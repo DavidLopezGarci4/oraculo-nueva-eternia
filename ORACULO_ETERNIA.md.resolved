@@ -1,0 +1,51 @@
+# 🔮 El Oráculo de Eternia: Visión Definitiva
+
+Esta hoja de ruta incorpora Desafíos Técnicos de Nivel Dios (Amazon/KidInn), Estrategia de Imágenes en Nube y Portabilidad Total.
+
+## Módulo 0: El Coleccionista & Imágenes (La Nube)
+**Integración del Script Personal**:
+1.  Tu script actual se mueve a `collectors/` y sigue siendo el "Maestro de Inventario".
+2.  **Solución Imágenes (Cero Coste & Nube)**:
+    *   **Fotos de Tiendas**: **Hotlinking**. No descargamos nada. Guardamos la URL original (`https://tienda.com/foto.jpg`). Ocupa 0 bytes.
+    *   **Fotos de TU Colección**:
+        *   *Opción A (Recomendada)*: **Cloudinary (Capa Gratuita)**. Te da 25GB de tráfico/espacio gratis. Subida vía API desde tu script.
+        *   *Opción B (Hack)*: Canal privado de **Telegram/Discord**. Subes la foto, obtienes la URL pública. Coste cero, espacio infinito.
+        *   *Opción C*: **Google Drive** con enlaces públicos.
+    *   *Decisión*: Empezaremos por **Hotlinking** para tiendas y **Cloudinary** para tu colección personal para sacarlas de tu PC.
+
+## Módulo 1: El Cerebro (SQLite + SQLAlchemy)
+Base de datos local, fichero único `oraculo.db`.
+*   **Esquema Robust**: Tablas para `Productos` (Maestro), `Ofertas` (Precios tiendas), `Coleccion` (Tus items), `HistóricoPrecios`.
+*   **Escalable**: Preparado para migrar a PostgreSQL en 5 minutos si fuera necesario.
+
+## Módulo 2: Portabilidad Universal & Migración
+Para llevar el proyecto a otro PC o cuenta Antigravity:
+*   **GitHub**: Es el corazón. Todo el código vive allí.
+*   **Prompt Maestro**: He generado un archivo `PROMPT_MAESTRO_MIGRACION.md`.
+    *   *Uso*: Cuando abras una nueva sesión de Antigravity en otro PC, copias y pegas ese texto.
+    *   *Efecto*: La IA entenderá INSTANTÁNEAMENTE la arquitectura, las reglas de negocio, el estado actual y los objetivos, sin que tengas que explicarle nada de cero.
+
+## Módulo 3: Expansión y Retos Técnicos (Nivel Dios)
+Ampliamos el alcance a las "Bestias Negras" del scraping:
+1.  **Tiendas Standard**: Comics Barcelona, Joguiba, Toy Planet.
+2.  **El Reto Amazon**:
+    *   Amazon odia los scrapers.
+    *   *Estrategia*: Usaremos técnicas de bajo perfil o APIs de terceros gratuitas (RapidAPI) si existen, o selectores muy específicos con rotación de User-Agents agresiva. Asumimos que puede fallar a veces.
+3.  **Grupo Inn (KidInn / TechInn)**:
+    *   Son sitios SPA (Single Page Applications) complejos o protegidos por Cloudflare.
+    *   *Estrategia*: Ingeniería inversa de sus APIs internas (JSON ocultos) o uso de Browser Headless (Playwright) con evasión de detección.
+
+## Módulo 4: Limpieza y Calidad (Excel como Juez)
+*   **Validación Cruzada**: Si una tienda dice "He-Man Origins" pero tu Excel dice que esa figura no existe en esa Wave, el sistema la marca como "Sospechosa" para revisión.
+*   **Smart Matching**: Cruzamos datos por códigos de barras (EAN/UPC) si las tiendas los publican, o por similitud de nombres usando tu Excel como diccionario canónico.
+
+## Módulo 5: Analytics Nativo
+Streamlit Dashboard.
+*   **KPIs**: Valor Total Colección, Gasto Mensual, Top Ahorro Potencial.
+*   Todo visual, interactivo y sin coste de licencias.
+
+---
+### ¿Cómo proceder?
+1.  Descarga el archivo `PROMPT_MAESTRO_MIGRACION.md` que voy a generar ahora.
+2.  Confírmame si la opción **Cloudinary** te encaja para tus fotos personales.
+3.  Damos luz verde a la **Fase 1**.

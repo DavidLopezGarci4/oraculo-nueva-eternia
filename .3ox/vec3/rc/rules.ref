@@ -1,0 +1,16 @@
+# RULES.REF :: Leyes de Hierro de Nueva Eternia
+# Versión: 2.1.0
+
+[VALIDACIÓN.MUESTRA]
+- R01: Prioridad absoluta al EAN-13 si está presente y es válido.
+- R02: Umbral mínimo Jaccard de 0.70 para vinculación automática.
+- R03: Prohibido sobreescribir vínculos validados manualmente por el usuario.
+
+[SEGURIDAD.OPERACIONAL]
+- R04: Backup atómico del vault antes de iniciar cualquier escaneo.
+- R05: Circuit-breaker: Detener si se detectan >3 bloqueos anti-bot (403/429) consecutivos.
+- R06: Rate-limiting: Máximo 1 alerta por minuto por el mismo ítem.
+
+[INTEGRIDAD.DATO]
+- R07: Todo cambio de precio debe generar un recibo de auditoría xxHash64.
+- R08: El Purgatorio es el único destino válido para discrepancias de confianza < 70%.

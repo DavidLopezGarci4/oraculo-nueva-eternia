@@ -1,0 +1,26 @@
+# TOOLS.YML :: Oráculo de Nueva Eternia
+# Framework for Market Surveillance
+
+tools:
+  - name: MarketScraper
+    function: run_all_scrapers(staggered=true)
+    returns: list of ScrapedOffer
+    
+  - name: RustMatcher
+    function: match_items_rust(offers)
+    returns: linked_results_hash
+    
+  - name: SentinelAlerter
+    function: send_telegram_alert(product, offer, discount)
+    returns: audit_receipt_id
+    
+  - name: VaultSealer
+    function: create_bunker_snapshot(db_session)
+    returns: snapshot_path
+
+dependencies:
+  - playwright
+  - sqlalchemy
+  - loguru
+  - python-telegram-bot
+  - xxhash

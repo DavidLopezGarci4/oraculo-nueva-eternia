@@ -1,0 +1,24 @@
+# 📄 Contrato de Datos: ScrapedOffer (v2.1)
+Superficie: dev/contract.ref
+
+Todo driver de captura debe devolver un objeto que cumpla con este esquema:
+
+```json
+{
+  "product_name": "Nombre completo del producto",
+  "price": 0.00,
+  "currency": "EUR",
+  "url": "https://tienda.com/producto",
+  "shop_name": "NombreTienda",
+  "is_available": true,
+  "ean": "13_DIGIT_STRING",
+  "image_url": "https://tienda.com/imagen.jpg",
+  "scraped_at": "ISO_TIMESTAMP",
+  "receipt_id": "XXHASH64_SIGNATURE"
+}
+```
+
+## Leyes de Transformación:
+1. **price**: Siempre float, con dos decimales.
+2. **ean**: Solo números, longitud 8 o 13 (EAN-8/13).
+3. **receipt_id**: Hash generado a partir de (shop_name + url + price).

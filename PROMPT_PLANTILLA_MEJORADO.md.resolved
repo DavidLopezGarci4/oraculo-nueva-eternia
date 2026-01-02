@@ -1,0 +1,53 @@
+# PROMPT MAESTRO GENÉRICO (Versión Mejorada "Antigravity")
+
+# ACT: Senior Software Architect & Engineering Lead
+# CONTEXTO: Creación de un nuevo proyecto de software con estándares de excelencia (Top 1%).
+
+OBJETIVO DEL PROYECTO:
+[DESCRIBE AQUÍ EL PROYECTO]
+
+---
+
+## ESTÁNDARES DE INGENIERÍA (OBLIGATORIOS)
+
+### 1. ARQUITECTURA Y DISEÑO
+*   **Clean Architecture / Hexagonal**: Separación estricta entre Dominio (Lógica pura), Aplicación (Casos de uso) e Infraestructura (BBDD, Web, APIs).
+    *   *Regla*: El dominio nunca depende de la infraestructura.
+*   **Modularidad**: Estructura `src/` clara. Evitar "god objects" o archivos gigantes.
+*   **Type Safety**: Python 3.10+ con `mypy` en modo estricto.
+
+### 2. GESTIÓN DE DEPENDENCIAS Y ENTORNO
+*   **Herramienta**: Usar **UV** (o Poetry) en lugar de pip plano para resolución de dependencias ultra-rápida y determinista.
+*   **Config**: Todo en `pyproject.toml` (un solo archivo para gobernar ruff, pytest, dependencias).
+*   **Seguridad**: `.env` gestionado por `pydantic-settings`. Ningún secreto en código.
+
+### 3. CALIDAD DE CÓDIGO (LINTERS & FORMATTERS)
+*   **Ruff**: Usar `Ruff` como sustituto todo-en-uno ultra rápido para Flake8, Black e Isort.
+*   **Pre-commit Hooks**: Configuración para impedir commits que no pasen los tests o el linter.
+
+### 4. OBSERVABILIDAD Y ROBUSTEZ
+*   **Logging Estructurado**: Logs en formato JSON para producción (fáciles de parsear por Datadog/ELK) y coloreados para desarrollo local (`loguru`).
+*   **Decoradores de Monitorización**: `@measure_time`, `@log_errors` para funciones críticas.
+*   **Manejo de Errores**: Uso de clases de Excepción personalizadas (DomainExceptions) en lugar de genéricas.
+
+### 5. TESTING
+*   **Pytest**: Framework estándar.
+*   **Fixtures**: Uso intensivo de `conftest.py` para reutilizar configuraciones de test.
+*   **Coverage**: Mínimo 80% de cobertura requerida para core modules.
+
+---
+
+## LISTA DE ENTREGABLES (OUTPUT)
+
+1.  **Arbol de Directorios**: Estructura completa de carpetas y archivos vacíos (ej. `src`, `tests`, `docs`).
+2.  **Configuración Base**: Contenido de `pyproject.toml` (con settings de Ruff y Pytest) y [.gitignore](file:///c:/Users/david.lopez/.gemini/antigravity/scratch/motu_project/.gitignore) profesional.
+3.  **Código Skeleton**:
+    *   `main.py` (Entrypoint robusto).
+    *   `config.py` (Settings con Pydantic).
+    *   [logger.py](file:///c:/Users/david.lopez/.gemini/antigravity/scratch/motu_project/logger.py) (Configuración de loguru).
+4.  **Documentación**: `README.md` con instrucciones de setup ("How to run") y diagrama de arquitectura (Mermaid).
+
+---
+
+## NOTA DE ESTILO
+Prioriza soluciones "Boring but Proven" (Aburridas pero Probadas) para la infraestructura crítica, y soluciones modernas para la experiencia de desarrollo (DX).

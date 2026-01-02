@@ -1,0 +1,9 @@
+{
+    "routes": {
+        "market_deal": "SENTINEL.NOTIFIER",
+        "low_confidence": "PURGATORIO.QUEUE",
+        "critical_block": "EMERGENCY.ALERT",
+        "daily_sync": "BUNKER.BACKUP",
+        "audit_log": "3OX.LOGGER"
+    }
+}
