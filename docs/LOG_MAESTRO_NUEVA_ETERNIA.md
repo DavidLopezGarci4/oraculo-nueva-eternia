@@ -177,5 +177,8 @@
 - **Hito**: [x] **Refinado Fase 2.6 (ESTRATÉGICO)**:
     - Pesos Pesados (Serie x10) para evitar confusiones entre líneas.
     - Soporte nativo para sinónimos domain-specific (TMNT, MOTU).
-    - UI Refinada sin redundancias y con umbral de confianza (0.65).
+- **Hito**: [x] **FIX CRÍTICO Fase 2.7**:
+    - Corregido bug donde el Purgatorio sugería productos con `is_match=False`.
+    - Añadida "Ley de Hierro 0" (Token Completeness) al motor de respaldo.
+    - Umbral de confianza ajustado (0.55) para títulos web extensos.
 - **Estado**: El Oráculo ahora posee discernimiento experto. Listos para la Fase 3 (API Broker Cloud Sync).

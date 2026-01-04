@@ -176,7 +176,7 @@ class SmartMatcher:
             if not db_series.intersection(scr_series):
                 return False, 0.0, f"Series Conflict: DB={db_series} vs Scraped={scr_series}"
         
-        if weighted_score >= 0.65:
+        if weighted_score >= 0.55:
             return True, weighted_score, "Series-Dominant Match"
         else:
             return False, weighted_score, f"Insufficient Weighted Score: {weighted_score:.2f}"

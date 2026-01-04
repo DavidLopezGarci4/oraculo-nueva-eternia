@@ -673,8 +673,10 @@ def _render_purgatory_content(db):
             for p in all_products:
                 # Include sub_category in the DB search string for better series detection
                 db_search_name = f"{p.name} {p.sub_category or ''}"
-                _, score, _ = matcher.match(db_search_name, item.scraped_name, item.url, db_ean=p.ean, scraped_ean=item.ean)
-                if score > best_score:
+                is_match, score, reason = matcher.match(db_search_name, item.scraped_name, item.url, db_ean=p.ean, scraped_ean=item.ean)
+                
+                # CRITICAL: Only consider products that PASS the match rules
+                if is_match and score > best_score:
                     best_score = score
                     best_match = p
             

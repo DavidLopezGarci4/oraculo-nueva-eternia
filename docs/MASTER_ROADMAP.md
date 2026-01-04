@@ -65,7 +65,8 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
     - **Pesos Dinámicos**: Identidad (x5) y Serie (x10) para evitar colisiones entre líneas de juguetes (Origins vs Masterverse).
     - **Normalización de Sinónimos**: Soporte para `TMNT` (Turtles) y `MOTU` (Masters Universe).
     - **Leyes de Hierro de Exclusión**: Bloqueo instantáneo por conflicto de identidad o serie.
-    - **UX Directa**: Desplegables claros con contexto de serie y sin redundancias visuales.
+    - **Fix Crítico**: El Purgatorio ahora solo sugiere productos que PASAN todas las reglas (`is_match=True`).
+    - **Token Completeness (Ley 0)**: Todo token de la DB debe estar presente en la web.
 
 ### Fase 3: Transactional API Broker (FastAPI) & Out-of-Band Sync
 *   **Estrategia "Out-of-Band" (No Bloqueante)**:

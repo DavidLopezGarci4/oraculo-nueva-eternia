@@ -64,6 +64,11 @@ class PythonBrainEngine:
         common = tokens1.intersection(tokens2)
         union = tokens1.union(tokens2)
         
+        # Ley de Hierro 0: TODOS los tokens de la DB deben estar en la web
+        missing_from_db = tokens1 - common
+        if missing_from_db:
+            return False, 0.0
+        
         # Pesos: Serie (x10), Identidad (x5), Otros (x1)
         weights = {}
         for t in union:
@@ -93,8 +98,8 @@ class PythonBrainEngine:
         if series1 and not series1.intersection(series2):
             return False, 0.0
 
-        # R02: Umbral Jaccard Pesado (0.65)
-        return score >= 0.65, score
+        # R02: Umbral Jaccard Pesado (0.55 para tolerar títulos largos)
+        return score >= 0.55, score
 
 # Singleton instance
 engine = PythonBrainEngine()
