@@ -18,8 +18,11 @@ class SmartBridge:
     def match_items(self, name1, name2, ean1=None, ean2=None):
         """
         Intenta usar el motor de Rust (Turbo). 
-        Si falla (bloqueo OS), conmuta al motor Python (Respaldo).
+        Si falla o tiene poca confianza, usa el motor Python (Respaldo inteligente).
         """
+        rust_match = None
+        rust_score = 0.0
+
         # 1. Intentar Modo Turbo (Rust)
         if os.path.exists(self.brain_path):
             try:
@@ -27,22 +30,31 @@ class SmartBridge:
                 if ean1: cmd.append(ean1)
                 if ean2: cmd.append(ean2)
                 
-                # Usar shell=False para mayor seguridad, pero capturando errores de acceso
                 result = subprocess.run(cmd, capture_output=True, text=True, timeout=2)
                 
                 if result.returncode == 0 and "MATCH_RESULT" in result.stdout:
                     parts = result.stdout.strip().split("|")
-                    logger.success("3OX.Bridge :: Modo TURBO (Rust) activo.")
-                    return parts[1] == "true", float(parts[2])
-            except (subprocess.SubprocessError, PermissionError) as e:
-                logger.warning(f"3OX.Bridge :: Motor Rust bloqueado ({type(e).__name__}). Activando Respaldo...")
-        else:
-            logger.debug("3OX.Bridge :: Binario Rust no encontrado. Usando motor Python.")
+                    rust_match = parts[1] == "true"
+                    rust_score = float(parts[2])
+                    
+                    # Si Rust detecta un match perfecto, lo aceptamos de inmediato
+                    if rust_match and rust_score >= 0.95:
+                        logger.success("3OX.Bridge :: Modo TURBO (Rust) - Match Perfecto.")
+                        return True, rust_score, "Rust Turbo Match"
+            except Exception as e:
+                logger.warning(f"3OX.Bridge :: Motor Rust omitido ({type(e).__name__}).")
 
-        # 2. Fallback: Modo Respaldo (Python)
-        is_match, score = python_engine.calculate_match(name1, name2, ean1, ean2)
-        logger.info(f"3OX.Bridge :: Operando en Modo RESPALDO (Python) [Confianza: {score:.2f}]")
-        return is_match, score
+        # 2. Respaldo Inteligente (Python con RapidFuzz)
+        py_match, py_score, py_reason = python_engine.calculate_match(name1, name2, ean1, ean2)
+        
+        # Lógica de Decisión: 
+        # Si Python tiene un score significativamente mejor que Rust, preferimos Python.
+        if py_score > rust_score:
+            logger.info(f"3OX.Bridge :: Usando REFUERZO Python (RapidFuzz) [Score: {py_score:.2f} | Reason: {py_reason}]")
+            return py_match, py_score, py_reason
+        else:
+            logger.info(f"3OX.Bridge :: Manteniendo resultado Rust [Score: {rust_score:.2f}]")
+            return rust_match if rust_match is not None else False, rust_score, "Rust Match (Fallback)"
 
 # Global Dispatcher
 kernel = SmartBridge()
