@@ -21,6 +21,13 @@ class PythonBrainEngine:
             "skeletor", "teela", "heman", "manatarms", "beastman", "trapjaw", "evillyn", "fisto", "ramman",
             "orko", "stratos", "merman", "jitsu", "triklops", "hordak", "she-ra", "man-at-arms", "he-man"
         }
+        self.stop_words = {
+            "mattel", "figure", "figura", "action", "toy", "juguete", "cm", "inch",
+            "wave", "deluxe", "collection", "collector", "edicion", "edition",
+            "new", "nuevo", "caja", "box", "original", "authentic",
+            "super7", "reaction", "pop", "funko", "vinyl", "of", "the", "del", "de", "y", "and",
+            "comprar", "venta", "oferta", "precio", "barato", "envio", "gratis"
+        }
     def normalize(self, text: str) -> Set[str]:
         if not text: return set()
         text = unicodedata.normalize('NFKD', text).encode('ascii', 'ignore').decode('utf-8')
@@ -28,12 +35,9 @@ class PythonBrainEngine:
         text = re.sub(r'[^a-z0-9]', ' ', text)
         tokens = set(text.split())
         
-        # Mapeo de Sinónimos
-        synonyms = {"tmnt": "turtles", "motu": "masters", "universe": "masters"}
-        normalized = set()
-        for t in tokens:
-            normalized.add(synonyms.get(t, t))
-        return normalized
+        # Filtrar significativos (Stopwords out)
+        significant = (tokens - self.stop_words) | (tokens & self.series_tokens)
+        return {t for t in significant if len(t) > 1 or t.isdigit()}
     
 
     def jaccard_similarity(self, s1: str, s2: str) -> float:

@@ -57,23 +57,8 @@ class SmartMatcher:
         
         tokens = set(text.split())
         
-        # --- SYNONYM NORMALIZATION ---
-        synonyms = {
-            "tmnt": "turtles",
-            "motu": "masters",
-            "masters": "masters",
-            "universe": "masters" # Map both to 'masters' for MOTU check
-        }
-        
-        normalized_tokens = set()
-        for t in tokens:
-            if t in synonyms:
-                normalized_tokens.add(synonyms[t])
-            else:
-                normalized_tokens.add(t)
-
         # Core Logic: Keep all tokens that are either NOT stop words OR ARE series tokens
-        significant = (normalized_tokens - self.stop_words) | (normalized_tokens & self.series_tokens)
+        significant = (tokens - self.stop_words) | (tokens & self.series_tokens)
         return {t for t in significant if len(t) > 1 or t.isdigit()}
 
     def match(self, product_name: str, scraped_title: str, scraped_url: str, db_ean: str = None, scraped_ean: str = None) -> Tuple[bool, float, str]:
