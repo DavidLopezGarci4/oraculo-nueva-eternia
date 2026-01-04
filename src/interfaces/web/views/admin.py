@@ -516,6 +516,13 @@ def _render_purgatory_content(db):
         shops = [r[0] for r in db.query(PendingMatchModel.shop_name).distinct().all()]
         sel_shops = st.multiselect("Filtrar por tienda", options=sorted(shops), key="purg_shops")
 
+    c_debug1, c_debug2 = st.columns([2, 1])
+    with c_debug2:
+        if st.button("🔄 Recalcular Sugerencias", help="Limpia la caché de coincidencias y vuelve a analizar todas las ofertas del purgatorio.", use_container_width=True):
+            if "purgatory_suggestions" in st.session_state:
+                st.session_state.purgatory_suggestions.clear()
+            st.rerun()
+
     st.divider()
 
     # --- Query con Filtros ---
@@ -583,8 +590,10 @@ def _render_purgatory_content(db):
                 m_best = None
                 m_score = 0.0
                 for p in all_products:
-                    _, sc, _ = matcher.match(p.name, item.scraped_name, item.url)
-                    if sc > m_score:
+                    # Match using sub_category as well
+                    db_search_name = f"{p.name} {p.sub_category or ''}"
+                    is_match, sc, _ = matcher.match(db_search_name, item.scraped_name, item.url, db_ean=p.ean, scraped_ean=item.ean)
+                    if is_match and sc > m_score:
                         m_score = sc
                         m_best = p
                 
@@ -680,8 +689,13 @@ def _render_purgatory_content(db):
                     best_score = score
                     best_match = p
             
-            # Guardar ID en caché
-            st.session_state.purgatory_suggestions[item.id] = (best_match.id if best_match else None, best_score)
+            # Guardar ID y razón en caché (Phase 20 Debug)
+            st.session_state.purgatory_suggestions[item.id] = (best_match.id if best_match else None, best_score, reason if not best_match else "Match OK")
+
+        # Recuperar razón del caché
+        match_reason = "No analizado aún"
+        if item.id in st.session_state.purgatory_suggestions:
+             _, _, match_reason = st.session_state.purgatory_suggestions[item.id]
 
         col_select, col_expander = st.columns([0.1, 9.9])
         
@@ -715,9 +729,12 @@ def _render_purgatory_content(db):
                     st.markdown(f"""
                         <div style="border: 1px solid {confidence_color}; border-left: 5px solid {confidence_color}; padding: 10px; border-radius: 5px; background-color: rgba(0,0,0,0.05); margin-bottom: 10px;">
                             <span style="color: {confidence_color}; font-weight: bold;">🎯 Sugerencia del Oráculo:</span> {best_match.name} 
-                            <br><small>Nivel de Confianza: {best_score:.2%}</small>
+                            <br><small>Nivel de Confianza: {best_score:.2%} | {match_reason}</small>
                         </div>
                     """, unsafe_allow_html=True)
+                else:
+                    # Show reason even if no match for debugging
+                    st.caption(f"ℹ️ Estado de Coincidencia: {match_reason}")
                 
                 from src.interfaces.web.shared import render_external_link
                 render_external_link(item.url, "Abrir Enlace", key_suffix=f"purg_{item.id}")
