@@ -1,0 +1,4 @@
+# 🛠️ Tool Registry
+tools:
+  - name: system_query
+    description: Read system state

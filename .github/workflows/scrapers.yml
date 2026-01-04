@@ -39,4 +39,4 @@ jobs:
           DELAY=60
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then DELAY=0; fi
           
-          python src/jobs/daily_scan.py --shops "${{ github.event.inputs.shops }}" --random-delay $DELAY
+          python src/application/jobs/daily_scan.py --shops "${{ github.event.inputs.shops }}" --random-delay $DELAY

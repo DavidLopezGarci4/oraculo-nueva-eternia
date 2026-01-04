@@ -3,7 +3,7 @@ import time
 from typing import List
 from playwright.async_api import async_playwright, BrowserContext
 from src.infrastructure.scrapers.base import BaseScraper
-from src.scrapers.base import ScrapedOffer
+from src.infrastructure.scrapers.base import ScrapedOffer
 
 class MockScraper(BaseScraper):
     async def run(self, context: BrowserContext) -> List[ScrapedOffer]:

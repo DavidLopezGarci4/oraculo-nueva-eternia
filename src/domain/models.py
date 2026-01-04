@@ -13,10 +13,16 @@ class ProductModel(Base):
     __tablename__ = "products"
     
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    name: Mapped[str] = mapped_column(String, index=True, unique=True)
+    name: Mapped[str] = mapped_column(String, index=True) # Removed unique=True to allow variants with same name
     ean: Mapped[Optional[str]] = mapped_column(String, index=True, nullable=True)
     image_url: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     category: Mapped[str] = mapped_column(String, default="Masters of the Universe")
+    sub_category: Mapped[Optional[str]] = mapped_column(String, index=True, nullable=True) # e.g. "Origins", "Turtles of Grayskull"
+    
+    # Phase 0: Multivariant Identity
+    figure_id: Mapped[Optional[str]] = mapped_column(String, index=True, unique=True, nullable=True)
+    variant_name: Mapped[Optional[str]] = mapped_column(String, nullable=True) # e.g. "V2", "Repaint"
+    image_hash: Mapped[Optional[str]] = mapped_column(String, index=True, nullable=True) # Perceptual Hash for visual dedupe
     
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -30,6 +36,12 @@ class ProductModel(Base):
     
     collection_items: Mapped[List["CollectionItemModel"]] = relationship(
         "CollectionItemModel",
+        back_populates="product",
+        cascade="all, delete-orphan"
+    )
+    
+    aliases: Mapped[List["ProductAliasModel"]] = relationship(
+        "ProductAliasModel",
         back_populates="product",
         cascade="all, delete-orphan"
     )
@@ -109,6 +121,24 @@ class PendingMatchModel(Base):
     receipt_id: Mapped[Optional[str]] = mapped_column(String, nullable=True, index=True)
     
     found_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+class ProductAliasModel(Base):
+    """
+    Capa de Alias (Phase 0): Mapea URLs de scraping a un Product ID interno.
+    Esto garantiza que si el nombre en la tienda cambia, el link siga apuntando al mismo producto.
+    """
+    __tablename__ = "product_aliases"
+    
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), index=True)
+    
+    source_url: Mapped[str] = mapped_column(String, index=True, unique=True)
+    confirmed: Mapped[bool] = mapped_column(Boolean, default=True) # Si fue validado por un matching de alta confianza
+    
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    product: Mapped["ProductModel"] = relationship("ProductModel", back_populates="aliases")
     
     
 # --- AUDIT TRAIL (BASTIÓN DE DATOS) ---
@@ -256,6 +286,7 @@ __all__ = [
     "PriceHistoryModel", 
     "ScraperExecutionLogModel", 
     "KaizenInsightModel",
+    "ProductAliasModel",
     "DOMAIN_VERSION"
 ]
 

@@ -2,7 +2,7 @@ import re
 import unicodedata
 from typing import Set, Tuple, List
 from urllib.parse import urlparse
-from src.domain.schemas import Product
+from src.domain.schemas import ProductSchema
 from src.core.rust_bridge import kernel
 
 class SmartMatcher:

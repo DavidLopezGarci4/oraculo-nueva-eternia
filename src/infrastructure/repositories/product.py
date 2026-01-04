@@ -1,8 +1,8 @@
 from sqlalchemy.orm import Session
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 from src.infrastructure.repositories.base import BaseRepository
-from src.domain.models import ProductModel, OfferModel
+from src.domain.models import ProductModel, OfferModel, PendingMatchModel, OfferHistoryModel
 
 class ProductRepository(BaseRepository[ProductModel]):
     def __init__(self, db: Session):
@@ -10,6 +10,12 @@ class ProductRepository(BaseRepository[ProductModel]):
 
     def get_by_name(self, name: str) -> Optional[ProductModel]:
         return self.db.query(ProductModel).filter(ProductModel.name == name).first()
+
+    def get_by_figure_id(self, figure_id: str) -> Optional[ProductModel]:
+        return self.db.query(ProductModel).filter(ProductModel.figure_id == figure_id).first()
+
+    def get_by_series(self, series: str) -> List[ProductModel]:
+        return self.db.query(ProductModel).filter(ProductModel.sub_category == series).all()
 
     def get_offer_by_url(self, url: str) -> Optional[OfferModel]:
         return self.db.query(OfferModel).filter(OfferModel.url == url).first()
@@ -34,17 +40,11 @@ class ProductRepository(BaseRepository[ProductModel]):
                  self.db.add(ph)
 
             # Check for Alert Condition (New Low + Significant Discount)
-            # Only alert if it's a DROPPING price that sets a new record low (to prevent spam on every scan)
             if existing_offer.min_price > 0 and current_price < existing_offer.min_price:
                  if existing_offer.max_price > 0:
                      discount = 1.0 - (current_price / existing_offer.max_price)
                      if discount >= 0.20:
                          alert_discount = discount
-                         # --- KAIZEN: Nuclear Anomaly Detection (Phase 8) ---
-                         if discount >= 0.50:
-                             logger.critical(f"🚀 NUCLEAR DEAL DETECTED: {product.name} at {current_price}€ (-{discount*100:.0f}%)")
-                             # We'll mark this for special handling in the notifier
-                             offer_data["is_nuclear"] = True 
 
             # Update Stats
             if existing_offer.min_price == 0 or current_price < existing_offer.min_price:
@@ -54,7 +54,7 @@ class ProductRepository(BaseRepository[ProductModel]):
                 existing_offer.max_price = current_price
                 
             existing_offer.price = current_price
-            existing_offer.is_available = offer_data["is_available"]
+            existing_offer.is_available = offer_data.get("is_available", True)
             existing_offer.last_seen = datetime.utcnow()
             
             # --- 3OX: Update Audit Receipt ---
@@ -76,7 +76,7 @@ class ProductRepository(BaseRepository[ProductModel]):
                 price=current_price,
                 currency=offer_data.get("currency", "EUR"),
                 url=offer_data["url"],
-                is_available=offer_data["is_available"],
+                is_available=offer_data.get("is_available", True),
                 min_price=current_price,
                 max_price=current_price,
                 receipt_id=offer_data.get("receipt_id") # --- 3OX Audit ---
@@ -98,12 +98,9 @@ class ProductRepository(BaseRepository[ProductModel]):
     def get_active_deals(self, min_discount: float = 0.20, max_original_price: float = None):
         """
         Find offers where current price is lower than max_price by at least min_discount.
-        Deduplication: Only returns the most recent offer per (product, shop).
-        Returns list of (Product, Offer, discount_percent) sorted by discount.
         """
         from sqlalchemy import desc
         
-        # 1. Base query for active, discounted offers
         query = self.db.query(OfferModel).join(ProductModel).filter(
             OfferModel.is_available == True,
             OfferModel.max_price > 0,
@@ -113,8 +110,6 @@ class ProductRepository(BaseRepository[ProductModel]):
         if max_original_price is not None:
              query = query.filter(OfferModel.max_price <= max_original_price)
         
-        # 2. Get all candidates and deduplicate in Python for maximum compatibility (SQLite/Postgres)
-        # We sort by last_seen desc to ensure the first one we find is the latest
         offers = query.order_by(desc(OfferModel.last_seen)).all()
         
         deduped = {}
@@ -125,7 +120,21 @@ class ProductRepository(BaseRepository[ProductModel]):
                 deduped[key] = (o.product, o, discount)
         
         results = list(deduped.values())
-        
-        # 3. Final sort by discount desc
         results.sort(key=lambda x: x[2], reverse=True)
         return results
+
+    # --- Purgatorio & Audit Methods ---
+    def get_pending_matches(self) -> List[PendingMatchModel]:
+        return self.db.query(PendingMatchModel).all()
+
+    def add_to_history(self, action_type: str, offer_url: str, product_name: str, shop_name: str, price: float, details: str = None):
+        history = OfferHistoryModel(
+            action_type=action_type,
+            offer_url=offer_url,
+            product_name=product_name,
+            shop_name=shop_name,
+            price=price,
+            details=details
+        )
+        self.db.add(history)
+        self.db.commit()

@@ -23,7 +23,7 @@ class PythonBrainEngine:
         text = re.sub(r'[^a-z0-9]', ' ', text)
         return set(text.split())
 
-    def jaccard_similarity(self, s1: str, s2: str) -> float {
+    def jaccard_similarity(self, s1: str, s2: str) -> float:
         set1 = self.normalize(s1)
         set2 = self.normalize(s2)
         

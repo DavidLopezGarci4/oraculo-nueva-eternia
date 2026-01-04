@@ -5,7 +5,7 @@ from playwright.async_api import BrowserContext, Page
 from bs4 import BeautifulSoup
 
 from src.infrastructure.scrapers.base import BaseScraper
-from src.scrapers.base import ScrapedOffer
+from src.infrastructure.scrapers.base import ScrapedOffer
 
 # Configure Logger
 logger = logging.getLogger(__name__)
