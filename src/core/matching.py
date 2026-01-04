@@ -15,14 +15,16 @@ class SmartMatcher:
             "comprar", "venta", "oferta", "precio", "barato", "envio", "gratis"
         }
         
-        # Hard Filters: If one defines 'Origins' and other 'Masterverse', they can NEVER match.
-        # These are series/lines that are distinct.
-        self.series_tokens = {
+        # Specific series lines (High weight: 10.0)
+        self.series_specific = {
             "origins", "masterverse", "cgi", "netflix", "filmation", "200x", "vintage", "commemorative",
             "turtles", "grayskull", "stranger", "things", "cartoon", "collection", "sun", "man", "rulers", "sunman",
-            "engineering", "art", "classics", "revelation", "revolution", "mondo", "super7", "tmnt", "motu",
-            "masters", "universe", "universo"
+            "engineering", "art", "classics", "revelation", "revolution", "mondo", "super7"
         }
+        # Generic branding (Low weight: 1.0) - these are often in both and don't help differentiate
+        self.series_generic = {"tmnt", "motu", "masters", "universe", "universo"}
+        
+        self.series_tokens = self.series_specific | self.series_generic
         
         # High Weight Tokens: If these don't match or are present in one but not the other, 
         # the overall score should drop significantly or fail.
@@ -57,8 +59,22 @@ class SmartMatcher:
         
         tokens = set(text.split())
         
+        # --- SYNONYM NORMALIZATION ---
+        synonyms = {
+            "tmnt": "turtles",
+            "motu": "masters",
+            "masters": "masters",
+            "universe": "masters",
+            "universo": "masters",
+            "origenes": "origins"
+        }
+        
+        normalized_tokens = set()
+        for t in tokens:
+            normalized_tokens.add(synonyms.get(t, t))
+
         # Core Logic: Keep all tokens that are either NOT stop words OR ARE series tokens
-        significant = (tokens - self.stop_words) | (tokens & self.series_tokens)
+        significant = (normalized_tokens - self.stop_words) | (normalized_tokens & self.series_tokens)
         return {t for t in significant if len(t) > 1 or t.isdigit()}
 
     def match(self, product_name: str, scraped_title: str, scraped_url: str, db_ean: str = None, scraped_ean: str = None) -> Tuple[bool, float, str]:
@@ -125,8 +141,9 @@ class SmartMatcher:
         weights = {}
         all_unique_tokens = db_tokens | scraped_tokens
         for t in all_unique_tokens:
-            if t in self.series_tokens: weights[t] = 10.0
+            if t in self.series_specific: weights[t] = 10.0
             elif t in self.identity_tokens: weights[t] = 5.0
+            elif t in self.series_generic: weights[t] = 1.0
             else: weights[t] = 1.0
             
         def get_weighted_sum(token_set):
@@ -161,7 +178,7 @@ class SmartMatcher:
             if not db_series.intersection(scr_series):
                 return False, 0.0, f"Series Conflict: DB={db_series} vs Scraped={scr_series}"
         
-        if weighted_score >= 0.55:
+        if weighted_score >= 0.7:
             return True, weighted_score, "Series-Dominant Match"
         else:
             return False, weighted_score, f"Insufficient Weighted Score: {weighted_score:.2f}"

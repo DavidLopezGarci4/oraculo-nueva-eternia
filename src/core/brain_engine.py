@@ -11,12 +11,13 @@ class PythonBrainEngine:
     
     def __init__(self):
         # Palabras clave de filtrado (Series de MOTU)
-        self.series_tokens = {
+        self.series_specific = {
             "origins", "masterverse", "cgi", "netflix", "filmation", "200x", "vintage", "commemorative",
             "turtles", "grayskull", "stranger", "things", "cartoon", "collection", "sun", "man",
-            "engineering", "art", "classics", "revelation", "revolution", "mondo", "super7", "tmnt", "motu",
-            "masters", "universe"
+            "engineering", "art", "classics", "revelation", "revolution", "mondo", "super7"
         }
+        self.series_generic = {"tmnt", "motu", "masters", "universe"}
+        self.series_tokens = self.series_specific | self.series_generic
         self.identity_tokens = {
             "skeletor", "teela", "heman", "manatarms", "beastman", "trapjaw", "evillyn", "fisto", "ramman",
             "orko", "stratos", "merman", "jitsu", "triklops", "hordak", "she-ra", "man-at-arms", "he-man"
@@ -35,8 +36,14 @@ class PythonBrainEngine:
         text = re.sub(r'[^a-z0-9]', ' ', text)
         tokens = set(text.split())
         
+        # Mapeo de Sinónimos
+        synonyms = {"tmnt": "turtles", "motu": "masters", "universe": "masters", "origenes": "origins"}
+        normalized = set()
+        for t in tokens:
+            normalized.add(synonyms.get(t, t))
+            
         # Filtrar significativos (Stopwords out)
-        significant = (tokens - self.stop_words) | (tokens & self.series_tokens)
+        significant = (normalized - self.stop_words) | (normalized & self.series_tokens)
         return {t for t in significant if len(t) > 1 or t.isdigit()}
     
 
@@ -73,11 +80,12 @@ class PythonBrainEngine:
         if missing_from_db:
             return False, 0.0
         
-        # Pesos: Serie (x10), Identidad (x5), Otros (x1)
+        # Pesos: Serie Especifica (x10), Identidad (x5), Serie Generica (x1), Otros (x1)
         weights = {}
         for t in union:
-            if t in self.series_tokens: weights[t] = 10.0
+            if t in self.series_specific: weights[t] = 10.0
             elif t in self.identity_tokens: weights[t] = 5.0
+            elif t in self.series_generic: weights[t] = 1.0
             else: weights[t] = 1.0
             
         w_intersection = sum(weights[t] for t in common)
@@ -102,8 +110,8 @@ class PythonBrainEngine:
         if series1 and not series1.intersection(series2):
             return False, 0.0
 
-        # R02: Umbral Jaccard Pesado (0.55 para tolerar títulos largos)
-        return score >= 0.55, score
+        # R02: Umbral Jaccard Pesado (0.70)
+        return score >= 0.7, score
 
 # Singleton instance
 engine = PythonBrainEngine()
