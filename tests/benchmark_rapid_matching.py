@@ -39,6 +39,13 @@ def benchmark_v3():
             "expected": False
         },
         {
+            "name": "Land Shark vs Roboto (Type Conflict)",
+            "db": "Roboto (Origins)",
+            "scraped": "Figura Vehículo Tanque Tiburón Masters del Universo Origins - Frikiverso",
+            "url": "https://frikiverso.com/tanque-tiburon-origins",
+            "expected": False
+        },
+        {
             "name": "Identity Mismatch (Beast Man vs Skeletor)",
             "db": "Beast Man (Origins)",
             "scraped": "Figura Skeletor Master of the Univers Origins Articulada 15 cms - Frikiverso",

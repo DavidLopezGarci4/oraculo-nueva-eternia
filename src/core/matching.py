@@ -46,6 +46,11 @@ class SmartMatcher:
             scraped_ean
         )
         
+        # --- VETO LOGIC (Phase 21) ---
+        # Si Python detecta un conflicto crítico (Identidad o Serie), VETAMOS el match de Rust.
+        if "Conflict" in py_reason or "Dissonance" in py_reason:
+            return False, 0.0, f"Python.Veto :: {py_reason}"
+
         # Si Python tiene un score significativamente mejor o Rust dio False, usamos Python
         if is_match is False or py_score > score:
             return py_match, py_score, f"Python.Brain :: {py_reason}"

@@ -690,8 +690,8 @@ def _render_purgatory_content(db):
                     best_score = score
                     best_match = p
             
-            # Guardar ID y razón en caché (Phase 20 Debug)
-            st.session_state.purgatory_suggestions[item.id] = (best_match.id if best_match else None, best_score, reason if not best_match else "Match OK")
+            # Guardar ID y razón en caché (Phase 21: Real Reasons)
+            st.session_state.purgatory_suggestions[item.id] = (best_match.id if best_match else None, best_score, reason if best_match else reason)
             match_reason = st.session_state.purgatory_suggestions[item.id][2]
 
         col_select, col_expander = st.columns([0.1, 9.9])
