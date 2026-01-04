@@ -13,15 +13,28 @@ class PythonBrainEngine:
         # Palabras clave de filtrado (Series de MOTU)
         self.series_tokens = {
             "origins", "masterverse", "cgi", "netflix", "filmation", "200x", "vintage", "commemorative",
-            "turtles", "grayskull", "stranger", "things", "cartoon", "collection", "sun", "man"
+            "turtles", "grayskull", "stranger", "things", "cartoon", "collection", "sun", "man",
+            "engineering", "art", "classics", "revelation", "revolution", "mondo", "super7", "tmnt", "motu",
+            "masters", "universe"
         }
-
+        self.identity_tokens = {
+            "skeletor", "teela", "heman", "manatarms", "beastman", "trapjaw", "evillyn", "fisto", "ramman",
+            "orko", "stratos", "merman", "jitsu", "triklops", "hordak", "she-ra", "man-at-arms", "he-man"
+        }
     def normalize(self, text: str) -> Set[str]:
         if not text: return set()
         text = unicodedata.normalize('NFKD', text).encode('ascii', 'ignore').decode('utf-8')
         text = text.lower()
         text = re.sub(r'[^a-z0-9]', ' ', text)
-        return set(text.split())
+        tokens = set(text.split())
+        
+        # Mapeo de Sinónimos
+        synonyms = {"tmnt": "turtles", "motu": "masters", "universe": "masters"}
+        normalized = set()
+        for t in tokens:
+            normalized.add(synonyms.get(t, t))
+        return normalized
+    
 
     def jaccard_similarity(self, s1: str, s2: str) -> float:
         set1 = self.normalize(s1)
@@ -42,21 +55,46 @@ class PythonBrainEngine:
             if clean_ean1 == clean_ean2 and len(clean_ean1) >= 8:
                 return True, 1.0
 
-        # Algoritmo Jaccard optimizado
-        score = self.jaccard_similarity(name1, name2)
-        
-        # Filtro de Conflicto de Series (Hard Filter)
+        # Algoritmo de Pesos Dinámicos
         tokens1 = self.normalize(name1)
         tokens2 = self.normalize(name2)
+        
+        if not tokens1 or not tokens2: return False, 0.0
+
+        common = tokens1.intersection(tokens2)
+        union = tokens1.union(tokens2)
+        
+        # Pesos: Serie (x10), Identidad (x5), Otros (x1)
+        weights = {}
+        for t in union:
+            if t in self.series_tokens: weights[t] = 10.0
+            elif t in self.identity_tokens: weights[t] = 5.0
+            else: weights[t] = 1.0
+            
+        w_intersection = sum(weights[t] for t in common)
+        w_union = sum(weights[t] for t in union)
+        score = w_intersection / w_union if w_union > 0 else 0.0
+        
+        # Ley de Hierro 1: Conflicto de Identidad
+        id1 = tokens1.intersection(self.identity_tokens)
+        id2 = tokens2.intersection(self.identity_tokens)
+        if id1 and id2 and not id1.intersection(id2):
+            return False, 0.0
+            
+        # Ley de Hierro 2: Si el producto (1) declara una serie o identidad, la web (2) DEBE tenerla
+        if id1 and not id1.intersection(id2): return False, 0.0
+        
+        # Ley de Hierro 2: Si el producto (1) declara una serie o identidad, la web (2) DEBE tenerla
+        if id1 and not id1.intersection(id2): return False, 0.0
+        
         series1 = tokens1.intersection(self.series_tokens)
         series2 = tokens2.intersection(self.series_tokens)
         
-        if series1 and series2 and not series1.intersection(series2):
-            logger.debug(f"Conflicto de Serie detectado: {series1} vs {series2}")
+        if series1 and not series1.intersection(series2):
             return False, 0.0
 
-        # R02: Umbral Jaccard (0.70)
-        return score >= 0.7, score
+        # R02: Umbral Jaccard Pesado (0.65)
+        return score >= 0.65, score
 
 # Singleton instance
 engine = PythonBrainEngine()

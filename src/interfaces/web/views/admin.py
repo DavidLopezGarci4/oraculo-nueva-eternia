@@ -671,7 +671,9 @@ def _render_purgatory_content(db):
         else:
             # Recalcular
             for p in all_products:
-                _, score, _ = matcher.match(p.name, item.scraped_name, item.url, db_ean=p.ean, scraped_ean=item.ean)
+                # Include sub_category in the DB search string for better series detection
+                db_search_name = f"{p.name} {p.sub_category or ''}"
+                _, score, _ = matcher.match(db_search_name, item.scraped_name, item.url, db_ean=p.ean, scraped_ean=item.ean)
                 if score > best_score:
                     best_score = score
                     best_match = p
@@ -706,7 +708,7 @@ def _render_purgatory_content(db):
                     # Optimized Thumbnails: Using CSS to limit height and avoid layout shift
                     st.markdown(f'<img src="{item.image_url}" style="height:150px; border-radius:10px; margin-bottom:10px; object-fit: contain;">', unsafe_allow_html=True)
                 
-                if best_match:
+                if best_match and best_score > 0.3:
                     confidence_color = "green" if best_score > 0.9 else ("orange" if best_score > 0.7 else "gray")
                     st.markdown(f"""
                         <div style="border: 1px solid {confidence_color}; border-left: 5px solid {confidence_color}; padding: 10px; border-radius: 5px; background-color: rgba(0,0,0,0.05); margin-bottom: 10px;">
@@ -731,7 +733,25 @@ def _render_purgatory_content(db):
                                 break
                     except Exception: pass
 
-                target_p = c1.selectbox("Vincular a:", all_products, index=idx_suggestion, format_func=lambda x: f"{'✨ ' if best_match and x.id == best_match.id else ''}{x.name}", key=f"purg_sel_{item.id}", help="El Oráculo ha pre-seleccionado la opción más probable.")
+                def product_fmt(x):
+                    label = f"{x.name}"
+                    # Only add parentheses if the name doesn't already have them OR if sub_category is not already present
+                    # Check if x.name ends with ) or contains (
+                    has_parens = "(" in label or label.strip().endswith(")")
+                    
+                    if x.sub_category and not has_parens:
+                        label += f" ({x.sub_category})"
+                    
+                    # Duplicate check for very generic items: show ID
+                    count = sum(1 for p in all_products if p.name == x.name and p.sub_category == x.sub_category)
+                    if count > 1:
+                        label += f" #ID:{x.id}"
+                        
+                    if best_match and x.id == best_match.id and best_score > 0.3:
+                        return f"✨ {label}"
+                    return label
+
+                target_p = c1.selectbox("Vincular a:", all_products, index=idx_suggestion, format_func=product_fmt, key=f"purg_sel_{item.id}", help="El Oráculo ha pre-seleccionado la opción más probable.")
                 
                 if c2.button("✅ Vincular", key=f"purg_ok_{item.id}", type="primary"):
                     if target_p:

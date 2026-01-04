@@ -7,12 +7,10 @@ from src.core.rust_bridge import kernel
 
 class SmartMatcher:
     def __init__(self):
-        # Tokens that don't distinguish a product (Stop Words for this Domain)
         self.stop_words = {
-            "masters", "universe", "universo", "motu", "origins", "masterverse",
             "mattel", "figure", "figura", "action", "toy", "juguete", "cm", "inch",
             "wave", "deluxe", "collection", "collector", "edicion", "edition",
-            "new", "nuevo", "caja", "box", "original", "authentic", "classics",
+            "new", "nuevo", "caja", "box", "original", "authentic",
             "super7", "reaction", "pop", "funko", "vinyl", "of", "the", "del", "de", "y", "and",
             "comprar", "venta", "oferta", "precio", "barato", "envio", "gratis"
         }
@@ -21,7 +19,18 @@ class SmartMatcher:
         # These are series/lines that are distinct.
         self.series_tokens = {
             "origins", "masterverse", "cgi", "netflix", "filmation", "200x", "vintage", "commemorative",
-            "turtles", "grayskull", "stranger", "things", "cartoon", "collection", "sun", "man", "rulers", "sunman"
+            "turtles", "grayskull", "stranger", "things", "cartoon", "collection", "sun", "man", "rulers", "sunman",
+            "engineering", "art", "classics", "revelation", "revolution", "mondo", "super7", "tmnt", "motu",
+            "masters", "universe", "universo"
+        }
+        
+        # High Weight Tokens: If these don't match or are present in one but not the other, 
+        # the overall score should drop significantly or fail.
+        self.identity_tokens = {
+            "skeletor", "teela", "heman", "manatarms", "beastman", "trapjaw", "evillyn", "fisto", "ramman",
+            "orko", "stratos", "merman", "jitsu", "triklops", "hordak", "she-ra", "man-at-arms", "he-man",
+            "sorceress", "faker", "mossman", "clawful", "whiplash", "stinkor", "spikor", "scareglow",
+            "snake", "shredder", "splinter", "krang", "donatello", "leonardo", "michelangelo", "raphael"
         }
 
     def normalize(self, text: str) -> Set[str]:
@@ -48,15 +57,23 @@ class SmartMatcher:
         
         tokens = set(text.split())
         
-        # Filter stop words but KEEP series tokens if they appear (for the series check)
-        # Actually, we want to filter generic stopwords, but Series tokens are crucial for the Hard Filter.
-        # So we remove stopwords UNLESS they are in series_tokens?
-        # No, "origins" is in stopwords list currently... removed it from stop_words in __init__ above? 
-        # Wait, "origins" was in stop_words in previous version. I should REMOVE it from stop_words if I want to use it as a filter.
+        # --- SYNONYM NORMALIZATION ---
+        synonyms = {
+            "tmnt": "turtles",
+            "motu": "masters",
+            "masters": "masters",
+            "universe": "masters" # Map both to 'masters' for MOTU check
+        }
         
-        # Refined Stop Words Logic in __init__ (I will fix it there).
-        
-        significant = tokens - self.stop_words
+        normalized_tokens = set()
+        for t in tokens:
+            if t in synonyms:
+                normalized_tokens.add(synonyms[t])
+            else:
+                normalized_tokens.add(t)
+
+        # Core Logic: Keep all tokens that are either NOT stop words OR ARE series tokens
+        significant = (normalized_tokens - self.stop_words) | (normalized_tokens & self.series_tokens)
         return {t for t in significant if len(t) > 1 or t.isdigit()}
 
     def match(self, product_name: str, scraped_title: str, scraped_url: str, db_ean: str = None, scraped_ean: str = None) -> Tuple[bool, float, str]:
@@ -118,21 +135,48 @@ class SmartMatcher:
             return False, 0.0, f"Missing DB tokens: {missing_from_db}"
 
         # Rule 2: Precision (Jaccard Index)
-        union = db_tokens.union(scraped_tokens)
-        jaccard = len(common) / len(union) if union else 0.0
+        # --- PHASE 20: STRATEGIC WEIGHTED SCORING ---
+        # Series tokens are now the TOP PRIORITY (x10), Identity (x5), others (x1)
+        weights = {}
+        all_unique_tokens = db_tokens | scraped_tokens
+        for t in all_unique_tokens:
+            if t in self.series_tokens: weights[t] = 10.0
+            elif t in self.identity_tokens: weights[t] = 5.0
+            else: weights[t] = 1.0
+            
+        def get_weighted_sum(token_set):
+            return sum(weights.get(t, 1.0) for t in token_set)
+            
+        common_weight = get_weighted_sum(common)
+        union_weight = get_weighted_sum(db_tokens | scraped_tokens)
+        weighted_score = common_weight / union_weight if union_weight else 0.0
         
-        # Rule 3: Series Hard Filter
-        # If DB Tokens contains a specific series marker (e.g. 'masterverse') 
-        # but Scraped Tokens contains a conflicting one (e.g. 'origins'), it's a FAIL.
+        # Rule 3: Series Hard Filter & Tension
         db_series = db_tokens.intersection(self.series_tokens)
         scr_series = scraped_tokens.intersection(self.series_tokens)
         
-        # If both have series markers, they MUST intersect
+        # Identity Hard Check: If an identity token is in DB but NOT in Scraped, it's a FAIL.
+        db_identity = db_tokens.intersection(self.identity_tokens)
+        scr_identity = scraped_tokens.intersection(self.identity_tokens)
+        
+        if db_identity:
+            missing_ids = db_identity - scr_identity
+            if missing_ids:
+                return False, 0.0, f"Identity Missing: {missing_ids}"
+        
+        if db_series:
+            missing_series = db_series - scr_series
+            # Synonyms are already normalized in self.normalize(), 
+            # so 'tmnt' is already 'turtles'. No extra logic needed here now.
+            if missing_series:
+                return False, 0.0, f"Series Missing: {missing_series}"
+
+        # Tension A: Conflict (e.g. Origins vs Masterverse)
         if db_series and scr_series:
             if not db_series.intersection(scr_series):
                 return False, 0.0, f"Series Conflict: DB={db_series} vs Scraped={scr_series}"
-
-        if jaccard >= 0.65:
-            return True, jaccard, "High Jaccard Match"
+        
+        if weighted_score >= 0.65:
+            return True, weighted_score, "Series-Dominant Match"
         else:
-            return False, jaccard, f"Too many extra tokens: {extra_in_scraped}"
+            return False, weighted_score, f"Insufficient Weighted Score: {weighted_score:.2f}"
