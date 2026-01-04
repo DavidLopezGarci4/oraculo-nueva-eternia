@@ -81,10 +81,17 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
     - Configurar **GitHub Actions** para invocar los endpoints de la API de sincronización.
     - Secretos gestionados exclusivamente en el entorno de la API.
 *   **Canales de Notificación**: Integración de tokens para Telegram/Discord en la configuración cloud.
-
-### Fase 4: Revolución UX (Frontend Evolution)
+### Fase 4: Revolución UX (Frontend Evolution) 🚀
 *   **Desacoplamiento Total**: Con el backend ya robustecido en la Fase 3, la Fase 4 se centra 100% en la experiencia de cliente.
-*   **Frontend**: Migración de Streamlit a **React (Vite) + TailwindCSS**.
+*   **Frontend Stack ✅**:
+    - **Vite 6 + React 19 + TypeScript**: Base de alto rendimiento.
+    - **Tailwind CSS 4.0 ✅**: Motor de estilos de última generación (sin archivos de config pesados).
+    - **TanStack Query (React Query)**: Gestión de estado asíncrono y caché para la API.
+    - **Framer Motion**: Micro-animaciones para una sensación premium.
+*   **Hitos de Interfaz**:
+    - **Diseño Glassmorphism**: Estética moderna con transparencias y desenfoques (MOTU-Dark).
+    - **Componentes Atómicos**: Botones, Modales y Cards unificados para toda la app.
+    - **SPA Navigation**: Cambio entre Catálogo, Purgatorio y Centinela instantáneo.
 *   **Consumo de API**: El frontend consume exclusivamente la API de FastAPI desarrollada en la fase anterior, garantizando fluidez y velocidad de respuesta instantánea.
 
 ### Fase 5: Estrategia de Valor y Futuro (Innovación)
