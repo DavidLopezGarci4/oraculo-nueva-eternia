@@ -62,21 +62,22 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
 *   **Módulo Centinela (NUEVO)**: Lógica de activación de alertas proactivas. Si un precio baja del umbral definido, se genera un evento de notificación listo para consumo.
 *   **Purgatorio (`PendingMatch`)**: Los scrapers externos depositan hallazgos aquí; solo pasan al catálogo principal tras validación manual o matching de alta confianza.
 *   **Refinado de Precisión Estratégica**:
-    - **Pesos Dinámicos**: Identidad (x5) y Serie (x10) para evitar colisiones entre líneas de juguetes (Origins vs Masterverse).
-    - **Normalización de Sinónimos**: Soporte para `TMNT` (Turtles) y `MOTU` (Masters Universe).
-    - **Leyes de Hierro de Exclusión**: Bloqueo instantáneo por conflicto de identidad o serie.
-    - **Fix Crítico**: El Purgatorio ahora solo sugiere productos que PASAN todas las reglas (`is_match=True`).
-    - **Token Completeness (Ley 0)**: Todo token de la DB debe estar presente en la web.
+    - **Pesos Dinámicos (IDF) ✅**: Identidad y Serie se calculan automáticamente basándose en la rareza en el catálogo matriz.
+    - **Normalización de Sinónimos ✅**: Soporte para `TMNT`, `MOTU`, `Origins`, etc.
+    - **Leyes de Hierro & Veto ABSOLUTO ✅**: El sistema inteligente (Python) bloquea falsos positivos de motores rápidos (Rust) si hay conflicto de identidad.
+    - **Gestión de Identidades (Refinado de Precisión) ✅**: Integración de Subcategoría en el cálculo de pesos para diferenciar líneas de juguetes.
+    - **Buscador de Identidades Manifiesto (NUEVO)**: UI para ver qué palabras el sistema considera críticas y permitir ajustes manuales.
+    - **Refuerzo por Descarte**: Si un admin descarta una sugerencia, el sistema "aprende" a bajar el peso de esa relación específica.
 
-### Fase 3: Transactional API Broker (FastAPI) & Out-of-Band Sync
-*   **Estrategia "Out-of-Band" (No Bloqueante)**:
-    - **App Update Flow**: Cuando el usuario modifica un item, la app escribe en una tabla de `SyncQueue` (SQLite) y devuelve éxito al instante.
-    - **Worker Silencioso**: Un proceso independiente (Worker) lee la `SyncQueue` y negocia con el **FastAPI Broker** la subida a Supabase sin afectar la navegación del usuario.
-    - **Reintentos Inteligentes**: Si no hay conexión, el Worker reintenta automáticamente en segundo plano.
-*   **FastAPI como Broker & Validador**:
+### Fase 3: Transactional API Broker (FastAPI) & Out-of-Band Sync ✅
+*   **Estrategia "Out-of-Band" (No Bloqueante) ✅**:
+    - **App Update Flow ✅**: Cuando el usuario modifica un item, la app escribe en una tabla de `SyncQueue` (SQLite) y devuelve éxito al instante.
+    - **Worker Silencioso ✅**: Un proceso independiente (Worker) lee la `SyncQueue` y negocia con el **FastAPI Broker** la subida a Supabase sin afectar la navegación del usuario.
+    - **Reintentos Inteligentes ✅**: Si no hay conexión, el Worker reintenta automáticamente en segundo plano.
+*   **FastAPI como Broker & Validador ✅**:
     - Centraliza la lógica de negocio y validación Pydantic para asegurar que lo que llega a la nube sea perfecto.
     - Proporciona endpoints de salud para monitorear el estado de la sincronización.
-*   **Infraestructura Cloud**:
+*   **Infraestructura Cloud (PENDIENTE)**:
     - Configurar **GitHub Actions** para invocar los endpoints de la API de sincronización.
     - Secretos gestionados exclusivamente en el entorno de la API.
 *   **Canales de Notificación**: Integración de tokens para Telegram/Discord en la configuración cloud.

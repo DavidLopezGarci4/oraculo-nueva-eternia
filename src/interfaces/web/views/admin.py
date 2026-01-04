@@ -6,8 +6,13 @@ import signal
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session, joinedload
 
+from loguru import logger
+import re
+
+from src.core.matching import SmartMatcher
+from src.domain.models import ProductModel, OfferModel, CollectionItemModel, PendingMatchModel, BlackcludedItemModel
+
 def render_inline_product_admin(db: Session, p, current_user_id: int):
-    from src.domain.models import ProductModel, OfferModel, CollectionItemModel, PendingMatchModel, BlackcludedItemModel
     """
     Renders the Superuser Edit Panel for a single product.
     Includes Metadata editing, nuclear options (Purge/Blacklist Product), and Offer management.
@@ -488,8 +493,6 @@ def _render_bastion_history(db: Session):
                 st.code(h.offer_url, language="text")
 
 def _render_purgatory_content(db):
-    from src.domain.models import ProductModel, OfferModel, PendingMatchModel, BlackcludedItemModel
-    from src.core.matching import SmartMatcher
     matcher = SmartMatcher()
     
     # --- PHASE 20: Reactivity Fix ---
@@ -590,9 +593,7 @@ def _render_purgatory_content(db):
                 m_best = None
                 m_score = 0.0
                 for p in all_products:
-                    # Match using sub_category as well
-                    db_search_name = f"{p.name} {p.sub_category or ''}"
-                    is_match, sc, _ = matcher.match(db_search_name, item.scraped_name, item.url, db_ean=p.ean, scraped_ean=item.ean)
+                    is_match, sc, _ = matcher.match(p.name, item.scraped_name, item.url, db_ean=p.ean, scraped_ean=item.ean, sub_category=p.sub_category)
                     if is_match and sc > m_score:
                         m_score = sc
                         m_best = p
@@ -681,17 +682,16 @@ def _render_purgatory_content(db):
         else:
             # Recalcular
             for p in all_products:
-                # Include sub_category in the DB search string for better series detection
-                db_search_name = f"{p.name} {p.sub_category or ''}"
-                is_match, score, reason = matcher.match(db_search_name, item.scraped_name, item.url, db_ean=p.ean, scraped_ean=item.ean)
+                is_match, score, reason = matcher.match(p.name, item.scraped_name, item.url, db_ean=p.ean, scraped_ean=item.ean, sub_category=p.sub_category)
                 
                 # CRITICAL: Only consider products that PASS the match rules
                 if is_match and score > best_score:
                     best_score = score
                     best_match = p
+                    match_reason = reason # Capture the specific reason for the best match
             
             # Guardar ID y razón en caché (Phase 21: Real Reasons)
-            st.session_state.purgatory_suggestions[item.id] = (best_match.id if best_match else None, best_score, reason if best_match else reason)
+            st.session_state.purgatory_suggestions[item.id] = (best_match.id if best_match else None, best_score, match_reason if best_match else reason)
             match_reason = st.session_state.purgatory_suggestions[item.id][2]
 
         col_select, col_expander = st.columns([0.1, 9.9])

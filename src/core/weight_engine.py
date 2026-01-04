@@ -8,6 +8,7 @@ from collections import Counter
 from loguru import logger
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from src.core.config import settings
 from src.domain.models import ProductModel
 
 class WeightEngine:
@@ -17,8 +18,9 @@ class WeightEngine:
     (raras y únicas) y cuáles son 'Series' (comunes y repetitivas).
     """
     
-    def __init__(self, db_url: str = "sqlite:///oraculo.db"):
-        self.db_url = db_url
+    def __init__(self, db_url: Optional[str] = None):
+        # Usar la base de datos de configuración por defecto
+        self.db_url = db_url or settings.DATABASE_URL
         self.weights: Dict[str, float] = {}
         self.token_df: Counter = Counter()
         self.total_docs: int = 0

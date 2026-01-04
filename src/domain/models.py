@@ -253,6 +253,25 @@ class ScraperExecutionLogModel(Base):
     trigger_type: Mapped[str] = mapped_column(String, default="manual") # manual, scheduled
     error_message: Mapped[Optional[str]] = mapped_column(String, nullable=True)
 
+class SyncQueueModel(Base):
+    """
+    Cola de Sincronización Transaccional (Fase 3).
+    Almacena las acciones pendientes de subir a la nube.
+    """
+    __tablename__ = "sync_queue"
+    
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    
+    action_type: Mapped[str] = mapped_column(String) # LINK, DISCARD, ADD_PRODUCT, UPDATE_PRICE
+    payload: Mapped[str] = mapped_column(String) # JSON string with all metadata
+    
+    status: Mapped[str] = mapped_column(String, default="PENDING") # PENDING, SYNCED, FAILED
+    retry_count: Mapped[int] = mapped_column(Integer, default=0)
+    error_msg: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    synced_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
 class KaizenInsightModel(Base):
     """
     Qualitative repository for anti-bot findings, DOM changes, and improvement ideas.
@@ -287,6 +306,7 @@ __all__ = [
     "ScraperExecutionLogModel", 
     "KaizenInsightModel",
     "ProductAliasModel",
+    "SyncQueueModel",
     "DOMAIN_VERSION"
 ]
 
