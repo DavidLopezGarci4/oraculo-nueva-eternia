@@ -57,10 +57,15 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
 *   **Estructura `src/`**: Separación en `core` (config), `domain` (entidades), `application` (casos de uso), `infrastructure` (DB/Scrapers) y `interfaces` (Web/API).
 *   **Hito de Consistencia**: Refactorización total de imports y eliminación de acoplamientos circulares.
 
-### Fase 2: El Bastión de Datos y Guardianía (Sentinel)
+### Fase 2: El Bastión de Datos y Guardianía (Sentinel) ✅
 *   **Auditoría**: Implementar `OfferHistory` para registrar cada movimiento de precio.
 *   **Módulo Centinela (NUEVO)**: Lógica de activación de alertas proactivas. Si un precio baja del umbral definido, se genera un evento de notificación listo para consumo.
 *   **Purgatorio (`PendingMatch`)**: Los scrapers externos depositan hallazgos aquí; solo pasan al catálogo principal tras validación manual o matching de alta confianza.
+*   **Refinado de Precisión Estratégica**:
+    - **Pesos Dinámicos**: Identidad (x5) y Serie (x10) para evitar colisiones entre líneas de juguetes (Origins vs Masterverse).
+    - **Normalización de Sinónimos**: Soporte para `TMNT` (Turtles) y `MOTU` (Masters Universe).
+    - **Leyes de Hierro de Exclusión**: Bloqueo instantáneo por conflicto de identidad o serie.
+    - **UX Directa**: Desplegables claros con contexto de serie y sin redundancias visuales.
 
 ### Fase 3: Transactional API Broker (FastAPI) & Out-of-Band Sync
 *   **Estrategia "Out-of-Band" (No Bloqueante)**:

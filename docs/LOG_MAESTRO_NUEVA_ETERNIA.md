@@ -170,8 +170,12 @@
 
 **PROYECTO REFACTORIZADO EXITOSAMENTE A NUEVA-ETERNIA (3OX.Ai)**
 
-### [2026-01-04] FASE 2: BASTIÓN DE DATOS - FINALIZADA
+### [2026-01-04] FASE 2: BASTIÓN DE DATOS - FINALIZADA ✅
 - **Hito**: [x] Auditoría 3OX Operativa.
 - **Hito**: [x] Centinela de Precios Activado.
-- **Hito**: [x] Simulacro de Campo (Frikiverso): 30 ítems capturados y auditados con éxito.
-- **Estado**: Sistema robusto y auditable bajo Tier 3. El Purgatorio está listo para la validación manual de datos reales.
+- **Hito**: [x] Purgatorio Inteligente (SmartMatcher) desplegado.
+- **Hito**: [x] **Refinado Fase 2.6 (ESTRATÉGICO)**:
+    - Pesos Pesados (Serie x10) para evitar confusiones entre líneas.
+    - Soporte nativo para sinónimos domain-specific (TMNT, MOTU).
+    - UI Refinada sin redundancias y con umbral de confianza (0.65).
+- **Estado**: El Oráculo ahora posee discernimiento experto. Listos para la Fase 3 (API Broker Cloud Sync).
