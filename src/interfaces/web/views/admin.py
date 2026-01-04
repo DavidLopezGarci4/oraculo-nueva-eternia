@@ -670,7 +670,8 @@ def _render_purgatory_content(db):
         best_score = 0.0
         
         if item.id in st.session_state.purgatory_suggestions:
-            sug_id, best_score = st.session_state.purgatory_suggestions[item.id]
+            # Unpack 3 values (ID, Score, Reason)
+            sug_id, best_score, match_reason = st.session_state.purgatory_suggestions[item.id]
             # Recuperar el objeto de la lista actual (all_products)
             if sug_id:
                 for p in all_products:
@@ -691,11 +692,7 @@ def _render_purgatory_content(db):
             
             # Guardar ID y razón en caché (Phase 20 Debug)
             st.session_state.purgatory_suggestions[item.id] = (best_match.id if best_match else None, best_score, reason if not best_match else "Match OK")
-
-        # Recuperar razón del caché
-        match_reason = "No analizado aún"
-        if item.id in st.session_state.purgatory_suggestions:
-             _, _, match_reason = st.session_state.purgatory_suggestions[item.id]
+            match_reason = st.session_state.purgatory_suggestions[item.id][2]
 
         col_select, col_expander = st.columns([0.1, 9.9])
         
