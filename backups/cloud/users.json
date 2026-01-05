@@ -1,0 +1,18 @@
+[
+    {
+        "id": 1,
+        "username": "David",
+        "email": "dace81@gmail.com",
+        "hashed_password": "$2b$12$quA3r4DyiJGTQTMXVViYn.50f7rfCiflD7U9naEayvVsQKY7hACiG",
+        "role": "viewer",
+        "is_active": true
+    },
+    {
+        "id": 2,
+        "username": "admin",
+        "email": "dace81@gmail.com",
+        "hashed_password": "$2b$12$4w1xN/WwV4dW73kbO8uZv.VTZSN2.ZpCm2zVkqcj.YdC0KEqqnn1.",
+        "role": "admin",
+        "is_active": true
+    }
+]

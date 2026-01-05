@@ -17,6 +17,10 @@ class Settings(BaseSettings):
     CLOUDINARY_API_KEY: str | None = None
     CLOUDINARY_API_SECRET: str | None = None
     
+    # Cloud Sync
+    SUPABASE_DATABASE_URL: str | None = None
+    ORACULO_API_KEY: str = "eternia-shield-2026" # Default key for dev
+    
     # Notifications (Telegram)
     TELEGRAM_BOT_TOKEN: str | None = None
     TELEGRAM_CHAT_ID: str | None = None

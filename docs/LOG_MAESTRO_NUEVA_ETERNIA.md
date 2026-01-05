@@ -174,11 +174,65 @@
 - **Hito**: [x] Auditoría 3OX Operativa.
 - **Hito**: [x] Centinela de Precios Activado.
 - **Hito**: [x] Purgatorio Inteligente (SmartMatcher) desplegado.
-- **Hito**: [x] **Refinado Fase 2.6 (ESTRATÉGICO)**:
-    - Pesos Pesados (Serie x10) para evitar confusiones entre líneas.
-    - Soporte nativo para sinónimos domain-specific (TMNT, MOTU).
-- **Hito**: [x] **FIX CRÍTICO Fase 2.7**:
-    - Corregido bug donde el Purgatorio sugería productos con `is_match=False`.
-    - Añadida "Ley de Hierro 0" (Token Completeness) al motor de respaldo.
-    - Umbral de confianza ajustado (0.55) para títulos web extensos.
-- **Estado**: El Oráculo ahora posee discernimiento experto. Listos para la Fase 3 (API Broker Cloud Sync).
+- **Hito**: [x] **Refinado Fase 2.8 (LA LEY DEL ORÁCULO) ✅**:
+    - **Pesos Dinámicos (IDF)**: Las identidades raras (ej: "Randor") tienen más peso que los términos comunes.
+    - **Lógica de Veto Absoluto**: El motor Python bloquea matches de Rust si detecta conflictos de identidad o serie.
+    - **Contexto de Subcategoría**: Precisión aumentada al diferenciar líneas (Origins vs Masterverse).
+    - **Benchmark 100%**: Validación de casos críticos (King Randor, Panthor, Roboto) superada.
+
+---
+
+## ☁️ Fase 3: Sincronización Cloud Transaccional
+
+- **Fecha**: 2026-01-04
+- **Estado**: ✅ COMPLETADO
+- **Descripción**: Implementación de la infraestructura de sincronización "fuera de banda" para conectar SQLite con Supabase.
+- **Hitos Validados**:
+    1. **SyncQueue**: Tabla local para persistir acciones pendientes ante fallos de red.
+    2. **Transactional MatchService**: Integración en el servicio core para encolar cambios automáticamente.
+    3. **API Broker (FastAPI)**: Servidor receptor centralizado para validación y persistencia cloud.
+    4. **Silent Worker**: Proceso independiente que procesa la cola y gestiona reintentos.
+    5. **Flow Integration Test**: Validación del ciclo completo (Local -> Queue -> Worker -> API) exitosa.
+
+---
+
+## 🚀 Fase 4: Revolución UX (Frontend Moderno)
+
+- **Fecha**: 2026-01-04
+- **Estado**: 🏗️ EN CURSO (Hito 1 Validado)
+- **Descripción**: Migración de Streamlit a una Single Page Application (SPA) de grado profesional.
+- **Hitos Validados**:
+    1. **Node Environment Control**: Superado el bloqueo del PATH mediante resolución de rutas absolutas.
+    2. **React + Vite Architecture**: Proyecto inicializado con React 19 y TypeScript.
+    3. **Tailwind CSS 4.0**: Configuración del motor de estilos de última generación validada visualmente.
+- **Próximos Pasos**: Diseño de la biblioteca de componentes atómicos y navegación SPA.
+
+---
+
+## 🛡️ Fase 3.6: Seguridad y Modernización de Red (Handshake)
+
+- **Fecha**: 2026-01-04
+- **Estado**: ✅ VALIDADO
+- **Descripción**: Blindaje del API Broker y modernización del protocolo de comunicación local-nube.
+- **Hitos Validados**:
+    1. **Frontera Segura**: Implementado middleware de `X-API-KEY` en FastAPI; denegación de acceso pública confirmada.
+    2. **HTTTPX Migration**: El `SyncWorker` y la suite de tests operan bajo `httpx`, garantizando compatibilidad con React/FastAPI.
+    3. **Handshake Test**: Prueba de seguridad (`verify_api_security.py`) con 100% de éxito en bloqueos y autorizaciones.
+
+---
+
+## 🛡️ Fase 3.7: Operación Rescate (Cloud Extraction)
+
+- **Fecha**: 2026-01-05
+- **Estado**: ✅ COMPLETADO
+- **Descripción**: Extracción de seguridad de los datos existentes en Supabase antes de la migración de esquema.
+- **Hitos Validados**:
+    1. **Recuperación de Credenciales**: Password de DB localizado en el proyecto antiguo.
+    2. **Driver Postgres (psycopg2)**: Instalado y validado para comunicación cloud.
+    3. **Rescate de Inteligencia**: Extraídos 6 módulos críticos a JSON local (`collection`, `blacklist`, `offers`, etc.).
+    4. **Integridad de Datos**: Confirmada la extracción de 75 items de la colección de David y 875 de la blacklist.
+
+---
+
+**ESTADO ACTUAL DEL PROYECTO: DATA SECURED & READY FOR SCHEMA MIGRATION**
+📦 *Los recuerdos de Eternia están a salvo en los archivos de la Ciudad Real; listos para el gran volcado.*

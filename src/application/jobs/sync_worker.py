@@ -1,14 +1,16 @@
 
 import json
-import requests
+import httpx
 import time
 from loguru import logger
+from src.core.config import settings
 from src.infrastructure.database import SessionLocal
 from src.infrastructure.repositories.sync_queue import SyncQueueRepository
 
 class SyncWorker:
-    def __init__(self, broker_url: str = "http://127.0.0.1:8000"):
+    def __init__(self, broker_url: str = "http://127.0.0.1:8000", api_key: str = settings.ORACULO_API_KEY):
         self.broker_url = broker_url
+        self.api_key = api_key
 
     def process_queue(self):
         """Procesa un lote de la cola de sincronización."""
@@ -30,8 +32,9 @@ class SyncWorker:
                 })
             
             try:
-                # Enviar al Broker
-                response = requests.post(f"{self.broker_url}/sync/batch", json=batch, timeout=10)
+                # Enviar al Broker con Seguridad
+                headers = {"X-API-KEY": self.api_key}
+                response = httpx.post(f"{self.broker_url}/sync/batch", json=batch, headers=headers, timeout=10)
                 
                 if response.status_code == 200:
                     # Marcar como sincronizados

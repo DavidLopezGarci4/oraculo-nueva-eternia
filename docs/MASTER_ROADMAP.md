@@ -76,6 +76,9 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
     - **Reintentos Inteligentes ✅**: Si no hay conexión, el Worker reintenta automáticamente en segundo plano.
 *   **FastAPI como Broker & Validador ✅**:
     - Centraliza la lógica de negocio y validación Pydantic para asegurar que lo que llega a la nube sea perfecto.
+    - **Seguridad de Frontera ✅**: Implementado sistema de `X-API-KEY` obligatorio para sincronización.
+    - **Stack Moderno ✅**: Migrado sistema de comunicación a **HTTTPX** para mayor performance y compatibilidad asíncrona.
+    - **Operación Rescate ✅**: Backup masivo de datos antiguos (Supabase -> JSON) para preservar la colección de David y la blacklist antes del cambio de esquema.
     - Proporciona endpoints de salud para monitorear el estado de la sincronización.
 *   **Infraestructura Cloud (PENDIENTE)**:
     - Configurar **GitHub Actions** para invocar los endpoints de la API de sincronización.

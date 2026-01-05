@@ -1,0 +1,704 @@
+[
+    {
+        "id": 166,
+        "product_id": 584,
+        "owner_id": 1,
+        "acquired": true,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 18:22:51.409978"
+    },
+    {
+        "id": 81,
+        "product_id": 291,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-20 10:49:58.631808"
+    },
+    {
+        "id": 84,
+        "product_id": 293,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-20 10:49:58.694142"
+    },
+    {
+        "id": 85,
+        "product_id": 295,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-20 10:49:58.732856"
+    },
+    {
+        "id": 91,
+        "product_id": 308,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-25 12:11:37.872214"
+    },
+    {
+        "id": 92,
+        "product_id": 310,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-25 12:11:38.716267"
+    },
+    {
+        "id": 93,
+        "product_id": 315,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-25 12:11:40.406327"
+    },
+    {
+        "id": 94,
+        "product_id": 316,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-25 12:11:40.972474"
+    },
+    {
+        "id": 95,
+        "product_id": 318,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-25 12:11:42.098290"
+    },
+    {
+        "id": 96,
+        "product_id": 320,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-25 12:11:42.938506"
+    },
+    {
+        "id": 97,
+        "product_id": 321,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-25 12:11:43.494468"
+    },
+    {
+        "id": 98,
+        "product_id": 322,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-25 12:11:44.282421"
+    },
+    {
+        "id": 99,
+        "product_id": 324,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-25 12:11:45.340092"
+    },
+    {
+        "id": 100,
+        "product_id": 327,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-25 12:11:46.477878"
+    },
+    {
+        "id": 101,
+        "product_id": 329,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-25 12:11:47.318317"
+    },
+    {
+        "id": 102,
+        "product_id": 330,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-25 12:11:47.884323"
+    },
+    {
+        "id": 103,
+        "product_id": 333,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-25 12:11:49.009864"
+    },
+    {
+        "id": 104,
+        "product_id": 335,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-25 12:11:49.851787"
+    },
+    {
+        "id": 105,
+        "product_id": 339,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-25 12:11:51.255876"
+    },
+    {
+        "id": 106,
+        "product_id": 354,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-25 12:13:23.496760"
+    },
+    {
+        "id": 107,
+        "product_id": 355,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-25 12:13:24.088503"
+    },
+    {
+        "id": 108,
+        "product_id": 357,
+        "owner_id": 1,
+        "acquired": true,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:16:43.809324"
+    },
+    {
+        "id": 109,
+        "product_id": 400,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:53:22.444572"
+    },
+    {
+        "id": 110,
+        "product_id": 402,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:53:23.446534"
+    },
+    {
+        "id": 111,
+        "product_id": 403,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:53:24.098396"
+    },
+    {
+        "id": 112,
+        "product_id": 404,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:53:24.730412"
+    },
+    {
+        "id": 113,
+        "product_id": 405,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:53:25.364494"
+    },
+    {
+        "id": 114,
+        "product_id": 408,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:53:26.708603"
+    },
+    {
+        "id": 115,
+        "product_id": 411,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:53:28.030483"
+    },
+    {
+        "id": 116,
+        "product_id": 413,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:53:29.010320"
+    },
+    {
+        "id": 117,
+        "product_id": 414,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:53:29.644306"
+    },
+    {
+        "id": 118,
+        "product_id": 417,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:53:30.964398"
+    },
+    {
+        "id": 119,
+        "product_id": 419,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:53:31.982308"
+    },
+    {
+        "id": 120,
+        "product_id": 420,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:53:32.610425"
+    },
+    {
+        "id": 121,
+        "product_id": 421,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:53:33.242408"
+    },
+    {
+        "id": 122,
+        "product_id": 422,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:53:33.874868"
+    },
+    {
+        "id": 123,
+        "product_id": 423,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:53:34.508723"
+    },
+    {
+        "id": 124,
+        "product_id": 425,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:53:35.482601"
+    },
+    {
+        "id": 125,
+        "product_id": 426,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:53:36.114452"
+    },
+    {
+        "id": 126,
+        "product_id": 428,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:53:37.100425"
+    },
+    {
+        "id": 127,
+        "product_id": 429,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:53:37.730767"
+    },
+    {
+        "id": 128,
+        "product_id": 430,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:53:38.362085"
+    },
+    {
+        "id": 129,
+        "product_id": 432,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:53:39.332345"
+    },
+    {
+        "id": 130,
+        "product_id": 435,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:53:40.650182"
+    },
+    {
+        "id": 131,
+        "product_id": 439,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:53:42.312039"
+    },
+    {
+        "id": 132,
+        "product_id": 442,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:53:43.632136"
+    },
+    {
+        "id": 133,
+        "product_id": 447,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:53:45.640158"
+    },
+    {
+        "id": 134,
+        "product_id": 451,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:53:47.306214"
+    },
+    {
+        "id": 135,
+        "product_id": 460,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:53:50.711291"
+    },
+    {
+        "id": 136,
+        "product_id": 462,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:53:51.690170"
+    },
+    {
+        "id": 137,
+        "product_id": 475,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:53:56.530309"
+    },
+    {
+        "id": 138,
+        "product_id": 478,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:53:57.868156"
+    },
+    {
+        "id": 139,
+        "product_id": 482,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:53:59.546247"
+    },
+    {
+        "id": 140,
+        "product_id": 483,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:54:00.176231"
+    },
+    {
+        "id": 141,
+        "product_id": 484,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:54:00.810202"
+    },
+    {
+        "id": 142,
+        "product_id": 486,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:54:01.778077"
+    },
+    {
+        "id": 143,
+        "product_id": 487,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:54:02.406055"
+    },
+    {
+        "id": 144,
+        "product_id": 495,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:54:05.448047"
+    },
+    {
+        "id": 145,
+        "product_id": 501,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:54:07.829813"
+    },
+    {
+        "id": 146,
+        "product_id": 518,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:54:14.025863"
+    },
+    {
+        "id": 147,
+        "product_id": 520,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:54:15.010059"
+    },
+    {
+        "id": 148,
+        "product_id": 521,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:54:15.643955"
+    },
+    {
+        "id": 149,
+        "product_id": 523,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:54:16.625879"
+    },
+    {
+        "id": 150,
+        "product_id": 524,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:54:17.263625"
+    },
+    {
+        "id": 151,
+        "product_id": 525,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:54:17.891954"
+    },
+    {
+        "id": 152,
+        "product_id": 528,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:54:19.229959"
+    },
+    {
+        "id": 153,
+        "product_id": 550,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:54:27.115604"
+    },
+    {
+        "id": 154,
+        "product_id": 564,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:54:32.275625"
+    },
+    {
+        "id": 155,
+        "product_id": 567,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:54:33.601711"
+    },
+    {
+        "id": 156,
+        "product_id": 569,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:54:34.575558"
+    },
+    {
+        "id": 157,
+        "product_id": 576,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:54:37.331658"
+    },
+    {
+        "id": 158,
+        "product_id": 579,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:54:38.660486"
+    },
+    {
+        "id": 159,
+        "product_id": 582,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:54:39.981564"
+    },
+    {
+        "id": 160,
+        "product_id": 586,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:54:41.647508"
+    },
+    {
+        "id": 161,
+        "product_id": 587,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:54:42.277586"
+    },
+    {
+        "id": 162,
+        "product_id": 589,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:54:43.258025"
+    },
+    {
+        "id": 163,
+        "product_id": 590,
+        "owner_id": 1,
+        "acquired": false,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2025-12-26 16:54:43.887674"
+    },
+    {
+        "id": 167,
+        "product_id": 342,
+        "owner_id": 1,
+        "acquired": true,
+        "condition": "New",
+        "notes": null,
+        "acquired_at": "2026-01-01 17:43:56.951920"
+    }
+]
