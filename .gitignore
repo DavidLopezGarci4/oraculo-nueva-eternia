@@ -57,3 +57,10 @@ inspect_*.py
 *.db
 oraculo.db
 *.sqlite3
+
+# Local Backups & Data
+backups/
+data/
+.env*
+node_modules/
+dist/
