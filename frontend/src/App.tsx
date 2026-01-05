@@ -2,6 +2,8 @@ import { useState } from 'react';
 import Sidebar from './components/layout/Sidebar';
 import Navbar from './components/layout/Navbar';
 import Catalog from './pages/Catalog';
+import Collection from './pages/Collection';
+import Purgatory from './pages/Purgatory';
 
 function App() {
   const [activeTab, setActiveTab] = useState('catalog');
@@ -18,12 +20,8 @@ function App() {
         {/* Contenido Principal */}
         <main className="flex-1 p-6">
           {activeTab === 'catalog' && <Catalog />}
-          {activeTab === 'purgatory' && (
-            <div className="flex flex-col items-center justify-center h-full opacity-50">
-              <h2 className="text-2xl font-bold">Purgatorio</h2>
-              <p>Próximamente en la Fase 4.2</p>
-            </div>
-          )}
+          {activeTab === 'collection' && <Collection />}
+          {activeTab === 'purgatory' && <Purgatory />}
         </main>
       </div>
     </div>

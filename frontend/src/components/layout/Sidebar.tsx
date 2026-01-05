@@ -9,9 +9,9 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
     const menuItems = [
-        { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-        { id: 'catalog', label: 'Catálogo Maestro', icon: Database },
-        { id: 'collection', label: 'Mi Colección', icon: Box },
+        { id: 'dashboard', label: 'Tablero', icon: LayoutDashboard },
+        { id: 'catalog', label: 'Eternia', icon: Database },
+        { id: 'collection', label: 'Mi Fortaleza', icon: Box },
         { id: 'purgatory', label: 'Purgatorio', icon: ShieldAlert },
     ];
 
@@ -32,8 +32,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
                         key={item.id}
                         onClick={() => setActiveTab(item.id)}
                         className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all ${activeTab === item.id
-                                ? 'bg-brand-primary/20 text-brand-primary border border-brand-primary/30 shadow-[0_0_15px_rgba(14,165,233,0.1)]'
-                                : 'text-white/50 hover:bg-white/5 hover:text-white'
+                            ? 'bg-brand-primary/20 text-brand-primary border border-brand-primary/30 shadow-[0_0_15px_rgba(14,165,233,0.1)]'
+                            : 'text-white/50 hover:bg-white/5 hover:text-white'
                             }`}
                     >
                         <item.icon className={`h-5 w-5 ${activeTab === item.id ? 'animate-pulse' : ''}`} />
