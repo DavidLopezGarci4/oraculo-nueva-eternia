@@ -50,8 +50,12 @@ def migrate_excel_to_db(excel_path: str, session):
                 df.columns = [str(c).strip() for c in df.columns]
                 
                 # Derive a clean sub_category (Line) from sheet name
-                # e.g. "Turtles_of_Grayskull_Checklist" -> "Turtles of Grayskull"
                 sub_category = sheet.replace('_Checklist', '').replace('_Checklis', '').replace('_', ' ').strip()
+                
+                # USER FEEDBACK: Standardize Beasts/Vehicles sub_category
+                if "Beasts_Vehicles_and_Pla" in sheet or "Beasts Vehicles" in sub_category:
+                    sub_category = "Beasts, Vehicles and Playsets"
+                
                 # Special cases for common sheet names
                 if "Origins Action" in sub_category: sub_category = "Origins"
                 elif "Deluxe" in sub_category: sub_category = "Origins Deluxe"
@@ -64,8 +68,21 @@ def migrate_excel_to_db(excel_path: str, session):
                     continue
 
                 for _, row in df.iterrows():
+                    # 0. CLEAN FIGURE ID (Convert float to int string)
+                    raw_id = row.get('Figure ID')
+                    if pd.isna(raw_id) or str(raw_id).strip().lower() == 'nan':
+                        continue # USER REQ: Remove/Skip NULL Figure IDs
+                    
+                    try:
+                        # Convert 12.0 to "12", or keep "MC-01" as "MC-01"
+                        if isinstance(raw_id, float) and raw_id.is_integer():
+                            figure_id = str(int(raw_id))
+                        else:
+                            figure_id = str(raw_id).strip()
+                    except Exception:
+                        figure_id = str(raw_id).strip()
+
                     name = str(row['Name']).strip()
-                    figure_id = str(row['Figure ID']).strip() if pd.notna(row['Figure ID']) else None
                     detail_link = str(row['Detail Link']).strip() if pd.notna(row['Detail Link']) else None
                     
                     if not name or name == "nan":
