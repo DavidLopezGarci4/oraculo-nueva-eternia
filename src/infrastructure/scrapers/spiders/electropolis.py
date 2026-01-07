@@ -114,11 +114,15 @@ class ElectropolisSpider(BaseSpider):
             
             # Availability
             is_available = True
-            # Check "stock unavailable" class or similar
-            # Magento often uses .unavailable or .stock.unavailable
-            stock_elem = item.select_one('.stock.unavailable')
+            # --- STOCK KAIZEN: Detect out-of-stock (Magento) ---
+            stock_elem = item.select_one('.stock.unavailable') or item.select_one('.unavailable')
             if stock_elem:
                 is_available = False
+            
+            # Fallback check on whole item text (Escudo del Centinela)
+            if is_available:
+                if any(x in item.get_text().lower() for x in ["agotado", "sin existencias", "fuera de stock"]):
+                    is_available = False
                 
             return ScrapedOffer(
                 product_name=name,

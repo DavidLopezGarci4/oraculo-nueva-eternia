@@ -103,12 +103,17 @@ class FantasiaSpider(BaseSpider):
             if price_val == 0.0: return None
             
             # Availability
-            # Usually PrestaShop has local selectors for stock.
             # Assuming available if listed, unless it says "Out of stock"
             is_available = True
+            # --- STOCK KAIZEN: Detect out-of-stock (PrestaShop) ---
             availability = item.select_one('.product-availability')
-            if availability and "agotado" in availability.get_text(strip=True).lower():
+            if availability and any(x in availability.get_text(strip=True).lower() for x in ["agotado", "sin existencias"]):
                 is_available = False
+            
+            # Fallback check on whole item text (Escudo del Centinela)
+            if is_available:
+                if any(x in item.get_text().lower() for x in ["agotado", "sin existencias", "fuera de stock"]):
+                    is_available = False
 
             return ScrapedOffer(
                 product_name=name,

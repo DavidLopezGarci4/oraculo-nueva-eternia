@@ -224,8 +224,16 @@ class ActionToysSpider(BaseSpider):
             # price_tag legacy block deleted to prevent double jeopardy.
             
             is_avl = True
-            # Check "out of stock" badge if exists
-            if item.select_one('.out-of-stock-badge'): is_avl = False
+            # --- STOCK KAIZEN: Detect "Sin existencias" ---
+            # Check for various out-of-stock markers found in ActionToys (WC)
+            if item.select_one('.out-of-stock') or item.select_one('.stock.out-of-stock'): 
+                is_avl = False
+            
+            # Fallback check by text (Escudo del Centinela)
+            if is_avl:
+                item_text = item.get_text().lower()
+                if "sin existencias" in item_text or "agotado" in item_text:
+                    is_avl = False
 
             # Image Logic HTML
             img_tag = item.select_one('img')

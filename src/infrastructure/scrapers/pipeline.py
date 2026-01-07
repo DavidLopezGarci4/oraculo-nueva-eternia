@@ -5,7 +5,7 @@ from src.infrastructure.scrapers.base import BaseSpider, ScrapedOffer
 from src.domain.schemas import ProductSchema
 from src.infrastructure.repositories.product import ProductRepository
 from sqlalchemy.orm import Session
-from src.infrastructure.database import SessionLocal
+from src.infrastructure.database_cloud import SessionCloud, init_cloud_db
 
 class ScrapingPipeline:
     def __init__(self, spiders: List[BaseSpider]):
@@ -76,7 +76,8 @@ class ScrapingPipeline:
         except Exception as e:
             logger.error(f"⚠️ Failed to save safety snapshot: {e}")
 
-        db: Session = SessionLocal()
+        from src.infrastructure.database_cloud import SessionCloud
+        db: Session = SessionCloud()
         from src.core.matching import SmartMatcher
         
         matcher = SmartMatcher()
@@ -91,12 +92,21 @@ class ScrapingPipeline:
             # Pre-fetch all product names/IDs
             all_products = repo.get_all(limit=5000)
             
+            # Tracking de URLs procesadas en este Lote para evitar duplicidades internas
+            processed_urls = set()
+            
             for offer in offers:
+                url_str = str(offer.get('url', ''))
+                
+                # 0. Skip if URL already processed in this batch
+                if url_str in processed_urls:
+                    continue
+                processed_urls.add(url_str)
+                
                 best_match_product = None
                 best_match_score = 0.0
                 
                 # Check 1: Does this offer satisfy "Already Linked" logic?
-                url_str = str(offer.get('url', ''))
                 existing_offer = repo.get_offer_by_url(url_str)
                 
                 if existing_offer:
@@ -137,8 +147,9 @@ class ScrapingPipeline:
                         if score >= 0.99:
                              break
                 
-                if best_match_product and best_match_score >= 0.7:
-                    logger.info(f"✅ SmartMatch: '{offer.get('product_name')}' -> '{best_match_product.name}' (Score: {best_match_score:.2f})")
+                # SmartMatch: Solo vincular automáticamente si la confianza es >= 75%
+                if best_match_product and best_match_score >= 0.75:
+                    logger.info(f"✅ SmartMatch (75%+): '{offer.get('product_name')}' -> '{best_match_product.name}' (Score: {best_match_score:.2f})")
                     
                     saved_offer, alert_discount = repo.add_offer(best_match_product, {
                         "shop_name": offer.get('shop_name'),
@@ -157,64 +168,61 @@ class ScrapingPipeline:
                     }
                     auditor.log_offer_event("SMART_MATCH", offer_data, details=f"Match confidence: {best_match_score:.2f}")
                     sentinel.check_alerts(best_match_product.id, offer.get('price'))
-                else:
-                    logger.info(f"⏳ No Match Found: '{offer.get('product_name')}' (Top Score: {best_match_score:.2f}) -> Routing to Purgatory")
-                    
-                    from src.domain.models import BlackcludedItemModel
-                    is_blacklisted = db.query(BlackcludedItemModel).filter(BlackcludedItemModel.url == url_str).first()
-                    if is_blacklisted:
-                        logger.warning(f"🚫 Ignored (Blacklist): {offer.get('product_name')}")
-                        continue
-                        
-                    from src.domain.models import PendingMatchModel
-                    try:
-                        existing = db.query(PendingMatchModel).filter(PendingMatchModel.url == url_str).first()
-                    except Exception as e:
-                        logger.warning(f"⚠️ Query for existing Pending item failed: {e}")
-                        db.rollback()
-                        existing = None
-                    if not existing:
-                        all_data = {
-                            "scraped_name": offer.get('product_name'),
-                            "price": offer.get('price'),
-                            "currency": offer.get('currency', 'EUR'),
-                            "url": url_str,
-                            "shop_name": offer.get('shop_name'),
-                            "image_url": offer.get('image_url'),
-                            "ean": offer.get('ean'),
-                            "receipt_id": offer.get('receipt_id') # --- 3OX Audit ---
-                        }
-                        
-                        from sqlalchemy import inspect
-                        try:
-                            mapper = inspect(PendingMatchModel)
-                            allowed_keys = {c.key for c in mapper.attrs}
-                            pending_data = {k: v for k, v in all_data.items() if k in allowed_keys}
-                        except:
-                            pending_data = {k: v for k, v in all_data.items() if hasattr(PendingMatchModel, k)}
+                    continue # Oferta vinculada, pasar al siguiente
+                
+                # --- ITEMS CON <75% VAN AL PURGATORIO ---
+                logger.info(f"⏳ To Purgatory: '{offer.get('product_name')}' (Top Score: {best_match_score:.2f} < 75%)")
 
-                        try:
-                            pending = PendingMatchModel(**pending_data)
-                            db.add(pending)
-                        except TypeError as e:
-                            logger.warning(f"⚠️ Model instantiation failed: {e}. Retrying with safe subset.")
-                            db.rollback()
-                            safe_data = {k: v for k, v in pending_data.items() if k not in ['ean', 'image_url']}
-                            pending = PendingMatchModel(**safe_data)
-                            db.add(pending)
-                        except Exception as e:
-                            logger.error(f"❌ Critical DB failure in Purgatory routing: {e}")
-                            db.rollback()
-                        
-                        try:
-                            offer_data_audit = {
-                                "url": url_str,
-                                "name": offer.get('product_name'),
-                                "shop_name": offer.get('shop_name'),
-                                "price": offer.get('price')
-                            }
-                            auditor.log_offer_event("PURGATORY", offer_data_audit, details=f"Match score too low ({best_match_score:.2f})")
-                        except: pass
+                from src.domain.models import BlackcludedItemModel
+                is_blacklisted = db.query(BlackcludedItemModel).filter(BlackcludedItemModel.url == url_str).first()
+                if is_blacklisted:
+                    logger.warning(f"🚫 Ignored (Blacklist): {offer.get('product_name')}")
+                    continue
+                    
+                from src.domain.models import PendingMatchModel
+                try:
+                    existing = db.query(PendingMatchModel).filter(PendingMatchModel.url == url_str).first()
+                except Exception as e:
+                    logger.warning(f"⚠️ Query for existing Pending item failed: {e}")
+                    db.rollback()
+                    existing = None
+                
+                if not existing:
+                    all_data = {
+                        "scraped_name": offer.get('product_name'),
+                        "price": offer.get('price'),
+                        "currency": offer.get('currency', 'EUR'),
+                        "url": url_str,
+                        "shop_name": offer.get('shop_name'),
+                        "image_url": offer.get('image_url'),
+                        "ean": offer.get('ean'),
+                        "receipt_id": offer.get('receipt_id') # --- 3OX Audit ---
+                    }
+                    
+                    from sqlalchemy import inspect
+                    try:
+                        mapper = inspect(PendingMatchModel)
+                        allowed_keys = {c.key for c in mapper.attrs}
+                        pending_data = {k: v for k, v in all_data.items() if k in allowed_keys}
+                    except:
+                        pending_data = {k: v for k, v in all_data.items() if hasattr(PendingMatchModel, k)}
+
+                    try:
+                        pending = PendingMatchModel(**pending_data)
+                        db.add(pending)
+                        # Log audit for new Purgatory item
+                        offer_data_audit = {
+                            "url": url_str,
+                            "name": offer.get('product_name'),
+                            "shop_name": offer.get('shop_name'),
+                            "price": offer.get('price')
+                        }
+                        auditor.log_offer_event("PURGATORY", offer_data_audit, details=f"Match score: {best_match_score:.2f}")
+                    except Exception as e:
+                        logger.error(f"❌ DB failure in Purgatory routing for {url_str}: {e}")
+                        db.rollback()
+                else:
+                    logger.info(f"⏭️ Skipping: '{offer.get('product_name')}' already exists in Purgatory.")
             
             db.commit()
             logger.info("⚡ Batch Commit Complete: All offers persisted in a single spark.")

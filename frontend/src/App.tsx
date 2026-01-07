@@ -4,9 +4,10 @@ import Navbar from './components/layout/Navbar';
 import Catalog from './pages/Catalog';
 import Collection from './pages/Collection';
 import Purgatory from './pages/Purgatory';
+import Dashboard from './pages/Dashboard';
 
 function App() {
-  const [activeTab, setActiveTab] = useState('catalog');
+  const [activeTab, setActiveTab] = useState('dashboard');
 
   return (
     <div className="flex min-h-screen w-screen overflow-hidden bg-transparent">
@@ -19,6 +20,7 @@ function App() {
 
         {/* Contenido Principal */}
         <main className="flex-1 p-6">
+          {activeTab === 'dashboard' && <Dashboard />}
           {activeTab === 'catalog' && <Catalog />}
           {activeTab === 'collection' && <Collection />}
           {activeTab === 'purgatory' && <Purgatory />}

@@ -1,6 +1,23 @@
 import axios from 'axios';
 
 const API_BASE = 'http://localhost:8000/api';
+// Nota: En una app real, esto vendría de un estado global o .env
+const ORACULO_API_KEY = 'eternia-shield-2026';
+
+const adminHeaders = {
+    headers: {
+        'x-api-key': ORACULO_API_KEY
+    }
+};
+
+export interface PendingItemSuggestion {
+    product_id: number;
+    name: string;
+    figure_id?: string;
+    sub_category?: string;
+    match_score: number;
+    reason: string;
+}
 
 export interface PendingItem {
     id: number;
@@ -12,6 +29,7 @@ export interface PendingItem {
     shop_name: string;
     image_url?: string;
     found_at: string;
+    suggestions?: PendingItemSuggestion[];
 }
 
 export interface ScraperStatus {
@@ -19,6 +37,16 @@ export interface ScraperStatus {
     status: string;
     start_time?: string;
     end_time?: string;
+}
+
+export interface ScraperExecutionLog {
+    id: number;
+    spider_name: string;
+    status: string;
+    items_found: number;
+    start_time: string;
+    end_time?: string;
+    error_message?: string;
 }
 
 export const getPurgatory = async (): Promise<PendingItem[]> => {
@@ -43,11 +71,24 @@ export const discardItem = async (pendingId: number, reason: string = 'manual_di
 };
 
 export const getScrapersStatus = async (): Promise<ScraperStatus[]> => {
-    const response = await axios.get(`${API_BASE}/scrapers/status`);
+    const response = await axios.get(`${API_BASE}/scrapers/status`, adminHeaders);
     return response.data;
 };
 
-export const runScrapers = async () => {
-    const response = await axios.post(`${API_BASE}/scrapers/run`);
+export const runScrapers = async (scraperName: string = 'harvester', triggerType: string = 'manual') => {
+    const response = await axios.post(`${API_BASE}/scrapers/run`, {
+        scraper_name: scraperName,
+        trigger_type: triggerType
+    }, adminHeaders);
+    return response.data;
+};
+
+export const getScraperLogs = async (): Promise<ScraperExecutionLog[]> => {
+    const response = await axios.get(`${API_BASE}/scrapers/logs`, adminHeaders);
+    return response.data;
+};
+
+export const resetSmartMatches = async () => {
+    const response = await axios.post(`${API_BASE}/admin/reset-smartmatches`, {}, adminHeaders);
     return response.data;
 };
