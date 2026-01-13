@@ -9,6 +9,12 @@ export interface Product {
     sub_category: string;
     figure_id: string;
     image_url: string | null;
+
+    // Financial Intelligence
+    purchase_price?: number;
+    market_value?: number;
+    is_grail?: boolean;
+    grail_score?: number;
 }
 
 export const getCollection = async (userId: number): Promise<Product[]> => {

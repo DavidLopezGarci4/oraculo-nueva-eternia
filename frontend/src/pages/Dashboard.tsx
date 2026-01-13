@@ -6,9 +6,12 @@ import {
     ShoppingBag,
     Loader2,
     Zap,
-    RotateCcw
+    RotateCcw,
+    Trophy,
+    TrendingUp,
+    Euro
 } from 'lucide-react';
-import { getDashboardStats, getTopDeals, getDashboardHistory, getDashboardMatchStats, revertDashboardAction } from '../api/dashboard';
+import { getDashboardStats, getTopDeals, getDashboardHistory, getDashboardMatchStats, revertDashboardAction, getHallOfFame } from '../api/dashboard';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -37,28 +40,34 @@ const Dashboard: React.FC = () => {
     const { data: stats, isLoading: isLoadingStats } = useQuery({
         queryKey: ['dashboard-stats'],
         queryFn: getDashboardStats,
-        refetchInterval: 30000 // Refresh every 30s
+        refetchInterval: 60000 // Refresh every 60s (Relaxed)
     });
 
     const { data: topDeals, isLoading: isLoadingDeals } = useQuery({
         queryKey: ['top-deals'],
         queryFn: () => getTopDeals(2),
-        refetchInterval: 60000 // Refresh every minute
+        refetchInterval: 120000 // Refresh every 2 mins
     });
 
     const { data: history, isLoading: isLoadingHistory } = useQuery({
         queryKey: ['dashboard-history'],
         queryFn: getDashboardHistory,
-        refetchInterval: 15000 // Refresh every 15s for high reactivity
+        refetchInterval: 30000 // Refresh every 30s
     });
 
     const { data: matchStats, isLoading: isLoadingMatchStats } = useQuery({
         queryKey: ['match-stats'],
         queryFn: getDashboardMatchStats,
-        refetchInterval: 30000
+        refetchInterval: 60000 // Refresh every 60s
     });
 
-    if (isLoadingStats || isLoadingDeals || isLoadingHistory || isLoadingMatchStats) {
+    const { data: hallOfFame, isLoading: isLoadingHall } = useQuery({
+        queryKey: ['hall-of-fame'],
+        queryFn: getHallOfFame,
+        refetchInterval: 60000
+    });
+
+    if (isLoadingStats || isLoadingDeals || isLoadingHistory || isLoadingMatchStats || isLoadingHall) {
         return (
             <div className="flex h-[60vh] flex-col items-center justify-center gap-4 text-white/30">
                 <Loader2 className="h-10 w-10 animate-spin text-brand-primary" />
@@ -124,20 +133,131 @@ const Dashboard: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Total Value */}
+                {/* Financial Performance (ROI Engine) */}
                 <div className="group relative overflow-hidden rounded-[2rem] border border-white/5 bg-white/[0.03] p-8 transition-all hover:bg-white/[0.05] hover:border-orange-500/20">
                     <div className="absolute -right-4 -top-4 opacity-10 transition-transform group-hover:scale-110">
                         <Coins className="h-32 w-32 text-orange-500" />
                     </div>
                     <div className="relative space-y-4">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-500/10 border border-orange-500/20">
-                            <Coins className="h-6 w-6 text-orange-500" />
+                        <div className="flex items-start justify-between">
+                            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-500/10 border border-orange-500/20">
+                                <Zap className="h-6 w-6 text-orange-500" />
+                            </div>
+                            <div className={`flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-black border ${(stats?.financial?.profit_loss || 0) >= 0
+                                ? 'bg-green-500/10 text-green-500 border-green-500/20'
+                                : 'bg-red-500/10 text-red-500 border-red-500/20'
+                                }`}>
+                                {(stats?.financial?.profit_loss || 0) >= 0 ? '+' : ''}{stats?.financial?.roi}% ROI
+                            </div>
                         </div>
+
                         <div>
-                            <p className="text-xs font-black uppercase tracking-widest text-white/30">Valor Estimado</p>
-                            <h3 className="text-4xl font-black text-white">{stats?.total_value} <span className="text-xl opacity-30">€</span></h3>
-                            <p className="text-xs text-white/20 font-bold">Patrimonio en reliquias</p>
+                            <p className="text-xs font-black uppercase tracking-widest text-white/30">Valor de Mercado</p>
+                            <h3 className="text-4xl font-black text-white">
+                                {stats?.financial?.market_value} <span className="text-xl opacity-30">€</span>
+                            </h3>
+
+                            <div className="mt-2 flex items-center gap-4 text-xs font-medium">
+                                <div className="text-white/40">
+                                    Invertido: <span className="text-white/60">{stats?.financial?.total_invested} €</span>
+                                </div>
+                                <div className={`${(stats?.financial?.profit_loss || 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                    {(stats?.financial?.profit_loss || 0) >= 0 ? 'Ganancia: ' : 'Pérdida: '}
+                                    <span className="font-bold">{(stats?.financial?.profit_loss || 0) >= 0 ? '+' : ''}{stats?.financial?.profit_loss} €</span>
+                                </div>
+                            </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Visionary Section: Hall of Fame */}
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                {/* Kingdom's Grails (Top Value) */}
+                <div className="relative overflow-hidden rounded-[2.5rem] border border-yellow-500/20 bg-gradient-to-br from-yellow-900/10 to-transparent p-8">
+                    <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-yellow-500/10 border border-yellow-500/20">
+                                <Trophy className="h-5 w-5 text-yellow-500" />
+                            </div>
+                            <div>
+                                <h4 className="text-white font-black text-lg leading-none">Griales del Reino</h4>
+                                <p className="text-[10px] font-bold text-yellow-500/60 uppercase tracking-widest mt-1">Activos más valiosos</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="space-y-4">
+                        {hallOfFame?.top_value?.map((item, idx: number) => (
+                            <div key={item.id} className="group flex items-center gap-4 rounded-2xl bg-black/20 p-3 border border-white/5 transition-all hover:bg-yellow-500/5 hover:border-yellow-500/20">
+                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-yellow-500/20 font-black text-yellow-500 text-sm border border-yellow-500/10">
+                                    {idx + 1}
+                                </div>
+                                <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-white/5">
+                                    {item.image_url && <img src={item.image_url} alt={item.name} className="h-full w-full object-cover" />}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <h5 className="truncate text-sm font-bold text-white group-hover:text-yellow-400 transition-colors">{item.name}</h5>
+                                    <div className="flex items-center gap-2 mt-0.5">
+                                        <div className="flex items-center gap-1 text-xs font-black text-white/40">
+                                            <span>Inv: {item.invested_value}€</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <div className="flex items-center justify-end gap-1 text-yellow-500 font-black text-lg">
+                                        <Euro className="h-4 w-4" />
+                                        {item.market_value}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                        {(!hallOfFame?.top_value?.length) && (
+                            <div className="text-center py-8 text-white/20 text-xs italic">
+                                La Sala del Trono está vacía...
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Hidden Potential (Top ROI) */}
+                <div className="relative overflow-hidden rounded-[2.5rem] border border-green-500/20 bg-gradient-to-br from-green-900/10 to-transparent p-8">
+                    <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-500/10 border border-green-500/20">
+                                <TrendingUp className="h-5 w-5 text-green-500" />
+                            </div>
+                            <div>
+                                <h4 className="text-white font-black text-lg leading-none">Potencial Oculto</h4>
+                                <p className="text-[10px] font-bold text-green-500/60 uppercase tracking-widest mt-1">Mayor crecimiento</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="space-y-4">
+                        {hallOfFame?.top_roi?.map((item, idx: number) => (
+                            <div key={item.id} className="group flex items-center gap-4 rounded-2xl bg-black/20 p-3 border border-white/5 transition-all hover:bg-green-500/5 hover:border-green-500/20">
+                                <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-white/5">
+                                    {item.image_url && <img src={item.image_url} alt={item.name} className="h-full w-full object-cover" />}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <h5 className="truncate text-sm font-bold text-white group-hover:text-green-400 transition-colors">{item.name}</h5>
+                                    <div className="flex items-center gap-1 mt-0.5 text-[10px] font-bold uppercase text-white/30">
+                                        Mercado: {item.market_value}€
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <div className="inline-flex items-center gap-1 rounded-lg bg-green-500/10 px-2.5 py-1 text-sm font-black text-green-500 border border-green-500/20">
+                                        +{item.roi_percentage}%
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                        {(!hallOfFame?.top_roi?.length) && (
+                            <div className="text-center py-8 text-white/20 text-xs italic">
+                                El potencial aún duerme...
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -283,7 +403,7 @@ const Dashboard: React.FC = () => {
                         {(!topDeals || topDeals.length === 0) && (
                             <div className="flex min-h-[400px] flex-col items-center justify-center text-white/10 uppercase tracking-[0.2em] font-black text-[10px]">
                                 <ShoppingBag className="mb-4 h-10 w-10 opacity-20" />
-                                Nada en el radar, Maestro.
+                                <span className="opacity-50">Nada en el radar, Maestro.</span>
                             </div>
                         )}
                     </div>

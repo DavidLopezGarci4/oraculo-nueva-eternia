@@ -97,7 +97,18 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
     - **SPA Navigation**: Cambio entre Catálogo, Purgatorio y Centinela instantáneo.
 *   **Consumo de API**: El frontend consume exclusivamente la API de FastAPI desarrollada en la fase anterior, garantizando fluidez y velocidad de respuesta instantánea.
 
-### Fase 5: Estrategia de Valor y Futuro (Innovación)
+### Fase 5: Refinamiento Táctico (La Gran Purificación) ✅
+*   **Reingeniería de Calidad de Datos**:
+    *   **SmartMatch Revertido ✅**: Capacidad de deshacer masivamente vínculos automáticos erróneos.
+    *   **Purgatorio v2 (Inteligencia) ✅**: Motor de sugerencias que muestra coincidencias ordenadas por probabilidad (30%+).
+    *   **SmartMatch 2.0 ✅**: Umbral elevado al 75%. Lo dudoso se deriva a revisión manual.
+*   **Verdad del Tablero (Real-Time)**:
+    *   Desacoplamiento de métricas históricas. Ahora el Dashboard refleja el estado vivo de la base de datos `OfferModel`.
+    *   Sincronización instantánea de contadores tras purificación o vinculación.
+*   **Experiencia de Catálogo**:
+    *   **Market Intelligence UI**: Indicadores visuales ("Live" badge) para productos con ofertas activas.
+
+### Fase 6: Estrategia de Valor y Futuro (Innovación)
 *   **Estimador de Valor (Financial)**: Cálculo automático del valor de la colección basado en precios históricos y estado del item.
 *   **Buscador Óptico (Future Vision)**: Identificación de figuras mediante carga de fotos (comparativa de hashes).
 *   **Exportación de Seguridad**: Generación de reportes PDF detallados para seguros y auditorías personales.

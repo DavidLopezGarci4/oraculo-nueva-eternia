@@ -48,6 +48,46 @@ Este documento registra la evolución técnica y estratégica del Oráculo. La P
 - **Hitos**: Implementación del sistema de "Deshacer" para vínculos y descartes. Restauración íntegra de metadatos al Purgatorio.
 - **Estado**: ✅ VALIDADO
 
+### Fase 5: Refinamiento Táctico (La Gran Purificación)
+- **Hitos**: Reingeniería de calidad de datos y "Verdad del Oráculo".
+- **Estado**: ✅ VALIDADO
+
+#### 5.1 La Gran Purificación (Reset Total)
+- **Hitos**: Capacidad de enviar TODAS las ofertas vinculadas al Purgatorio para re-verificación masiva.
+- **Estado**: ✅ COMPLETADO
+
+#### 5.2 Purgatorio v2 (Inteligencia Guiada)
+- **Hitos**: Motor de sugerencias en tiempo real. Muestra coincidencias ordenadas por score (30%+).
+- **Estado**: ✅ COMPLETADO
+
+#### 5.3 SmartMatch 2.0 (Umbral de Calidad)
+- **Hitos**: Elevación del estándar de auto-vinculación al 75%. Lo que no es seguro, va al Purgatorio.
+- **Estado**: ✅ COMPLETADO
+
+#### 5.4 Sincronización de Métricas (Real-Time Truth)
+- **Hitos**: Tablero conectado directamente a `OfferModel`. Las métricas de "Vínculos Sagrados" y "Conquistas" son dinámicas al instante.
+- **Estado**: ✅ COMPLETADO
+
+- **Hitos**: Indicadores "Live" (brillo cyan) y badge para productos con ofertas de mercado activas.
+- **Estado**: ✅ COMPLETADO
+
+### Fase 6: Innovación (El Tesoro de Grayskull)
+- **Hitos**: Motor Financiero, Detección de Griales y Estabilización de Infraestructura.
+- **Estado**: 🏗️ EN PROGRESO
+
+#### 6.1 Motor Financiero (Market Value)
+- **Hitos**: Cálculo de valor real de colección vs inversión. Métricas financieras en Dashboard.
+- **Estado**: ✅ COMPLETADO Y ESTABILIZADO (PostgreSQL)
+
+#### 6.2 Detector de Griales (High Value)
+- **Hitos**: Identificación automática de tesoros (ROI > 50% o Valor > 150€). UI Premium (Borde Dorado/Trofeo) en Mi Fortaleza. Estandarización a Euro (€).
+- **Estado**: ✅ COMPLETADO
+
+#### 6.3 Visionary Dashboard (Inteligencia de Mercado)
+- **Hitos**: Implementación del endpoint `/hall-of-fame` y widgets frontend "Griales del Reino" (Top Valor) y "Potencial Oculto" (Top ROI).
+- **Estado**: ✅ COMPLETADO
+
+
 ---
 
 ## PLAN DE VERIFICACIÓN (PÚLSAR)

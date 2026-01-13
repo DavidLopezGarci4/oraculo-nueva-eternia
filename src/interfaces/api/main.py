@@ -41,6 +41,12 @@ class ProductOutput(BaseModel):
     figure_id: str
     variant_name: str | None
 
+    # Financial & Intelligence (Computed)
+    purchase_price: float = 0.0
+    market_value: float = 0.0
+    is_grail: bool = False
+    grail_score: float = 0.0
+
     class Config:
         from_attributes = True
 
@@ -111,17 +117,68 @@ async def get_collection(user_id: int):
     """
     Retorna la colección personal del usuario desde Supabase.
     """
-    from src.domain.models import CollectionItemModel
+    from src.domain.models import CollectionItemModel, OfferModel
+    from sqlalchemy import func
+    
     with SessionCloud() as db:
+        # 1. Fetch Products + Collection Data
         query = (
-            select(ProductModel)
-            .join(CollectionItemModel)
+            select(ProductModel, CollectionItemModel)
+            .join(CollectionItemModel, ProductModel.id == CollectionItemModel.product_id)
             .where(CollectionItemModel.owner_id == user_id)
             .where(CollectionItemModel.acquired == True)
         )
-        result = db.execute(query)
-        products = result.scalars().all()
-        return products
+        results = db.execute(query).all()
+        
+        if not results:
+            return []
+
+        # 2. Bulk Fetch Best Offers to avoid N+1
+        product_ids = [p.id for p, c in results]
+        
+        best_price_query = (
+            select(OfferModel.product_id, func.min(OfferModel.price))
+            .where(OfferModel.product_id.in_(product_ids))
+            .where(OfferModel.is_available == True)
+            .group_by(OfferModel.product_id)
+        )
+        best_prices = dict(db.execute(best_price_query).all()) # {pid: min_price}
+        
+        # 3. Construct Response with Grail Logic
+        output_list = []
+        for product, item in results:
+            # Base data from product
+            p_out = ProductOutput.model_validate(product)
+            
+            # Financial Data
+            invested = item.purchase_price if item.purchase_price is not None else (product.retail_price or 0.0)
+            market = best_prices.get(product.id, 0.0)
+            
+            p_out.purchase_price = invested
+            p_out.market_value = market
+            
+            # Grail Detection Logic (Rule: ROI > 50% OR Value > 150€)
+            roi = 0.0
+            is_grail = False
+            
+            if invested > 0:
+                roi_val = (market - invested) / invested
+                roi = round(roi_val * 100, 1)
+                
+                # Rule 1: ROI > 50% (and confirmed match exists)
+                if market > 0 and roi > 50.0:
+                    is_grail = True
+            
+            # Rule 2: High Value Absolute (> 150€)
+            if market > 150.0:
+                is_grail = True
+                
+            p_out.is_grail = is_grail
+            p_out.grail_score = roi
+            
+            output_list.append(p_out)
+            
+        return output_list
 
 @app.post("/api/collection/toggle")
 async def toggle_collection(request: CollectionToggleRequest):
@@ -494,29 +551,110 @@ async def get_scrapers_logs():
 @app.get("/api/dashboard/stats")
 async def get_dashboard_stats():
     """Retorna métricas globales para el Tablero de Inteligencia"""
-    from sqlalchemy import func
-    from src.domain.models import OfferHistoryModel
-    with SessionCloud() as db:
-        total_products = db.query(ProductModel).count()
-        owned_count = db.query(CollectionItemModel).count() # Sin filtrar por user para MVP o asumiendo user único
+
         
-        # Valor total de la colección (suma de precios de los items en Mi Fortaleza)
-        total_value = db.query(func.sum(OfferModel.price))\
-            .join(ProductModel, OfferModel.product_id == ProductModel.id)\
-            .join(CollectionItemModel, CollectionItemModel.product_id == ProductModel.id)\
-            .scalar() or 0.0
+    try:
+        with SessionCloud() as db:
+            total_products = db.query(ProductModel).count()
+            owned_count = db.query(CollectionItemModel).count() # Sin filtrar por user para MVP o asumiendo user único
             
-        # Distribución por tienda (para el gráfico)
-        shop_dist = db.query(OfferModel.shop_name, func.count(OfferModel.id))\
-            .group_by(OfferModel.shop_name)\
-            .all()
-        
+            # --- FINANCIAL ENGINE (PHASE 6) ---
+            # Logic: Best offer per product to avoid double counting if multiple offers exist
+            # But SQL above joins all offers. We need to be careful.
+            # Better approach: 
+            # 1. Calculate Invested (Collection Items)
+            # 2. Calculate Market Value (Unique Products with Offers)
+            
+            total_invested = 0.0
+            market_value = 0.0
+            profit_loss = 0.0
+            roi = 0.0
+
+            try:
+                # 2. Market Value (Calculated in Python to avoid complex SQL/Locking)
+                # Strategy: Fetch all best prices once, then map to collection items.
+                
+                # Get all relevant offers (product_id, price)
+                # Optimizes DB time by doing a single fast read
+                all_prices = db.query(OfferModel.product_id, OfferModel.price)\
+                    .filter(OfferModel.is_available == True, OfferModel.product_id.isnot(None))\
+                    .all()
+                    
+                # Create map of ProductID -> Best Price
+                best_price_map = {}
+                for row in all_prices:
+                    pid = row.product_id
+                    price = row.price
+                    
+                    # Safety check for None values
+                    if pid is None or price is None:
+                        continue
+                        
+                    if pid not in best_price_map or price < best_price_map[pid]:
+                        best_price_map[pid] = price
+                        
+                # Calculate Market Value
+                collection_pids = db.query(CollectionItemModel.product_id).all()
+                
+                market_value = 0.0
+                total_invested = 0.0 
+                # Re-calculate invested (since strict query was removed)
+                # Simplified estimation: 0 for now as we focus on stability
+                # Or fetch it simply:
+                invested_items = db.query(CollectionItemModel.purchase_price).all()
+                for (p_price,) in invested_items:
+                    if p_price: total_invested += p_price
+
+                for (pid,) in collection_pids:
+                    if pid is not None and pid in best_price_map:
+                        market_value += best_price_map[pid]
+                
+                profit_loss = market_value - total_invested
+                roi = (profit_loss / total_invested * 100) if total_invested > 0 else 0.0
+                
+            except Exception as e:
+                logger.error(f"Financial Engine Error: {e}")
+                # Fallback
+                market_value = 0.0
+                total_invested = 0.0
+                profit_loss = 0.0
+                roi = 0.0
+
+            # Distribución por tienda (para el gráfico)
+            shop_dist = db.query(OfferModel.shop_name, func.count(OfferModel.id))\
+                .group_by(OfferModel.shop_name)\
+                .all()
+            
+            match_count = db.query(OfferModel).filter(OfferModel.product_id.isnot(None), OfferModel.is_available == True).count()
+            
+            return {
+                "total_products": total_products,
+                "owned_count": owned_count,
+                "financial": {
+                    "total_invested": round(total_invested, 2),
+                    "market_value": round(market_value, 2),
+                    "profit_loss": round(profit_loss, 2),
+                    "roi": round(roi, 1)
+                },
+                "match_count": match_count,
+                "shop_distribution": [{"shop": s, "count": c} for s, c in shop_dist]
+            }
+    except Exception as e:
+        # Emergency Fallback
+        with open("debug_error.log", "a") as f:
+            f.write(f"CRITICAL DASHBOARD ERROR: {str(e)}\n")
+        logger.error(f"CRITICAL DASHBOARD ERROR: {e}")
         return {
-            "total_products": total_products,
-            "owned_count": owned_count,
-            "total_value": round(total_value, 2),
-            "match_count": db.query(OfferModel).filter(OfferModel.product_id.isnot(None), OfferModel.is_available == True).count(),
-            "shop_distribution": [{"shop": s, "count": c} for s, c in shop_dist]
+            "total_products": 0,
+            "owned_count": 0,
+            "financial": {
+                "total_invested": 0,
+                "market_value": 0,
+                "profit_loss": 0,
+                "roi": 0
+            },
+            "match_count": 0,
+            "shop_distribution": []
         }
 
 @app.get("/api/products/with-offers")
@@ -569,6 +707,75 @@ async def get_product_offers(product_id: int):
             results[0]["is_best"] = True
             
         return results
+
+@app.get("/api/dashboard/hall-of-fame")
+async def get_dashboard_hall_of_fame():
+    """
+    Fase 6.3: Retorna los 'Griales del Reino' (Top Valor) y 'Potencial Oculto' (Top ROI).
+    """
+    from src.domain.models import CollectionItemModel, OfferModel, ProductModel
+    from sqlalchemy import func
+    
+    with SessionCloud() as db:
+        # 1. Obtener todos los items de colección (con sus productos)
+        items = (
+            db.query(CollectionItemModel)
+            .join(ProductModel)
+            .filter(CollectionItemModel.acquired == True)
+            .all()
+        )
+        
+        if not items:
+            return {"top_value": [], "top_roi": []}
+            
+        # 2. Obtener mejores precios actuales
+        product_ids = [item.product_id for item in items]
+        best_price_query = (
+            select(OfferModel.product_id, func.min(OfferModel.price))
+            .where(OfferModel.product_id.in_(product_ids))
+            .where(OfferModel.is_available == True)
+            .group_by(OfferModel.product_id)
+        )
+        best_prices = dict(db.execute(best_price_query).all())
+        
+        # 3. Calcular métricas para cada item
+        analyzed_items = []
+        for item in items:
+            market = best_prices.get(item.product_id, 0.0)
+            invested = item.purchase_price if item.purchase_price is not None else 0.0
+            
+            roi = 0.0
+            if invested > 0 and market > 0:
+                roi = ((market - invested) / invested) * 100
+            
+            analyzed_items.append({
+                "id": item.product.id,
+                "name": item.product.name,
+                "image_url": item.product.image_url,
+                "market_value": round(market, 2),
+                "invested_value": round(invested, 2),
+                "roi_percentage": round(roi, 1)
+            })
+            
+        # 4. Ordenar y filtrar
+        # Top Value (Solo si tienen valor de mercado)
+        top_value = sorted(
+            [x for x in analyzed_items if x["market_value"] > 0], 
+            key=lambda x: x["market_value"], 
+            reverse=True
+        )[:3]
+        
+        # Top ROI (Solo si hay ganancia real y valoración de mercado)
+        top_roi = sorted(
+            [x for x in analyzed_items if x["market_value"] > 0 and x["roi_percentage"] > 0],
+            key=lambda x: x["roi_percentage"],
+            reverse=True
+        )[:3]
+        
+        return {
+            "top_value": top_value,
+            "top_roi": top_roi
+        }
 
 @app.get("/api/dashboard/top-deals")
 async def get_top_deals(user_id: int = 2):

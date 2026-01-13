@@ -2,11 +2,18 @@ import axios from 'axios';
 
 const API_BASE = 'http://localhost:8000/api';
 
+export interface FinancialHealth {
+    total_invested: number;
+    market_value: number;
+    profit_loss: number;
+    roi: number;
+}
+
 export interface DashboardStats {
     total_products: number;
     owned_count: number;
-    total_value: number;
     match_count: number;
+    financial: FinancialHealth;
     shop_distribution: {
         shop: string;
         count: number;
@@ -61,5 +68,24 @@ export const getDashboardMatchStats = async (): Promise<MatchStat[]> => {
 
 export const revertDashboardAction = async (historyId: number): Promise<{ status: string; message: string }> => {
     const response = await axios.post(`${API_BASE}/dashboard/revert`, { history_id: historyId });
+    return response.data;
+};
+
+export interface HallOfFameItem {
+    id: number;
+    name: string;
+    image_url: string | null;
+    market_value: number;
+    invested_value: number;
+    roi_percentage: number;
+}
+
+export interface HallOfFameResponse {
+    top_value: HallOfFameItem[];
+    top_roi: HallOfFameItem[];
+}
+
+export const getHallOfFame = async (): Promise<HallOfFameResponse> => {
+    const response = await axios.get(`${API_BASE}/dashboard/hall-of-fame`);
     return response.data;
 };

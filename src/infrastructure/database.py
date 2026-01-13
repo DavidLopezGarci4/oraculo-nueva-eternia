@@ -11,7 +11,7 @@ if db_url and db_url.startswith("postgres://"):
 
 engine = create_engine(
     db_url, 
-    connect_args={"check_same_thread": False} if "sqlite" in db_url else {}
+    connect_args={"check_same_thread": False, "timeout": 30} if "sqlite" in db_url else {}
 )
 
 # Enable WAL Mode for SQLite Concurrency

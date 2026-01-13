@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Box, AlertCircle, Loader2, Info, Check, Database } from 'lucide-react';
+import { Box, AlertCircle, Loader2, Info, Check, Database, Trophy, TrendingUp, Euro } from 'lucide-react';
 import { getCollection, toggleCollection } from '../api/collection';
 import type { Product } from '../api/collection';
 
@@ -96,72 +96,106 @@ const Collection: React.FC = () => {
 
             {/* Grid */}
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {collection.map((product) => (
-                    <div key={product.id} className="glass-card group flex flex-col gap-4 relative overflow-hidden transition-all hover:translate-y-[-4px]">
-                        {/* Status Glow */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-green-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+                {collection.map((product) => {
+                    const isGrail = product.is_grail;
+                    const roi = product.grail_score || 0;
 
-                        {/* Image */}
-                        <div className="aspect-square w-full overflow-hidden rounded-xl bg-white/5 border border-white/10 relative">
-                            {product.image_url ? (
-                                <img
-                                    src={product.image_url}
-                                    alt={product.name}
-                                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
-                                />
-                            ) : (
-                                <div className="flex h-full w-full items-center justify-center bg-white/5 italic text-white/10 text-xs text-center p-4">
-                                    {product.name}
-                                </div>
+                    return (
+                        <div key={product.id} className={`glass-card group flex flex-col gap-4 relative overflow-hidden transition-all hover:translate-y-[-4px] ${isGrail ? 'border-yellow-500/50 shadow-[0_0_20px_rgba(234,179,8,0.2)]' : ''}`}>
+                            {/* Grail Shine Effect */}
+                            {isGrail && (
+                                <div className="absolute inset-0 bg-gradient-to-tr from-yellow-500/10 via-transparent to-transparent pointer-events-none animate-pulse"></div>
                             )}
-                            <div className="absolute top-3 right-3 rounded-lg bg-black/60 px-2.5 py-1 text-[10px] font-black text-white/90 backdrop-blur-md border border-white/20 shadow-xl">
-                                #{product.figure_id}
+
+                            {/* Status Glow */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-green-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+
+                            {/* Image */}
+                            <div className="aspect-square w-full overflow-hidden rounded-xl bg-white/5 border border-white/10 relative">
+                                {product.image_url ? (
+                                    <img
+                                        src={product.image_url}
+                                        alt={product.name}
+                                        className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+                                    />
+                                ) : (
+                                    <div className="flex h-full w-full items-center justify-center bg-white/5 italic text-white/10 text-xs text-center p-4">
+                                        {product.name}
+                                    </div>
+                                )}
+                                <div className="absolute top-3 right-3 rounded-lg bg-black/60 px-2.5 py-1 text-[10px] font-black text-white/90 backdrop-blur-md border border-white/20 shadow-xl z-10">
+                                    #{product.figure_id}
+                                </div>
+
+                                {/* Grail Badge */}
+                                {isGrail && (
+                                    <div className="absolute top-3 left-3 rounded-lg bg-gradient-to-r from-yellow-600 to-yellow-500 px-2.5 py-1 text-[10px] font-black text-black backdrop-blur-md border border-yellow-400 shadow-[0_0_10px_rgba(234,179,8,0.4)] z-10 flex items-center gap-1 animate-in zoom-in duration-300">
+                                        <Trophy className="h-3 w-3" />
+                                        GRIAL
+                                    </div>
+                                )}
+
+                                {/* Ownership pulse */}
+                                <div className="absolute bottom-3 left-3 flex h-2 w-2">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                                </div>
                             </div>
 
-                            {/* Ownership pulse */}
-                            <div className="absolute bottom-3 left-3 flex h-2 w-2">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                            {/* Info */}
+                            <div className="space-y-3">
+                                <h3 className="line-clamp-2 text-sm font-bold text-white/95 leading-tight group-hover:text-green-400 transition-colors">
+                                    {product.name}
+                                </h3>
+                                <div className="flex flex-wrap gap-2">
+                                    <span className="flex items-center gap-1 rounded-md bg-white/5 px-2 py-1 text-[10px] font-bold text-white/40 border border-white/5">
+                                        <Database className="h-3 w-3" />
+                                        {product.sub_category}
+                                    </span>
+
+                                    {/* Market Value Badge */}
+                                    {product.market_value && product.market_value > 0 && (
+                                        <span className={`flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-bold border ${isGrail ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' : 'bg-blue-500/10 text-blue-400 border-blue-500/20'}`}>
+                                            <Euro className="h-3 w-3" />
+                                            {product.market_value}
+                                        </span>
+                                    )}
+
+                                    {/* ROI Badge */}
+                                    {roi > 0 && (
+                                        <span className="flex items-center gap-1 rounded-md bg-green-500/10 px-2 py-1 text-[10px] font-bold text-green-400 border border-green-500/20">
+                                            <TrendingUp className="h-3 w-3" />
+                                            +{roi}%
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="mt-auto flex items-center justify-between gap-3 pt-2">
+                                <button className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-white/5 px-3 py-2 text-xs font-bold text-white/60 hover:bg-white/10 hover:text-white transition-all border border-white/5">
+                                    <Info className="h-3.5 w-3.5" />
+                                    Detalles
+                                </button>
+
+                                <button
+                                    onClick={() => toggleMutation.mutate(product.id)}
+                                    disabled={toggleMutation.isPending}
+                                    className="flex-1 flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-xs font-black transition-all border shadow-[0_0_15px_rgba(34,197,94,0)] bg-green-500/10 text-green-400 border-green-500/20 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/30 hover:shadow-[0_0_15px_rgba(239,68,68,0.2)] group/btn"
+                                >
+                                    <span className="group-hover/btn:hidden transition-all flex items-center gap-2">
+                                        <Check className="h-3.5 w-3.5" />
+                                        Cautivo
+                                    </span>
+                                    <span className="hidden group-hover/btn:flex items-center gap-2">
+                                        <Box className="h-3.5 w-3.5" />
+                                        Liberar
+                                    </span>
+                                </button>
                             </div>
                         </div>
-
-                        {/* Info */}
-                        <div className="space-y-3">
-                            <h3 className="line-clamp-2 text-sm font-bold text-white/95 leading-tight group-hover:text-green-400 transition-colors">
-                                {product.name}
-                            </h3>
-                            <div className="flex flex-wrap gap-2">
-                                <span className="flex items-center gap-1 rounded-md bg-white/5 px-2 py-1 text-[10px] font-bold text-white/40 border border-white/5">
-                                    <Database className="h-3 w-3" />
-                                    {product.sub_category}
-                                </span>
-                            </div>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="mt-auto flex items-center justify-between gap-3 pt-2">
-                            <button className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-white/5 px-3 py-2 text-xs font-bold text-white/60 hover:bg-white/10 hover:text-white transition-all border border-white/5">
-                                <Info className="h-3.5 w-3.5" />
-                                Detalles
-                            </button>
-
-                            <button
-                                onClick={() => toggleMutation.mutate(product.id)}
-                                disabled={toggleMutation.isPending}
-                                className="flex-1 flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-xs font-black transition-all border shadow-[0_0_15px_rgba(34,197,94,0)] bg-green-500/10 text-green-400 border-green-500/20 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/30 hover:shadow-[0_0_15px_rgba(239,68,68,0.2)] group/btn"
-                            >
-                                <span className="group-hover/btn:hidden transition-all flex items-center gap-2">
-                                    <Check className="h-3.5 w-3.5" />
-                                    Cautivo
-                                </span>
-                                <span className="hidden group-hover/btn:flex items-center gap-2">
-                                    <Box className="h-3.5 w-3.5" />
-                                    Liberar
-                                </span>
-                            </button>
-                        </div>
-                    </div>
-                ))}
+                    )
+                })}
             </div>
         </div>
     );

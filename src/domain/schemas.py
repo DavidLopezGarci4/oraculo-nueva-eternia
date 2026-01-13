@@ -38,3 +38,8 @@ class CollectionItemSchema(CollectionItemBase):
     id: int
     created_at: datetime
     updated_at: Optional[datetime] = None
+    
+    # Financial Intelligence Fields (Computed at runtime)
+    is_grail: Optional[bool] = False
+    grail_score: Optional[float] = 0.0
+    current_value: Optional[float] = 0.0 # Snapshot of market value

@@ -19,6 +19,10 @@ class ProductModel(Base):
     category: Mapped[str] = mapped_column(String, default="Masters of the Universe")
     sub_category: Mapped[Optional[str]] = mapped_column(String, index=True, nullable=True) # e.g. "Origins", "Turtles of Grayskull"
     
+    # Financial & Meta Data (Phase 6)
+    retail_price: Mapped[Optional[float]] = mapped_column(Float, nullable=True, default=0.0)
+    release_year: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    
     # Phase 0: Multivariant Identity
     figure_id: Mapped[Optional[str]] = mapped_column(String, index=True, unique=True, nullable=True)
     variant_name: Mapped[Optional[str]] = mapped_column(String, nullable=True) # e.g. "V2", "Repaint"
@@ -83,6 +87,7 @@ class CollectionItemModel(Base):
     
     acquired: Mapped[bool] = mapped_column(Boolean, default=False)
     condition: Mapped[str] = mapped_column(String, default="New")
+    purchase_price: Mapped[Optional[float]] = mapped_column(Float, nullable=True, default=0.0) # Financial Investment
     notes: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     acquired_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     

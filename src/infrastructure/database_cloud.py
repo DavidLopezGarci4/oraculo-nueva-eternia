@@ -13,7 +13,10 @@ if "postgresql" in cloud_url:
 else:
     logger.warning("Cloud DB :: Using local engine for Broker (Testing mode).")
 
-engine_cloud = create_engine(cloud_url)
+engine_cloud = create_engine(
+    cloud_url,
+    connect_args={"check_same_thread": False, "timeout": 30} if "sqlite" in cloud_url else {}
+)
 SessionCloud = sessionmaker(autocommit=False, autoflush=False, bind=engine_cloud)
 
 def init_cloud_db():
