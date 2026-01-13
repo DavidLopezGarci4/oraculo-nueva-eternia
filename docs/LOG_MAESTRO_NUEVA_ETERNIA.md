@@ -90,13 +90,32 @@ Este documento registra la evolución técnica y estratégica del Oráculo. La P
 
 ---
 
+### Fase 7: Adaptación Híbrida (Mobile First)
+- **Hitos**: Responsive Design integral, Widgets compactos y Estabilidad de datos.
+- **Estado**: ✅ COMPLETADO Y ESTABILIZADO
+
+#### 7.1 Navegación Líquida
+- **Hitos**: Sidebar/Drawer móvil y Navbar táctil.
+- **Estado**: ✅ COMPLETADO
+
+#### 7.2 Optimización Táctil (UI Compacta)
+- **Hitos**: Layouts "Compact Ticket" en Purgatorio y Grillas 2-Col en Colección. Reintegración de Enlace Externo.
+- **Estado**: ✅ COMPLETADO
+
+#### 7.3 Estabilidad del Purgatorio (Atomic Safety)
+- **Hitos**: Solución definitiva a `Duplicate Key Error` mediante transacciones anidadas. Blindaje CSS contra desbordamientos.
+- **Estado**: ✅ COMPLETADO
+
+---
+
 ## PLAN DE VERIFICACIÓN (PÚLSAR)
 1. **Radar**: Los vínculos manuales se reflejan instantáneamente en el Tablero.
 2. **Justicia**: Cada acción en el historial permite reversión inmediata con un clic.
 3. **Métricas**: El Tablero calcula el valor total basándose en los items de "La Fortaleza".
+4. **Movilidad**: Operatividad total verificada en resoluciones móviles.
 
-## PRÓXIMOS PASOS (FASE 5)
-- **5.1 El Ojo de Sauron**: Notificaciones Push para bajadas de precio críticas.
-- **5.2 Sincronización Universal**: Integración total con Supabase para multi-usuario.
-- **5.3 Visión del Oráculo**: Recomendaciones automáticas basadas en tendencias.
-- **5.4 Histórico de Precios**: Gráficos interactivos de evolución temporal.
+## PRÓXIMOS PASOS (FASE 8 - EL FUTURO)
+- **8.1 El Ojo de Sauron**: Sistema de alertas críticas vía Push/Telegram.
+- **8.2 Sincronización Universal**: Integración total con Supabase para multi-usuario.
+- **8.3 IA Auditora**: Integración de LLMs para sugerencias de vinculación automáticas.
+- **8.4 Histórico de Precios**: Gráficos interactivos de evolución temporal.

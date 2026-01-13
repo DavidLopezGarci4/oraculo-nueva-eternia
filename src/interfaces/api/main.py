@@ -27,11 +27,16 @@ def verify_api_key(x_api_key: str = Header(...)):
         raise HTTPException(status_code=403, detail="Invalid API Key. Access Denied.")
     return x_api_key
 
+from pydantic import BaseModel, ConfigDict
+# ... (existing imports will be handled by context if not explicit, but here I replace the class definition part)
+
 class SyncAction(BaseModel):
     action_type: str
     payload: dict
 
 class ProductOutput(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     name: str
     ean: str | None
@@ -46,9 +51,6 @@ class ProductOutput(BaseModel):
     market_value: float = 0.0
     is_grail: bool = False
     grail_score: float = 0.0
-
-    class Config:
-        from_attributes = True
 
 from fastapi import BackgroundTasks
 from src.infrastructure.scrapers.harvester import run_harvester

@@ -18,7 +18,7 @@ const Catalog: React.FC = () => {
     const { data: products, isLoading: isLoadingProducts, isError: isErrorProducts } = useQuery<Product[]>({
         queryKey: ['products'],
         queryFn: async () => {
-            const response = await axios.get('http://localhost:8000/api/products');
+            const response = await axios.get('/api/products');
             return response.data;
         }
     });
@@ -34,7 +34,7 @@ const Catalog: React.FC = () => {
         queryKey: ['product-offers', selectedProduct?.id],
         queryFn: async () => {
             if (!selectedProduct) return [];
-            const response = await axios.get(`http://localhost:8000/api/products/${selectedProduct.id}/offers`);
+            const response = await axios.get(`/api/products/${selectedProduct.id}/offers`);
             return response.data;
         },
         enabled: !!selectedProduct
@@ -44,7 +44,7 @@ const Catalog: React.FC = () => {
     const { data: productsWithOffers } = useQuery<number[]>({
         queryKey: ['products-with-offers'],
         queryFn: async () => {
-            const response = await axios.get('http://localhost:8000/api/products/with-offers');
+            const response = await axios.get('/api/products/with-offers');
             return response.data;
         }
     });
@@ -118,37 +118,37 @@ const Catalog: React.FC = () => {
             </div>
 
             {/* Grid */}
-            <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {products?.map((product) => {
                     const owned = isOwned(product.id);
                     const hasIntel = hasMarketIntel(product.id);
                     return (
                         <div
                             key={product.id}
-                            className={`group relative flex flex-col gap-5 rounded-[2.5rem] border p-5 transition-all duration-500 hover:translate-y-[-8px] ${hasIntel
-                                    ? 'border-brand-primary/30 bg-brand-primary/[0.03] shadow-[0_0_40px_-10px_rgba(14,165,233,0.15)] hover:shadow-[0_40px_80px_-20px_rgba(14,165,233,0.2)]'
-                                    : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.05] hover:shadow-[0_40px_80px_-20px_rgba(0,0,0,0.5)]'
+                            className={`group relative flex flex-col gap-2 sm:gap-5 rounded-3xl sm:rounded-[2.5rem] border p-2.5 sm:p-5 transition-all duration-500 hover:translate-y-[-8px] ${hasIntel
+                                ? 'border-brand-primary/30 bg-brand-primary/[0.03] shadow-[0_0_20px_-5px_rgba(14,165,233,0.15)] hover:shadow-[0_40px_80px_-20px_rgba(14,165,233,0.2)]'
+                                : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.05] hover:shadow-[0_40px_80px_-20px_rgba(0,0,0,0.5)]'
                                 }`}
                         >
                             {/* Market Intel Badge */}
                             {hasIntel && (
-                                <div className="absolute top-4 right-4 z-20 flex items-center gap-1.5 rounded-xl bg-brand-primary/10 px-2.5 py-1 border border-brand-primary/20 backdrop-blur-md">
-                                    <span className="h-1.5 w-1.5 rounded-full bg-brand-primary animate-pulse"></span>
-                                    <span className="text-[8px] font-black uppercase tracking-widest text-brand-primary">Live</span>
+                                <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-20 flex items-center gap-1 rounded-lg sm:rounded-xl bg-brand-primary/10 px-1.5 py-0.5 sm:px-2.5 sm:py-1 border border-brand-primary/20 backdrop-blur-md">
+                                    <span className="h-1 w-1 sm:h-1.5 sm:w-1.5 rounded-full bg-brand-primary animate-pulse"></span>
+                                    <span className="text-[6px] sm:text-[8px] font-black uppercase tracking-widest text-brand-primary">Live</span>
                                 </div>
                             )}
 
                             {/* Owned Badge (Small Corner indicator) */}
                             {owned && (
-                                <div className="absolute top-0 left-0 w-16 h-16 overflow-hidden z-20">
-                                    <div className="bg-green-500 text-white text-[9px] font-black uppercase text-center w-[100px] py-1 absolute rotate-[-45deg] left-[-30px] top-[15px] shadow-[0_5px_15px_rgba(34,197,94,0.4)] border-b border-white/20">
+                                <div className="absolute top-0 left-0 w-12 h-12 sm:w-16 sm:h-16 overflow-hidden z-20">
+                                    <div className="bg-green-500 text-white text-[7px] sm:text-[9px] font-black uppercase text-center w-[80px] sm:w-[100px] py-0.5 sm:py-1 absolute rotate-[-45deg] left-[-25px] sm:left-[-30px] top-[10px] sm:top-[15px] shadow-[0_5px_15px_rgba(34,197,94,0.4)] border-b border-white/20">
                                         Cautivo
                                     </div>
                                 </div>
                             )}
 
                             {/* Image Container */}
-                            <div className="relative aspect-square w-full overflow-hidden rounded-[2rem] bg-black/40 border border-white/10 shadow-inner group/img">
+                            <div className="relative aspect-square w-full overflow-hidden rounded-2xl sm:rounded-[2rem] bg-black/40 border border-white/10 shadow-inner group/img">
                                 {product.image_url ? (
                                     <img
                                         src={product.image_url}
@@ -156,47 +156,48 @@ const Catalog: React.FC = () => {
                                         className="h-full w-full object-cover transition-all duration-700 group-hover/img:scale-110 group-hover/img:rotate-1"
                                     />
                                 ) : (
-                                    <div className="flex h-full w-full items-center justify-center italic text-white/20 text-xs font-black uppercase tracking-widest">
-                                        Falla de Imagen
+                                    <div className="flex h-full w-full items-center justify-center italic text-white/20 text-[10px] sm:text-xs font-black uppercase tracking-widest">
+                                        Sin Imagen
                                     </div>
                                 )}
-                                <div className="absolute top-4 right-4 rounded-xl bg-black/70 px-3 py-1.5 text-[10px] font-black text-brand-primary backdrop-blur-md border border-brand-primary/20 shadow-2xl opacity-0 group-hover:opacity-100 transition-all transform translate-y-[-10px] group-hover:translate-y-0 uppercase tracking-widest">
-                                    ID: {product.figure_id}
+                                <div className="absolute top-2 right-2 sm:top-4 sm:right-4 rounded-lg sm:rounded-xl bg-black/70 px-2 py-1 sm:px-3 sm:py-1.5 text-[8px] sm:text-[10px] font-black text-brand-primary backdrop-blur-md border border-brand-primary/20 shadow-2xl opacity-0 group-hover:opacity-100 transition-all transform translate-y-[-10px] group-hover:translate-y-0 uppercase tracking-widest">
+                                    #{product.figure_id}
                                 </div>
                             </div>
 
                             {/* Content */}
-                            <div className="flex flex-1 flex-col gap-3 px-1">
-                                <div className="space-y-1">
-                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20 group-hover:text-brand-primary/50 transition-colors">
+                            <div className="flex flex-1 flex-col gap-2 sm:gap-3 px-1">
+                                <div className="space-y-0.5 sm:space-y-1">
+                                    <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-white/20 group-hover:text-brand-primary/50 transition-colors line-clamp-1">
                                         {product.sub_category}
                                     </span>
-                                    <h3 className="line-clamp-2 min-h-[2.5rem] text-lg font-black leading-tight text-white group-hover:text-brand-primary transition-colors">
+                                    <h3 className="line-clamp-2 min-h-[2rem] sm:min-h-[2.5rem] text-xs sm:text-lg font-black leading-tight text-white group-hover:text-brand-primary transition-colors">
                                         {product.name}
                                     </h3>
                                 </div>
 
-                                <div className="mt-auto flex items-center justify-between pt-4 gap-3">
+                                <div className="mt-auto flex items-center justify-between pt-2 sm:pt-4 gap-2 sm:gap-3">
                                     {/* Action Button: Detail View */}
                                     <button
                                         onClick={() => setSelectedProduct(product)}
-                                        className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-white/5 py-2.5 text-xs font-black uppercase tracking-widest text-white/40 border border-white/5 transition-all hover:bg-brand-primary/20 hover:text-brand-primary hover:border-brand-primary/40 group/btn"
+                                        className="flex flex-1 items-center justify-center gap-1.5 sm:gap-2 rounded-xl sm:rounded-2xl bg-white/5 py-2 sm:py-2.5 text-[10px] sm:text-xs font-black uppercase tracking-widest text-white/40 border border-white/5 transition-all hover:bg-brand-primary/20 hover:text-brand-primary hover:border-brand-primary/40 group/btn"
                                     >
-                                        <Info className="h-4 w-4 transition-transform group-hover/btn:scale-120" />
-                                        Mercado
+                                        <Info className="h-3 w-3 sm:h-4 sm:w-4 transition-transform group-hover/btn:scale-120" />
+                                        <span className="hidden sm:inline">Mercado</span>
+                                        <span className="sm:hidden">Ver</span>
                                     </button>
 
                                     {/* Action: Toggle Collection */}
                                     <button
                                         onClick={() => toggleMutation.mutate(product.id)}
                                         disabled={toggleMutation.isPending}
-                                        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl transition-all border shadow-lg ${owned
+                                        className={`flex h-8 w-8 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl transition-all border shadow-lg ${owned
                                             ? 'bg-green-500/20 text-green-400 border-green-500/30 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/30'
                                             : 'bg-brand-primary/10 text-brand-primary border-brand-primary/20 hover:bg-brand-primary/20 hover:shadow-[0_0_20px_rgba(14,165,233,0.3)]'
                                             } ${toggleMutation.isPending ? 'opacity-50 cursor-wait' : ''}`}
                                         title={owned ? 'Liberar del Catálogo' : 'Asegurar en la Fortaleza'}
                                     >
-                                        {owned ? <Check className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
+                                        {owned ? <Check className="h-3 w-3 sm:h-5 sm:w-5" /> : <Plus className="h-3 w-3 sm:h-5 sm:w-5" />}
                                     </button>
                                 </div>
                             </div>

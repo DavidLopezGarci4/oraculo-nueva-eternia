@@ -79,20 +79,20 @@ const Dashboard: React.FC = () => {
     return (
         <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-1000">
             {/* Hero Section / Welcome */}
-            <div className="relative overflow-hidden rounded-[2.5rem] border border-white/5 bg-gradient-to-br from-white/[0.08] to-transparent p-10 backdrop-blur-3xl">
-                <div className="absolute -right-20 -top-20 h-96 w-96 rounded-full bg-brand-primary/10 blur-[100px]"></div>
-                <div className="absolute -left-20 -bottom-20 h-96 w-96 rounded-full bg-brand-primary/5 blur-[100px]"></div>
+            <div className="relative overflow-hidden rounded-[2rem] md:rounded-[2.5rem] border border-white/5 bg-gradient-to-br from-white/[0.08] to-transparent p-6 md:p-10 backdrop-blur-3xl">
+                <div className="absolute -right-20 -top-20 h-64 w-64 md:h-96 md:w-96 rounded-full bg-brand-primary/10 blur-[100px]"></div>
+                <div className="absolute -left-20 -bottom-20 h-64 w-64 md:h-96 md:w-96 rounded-full bg-brand-primary/5 blur-[100px]"></div>
 
                 <div className="relative space-y-2">
                     <div className="flex items-center gap-2 text-brand-primary">
-                        <Zap className="h-4 w-4 fill-brand-primary" />
-                        <span className="text-[10px] font-black uppercase tracking-[0.3em]">Estado de la Fortaleza</span>
+                        <Zap className="h-3 w-3 md:h-4 md:w-4 fill-brand-primary" />
+                        <span className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.3em]">Estado de la Fortaleza</span>
                     </div>
-                    <h2 className="text-5xl font-black tracking-tighter text-white lg:text-6xl">
+                    <h2 className="text-3xl md:text-5xl lg:text-6xl font-black tracking-tighter text-white">
                         Tablero de <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-primary to-blue-400">Poder</span>
                     </h2>
-                    <p className="max-w-xl text-lg text-white/40 font-medium">
-                        Bienvenido, Maestro de Armas. Aquí converge la inteligencia de mercaderes lejanos con la gloria de tu colección personal.
+                    <p className="max-w-xl text-sm md:text-lg text-white/40 font-medium leading-relaxed">
+                        Bienvenido, Maestro. La inteligencia de mercaderes converge con tu gloria personal.
                     </p>
                 </div>
             </div>
@@ -100,48 +100,48 @@ const Dashboard: React.FC = () => {
             {/* Metrics Grid */}
             <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
                 {/* Total Manual Matches (Vínculos) */}
-                <div className="group relative overflow-hidden rounded-[2rem] border border-white/5 bg-white/[0.03] p-8 transition-all hover:bg-white/[0.05] hover:border-brand-primary/20">
+                <div className="group relative overflow-hidden rounded-3xl md:rounded-[2rem] border border-white/5 bg-white/[0.03] p-5 md:p-8 transition-all hover:bg-white/[0.05] hover:border-brand-primary/20">
                     <div className="absolute -right-4 -top-4 opacity-10 transition-transform group-hover:scale-110">
-                        <Zap className="h-32 w-32 text-brand-primary" />
+                        <Zap className="h-24 w-24 md:h-32 md:w-32 text-brand-primary" />
                     </div>
-                    <div className="relative space-y-4">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-primary/10 border border-brand-primary/20">
-                            <Zap className="h-6 w-6 text-brand-primary" />
+                    <div className="relative space-y-3 md:space-y-4">
+                        <div className="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-2xl bg-brand-primary/10 border border-brand-primary/20">
+                            <Zap className="h-5 w-5 md:h-6 md:w-6 text-brand-primary" />
                         </div>
                         <div>
-                            <p className="text-xs font-black uppercase tracking-widest text-white/30">Vínculos Sagrados</p>
-                            <h3 className="text-4xl font-black text-white">{stats?.match_count || 0}</h3>
-                            <p className="text-xs text-white/20 font-bold">Items asimilados</p>
+                            <p className="text-[10px] md:text-xs font-black uppercase tracking-widest text-white/30">Vínculos Sagrados</p>
+                            <h3 className="text-3xl md:text-4xl font-black text-white">{stats?.match_count || 0}</h3>
+                            <p className="text-[10px] md:text-xs text-white/20 font-bold">Items asimilados</p>
                         </div>
                     </div>
                 </div>
 
                 {/* My Fortress */}
-                <div className="group relative overflow-hidden rounded-[2rem] border border-white/5 bg-white/[0.03] p-8 transition-all hover:bg-white/[0.05] hover:border-green-500/20">
+                <div className="group relative overflow-hidden rounded-3xl md:rounded-[2rem] border border-white/5 bg-white/[0.03] p-5 md:p-8 transition-all hover:bg-white/[0.05] hover:border-green-500/20">
                     <div className="absolute -right-4 -top-4 opacity-10 transition-transform group-hover:scale-110">
-                        <ShoppingBag className="h-32 w-32 text-green-500" />
+                        <ShoppingBag className="h-24 w-24 md:h-32 md:w-32 text-green-500" />
                     </div>
-                    <div className="relative space-y-4">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-green-500/10 border border-green-500/20">
-                            <ShoppingCart className="h-6 w-6 text-green-500" />
+                    <div className="relative space-y-3 md:space-y-4">
+                        <div className="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-2xl bg-green-500/10 border border-green-500/20">
+                            <ShoppingCart className="h-5 w-5 md:h-6 md:w-6 text-green-500" />
                         </div>
                         <div>
-                            <p className="text-xs font-black uppercase tracking-widest text-white/30">Mi Fortaleza</p>
-                            <h3 className="text-4xl font-black text-white">{stats?.owned_count}</h3>
-                            <p className="text-xs text-white/20 font-bold">Items asegurados</p>
+                            <p className="text-[10px] md:text-xs font-black uppercase tracking-widest text-white/30">Mi Fortaleza</p>
+                            <h3 className="text-3xl md:text-4xl font-black text-white">{stats?.owned_count}</h3>
+                            <p className="text-[10px] md:text-xs text-white/20 font-bold">Items asegurados</p>
                         </div>
                     </div>
                 </div>
 
                 {/* Financial Performance (ROI Engine) */}
-                <div className="group relative overflow-hidden rounded-[2rem] border border-white/5 bg-white/[0.03] p-8 transition-all hover:bg-white/[0.05] hover:border-orange-500/20">
+                <div className="group relative overflow-hidden rounded-3xl md:rounded-[2rem] border border-white/5 bg-white/[0.03] p-5 md:p-8 transition-all hover:bg-white/[0.05] hover:border-orange-500/20">
                     <div className="absolute -right-4 -top-4 opacity-10 transition-transform group-hover:scale-110">
-                        <Coins className="h-32 w-32 text-orange-500" />
+                        <Coins className="h-24 w-24 md:h-32 md:w-32 text-orange-500" />
                     </div>
-                    <div className="relative space-y-4">
+                    <div className="relative space-y-3 md:space-y-4">
                         <div className="flex items-start justify-between">
-                            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-500/10 border border-orange-500/20">
-                                <Zap className="h-6 w-6 text-orange-500" />
+                            <div className="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-2xl bg-orange-500/10 border border-orange-500/20">
+                                <Zap className="h-5 w-5 md:h-6 md:w-6 text-orange-500" />
                             </div>
                             <div className={`flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-black border ${(stats?.financial?.profit_loss || 0) >= 0
                                 ? 'bg-green-500/10 text-green-500 border-green-500/20'
@@ -152,14 +152,14 @@ const Dashboard: React.FC = () => {
                         </div>
 
                         <div>
-                            <p className="text-xs font-black uppercase tracking-widest text-white/30">Valor de Mercado</p>
-                            <h3 className="text-4xl font-black text-white">
-                                {stats?.financial?.market_value} <span className="text-xl opacity-30">€</span>
+                            <p className="text-[10px] md:text-xs font-black uppercase tracking-widest text-white/30">Valor de Mercado</p>
+                            <h3 className="text-3xl md:text-4xl font-black text-white">
+                                {stats?.financial?.market_value} <span className="text-lg md:text-xl opacity-30">€</span>
                             </h3>
 
-                            <div className="mt-2 flex items-center gap-4 text-xs font-medium">
+                            <div className="mt-2 flex flex-col md:flex-row md:items-center gap-1 md:gap-4 text-[10px] md:text-xs font-medium">
                                 <div className="text-white/40">
-                                    Invertido: <span className="text-white/60">{stats?.financial?.total_invested} €</span>
+                                    Inv: <span className="text-white/60">{stats?.financial?.total_invested} €</span>
                                 </div>
                                 <div className={`${(stats?.financial?.profit_loss || 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                                     {(stats?.financial?.profit_loss || 0) >= 0 ? 'Ganancia: ' : 'Pérdida: '}
@@ -235,7 +235,7 @@ const Dashboard: React.FC = () => {
                     </div>
 
                     <div className="space-y-4">
-                        {hallOfFame?.top_roi?.map((item, idx: number) => (
+                        {hallOfFame?.top_roi?.map((item) => (
                             <div key={item.id} className="group flex items-center gap-4 rounded-2xl bg-black/20 p-3 border border-white/5 transition-all hover:bg-green-500/5 hover:border-green-500/20">
                                 <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-white/5">
                                     {item.image_url && <img src={item.image_url} alt={item.name} className="h-full w-full object-cover" />}

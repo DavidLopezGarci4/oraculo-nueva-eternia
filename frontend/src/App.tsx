@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import Sidebar from './components/layout/Sidebar';
 import Navbar from './components/layout/Navbar';
@@ -8,22 +9,30 @@ import Dashboard from './pages/Dashboard';
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen w-screen overflow-hidden bg-transparent">
-      {/* Menu Lateral */}
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+    <div className="flex h-screen w-full overflow-hidden bg-transparent">
+      {/* Menu Lateral (Responsive Drawer) */}
+      <Sidebar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        isMobileOpen={isMobileMenuOpen}
+        onCloseMobile={() => setIsMobileMenuOpen(false)}
+      />
 
-      <div className="flex flex-1 flex-col overflow-y-auto">
+      <div className="flex flex-1 flex-col overflow-hidden relative w-full">
         {/* Barra Superior */}
-        <Navbar />
+        <Navbar onMenuClick={() => setIsMobileMenuOpen(prev => !prev)} />
 
-        {/* Contenido Principal */}
-        <main className="flex-1 p-6">
-          {activeTab === 'dashboard' && <Dashboard />}
-          {activeTab === 'catalog' && <Catalog />}
-          {activeTab === 'collection' && <Collection />}
-          {activeTab === 'purgatory' && <Purgatory />}
+        {/* Contenido Principal con Scroll */}
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-24 md:pb-6 scroll-smooth">
+          <div className="max-w-7xl mx-auto w-full">
+            {activeTab === 'dashboard' && <Dashboard />}
+            {activeTab === 'catalog' && <Catalog />}
+            {activeTab === 'collection' && <Collection />}
+            {activeTab === 'purgatory' && <Purgatory />}
+          </div>
         </main>
       </div>
     </div>

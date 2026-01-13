@@ -49,7 +49,7 @@ const Purgatory: React.FC = () => {
     const { data: products } = useQuery({
         queryKey: ['products-purgatory'],
         queryFn: async () => {
-            const response = await axios.get('http://localhost:8000/api/products');
+            const response = await axios.get('/api/products');
             return response.data;
         }
     });
@@ -96,21 +96,21 @@ const Purgatory: React.FC = () => {
     ).slice(0, 10);
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-700">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 animate-in fade-in duration-700">
             {/* Header / Scraper Control Panel */}
-            <div className="relative overflow-hidden rounded-3xl border border-white/5 bg-gradient-to-br from-white/[0.05] to-black p-8 backdrop-blur-xl">
-                <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-brand-primary/5 blur-3xl"></div>
+            <div className="relative overflow-hidden rounded-3xl md:rounded-[2.5rem] border border-white/5 bg-gradient-to-br from-white/[0.05] to-black p-5 md:p-8 backdrop-blur-xl">
+                <div className="absolute -right-20 -top-20 h-48 w-48 md:h-64 md:w-64 rounded-full bg-brand-primary/5 blur-3xl"></div>
 
                 <div className="relative space-y-8">
                     <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
                         <div className="space-y-2">
                             <div className="flex items-center gap-2 text-brand-primary">
-                                <Flame className="h-5 w-5" />
-                                <span className="text-xs font-black uppercase tracking-widest opacity-70">El Espejo de Eternia</span>
+                                <Flame className="h-4 w-4 md:h-5 md:w-5" />
+                                <span className="text-[10px] md:text-xs font-black uppercase tracking-widest opacity-70">El Espejo de Eternia</span>
                             </div>
-                            <h2 className="text-4xl font-black tracking-tight text-white lg:text-5xl">Purgatorio</h2>
-                            <p className="max-w-md text-sm leading-relaxed text-white/50">
-                                Gestiona las reliquias que necesitan vinculación manual y despliega incursiones a las tierras lejanas.
+                            <h2 className="text-3xl md:text-5xl font-black tracking-tight text-white">Purgatorio</h2>
+                            <p className="max-w-md text-xs md:text-sm leading-relaxed text-white/50">
+                                Gestiona las reliquias que necesitan vinculación manual y despliega incursiones.
                             </p>
                         </div>
 
@@ -209,29 +209,38 @@ const Purgatory: React.FC = () => {
 
                         <div className="max-h-60 overflow-y-auto rounded-2xl border border-white/5 bg-black/20 custom-scrollbar pr-1">
                             <table className="w-full text-left">
-                                <thead className="sticky top-0 z-10 border-b border-white/5 bg-black/80 backdrop-blur-md">
+                                <thead className="sticky top-0 z-10 border-b border-white/5 bg-black/80 backdrop-blur-md hidden md:table-header-group">
                                     <tr>
                                         <th className="px-4 py-3 text-[9px] font-black uppercase tracking-widest text-white/20">Registro</th>
                                         <th className="px-4 py-3 text-[9px] font-black uppercase tracking-widest text-white/20">Hallazgos</th>
                                         <th className="px-4 py-3 text-[9px] font-black uppercase tracking-widest text-white/20">Estado</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-white/5">
+                                <tbody className="divide-y divide-white/5 block md:table-row-group">
                                     {scrapersLogs?.map((log) => (
-                                        <tr key={log.id} className="group hover:bg-white/[0.01] transition-colors">
-                                            <td className="px-4 py-3">
+                                        <tr key={log.id} className="group hover:bg-white/[0.01] transition-colors flex flex-col md:table-row p-3 md:p-0 border-b border-white/5 md:border-none gap-2 md:gap-0">
+                                            <td className="px-0 md:px-4 py-1 md:py-3 flex justify-between md:table-cell">
                                                 <div className="flex flex-col">
                                                     <span className="text-[10px] font-black text-white/80 uppercase tracking-tight">{log.spider_name}</span>
                                                     <span className="text-[9px] text-white/20 font-bold">{new Date(log.start_time).toLocaleTimeString()}</span>
                                                 </div>
+                                                {/* Mobile Status placed here for space efficiency */}
+                                                <div className="md:hidden">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className={`h-1.5 w-1.5 rounded-full ${log.status === 'success' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' : log.status === 'running' ? 'bg-orange-500 animate-pulse' : 'bg-red-500'}`}></div>
+                                                        <span className={`text-[9px] font-black uppercase ${log.status === 'success' ? 'text-green-500/60' : log.status === 'running' ? 'text-orange-500/60' : 'text-red-500/60'}`}>
+                                                            {log.status === 'success' ? 'OK' : log.status === 'running' ? 'WORK' : 'KO'}
+                                                        </span>
+                                                    </div>
+                                                </div>
                                             </td>
-                                            <td className="px-4 py-3">
+                                            <td className="px-0 md:px-4 py-1 md:py-3 md:table-cell">
                                                 <div className="flex items-center gap-2">
                                                     <Database className="h-3 w-3 text-brand-primary/40" />
                                                     <span className="text-[10px] font-bold text-white/60">{log.items_found} items</span>
                                                 </div>
                                             </td>
-                                            <td className="px-4 py-3">
+                                            <td className="px-0 md:px-4 py-1 md:py-3 hidden md:table-cell">
                                                 <div className="flex flex-col gap-1">
                                                     <div className="flex items-center gap-2">
                                                         <div className={`h-1 w-1 rounded-full ${log.status === 'success' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' : log.status === 'running' ? 'bg-orange-500 animate-pulse' : 'bg-red-500'}`}></div>
@@ -250,6 +259,16 @@ const Purgatory: React.FC = () => {
                                                     )}
                                                 </div>
                                             </td>
+                                            {/* Mobile Error Message */}
+                                            {log.error_message && (
+                                                <td className="px-0 pb-2 md:hidden max-w-0">
+                                                    <div className="w-full overflow-hidden">
+                                                        <span className="text-[10px] font-bold text-red-400 bg-red-500/10 px-2 py-1 rounded border border-red-500/20 block w-full truncate" title={log.error_message}>
+                                                            {log.error_message}
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                            )}
                                         </tr>
                                     ))}
                                     {(!scrapersLogs || scrapersLogs.length === 0) && (
@@ -353,90 +372,146 @@ const Purgatory: React.FC = () => {
                     </div>
                 ) : (
                     pendingItems?.map((item: any) => (
-                        <div key={item.id} className="group relative overflow-hidden rounded-2xl border border-white/5 bg-white/[0.02] p-4 transition-all hover:bg-white/[0.04] hover:border-white/10">
-                            <div className="flex flex-col gap-6 md:flex-row md:items-center">
-                                {/* Thumbnail */}
-                                <div className="h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-black/40 border border-white/5">
-                                    {item.image_url ? (
-                                        <img src={item.image_url} alt={item.scraped_name} className="h-full w-full object-cover p-1" />
-                                    ) : (
-                                        <div className="flex h-full w-full items-center justify-center text-[10px] text-white/10 uppercase font-black">No img</div>
-                                    )}
+                        <div key={item.id} className={`group relative overflow-hidden rounded-3xl border transition-all duration-500 ${selectedPendingId === item.id ? 'bg-brand-primary/[0.03] border-brand-primary/30 shadow-[0_0_30px_rgba(var(--brand-primary-rgb),0.1)]' : 'bg-white/[0.02] border-white/5 hover:border-white/10'}`}>
+
+                            {/* Card Main Body */}
+                            <div className="p-5 md:p-6 flex flex-col gap-6 md:flex-row md:items-start">
+                                {/* Thumbnail & Mobile Header */}
+                                <div className="flex items-start gap-5 w-full md:w-auto">
+                                    <div className="relative h-24 w-24 md:h-32 md:w-32 shrink-0 overflow-hidden rounded-2xl bg-black border border-white/10 shadow-lg">
+                                        {item.image_url ? (
+                                            <img src={item.image_url} alt={item.scraped_name} className="h-full w-full object-cover p-1 transition-transform duration-700 group-hover:scale-110 opacity-80 group-hover:opacity-100" />
+                                        ) : (
+                                            <div className="flex h-full w-full items-center justify-center text-[10px] text-white/20 uppercase font-black tracking-widest">No IMG</div>
+                                        )}
+                                        {/* Shop Badge (Mobile Overlay) */}
+                                        <div className="absolute bottom-0 left-0 right-0 bg-black/80 backdrop-blur-sm py-1 text-center md:hidden">
+                                            <span className="text-[9px] font-black text-white/60 uppercase tracking-tighter">{item.shop_name}</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Mobile Only Info Block */}
+                                    <div className="flex-1 md:hidden space-y-2">
+                                        <h3 className="text-sm font-bold text-white leading-snug line-clamp-3">{item.scraped_name}</h3>
+                                        <div className="flex items-baseline gap-2">
+                                            <span className="text-xl font-black text-brand-primary tracking-tight">{item.price} {item.currency}</span>
+                                        </div>
+                                        <span className="text-[10px] font-bold text-white/30">{new Date(item.found_at).toLocaleDateString()}</span>
+                                    </div>
                                 </div>
 
-                                {/* Info */}
-                                <div className="flex-1 space-y-2">
-                                    <div className="flex items-center gap-2">
-                                        <span className="rounded bg-white/5 px-2 py-0.5 text-[10px] font-black text-white/40 uppercase tracking-tighter border border-white/10">
+                                {/* Desktop Info */}
+                                <div className="hidden md:flex flex-1 flex-col gap-3">
+                                    <div className="flex items-center gap-3">
+                                        <span className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest border ${item.shop_name === 'kidinn' ? 'bg-orange-500/10 border-orange-500/20 text-orange-400' : 'bg-white/5 border-white/10 text-white/40'}`}>
                                             {item.shop_name}
                                         </span>
-                                        <span className="text-[10px] text-white/20 font-bold">
-                                            {new Date(item.found_at).toLocaleTimeString()}
+                                        <span className="text-[10px] text-white/20 font-bold tracking-wider">
+                                            DETECTADO: {new Date(item.found_at).toLocaleString()}
                                         </span>
                                     </div>
-                                    <h3 className="text-sm font-bold text-white/90 leading-tight">{item.scraped_name}</h3>
-                                    <div className="flex items-center gap-4">
-                                        <span className="text-lg font-black text-white">{item.price} {item.currency}</span>
-                                        <a href={item.url} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-[10px] font-bold text-brand-primary hover:underline">
-                                            Ver Original <ExternalLink className="h-3 w-3" />
+
+                                    <h3 className="text-lg font-bold text-white/90 leading-snug max-w-2xl group-hover:text-white transition-colors">
+                                        {item.scraped_name}
+                                    </h3>
+
+                                    <div className="flex items-center gap-6 pt-1">
+                                        <div className="flex flex-col">
+                                            <span className="text-[10px] font-black text-white/30 uppercase tracking-wider">Precio Detectado</span>
+                                            <span className="text-2xl font-black text-white tracking-tight">{item.price} <span className="text-sm text-white/40">{item.currency}</span></span>
+                                        </div>
+                                        {item.ean && (
+                                            <div className="flex flex-col">
+                                                <span className="text-[10px] font-black text-white/30 uppercase tracking-wider">EAN / Ref</span>
+                                                <span className="text-sm font-mono font-bold text-white/60">{item.ean}</span>
+                                            </div>
+                                        )}
+                                        <div className="flex-1"></div>
+                                        <a href={item.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/5 text-xs font-black text-white/40 hover:bg-white/10 hover:text-white transition-all uppercase tracking-wider">
+                                            Fuente Original <ExternalLink className="h-3 w-3" />
                                         </a>
                                     </div>
                                 </div>
+                            </div>
 
-                                {/* Actions */}
-                                <div className="flex shrink-0 items-center gap-3">
+                            {/* Actions Footer */}
+                            <div className="border-t border-white/5 bg-black/20 p-4 md:px-6 flex items-center justify-between gap-4">
+                                <div className="flex items-center gap-2 text-[10px] font-bold text-white/20 uppercase tracking-wider">
+                                    <Database className="h-3 w-3" /> ID: #{item.id}
+                                </div>
+                                <div className="flex items-center gap-3 w-full md:w-auto">
+                                    <a
+                                        href={item.url}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="h-12 md:h-10 w-12 md:w-10 flex items-center justify-center rounded-xl bg-white/5 border border-white/10 text-white/40 hover:text-white hover:bg-white/10 transition-all"
+                                        title="Ver en Tienda"
+                                    >
+                                        <ExternalLink className="h-5 w-5 md:h-4 md:w-4" />
+                                    </a>
                                     <button
                                         onClick={() => discardMutation.mutate(item.id)}
-                                        className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500 hover:text-white transition-all transition-all"
+                                        className="h-12 md:h-10 w-12 md:w-auto md:px-5 flex items-center justify-center rounded-xl bg-red-500/5 text-red-500/60 border border-red-500/10 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all"
+                                        title="Descartar Item"
                                     >
-                                        <Trash2 className="h-5 w-5" />
+                                        <Trash2 className="h-5 w-5 md:h-4 md:w-4 md:mr-2" />
+                                        <span className="hidden md:inline text-[10px] font-black uppercase tracking-widest">Descartar</span>
                                     </button>
                                     <button
                                         onClick={() => setSelectedPendingId(selectedPendingId === item.id ? null : item.id)}
-                                        className={`flex items-center gap-2 rounded-xl px-6 py-2.5 text-xs font-black transition-all ${selectedPendingId === item.id
-                                            ? 'bg-brand-primary text-white'
-                                            : 'bg-brand-primary/10 text-brand-primary border border-brand-primary/20 hover:bg-brand-primary/20'
-                                            }`}
+                                        className={`h-12 md:h-10 flex-1 md:flex-initial md:px-8 flex items-center justify-center rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg ${selectedPendingId === item.id
+                                            ? 'bg-white text-black shadow-white/10'
+                                            : 'bg-brand-primary text-white shadow-brand-primary/20 hover:brightness-110'}`}
                                     >
-                                        <Link className="h-4 w-4" />
-                                        {selectedPendingId === item.id ? 'CANCELAR' : 'VINCULAR'}
+                                        {selectedPendingId === item.id ? 'Cerrar Vinculación' : 'Vincular Item'}
+                                        <Link className="ml-2 h-4 w-4" />
                                     </button>
                                 </div>
                             </div>
 
-                            {/* Matcher Drawer (condicional) */}
+                            {/* Matcher Drawer (The "Banner" Area) */}
                             {selectedPendingId === item.id && (
-                                <div className="mt-4 animate-in slide-in-from-top-4 duration-300 border-t border-white/5 pt-4">
-                                    <div className="space-y-6">
-                                        {/* Sugerencias del Oráculo */}
+                                <div className="border-t border-white/10 bg-gradient-to-b from-brand-primary/[0.02] to-transparent p-5 md:p-8 animate-in slide-in-from-top-4 duration-500">
+                                    <div className="max-w-4xl mx-auto space-y-8">
+
+                                        {/* Section 1: Oracle Suggestions (The Main Banner) */}
                                         {item.suggestions && item.suggestions.length > 0 && !searchTerm && (
-                                            <div className="space-y-3">
-                                                <div className="flex items-center gap-2 text-brand-primary">
-                                                    <Zap className="h-4 w-4" />
-                                                    <span className="text-[10px] font-black uppercase tracking-widest">Sugerencias del Oráculo</span>
+                                            <div className="space-y-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="h-8 w-8 rounded-full bg-brand-primary/20 flex items-center justify-center animate-pulse">
+                                                        <Zap className="h-4 w-4 text-brand-primary" />
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="text-sm font-black text-white uppercase tracking-widest">Sugerencias del Oráculo</h4>
+                                                        <p className="text-[10px] font-bold text-white/40">Basado en coincidencia de nombre y metadatos</p>
+                                                    </div>
                                                 </div>
-                                                <div className="grid grid-cols-1 gap-2">
+
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                                     {item.suggestions.map((s: any) => (
                                                         <button
                                                             key={s.product_id}
                                                             onClick={() => matchMutation.mutate({ pendingId: item.id, productId: s.product_id })}
-                                                            className="flex items-center justify-between rounded-xl bg-brand-primary/5 border border-brand-primary/20 p-4 text-left hover:bg-brand-primary/10 transition-all group/suggestion"
+                                                            className="group/btn relative flex items-center gap-4 overflow-hidden rounded-2xl border border-brand-primary/20 bg-brand-primary/5 p-4 text-left transition-all hover:border-brand-primary hover:bg-brand-primary/10 hover:shadow-[0_0_30px_rgba(var(--brand-primary-rgb),0.15)]"
                                                         >
-                                                            <div className="flex items-center gap-4">
-                                                                <div className="flex flex-col items-center justify-center h-10 w-12 rounded-lg bg-brand-primary/20 border border-brand-primary/30">
-                                                                    <span className="text-[14px] font-black text-brand-primary leading-none">{s.match_score}%</span>
-                                                                    <span className="text-[8px] font-black text-brand-primary/60 uppercase">Score</span>
-                                                                </div>
-                                                                <div>
-                                                                    <div className="text-xs font-black text-white group-hover/suggestion:text-brand-primary transition-colors">{s.name}</div>
-                                                                    <div className="text-[10px] text-white/30 uppercase font-bold">{s.sub_category} • {s.figure_id}</div>
-                                                                </div>
+                                                            {/* Score Ring */}
+                                                            <div className="relative h-14 w-14 shrink-0 flex items-center justify-center rounded-full bg-black border-2 border-brand-primary/30 group-hover/btn:border-brand-primary transition-colors">
+                                                                <span className="text-xs font-black text-brand-primary">{s.match_score}%</span>
                                                             </div>
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="text-[9px] font-black text-white/10 uppercase tracking-widest mr-2">{s.reason}</span>
-                                                                <div className="flex h-8 items-center gap-2 rounded-lg bg-brand-primary px-3 text-[10px] font-black text-white shadow-lg shadow-brand-primary/20 opacity-0 group-hover/suggestion:opacity-100 transition-all translate-x-1 group-hover/suggestion:translate-x-0">
-                                                                    CONFIRMAR VÍNCULO <CheckCircle2 className="h-3 w-3" />
+
+                                                            <div className="flex-1 min-w-0">
+                                                                <div className="flex items-center gap-2 mb-1">
+                                                                    <span className="px-1.5 py-0.5 rounded bg-brand-primary/20 text-[9px] font-black text-brand-primary uppercase tracking-tighter">
+                                                                        {s.reason.toUpperCase()}
+                                                                    </span>
+                                                                    <span className="text-[9px] font-bold text-white/30 uppercase tracking-widest truncate">{s.sub_category}</span>
                                                                 </div>
+                                                                <h5 className="text-sm font-bold text-white leading-tight truncate">{s.name}</h5>
+                                                                <p className="text-[10px] text-white/40 font-mono mt-0.5">{s.figure_id}</p>
+                                                            </div>
+
+                                                            <div className="opacity-0 group-hover/btn:opacity-100 absolute right-4 transition-all transform translate-x-4 group-hover/btn:translate-x-0">
+                                                                <CheckCircle2 className="h-6 w-6 text-brand-primary" />
                                                             </div>
                                                         </button>
                                                     ))}
@@ -444,48 +519,50 @@ const Purgatory: React.FC = () => {
                                             </div>
                                         )}
 
-                                        {/* Buscador Manual */}
-                                        <div className="space-y-3">
-                                            <div className="flex items-center gap-2 text-white/20">
-                                                <Search className="h-4 w-4" />
-                                                <span className="text-[10px] font-black uppercase tracking-widest">Búsqueda Manual</span>
+                                        {/* Section 2: Manual Search */}
+                                        <div className="space-y-4 pt-4 border-t border-white/5">
+                                            <div className="flex items-center gap-3">
+                                                <div className="h-8 w-8 rounded-full bg-white/10 flex items-center justify-center">
+                                                    <Search className="h-4 w-4 text-white/60" />
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-sm font-black text-white uppercase tracking-widest">Búsqueda Manual</h4>
+                                                    <p className="text-[10px] font-bold text-white/40">Explora el Gran Catálogo de Eternia</p>
+                                                </div>
                                             </div>
-                                            <div className="relative">
-                                                <Search className="absolute left-3 top-2.5 h-4 w-4 text-white/20" />
+
+                                            <div className="relative group/input">
+                                                <Search className="absolute left-4 top-3.5 h-5 w-5 text-white/30 group-focus-within/input:text-brand-primary transition-colors" />
                                                 <input
                                                     type="text"
-                                                    placeholder="Buscar producto en el Gran Catálogo..."
-                                                    className="w-full rounded-xl bg-black/40 border border-white/10 py-2.5 pl-10 pr-4 text-sm text-white placeholder:text-white/20 outline-none focus:border-brand-primary/50"
-                                                    autoFocus
+                                                    placeholder="Escribe el nombre de la figura..."
+                                                    className="w-full rounded-2xl bg-black/40 border border-white/10 py-3.5 pl-12 pr-4 text-sm font-bold text-white placeholder:text-white/20 outline-none focus:border-brand-primary/50 focus:bg-black/60 transition-all focus:ring-1 focus:ring-brand-primary/20"
                                                     value={searchTerm}
                                                     onChange={(e) => setSearchTerm(e.target.value)}
                                                 />
                                             </div>
 
-                                            <div className="grid grid-cols-1 gap-2 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
+                                            {/* Results List */}
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-60 overflow-y-auto custom-scrollbar pr-2">
                                                 {(searchTerm ? filteredProducts : []).map((p: any) => (
                                                     <button
                                                         key={p.id}
                                                         onClick={() => matchMutation.mutate({ pendingId: item.id, productId: p.id })}
-                                                        className="flex items-center justify-between rounded-lg bg-white/5 p-3 text-left hover:bg-brand-primary/10 border border-transparent hover:border-brand-primary/20 transition-all group/match"
+                                                        className="flex items-center gap-3 rounded-xl bg-white/5 p-3 text-left hover:bg-white/10 border border-transparent hover:border-white/20 transition-all group/res"
                                                     >
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="h-8 w-8 rounded bg-white/10 flex items-center justify-center text-[10px] font-black text-white/40">
-                                                                {p.figure_id}
-                                                            </div>
-                                                            <div>
-                                                                <div className="text-xs font-bold text-white/90">{p.name}</div>
-                                                                <div className="text-[10px] text-white/30 uppercase">{p.sub_category}</div>
-                                                            </div>
+                                                        <div className="h-10 w-10 shrink-0 rounded-lg bg-black/40 border border-white/5 flex items-center justify-center text-[9px] font-black text-white/30">
+                                                            IMG
                                                         </div>
-                                                        <div className="hidden group-hover/match:flex items-center gap-1.5 text-[10px] font-black text-brand-primary">
-                                                            CONFIRMAR <CheckCircle2 className="h-3.5 w-3.5" />
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="text-xs font-bold text-white truncate">{p.name}</div>
+                                                            <div className="text-[9px] font-black text-white/30 uppercase tracking-widest">{p.figure_id}</div>
                                                         </div>
+                                                        <CheckCircle2 className="h-4 w-4 text-brand-primary opacity-0 group-hover/res:opacity-100 transition-opacity" />
                                                     </button>
                                                 ))}
                                                 {searchTerm && filteredProducts?.length === 0 && (
-                                                    <div className="py-8 text-center text-xs text-white/20">
-                                                        No se encontraron reliquias con ese nombre.
+                                                    <div className="col-span-full py-8 text-center">
+                                                        <p className="text-xs font-bold text-white/30">El Oráculo no ve nada...</p>
                                                     </div>
                                                 )}
                                             </div>
