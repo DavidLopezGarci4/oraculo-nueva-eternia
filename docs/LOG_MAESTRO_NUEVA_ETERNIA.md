@@ -106,6 +106,10 @@ Este documento registra la evolución técnica y estratégica del Oráculo. La P
 - **Hitos**: Solución definitiva a `Duplicate Key Error` mediante transacciones anidadas. Blindaje CSS contra desbordamientos.
 - **Estado**: ✅ COMPLETADO
 
+#### 7.4 Integridad de Dashboard (Data Consistency)
+- **Hitos**: Corrección de discrepancia visula entre contadores y gráficos. Implementación de cálculo derivado (`sum(distribución)`) para garantizar coherencia matemática absoluta y corrección de `NameError` en runtime.
+- **Estado**: ✅ COMPLETADO
+
 ---
 
 ## PLAN DE VERIFICACIÓN (PÚLSAR)
