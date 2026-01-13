@@ -556,6 +556,7 @@ async def get_dashboard_stats():
 
         
     try:
+        from sqlalchemy import func
         with SessionCloud() as db:
             total_products = db.query(ProductModel).count()
             owned_count = db.query(CollectionItemModel).count() # Sin filtrar por user para MVP o asumiendo user único
@@ -622,12 +623,15 @@ async def get_dashboard_stats():
                 profit_loss = 0.0
                 roi = 0.0
 
-            # Distribución por tienda (para el gráfico)
+            # Distribución por tienda (para el gráfico) - FILTRADO POR VÍNCULOS VÁLIDOS
             shop_dist = db.query(OfferModel.shop_name, func.count(OfferModel.id))\
+                .filter(OfferModel.product_id.isnot(None), OfferModel.is_available == True)\
                 .group_by(OfferModel.shop_name)\
                 .all()
             
-            match_count = db.query(OfferModel).filter(OfferModel.product_id.isnot(None), OfferModel.is_available == True).count()
+            # CONSISTENCY FIX: Derive total count from distributions to ensure 100% match
+            # This avoids race conditions or filter discrepancies between the two metrics
+            match_count = sum(count for _, count in shop_dist)
             
             return {
                 "total_products": total_products,
