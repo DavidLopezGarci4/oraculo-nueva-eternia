@@ -9,14 +9,10 @@ from src.infrastructure.database_cloud import SessionCloud
 from datetime import datetime
 app = FastAPI(title="Oráculo API Broker", version="1.0.0")
 
-# Configurar CORS para permitir peticiones desde el frontend (Vite)
+# Configurar CORS para permitir peticiones universales (Útil para acceso móvil y Docker)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:5174"
-    ],
+    allow_origins=["*"], # Permitimos todo para facilitar el acceso desde cualquier IP del hogar
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

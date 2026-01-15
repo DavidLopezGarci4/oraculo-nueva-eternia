@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: oraculo-backend
+    container_name: oraculo_backend
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount host code for Hot Reload (Dev Mode Experience)
+      - .:/app
+      # Prevent crucial docker-internal dirs from being masked by host
+      - /app/__pycache__
+      - /app/frontend/node_modules
+    environment:
+      # Ensure we use the sqlite file mapped from host
+      - DATABASE_URL=sqlite:///./oraculo.db
+      - SUPABASE_DATABASE_URL=
+      - PYTHONUNBUFFERED=1
+    # Reload flag ensures changes in host trigger restart
+    command: uvicorn src.interfaces.api.main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - eternia-net
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: oraculo-frontend
+    container_name: oraculo_frontend
+    ports:
+      - "3000:80" # Access at localhost:3000
+    depends_on:
+      - backend
+    networks:
+      - eternia-net
+    restart: unless-stopped
+
+networks:
+  eternia-net:
+    driver: bridge

@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: oraculo-backend-prod
+    container_name: oraculo_backend_prod
+    ports:
+      - "8000:8000"
+    volumes:
+      # We ONLY map the database and logs in production for maximum stability
+      - ./oraculo.db:/app/oraculo.db
+      - ./logs:/app/logs
+      - ./data:/app/data
+    environment:
+      # Use cloud database by default in production
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///./oraculo.db}
+      - SUPABASE_DATABASE_URL=${SUPABASE_DATABASE_URL}
+      - PYTHONUNBUFFERED=1
+      - ENV=production
+    # No --reload in production for performance and stability
+    command: uvicorn src.interfaces.api.main:app --host 0.0.0.0 --port 8000
+    networks:
+      - eternia-net-prod
+    restart: always
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: oraculo-frontend-prod
+    container_name: oraculo_frontend_prod
+    ports:
+      - "8080:80" # Production port
+    depends_on:
+      - backend
+    networks:
+      - eternia-net-prod
+    restart: always
+
+networks:
+  eternia-net-prod:
+    driver: bridge
