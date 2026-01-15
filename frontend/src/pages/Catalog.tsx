@@ -38,6 +38,15 @@ const Catalog: React.FC = () => {
         queryFn: () => getCollection(activeUserId)
     });
 
+    // 2.5 Fetch de productos con ofertas activas (para el badge Live)
+    const { data: productsWithOffers } = useQuery<number[]>({
+        queryKey: ['products-with-offers'],
+        queryFn: async () => {
+            const response = await axios.get('/api/products/with-offers');
+            return response.data;
+        }
+    });
+
     // 3. Fetch de ofertas del producto seleccionado
     const { data: productOffers, isLoading: isLoadingOffers } = useQuery<any[]>({
         queryKey: ['product-offers', selectedProduct?.id],

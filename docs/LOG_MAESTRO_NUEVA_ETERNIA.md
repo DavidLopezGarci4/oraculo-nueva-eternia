@@ -244,10 +244,13 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
     *   `Time4ActionToys_scraper.py` (Alemania): Gran volumen (273 productos) con paginación industrial.
     *   `BBTS_scraper.py` (USA): **Stealth Mode** avanzado (Playwright, fingerprint spoofing, init scripts anti-detección) para saltar Cloudflare desde GitHub Actions.
 
-#### 🔧 Mejoras de Infraestructura
+#### 🔧 Mejoras de Infraestructura y Datos
 *   **Bypass de Cloudflare**: Implementación de técnicas de evasión en `BBTS_scraper.py` (Timezone USA, Geo-spoofing, movimientos humanizados).
 *   **Corrección de BaseScraper**: Reparado bug crítico de importación en `base.py` que afectaba a la generación de User-Agents aleatorios.
 *   **Optimización de Carga**: Configuración de `af=60` en Toymi para maximizar la eficiencia por cada incursión.
+*   **Blindaje de Build (Docker)**: Corrección de errores de TypeScript en `Catalog.tsx`, `Config.tsx` y `Dashboard.tsx` para garantizar el despliegue industrial.
+*   **Restauración de Propiedad**: Reasignación atómica de 75 items a la cuenta de David (ID 2), corrigiendo la discrepancia financiera en el Dashboard personal.
+*   **Inteligencia de Mercado (Top Deals)**: Implementación de deduplicación por producto y filtrado dinámico por `owner_id`. El widget ahora solo muestra "lo mejor de lo que no tienes".
 
 ---
 

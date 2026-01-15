@@ -45,7 +45,7 @@ const Dashboard: React.FC = () => {
 
     const { data: topDeals, isLoading: isLoadingDeals } = useQuery({
         queryKey: ['top-deals'],
-        queryFn: () => getTopDeals(2),
+        queryFn: () => getTopDeals(),
         refetchInterval: 120000 // Refresh every 2 mins
     });
 

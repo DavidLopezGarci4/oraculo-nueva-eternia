@@ -969,20 +969,41 @@ async def get_dashboard_hall_of_fame(user_id: int = 1):
 async def get_top_deals(user_id: int = 2):
     """
     Retorna las 20 mejores ofertas actuales de items NO CAPTURADOS.
+    MEJORA: Solo muestra el mejor precio por producto (sin duplicados).
     """
+    from sqlalchemy import func, and_
+    
     with SessionCloud() as db:
-        # Obtenemos IDs de productos ya capturados
+        # 1. Obtenemos IDs de productos ya capturados por el usuario
         owned_ids = [p[0] for p in db.query(CollectionItemModel.product_id).filter(CollectionItemModel.owner_id == user_id).all()]
 
-        offers = db.query(OfferModel)\
-            .join(ProductModel)\
-            .filter(
-                OfferModel.is_available == True,
-                OfferModel.product_id.notin_(owned_ids) if owned_ids else True
-            )\
-            .order_by(OfferModel.price.asc())\
-            .limit(20)\
-            .all()
+        # 2. Subquery: Encontrar el precio mínimo para cada producto disponible
+        best_prices_subq = db.query(
+            OfferModel.product_id,
+            func.min(OfferModel.price).label('min_price')
+        ).filter(
+            OfferModel.is_available == True,
+            OfferModel.product_id.notin_(owned_ids) if owned_ids else True
+        ).group_by(OfferModel.product_id).subquery()
+
+        # 3. Join para obtener los detalles de la oferta más barata por producto
+        offers = db.query(OfferModel).join(
+            best_prices_subq,
+            and_(
+                OfferModel.product_id == best_prices_subq.c.product_id,
+                OfferModel.price == best_prices_subq.c.min_price
+            )
+        ).join(ProductModel).filter(
+            OfferModel.is_available == True
+        ).order_by(OfferModel.price.asc()).limit(20).all()
+        
+        # 4. Deduplicar por product_id en Python (failsafe para empates de precio)
+        seen_product_ids = set()
+        unique_offers = []
+        for o in offers:
+            if o.product_id not in seen_product_ids:
+                seen_product_ids.add(o.product_id)
+                unique_offers.append(o)
         
         return [
             {
@@ -992,7 +1013,7 @@ async def get_top_deals(user_id: int = 2):
                 "shop_name": o.shop_name,
                 "url": o.url,
                 "image_url": o.product.image_url
-            } for o in offers
+            } for o in unique_offers[:20]  # Garantizar máximo 20
         ]
 
 @app.get("/api/dashboard/match-stats")
