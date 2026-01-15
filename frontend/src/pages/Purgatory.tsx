@@ -15,7 +15,7 @@ import {
     Database,
     AlertCircle
 } from 'lucide-react';
-import { getPurgatory, matchItem, discardItem, getScrapersStatus, runScrapers, getScraperLogs, resetSmartMatches } from '../api/purgatory';
+import { getPurgatory, matchItem, discardItem, discardItemsBulk, getScrapersStatus, runScrapers, getScraperLogs, resetSmartMatches } from '../api/purgatory';
 import axios from 'axios';
 
 const Purgatory: React.FC = () => {
@@ -24,6 +24,16 @@ const Purgatory: React.FC = () => {
     const [selectedPendingId, setSelectedPendingId] = useState<number | null>(null);
     const [confirmScraper, setConfirmScraper] = useState<string | null>(null);
     const [confirmReset, setConfirmReset] = useState(false);
+    const [selectedIds, setSelectedIds] = useState<number[]>([]);
+
+    // Mutations
+    const discardBulkMutation = useMutation({
+        mutationFn: (ids: number[]) => discardItemsBulk(ids),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['purgatory'] });
+            setSelectedIds([]);
+        }
+    });
 
     // Queries
     const { data: pendingItems, isLoading: isLoadingPending } = useQuery({
@@ -377,6 +387,19 @@ const Purgatory: React.FC = () => {
 
                             {/* Card Main Body */}
                             <div className="p-5 md:p-6 flex flex-col gap-6 md:flex-row md:items-start">
+                                {/* Selection Checkbox */}
+                                <div className="pt-1">
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedIds.includes(item.id)}
+                                        onChange={(e) => {
+                                            if (e.target.checked) setSelectedIds([...selectedIds, item.id]);
+                                            else setSelectedIds(selectedIds.filter(id => id !== item.id));
+                                        }}
+                                        className="h-5 w-5 rounded border-white/10 bg-white/5 text-brand-primary focus:ring-brand-primary/50"
+                                    />
+                                </div>
+
                                 {/* Thumbnail & Mobile Header */}
                                 <div className="flex items-start gap-5 w-full md:w-auto">
                                     <div className="relative h-24 w-24 md:h-32 md:w-32 shrink-0 overflow-hidden rounded-2xl bg-black border border-white/10 shadow-lg">
@@ -578,6 +601,35 @@ const Purgatory: React.FC = () => {
                     ))
                 )}
             </div>
+
+            {/* Bulk Action Bar */}
+            {selectedIds.length > 0 && (
+                <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-8 duration-500">
+                    <div className="bg-black/80 backdrop-blur-2xl border border-brand-primary/30 rounded-full px-8 py-4 flex items-center gap-8 shadow-[0_0_50px_rgba(14,165,233,0.3)]">
+                        <div className="flex flex-col">
+                            <span className="text-[10px] font-black text-brand-primary uppercase tracking-widest">Seleccionados</span>
+                            <span className="text-xl font-black text-white">{selectedIds.length} <span className="text-sm text-white/40">ITEMS</span></span>
+                        </div>
+                        <div className="h-8 w-px bg-white/10"></div>
+                        <div className="flex items-center gap-4">
+                            <button
+                                onClick={() => setSelectedIds([])}
+                                className="text-xs font-black text-white/40 hover:text-white uppercase tracking-widest transition-all"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={() => discardBulkMutation.mutate(selectedIds)}
+                                disabled={discardBulkMutation.isPending}
+                                className="bg-red-500 hover:bg-red-600 text-white px-8 py-3 rounded-full text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-red-500/20 flex items-center gap-2 disabled:opacity-50"
+                            >
+                                {discardBulkMutation.isPending ? <RefreshCcw className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                                Descartar Seleccionados
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

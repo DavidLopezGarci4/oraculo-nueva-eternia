@@ -119,14 +119,69 @@ Este documento registra la evolución técnica y estratégica del Oráculo. La P
 
 ---
 
+### Fase 8: Omnipresencia (Dockerización)
+- **Hitos**: Encapsulamiento total en contenedores y preparación para despliegue industrial (NAS/VPS).
+- **Estado**: ✅ COMPLETADO (Estructura)
+
+#### 8.1 El Arca (Dockerización Integral)
+- **Hitos**: Creación de `Dockerfile` para Backend (Python/Playwright) y Frontend (Nginx). Implementación de `launch_ark.ps1` y accesos directos.
+- **Estado**: ✅ COMPLETADO
+
+#### 8.2 Blindaje de Producción (Grado Industrial)
+- **Hitos**: Orquestación estable con `docker-compose.prod.yml`, persistencia de datos via volúmenes y creación del sistema "Guardián de Datos" para backups automáticos. Apertura de CORS para acceso universal móvil.
+- **Estado**: ✅ COMPLETADO
+
+#### 8.2.1 Sincronización Universal (Cloud Jump)
+- **Hitos**: Transvase exitoso de toda la colección local y catálogo a Supabase.
+- **Estado**: ✅ COMPLETADO
+
+#### 8.2.2 Gestión de Identidad y Restauración
+- **Hitos**: Activación del usuario "David" (ID 2). Reasignación atómica de los 75 items de "La Fortaleza" desde el admin al perfil personal de David. Verificación del esquema `UserModel`.
+- **Estado**: ✅ COMPLETADO
+
+#### 8.2.3 Multiusuario Fluido (Inyectando Conciencia)
+- **Hitos**: Implementación del "Interruptor de Héroes" en la Navbar con persistencia en `localStorage`. Filtrado atómico por `user_id` en los motores del Dashboard (Stats, Top Deals, Hall of Fame). El sistema ahora distingue entre la colección de David y la vista de gestión del Admin.
+- **Estado**: ✅ COMPLETADO
+
+### 🏰 Fase 9: El Legado de Eternia (Poderes por Perfil)
+Esta fase ha dividido el Oráculo en dos experiencias potentes y diferenciadas:
+
+#### 9.1 El Arquitecto (Poderes de Admin)
+- **Mando de Scrapers**: Central de control para activar incursiones manuales por tienda con visualización de logs de ejecución en tiempo real (Items encontrados, errores, tiempos).
+- **Editor de la Verdad**: Herramienta de edición directa en el catálogo para corregir metadatos (Nombres, EANs, Categorías).
+- **Radar de Duplicados & Fusión**: Motor de detección por EAN que permite fusionar dos productos transfiriendo ofertas y registros de propiedad sin pérdida de datos.
+- **Descarte Masivo**: Interfaz de selección múltiple en el Purgatorio con barra de acciones flotante para limpieza a gran escala.
+- **Estado**: ✅ COMPLETADO
+
+#### 9.2 El Guardián (Experiencia David)
+- **Lista de Deseos (Wishlist)**: Implementación de la lógica de "Target" donde David puede marcar futuras adquisiciones sin ensuciar sus métricas de inversión reales.
+- **La Fortaleza 2.0**: Rediseño de la página de colección con sistema de pestañas (Poseído/Deseado) y estéticas premium con efectos de brillo y tarjetas dinámicas.
+- **Upgrade de Reliquias**: Al adquirir un item de la wishlist, el sistema permite "Reclamarlo" con un clic, marcándolo como poseído y solicitando el precio de compra real.
+- **Estado**: ✅ COMPLETADO
+
+### 🛠️ Mecánica Técnica y Dockerización (Resumen de Arquitectura)
+
+Para garantizar que el Oráculo sea indestructible y portable, hemos implementado las fases 8.2 y 8.3 bajo estos pilares:
+
+#### 👤 Gestión de Identidad (Multi-Hero System)
+*   **Restauración Atómica**: El perfil de **David** fue activado y sus 75 items reasignados mediante el script `restore_david.py`. La base de datos en Supabase ahora vincula cada item al `owner_id` correspondiente.
+*   **Identidad Persistente**: El Frontend usa `localStorage` (`active_user_id`) para recordar quién ha entrado. Al cambiar de usuario en la Navbar, se refresca la sesión para inyectar el ID en todas las llamadas de la API.
+*   **Filtrado en el Backend**: Los endpoints de la API (`/stats`, `/top-deals`, `/hall-of-fame`) han sido actualizados para filtrar resultados por el `user_id` recibido, garantizando que David vea su ROI personal y el Admin vea la salud global.
+
+#### 🐳 Sincronización en el Arca (Docker)
+*   **Desarrollo Líquido**: El entorno Docker está vinculado a la carpeta del proyecto mediante volúmenes. Esto permite que cualquier cambio en el código (como el nuevo selector de perfiles) se refleje en los contenedores al instante sin reconstruir imágenes.
+*   **Persistencia Blindada**: Aunque los contenedores se detengan o actualicen, la base de datos local y los logs están mapeados fuera del Docker. Esto asegura que la "Fortaleza de Datos" sea inmune a reinicios.
+*   **Escalabilidad NAS/VPS**: Al estar 100% Dockerizado, el Oráculo puede migrar a un servidor externo simplemente copiando la carpeta y lanzando el script, manteniendo todas las identidades y configuraciones intactas.
+
+---
+
 ## PLAN DE VERIFICACIÓN (PÚLSAR)
 1. **Radar**: Los vínculos manuales se reflejan instantáneamente en el Tablero.
 2. **Justicia**: Cada acción en el historial permite reversión inmediata con un clic.
 3. **Métricas**: El Tablero calcula el valor total basándose en los items de "La Fortaleza".
-4. **Movilidad**: Operatividad total verificada en resoluciones móviles.
+4. **Movilidad**: Operatividad total verificada en resoluciones móviles y acceso via Docker/Nginx.
 
-## PRÓXIMOS PASOS (FASE 8 - EL FUTURO)
-- **8.1 El Ojo de Sauron**: Sistema de alertas críticas vía Push/Telegram.
-- **8.2 Sincronización Universal**: Integración total con Supabase para multi-usuario.
-- **8.3 IA Auditora**: Integración de LLMs para sugerencias de vinculación automáticas.
-- **8.4 Histórico de Precios**: Gráficos interactivos de evolución temporal.
+## PRÓXIMOS PASOS (EL OJO DE SAURON)
+- **8.3 El Ojo de Sauron**: Sistema de alertas críticas vía Push/Telegram.
+- **8.4 Cronos**: Histórico de Precios portable.
+

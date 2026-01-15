@@ -6,6 +6,7 @@ import Catalog from './pages/Catalog';
 import Collection from './pages/Collection';
 import Purgatory from './pages/Purgatory';
 import Dashboard from './pages/Dashboard';
+import Config from './pages/Config';
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -32,6 +33,7 @@ function App() {
             {activeTab === 'catalog' && <Catalog />}
             {activeTab === 'collection' && <Collection />}
             {activeTab === 'purgatory' && <Purgatory />}
+            {activeTab === 'settings' && <Config />}
           </div>
         </main>
       </div>

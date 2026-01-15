@@ -45,11 +45,15 @@ export interface MatchStat {
 }
 
 export const getDashboardStats = async (): Promise<DashboardStats> => {
-    const response = await axios.get(`${API_BASE}/dashboard/stats`);
+    const userId = localStorage.getItem('active_user_id') || '1';
+    const response = await axios.get(`${API_BASE}/dashboard/stats`, {
+        params: { user_id: userId }
+    });
     return response.data;
 };
 
-export const getTopDeals = async (userId: number = 2): Promise<TopDeal[]> => {
+export const getTopDeals = async (): Promise<TopDeal[]> => {
+    const userId = localStorage.getItem('active_user_id') || '1';
     const response = await axios.get(`${API_BASE}/dashboard/top-deals`, {
         params: { user_id: userId }
     });
@@ -86,6 +90,9 @@ export interface HallOfFameResponse {
 }
 
 export const getHallOfFame = async (): Promise<HallOfFameResponse> => {
-    const response = await axios.get(`${API_BASE}/dashboard/hall-of-fame`);
+    const userId = localStorage.getItem('active_user_id') || '1';
+    const response = await axios.get(`${API_BASE}/dashboard/hall-of-fame`, {
+        params: { user_id: userId }
+    });
     return response.data;
 };

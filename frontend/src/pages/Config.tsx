@@ -1,0 +1,340 @@
+import React, { useState, useEffect } from 'react';
+import { Play, Activity, Clock, AlertCircle, CheckCircle2, RefreshCw, Terminal, GitMerge, Target, Trash2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { getScrapersStatus, getScrapersLogs, runScraper, getDuplicates, mergeProducts, type ScraperStatus, type ScraperLog } from '../api/admin';
+import { formatDistanceToNow } from 'date-fns';
+import { es } from 'date-fns/locale';
+
+const Config: React.FC = () => {
+    const [activeTab, setActiveTab] = useState<'scrapers' | 'radar'>('scrapers');
+    const [statuses, setStatuses] = useState<ScraperStatus[]>([]);
+    const [logs, setLogs] = useState<ScraperLog[]>([]);
+    const [duplicates, setDuplicates] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [runningScraper, setRunningScraper] = useState<string | null>(null);
+    const [mergingId, setMergingId] = useState<number | null>(null);
+
+    const fetchData = async () => {
+        try {
+            const [s, l, d] = await Promise.all([
+                getScrapersStatus(),
+                getScrapersLogs(),
+                getDuplicates()
+            ]);
+            setStatuses(s);
+            setLogs(l);
+            setDuplicates(d);
+        } catch (error) {
+            console.error('Error fetching admin data:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchData();
+        const interval = setInterval(fetchData, 10000); // Polling every 10s
+        return () => clearInterval(interval);
+    }, []);
+
+    const handleRunScraper = async (name: string) => {
+        setRunningScraper(name);
+        try {
+            await runScraper(name);
+            setTimeout(fetchData, 2000);
+        } catch (error) {
+            console.error('Error starting scraper:', error);
+        } finally {
+            setTimeout(() => setRunningScraper(null), 5000);
+        }
+    };
+
+    const handleMerge = async (sourceId: number, targetId: number) => {
+        setMergingId(sourceId);
+        try {
+            await mergeProducts(sourceId, targetId);
+            fetchData();
+        } catch (error) {
+            console.error('Error merging products:', error);
+        } finally {
+            setMergingId(null);
+        }
+    };
+
+    const getStatusVariant = (status: string) => {
+        if (status === 'running') return 'text-brand-primary bg-brand-primary/10 border-brand-primary/30';
+        if (status === 'completed' || status === 'success') return 'text-green-400 bg-green-400/10 border-green-400/30';
+        if (status.startsWith('error')) return 'text-red-400 bg-red-400/10 border-red-400/30';
+        return 'text-white/30 bg-white/5 border-white/10';
+    };
+
+    if (loading && statuses.length === 0) {
+        return (
+            <div className="flex h-[60vh] items-center justify-center">
+                <div className="flex flex-col items-center gap-4">
+                    <RefreshCw className="h-8 w-8 animate-spin text-brand-primary" />
+                    <p className="text-white/50 text-sm">Cargando Mando de Scrapers...</p>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
+            {/* Header & Tabs */}
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                <div className="flex flex-col gap-2">
+                    <h2 className="text-3xl font-bold tracking-tight text-white flex items-center gap-3">
+                        <Terminal className="h-8 w-8 text-brand-primary" />
+                        Poderes del <span className="text-brand-primary">Arquitecto</span>
+                    </h2>
+                    <p className="text-white/50">Control absoluto sobre las reliquias y sus fuentes.</p>
+                </div>
+
+                <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10 backdrop-blur-xl">
+                    <button
+                        onClick={() => setActiveTab('scrapers')}
+                        className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'scrapers' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'text-white/40 hover:text-white'}`}
+                    >
+                        <Activity className="h-4 w-4" />
+                        Scrapers
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('radar')}
+                        className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'radar' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'text-white/40 hover:text-white'}`}
+                    >
+                        <Target className="h-4 w-4" />
+                        Radar Duplicados
+                        {duplicates.length > 0 && (
+                            <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full ml-1 animate-pulse">
+                                {duplicates.length}
+                            </span>
+                        )}
+                    </button>
+                </div>
+            </div>
+
+            <AnimatePresence mode="wait">
+                {activeTab === 'scrapers' ? (
+                    <motion.div
+                        key="scrapers"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="space-y-8"
+                    >
+                        {/* Quick Actions / All Scrapers */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <motion.div
+                                whileHover={{ scale: 1.02 }}
+                                className="col-span-1 md:col-span-2 glass border border-brand-primary/30 p-6 rounded-2xl flex items-center justify-between bg-gradient-to-br from-brand-primary/10 to-transparent"
+                            >
+                                <div className="flex items-center gap-4">
+                                    <div className="bg-brand-primary/20 p-4 rounded-xl shadow-[0_0_20px_rgba(14,165,233,0.3)]">
+                                        <Activity className="h-8 w-8 text-brand-primary" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xl font-bold text-white">Incursión Global</h3>
+                                        <p className="text-white/50 text-sm">Escaneo completo de todas las tiendas.</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => handleRunScraper('all')}
+                                    disabled={runningScraper === 'all'}
+                                    className="bg-brand-primary hover:bg-brand-secondary text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-brand-primary/20 transition-all flex items-center gap-2 disabled:opacity-50"
+                                >
+                                    {runningScraper === 'all' ? <RefreshCw className="h-5 w-5 animate-spin" /> : <Play className="h-5 w-5 fill-current" />}
+                                    DESPLEGAR TODO
+                                </button>
+                            </motion.div>
+
+                            <motion.div
+                                whileHover={{ scale: 1.02 }}
+                                className="glass border border-white/10 p-6 rounded-2xl flex flex-col gap-4"
+                            >
+                                <div className="flex items-center justify-between">
+                                    <div className="h-10 w-10 bg-white/5 rounded-lg flex items-center justify-center">
+                                        <RefreshCw className="h-5 w-5 text-purple-400" />
+                                    </div>
+                                    <span className={`px-2 py-0.5 rounded-full text-[10px] uppercase font-bold border ${getStatusVariant(statuses.find(s => s.spider_name === 'harvester')?.status || 'idle')}`}>
+                                        {statuses.find(s => s.spider_name === 'harvester')?.status || 'Inactivo'}
+                                    </span>
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-white">Harvester</h3>
+                                    <p className="text-white/40 text-xs">Búsqueda manual dirigida.</p>
+                                </div>
+                                <button
+                                    onClick={() => handleRunScraper('harvester')}
+                                    disabled={runningScraper === 'harvester'}
+                                    className="w-full bg-white/5 hover:bg-white/10 text-white py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 border border-white/10"
+                                >
+                                    {runningScraper === 'harvester' ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4 fill-current text-white/40" />}
+                                    Lanzar
+                                </button>
+                            </motion.div>
+
+                            <motion.div
+                                whileHover={{ scale: 1.02 }}
+                                className="glass border border-white/10 p-6 rounded-2xl flex flex-col gap-4"
+                            >
+                                <div className="flex items-center justify-between">
+                                    <div className="h-10 w-10 bg-white/5 rounded-lg flex items-center justify-center">
+                                        <span className="text-orange-400 font-bold">A</span>
+                                    </div>
+                                    <span className={`px-2 py-0.5 rounded-full text-[10px] uppercase font-bold border ${getStatusVariant(statuses.find(s => s.spider_name === 'amazon')?.status || 'idle')}`}>
+                                        {statuses.find(s => s.spider_name === 'amazon')?.status || 'Inactivo'}
+                                    </span>
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-white">Amazon</h3>
+                                    <p className="text-white/40 text-xs">Vigilancia centinela.</p>
+                                </div>
+                                <button
+                                    onClick={() => handleRunScraper('amazon')}
+                                    disabled={runningScraper === 'amazon'}
+                                    className="w-full bg-white/5 hover:bg-white/10 text-white py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 border border-white/10"
+                                >
+                                    {runningScraper === 'amazon' ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4 fill-current text-white/40" />}
+                                    Escanear
+                                </button>
+                            </motion.div>
+                        </div>
+
+                        {/* Individual Scrapers Grid */}
+                        <div className="space-y-4">
+                            <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                                <Activity className="h-5 w-5 text-brand-primary" />
+                                Estados Individuales
+                            </h3>
+                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                                {statuses.filter(s => s.spider_name !== 'all' && s.spider_name !== 'harvester' && s.spider_name !== 'amazon').map((s) => (
+                                    <div key={s.spider_name} className="glass border border-white/5 p-3 rounded-xl flex flex-col gap-2 relative">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-[10px] font-bold text-white/70 uppercase tracking-wider">{s.spider_name}</span>
+                                            <div className={`h-1.5 w-1.5 rounded-full ${s.status === 'running' ? 'bg-brand-primary animate-pulse' : s.status === 'completed' ? 'bg-green-400' : 'bg-white/20'}`}></div>
+                                        </div>
+                                        <button
+                                            onClick={() => handleRunScraper(s.spider_name)}
+                                            disabled={runningScraper === s.spider_name}
+                                            className="text-[11px] bg-white/5 py-1 rounded-md text-white/50 hover:bg-brand-primary/20 hover:text-brand-primary transition-all flex items-center justify-center gap-1"
+                                        >
+                                            {runningScraper === s.spider_name ? <RefreshCw className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3 fill-current" />}
+                                            RUN
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Recent logs */}
+                        <div className="space-y-4">
+                            <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                                <Clock className="h-5 w-5 text-brand-primary" />
+                                Bitácora de Incursiones
+                            </h3>
+                            <div className="glass border border-white/10 rounded-2xl overflow-hidden">
+                                <div className="overflow-x-auto text-sm">
+                                    <table className="w-full text-left">
+                                        <thead className="bg-white/5 text-white/30 uppercase text-[10px] font-bold">
+                                            <tr>
+                                                <th className="px-6 py-4">Scraper</th>
+                                                <th className="px-6 py-4">Estado</th>
+                                                <th className="px-6 py-4 text-center">Items</th>
+                                                <th className="px-6 py-4">Tiempo</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-white/5 text-white/70">
+                                            {logs.map((log) => (
+                                                <tr key={log.id} className="hover:bg-white/5 transition-colors">
+                                                    <td className="px-6 py-4 font-bold">{log.spider_name}</td>
+                                                    <td className="px-6 py-4">
+                                                        <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold ${log.status === 'success' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
+                                                            {log.status}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center font-black text-white">{log.items_found}</td>
+                                                    <td className="px-6 py-4 text-[10px]">
+                                                        {formatDistanceToNow(new Date(log.start_time), { addSuffix: true, locale: es })}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </motion.div>
+                ) : (
+                    <motion.div
+                        key="radar"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="space-y-6"
+                    >
+                        <div className="flex flex-col gap-2 mb-4">
+                            <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                                <Target className="h-6 w-6 text-brand-primary" />
+                                Radar de Similitud por EAN
+                            </h3>
+                            <p className="text-white/40 text-sm">Detección de reliquias duplicadas que deben ser fusionadas para preservar la coherencia del Oráculo.</p>
+                        </div>
+
+                        {duplicates.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center p-20 glass border border-dashed border-white/10 rounded-[3rem]">
+                                <CheckCircle2 className="h-16 w-16 text-green-500/20 mb-4" />
+                                <p className="text-white/30 font-bold uppercase tracking-[0.2em]">No hay anomalías detectadas en el catálogo</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {duplicates.map((dup, idx) => (
+                                    <div key={idx} className="glass border border-brand-primary/20 rounded-3xl p-6 space-y-4 bg-gradient-to-r from-brand-primary/5 to-transparent">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2 text-brand-primary font-bold uppercase tracking-widest text-xs">
+                                                <AlertCircle className="h-4 w-4" />
+                                                {dup.reason}
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {dup.products.map((p: any) => (
+                                                <div key={p.id} className="flex items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/5 relative group">
+                                                    <div className="h-16 w-16 rounded-xl overflow-hidden border border-white/10">
+                                                        <img src={p.image_url} className="h-full w-full object-cover" />
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <h4 className="text-white font-bold truncate">{p.name}</h4>
+                                                        <p className="text-[10px] text-white/30 uppercase font-black">ID: #{p.id} • {p.sub_category}</p>
+                                                    </div>
+
+                                                    {/* Merge Logic: Show merge button if this is source, merging into the one above/next */}
+                                                    {/* Simplification: Just allow merging this into any other in the group */}
+                                                    <div className="flex flex-col gap-2">
+                                                        <button
+                                                            onClick={() => {
+                                                                const target = dup.products.find((prod: any) => prod.id !== p.id);
+                                                                if (target) handleMerge(p.id, target.id);
+                                                            }}
+                                                            disabled={mergingId === p.id}
+                                                            className="bg-brand-primary/20 text-brand-primary hover:bg-brand-primary hover:text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2"
+                                                        >
+                                                            {mergingId === p.id ? <RefreshCw className="h-3 w-3 animate-spin" /> : <GitMerge className="h-3 w-3" />}
+                                                            Absorber
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+};
+
+export default Config;

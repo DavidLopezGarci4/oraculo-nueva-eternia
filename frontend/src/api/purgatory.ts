@@ -70,6 +70,14 @@ export const discardItem = async (pendingId: number, reason: string = 'manual_di
     return response.data;
 };
 
+export const discardItemsBulk = async (pendingIds: number[], reason: string = 'manual_bulk_discard') => {
+    const response = await axios.post(`${API_BASE}/purgatory/discard/bulk`, {
+        pending_ids: pendingIds,
+        reason
+    }, adminHeaders);
+    return response.data;
+};
+
 export const getScrapersStatus = async (): Promise<ScraperStatus[]> => {
     const response = await axios.get(`${API_BASE}/scrapers/status`, adminHeaders);
     return response.data;

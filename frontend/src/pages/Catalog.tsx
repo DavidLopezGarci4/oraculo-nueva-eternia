@@ -1,18 +1,23 @@
 import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { Package, AlertCircle, Loader2, Info, Plus, Check, ShoppingCart } from 'lucide-react';
+import { Package, AlertCircle, Loader2, Info, Plus, Check, ShoppingCart, Settings, Save, X, RefreshCw, Star } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { getCollection, toggleCollection } from '../api/collection';
 import type { Product } from '../api/collection';
+import { updateProduct } from '../api/admin';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 // Para desarrollo, usamos el ID de David
-const DAVID_USER_ID = 2;
-
 const Catalog: React.FC = () => {
     const queryClient = useQueryClient();
     const [selectedProduct, setSelectedProduct] = React.useState<Product | null>(null);
+    const [editingProduct, setEditingProduct] = React.useState<Product | null>(null);
+
+    // Contexto de Autenticación (Fase 8.2)
+    const activeUserId = parseInt(localStorage.getItem('active_user_id') || '2');
+    const isAdmin = activeUserId === 1;
 
     // 1. Fetch de todos los productos
     const { data: products, isLoading: isLoadingProducts, isError: isErrorProducts } = useQuery<Product[]>({
@@ -23,10 +28,10 @@ const Catalog: React.FC = () => {
         }
     });
 
-    // 2. Fetch de la colección de David
+    // 2. Fetch de la colección (basada en el ID activo)
     const { data: collection, isLoading: isLoadingCollection } = useQuery<Product[]>({
-        queryKey: ['collection', DAVID_USER_ID],
-        queryFn: () => getCollection(DAVID_USER_ID)
+        queryKey: ['collection', activeUserId],
+        queryFn: () => getCollection(activeUserId)
     });
 
     // 3. Fetch de ofertas del producto seleccionado
@@ -53,18 +58,30 @@ const Catalog: React.FC = () => {
 
     // 4. Mutación para alternar estado (Optimistic Updates)
     const toggleMutation = useMutation({
-        mutationFn: (productId: number) => toggleCollection(productId, DAVID_USER_ID),
-        onMutate: async (productId) => {
-            await queryClient.cancelQueries({ queryKey: ['collection', DAVID_USER_ID] });
-            const previousCollection = queryClient.getQueryData<Product[]>(['collection', DAVID_USER_ID]);
+        mutationFn: ({ productId, wish }: { productId: number, wish: boolean }) => toggleCollection(productId, activeUserId, wish),
+        onMutate: async ({ productId, wish }) => {
+            await queryClient.cancelQueries({ queryKey: ['collection', activeUserId] });
+            const previousCollection = queryClient.getQueryData<Product[]>(['collection', activeUserId]);
 
-            queryClient.setQueryData<Product[]>(['collection', DAVID_USER_ID], (old) => {
-                const alreadyOwned = old?.some(p => p.id === productId);
-                if (alreadyOwned) {
-                    return old?.filter(p => p.id !== productId);
+            queryClient.setQueryData<Product[]>(['collection', activeUserId], (old) => {
+                const item = old?.find(p => p.id === productId);
+
+                if (item) {
+                    // Si ya existe y pulsas "wish" cuando ya estaba en "wish", lo quitas
+                    // Si ya existe y pulsas "owned" cuando ya estaba en "owned", lo quitas
+                    // Si estaba en "wish" y pulsas "owned", lo pasas a "owned" (upgrade)
+                    if (item.is_wish && !wish) {
+                        return old?.map(p => p.id === productId ? { ...p, is_wish: false } : p);
+                    } else if (item.is_wish === wish) {
+                        return old?.filter(p => p.id !== productId);
+                    }
+                    return old;
                 } else {
                     const productToAdd = products?.find(p => p.id === productId);
-                    return old ? [...old, productToAdd!] : [productToAdd!];
+                    if (productToAdd) {
+                        return old ? [...old, { ...productToAdd, is_wish: wish }] : [{ ...productToAdd, is_wish: wish }];
+                    }
+                    return old;
                 }
             });
 
@@ -72,16 +89,49 @@ const Catalog: React.FC = () => {
         },
         onError: (_, __, context) => {
             if (context?.previousCollection) {
-                queryClient.setQueryData(['collection', DAVID_USER_ID], context.previousCollection);
+                queryClient.setQueryData(['collection', activeUserId], context.previousCollection);
             }
         },
         onSettled: () => {
-            queryClient.invalidateQueries({ queryKey: ['collection', DAVID_USER_ID] });
+            queryClient.invalidateQueries({ queryKey: ['collection', activeUserId] });
         }
     });
 
+    const getCollectionItem = (productId: number) => {
+        return collection?.find(p => p.id === productId);
+    };
+
     const isOwned = (productId: number) => {
-        return collection?.some(p => p.id === productId);
+        const item = getCollectionItem(productId);
+        return item && !item.is_wish;
+    };
+
+    const isWished = (productId: number) => {
+        const item = getCollectionItem(productId);
+        return item && item.is_wish;
+    };
+
+    const updateMutation = useMutation({
+        mutationFn: ({ id, data }: { id: number, data: any }) => updateProduct(id, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['products'] });
+            setEditingProduct(null);
+        }
+    });
+
+    const handleSaveEdit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingProduct) return;
+        updateMutation.mutate({
+            id: editingProduct.id,
+            data: {
+                name: editingProduct.name,
+                ean: editingProduct.ean,
+                image_url: editingProduct.image_url,
+                sub_category: editingProduct.sub_category,
+                retail_price: editingProduct.retail_price
+            }
+        });
     };
 
     if (isLoadingProducts || isLoadingCollection) {
@@ -121,6 +171,7 @@ const Catalog: React.FC = () => {
             <div className="grid grid-cols-2 gap-3 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {products?.map((product) => {
                     const owned = isOwned(product.id);
+                    const wished = isWished(product.id);
                     const hasIntel = hasMarketIntel(product.id);
                     return (
                         <div
@@ -138,11 +189,18 @@ const Catalog: React.FC = () => {
                                 </div>
                             )}
 
-                            {/* Owned Badge (Small Corner indicator) */}
+                            {/* Owned/Wish Badge */}
                             {owned && (
                                 <div className="absolute top-0 left-0 w-12 h-12 sm:w-16 sm:h-16 overflow-hidden z-20">
                                     <div className="bg-green-500 text-white text-[7px] sm:text-[9px] font-black uppercase text-center w-[80px] sm:w-[100px] py-0.5 sm:py-1 absolute rotate-[-45deg] left-[-25px] sm:left-[-30px] top-[10px] sm:top-[15px] shadow-[0_5px_15px_rgba(34,197,94,0.4)] border-b border-white/20">
-                                        Cautivo
+                                        Captivo
+                                    </div>
+                                </div>
+                            )}
+                            {!owned && wished && (
+                                <div className="absolute top-0 left-0 w-12 h-12 sm:w-16 sm:h-16 overflow-hidden z-20">
+                                    <div className="bg-brand-primary text-white text-[7px] sm:text-[9px] font-black uppercase text-center w-[80px] sm:w-[100px] py-0.5 sm:py-1 absolute rotate-[-45deg] left-[-25px] sm:left-[-30px] top-[10px] sm:top-[15px] shadow-[0_5px_15px_rgba(14,165,233,0.4)] border-b border-white/20">
+                                        Deseado
                                     </div>
                                 </div>
                             )}
@@ -187,18 +245,44 @@ const Catalog: React.FC = () => {
                                         <span className="sm:hidden">Ver</span>
                                     </button>
 
+                                    {/* Action: Toggle Wishlist */}
+                                    <button
+                                        onClick={() => toggleMutation.mutate({ productId: product.id, wish: true })}
+                                        disabled={toggleMutation.isPending || owned}
+                                        className={`flex h-8 w-8 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl transition-all border shadow-lg ${wished
+                                            ? 'bg-brand-primary/20 text-brand-primary border-brand-primary/30 hover:bg-red-500/20 hover:text-red-400'
+                                            : 'bg-white/5 text-white/20 border-white/10 hover:bg-brand-primary/10 hover:text-brand-primary'
+                                            } ${owned ? 'opacity-20 cursor-not-allowed' : ''} ${toggleMutation.isPending ? 'opacity-50 cursor-wait' : ''}`}
+                                        title={wished ? 'Quitar de Deseos' : 'Añadir a Deseos'}
+                                    >
+                                        <Star className={`h-3 w-3 sm:h-5 sm:w-5 ${wished ? 'fill-current' : ''}`} />
+                                    </button>
+
                                     {/* Action: Toggle Collection */}
                                     <button
-                                        onClick={() => toggleMutation.mutate(product.id)}
+                                        onClick={() => toggleMutation.mutate({ productId: product.id, wish: false })}
                                         disabled={toggleMutation.isPending}
                                         className={`flex h-8 w-8 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl transition-all border shadow-lg ${owned
-                                            ? 'bg-green-500/20 text-green-400 border-green-500/30 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/30'
-                                            : 'bg-brand-primary/10 text-brand-primary border-brand-primary/20 hover:bg-brand-primary/20 hover:shadow-[0_0_20px_rgba(14,165,233,0.3)]'
+                                            ? 'bg-green-500/20 text-green-400 border-green-500/30 hover:bg-red-500/20 hover:text-red-400'
+                                            : wished
+                                                ? 'bg-brand-primary text-white border-brand-primary shadow-brand-primary/20 hover:brightness-110'
+                                                : 'bg-brand-primary/10 text-brand-primary border-brand-primary/20 hover:bg-brand-primary/20'
                                             } ${toggleMutation.isPending ? 'opacity-50 cursor-wait' : ''}`}
-                                        title={owned ? 'Liberar del Catálogo' : 'Asegurar en la Fortaleza'}
+                                        title={owned ? 'Liberar del Catálogo' : wished ? 'Reclamar Reliquia' : 'Asegurar en la Fortaleza'}
                                     >
-                                        {owned ? <Check className="h-3 w-3 sm:h-5 sm:w-5" /> : <Plus className="h-3 w-3 sm:h-5 sm:w-5" />}
+                                        {owned ? <Check className="h-3 w-3 sm:h-5 sm:w-5" /> : wished ? <ShoppingCart className="h-3 w-3 sm:h-5 sm:w-5" /> : <Plus className="h-3 w-3 sm:h-5 sm:w-5" />}
                                     </button>
+
+                                    {/* Admin Action: Edit */}
+                                    {isAdmin && (
+                                        <button
+                                            onClick={() => setEditingProduct(product)}
+                                            className="flex h-8 w-8 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl bg-white/5 text-white/40 border border-white/5 hover:bg-brand-primary/20 hover:text-brand-primary transition-all shadow-lg"
+                                            title="Editar Metadatos (Arquitecto)"
+                                        >
+                                            <Settings className="h-3 w-3 sm:h-5 sm:w-5" />
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -309,6 +393,109 @@ const Catalog: React.FC = () => {
                             </p>
                         </div>
                     </div>
+                </div>
+            )}
+            {/* EDIT PRODUCT MODAL (ADMIN ONLY) */}
+            {isAdmin && editingProduct && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-2xl animate-in fade-in duration-300">
+                    <motion.div
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className="relative w-full max-w-2xl overflow-hidden rounded-[2.5rem] border border-brand-primary/30 bg-[#0A0A0B] shadow-[0_0_50px_rgba(14,165,233,0.2)] flex flex-col"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <form onSubmit={handleSaveEdit}>
+                            <div className="p-8 pb-4 flex items-center justify-between border-b border-white/5">
+                                <div className="flex items-center gap-4">
+                                    <div className="p-3 bg-brand-primary/10 rounded-xl">
+                                        <Settings className="h-6 w-6 text-brand-primary" />
+                                    </div>
+                                    <h4 className="text-2xl font-black text-white">Editor de <span className="text-brand-primary">La Verdad</span></h4>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setEditingProduct(null)}
+                                    className="h-10 w-10 flex items-center justify-center rounded-xl bg-white/5 text-white/40 hover:bg-red-500/20 hover:text-red-400 transition-all"
+                                >
+                                    <X className="h-5 w-5" />
+                                </button>
+                            </div>
+
+                            <div className="p-8 space-y-6 overflow-y-auto max-h-[60vh] custom-scrollbar">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {/* Name */}
+                                    <div className="col-span-2 space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Nombre de la Reliquia</label>
+                                        <input
+                                            value={editingProduct.name}
+                                            onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
+                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-white focus:outline-none focus:border-brand-primary/50 transition-all"
+                                        />
+                                    </div>
+
+                                    {/* EAN */}
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">EAN (Código Sagrado)</label>
+                                        <input
+                                            value={editingProduct.ean || ''}
+                                            onChange={(e) => setEditingProduct({ ...editingProduct, ean: e.target.value })}
+                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-white focus:outline-none focus:border-brand-primary/50 transition-all"
+                                            placeholder="Desconocido"
+                                        />
+                                    </div>
+
+                                    {/* Retail Price */}
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Precio de Lanzamiento (€)</label>
+                                        <input
+                                            type="number"
+                                            value={editingProduct.retail_price || 0}
+                                            onChange={(e) => setEditingProduct({ ...editingProduct, retail_price: parseFloat(e.target.value) })}
+                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-white focus:outline-none focus:border-brand-primary/50 transition-all"
+                                        />
+                                    </div>
+
+                                    {/* Subcategory */}
+                                    <div className="col-span-2 space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Línea temporal (Subcategoría)</label>
+                                        <input
+                                            value={editingProduct.sub_category || ''}
+                                            onChange={(e) => setEditingProduct({ ...editingProduct, sub_category: e.target.value })}
+                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-white focus:outline-none focus:border-brand-primary/50 transition-all"
+                                        />
+                                    </div>
+
+                                    {/* Image URL */}
+                                    <div className="col-span-2 space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Pocion Visual (URL Imagen)</label>
+                                        <input
+                                            value={editingProduct.image_url || ''}
+                                            onChange={(e) => setEditingProduct({ ...editingProduct, image_url: e.target.value })}
+                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-white/50 text-xs focus:outline-none focus:border-brand-primary/50 transition-all"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="p-8 border-t border-white/5 bg-white/[0.02] flex items-center justify-end gap-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setEditingProduct(null)}
+                                    className="px-6 py-3 rounded-2xl text-sm font-black uppercase tracking-widest text-white/30 hover:text-white transition-all"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={updateMutation.isPending}
+                                    className="bg-brand-primary hover:bg-brand-secondary text-white px-8 py-3 rounded-2xl font-black uppercase tracking-widest transition-all shadow-[0_0_30px_rgba(14,165,233,0.3)] flex items-center gap-2 disabled:opacity-50"
+                                >
+                                    {updateMutation.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                                    Preservar Cambios
+                                </button>
+                            </div>
+                        </form>
+                    </motion.div>
                 </div>
             )}
         </div>

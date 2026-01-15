@@ -10,11 +10,13 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen, onCloseMobile }) => {
+    const isAdmin = localStorage.getItem('active_user_id') === '1';
+
     const menuItems = [
         { id: 'dashboard', label: 'Tablero', icon: LayoutDashboard },
         { id: 'catalog', label: 'Eternia', icon: Database },
         { id: 'collection', label: 'Mi Fortaleza', icon: Box },
-        { id: 'purgatory', label: 'Purgatorio', icon: ShieldAlert },
+        ...(isAdmin ? [{ id: 'purgatory', label: 'Purgatorio', icon: ShieldAlert }] : []),
     ];
 
     // Clases base para el sidebar
@@ -72,10 +74,21 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen
 
                 {/* Footer */}
                 <div className="border-t border-glass-border p-4 space-y-2 mt-auto">
-                    <button className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-white/50 hover:bg-white/5 hover:text-white transition-all">
-                        <Settings className="h-5 w-5" />
-                        Ajustes
-                    </button>
+                    {isAdmin && (
+                        <button
+                            onClick={() => {
+                                setActiveTab('settings');
+                                onCloseMobile();
+                            }}
+                            className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all ${activeTab === 'settings'
+                                ? 'bg-brand-primary/20 text-brand-primary border border-brand-primary/30 shadow-[0_0_15px_rgba(14,165,233,0.1)]'
+                                : 'text-white/50 hover:bg-white/5 hover:text-white'
+                                }`}
+                        >
+                            <Settings className={`h-5 w-5 ${activeTab === 'settings' ? 'animate-spin-slow' : ''}`} />
+                            Configuración
+                        </button>
+                    )}
                     <button className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-red-400/60 hover:bg-red-500/10 hover:text-red-400 transition-all">
                         <LogOut className="h-5 w-5" />
                         Cerrar Sesión

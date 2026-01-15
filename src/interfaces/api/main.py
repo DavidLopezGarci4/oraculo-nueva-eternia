@@ -47,6 +47,8 @@ class ProductOutput(BaseModel):
     market_value: float = 0.0
     is_grail: bool = False
     grail_score: float = 0.0
+    is_wish: bool = False
+    acquired_at: str | None = None
 
 from fastapi import BackgroundTasks
 from src.infrastructure.scrapers.harvester import run_harvester
@@ -57,6 +59,7 @@ from sqlalchemy import select
 class CollectionToggleRequest(BaseModel):
     product_id: int
     user_id: int
+    wish: bool = False
 
 class PurgatoryMatchRequest(BaseModel):
     pending_id: int
@@ -66,9 +69,25 @@ class PurgatoryDiscardRequest(BaseModel):
     pending_id: int
     reason: str = "manual_discard"
 
+class PurgatoryBulkDiscardRequest(BaseModel):
+    pending_ids: List[int]
+    reason: str = "manual_bulk_discard"
+
 class ScraperRunRequest(BaseModel):
     scraper_name: str = "harvester"  # "harvester", "all", or individual spider name
-    trigger_type: str = "manual"     # "manual" or "scheduled"
+    trigger_type: str = "manual"
+
+class ProductEditRequest(BaseModel):
+    name: str | None = None
+    ean: str | None = None
+    image_url: str | None = None
+    category: str | None = None
+    sub_category: str | None = None
+    retail_price: float | None = None
+
+class ProductMergeRequest(BaseModel):
+    source_id: int
+    target_id: int     # "manual" or "scheduled"
 
 @app.get("/health")
 def health():
@@ -95,6 +114,14 @@ async def sync_batch(actions: List[SyncAction]):
             db.rollback()
             logger.error(f"Sync error: {e}")
             raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/auth/users")
+async def get_users():
+    """Retorna la lista de usuarios disponibles (Modo Test)"""
+    from src.domain.models import UserModel
+    with SessionCloud() as db:
+        users = db.query(UserModel).all()
+        return [{"id": u.id, "username": u.username, "role": u.role} for u in users]
 
 @app.get("/api/products", response_model=List[ProductOutput])
 async def get_products(sub_category: str | None = None):
@@ -124,7 +151,6 @@ async def get_collection(user_id: int):
             select(ProductModel, CollectionItemModel)
             .join(CollectionItemModel, ProductModel.id == CollectionItemModel.product_id)
             .where(CollectionItemModel.owner_id == user_id)
-            .where(CollectionItemModel.acquired == True)
         )
         results = db.execute(query).all()
         
@@ -141,6 +167,129 @@ async def get_collection(user_id: int):
             .group_by(OfferModel.product_id)
         )
         best_prices = dict(db.execute(best_price_query).all()) # {pid: min_price}
+
+        # 3. Construct Response with Grail & Wish Logic
+        output_list = []
+        for product, collection_item in results:
+            market_val = best_prices.get(product.id, 0.0)
+            
+            # Smart Grail Logic
+            is_grail = False
+            grail_score = 0.0
+            if market_val > 0 and product.retail_price and product.retail_price > 0:
+                roi = ((market_val - product.retail_price) / product.retail_price) * 100
+                if roi > 200: 
+                    is_grail = True
+                    grail_score = min(roi / 10, 100)
+
+            output_list.append(ProductOutput(
+                id=product.id,
+                name=product.name,
+                ean=product.ean,
+                image_url=product.image_url,
+                category=product.category,
+                sub_category=product.sub_category,
+                figure_id=product.figure_id,
+                variant_name=product.variant_name,
+                purchase_price=collection_item.purchase_price or 0.0,
+                market_value=market_val,
+                is_grail=is_grail,
+                grail_score=grail_score,
+                is_wish=not collection_item.acquired,
+                acquired_at=collection_item.acquired_at.isoformat() if collection_item.acquired_at else None
+            ))
+        
+        return output_list
+
+@app.put("/api/products/{product_id}", dependencies=[Depends(verify_api_key)])
+async def edit_product(product_id: int, request: ProductEditRequest):
+    """
+    Actualiza metadatos de un producto (Editor de la Verdad).
+    """
+    with SessionCloud() as db:
+        product = db.query(ProductModel).filter(ProductModel.id == product_id).first()
+        if not product:
+            raise HTTPException(status_code=404, detail="Producto no encontrado")
+        
+        if request.name is not None: product.name = request.name
+        if request.ean is not None: product.ean = request.ean
+        if request.image_url is not None: product.image_url = request.image_url
+        if request.category is not None: product.category = request.category
+        if request.sub_category is not None: product.sub_category = request.sub_category
+        if request.retail_price is not None: product.retail_price = request.retail_price
+        
+        db.commit()
+        return {"status": "success", "message": f"Reliquia '{product.name}' actualizada con éxito"}
+
+@app.get("/api/admin/duplicates", dependencies=[Depends(verify_api_key)])
+async def get_duplicates():
+    """
+    Detecta posibles duplicados basados en EAN (Exacto).
+    """
+    with SessionCloud() as db:
+        products = db.query(ProductModel).all()
+        duplicates = []
+        
+        # Exact EAN Match
+        ean_map = {}
+        for p in products:
+            if p.ean:
+                if p.ean in ean_map:
+                    ean_map[p.ean].append({
+                        "id": p.id,
+                        "name": p.name,
+                        "image_url": p.image_url,
+                        "sub_category": p.sub_category,
+                        "figure_id": p.figure_id
+                    })
+                else:
+                    ean_map[p.ean] = [{
+                        "id": p.id,
+                        "name": p.name,
+                        "image_url": p.image_url,
+                        "sub_category": p.sub_category,
+                        "figure_id": p.figure_id
+                    }]
+        
+        for ean, prods in ean_map.items():
+            if len(prods) > 1:
+                duplicates.append({
+                    "reason": f"EAN compartido: {ean}",
+                    "products": prods
+                })
+        
+        return duplicates
+
+@app.post("/api/products/merge", dependencies=[Depends(verify_api_key)])
+async def merge_products(request: ProductMergeRequest):
+    """
+    Fusiona dos productos. Transfiere ofertas y colecciones al target y borra el source.
+    """
+    with SessionCloud() as db:
+        source = db.query(ProductModel).filter(ProductModel.id == request.source_id).first()
+        target = db.query(ProductModel).filter(ProductModel.id == request.target_id).first()
+        if not source or not target: raise HTTPException(status_code=404, detail="Producto(s) no encontrado")
+            
+        # 1. Transferir ofertas
+        db.query(OfferModel).filter(OfferModel.product_id == source.id).update({"product_id": target.id})
+        
+        # 2. Transferir coleccionistas
+        source_items = db.query(CollectionItemModel).filter(CollectionItemModel.product_id == source.id).all()
+        for item in source_items:
+            exists = db.query(CollectionItemModel).filter(
+                CollectionItemModel.product_id == target.id,
+                CollectionItemModel.owner_id == item.owner_id
+            ).first()
+            if not exists:
+                item.product_id = target.id
+            else:
+                db.delete(item)
+                
+        # 3. Eliminar fuente
+        source_name = source.name
+        db.delete(source)
+        db.commit()
+        return {"status": "success", "message": f"Fusión divina: '{source_name}' ha sido absorbido por '{target.name}'"}
         
         # 3. Construct Response with Grail Logic
         output_list = []
@@ -181,7 +330,7 @@ async def get_collection(user_id: int):
 @app.post("/api/collection/toggle")
 async def toggle_collection(request: CollectionToggleRequest):
     """
-    Añade o elimina un producto de la colección del usuario.
+    Añade o elimina un producto de la colección del usuario (o lista de deseos).
     """
     from src.domain.models import CollectionItemModel
     with SessionCloud() as db:
@@ -192,18 +341,24 @@ async def toggle_collection(request: CollectionToggleRequest):
         ).first()
 
         if item:
-            # Si existe, lo eliminamos (toggle off)
-            db.delete(item)
-            action = "removed"
+            # Caso 1: Estaba en deseos y ahora lo marcamos como poseído (Upgrade)
+            if not item.acquired and not request.wish:
+                item.acquired = True
+                action = "upgraded"
+            # Caso 2: Estaba poseído y ahora lo marcamos como deseos (Downgrade - opcional, por ahora tratamos como toggle normal)
+            # Por simplicidad, si ya existe y pulsas lo mismo, se borra (toggle off)
+            else:
+                db.delete(item)
+                action = "removed"
         else:
-            # Si no existe, lo creamos (toggle on)
+            # Crear según el tipo solicitado
             new_item = CollectionItemModel(
                 product_id=request.product_id,
                 owner_id=request.user_id,
-                acquired=True
+                acquired=not request.wish
             )
             db.add(new_item)
-            action = "added"
+            action = "added_wish" if request.wish else "added_owned"
         
         db.commit()
         return {"status": "success", "action": action, "product_id": request.product_id}
@@ -394,6 +549,29 @@ async def discard_purgatory(request: PurgatoryDiscardRequest):
         db.commit()
         return {"status": "success", "message": "Reliquia desterrada al abismo y registrada"}
 
+@app.post("/api/purgatory/discard/bulk", dependencies=[Depends(verify_api_key)])
+async def discard_purgatory_bulk(request: PurgatoryBulkDiscardRequest):
+    """
+    Descarta múltiples items del Purgatorio a la vez.
+    """
+    with SessionCloud() as db:
+        items = db.query(PendingMatchModel).filter(PendingMatchModel.id.in_(request.pending_ids)).all()
+        count = 0
+        for item in items:
+            # Añadir a lista negra para no volver a verlo
+            blacklist = BlackcludedItemModel(
+                scraped_name=item.scraped_name,
+                shop_name=item.shop_name,
+                reason=request.reason
+            )
+            db.add(blacklist)
+            db.delete(item)
+            count += 1
+        
+        db.commit()
+    
+    return {"status": "success", "message": f"{count} items desterrados al abismo."}
+
 # --- SCRAPER CONTROL ENDPOINTS ---
 
 def run_scraper_task(scraper_name: str = "harvester", trigger_type: str = "manual"):
@@ -547,91 +725,76 @@ async def get_scrapers_logs():
         return db.query(ScraperExecutionLogModel).order_by(desc(ScraperExecutionLogModel.start_time)).limit(50).all()
 
 @app.get("/api/dashboard/stats")
-async def get_dashboard_stats():
-    """Retorna métricas globales para el Tablero de Inteligencia"""
-
-        
+async def get_dashboard_stats(user_id: int = 1):
+    """
+    Retorna métricas globales para el Tablero de Inteligencia, filtradas por usuario.
+    Diferencia entre items poseídos y lista de deseos.
+    """
     try:
         from sqlalchemy import func
         with SessionCloud() as db:
             total_products = db.query(ProductModel).count()
-            owned_count = db.query(CollectionItemModel).count() # Sin filtrar por user para MVP o asumiendo user único
+            # Solo contamos items poseídos (acquired=True) para las métricas de "Poder"
+            owned_count = db.query(CollectionItemModel).filter(
+                CollectionItemModel.owner_id == user_id, 
+                CollectionItemModel.acquired == True
+            ).count()
             
+            wish_count = db.query(CollectionItemModel).filter(
+                CollectionItemModel.owner_id == user_id, 
+                CollectionItemModel.acquired == False
+            ).count()
+
             # --- FINANCIAL ENGINE (PHASE 6) ---
-            # Logic: Best offer per product to avoid double counting if multiple offers exist
-            # But SQL above joins all offers. We need to be careful.
-            # Better approach: 
-            # 1. Calculate Invested (Collection Items)
-            # 2. Calculate Market Value (Unique Products with Offers)
-            
             total_invested = 0.0
             market_value = 0.0
-            profit_loss = 0.0
-            roi = 0.0
-
+            
             try:
-                # 2. Market Value (Calculated in Python to avoid complex SQL/Locking)
-                # Strategy: Fetch all best prices once, then map to collection items.
-                
-                # Get all relevant offers (product_id, price)
-                # Optimizes DB time by doing a single fast read
+                # Get best prices map
                 all_prices = db.query(OfferModel.product_id, OfferModel.price)\
                     .filter(OfferModel.is_available == True, OfferModel.product_id.isnot(None))\
                     .all()
                     
-                # Create map of ProductID -> Best Price
                 best_price_map = {}
                 for row in all_prices:
-                    pid = row.product_id
-                    price = row.price
-                    
-                    # Safety check for None values
-                    if pid is None or price is None:
-                        continue
-                        
+                    pid, price = row
+                    if pid is None or price is None: continue
                     if pid not in best_price_map or price < best_price_map[pid]:
                         best_price_map[pid] = price
                         
-                # Calculate Market Value
-                collection_pids = db.query(CollectionItemModel.product_id).all()
+                # Calcular Inversión y Valor de Mercado (SOLO POSEÍDOS)
+                collection_items = db.query(CollectionItemModel).filter(
+                    CollectionItemModel.owner_id == user_id,
+                    CollectionItemModel.acquired == True
+                ).all()
                 
-                market_value = 0.0
-                total_invested = 0.0 
-                # Re-calculate invested (since strict query was removed)
-                # Simplified estimation: 0 for now as we focus on stability
-                # Or fetch it simply:
-                invested_items = db.query(CollectionItemModel.purchase_price).all()
-                for (p_price,) in invested_items:
-                    if p_price: total_invested += p_price
-
-                for (pid,) in collection_pids:
-                    if pid is not None and pid in best_price_map:
-                        market_value += best_price_map[pid]
+                for item in collection_items:
+                    total_invested += (item.purchase_price or 0.0)
+                    if item.product_id in best_price_map:
+                        market_value += best_price_map[item.product_id]
                 
                 profit_loss = market_value - total_invested
                 roi = (profit_loss / total_invested * 100) if total_invested > 0 else 0.0
                 
             except Exception as e:
                 logger.error(f"Financial Engine Error: {e}")
-                # Fallback
                 market_value = 0.0
                 total_invested = 0.0
                 profit_loss = 0.0
                 roi = 0.0
 
-            # Distribución por tienda (para el gráfico) - FILTRADO POR VÍNCULOS VÁLIDOS
+            # Distribución por tienda (Global, para inteligencia de mercado)
             shop_dist = db.query(OfferModel.shop_name, func.count(OfferModel.id))\
                 .filter(OfferModel.product_id.isnot(None), OfferModel.is_available == True)\
                 .group_by(OfferModel.shop_name)\
                 .all()
             
-            # CONSISTENCY FIX: Derive total count from distributions to ensure 100% match
-            # This avoids race conditions or filter discrepancies between the two metrics
             match_count = sum(count for _, count in shop_dist)
             
             return {
                 "total_products": total_products,
                 "owned_count": owned_count,
+                "wish_count": wish_count,
                 "financial": {
                     "total_invested": round(total_invested, 2),
                     "market_value": round(market_value, 2),
@@ -642,21 +805,11 @@ async def get_dashboard_stats():
                 "shop_distribution": [{"shop": s, "count": c} for s, c in shop_dist]
             }
     except Exception as e:
-        # Emergency Fallback
-        with open("debug_error.log", "a") as f:
-            f.write(f"CRITICAL DASHBOARD ERROR: {str(e)}\n")
         logger.error(f"CRITICAL DASHBOARD ERROR: {e}")
         return {
-            "total_products": 0,
-            "owned_count": 0,
-            "financial": {
-                "total_invested": 0,
-                "market_value": 0,
-                "profit_loss": 0,
-                "roi": 0
-            },
-            "match_count": 0,
-            "shop_distribution": []
+            "total_products": 0, "owned_count": 0, "wish_count": 0,
+            "financial": {"total_invested": 0, "market_value": 0, "profit_loss": 0, "roi": 0},
+            "match_count": 0, "shop_distribution": []
         }
 
 @app.get("/api/products/with-offers")
@@ -711,7 +864,7 @@ async def get_product_offers(product_id: int):
         return results
 
 @app.get("/api/dashboard/hall-of-fame")
-async def get_dashboard_hall_of_fame():
+async def get_dashboard_hall_of_fame(user_id: int = 1):
     """
     Fase 6.3: Retorna los 'Griales del Reino' (Top Valor) y 'Potencial Oculto' (Top ROI).
     """
@@ -719,11 +872,11 @@ async def get_dashboard_hall_of_fame():
     from sqlalchemy import func
     
     with SessionCloud() as db:
-        # 1. Obtener todos los items de colección (con sus productos)
+        # 1. Obtener todos los items de colección filtrados por el usuario
         items = (
             db.query(CollectionItemModel)
             .join(ProductModel)
-            .filter(CollectionItemModel.acquired == True)
+            .filter(CollectionItemModel.acquired == True, CollectionItemModel.owner_id == user_id)
             .all()
         )
         

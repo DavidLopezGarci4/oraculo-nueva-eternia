@@ -1,80 +1,90 @@
 
 import sqlite3
-from sqlalchemy import create_engine, text, inspect
+from sqlalchemy import create_engine, text, inspect, Boolean
 from src.core.config import settings
 from src.domain.models import Base
-import sys
+import os
 
 def sync():
     """
     Migra los datos de oraculo.db (SQLite) a Supabase (Postgres).
+    Version 'Genius': 
+    1. Detecta tipos booleanos automaticamente usando los modelos de SQLAlchemy.
+    2. Convierte 0/1 a False/True para Postgres.
     """
-    print("🚀 Iniciando Sincronización Universal con Supabase...")
+    print("--- INICIANDO MIGRACION INTELIGENTE A SUPABASE ---")
     
+    db_path = "oraculo.db"
+    if not os.path.exists(db_path):
+        print(f"Error: No se encuentra el archivo {db_path} en la raiz.")
+        return
+
     # 1. Conexiones
-    local_conn = sqlite3.connect("oraculo.db")
+    local_conn = sqlite3.connect(db_path)
     local_conn.row_factory = sqlite3.Row
     
     cloud_url = settings.SUPABASE_DATABASE_URL
     if not cloud_url:
-        print("❌ Error: SUPABASE_DATABASE_URL no está configurada en el .env")
+        print("Error: SUPABASE_DATABASE_URL no encontrada en .env")
         return
 
     cloud_engine = create_engine(cloud_url)
     
-    # 2. Asegurar Esquema en Cloud
-    print("📋 Asegurando que las tablas existen en la nube...")
+    # 2. Detectar tablas reales en el archivo SQLite
+    cursor = local_conn.cursor()
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';")
+    tables = [row[0] for row in cursor.fetchall()]
+    print(f"Tablas detectadas: {', '.join(tables)}")
+
+    # 3. Asegurar Esquema en Cloud
+    print("Verificando tablas en la nube...")
     Base.metadata.create_all(bind=cloud_engine)
     
-    # Lista de tablas a migrar en orden de dependencia
-    # (Primero productos, luego ofertas/coleccion que dependen de ellos si hubiera FKs)
-    tables = [
-        "products",
-        "offers",
-        "pending_matches",
-        "collection",
-        "price_alerts",
-        "offer_history"
-    ]
-    
+    # 4. Mapeo de tipos booleanos por tabla
+    bool_columns_map = {}
+    for table_name, table_obj in Base.metadata.tables.items():
+        bool_cols = [col.name for col in table_obj.columns if isinstance(col.type, Boolean)]
+        if bool_cols:
+            bool_columns_map[table_name] = bool_cols
+
     try:
         with cloud_engine.begin() as cloud_conn:
             for table in tables:
-                print(f"  -> Migrando tabla: {table}...")
+                print(f"Migrando {table}...")
                 
-                # Leer datos locales
-                cursor = local_conn.cursor()
-                try:
-                    cursor.execute(f"SELECT * FROM {table}")
-                    rows = cursor.fetchall()
-                except sqlite3.OperationalError:
-                    print(f"     ⚠️ Tabla {table} no existe en local, saltando.")
-                    continue
+                cursor.execute(f"SELECT * FROM {table}")
+                rows = cursor.fetchall()
                 
                 if not rows:
-                    print(f"     ℹ️ Tabla {table} vacía en local.")
+                    print(f"  -> Tabla {table} esta vacia. Saltando.")
                     continue
 
-                # Preparar inserción en Cloud
-                # 1. Limpiar tabla en cloud para evitar duplicados en migración limpia
-                # cloud_conn.execute(text(f"DELETE FROM {table}")) # Descomentar si se quiere resetear cloud
-                
                 columns = rows[0].keys()
-                placeholders = ", ".join([f":{col}" for col in columns])
-                insert_stmt = text(f"INSERT INTO {table} ({', '.join(columns)}) VALUES ({placeholders}) ON CONFLICT DO NOTHING")
+                col_names = ", ".join([f'"{c}"' for c in columns])
+                placeholders = ", ".join([f":{c}" for c in columns])
+                
+                insert_stmt = text(f'INSERT INTO "{table}" ({col_names}) VALUES ({placeholders}) ON CONFLICT DO NOTHING')
+                
+                # Obtener columnas booleanas para esta tabla
+                bool_cols = bool_columns_map.get(table, [])
                 
                 count = 0
                 for row in rows:
-                    cloud_conn.execute(insert_stmt, dict(row))
+                    data = dict(row)
+                    # Conversion automatica de tipos para Postgres
+                    for col in bool_cols:
+                        if col in data and isinstance(data[col], int):
+                            data[col] = bool(data[col])
+                    
+                    cloud_conn.execute(insert_stmt, data)
                     count += 1
                 
-                print(f"     ✅ {count} registros sincronizados.")
+                print(f"  -> Exito: {count} registros sincronizados.")
 
-        print("\n✨ ¡Sincronización completada con éxito!")
-        print("Ahora tu Oráculo vive en la nube.")
+        print("\n--- ¡MIGRACION FINALIZADA CON EXITO! ---")
 
     except Exception as e:
-        print(f"\n❌ Error durante la migración: {e}")
+        print(f"\nError critico: {e}")
     finally:
         local_conn.close()
 
