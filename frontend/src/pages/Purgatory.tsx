@@ -77,6 +77,7 @@ const Purgatory: React.FC = () => {
             queryClient.invalidateQueries({ queryKey: ['purgatory'] });
             queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
             setSelectedPendingId(null);
+            setSearchTerm('');
         }
     });
 
@@ -458,7 +459,10 @@ const Purgatory: React.FC = () => {
                                         <span className="hidden md:inline text-[10px] font-black uppercase tracking-widest">Descartar</span>
                                     </button>
                                     <button
-                                        onClick={() => setSelectedPendingId(selectedPendingId === item.id ? null : item.id)}
+                                        onClick={() => {
+                                            setSelectedPendingId(selectedPendingId === item.id ? null : item.id);
+                                            setSearchTerm('');
+                                        }}
                                         className={`h-12 md:h-10 flex-1 md:flex-initial md:px-8 flex items-center justify-center rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg ${selectedPendingId === item.id
                                             ? 'bg-white text-black shadow-white/10'
                                             : 'bg-brand-primary text-white shadow-brand-primary/20 hover:brightness-110'}`}

@@ -110,6 +110,13 @@ Este documento registra la evolución técnica y estratégica del Oráculo. La P
 - **Hitos**: Corrección de discrepancia visula entre contadores y gráficos. Implementación de cálculo derivado (`sum(distribución)`) para garantizar coherencia matemática absoluta y corrección de `NameError` en runtime.
 - **Estado**: ✅ COMPLETADO
 
+#### 7.5 Refinamiento UX Purgatorio (Auto-Clear)
+- **Hitos**: Mejora de calidad de vida. El buscador manual ahora se reinicia automáticamente al completar una vinculación o cambiar el foco a otro item, eliminando la fricción de borrar texto anterior.
+- **Estado**: ✅ COMPLETADO
+
+> [!NOTE]
+> **Norma Operativa**: A partir de este hito, todos los títulos y descripciones para commits de GitHub deberán redactarse estrictamente en **ESPAÑOL** para mantener la coherencia con el idioma nativo del proyecto "Oráculo de Eternia".
+
 ---
 
 ## PLAN DE VERIFICACIÓN (PÚLSAR)
