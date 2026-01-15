@@ -863,6 +863,39 @@ async def get_product_offers(product_id: int):
             
         return results
 
+@app.get("/api/products/{product_id}/price-history")
+async def get_product_price_history(product_id: int):
+    """
+    Retorna la evolución de precios de un producto agrupada por tienda.
+    Fase 8.3: Cronos.
+    """
+    from src.domain.models import OfferModel, PriceHistoryModel
+    
+    with SessionCloud() as db:
+        # Buscamos todas las ofertas vinculadas a este producto
+        offers = db.query(OfferModel).filter(OfferModel.product_id == product_id).all()
+        
+        results = []
+        for offer in offers:
+            # Para cada oferta (tienda), obtener su historial de precios
+            history = db.query(PriceHistoryModel)\
+                .filter(PriceHistoryModel.offer_id == offer.id)\
+                .order_by(PriceHistoryModel.recorded_at.asc())\
+                .all()
+            
+            if history:
+                results.append({
+                    "shop_name": offer.shop_name,
+                    "history": [
+                        {
+                            "date": h.recorded_at.isoformat(),
+                            "price": h.price
+                        } for h in history
+                    ]
+                })
+        
+        return results
+
 @app.get("/api/dashboard/hall-of-fame")
 async def get_dashboard_hall_of_fame(user_id: int = 1):
     """

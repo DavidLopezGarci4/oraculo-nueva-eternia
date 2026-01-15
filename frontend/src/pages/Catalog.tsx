@@ -8,12 +8,16 @@ import type { Product } from '../api/collection';
 import { updateProduct } from '../api/admin';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { getProductPriceHistory } from '../api/products';
+import PriceHistoryChart from '../components/products/PriceHistoryChart';
+import { TrendingUp, History } from 'lucide-react';
 
 // Para desarrollo, usamos el ID de David
 const Catalog: React.FC = () => {
     const queryClient = useQueryClient();
     const [selectedProduct, setSelectedProduct] = React.useState<Product | null>(null);
     const [editingProduct, setEditingProduct] = React.useState<Product | null>(null);
+    const [historyProductId, setHistoryProductId] = React.useState<number | null>(null);
 
     // Contexto de Autenticación (Fase 8.2)
     const activeUserId = parseInt(localStorage.getItem('active_user_id') || '2');
@@ -45,13 +49,11 @@ const Catalog: React.FC = () => {
         enabled: !!selectedProduct
     });
 
-    // 4. Fetch de IDs de productos con ofertas activas (inteligencia de mercado)
-    const { data: productsWithOffers } = useQuery<number[]>({
-        queryKey: ['products-with-offers'],
-        queryFn: async () => {
-            const response = await axios.get('/api/products/with-offers');
-            return response.data;
-        }
+    // 5. Fetch de Histórico de Precios (Fase 8.3 Cronos)
+    const { data: priceHistory, isLoading: isLoadingHistory } = useQuery({
+        queryKey: ['price-history', historyProductId],
+        queryFn: () => historyProductId ? getProductPriceHistory(historyProductId) : null,
+        enabled: !!historyProductId
     });
 
     const hasMarketIntel = (productId: number) => productsWithOffers?.includes(productId);
@@ -235,15 +237,25 @@ const Catalog: React.FC = () => {
                                 </div>
 
                                 <div className="mt-auto flex items-center justify-between pt-2 sm:pt-4 gap-2 sm:gap-3">
-                                    {/* Action Button: Detail View */}
-                                    <button
-                                        onClick={() => setSelectedProduct(product)}
-                                        className="flex flex-1 items-center justify-center gap-1.5 sm:gap-2 rounded-xl sm:rounded-2xl bg-white/5 py-2 sm:py-2.5 text-[10px] sm:text-xs font-black uppercase tracking-widest text-white/40 border border-white/5 transition-all hover:bg-brand-primary/20 hover:text-brand-primary hover:border-brand-primary/40 group/btn"
-                                    >
-                                        <Info className="h-3 w-3 sm:h-4 sm:w-4 transition-transform group-hover/btn:scale-120" />
-                                        <span className="hidden sm:inline">Mercado</span>
-                                        <span className="sm:hidden">Ver</span>
-                                    </button>
+                                    <div className="flex items-center gap-2">
+                                        {/* Action: Toggle Price History */}
+                                        <button
+                                            onClick={() => setHistoryProductId(historyProductId === product.id ? null : product.id)}
+                                            className={`flex h-8 w-8 sm:h-11 sm:w-11 items-center justify-center rounded-xl sm:rounded-2xl transition-all border ${historyProductId === product.id ? 'bg-purple-500/20 text-purple-400 border-purple-500/50' : 'bg-white/5 text-white/30 border-white/5 hover:bg-white/10 hover:text-white'}`}
+                                            title="Ver Evolución de Precios"
+                                        >
+                                            <History className="h-3 w-3 sm:h-5 sm:w-5" />
+                                        </button>
+
+                                        {/* Action Button: Detail View */}
+                                        <button
+                                            onClick={() => setSelectedProduct(product)}
+                                            className="flex h-8 w-8 sm:h-11 sm:w-11 items-center justify-center rounded-xl sm:rounded-2xl bg-white/5 text-white/40 border border-white/5 transition-all hover:bg-brand-primary/20 hover:text-brand-primary hover:border-brand-primary/40"
+                                            title="Ver Mercado Live"
+                                        >
+                                            <Info className="h-3 w-3 sm:h-5 sm:w-5" />
+                                        </button>
+                                    </div>
 
                                     {/* Action: Toggle Wishlist */}
                                     <button
@@ -284,6 +296,36 @@ const Catalog: React.FC = () => {
                                         </button>
                                     )}
                                 </div>
+
+                                {/* Inline Price History Chart (Cronos) */}
+                                {historyProductId === product.id && (
+                                    <motion.div
+                                        initial={{ opacity: 0, height: 0 }}
+                                        animate={{ opacity: 1, height: 'auto' }}
+                                        className="overflow-hidden space-y-3"
+                                    >
+                                        <div className="flex items-center justify-between text-[8px] font-black uppercase tracking-widest text-purple-400 pt-2 px-1">
+                                            <span className="flex items-center gap-1">
+                                                <TrendingUp className="h-3 w-3" />
+                                                Evolución Cronos
+                                            </span>
+                                            <button onClick={() => setSelectedProduct(product)} className="hover:text-white transition-colors">
+                                                Ver Detalles
+                                            </button>
+                                        </div>
+                                        {isLoadingHistory ? (
+                                            <div className="h-20 flex items-center justify-center">
+                                                <RefreshCw className="h-4 w-4 animate-spin text-purple-500/50" />
+                                            </div>
+                                        ) : priceHistory && priceHistory.length > 0 ? (
+                                            <PriceHistoryChart data={priceHistory} />
+                                        ) : (
+                                            <div className="p-4 text-[10px] font-bold text-center text-white/10 uppercase italic">
+                                                Sin datos históricos suficientes
+                                            </div>
+                                        )}
+                                    </motion.div>
+                                )}
                             </div>
                         </div>
                     );

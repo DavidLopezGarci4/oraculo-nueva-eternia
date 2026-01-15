@@ -7,6 +7,7 @@ from src.domain.schemas import ProductSchema
 from src.infrastructure.repositories.product import ProductRepository
 from sqlalchemy.orm import Session
 from src.infrastructure.database_cloud import SessionCloud, init_cloud_db
+from src.infrastructure.services.telegram_service import telegram_service
 
 class ScrapingPipeline:
     def __init__(self, spiders: List[BaseSpider]):
@@ -195,6 +196,16 @@ class ScrapingPipeline:
                         {"url": url_str, "name": best_match_product.name, "shop_name": offer.get('shop_name'), "price": offer.get('price')}, 
                         details=f"Match confidence: {best_match_score:.2f}"
                     )
+
+                    # --- PHASE 8.5: THE EYE OF SAURON (TELEGRAM ALERT) ---
+                    # Only alert for high-confidence matches to avoid noise
+                    if best_match_score >= 0.90:
+                        asyncio.create_task(telegram_service.send_deal_alert(
+                            product_name=best_match_product.name,
+                            price=offer.get('price'),
+                            shop_name=offer.get('shop_name'),
+                            url=url_str
+                        ))
                 else:
                     # To Purgatory
                     # logger.info(f"🆕 To Purgatory: '{offer.get('product_name')}'")

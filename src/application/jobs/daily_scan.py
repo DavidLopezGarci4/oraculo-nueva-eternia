@@ -21,6 +21,16 @@ from src.infrastructure.scrapers.frikiverso_scraper import FrikiversoScraper
 from src.infrastructure.scrapers.pixelatoy_scraper import PixelatoyScraper
 from src.infrastructure.scrapers.electropolis_scraper import ElectropolisScraper
 
+# Phase 8.4: European Expansion Scrapers
+from src.infrastructure.scrapers.detoyboys_scraper import DeToyboysNLScraper
+from src.infrastructure.scrapers.motuclassics_de_scraper import MotuClassicsDEScraper
+from src.infrastructure.scrapers.vendiloshop_scraper import VendiloshopITScraper
+
+# Phase 8.4b: Advanced Expansion Scrapers
+from src.infrastructure.scrapers.toymi_scraper import ToymiEUScraper
+from src.infrastructure.scrapers.time4actiontoys_scraper import Time4ActionToysDEScraper
+from src.infrastructure.scrapers.bbts_scraper import BigBadToyStoreScraper
+
 async def run_daily_scan(progress_callback=None):
     # Ensure logging is set up
     setup_logging()
@@ -90,13 +100,21 @@ async def run_daily_scan(progress_callback=None):
         # Initialize Pipeline
         pipeline = ScrapingPipeline([])
         
-        # List of Scrapers
+        # List of Scrapers (Spanish + Phase 8.4 European)
         all_scrapers = [
             ActionToysScraper(),
             FantasiaScraper(),
             FrikiversoScraper(),
             PixelatoyScraper(),
-            ElectropolisScraper()
+            ElectropolisScraper(),
+            # Phase 8.4: European Expansion
+            DeToyboysNLScraper(),
+            MotuClassicsDEScraper(),
+            VendiloshopITScraper(),
+            # Phase 8.4b: Advanced Expansion
+            ToymiEUScraper(),
+            Time4ActionToysDEScraper(),
+            BigBadToyStoreScraper(),
         ]
         
         # Filter Scrapers

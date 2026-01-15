@@ -177,11 +177,88 @@ Para garantizar que el Oráculo sea indestructible y portable, hemos implementad
 
 ## PLAN DE VERIFICACIÓN (PÚLSAR)
 1. **Radar**: Los vínculos manuales se reflejan instantáneamente en el Tablero.
+- **8.3 Cronos**: Histórico de Precios premium integrado en Catálogo. ✅ COMPLETADO
+- **8.4 Expansión Continental**: Integración de tiendas TOP europeas.
+
+---
+
+### 🔍 Fase 10: Infiltración en los Grandes Mercados (APIs & Scraping)
+Iniciada tras la consolidación de Cronos, esta fase busca el dominio de los precios globales.
+- **Inteligencia Amazon**: Definida estrategia para amazon.es centrada en monitoreo de precios (PA-API 5.0).
+- **Inteligencia eBay**: Preparado conector OAuth 2.0 para Browse API (Búsqueda de subastas y ventas directas).
+- **Inteligencia Wallapop**: Identificada API interna v3 y headers críticos para bypass de seguridad.
+- **Monitorización de Ventas**: Investigando métodos para rastrear no solo precios, sino transacciones reales de MOTU Origins.
+
+---
+
+### 🧠 Sabiduría de los Grandes Mercados (Marketplace Intelligence)
+
+Para la expansión a los "Tres Titanes" (Amazon, eBay, Wallapop), el Oráculo ha sintetizado las siguientes reglas de infiltración:
+
+#### 📦 Amazon.es (El Gigante de la Logística)
+*   **Misión**: Vigilancia de precios en España para detectar bajadas repentinas de stock oficial de Mattel.
+*   **Técnica**: Uso de `PA-API 5.0` via `python-amazon-paapi`. Requiere cuenta de Afiliados con 3 ventas previas.
+*   **Enfoque**: No ventas, solo extracción de `LowestNewPrice` y `OfferListingId`.
+
+#### 🏛️ eBay (La Sala de Subastas Global)
+*   **Misión**: Capturar el valor real de mercado mediante subastas y ventas históricas.
+*   **Técnica**: `Browse API` con flujo `Client Credentials`. Búsqueda por palabras clave con filtros de categoría específicos de coleccionismo.
+*   **Valor**: eBay es el estándar de oro para valorar piezas antiguas o raras de MOTU Origins.
+
+#### 🤝 Wallapop (El Mercado del Pueblo)
+*   **Misión**: Rastrear el pulso de la segunda mano y coleccionistas locales en España.
+*   **Técnica**: Infiltración en la API interna (`api.wallapop.com/api/v3`) usando headers de dispositivo (`X-DeviceOS`) y User-Agents específicos.
+*   **Desafío**: Gestión de proxies para evitar el ban de Cloudflare/DataDome.
+
+#### 📊 Espionaje de Ventas Reales (Sales Monitoring)
+Para capturar no solo el precio de oferta, sino el precio de transacción real, el Oráculo empleará estas tácticas:
+
+*   **Action Figure 411 (El Oráculo Aliado)**: Es la fuente más limpia. Scrapearemos su guía de precios de MOTU Origins para obtener promedios de venta y listados de subastas finalizadas ya filtrados de ruido.
+*   **eBay (Sold Listings)**: Infiltración mediante scraping de `&LH_Sold=1&LH_Complete=1`. Esto nos dará el pulso exacto de lo que los coleccionistas españoles están pagando **hoy**.
+*   **Wallapop (Status Tracker)**: Monitorización selectiva de productos. Cuando un item desaparece o cambia a `status: sold`, el Oráculo registrará la última cifra conocida como precio de venta probable.
+*   **Amazon (BSR Analysis)**: Seguimiento del `SalesRank` via PA-API. Una caída brusca en el ranking es un indicador directo de volumen de ventas.
+
+---
+
+## PLAN DE VERIFICACIÓN (PÚLSAR)
+1. **Radar**: Los vínculos manuales se reflejan instantáneamente en el Tablero.
 2. **Justicia**: Cada acción en el historial permite reversión inmediata con un clic.
 3. **Métricas**: El Tablero calcula el valor total basándose en los items de "La Fortaleza".
 4. **Movilidad**: Operatividad total verificada en resoluciones móviles y acceso via Docker/Nginx.
 
 ## PRÓXIMOS PASOS (EL OJO DE SAURON)
-- **8.3 El Ojo de Sauron**: Sistema de alertas críticas vía Push/Telegram.
-- **8.4 Cronos**: Histórico de Precios portable.
+### Fase 8.4 & 8.4b: Expansión Continental y Avanzada
+- **Hitos**: Integración de 6 nuevas tiendas internacionales (Holanda, Alemania, Italia, Europa, USA) y optimización stealth para GitHub Actions.
+- **Estado**: ✅ COMPLETADO Y VERIFICADO
+
+#### 🌍 El Oráculo Global (11 Tiendas Activas)
+El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas para cada una:
+
+1.  **España (5)**: ActionToys, Fantasia, Frikiverso, Pixelatoy, Electropolis (WooCommerce/Prestashop).
+2.  **Europa (3)**: 
+    *   `DeToyboys_scraper.py` (Holanda): Gestión de stock NL.
+    *   `Motuclassics_de_scraper.py` (Alemania): Shopware crawler.
+    *   `Vendiloshop_scraper.py` (Italia): Precios en Euros competitivos.
+3.  **Avanzado (3)**:
+    *   `Toymi_scraper.py` (EU): Paginación optimizada (102 productos detectados mediante `?af=60`).
+    *   `Time4ActionToys_scraper.py` (Alemania): Gran volumen (273 productos) con paginación industrial.
+    *   `BBTS_scraper.py` (USA): **Stealth Mode** avanzado (Playwright, fingerprint spoofing, init scripts anti-detección) para saltar Cloudflare desde GitHub Actions.
+
+#### 🔧 Mejoras de Infraestructura
+*   **Bypass de Cloudflare**: Implementación de técnicas de evasión en `BBTS_scraper.py` (Timezone USA, Geo-spoofing, movimientos humanizados).
+*   **Corrección de BaseScraper**: Reparado bug crítico de importación en `base.py` que afectaba a la generación de User-Agents aleatorios.
+*   **Optimización de Carga**: Configuración de `af=60` en Toymi para maximizar la eficiencia por cada incursión.
+
+---
+
+## PLAN DE VERIFICACIÓN (PÚLSAR)
+1. **Radar**: Los vínculos manuales se reflejan instantáneamente en el Tablero.
+2. **Justicia**: Cada acción en el historial permite reversión inmediata con un clic.
+3. **Métricas**: El Tablero calcula el valor total basándose en los items de "La Fortaleza".
+4. **Scrapers**: Verificados mediante `test_european_scrapers.py` y logs de `daily_scan.py`.
+
+## PRÓXIMOS PASOS (EL OJO DE SAURON)
+- **8.5 El Ojo de Sauron**: Alertas críticas en Telegram para "Chollos" y "Griales".
+- **10.1 Infiltración Amazon**: Monitoreo de precios amazon.es (PA-API).
+- **10.5 IA SmartMatcher**: Implementación de LLM ligero para mejorar el reconocimiento automático de ítems difíciles.
 

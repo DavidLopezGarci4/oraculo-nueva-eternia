@@ -5,6 +5,7 @@ from datetime import datetime
 import asyncio
 import logging
 import re
+import random
 from playwright.async_api import Page, BrowserContext
 
 logger = logging.getLogger(__name__)
