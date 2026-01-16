@@ -260,8 +260,29 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
 3. **Métricas**: El Tablero calcula el valor total basándose en los items de "La Fortaleza".
 4. **Scrapers**: Verificados mediante `test_european_scrapers.py` y logs de `daily_scan.py`.
 
-## PRÓXIMOS PASOS (EL OJO DE SAURON)
-- **8.5 El Ojo de Sauron**: Alertas críticas en Telegram para "Chollos" y "Griales".
-- **10.1 Infiltración Amazon**: Monitoreo de precios amazon.es (PA-API).
-- **10.5 IA SmartMatcher**: Implementación de LLM ligero para mejorar el reconocimiento automático de ítems difíciles.
+---
 
+### Fase 10: Infiltración en los Grandes Mercados
+- **Hitos**: Inteligencia de mercado extendida a plataformas de segunda mano y marketplaces globales.
+- **Estado**: 🏗️ EN PROGRESO
+
+#### 10.3 Inteligencia Wallapop (Segunda Mano)
+- **Hitos**: Sistema de importación manual integrado en la web del Oráculo. Pestaña "Wallapop" en Admin → Config. Formato de entrada: `Nombre | Precio | URL`. Endpoint API: `POST /api/wallapop/import`.
+- **Verificado**: 57 productos importados exitosamente al Purgatorio.
+- **Limitación Técnica**: Wallapop usa CloudFront WAF que bloquea scraping automatizado. Solución híbrida: el usuario navega manualmente y pega los datos en la app.
+- **Archivos Creados**:
+  - `frontend/src/components/admin/WallapopImporter.tsx` - Componente React con preview en tiempo real.
+  - `frontend/src/api/wallapop.ts` - Cliente API y parseador de texto.
+  - `src/infrastructure/scrapers/wallapop_manual_importer.py` - Motor de importación CLI.
+  - `import_wallapop.bat` - Script de acceso rápido.
+  - `docs/GUIA_WALLAPOP_MANUAL.md` - Guía de uso.
+  - `chrome-extension/` - Extensión de navegador (opcional, experimental).
+- **Estado**: ✅ COMPLETADO (Importación Manual Integrada)
+
+---
+
+## PRÓXIMOS PASOS (EL OJO DE SAURON)
+- **10.1 Infiltración Amazon**: Monitoreo de precios amazon.es (requiere PA-API con 3 ventas de afiliado).
+- **10.2 Inteligencia eBay**: Conector Browse API + OAuth 2.0 (requiere cuenta developer.ebay.com).
+- **10.4 Consolidación Global**: Unificación de métricas de todos los marketplaces.
+- **10.5 IA SmartMatcher**: Implementación de LLM ligero para mejorar el reconocimiento automático.

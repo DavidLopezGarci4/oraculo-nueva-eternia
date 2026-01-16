@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Activity, Clock, AlertCircle, CheckCircle2, RefreshCw, Terminal, GitMerge, Target } from 'lucide-react';
+import { Play, Activity, Clock, AlertCircle, CheckCircle2, RefreshCw, Terminal, GitMerge, Target, Upload } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getScrapersStatus, getScrapersLogs, runScraper, getDuplicates, mergeProducts, type ScraperStatus, type ScraperLog } from '../api/admin';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
+import WallapopImporter from '../components/admin/WallapopImporter';
 
 const Config: React.FC = () => {
-    const [activeTab, setActiveTab] = useState<'scrapers' | 'radar'>('scrapers');
+    const [activeTab, setActiveTab] = useState<'scrapers' | 'radar' | 'wallapop'>('scrapers');
     const [statuses, setStatuses] = useState<ScraperStatus[]>([]);
     const [logs, setLogs] = useState<ScraperLog[]>([]);
     const [duplicates, setDuplicates] = useState<any[]>([]);
@@ -110,6 +111,13 @@ const Config: React.FC = () => {
                                 {duplicates.length}
                             </span>
                         )}
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('wallapop')}
+                        className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'wallapop' ? 'bg-green-500 text-white shadow-lg shadow-green-500/20' : 'text-white/40 hover:text-white'}`}
+                    >
+                        <Upload className="h-4 w-4" />
+                        Wallapop
                     </button>
                 </div>
             </div>
@@ -265,7 +273,7 @@ const Config: React.FC = () => {
                             </div>
                         </div>
                     </motion.div>
-                ) : (
+                ) : activeTab === 'radar' ? (
                     <motion.div
                         key="radar"
                         initial={{ opacity: 0, y: 10 }}
@@ -307,9 +315,6 @@ const Config: React.FC = () => {
                                                         <h4 className="text-white font-bold truncate">{p.name}</h4>
                                                         <p className="text-[10px] text-white/30 uppercase font-black">ID: #{p.id} • {p.sub_category}</p>
                                                     </div>
-
-                                                    {/* Merge Logic: Show merge button if this is source, merging into the one above/next */}
-                                                    {/* Simplification: Just allow merging this into any other in the group */}
                                                     <div className="flex flex-col gap-2">
                                                         <button
                                                             onClick={() => {
@@ -331,7 +336,16 @@ const Config: React.FC = () => {
                             </div>
                         )}
                     </motion.div>
-                )}
+                ) : activeTab === 'wallapop' ? (
+                    <motion.div
+                        key="wallapop"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                    >
+                        <WallapopImporter />
+                    </motion.div>
+                ) : null}
             </AnimatePresence>
         </div>
     );

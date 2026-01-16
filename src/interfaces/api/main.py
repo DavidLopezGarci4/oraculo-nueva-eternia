@@ -1127,6 +1127,57 @@ async def run_scrapers(request: ScraperRunRequest, background_tasks: BackgroundT
     background_tasks.add_task(run_scraper_task, request.scraper_name, request.trigger_type)
     return {"status": "success", "message": f"Incursión '{request.scraper_name}' ({request.trigger_type}) desplegada en los páramos de Eternia"}
 
+# === WALLAPOP EXTENSION IMPORT ===
+class WallapopProduct(BaseModel):
+    title: str
+    price: float
+    url: str
+    imageUrl: str | None = None
+
+class WallapopImportRequest(BaseModel):
+    products: List[WallapopProduct]
+
+@app.get("/api/health")
+def api_health():
+    """Health check para la extensión de Chrome"""
+    return {"status": "ok", "service": "oraculo", "version": "1.0.0"}
+
+@app.post("/api/wallapop/import")
+async def import_wallapop_products(request: WallapopImportRequest):
+    """
+    Recibe productos de Wallapop desde la extensión de Chrome
+    y los guarda en el Purgatorio para revisión manual.
+    """
+    imported = 0
+    
+    with SessionCloud() as db:
+        for product in request.products:
+            # Verificar si ya existe
+            existing = db.query(PendingMatchModel).filter(
+                PendingMatchModel.url == product.url
+            ).first()
+            
+            if existing:
+                continue
+            
+            # Crear item en Purgatorio
+            pending = PendingMatchModel(
+                scraped_name=f"[Wallapop] {product.title}",
+                price=product.price,
+                currency="EUR",
+                url=product.url,
+                shop_name="Wallapop",
+                image_url=product.imageUrl,
+                found_at=datetime.utcnow()
+            )
+            db.add(pending)
+            imported += 1
+        
+        db.commit()
+    
+    logger.info(f"[Wallapop Extension] Importados {imported} productos al Purgatorio")
+    return {"status": "success", "imported": imported, "total_received": len(request.products)}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("src.interfaces.api.main:app", host="127.0.0.1", port=8000, reload=True)
