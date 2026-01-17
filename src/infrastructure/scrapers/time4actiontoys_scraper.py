@@ -98,9 +98,16 @@ class Time4ActionToysDEScraper(BaseScraper):
                 return None
             
             # Price: German format 12,95 €
+            # Phase 11.2: Avoid concatenating list price with real price
             price_tag = item.select_one('.product-price, .product--price, .price')
             price_val = 0.0
             if price_tag:
+                # If there's a discounted price, we must remove the 'list-price' part
+                # to avoid strings like "14,9928,99"
+                list_price_tag = price_tag.select_one('.list-price')
+                if list_price_tag:
+                    list_price_tag.decompose()
+                
                 price_val = self._normalize_price(price_tag.get_text(strip=True))
             
             if price_val == 0.0:

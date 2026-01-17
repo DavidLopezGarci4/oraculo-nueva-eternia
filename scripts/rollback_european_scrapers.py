@@ -6,7 +6,7 @@ from src.infrastructure.database_cloud import SessionCloud
 from src.domain.models import OfferModel, PendingMatchModel, ProductAliasModel, OfferHistoryModel
 from sqlalchemy import delete
 
-def rollback_scrapers(shops=["ToymiEU", "Time4ActionToys"]):
+def rollback_scrapers(shops=["ToymiEU", "Time4ActionToys", "Time4ActionToysDE"]):
     with SessionCloud() as db:
         print(f"Rollback iniciado para tiendas: {shops}")
         

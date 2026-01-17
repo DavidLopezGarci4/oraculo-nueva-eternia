@@ -304,19 +304,23 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
 - **Blindaje de Rollback**: Corregido `AttributeError` en el script de reversión ejecutiva.
 - **Verificación de Pipeline**: Confirmado que `daily_scan.py` integra correctamente los 11 scrapers activos (España + Europa).
 
-### 🕸️ Operación "Purgatorio Limpio" (82 Almas Retornadas)
-- **Acción**: Rollback total de los scrapers **ToymiEU** y **Time4ActionToys**.
-- **Resultado**: 82 items vinculados automáticamente han sido devueltos al Purgatorio para revisión manual del Maestro, eliminando cualquier riesgo de desincronización por SmartMatch.
+### 🕸️ Operación "Purgatorio Limpio" (Rollback Total Europeo)
+- **Acción**: Rollback extendido para **Time4ActionToysDE**, **Time4ActionToys** y **ToymiEU**.
+- **Resultado**: +234 items de `Time4ActionToysDE` enviados al Purgatorio. Total acumulado de ~300+ items devueltos para auditoría manual tras detectar errores de SmartMatch y precios.
+- **Limpieza de Alias**: Se han eliminado los `ProductAliasModel` para evitar que el sistema los vuelva a vincular automáticamente de forma inmediata.
 
-### 🔗 Hipervínculos de Verificación (Actividad del Oráculo)
-- **Mejora API**: El historial de actividad ahora incluye `offer_url` en la respuesta.
-- **Mejora UI**: Botón de acceso directo a la fuente original en cada entrada del historial del Dashboard.
-- **Wallapop Sync**: Integración de lógica de "Copiar URL" también en el historial de actividad para evitar bloqueos 403.
+### 🧩 Estabilidad del Arca (Fixes Técnicos)
+- **Docker**: Limpieza de cache corrupto mediante `fix_docker_cache.bat` para resolver errores de `snapshot parent`.
+- **Frontend**: Eliminación de importaciones huérfanas (`Upload`, `LinkIcon`) en `Config.tsx` y `Dashboard.tsx` que bloqueaban la compilación de producción de Vite.
+
+### 🌍 Refinamiento Europeo (ToymiEU "Spanien" Fix)
+- **Lógica de Precios**: El scraper `ToymiEUScraper` ahora detecta el selector OSS y fuerza la región a **España (ES)** antes de iniciar el escaneo.
+- **Precisión**: Mejora en la extracción de precios priorizando tags `meta[itemprop="price"]` de Schema.org para asegurar que se capture el PVP con IVA español.
 
 ---
 
-## PRÓXIMOS PASOS (EL OJO DE SAURON)
-- **10.1 Infiltración Amazon**: Monitoreo de precios amazon.es (requiere PA-API con 3 ventas de afiliado).
-- **10.2 Inteligencia eBay**: Conector Browse API + OAuth 2.0 (requiere cuenta developer.ebay.com).
-- **10.5 IA SmartMatcher**: Implementación de LLM ligero para mejorar el reconocimiento automático.
-- **11.1 Control de Erratas**: Refinamiento del motor de SmartMatch para evitar vinculaciones incorrectas detectadas en auditoría europea.
+- [x] **11.1 Rollback masivo**: Auditoría europea completada y items devueltos al Purgatorio.
+- [x] **11.2 Fix ToymiEU**: Lógica de selección de precios por país (España) implementada.
+- [ ] **11.5 IA SmartMatcher**: Implementación de LLM ligero para mejorar el reconocimiento automático.
+- [ ] **12.1 Infiltración Amazon**: Monitoreo de precios amazon.es.
+- [ ] **12.2 Inteligencia eBay**: Conector Browse API + OAuth 2.0.

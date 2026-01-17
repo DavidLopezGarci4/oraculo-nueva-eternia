@@ -40,6 +40,9 @@ class ToymiEUScraper(BaseScraper):
             page = await context.new_page()
             
             try:
+                # Phase 11: Ensure we get Spanish prices (ES) via OSS selector
+                await self._set_country_spain(page)
+                
                 # Toymi tiene 5 paginas segun la estructura observada
                 for page_num in range(1, 6):
                     if page_num == 1:
@@ -113,6 +116,30 @@ class ToymiEUScraper(BaseScraper):
         logger.info(f"[{self.spider_name}] Finished. Total items: {len(products)}")
         return products
 
+    async def _set_country_spain(self, page: Page):
+        """Sets the shipping country to Spain to get correct VAT/OSS prices."""
+        try:
+            logger.info(f"[{self.spider_name}] Setting shipping country to Spain (ES)...")
+            # Navigate to home if not already there or just try to find it on current page
+            # Usually it's in the header or a popup
+            
+            # Look for the OSS selector
+            selector = '.ws5_oss_form-select'
+            button = '.ws5_oss_button'
+            
+            if await page.query_selector(selector):
+                logger.debug(f"[{self.spider_name}] OSS selector found. Selecting 'ES'...")
+                # Note: select2 might be active, but select_option usually works on the underlying select
+                await page.select_option(selector, value='ES')
+                await page.click(button)
+                await page.wait_for_load_state('networkidle')
+                await asyncio.sleep(2)
+                logger.info(f"[{self.spider_name}] Country successfully set to Spain.")
+            else:
+                logger.debug(f"[{self.spider_name}] OSS selector not found on initial load.")
+        except Exception as e:
+            logger.warning(f"[{self.spider_name}] Could not set country to ES: {e}")
+
     def _parse_link(self, link_tag, full_url: str) -> Optional[ScrapedOffer]:
         """Parsea un link a producto MOTU."""
         try:
@@ -136,7 +163,15 @@ class ToymiEUScraper(BaseScraper):
             for _ in range(5):  # Subir hasta 5 niveles
                 if parent is None:
                     break
-                    
+                
+                # Prioridad 1: Meta tag de Schema.org
+                price_tag = parent.select_one('meta[itemprop="price"]')
+                if price_tag:
+                    price_val = self._normalize_price(price_tag.get('content', '0'))
+                    if price_val > 0:
+                        break
+
+                # Prioridad 2: Clases estandar
                 price_tag = parent.select_one('.price, [class*="price"], [class*="Price"]')
                 if price_tag:
                     price_val = self._normalize_price(price_tag.get_text(strip=True))
