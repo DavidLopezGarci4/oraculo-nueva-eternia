@@ -294,6 +294,11 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
 - **Time4ActionToys (DE)**: Auditoría real exitosa. 273 items encontrados y procesados.
 - **Verificación**: Confirmación de los 11 scrapers europeos en `daily_scan.py` y configuración en GitHub Actions.
 
+### 🛡️ Blindaje Atómico y Evolución de Precios (Bypass de Duplicados)
+- **Inserción Atómica**: Implementado sistema de transacciones anidadas (Savepoints) en el `ScrapingPipeline`. El Arca ya no se detiene ante errores de `UniqueViolation` (duplicados de URL) en PostgreSQL, garantizando incursiones 100% resilientes.
+- **Evolución en el Purgatorio**: Si una oferta ya existente en el Purgatorio cambia de precio, el sistema la actualiza automáticamente en lugar de ignorarla. Esto permite capturar fluctuaciones de mercado incluso antes de que el item sea vinculado manualmente.
+- **Telegram Sync**: Las alertas de Telegram ahora operan sobre datos actualizados dinámicamente, reflejando rebajas en tiempo real.
+
 ### 🔗 Refinamiento de Wallapop (Anti-Bot Bypass)
 - **Problema**: Wallapop bloquea enlaces directos (Error 403).
 - **Mejora**: Implementación de botón **"Copiar URL"** en el Purgatorio y Dashboard.
@@ -321,6 +326,7 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
 
 - [x] **11.1 Rollback masivo**: Auditoría europea completada y items devueltos al Purgatorio.
 - [x] **11.2 Fix ToymiEU**: Lógica de selección de precios por país (España) implementada.
+- [x] **11.3 Blindaje Atómico**: Inserción resiliente y actualización de precios en Purgatorio.
 - [ ] **11.5 IA SmartMatcher**: Implementación de LLM ligero para mejorar el reconocimiento automático.
 - [ ] **12.1 Infiltración Amazon**: Monitoreo de precios amazon.es.
 - [ ] **12.2 Inteligencia eBay**: Conector Browse API + OAuth 2.0.

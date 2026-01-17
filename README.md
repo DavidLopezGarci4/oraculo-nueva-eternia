@@ -56,6 +56,7 @@ El espacio personal del coleccionista.
 ### El Purgatorio (Validación)
 Donde llegan los hallazgos de los scrapers antes de ser "Verdad Absoluta".
 *   **Sistema de SmartMatch**: El motor sugiere a qué figura del catálogo pertenece cada oferta encontrada.
+*   **Evolución de Precios**: Si un item en el Purgatorio cambia de precio antes de ser vinculado, el sistema actualiza su valor automáticamente, permitiendo rastrear ofertas y rebajas en tiempo real.
 *   **Validación Manual**: El usuario aprueba o descarta los vínculos.
 *   **Importación de Wallapop**: Debido a bloqueos anti-bot, Wallapop tiene un importador manual donde pegas texto/URL y el sistema lo procesa.
 

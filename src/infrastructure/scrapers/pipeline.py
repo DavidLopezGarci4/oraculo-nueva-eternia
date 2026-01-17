@@ -108,10 +108,11 @@ class ScrapingPipeline:
             blocked_urls = set(
                 x[0] for x in db.query(BlackcludedItemModel.url).filter(BlackcludedItemModel.url.in_(incoming_urls)).all()
             )
-            # 2. Pending Items (Purgatory)
-            existing_pending_urls = set(
-                x[0] for x in db.query(PendingMatchModel.url).filter(PendingMatchModel.url.in_(incoming_urls)).all()
-            )
+            # 2. Pending Items (Purgatory) - Fetch full objects for price updates
+            existing_pending = {
+                p.url: p for p in db.query(PendingMatchModel).filter(PendingMatchModel.url.in_(incoming_urls)).all()
+            }
+            existing_pending_urls = set(existing_pending.keys())
             # 3. Active Offers (Linked) - Fetch full objects for updates
             existing_offers = {
                 o.url: o for o in db.query(OfferModel).filter(OfferModel.url.in_(incoming_urls)).all()
@@ -155,9 +156,16 @@ class ScrapingPipeline:
                     # Sentinel/Audit logic omitted for speed in updates or can be added selectively
                     continue
 
-                # d. Check Pending (Skip if exists)
+                # d. Check Pending (Update price if changed)
                 if url_str in existing_pending_urls:
-                    # logger.debug(f"⏳ Exists in Purgatory: {offer.get('product_name')}")
+                    pending_item = existing_pending[url_str]
+                    new_price = offer.get('price', 0.0)
+                    
+                    if new_price > 0 and abs(pending_item.price - new_price) > 0.01:
+                        # logger.info(f"📈 Purgatory Price Update: {pending_item.scraped_name} ({pending_item.price} -> {new_price})")
+                        pending_item.price = new_price
+                        pending_item.found_at = datetime.utcnow()
+                        # Si quisiéramos alertas aquí (antes de vincular), se podrían añadir.
                     continue
 
                 # --- IF HERE, IT IS A NEW CANDIDATE ---
@@ -222,35 +230,29 @@ class ScrapingPipeline:
                         "found_at": datetime.utcnow()
                     }
                     
-                    # --- REFACTOR 7.3: NATIVE SQL 'ON CONFLICT' (THE "PRO" SOLUTION) ---
-                    # Detect if we are on Postgres to use Atomic Upsert
-                    if db.bind.dialect.name == 'postgresql':
-                        from sqlalchemy.dialects.postgresql import insert as pg_insert
+                    # --- REFACTOR 7.3: GRANULAR ATOMIC INSERT ---
+                    try:
+                        # Use nested transaction to prevent full rollback on error for this specific item
+                        db.begin_nested()
                         
-                        stmt = pg_insert(PendingMatchModel).values(pending_data)
-                        stmt = stmt.on_conflict_do_nothing(index_elements=['url'])
-                        db.execute(stmt)
-                        new_items_count += 1
-                        
-                    else:
-                        # SQLite / Fallback Strategy (Try/Catch with Nested Transaction)
-                        try:
-                            # Verify existence (again) just in case
+                        if 'postgresql' in db.bind.dialect.name.lower():
+                            from sqlalchemy.dialects.postgresql import insert as pg_insert
+                            stmt = pg_insert(PendingMatchModel).values(pending_data).on_conflict_do_nothing(index_elements=['url'])
+                            db.execute(stmt)
+                        else:
+                            # Standard add for SQLite
                             if not db.query(PendingMatchModel).filter(PendingMatchModel.url == url_str).first():
-                                # Use nested transaction to prevent full rollback on error
-                                db.begin_nested()
-                                try:
-                                    pending = PendingMatchModel(**pending_data)
-                                    db.add(pending)
-                                    db.flush() # Force check
-                                    db.commit() # Commit the savepoint
-                                    new_items_count += 1
-                                except Exception:
-                                    db.rollback() # Rollback to savepoint only
-                                    # logger.debug(f"⚠️ Duplicate ignored: {url_str}")
-                        except Exception:
-                            # If begin_nested fails (some drivers don't support it), fall back to silent ignore
-                            pass
+                                pending = PendingMatchModel(**pending_data)
+                                db.add(pending)
+                        
+                        db.commit() # Savepoint commit
+                        new_items_count += 1
+                    except Exception as e:
+                        db.rollback() # Rollback to savepoint only
+                        if "unique" in str(e).lower():
+                            logger.debug(f"⏳ Duplicate URL skipped (SafeMode): {url_str}")
+                        else:
+                            logger.warning(f"⚠️ Item insertion error: {e}")
             
             db.commit()
             logger.success(f"⚡ Batch Complete: {new_items_count} new items added to Purgatory (Atomic Safe Mode).")

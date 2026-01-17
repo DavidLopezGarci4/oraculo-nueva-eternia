@@ -100,8 +100,8 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
 ### Fase 5: Refinamiento Táctico (La Gran Purificación) ✅
 *   **Reingeniería de Calidad de Datos**:
     *   **SmartMatch Revertido ✅**: Capacidad de deshacer masivamente vínculos automáticos erróneos.
-    *   **Purgatorio v2 (Inteligencia) ✅**: Motor de sugerencias que muestra coincidencias ordenadas por probabilidad (30%+).
     *   **SmartMatch 2.0 ✅**: Umbral elevado al 75%. Lo dudoso se deriva a revisión manual.
+    *   **Evolución de Purgatorio ✅**: Los items pendientes actualizan sus precios automáticamente tras cada escaneo si hay cambios.
 *   **Verdad del Tablero (Real-Time)**:
     *   Desacoplamiento de métricas históricas. Ahora el Dashboard refleja el estado vivo de la base de datos `OfferModel`.
     *   Sincronización instantánea de contadores tras purificación o vinculación.
