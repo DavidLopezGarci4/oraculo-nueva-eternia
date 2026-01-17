@@ -1050,7 +1050,8 @@ async def get_dashboard_history():
             "shop_name": h.shop_name,
             "price": h.price,
             "action_type": h.action_type,
-            "timestamp": h.timestamp.isoformat()
+            "timestamp": h.timestamp.isoformat(),
+            "offer_url": h.offer_url
         } for h in history]
 
 @app.post("/api/dashboard/revert")

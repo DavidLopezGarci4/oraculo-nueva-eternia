@@ -13,7 +13,8 @@ import {
     ShieldAlert,
     History,
     Database,
-    AlertCircle
+    AlertCircle,
+    Copy
 } from 'lucide-react';
 import { getPurgatory, matchItem, discardItem, discardItemsBulk, getScrapersStatus, runScrapers, getScraperLogs, resetSmartMatches } from '../api/purgatory';
 import axios from 'axios';
@@ -25,6 +26,21 @@ const Purgatory: React.FC = () => {
     const [confirmScraper, setConfirmScraper] = useState<string | null>(null);
     const [confirmReset, setConfirmReset] = useState(false);
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
+    const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
+
+    // Helper: Check if URL is from Wallapop
+    const isWallapopUrl = (url: string) => url?.toLowerCase().includes('wallapop.com');
+
+    // Helper: Copy URL to clipboard
+    const copyToClipboard = async (url: string) => {
+        try {
+            await navigator.clipboard.writeText(url);
+            setCopiedUrl(url);
+            setTimeout(() => setCopiedUrl(null), 2000);
+        } catch (err) {
+            console.error('Failed to copy:', err);
+        }
+    };
 
     // Mutations
     const discardBulkMutation = useMutation({
@@ -451,9 +467,18 @@ const Purgatory: React.FC = () => {
                                             </div>
                                         )}
                                         <div className="flex-1"></div>
-                                        <a href={item.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/5 text-xs font-black text-white/40 hover:bg-white/10 hover:text-white transition-all uppercase tracking-wider">
-                                            Fuente Original <ExternalLink className="h-3 w-3" />
-                                        </a>
+                                        {isWallapopUrl(item.url) ? (
+                                            <button
+                                                onClick={() => copyToClipboard(item.url)}
+                                                className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-xs font-black uppercase tracking-wider transition-all ${copiedUrl === item.url ? 'bg-green-500/20 border-green-500/50 text-green-400' : 'bg-white/5 border-white/5 text-white/40 hover:bg-white/10 hover:text-white'}`}
+                                            >
+                                                {copiedUrl === item.url ? 'Copiado!' : 'Copiar URL'} <Copy className="h-3 w-3" />
+                                            </button>
+                                        ) : (
+                                            <a href={item.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/5 text-xs font-black text-white/40 hover:bg-white/10 hover:text-white transition-all uppercase tracking-wider">
+                                                Fuente Original <ExternalLink className="h-3 w-3" />
+                                            </a>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -464,15 +489,25 @@ const Purgatory: React.FC = () => {
                                     <Database className="h-3 w-3" /> ID: #{item.id}
                                 </div>
                                 <div className="flex items-center gap-3 w-full md:w-auto">
-                                    <a
-                                        href={item.url}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="h-12 md:h-10 w-12 md:w-10 flex items-center justify-center rounded-xl bg-white/5 border border-white/10 text-white/40 hover:text-white hover:bg-white/10 transition-all"
-                                        title="Ver en Tienda"
-                                    >
-                                        <ExternalLink className="h-5 w-5 md:h-4 md:w-4" />
-                                    </a>
+                                    {isWallapopUrl(item.url) ? (
+                                        <button
+                                            onClick={() => copyToClipboard(item.url)}
+                                            className={`h-12 md:h-10 w-12 md:w-10 flex items-center justify-center rounded-xl border transition-all ${copiedUrl === item.url ? 'bg-green-500/20 border-green-500/50 text-green-400' : 'bg-white/5 border-white/10 text-white/40 hover:text-white hover:bg-white/10'}`}
+                                            title="Copiar URL (Wallapop bloquea links directos)"
+                                        >
+                                            <Copy className="h-5 w-5 md:h-4 md:w-4" />
+                                        </button>
+                                    ) : (
+                                        <a
+                                            href={item.url}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="h-12 md:h-10 w-12 md:w-10 flex items-center justify-center rounded-xl bg-white/5 border border-white/10 text-white/40 hover:text-white hover:bg-white/10 transition-all"
+                                            title="Ver en Tienda"
+                                        >
+                                            <ExternalLink className="h-5 w-5 md:h-4 md:w-4" />
+                                        </a>
+                                    )}
                                     <button
                                         onClick={() => discardMutation.mutate(item.id)}
                                         className="h-12 md:h-10 w-12 md:w-auto md:px-5 flex items-center justify-center rounded-xl bg-red-500/5 text-red-500/60 border border-red-500/10 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all"

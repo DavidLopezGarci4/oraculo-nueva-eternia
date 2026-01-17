@@ -37,6 +37,7 @@ export interface MatchHistoryEntry {
     price: number;
     action_type: string;
     timestamp: string;
+    offer_url: string;
 }
 
 export interface MatchStat {

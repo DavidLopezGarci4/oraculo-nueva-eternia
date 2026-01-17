@@ -9,7 +9,9 @@ import {
     RotateCcw,
     Trophy,
     TrendingUp,
-    Euro
+    Euro,
+    ExternalLink,
+    Copy
 } from 'lucide-react';
 import { getDashboardStats, getTopDeals, getDashboardHistory, getDashboardMatchStats, revertDashboardAction, getHallOfFame } from '../api/dashboard';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -315,16 +317,42 @@ const Dashboard: React.FC = () => {
                                                 </p>
                                             </div>
                                         </div>
-                                        {entry.action_type !== 'PURGATORY' && (
-                                            <button
-                                                onClick={() => revertMutation.mutate(entry.id)}
-                                                disabled={revertMutation.isPending}
-                                                className="group/btn relative flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-white/5 bg-white/[0.05] transition-all hover:bg-brand-primary/20 hover:border-brand-primary/40 disabled:opacity-30"
-                                                title="Revertir"
-                                            >
-                                                <RotateCcw className={`h-2.5 w-2.5 text-white/40 group-hover/btn:text-brand-primary transition-colors ${revertMutation.isPending ? 'animate-spin' : ''}`} />
-                                            </button>
-                                        )}
+                                        <div className="flex items-center gap-2">
+                                            {/* Link to Source */}
+                                            {entry.offer_url?.toLowerCase().includes('wallapop.com') ? (
+                                                <button
+                                                    onClick={() => {
+                                                        navigator.clipboard.writeText(entry.offer_url);
+                                                        alert("URL de Wallapop copiada al portapapeles");
+                                                    }}
+                                                    className="p-1 rounded hover:bg-white/10 text-white/40 hover:text-white transition-colors"
+                                                    title="Copiar URL (Wallapop)"
+                                                >
+                                                    <Copy className="h-3 w-3" />
+                                                </button>
+                                            ) : (
+                                                <a
+                                                    href={entry.offer_url}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="p-1 rounded hover:bg-white/10 text-white/40 hover:text-white transition-colors"
+                                                    title="Ver Fuente Original"
+                                                >
+                                                    <ExternalLink className="h-3 w-3" />
+                                                </a>
+                                            )}
+
+                                            {entry.action_type !== 'PURGATORY' && (
+                                                <button
+                                                    onClick={() => revertMutation.mutate(entry.id)}
+                                                    disabled={revertMutation.isPending}
+                                                    className="group/btn relative flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-white/5 bg-white/[0.05] transition-all hover:bg-brand-primary/20 hover:border-brand-primary/40 disabled:opacity-30"
+                                                    title="Revertir"
+                                                >
+                                                    <RotateCcw className={`h-2.5 w-2.5 text-white/40 group-hover/btn:text-brand-primary transition-colors ${revertMutation.isPending ? 'animate-spin' : ''}`} />
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
                                     <div className="flex items-center justify-between text-[8px] font-bold text-white/20 uppercase tracking-tighter">
                                         <span>{entry.shop_name}</span>

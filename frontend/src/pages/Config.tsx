@@ -112,6 +112,7 @@ const Config: React.FC = () => {
                             </span>
                         )}
                     </button>
+                    {/* Wallapop tab disabled due to CloudFront 403 errors
                     <button
                         onClick={() => setActiveTab('wallapop')}
                         className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'wallapop' ? 'bg-green-500 text-white shadow-lg shadow-green-500/20' : 'text-white/40 hover:text-white'}`}
@@ -119,6 +120,7 @@ const Config: React.FC = () => {
                         <Upload className="h-4 w-4" />
                         Wallapop
                     </button>
+                    */}
                 </div>
             </div>
 

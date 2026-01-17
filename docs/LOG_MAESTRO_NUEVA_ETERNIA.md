@@ -281,8 +281,42 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
 
 ---
 
+## FASE 11: ESTABILIZACIÓN Y AUDITORÍA EUROPEA (17/01/2026)
+
+### 🛡️ Corrección Crítica: El Bastión de la Fortaleza (ID Sequence Fix)
+- **Problema**: El endpoint `/api/collection/toggle` devolvía Error 500 para usuarios no-admin.
+- **Causa**: Desincronización de la secuencia de IDs en PostgreSQL (`collection_items_id_seq`). La secuencia intentaba insertar ID 26 en una tabla que ya tenía items hasta el ID 75.
+- **Solución**: Ejecución de `ALTER SEQUENCE collection_items_id_seq RESTART WITH 76`.
+- **Resultado**: Registro y captura de items corregido para todos los usuarios.
+
+### 🕸️ Auditoría Ejecutiva de Scrapers Continentales
+- **ToymiEU (EU)**: Auditoría real exitosa. 106 items encontrados y procesados.
+- **Time4ActionToys (DE)**: Auditoría real exitosa. 273 items encontrados y procesados.
+- **Verificación**: Confirmación de los 11 scrapers europeos en `daily_scan.py` y configuración en GitHub Actions.
+
+### 🔗 Refinamiento de Wallapop (Anti-Bot Bypass)
+- **Problema**: Wallapop bloquea enlaces directos (Error 403).
+- **Mejora**: Implementación de botón **"Copiar URL"** en el Purgatorio y Dashboard.
+- **UX**: Feedback visual ("¡Copiado!") para una navegación sin fricciones.
+
+### 🛡️ Auditoría de Código y Refinamiento (The Oracle's Eye)
+- **Corrección de Lints**: Eliminación de importaciones no utilizadas (`LinkIcon`) en `Dashboard.tsx`.
+- **Blindaje de Rollback**: Corregido `AttributeError` en el script de reversión ejecutiva.
+- **Verificación de Pipeline**: Confirmado que `daily_scan.py` integra correctamente los 11 scrapers activos (España + Europa).
+
+### 🕸️ Operación "Purgatorio Limpio" (82 Almas Retornadas)
+- **Acción**: Rollback total de los scrapers **ToymiEU** y **Time4ActionToys**.
+- **Resultado**: 82 items vinculados automáticamente han sido devueltos al Purgatorio para revisión manual del Maestro, eliminando cualquier riesgo de desincronización por SmartMatch.
+
+### 🔗 Hipervínculos de Verificación (Actividad del Oráculo)
+- **Mejora API**: El historial de actividad ahora incluye `offer_url` en la respuesta.
+- **Mejora UI**: Botón de acceso directo a la fuente original en cada entrada del historial del Dashboard.
+- **Wallapop Sync**: Integración de lógica de "Copiar URL" también en el historial de actividad para evitar bloqueos 403.
+
+---
+
 ## PRÓXIMOS PASOS (EL OJO DE SAURON)
 - **10.1 Infiltración Amazon**: Monitoreo de precios amazon.es (requiere PA-API con 3 ventas de afiliado).
 - **10.2 Inteligencia eBay**: Conector Browse API + OAuth 2.0 (requiere cuenta developer.ebay.com).
-- **10.4 Consolidación Global**: Unificación de métricas de todos los marketplaces.
 - **10.5 IA SmartMatcher**: Implementación de LLM ligero para mejorar el reconocimiento automático.
+- **11.1 Control de Erratas**: Refinamiento del motor de SmartMatch para evitar vinculaciones incorrectas detectadas en auditoría europea.
