@@ -527,12 +527,15 @@ async def discard_purgatory(request: PurgatoryDiscardRequest):
             "receipt_id": item.receipt_id
         }
 
-        bl = BlackcludedItemModel(
-            url=item.url,
-            scraped_name=item.scraped_name,
-            reason=request.reason
-        )
-        db.add(bl)
+        # Evitar duplicados en lista negra para no causar 500
+        exists = db.query(BlackcludedItemModel).filter(BlackcludedItemModel.url == item.url).first()
+        if not exists:
+            bl = BlackcludedItemModel(
+                url=item.url,
+                scraped_name=item.scraped_name,
+                reason=request.reason
+            )
+            db.add(bl)
 
         # Registrar en historial para posible reversión
         history = OfferHistoryModel(
@@ -558,13 +561,27 @@ async def discard_purgatory_bulk(request: PurgatoryBulkDiscardRequest):
         items = db.query(PendingMatchModel).filter(PendingMatchModel.id.in_(request.pending_ids)).all()
         count = 0
         for item in items:
-            # Añadir a lista negra para no volver a verlo
-            blacklist = BlackcludedItemModel(
-                scraped_name=item.scraped_name,
+            # Evitar duplicados en lista negra
+            exists = db.query(BlackcludedItemModel).filter(BlackcludedItemModel.url == item.url).first()
+            if not exists:
+                blacklist = BlackcludedItemModel(
+                    url=item.url,
+                    scraped_name=item.scraped_name,
+                    reason=request.reason
+                )
+                db.add(blacklist)
+            
+            # Registrar historial de descarte masivo para cada uno
+            history = OfferHistoryModel(
+                offer_url=item.url,
+                product_name=item.scraped_name,
                 shop_name=item.shop_name,
-                reason=request.reason
+                price=item.price,
+                action_type="DISCARDED_BULK",
+                details=json.dumps({"reason": request.reason})
             )
-            db.add(blacklist)
+            db.add(history)
+            
             db.delete(item)
             count += 1
         

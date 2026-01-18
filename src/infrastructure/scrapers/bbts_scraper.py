@@ -33,7 +33,8 @@ class BigBadToyStoreScraper(BaseScraper):
     def __init__(self):
         super().__init__(
             shop_name="BigBadToyStore",
-            base_url="https://www.bigbadtoystore.com/Search?SearchText=masters+of+the+universe+origins"
+            # Filtros precisos para MOTU Origins obtenidos del analisis del sitio
+            base_url="https://www.bigbadtoystore.com/Search?HideInStock=false&HidePreorder=true&HideSoldOut=true&InventoryStatus=i&PageSize=100&SortOrder=PriceLowToHigh&Brand=2603&Series=22776"
         )
 
     async def search(self, query: str = "auto") -> List[ScrapedOffer]:
@@ -122,64 +123,104 @@ class BigBadToyStoreScraper(BaseScraper):
             try:
                 logger.info(f"[{self.spider_name}] Navegando a BBTS con stealth mode (UA: {user_agent[:50]}...)")
                 
-                # Delay inicial aleatorio (simular humano)
-                await asyncio.sleep(random.uniform(1, 3))
+                # === PAGINACIÓN MEJORADA ===
+                # BBTS usa PageIndex para la paginación (1-indexed)
+                page_num = 1
+                consecutive_empty_pages = 0
+                has_next_page = True
                 
-                if not await self._safe_navigate(page, self.base_url, timeout=90000):
-                    logger.error(f"[{self.spider_name}] Fallo al cargar BBTS")
-                    self.blocked = True
-                    return products
-                
-                # Esperar renderizado JavaScript con timeout generoso
-                await page.wait_for_timeout(random.randint(5000, 8000))
-                
-                # Scroll humanizado para cargar lazy content
-                for i in range(5):
-                    await page.keyboard.press("End")
-                    await asyncio.sleep(random.uniform(0.8, 1.5))
+                while page_num <= self.max_pages and has_next_page:
+                    # Construir URL con PageIndex
+                    current_url = f"{self.base_url}&PageIndex={page_num}"
+                    logger.info(f"[{self.spider_name}] Scraping página {page_num}: {current_url}")
                     
-                    # Movimiento de mouse aleatorio (simular usuario real)
-                    x = random.randint(100, 1800)
-                    y = random.randint(100, 900)
-                    await page.mouse.move(x, y)
-                
-                html_content = await page.content()
-                soup = BeautifulSoup(html_content, 'html.parser')
-                
-                # Selectores multiples para BBTS (la estructura puede variar)
-                selectors = [
-                    '.search-item',
-                    '.product-card', 
-                    '.item-card',
-                    '[class*="SearchResult"]',
-                    '[class*="ProductPod"]',
-                    '.pod',
-                    'a[href*="/Product/"]',
-                ]
-                
-                items = []
-                for selector in selectors:
-                    found = soup.select(selector)
-                    if found:
-                        items.extend(found)
-                        logger.info(f"[{self.spider_name}] Selector '{selector}' encontro {len(found)} elementos")
-                
-                # Deduplicar por href
-                seen_urls = set()
-                unique_items = []
-                for item in items:
-                    href = item.get('href') or (item.select_one('a') and item.select_one('a').get('href'))
-                    if href and href not in seen_urls:
-                        seen_urls.add(href)
-                        unique_items.append(item)
-                
-                logger.info(f"[{self.spider_name}] Total items unicos: {len(unique_items)}")
-                
-                for item in unique_items:
-                    prod = self._parse_item(item)
-                    if prod:
-                        products.append(prod)
-                        self.items_scraped += 1
+                    # Delay inicial aleatorio largo (simular humano - MÁS CAUTELOSO)
+                    if page_num == 1:
+                        await asyncio.sleep(random.uniform(2, 4))
+                    else:
+                        # Delay más largo entre páginas (8-15 segundos según petición del usuario)
+                        delay = random.uniform(8, 15)
+                        logger.info(f"[{self.spider_name}] Esperando {delay:.1f}s antes de la siguiente página...")
+                        await asyncio.sleep(delay)
+                    
+                    if not await self._safe_navigate(page, current_url, timeout=90000):
+                        logger.error(f"[{self.spider_name}] Fallo al cargar BBTS página {page_num}")
+                        self.blocked = True
+                        break
+                    
+                    # Esperar renderizado JavaScript con timeout generoso
+                    await page.wait_for_timeout(random.randint(5000, 8000))
+                    
+                    # Scroll humanizado para cargar lazy content
+                    for i in range(3):
+                        await page.keyboard.press("End")
+                        await asyncio.sleep(random.uniform(0.8, 1.5))
+                        
+                        # Movimiento de mouse aleatorio (simular usuario real)
+                        x = random.randint(100, 1800)
+                        y = random.randint(100, 900)
+                        await page.mouse.move(x, y)
+                    
+                    html_content = await page.content()
+                    soup = BeautifulSoup(html_content, 'html.parser')
+                    
+                    # Selectores multiples para BBTS (la estructura puede variar)
+                    selectors = [
+                        '.search-item',
+                        '.product-card', 
+                        '.item-card',
+                        '[class*="SearchResult"]',
+                        '[class*="ProductPod"]',
+                        '.pod',
+                        'a[href*="/Product/"]',
+                    ]
+                    
+                    items = []
+                    for selector in selectors:
+                        found = soup.select(selector)
+                        if found:
+                            items.extend(found)
+                            if page_num == 1:
+                                logger.info(f"[{self.spider_name}] Selector '{selector}' encontro {len(found)} elementos")
+                    
+                    # Deduplicar por href (dentro de esta página)
+                    seen_urls_page = set()
+                    unique_items_page = []
+                    for item in items:
+                        href = item.get('href') or (item.select_one('a') and item.select_one('a').get('href'))
+                        if href and href not in seen_urls_page:
+                            seen_urls_page.add(href)
+                            unique_items_page.append(item)
+                    
+                    logger.info(f"[{self.spider_name}] Página {page_num}: {len(unique_items_page)} items únicos")
+                    
+                    # Verificación de "Siguiente Página" en el DOM
+                    # Buscamos <a rel="next"> o <a aria-label="Next">
+                    next_link = soup.select_one('a[rel="next"]') or soup.select_one('a[aria-label="Next"]')
+                    if not next_link:
+                        logger.info(f"[{self.spider_name}] No se detectó botón 'Siguiente'. Fin de paginación.")
+                        has_next_page = False
+                    
+                    # Si no hay items, hemos llegado al final
+                    if len(unique_items_page) == 0:
+                        consecutive_empty_pages += 1
+                        if consecutive_empty_pages >= 2:
+                            logger.info(f"[{self.spider_name}] Fin de resultados (2 páginas vacías consecutivas)")
+                            has_next_page = False
+                            break
+                    else:
+                        consecutive_empty_pages = 0
+                    
+                    # Parsear items de esta página
+                    for item in unique_items_page:
+                        prod = self._parse_item(item)
+                        if prod:
+                            # Evitar duplicados globales
+                            if not any(p.url == prod.url for p in products):
+                                products.append(prod)
+                                self.items_scraped += 1
+                    
+                    page_num += 1
                         
             except Exception as e:
                 logger.error(f"[{self.spider_name}] Error critico: {e}", exc_info=True)
@@ -189,6 +230,7 @@ class BigBadToyStoreScraper(BaseScraper):
                 
         logger.info(f"[{self.spider_name}] Completado. Total: {len(products)} productos")
         return products
+
 
     def _parse_item(self, item) -> Optional[ScrapedOffer]:
         try:

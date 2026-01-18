@@ -120,6 +120,7 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
 *   **Métricas "ActionFigure411 Style"**: Implementación de MSRP, Revalorización (%), Precio Medio Móvil y Volumen de ventas.
 *   **Scraper Modernización**: Refactorización de `daily_scan.py` y scrapers clave (BBTS, Vendilo, DeToyboys) para máxima resiliencia.
 *   **Optimización de Legibilidad**: Rediseño de la rejilla de scrapers para evitar el colapso visual, priorizando la lectura horizontal y etiquetas claras.
+*   **Auditoría de Purgatorio**: Resolución de inactividad de botones mediante lógica `onSettled` y blindaje de lista negra en backend.
 
 ### Fase 6: Estrategia de Valor y Futuro (Innovación)
 *   **Estimador de Valor (Financial)**: Cálculo automático del valor de la colección basado en precios históricos y estado del item.

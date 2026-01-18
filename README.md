@@ -142,7 +142,7 @@ TELEGRAM_BOT_TOKEN=tu_token
 *   **Fase 9 (Guardiana)**: ✅ Perfiles de usuario y Wishlist (Completado).
 *   **Fase 10 (Mercados)**: 🏗️ Integración de APIs de Amazon y eBay (En progreso).
 *   **Fase 11 (Continental)**: ✅ Expansión a 14 fuentes europeas y auditoría de precios OSS (Completado).
-*   **Fase 12 (Sentinel)**: ✅ Implementación de `simulated_connection.py` para monitoreo de salud y modernización de scrapers clave (BBTS, Vendilo, DeToyboys).
+*   **Fase 12 (Sentinel)**: ✅ Implementación de `simulated_connection.py` para monitoreo de salud y modernización de scrapers clave (BBTS, Vendilo, DeToyboys). Auditoría integral de Purgatorio y limpieza de sistema.
 *   **Fase 13 (IA)**: ⏳ Implementación de LLMs para matching semántico avanzado.
 
 ---

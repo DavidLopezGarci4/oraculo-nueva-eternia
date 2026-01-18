@@ -66,7 +66,7 @@ export const discardItem = async (pendingId: number, reason: string = 'manual_di
     const response = await axios.post(`${API_BASE}/purgatory/discard`, {
         pending_id: pendingId,
         reason
-    });
+    }, adminHeaders);
     return response.data;
 };
 

@@ -353,5 +353,6 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
 - [x] **11.3 Blindaje Atómico**: Inserción resiliente y actualización de precios en Purgatorio.
 - [x] **11.4 Expansión Europea**: 14 scrapers integrados y operativos en UI dinámica.
 - [x] **11.5 Latido del Oráculo**: Implementado simulador de conexión y salud de scrapers.
+- [x] **11.6 Auditoría de Integridad**: Corregido fallo de inactividad en el Purgatorio (Bulk Discard & Blacklist Logic). Limpieza profunda de scripts temporales.
 - [ ] **12.1 Infiltración Amazon**: Monitoreo de precios amazon.es.
 - [ ] **12.2 Inteligencia eBay**: Conector Browse API + OAuth 2.0.

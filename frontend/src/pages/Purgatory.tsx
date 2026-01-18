@@ -47,6 +47,8 @@ const Purgatory: React.FC = () => {
         mutationFn: (ids: number[]) => discardItemsBulk(ids),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['purgatory'] });
+        },
+        onSettled: () => {
             setSelectedIds([]);
         }
     });
@@ -93,6 +95,9 @@ const Purgatory: React.FC = () => {
         mutationFn: (id: number) => discardItem(id),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['purgatory'] });
+        },
+        onError: (err) => {
+            console.error('Individual discard failed:', err);
         }
     });
 
