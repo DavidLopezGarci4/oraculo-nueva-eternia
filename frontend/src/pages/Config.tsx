@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Activity, Clock, AlertCircle, CheckCircle2, RefreshCw, Terminal, GitMerge, Target } from 'lucide-react';
+import { Play, Activity, Clock, AlertCircle, CheckCircle2, RefreshCw, Terminal, GitMerge, Target, Settings, Users } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getScrapersStatus, getScrapersLogs, runScraper, getDuplicates, mergeProducts, type ScraperStatus, type ScraperLog } from '../api/admin';
 import { formatDistanceToNow } from 'date-fns';
@@ -7,13 +7,14 @@ import { es } from 'date-fns/locale';
 import WallapopImporter from '../components/admin/WallapopImporter';
 
 const Config: React.FC = () => {
-    const [activeTab, setActiveTab] = useState<'scrapers' | 'radar' | 'wallapop'>('scrapers');
+    const [activeTab, setActiveTab] = useState<'scrapers' | 'radar' | 'system' | 'users' | 'wallapop'>('scrapers');
     const [statuses, setStatuses] = useState<ScraperStatus[]>([]);
     const [logs, setLogs] = useState<ScraperLog[]>([]);
     const [duplicates, setDuplicates] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [runningScraper, setRunningScraper] = useState<string | null>(null);
     const [mergingId, setMergingId] = useState<number | null>(null);
+    const [showAddUserModal, setShowAddUserModal] = useState(false);
 
     const fetchData = async () => {
         try {
@@ -87,7 +88,7 @@ const Config: React.FC = () => {
                 <div className="flex flex-col gap-2">
                     <h2 className="text-3xl font-bold tracking-tight text-white flex items-center gap-3">
                         <Terminal className="h-8 w-8 text-brand-primary" />
-                        Poderes del <span className="text-brand-primary">Arquitecto</span>
+                        Poderes del <span className="text-brand-primary">Arquitecto de Nueva Eternia</span>
                     </h2>
                     <p className="text-white/50">Control absoluto sobre las reliquias y sus fuentes.</p>
                 </div>
@@ -112,15 +113,21 @@ const Config: React.FC = () => {
                             </span>
                         )}
                     </button>
-                    {/* Wallapop tab disabled due to CloudFront 403 errors
                     <button
-                        onClick={() => setActiveTab('wallapop')}
-                        className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'wallapop' ? 'bg-green-500 text-white shadow-lg shadow-green-500/20' : 'text-white/40 hover:text-white'}`}
+                        onClick={() => setActiveTab('system')}
+                        className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'system' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'text-white/40 hover:text-white'}`}
                     >
-                        <Upload className="h-4 w-4" />
-                        Wallapop
+                        <Settings className="h-4 w-4" />
+                        Ajustes de Sistema
                     </button>
-                    */}
+                    <button
+                        onClick={() => setActiveTab('users')}
+                        className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'users' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'text-white/40 hover:text-white'}`}
+                    >
+                        <Users className="h-4 w-4" />
+                        Gestión de Héroes
+                    </button>
+                    {/* Wallapop tab disabled */}
                 </div>
             </div>
 
@@ -338,6 +345,200 @@ const Config: React.FC = () => {
                             </div>
                         )}
                     </motion.div>
+                ) : activeTab === 'system' ? (
+                    <motion.div
+                        key="system"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="space-y-6"
+                    >
+                        <div className="flex flex-col gap-2 mb-4">
+                            <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                                <Settings className="h-6 w-6 text-brand-primary" />
+                                Configuración del Núcleo
+                            </h3>
+                            <p className="text-white/40 text-sm">Ajustes sistémicos del Oráculo. Actualmente en modo lectura (inactivos).</p>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {/* Sentinel Settings */}
+                            <div className="glass border border-white/10 p-6 rounded-3xl space-y-4 opacity-60">
+                                <div className="flex items-center gap-3 text-orange-400 font-bold uppercase tracking-widest text-xs mb-2">
+                                    <AlertCircle className="h-4 w-4" />
+                                    Vigilancia (Sentinel)
+                                </div>
+                                <div className="space-y-4">
+                                    <div className="space-y-2">
+                                        <label className="text-xs text-white/50 block font-medium">Umbral de Alerta de Precio (%)</label>
+                                        <input type="range" disabled className="w-full accent-brand-primary" value="15" />
+                                        <div className="flex justify-between text-[10px] text-white/30 font-bold">
+                                            <span>5%</span>
+                                            <span className="text-brand-primary">15%</span>
+                                            <span>50%</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl">
+                                        <span className="text-xs text-white/70">Notificaciones Push</span>
+                                        <div className="h-4 w-8 bg-white/10 rounded-full relative">
+                                            <div className="absolute left-1 top-1 h-2 w-2 bg-white/30 rounded-full"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Financial Engine Settings */}
+                            <div className="glass border border-white/10 p-6 rounded-3xl space-y-4 opacity-60">
+                                <div className="flex items-center gap-3 text-yellow-500 font-bold uppercase tracking-widest text-xs mb-2">
+                                    <Target className="h-4 w-4" />
+                                    Motor Financiero (Griales)
+                                </div>
+                                <div className="space-y-4">
+                                    <div className="space-y-2">
+                                        <label className="text-xs text-white/50 block font-medium">ROI Mínimo para Grial (%)</label>
+                                        <div className="flex items-center gap-3">
+                                            <input type="number" disabled className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white/50 w-full" value="50" />
+                                            <span className="text-white/30 text-xs">%</span>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs text-white/50 block font-medium">Valor Umbral Grial (€)</label>
+                                        <div className="flex items-center gap-3">
+                                            <input type="number" disabled className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white/50 w-full" value="150" />
+                                            <span className="text-white/30 text-xs">€</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Scraper Global Timing */}
+                            <div className="glass border border-white/10 p-6 rounded-3xl space-y-4 opacity-60">
+                                <div className="flex items-center gap-3 text-blue-400 font-bold uppercase tracking-widest text-xs mb-2">
+                                    <Clock className="h-4 w-4" />
+                                    Tiempos de Incursión
+                                </div>
+                                <div className="space-y-4">
+                                    <div className="space-y-2">
+                                        <label className="text-xs text-white/50 block font-medium">Delay entre Páginas (seg)</label>
+                                        <input type="range" disabled className="w-full accent-blue-400" value="10" />
+                                        <div className="flex justify-between text-[10px] text-white/30 font-bold">
+                                            <span>1s</span>
+                                            <span className="text-blue-400">10s (Auto)</span>
+                                            <span>30s</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl">
+                                        <span className="text-xs text-white/70">Stealth Mode (Playwright)</span>
+                                        <div className="h-4 w-8 bg-green-500/30 rounded-full relative">
+                                            <div className="absolute right-1 top-1 h-2 w-2 bg-green-400 rounded-full"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="p-8 glass border border-dashed border-white/10 rounded-[3rem] bg-brand-primary/5 flex flex-col items-center gap-4">
+                            <AlertCircle className="h-8 w-8 text-brand-primary animate-pulse" />
+                            <div className="text-center">
+                                <h4 className="text-white font-bold">Panel Protector Activo</h4>
+                                <p className="text-white/40 text-sm max-w-md mx-auto">Estas configuraciones se sincronizarán con los workers de GitHub Actions y el Backend en la Phase 13.</p>
+                            </div>
+                        </div>
+                    </motion.div>
+                ) : activeTab === 'users' ? (
+                    <motion.div
+                        key="users"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="space-y-6"
+                    >
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                            <div className="flex flex-col gap-1">
+                                <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                                    <Users className="h-6 w-6 text-brand-primary" />
+                                    Gestión de Héroes del Reino
+                                </h3>
+                                <p className="text-white/40 text-sm">Control de acceso, roles y estados de las fortalezas individuales.</p>
+                            </div>
+                            <button
+                                onClick={() => setShowAddUserModal(true)}
+                                className="bg-brand-primary/20 text-brand-primary border border-brand-primary/30 hover:bg-brand-primary hover:text-white px-6 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2"
+                            >
+                                <Users className="h-4 w-4" />
+                                RECLUTAR NUEVO HÉROE
+                            </button>
+                        </div>
+
+                        <div className="glass border border-white/10 rounded-3xl overflow-hidden opacity-60">
+                            <table className="w-full text-left text-sm">
+                                <thead className="bg-white/5 text-white/30 uppercase text-[10px] font-bold">
+                                    <tr>
+                                        <th className="px-6 py-4">Usuario</th>
+                                        <th className="px-6 py-4">Rol</th>
+                                        <th className="px-6 py-4">Colección</th>
+                                        <th className="px-6 py-4">Última Actividad</th>
+                                        <th className="px-6 py-4 text-right">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-white/5 text-white/70">
+                                    <tr className="hover:bg-white/5 transition-colors">
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="h-8 w-8 rounded-full bg-brand-primary/20 flex items-center justify-center text-brand-primary font-bold text-xs border border-brand-primary/30">D</div>
+                                                <div>
+                                                    <p className="font-bold text-white">David</p>
+                                                    <p className="text-[10px] text-white/30">david@eternia.com</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <span className="px-2 py-0.5 rounded bg-brand-primary/10 text-brand-primary text-[10px] uppercase font-bold border border-brand-primary/20">Admin</span>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-2">
+                                                <Target className="h-3 w-3 text-brand-primary" />
+                                                <span className="font-black text-white">75</span>
+                                                <span className="text-[10px] text-white/30 tracking-tighter">items</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 text-[10px]">Hace 5 minutos</td>
+                                        <td className="px-6 py-4 text-right">
+                                            <button disabled className="text-white/20 hover:text-white p-2"><Settings className="h-4 w-4" /></button>
+                                        </td>
+                                    </tr>
+                                    <tr className="hover:bg-white/5 transition-colors">
+                                        <td className="px-6 py-4 text-white/30 italic" colSpan={5}>
+                                            Espacio reservado para futuros reclutas...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 opacity-60">
+                            <div className="glass border border-white/10 p-5 rounded-2xl flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                    <div className="bg-green-500/10 p-3 rounded-lg"><CheckCircle2 className="h-5 w-5 text-green-400" /></div>
+                                    <div>
+                                        <h4 className="text-sm font-bold text-white">Registro Abierto</h4>
+                                        <p className="text-[10px] text-white/40">Permitir que nuevos usuarios se unan.</p>
+                                    </div>
+                                </div>
+                                <div className="h-4 w-8 bg-brand-primary/30 rounded-full relative"><div className="absolute right-1 top-1 h-2 w-2 bg-brand-primary rounded-full"></div></div>
+                            </div>
+                            <div className="glass border border-white/10 p-5 rounded-2xl flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                    <div className="bg-red-500/10 p-3 rounded-lg"><AlertCircle className="h-5 w-5 text-red-400" /></div>
+                                    <div>
+                                        <h4 className="text-sm font-bold text-white">Modo Invitado</h4>
+                                        <p className="text-[10px] text-white/40">Visualización sin registro.</p>
+                                    </div>
+                                </div>
+                                <div className="h-4 w-8 bg-white/10 rounded-full relative"><div className="absolute left-1 top-1 h-2 w-2 bg-white/30 rounded-full"></div></div>
+                            </div>
+                        </div>
+                    </motion.div>
                 ) : activeTab === 'wallapop' ? (
                     <motion.div
                         key="wallapop"
@@ -348,6 +549,81 @@ const Config: React.FC = () => {
                         <WallapopImporter />
                     </motion.div>
                 ) : null}
+            </AnimatePresence>
+
+            {/* Modal de Registro de Usuario (Mock) */}
+            <AnimatePresence>
+                {showAddUserModal && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setShowAddUserModal(false)}
+                            className="absolute inset-0 bg-black/80 backdrop-blur-md"
+                        />
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                            className="relative w-full max-w-lg glass border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl"
+                        >
+                            <div className="p-8 space-y-6">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-2xl font-black text-white uppercase tracking-tighter">Reclutar <span className="text-brand-primary">Héroe</span></h3>
+                                    <div className="bg-brand-primary/20 p-2 rounded-lg text-brand-primary"><Users className="h-5 w-5" /></div>
+                                </div>
+
+                                <div className="space-y-4 opacity-50">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-white/40 uppercase tracking-widest pl-1">Nombre de Usuario</label>
+                                        <input type="text" disabled placeholder="Ej: He-Man" className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white focus:outline-none" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-white/40 uppercase tracking-widest pl-1">Correo Electrónico</label>
+                                        <input type="email" disabled placeholder="defensor@eternia.com" className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white focus:outline-none" />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-white/40 uppercase tracking-widest pl-1">Contraseña</label>
+                                            <input type="password" disabled value="********" className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white focus:outline-none" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-white/40 uppercase tracking-widest pl-1">Confirmar</label>
+                                            <input type="password" disabled value="********" className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white focus:outline-none" />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-white/40 uppercase tracking-widest pl-1">Rango del Héroe (Rol)</label>
+                                        <select disabled className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white/50 focus:outline-none appearance-none font-bold">
+                                            <option>🛡️ Guardián de Eternia (Viewer)</option>
+                                            <option>⚔️ Master del Universo (Admin)</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div className="pt-4 flex flex-col gap-3">
+                                    <div className="flex items-center gap-2 text-[10px] text-brand-primary font-bold uppercase tracking-widest justify-center">
+                                        <AlertCircle className="h-3 w-3" />
+                                        Modo Lectura Activo
+                                    </div>
+                                    <button
+                                        disabled
+                                        className="w-full bg-brand-primary opacity-30 text-white py-4 rounded-2xl font-black uppercase tracking-widest"
+                                    >
+                                        REGISTRAR EN EL ORÁCULO
+                                    </button>
+                                    <button
+                                        onClick={() => setShowAddUserModal(false)}
+                                        className="w-full py-2 text-white/30 text-xs font-bold hover:text-white transition-colors"
+                                    >
+                                        VOLVAR ATRÁS
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
             </AnimatePresence>
         </div>
     );

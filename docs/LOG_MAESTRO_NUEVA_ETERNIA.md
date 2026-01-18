@@ -1,4 +1,4 @@
-# LOG MAESTRO: Oráculo Nueva Eternia
+# 📜 LOG MAESTRO: El Oráculo de Nueva Eternia
 
 ## Estado Actual: [SISTEMA OPERATIVO, AUDITADO Y REVERSIBLE]
 

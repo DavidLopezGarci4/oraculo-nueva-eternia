@@ -1,4 +1,4 @@
-# 🔮 MASTER ROADMAP: El Oráculo de Eternia
+# 🔮 MASTER ROADMAP: El Oráculo de Nueva Eternia
 
 Este documento unifica la visión estratégica y el plan técnico de ejecución en una sola fuente de verdad. El objetivo es transformar el actual "motu-tracker" en una aplicación premium, escalable y resiliente.
 

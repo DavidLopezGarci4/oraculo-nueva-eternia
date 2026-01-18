@@ -1,8 +1,8 @@
 {
     "manifest_version": 3,
-    "name": "Oráculo de Eternia - Wallapop Connector",
+    "name": "El Oráculo de Nueva Eternia - Scanner",
     "version": "1.0.0",
-    "description": "Captura ofertas de Wallapop y las envía al Oráculo de Eternia",
+    "description": "Detector de Reliquias MOTU para el Oráculo de Nueva Eternia",
     "permissions": [
         "activeTab",
         "storage"

@@ -1,4 +1,4 @@
-# 🔮 El Oráculo de Eternia
+# 🔮 El Oráculo de Nueva Eternia
 
 **Centro de Inteligencia de Mercado y Gestión de Colecciones MOTU Origins**
 

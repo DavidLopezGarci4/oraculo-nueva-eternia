@@ -5,7 +5,7 @@ from loguru import logger
 
 class Settings(BaseSettings):
     # App
-    PROJECT_NAME: str = "El Oráculo de Eternia"
+    PROJECT_NAME: str = "El Oráculo de Nueva Eternia"
     VERSION: str = "2.0.0"
     DEBUG: bool = False
 

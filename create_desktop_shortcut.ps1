@@ -12,7 +12,7 @@ $Shortcut = $WScriptShell.CreateShortcut($ShortcutFile)
 $Shortcut.TargetPath = "powershell.exe"
 $Shortcut.Arguments = "-ExecutionPolicy Bypass -NoExit -File `"$TargetScript`""
 $Shortcut.WorkingDirectory = $PSScriptRoot
-$Shortcut.Description = "Lanzar Oráculo de Eternia (Docker)"
+$Shortcut.Description = "Lanzar El Oráculo de Nueva Eternia (Docker)"
 
 # Set Icon if it exists (Optional polish)
 $Shortcut.IconLocation = "powershell.exe"
