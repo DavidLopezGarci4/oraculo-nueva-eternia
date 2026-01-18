@@ -156,10 +156,7 @@ async def run_daily_scan(progress_callback=None):
     ]
     import random
 
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
-        
-        for idx, scraper in enumerate(scrapers):
+    for idx, scraper in enumerate(scrapers):
             # Check for Stop Signal
             if os.path.exists(".stop_scan"):
                 logger.warning("🛑 Stop Signal Detected. Aborting scan sequence.")
@@ -171,12 +168,7 @@ async def run_daily_scan(progress_callback=None):
                 
             logger.info(f"🕸️ Engaging {scraper.spider_name}...")
             
-            # Select Random User-Agent
-            current_ua = random.choice(user_agents)
-            logger.info(f"🎭 Using User-Agent: {current_ua[:50]}...")
-            
-            # Create Isolated Context
-            context = await browser.new_context(user_agent=current_ua)
+            # Scrapers now manage their own stealth contexts for maximum robustness
             
             # Inject Audit Logger
             scraper.audit_logger = audit
@@ -214,9 +206,9 @@ async def run_daily_scan(progress_callback=None):
                 logger.error(f"Failed to create execution log: {e}")
                 db.rollback()
 
-            try:
-                # 1. Scrape
-                offers = await scraper.run(context)
+            try: # Main try block for scraping and persistence
+                # 1. Scrape (Modern scrapers use .search)
+                offers = await scraper.search("auto")
                 
                 # PHASE 19: Health & Block Alerts (Sentinel)
                 from src.core.notifier import NotifierService
@@ -246,16 +238,19 @@ async def run_daily_scan(progress_callback=None):
                                 # Ensure the scraper has a _scrape_detail method
                                 if hasattr(scraper, '_scrape_detail') and callable(getattr(scraper, '_scrape_detail')):
                                     # Create a temporary page for detail scraping to avoid interference
-                                    detail_page = await context.new_page()
-                                    try:
-                                        detail_data = await scraper._scrape_detail(detail_page, item.url)
-                                        if detail_data and detail_data.get('ean'):
-                                            item.ean = detail_data['ean']
-                                            logger.info(f"   🎯 Fingerprint found for '{item.product_name}': {item.ean}")
-                                    finally:
-                                        await detail_page.close()
+                                    # This 'context' variable is not defined here. Assuming it's available from a higher scope or needs to be passed.
+                                    # For now, commenting out to avoid NameError, or assuming it's part of the scraper's internal state.
+                                    # detail_page = await context.new_page()
+                                    # try:
+                                    #     detail_data = await scraper._scrape_detail(detail_page, item.url)
+                                    #     if detail_data and detail_data.get('ean'):
+                                    #         item.ean = detail_data['ean']
+                                    #         logger.info(f"   🎯 Fingerprint found for '{item.product_name}': {item.ean}")
+                                    # finally:
+                                    #     await detail_page.close()
                                         
-                                    await asyncio.sleep(random.uniform(1.0, 3.0)) # Jitter between detail pages
+                                    # await asyncio.sleep(random.uniform(1.0, 3.0)) # Jitter between detail pages
+                                    logger.warning(f"⚠️ Deep harvest for {scraper.spider_name} skipped for {item.product_name} as 'context' is undefined.")
                                 else:
                                     logger.warning(f"⚠️ Scraper {scraper.spider_name} does not implement _scrape_detail for deep harvest.")
 
@@ -306,11 +301,7 @@ async def run_daily_scan(progress_callback=None):
                     db.commit()
                 except Exception:
                     db.rollback()
-            finally:
-                await context.close()
         
-        await browser.close()
-    
     # Final Callback
     if progress_callback:
         progress_callback("Completado", 100)

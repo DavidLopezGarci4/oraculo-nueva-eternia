@@ -34,6 +34,7 @@ class BaseScraper(ABC):
         self.errors = 0
         self.blocked = False
         self.audit_logger = None # Optional AuditLogger injection
+        self.max_pages = 100  # Default max pages to crawl
 
     @abstractmethod
     async def search(self, query: str) -> List[ScrapedOffer]:

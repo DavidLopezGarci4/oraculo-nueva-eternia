@@ -16,7 +16,7 @@ class DeToyboysNLScraper(BaseScraper):
     def __init__(self):
         super().__init__(
             shop_name="DeToyboys",
-            base_url="https://detoyboys.nl/en/collectibles/subline-masters-of-the-universe-origins"
+            base_url="https://detoyboys.nl/en/8489-masters-of-the-universe-origins-mattel"
         )
 
     async def search(self, query: str = "auto") -> List[ScrapedOffer]:
@@ -37,9 +37,8 @@ class DeToyboysNLScraper(BaseScraper):
             try:
                 current_url = self.base_url
                 page_num = 1
-                max_pages = 50
                 
-                while current_url and page_num <= max_pages:
+                while current_url and page_num <= self.max_pages:
                     logger.info(f"[{self.spider_name}] Scraping page {page_num}: {current_url}")
                     
                     if not await self._safe_navigate(page, current_url):
@@ -50,12 +49,12 @@ class DeToyboysNLScraper(BaseScraper):
                     html_content = await page.content()
                     soup = BeautifulSoup(html_content, 'html.parser')
                     
-                    # De Toyboys uses standard WooCommerce/Shopify patterns
-                    items = soup.select('.product-card, .product-item, .woocommerce-LoopProduct-link')
+                    # De Toyboys uses standard PrestaShop / Modern WooCommerce patterns
+                    items = soup.select('li.ajax_block_product, .product-miniature, .product-card')
                     
                     if not items:
                         # Fallback: generic product listing
-                        items = soup.select('[data-product-id], .product')
+                        items = soup.select('[data-product-id], .product, li.product')
                     
                     logger.info(f"[{self.spider_name}] Found {len(items)} items on page {page_num}")
                     
@@ -65,8 +64,8 @@ class DeToyboysNLScraper(BaseScraper):
                             products.append(prod)
                             self.items_scraped += 1
                     
-                    # Pagination
-                    next_btn = soup.select_one('a.next, [rel="next"], .pagination__next')
+                    # Pagination: Standard PrestaShop .pagination_next
+                    next_btn = soup.select_one('li.pagination_next a, a.next, [rel="next"], .pagination__next')
                     if next_btn and next_btn.get('href'):
                         next_href = next_btn.get('href')
                         current_url = next_href if next_href.startswith('http') else f"https://detoyboys.nl{next_href}"
@@ -96,11 +95,11 @@ class DeToyboysNLScraper(BaseScraper):
                 link = f"https://detoyboys.nl{link}"
             
             # Find name
-            title_tag = item.select_one('.product-title, .product-name, h2, h3, .title')
+            title_tag = item.select_one('a.product-name, .product-title, .product-name, h2, h3, .title')
             name = title_tag.get_text(strip=True) if title_tag else "Unknown"
             
             # Find price
-            price_tag = item.select_one('.price, .product-price, [data-price]')
+            price_tag = item.select_one('span.price.product-price, .price, .product-price, [data-price]')
             price_val = 0.0
             if price_tag:
                 price_val = self._normalize_price(price_tag.get_text(strip=True))

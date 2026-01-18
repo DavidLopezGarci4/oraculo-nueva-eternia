@@ -16,63 +16,68 @@ class FantasiaScraper(BaseScraper):
     Uses 'content' attribute for price reliability.
     """
     def __init__(self):
-        super().__init__(name="Fantasia Personajes", base_url="https://fantasiapersonajes.es/busqueda?controller=search&s=masters+of+the+universe")
+        super().__init__(shop_name="Fantasia Personajes", base_url="https://fantasiapersonajes.es/busqueda?controller=search&s=masters+of+the+universe")
 
-    async def run(self, context: BrowserContext) -> List[ScrapedOffer]:
+    async def search(self, query: str = "auto") -> List[ScrapedOffer]:
+        from playwright.async_api import async_playwright
         products: List[ScrapedOffer] = []
-        page = await context.new_page()
         
-        try:
-            current_url = self.base_url
-            page_num = 1
-            max_pages = 20 # Increased limit for sanity, 8+ seen by user
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=True)
+            context = await browser.new_context(user_agent=self._get_random_header()["User-Agent"])
+            page = await context.new_page()
             
-            while current_url and page_num <= max_pages:
-                logger.info(f"[{self.spider_name}] Scraping page {page_num}: {current_url}")
+            try:
+                current_url = self.base_url
+                page_num = 1
+                max_pages = 20 # Increased limit for sanity, 8+ seen by user
                 
-                if not await self._safe_navigate(page, current_url):
-                    break
-                
-                await self._handle_popups(page)
-                await asyncio.sleep(1.5)
-                
-                html_content = await page.content()
-                soup = BeautifulSoup(html_content, 'html.parser')
-                
-                # Strategy 1: Verified CSS Selectors (Primary for results)
-                items = soup.select('article.product-miniature')
-                logger.info(f"[{self.spider_name}] Found {len(items)} items using CSS.")
-                
-                if not items:
-                    # Fallback to secondary container pattern
-                    items = soup.select('.product-miniature')
+                while current_url and page_num <= max_pages:
+                    logger.info(f"[{self.spider_name}] Scraping page {page_num}: {current_url}")
                     
-                for item in items:
-                    prod = self._parse_html_item(item)
-                    if prod:
-                        products.append(prod)
-                        self.items_scraped += 1
-                
-                # Pagination: PrestaShop .next.js-search-link
-                next_tag = soup.select_one('a.next.js-search-link, li.next a')
-                if next_tag and next_tag.get('href') and 'javascript:void' not in next_tag.get('href'):
-                    current_url = next_tag.get('href')
-                    # PrestaShop relative link check
-                    if current_url.startswith('/'):
-                        current_url = f"https://fantasiapersonajes.es{current_url}"
-                    page_num += 1
-                else:
-                    logger.info(f"[{self.spider_name}] End of pagination.")
-                    break
+                    if not await self._safe_navigate(page, current_url):
+                        break
                     
-        except Exception as e:
-            logger.error(f"[{self.spider_name}] Critical Error: {e}", exc_info=True)
-            self.errors += 1
-        finally:
-            await page.close()
-            
-        logger.info(f"[{self.spider_name}] Finished. Total items: {len(products)}")
-        return products
+                    await self._handle_popups(page)
+                    await asyncio.sleep(1.5)
+                    
+                    html_content = await page.content()
+                    soup = BeautifulSoup(html_content, 'html.parser')
+                    
+                    # Strategy 1: Verified CSS Selectors (Primary for results)
+                    items = soup.select('article.product-miniature')
+                    logger.info(f"[{self.spider_name}] Found {len(items)} items using CSS.")
+                    
+                    if not items:
+                        # Fallback to secondary container pattern
+                        items = soup.select('.product-miniature')
+                        
+                    for item in items:
+                        prod = self._parse_html_item(item)
+                        if prod:
+                            products.append(prod)
+                            self.items_scraped += 1
+                    
+                    # Pagination: PrestaShop .next.js-search-link
+                    next_tag = soup.select_one('a.next.js-search-link, li.next a')
+                    if next_tag and next_tag.get('href') and 'javascript:void' not in next_tag.get('href'):
+                        current_url = next_tag.get('href')
+                        # PrestaShop relative link check
+                        if current_url.startswith('/'):
+                            current_url = f"https://fantasiapersonajes.es{current_url}"
+                        page_num += 1
+                    else:
+                        logger.info(f"[{self.spider_name}] End of pagination.")
+                        break
+                        
+            except Exception as e:
+                logger.error(f"[{self.spider_name}] Critical Error: {e}", exc_info=True)
+                self.errors += 1
+            finally:
+                await browser.close()
+                
+            logger.info(f"[{self.spider_name}] Finished. Total items: {len(products)}")
+            return products
 
     def _parse_html_item(self, item) -> Optional[ScrapedOffer]:
         try:

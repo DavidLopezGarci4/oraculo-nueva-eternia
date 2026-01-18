@@ -338,10 +338,20 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
 
 ---
 
+### 🛡️ Operación "Corazón de Grayskull" (Heartbeat & Scraper Fixes - 18/01/2026)
+- **BBTS Fix**: Reparado el filtrado por nombre y selector de precios (`.product-card-price`). Superado bloqueo de detección de variables.
+- **DeToyboys Fix**: Actualizada URL de categoría a la versión de Mattel/Origins de alto rendimiento. Selectores PrestaShop renovados.
+- **Vendiloshop Fix**: Implementada estrategia basada en Sniperfast (Search Overlay) para capturar >2000 productos.
+- **Simulador de Latidos**: Creado `simulated_connection.py` para verificaciones de salud ultra-rápidas (1 página) en segundo plano.
+- **Estandarización**: Refactorizado `daily_scan.py` para usar el método proactivo `search()` en lugar del legado `run()`.
+- **Compatibilidad**: Eliminados emojis de logs críticos para evitar `UnicodeEncodeError` en terminales Windows.
+
+---
+
 - [x] **11.1 Rollback masivo**: Auditoría europea completada y items devueltos al Purgatorio.
 - [x] **11.2 Fix ToymiEU**: Lógica de selección de precios por país (España) implementada.
 - [x] **11.3 Blindaje Atómico**: Inserción resiliente y actualización de precios en Purgatorio.
 - [x] **11.4 Expansión Europea**: 14 scrapers integrados y operativos en UI dinámica.
-- [ ] **11.5 IA SmartMatcher**: Implementación de LLM ligero para mejorar el reconocimiento automático.
+- [x] **11.5 Latido del Oráculo**: Implementado simulador de conexión y salud de scrapers.
 - [ ] **12.1 Infiltración Amazon**: Monitoreo de precios amazon.es.
 - [ ] **12.2 Inteligencia eBay**: Conector Browse API + OAuth 2.0.

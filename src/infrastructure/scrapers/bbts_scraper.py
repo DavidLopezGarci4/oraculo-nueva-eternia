@@ -205,11 +205,6 @@ class BigBadToyStoreScraper(BaseScraper):
             if not link.startswith('http'):
                 link = f"https://www.bigbadtoystore.com{link}"
             
-            # Filtrar solo productos MOTU
-            link_lower = link.lower()
-            if not any(kw in link_lower for kw in ['origin', 'master', 'motu', 'eternia', 'he-man', 'skeletor']):
-                return None
-            
             # Nombre del producto
             title_selectors = ['.product-name', '.item-name', '.title', '.pod-title', 'h2', 'h3', '[class*="Name"]', '[class*="Title"]']
             name = None
@@ -224,9 +219,16 @@ class BigBadToyStoreScraper(BaseScraper):
             
             if not name or len(name) < 5:
                 return None
+
+            # Validar que el nombre contenga MOTU (ya que el link es un VariationID genérico)
+            name_lower = name.lower()
+            keywords = ['origin', 'master', 'motu', 'eternia', 'he-man', 'skeletor', 'mattel']
+            if not any(kw in name_lower for kw in keywords):
+                logger.debug(f"[{self.spider_name}] Skipping item (no keywords in name): {name}")
+                return None
             
             # Precio (USD -> EUR conversion)
-            price_selectors = ['.product-price', '.item-price', '.price', '.pod-price', '[class*="Price"]']
+            price_selectors = ['.product-card-price', '.product-price', '.item-price', '.price', '.pod-price', '[class*="price"]', '[class*="Price"]']
             price_val = 0.0
             for sel in price_selectors:
                 price_tag = item.select_one(sel)
@@ -239,6 +241,7 @@ class BigBadToyStoreScraper(BaseScraper):
                         break
             
             if price_val == 0.0:
+                logger.debug(f"[{self.spider_name}] Skipping item (price is 0): {name}")
                 return None
             
             # Disponibilidad

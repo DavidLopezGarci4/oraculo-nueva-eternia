@@ -16,7 +16,7 @@ class VendiloshopITScraper(BaseScraper):
     def __init__(self):
         super().__init__(
             shop_name="VendiloshopIT",
-            base_url="https://vendiloshop.it/masters-of-the-universe/"
+            base_url="https://www.vendiloshop.it/it/ricerca?s=Masters+of+the+Universe"
         )
 
     async def search(self, query: str = "auto") -> List[ScrapedOffer]:
@@ -37,9 +37,8 @@ class VendiloshopITScraper(BaseScraper):
             try:
                 current_url = self.base_url
                 page_num = 1
-                max_pages = 50
                 
-                while current_url and page_num <= max_pages:
+                while current_url and page_num <= self.max_pages:
                     logger.info(f"[{self.spider_name}] Scraping page {page_num}: {current_url}")
                     
                     if not await self._safe_navigate(page, current_url):
@@ -50,11 +49,12 @@ class VendiloshopITScraper(BaseScraper):
                     html_content = await page.content()
                     soup = BeautifulSoup(html_content, 'html.parser')
                     
-                    # Italian shops typically use WooCommerce or PrestaShop
-                    items = soup.select('.product-miniature, .product, li.product')
+                    # Italian shops typically use WooCommerce or PrestaShop. 
+                    # Vendiloshop also has Sniperfast overlay.
+                    items = soup.select('.product-miniature, .product, li.product, .sniperfast_product')
                     
                     if not items:
-                        items = soup.select('[data-product-id], .woocommerce-LoopProduct-link')
+                        items = soup.select('[data-product-id], .woocommerce-LoopProduct-link, .snpf_product')
                     
                     logger.info(f"[{self.spider_name}] Found {len(items)} items on page {page_num}")
                     
@@ -95,15 +95,15 @@ class VendiloshopITScraper(BaseScraper):
                 link = f"https://vendiloshop.it{link}"
             
             # Find name
-            title_tag = item.select_one('.product-title, .woocommerce-loop-product__title, h2, h3')
+            title_tag = item.select_one('.product-title a, .product-title, .woocommerce-loop-product__title, h2, h3, .sniperfast_prod_name')
             name = title_tag.get_text(strip=True) if title_tag else "Unknown"
             
             # Find price (Italian format: 12,95 €)
-            price_tag = item.select_one('.price, .product-price, .amount')
+            price_tag = item.select_one('.product-price, .price, .amount, .sniperfast_prod_price, .sniperfast_prod_price_del')
             price_val = 0.0
             if price_tag:
                 # Get sale price if available
-                sale_price = item.select_one('ins .amount, .product-price-new')
+                sale_price = item.select_one('ins .amount, .product-price-new, .sniperfast_prod_price')
                 if sale_price:
                     price_val = self._normalize_price(sale_price.get_text(strip=True))
                 else:

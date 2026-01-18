@@ -15,72 +15,76 @@ class ActionToysScraper(BaseScraper):
     Scraper for ActionToys (WooCommerce).
     """
     def __init__(self):
-        super().__init__(name="ActionToys", base_url="https://actiontoys.es/figuras-de-accion/masters-of-the-universe/")
+        super().__init__(shop_name="ActionToys", base_url="https://actiontoys.es/figuras-de-accion/masters-of-the-universe/")
 
-    async def run(self, context: BrowserContext) -> List[ScrapedOffer]:
+    async def search(self, query: str = "auto") -> List[ScrapedOffer]:
         """
         Executes the scraping logic for Action Toys.
         """
+        from playwright.async_api import async_playwright
         products: List[ScrapedOffer] = []
-        page = await context.new_page()
         
-        try:
-            # Start at page 1
-            current_url = self.base_url
-            page_num = 1
-            max_pages = 100 # Future-proof: Follows the 'Next' link up to 100 pages
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=True)
+            context = await browser.new_context(user_agent=self._get_random_header()["User-Agent"])
+            page = await context.new_page()
             
-            while current_url and page_num <= max_pages:
-                logger.info(f"[{self.spider_name}] Scraping page {page_num}: {current_url}")
+            try:
+                # Start at page 1
+                current_url = self.base_url
+                page_num = 1
                 
-                if not await self._safe_navigate(page, current_url):
-                    break
-                
-                # Random delay to behave like a human (anti-ban)
-                await asyncio.sleep(2.0)
-                
-                # Extract HTML
-                html_content = await page.content()
-                soup = BeautifulSoup(html_content, 'html.parser')
-                
-                # Find Items
-                items = soup.select('li.product')
-                logger.info(f"[{self.spider_name}] Found {len(items)} items on page {page_num}")
-                
-                for item in items:
-                    prod = self._parse_html_item(item)
-                    if prod:
-                        products.append(prod)
-                        self.items_scraped += 1
-                
-                # Pagination (More robust selector: looking for current + 1 or next)
-                next_tag = soup.select_one('a.next.page-numbers')
-                if not next_tag:
-                    # Fallback: check the pagination list for the link AFTER the current one
-                    current_span = soup.select_one('span.page-numbers.current')
-                    if current_span and current_span.parent:
-                        next_li = current_span.parent.find_next_sibling('li')
-                        if next_li:
-                            next_tag = next_li.select_one('a.page-numbers')
-
-                if next_tag and next_tag.get('href'):
-                    current_url = next_tag.get('href')
-                    if not current_url.startswith('http'):
-                        current_url = f"https://actiontoys.es{current_url}"
-                    page_num += 1
-                else:
-                    # HEURISTIC: Check if there's any other indicator of a next page
-                    logger.info(f"[{self.spider_name}] No more explicit 'Next' links found.")
-                    break
+                while current_url and page_num <= self.max_pages:
+                    logger.info(f"[{self.spider_name}] Scraping page {page_num}: {current_url}")
                     
-        except Exception as e:
-            logger.error(f"[{self.spider_name}] Critical Error: {e}", exc_info=True)
-            self.errors += 1
-        finally:
-            await page.close()
-            
-        logger.info(f"[{self.spider_name}] Finished. Total items: {len(products)}")
-        return products
+                    if not await self._safe_navigate(page, current_url):
+                        break
+                    
+                    # Random delay to behave like a human (anti-ban)
+                    await asyncio.sleep(2.0)
+                    
+                    # Extract HTML
+                    html_content = await page.content()
+                    soup = BeautifulSoup(html_content, 'html.parser')
+                    
+                    # Find Items
+                    items = soup.select('li.product')
+                    logger.info(f"[{self.spider_name}] Found {len(items)} items on page {page_num}")
+                    
+                    for item in items:
+                        prod = self._parse_html_item(item)
+                        if prod:
+                            products.append(prod)
+                            self.items_scraped += 1
+                    
+                    # Pagination (More robust selector: looking for current + 1 or next)
+                    next_tag = soup.select_one('a.next.page-numbers')
+                    if not next_tag:
+                        # Fallback: check the pagination list for the link AFTER the current one
+                        current_span = soup.select_one('span.page-numbers.current')
+                        if current_span and current_span.parent:
+                            next_li = current_span.parent.find_next_sibling('li')
+                            if next_li:
+                                next_tag = next_li.select_one('a.page-numbers')
+
+                    if next_tag and next_tag.get('href'):
+                        current_url = next_tag.get('href')
+                        if not current_url.startswith('http'):
+                            current_url = f"https://actiontoys.es{current_url}"
+                        page_num += 1
+                    else:
+                        # HEURISTIC: Check if there's any other indicator of a next page
+                        logger.info(f"[{self.spider_name}] No more explicit 'Next' links found.")
+                        break
+                        
+            except Exception as e:
+                logger.error(f"[{self.spider_name}] Critical Error: {e}", exc_info=True)
+                self.errors += 1
+            finally:
+                await browser.close()
+                
+            logger.info(f"[{self.spider_name}] Finished. Total items: {len(products)}")
+            return products
 
     def _parse_html_item(self, item) -> Optional[ScrapedOffer]:
         try:

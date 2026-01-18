@@ -113,6 +113,13 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
 *   **Bypass de IVA (OSS)**: Lógica específica para detectar y normalizar precios internacionales.
 *   **Interfaz del Arquitecto**: UI del Purgatorio 100% dinámica, eliminando el hardcode y permitiendo escalabilidad infinita de fuentes.
 *   **Atomicidad Transaccional**: Blindaje de base de datos contra duplicación de URLs y colisiones de red.
+*   **Heartbeat Sentinel**: Implementación de `simulated_connection.py` para monitoreo de salud de la red.
+
+### Fase 12: Inteligencia del Dato y Refinamiento UX ✅
+*   **Patrones de Conexión SKU/EAN**: Investigación y mapeo de identificadores Mattel (SKU, ASIN, UPC) para automatizar el matching entre webs.
+*   **Métricas "ActionFigure411 Style"**: Implementación de MSRP, Revalorización (%), Precio Medio Móvil y Volumen de ventas.
+*   **Scraper Modernización**: Refactorización de `daily_scan.py` y scrapers clave (BBTS, Vendilo, DeToyboys) para máxima resiliencia.
+*   **Optimización de Legibilidad**: Rediseño de la rejilla de scrapers para evitar el colapso visual, priorizando la lectura horizontal y etiquetas claras.
 
 ### Fase 6: Estrategia de Valor y Futuro (Innovación)
 *   **Estimador de Valor (Financial)**: Cálculo automático del valor de la colección basado en precios históricos y estado del item.

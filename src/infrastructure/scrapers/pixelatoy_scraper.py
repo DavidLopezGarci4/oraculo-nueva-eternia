@@ -16,66 +16,68 @@ class PixelatoyScraper(BaseScraper):
     Uses 'itemprop' and specific PrestaShop selectors.
     """
     def __init__(self):
-        super().__init__(name="Pixelatoy", base_url="https://pixelatoy.com/es/busqueda?controller=search&s=masters+of+the+universe")
+        super().__init__(shop_name="Pixelatoy", base_url="https://pixelatoy.com/es/busqueda?controller=search&s=masters+of+the+universe")
 
-    async def run(self, context: BrowserContext) -> List[ScrapedOffer]:
+    async def search(self, query: str = "auto") -> List[ScrapedOffer]:
+        from playwright.async_api import async_playwright
         products: List[ScrapedOffer] = []
-        page = await context.new_page()
         
-        try:
-            current_url = self.base_url
-            page_num = 1
-            max_pages = 25 # Increased for safety
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=True)
+            context = await browser.new_context(user_agent=self._get_random_header()["User-Agent"])
+            page = await context.new_page()
             
-            while current_url and page_num <= max_pages:
-                logger.info(f"[{self.spider_name}] Scraping page {page_num}: {current_url}")
+            try:
+                current_url = self.base_url
+                page_num = 1
+                max_pages = 25 
                 
-                if not await self._safe_navigate(page, current_url):
-                    break
-                
-                await self._handle_popups(page)
-                await asyncio.sleep(2.0) 
-                
-                # Human-like interaction (Kaizen Hardening)
-                await page.mouse.wheel(0, 500)
-                await asyncio.sleep(1.0)
-                
-                html_content = await page.content()
-                soup = BeautifulSoup(html_content, 'html.parser')
-                
-                # Container (Refined with js- variant for PrestaShop modern themes)
-                items = soup.select('article.product-miniature, article.js-product-miniature')
-                logger.info(f"[{self.spider_name}] Found {len(items)} items on page {page_num}")
-                
-                if not items:
-                    logger.warning(f"[{self.spider_name}] No items found on page {page_num}. Possible block or selector change.")
-                    break
-
-                for item in items:
-                    prod = self._parse_html_item(item)
-                    if prod:
-                        products.append(prod)
-                        self.items_scraped += 1
-                
-                # Pagination: PrestaShop .next.js-search-link
-                next_tag = soup.select_one('a.next.js-search-link, .pagination .next a, a#infinity-url')
-                if next_tag and next_tag.get('href') and 'javascript:void' not in next_tag.get('href'):
-                    current_url = next_tag.get('href')
-                    if current_url.startswith('/'):
-                        current_url = f"https://www.pixelatoy.com{current_url}"
-                    page_num += 1
-                else:
-                    logger.info(f"[{self.spider_name}] End of pagination.")
-                    break
+                while current_url and page_num <= max_pages:
+                    logger.info(f"[{self.spider_name}] Scraping page {page_num}: {current_url}")
                     
-        except Exception as e:
-            logger.error(f"[{self.spider_name}] Critical Error: {e}", exc_info=True)
-            self.errors += 1
-        finally:
-            await page.close()
-            
-        logger.info(f"[{self.spider_name}] Finished. Total items: {len(products)}")
-        return products
+                    if not await self._safe_navigate(page, current_url):
+                        break
+                    
+                    await self._handle_popups(page)
+                    await asyncio.sleep(2.0) 
+                    
+                    # Human-like interaction (Kaizen Hardening)
+                    await page.mouse.wheel(0, 500)
+                    await asyncio.sleep(1.0)
+                    
+                    html_content = await page.content()
+                    soup = BeautifulSoup(html_content, 'html.parser')
+                    
+                    items = soup.select('article.product-miniature, article.js-product-miniature')
+                    logger.info(f"[{self.spider_name}] Found {len(items)} items on page {page_num}")
+                    
+                    if not items:
+                        break
+
+                    for item in items:
+                        prod = self._parse_html_item(item)
+                        if prod:
+                            products.append(prod)
+                            self.items_scraped += 1
+                    
+                    # Pagination: PrestaShop .next.js-search-link
+                    next_tag = soup.select_one('a.next.js-search-link, .pagination .next a, a#infinity-url')
+                    if next_tag and next_tag.get('href') and 'javascript:void' not in next_tag.get('href'):
+                        current_url = next_tag.get('href')
+                        if current_url.startswith('/'):
+                            current_url = f"https://www.pixelatoy.com{current_url}"
+                        page_num += 1
+                    else:
+                        break
+                        
+            except Exception as e:
+                logger.error(f"[{self.spider_name}] Critical Error: {e}", exc_info=True)
+                self.errors += 1
+            finally:
+                await browser.close()
+                
+            logger.info(f"[{self.spider_name}] Finished. Total items: {len(products)}")
+            return products
 
     def _parse_html_item(self, item) -> Optional[ScrapedOffer]:
         try:
