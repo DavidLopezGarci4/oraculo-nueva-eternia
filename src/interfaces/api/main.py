@@ -637,25 +637,41 @@ def run_scraper_task(scraper_name: str = "harvester", trigger_type: str = "manua
         else:
             # Ejecutar spiders de fondo (ScrapingPipeline)
             from src.infrastructure.scrapers.pipeline import ScrapingPipeline
-            from src.infrastructure.scrapers.spiders.actiontoys import ActionToysSpider
-            from src.infrastructure.scrapers.spiders.fantasia import FantasiaSpider
-            from src.infrastructure.scrapers.spiders.frikiverso import FrikiversoSpider
-            from src.infrastructure.scrapers.spiders.electropolis import ElectropolisSpider
-            from src.infrastructure.scrapers.spiders.pixelatoy import PixelatoySpider
+            from src.infrastructure.scrapers.action_toys_scraper import ActionToysScraper
+            from src.infrastructure.scrapers.fantasia_scraper import FantasiaScraper
+            from src.infrastructure.scrapers.frikiverso_scraper import FrikiversoScraper
+            from src.infrastructure.scrapers.electropolis_scraper import ElectropolisScraper
+            from src.infrastructure.scrapers.pixelatoy_scraper import PixelatoyScraper
             from src.infrastructure.scrapers.spiders.amazon import AmazonSpider
             from src.infrastructure.scrapers.spiders.dvdstorespain import DVDStoreSpainSpider
             from src.infrastructure.scrapers.spiders.kidinn import KidInnSpider
+            
+            # Phase 8. European Expansion
+            from src.infrastructure.scrapers.detoyboys_scraper import DeToyboysNLScraper
+            from src.infrastructure.scrapers.motuclassics_de_scraper import MotuClassicsDEScraper
+            from src.infrastructure.scrapers.vendiloshop_scraper import VendiloshopITScraper
+            from src.infrastructure.scrapers.toymi_scraper import ToymiEUScraper
+            from src.infrastructure.scrapers.time4actiontoys_scraper import Time4ActionToysDEScraper
+            from src.infrastructure.scrapers.bbts_scraper import BigBadToyStoreScraper
+            
             import asyncio
 
             spiders_map = {
-                "actiontoys": ActionToysSpider(),
-                "fantasia": FantasiaSpider(),
-                "frikiverso": FrikiversoSpider(),
-                "electropolis": ElectropolisSpider(),
-                "pixelatoy": PixelatoySpider(),
-                "amazon": AmazonSpider(),
+                "ActionToys": ActionToysScraper(),
+                "Fantasia": FantasiaScraper(),
+                "Frikiverso": FrikiversoScraper(),
+                "Electropolis": ElectropolisScraper(),
+                "Pixelatoy": PixelatoyScraper(),
+                "amazon": AmazonSpider(), # Old spider, keep lowercase if that's what it uses
                 "dvdstorespain": DVDStoreSpainSpider(),
-                "kidinn": KidInnSpider()
+                "kidinn": KidInnSpider(),
+                # European Expansion
+                "DeToyboys": DeToyboysNLScraper(),
+                "MotuClassicsDE": MotuClassicsDEScraper(),
+                "VendiloshopIT": VendiloshopITScraper(),
+                "ToymiEU": ToymiEUScraper(),
+                "Time4ActionToysDE": Time4ActionToysDEScraper(),
+                "BigBadToyStore": BigBadToyStoreScraper()
             }
 
             spiders_to_run = []

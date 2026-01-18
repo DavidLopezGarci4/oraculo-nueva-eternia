@@ -108,6 +108,12 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
 *   **Experiencia de Catálogo**:
     *   **Market Intelligence UI**: Indicadores visuales ("Live" badge) para productos con ofertas activas.
 
+### Fase 11: Expansión Continental y Dinamización ✅
+*   **Incursión Europea**: Integración de 14 scrapers activos cubriendo España, Alemania e Italia.
+*   **Bypass de IVA (OSS)**: Lógica específica para detectar y normalizar precios internacionales.
+*   **Interfaz del Arquitecto**: UI del Purgatorio 100% dinámica, eliminando el hardcode y permitiendo escalabilidad infinita de fuentes.
+*   **Atomicidad Transaccional**: Blindaje de base de datos contra duplicación de URLs y colisiones de red.
+
 ### Fase 6: Estrategia de Valor y Futuro (Innovación)
 *   **Estimador de Valor (Financial)**: Cálculo automático del valor de la colección basado en precios históricos y estado del item.
 *   **Buscador Óptico (Future Vision)**: Identificación de figuras mediante carga de fotos (comparativa de hashes).

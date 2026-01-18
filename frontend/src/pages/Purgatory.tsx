@@ -195,28 +195,56 @@ const Purgatory: React.FC = () => {
                             </div>
                         </button>
 
-                        {/* Individual Spiders */}
-                        {['actiontoys', 'fantasia', 'frikiverso', 'electropolis', 'pixelatoy', 'amazon', 'dvdstorespain', 'kidinn'].map(shop => {
-                            const status = scrapersStatus?.find((s: any) => s.spider_name === shop)?.status;
-                            const isActive = status === 'running';
-                            return (
-                                <button
-                                    key={shop}
-                                    onClick={() => setConfirmScraper(shop)}
-                                    disabled={isRunning}
-                                    className="group relative flex flex-col gap-3 rounded-2xl border border-white/5 bg-white/[0.02] p-4 transition-all hover:bg-white/5 disabled:opacity-50"
-                                >
-                                    <div className="flex items-center justify-between">
-                                        <Search className={`h-4 w-4 ${isActive ? 'text-brand-primary' : 'text-white/20'}`} />
-                                        <div className={`h-1.5 w-1.5 rounded-full ${isActive ? 'bg-brand-primary animate-pulse' : status === 'completed' ? 'bg-green-500/50' : 'bg-white/5'}`}></div>
-                                    </div>
-                                    <div className="space-y-1 text-left">
-                                        <p className="text-[10px] font-black uppercase tracking-tighter text-white/20">Background Spider</p>
-                                        <p className="text-xs font-bold text-white/70 uppercase truncate">{shop}</p>
-                                    </div>
-                                </button>
-                            );
-                        })}
+                        {/* Individual Spiders - Dynamic & Compact Grid */}
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
+                            {(() => {
+                                if (!scrapersStatus) return null;
+
+                                // 1. Filter out metadata scrapers
+                                const individualScrapers = scrapersStatus.filter((s: any) =>
+                                    !['all', 'harvester', 'Harvester'].includes(s.spider_name)
+                                );
+
+                                // 2. Deduplicate (case-insensitive) but prefer PascalCase
+                                const uniqueMap = new Map();
+                                individualScrapers.forEach((s: any) => {
+                                    const key = s.spider_name.toLowerCase();
+                                    const existing = uniqueMap.get(key);
+                                    // If the new name has more capitals, it's likely the standardized one
+                                    if (!existing || (s.spider_name.match(/[A-Z]/g) || []).length > (existing.spider_name.match(/[A-Z]/g) || []).length) {
+                                        uniqueMap.set(key, s);
+                                    }
+                                });
+
+                                return Array.from(uniqueMap.values())
+                                    .sort((a, b) => a.spider_name.localeCompare(b.spider_name))
+                                    .map((s: any) => {
+                                        const status = s.status;
+                                        const isActive = status === 'running';
+                                        const hasError = status.startsWith('error');
+
+                                        return (
+                                            <button
+                                                key={s.spider_name}
+                                                onClick={() => setConfirmScraper(s.spider_name)}
+                                                disabled={isRunning}
+                                                className={`group relative flex flex-col gap-1.5 rounded-xl border p-2.5 transition-all hover:bg-white/5 disabled:opacity-50 ${hasError ? 'border-red-500/20 bg-red-500/5' : 'border-white/5 bg-white/[0.02]'}`}
+                                            >
+                                                <div className="flex items-center justify-between">
+                                                    <Search className={`h-3 w-3 ${isActive ? 'text-brand-primary' : hasError ? 'text-red-400' : 'text-white/20'}`} />
+                                                    <div className={`h-1.5 w-1.5 rounded-full ${isActive ? 'bg-brand-primary animate-pulse' : status === 'completed' ? 'bg-green-500/50' : hasError ? 'bg-red-500' : 'bg-white/5'}`}></div>
+                                                </div>
+                                                <div className="space-y-0.5 text-left overflow-hidden">
+                                                    <p className="text-[8px] font-black uppercase tracking-tighter text-white/20 group-hover:text-brand-primary/40 transition-colors">Spider</p>
+                                                    <p className={`text-[10px] font-bold uppercase truncate ${hasError ? 'text-red-300' : 'text-white/70'}`} title={s.spider_name}>
+                                                        {s.spider_name}
+                                                    </p>
+                                                </div>
+                                            </button>
+                                        );
+                                    });
+                            })()}
+                        </div>
                     </div>
 
                     {/* Compact Execution Logs */}

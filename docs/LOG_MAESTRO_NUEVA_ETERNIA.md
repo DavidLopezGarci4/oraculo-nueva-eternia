@@ -323,11 +323,25 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
 - **Lógica de Precios**: El scraper `ToymiEUScraper` ahora detecta el selector OSS y fuerza la región a **España (ES)** antes de iniciar el escaneo.
 - **Precisión**: Mejora en la extracción de precios priorizando tags `meta[itemprop="price"]` de Schema.org para asegurar que se capture el PVP con IVA español.
 
+### 🌍 Expansión Continental 🇪🇺 (Fase 11.4)
+- **Nuevos Scrapers**: Integración de 6 nuevas fuentes europeas (**DeToyboys**, **MotuClassicsDE**, **VendiloshopIT**, **ToymiEU**, **Time4ActionToysDE**, **BigBadToyStore**).
+- **Control Total**: Registro centralizado en `spiders_map` con nombres estandarizados (PascalCase).
+- **Infraestructura Cloud**: Unificación de sesiones de base de datos (`SessionCloud`) en `daily_scan.py`, asegurando que los trabajos automáticos reporten a Supabase en tiempo real.
+
+### 🧠 Interfaz del Arquitecto (UI Dinámica)
+- **Refactor Purgatorio**: El panel de control de scrapers ya no es estático. Ahora renderiza dinámicamente cualquier tienda registrada en la base de datos.
+- **Optimización de Espacio**: Diseño compacto (grid adaptativo hasta 8 columnas) para dar cabida a la creciente lista de fuentes sin saturar la vista.
+- **Deduplicación de Status**: Script de limpieza ejecutado para unificar registros de estado (ej. `actiontoys` -> `ActionToys`).
+
+### 🛠️ Estabilidad del Núcleo
+- **Atomicidad SQL**: Implementación de `ON CONFLICT DO UPDATE` y `begin_nested()` para inserciones ultra-resilientes en PostgreSQL.
+
 ---
 
 - [x] **11.1 Rollback masivo**: Auditoría europea completada y items devueltos al Purgatorio.
 - [x] **11.2 Fix ToymiEU**: Lógica de selección de precios por país (España) implementada.
 - [x] **11.3 Blindaje Atómico**: Inserción resiliente y actualización de precios en Purgatorio.
+- [x] **11.4 Expansión Europea**: 14 scrapers integrados y operativos en UI dinámica.
 - [ ] **11.5 IA SmartMatcher**: Implementación de LLM ligero para mejorar el reconocimiento automático.
 - [ ] **12.1 Infiltración Amazon**: Monitoreo de precios amazon.es.
 - [ ] **12.2 Inteligencia eBay**: Conector Browse API + OAuth 2.0.

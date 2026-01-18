@@ -137,7 +137,7 @@ async def run_daily_scan(progress_callback=None):
     start_time = datetime.now()
     
     # DB Session for Status Updates
-    from src.infrastructure.database import SessionLocal
+    from src.infrastructure.database_cloud import SessionCloud as SessionLocal # Unified for Cloud
     from src.domain.models import ScraperStatusModel
     from src.core.audit_logger import AuditLogger
     
@@ -320,7 +320,7 @@ async def run_daily_scan(progress_callback=None):
     # PHASE 18: Create Database Vault (Safe Backup)
     try:
         from src.core.backup_manager import BackupManager
-        from src.infrastructure.database import SessionLocal
+        from src.infrastructure.database_cloud import SessionCloud as SessionLocal
         
         logger.info("🏰 Sealing the Data Vault (Database Backup)...")
         backup_db = SessionLocal()
@@ -362,7 +362,7 @@ if __name__ == "__main__":
         
         # --- EMERGENCY DB LOGGING ---
         try:
-            from src.infrastructure.database import SessionLocal
+            from src.infrastructure.database_cloud import SessionCloud as SessionLocal
             from src.domain.models import ScraperExecutionLogModel
             from datetime import datetime
             
