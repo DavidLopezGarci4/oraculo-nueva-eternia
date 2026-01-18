@@ -150,7 +150,7 @@ class ScrapingPipeline:
                         "price": offer.get('price'),
                         "currency": offer.get('currency'), 
                         "url": url_str,
-                        "is_available": offer.get('is_available')
+                        "is_available": offer.get('is_available') if offer.get('is_available') is not None else True
                     }, commit=False)
                     
                     # Sentinel/Audit logic omitted for speed in updates or can be added selectively
@@ -195,7 +195,7 @@ class ScrapingPipeline:
                         "price": offer.get('price'),
                         "currency": offer.get('currency'), 
                         "url": url_str,
-                        "is_available": offer.get('is_available')
+                        "is_available": offer.get('is_available') if offer.get('is_available') is not None else True
                     }, commit=False)
                     
                     # Audit new link
@@ -230,29 +230,43 @@ class ScrapingPipeline:
                         "found_at": datetime.utcnow()
                     }
                     
-                    # --- REFACTOR 7.3: GRANULAR ATOMIC INSERT ---
+                    # --- REFACTOR 7.3: DEFINITIVE ATOMIC UPSERT ---
                     try:
-                        # Use nested transaction to prevent full rollback on error for this specific item
-                        db.begin_nested()
+                        # Use a nested transaction (SAVEPOINT) to isolate this operation
+                        with db.begin_nested():
+                            if 'postgresql' in db.bind.dialect.name.lower():
+                                from sqlalchemy.dialects.postgresql import insert as pg_insert
+                                
+                                # Use ON CONFLICT DO UPDATE to handle latent duplicates and price updates atomically
+                                stmt = pg_insert(PendingMatchModel).values(pending_data)
+                                stmt = stmt.on_conflict_do_update(
+                                    index_elements=['url'],
+                                    set_={
+                                        "price": stmt.excluded.price,
+                                        "found_at": stmt.excluded.found_at,
+                                        "scraped_name": stmt.excluded.scraped_name
+                                    }
+                                )
+                                db.execute(stmt)
+                            else:
+                                # SQLite / Fallback
+                                existing = db.query(PendingMatchModel).filter(PendingMatchModel.url == url_str).first()
+                                if existing:
+                                    existing.price = pending_data["price"]
+                                    existing.found_at = pending_data["found_at"]
+                                else:
+                                    pending = PendingMatchModel(**pending_data)
+                                    db.add(pending)
                         
-                        if 'postgresql' in db.bind.dialect.name.lower():
-                            from sqlalchemy.dialects.postgresql import insert as pg_insert
-                            stmt = pg_insert(PendingMatchModel).values(pending_data).on_conflict_do_nothing(index_elements=['url'])
-                            db.execute(stmt)
-                        else:
-                            # Standard add for SQLite
-                            if not db.query(PendingMatchModel).filter(PendingMatchModel.url == url_str).first():
-                                pending = PendingMatchModel(**pending_data)
-                                db.add(pending)
-                        
-                        db.commit() # Savepoint commit
+                        # No db.commit() here! We commit the whole batch at the end.
                         new_items_count += 1
+                        
                     except Exception as e:
-                        db.rollback() # Rollback to savepoint only
+                        # db.begin_nested() context manager handles rollback of the savepoint automatically
                         if "unique" in str(e).lower():
-                            logger.debug(f"⏳ Duplicate URL skipped (SafeMode): {url_str}")
+                            logger.debug(f"⏳ Duplicate URL skipped (SaveMode): {url_str}")
                         else:
-                            logger.warning(f"⚠️ Item insertion error: {e}")
+                            logger.warning(f"⚠️ Item insertion error ({url_str}): {e}")
             
             db.commit()
             logger.success(f"⚡ Batch Complete: {new_items_count} new items added to Purgatory (Atomic Safe Mode).")

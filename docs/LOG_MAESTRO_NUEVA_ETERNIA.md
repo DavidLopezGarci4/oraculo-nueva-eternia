@@ -294,10 +294,11 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
 - **Time4ActionToys (DE)**: Auditoría real exitosa. 273 items encontrados y procesados.
 - **Verificación**: Confirmación de los 11 scrapers europeos en `daily_scan.py` y configuración en GitHub Actions.
 
-### 🛡️ Blindaje Atómico y Evolución de Precios (Bypass de Duplicados)
-- **Inserción Atómica**: Implementado sistema de transacciones anidadas (Savepoints) en el `ScrapingPipeline`. El Arca ya no se detiene ante errores de `UniqueViolation` (duplicados de URL) en PostgreSQL, garantizando incursiones 100% resilientes.
-- **Evolución en el Purgatorio**: Si una oferta ya existente en el Purgatorio cambia de precio, el sistema la actualiza automáticamente en lugar de ignorarla. Esto permite capturar fluctuaciones de mercado incluso antes de que el item sea vinculado manualmente.
-- **Telegram Sync**: Las alertas de Telegram ahora operan sobre datos actualizados dinámicamente, reflejando rebajas en tiempo real.
+### 🛡️ Blindaje Atómico Definitivo (UPSERT)
+- **Corrección Electrópolis**: Identificada fuga en la lógica de inserción de duplicados latentes.
+- **Atomic UPSERT**: Implementada lógica `ON CONFLICT (url) DO UPDATE` en el `ScrapingPipeline`. Ahora, cualquier colisión de URL en PostgreSQL se resuelve actualizando el precio y metadatos automáticamente sin interrumpir el proceso.
+- **Data Integrity**: Corregido bug de `is_available` que enviaba `None` a la base de datos, garantizando que el stock sea siempre booleano.
+- **Safe Transactions**: Uso estricto de `with db.begin_nested()` para asegurar que cada item sea una unidad atómica independiente.
 
 ### 🔗 Refinamiento de Wallapop (Anti-Bot Bypass)
 - **Problema**: Wallapop bloquea enlaces directos (Error 403).
