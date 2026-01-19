@@ -1,6 +1,7 @@
 
-import React from 'react';
-import { LayoutDashboard, Database, Box, ShieldAlert, Settings, LogOut, X } from 'lucide-react';
+import React from 'react'; import { LayoutDashboard, Database, Box, ShieldAlert, Settings, LogOut, X } from 'lucide-react';
+import masterRoleImg from '../../assets/role-master.png';
+import guardianRoleImg from '../../assets/role-guardian.png';
 
 interface SidebarProps {
     activeTab: string;
@@ -14,7 +15,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen
 
     const menuItems = [
         { id: 'dashboard', label: 'Tablero', icon: LayoutDashboard },
-        { id: 'catalog', label: 'Eternia', icon: Database },
+        { id: 'catalog', label: 'Nueva Eternia', icon: Database },
         { id: 'collection', label: 'Mi Fortaleza', icon: Box },
         ...(isAdmin ? [{ id: 'purgatory', label: 'Purgatorio', icon: ShieldAlert }] : []),
     ];
@@ -40,8 +41,17 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen
                 {/* Logo & Close Button */}
                 <div className="flex h-16 items-center justify-between border-b border-glass-border px-6">
                     <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-lg bg-brand-primary shadow-[0_0_15px_rgba(14,165,233,0.5)]"></div>
-                        <h1 className="text-xl font-bold tracking-tight text-white">ORÁCULO</h1>
+                        <div className="h-9 w-9 rounded-xl overflow-hidden border border-white/20 shadow-[0_0_15px_rgba(14,165,233,0.3)] bg-black/40">
+                            <img
+                                src={localStorage.getItem('active_user_id') === '2' ? guardianRoleImg : masterRoleImg}
+                                alt="Role Logo"
+                                className="h-full w-full object-cover"
+                            />
+                        </div>
+                        <div className="flex flex-col">
+                            <h1 className="text-sm font-black tracking-tighter text-white leading-none">ORÁCULO</h1>
+                            <span className="text-[8px] font-black text-brand-primary uppercase tracking-[0.2em] mt-1">NUEVA ETERNIA</span>
+                        </div>
                     </div>
                     {/* Botón de cierre solo en móvil */}
                     <button
