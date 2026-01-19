@@ -1,5 +1,6 @@
-
 import { Search, Bell, Menu } from 'lucide-react';
+import masterRoleImg from '../../assets/role-master.png';
+import guardianRoleImg from '../../assets/role-guardian.png';
 
 interface NavbarProps {
     onMenuClick: () => void;
@@ -43,8 +44,15 @@ const Navbar: React.FC<NavbarProps> = ({ onMenuClick }) => {
                     }}
                     className="flex items-center gap-3 border-l border-white/10 pl-3 md:pl-6 cursor-pointer group hover:bg-white/5 py-1 px-2 rounded-xl transition-all"
                 >
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-tr from-brand-primary to-brand-secondary text-xs font-bold text-white shadow-lg group-hover:scale-110 transition-transform">
-                        {localStorage.getItem('active_user_id') === '2' ? 'DA' : 'AD'}
+                    <div className="relative flex h-9 w-9 items-center justify-center rounded-full overflow-hidden border border-white/20 shadow-lg group-hover:scale-110 transition-transform bg-black/40">
+                        <img
+                            src={localStorage.getItem('active_user_id') === '2' ? guardianRoleImg : masterRoleImg}
+                            alt="Hero"
+                            className="h-full w-full object-cover"
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/20 text-[10px] font-black text-white pointer-events-none">
+                            {localStorage.getItem('active_user_id') === '2' ? 'DA' : 'AD'}
+                        </div>
                     </div>
                     <div className="hidden md:flex flex-col">
                         <span className="text-sm font-medium text-white/80 group-hover:text-white transition-colors leading-none">

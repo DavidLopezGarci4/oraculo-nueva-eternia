@@ -17,6 +17,8 @@ import { getDashboardStats, getTopDeals, getDashboardHistory, getDashboardMatchS
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
+import masterRoleImg from '../assets/role-master.png';
+import guardianRoleImg from '../assets/role-guardian.png';
 
 const Dashboard: React.FC = () => {
     const queryClient = useQueryClient();
@@ -82,6 +84,15 @@ const Dashboard: React.FC = () => {
         <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-1000">
             {/* Hero Section / Welcome */}
             <div className="relative overflow-hidden rounded-[2rem] md:rounded-[2.5rem] border border-white/5 bg-gradient-to-br from-white/[0.08] to-transparent p-6 md:p-10 backdrop-blur-3xl">
+                {/* Role Background Layer */}
+                <div className="absolute inset-0 z-0 opacity-20 pointer-events-none overflow-hidden mt-[-10%] ml-[-5%] w-[110%] h-[120%]">
+                    <img
+                        src={localStorage.getItem('active_user_id') === '2' ? guardianRoleImg : masterRoleImg}
+                        alt=""
+                        className="w-full h-full object-cover blur-2xl scale-125 transition-transform duration-1000"
+                    />
+                </div>
+
                 <div className="absolute -right-20 -top-20 h-64 w-64 md:h-96 md:w-96 rounded-full bg-brand-primary/10 blur-[100px]"></div>
                 <div className="absolute -left-20 -bottom-20 h-64 w-64 md:h-96 md:w-96 rounded-full bg-brand-primary/5 blur-[100px]"></div>
 
