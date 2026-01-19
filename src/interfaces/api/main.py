@@ -234,22 +234,17 @@ async def get_duplicates():
         ean_map = {}
         for p in products:
             if p.ean:
+                product_info = {
+                    "id": p.id,
+                    "name": p.name,
+                    "image_url": p.image_url,
+                    "sub_category": p.sub_category,
+                    "figure_id": p.figure_id
+                }
                 if p.ean in ean_map:
-                    ean_map[p.ean].append({
-                        "id": p.id,
-                        "name": p.name,
-                        "image_url": p.image_url,
-                        "sub_category": p.sub_category,
-                        "figure_id": p.figure_id
-                    })
+                    ean_map[p.ean].append(product_info)
                 else:
-                    ean_map[p.ean] = [{
-                        "id": p.id,
-                        "name": p.name,
-                        "image_url": p.image_url,
-                        "sub_category": p.sub_category,
-                        "figure_id": p.figure_id
-                    }]
+                    ean_map[p.ean] = [product_info]
         
         for ean, prods in ean_map.items():
             if len(prods) > 1:
@@ -259,6 +254,18 @@ async def get_duplicates():
                 })
         
         return duplicates
+
+@app.post("/api/admin/nexus/sync", dependencies=[Depends(verify_api_key)])
+async def sync_nexus(background_tasks: BackgroundTasks):
+    """
+    Dispara la sincronización manual del catálogo maestro de ActionFigure411.
+    """
+    from src.application.services.nexus_service import NexusService
+    
+    # Lo ejecutamos en segundo plano para no bloquear la UI
+    background_tasks.add_task(NexusService.sync_catalog)
+    
+    return {"status": "success", "message": "Iniciando sincronización del Nexo Maestro en segundo plano..."}
 
 @app.post("/api/products/merge", dependencies=[Depends(verify_api_key)])
 async def merge_products(request: ProductMergeRequest):

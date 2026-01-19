@@ -63,3 +63,8 @@ export const mergeProducts = async (sourceId: number, targetId: number): Promise
     });
     return response.data;
 };
+
+export const syncNexus = async (): Promise<{ status: string; message: string }> => {
+    const response = await adminAxios.post('/admin/nexus/sync');
+    return response.data;
+};

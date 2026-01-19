@@ -142,8 +142,8 @@ TELEGRAM_BOT_TOKEN=tu_token
 *   **Fase 9 (Guardiana)**: ✅ Perfiles de usuario y Wishlist (Completado).
 *   **Fase 10 (Mercados)**: 🏗️ Integración de APIs de Amazon y eBay (En progreso).
 *   **Fase 11 (Continental)**: ✅ Expansión a 14 fuentes europeas y auditoría de precios OSS (Completado).
-*   **Fase 12 (Logística & Identidad)**: ✅ Implementación de `simulated_connection.py`, modernización de scrapers (BBTS, Vendilo, DeToyboys) y **Rebranding a "Nueva Eternia"** con auditoría total del catálogo (297 reliquias).
-*   **Fase 13 (IA)**: ⏳ Implementación de LLMs para matching semántico avanzado.
+*   **Fase 12 (Logística & Identidad)**: ✅ Rebranding a "Nueva Eternia", auditoría total del catálogo (297 reliquias) e implementación del **Nexo Maestro** para sincronización automática.
+*   **Fase 13 (Subastas & Amazon)**: 🏗️ Creación del **Pabellón de Subastas** (Wallapop/eBay) e infiltración en Amazon.es (En progreso).
 
 ---
 

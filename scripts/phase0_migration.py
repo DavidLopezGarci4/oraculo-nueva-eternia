@@ -5,8 +5,10 @@ import pandas as pd
 from pathlib import Path
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from loguru import logger
+import logging
 from datetime import datetime
+
+logger = logging.getLogger("Migration")
 
 # Add src to path
 root_dir = Path(__file__).parent.parent

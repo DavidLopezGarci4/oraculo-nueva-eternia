@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Play, Activity, Clock, AlertCircle, CheckCircle2, RefreshCw, Terminal, GitMerge, Target, Settings, Users } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getScrapersStatus, getScrapersLogs, runScraper, getDuplicates, mergeProducts, type ScraperStatus, type ScraperLog } from '../api/admin';
+import { getScrapersStatus, getScrapersLogs, runScraper, getDuplicates, mergeProducts, syncNexus, type ScraperStatus, type ScraperLog } from '../api/admin';
 import { formatDistanceToNow, format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import WallapopImporter from '../components/admin/WallapopImporter';
@@ -14,6 +14,7 @@ const Config: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [runningScraper, setRunningScraper] = useState<string | null>(null);
     const [mergingId, setMergingId] = useState<number | null>(null);
+    const [syncingNexus, setSyncingNexus] = useState(false);
     const [showAddUserModal, setShowAddUserModal] = useState(false);
 
     const fetchData = async () => {
@@ -60,6 +61,19 @@ const Config: React.FC = () => {
             console.error('Error merging products:', error);
         } finally {
             setMergingId(null);
+        }
+    };
+
+    const handleSyncNexus = async () => {
+        setSyncingNexus(true);
+        try {
+            await syncNexus();
+            alert("📡 Nexus: Sincronización maestro iniciada en segundo plano. Las nuevas imágenes y datos se verán reflejados en unos minutos.");
+        } catch (error) {
+            console.error('Error syncing Nexus:', error);
+            alert("❌ Nexus: Error al iniciar la sincronización.");
+        } finally {
+            setSyncingNexus(false);
         }
     };
 
@@ -155,14 +169,25 @@ const Config: React.FC = () => {
                                         <p className="text-white/50 text-sm">Escaneo completo de todas las tiendas.</p>
                                     </div>
                                 </div>
-                                <button
-                                    onClick={() => handleRunScraper('all')}
-                                    disabled={runningScraper === 'all'}
-                                    className="bg-brand-primary hover:bg-brand-secondary text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-brand-primary/20 transition-all flex items-center gap-2 disabled:opacity-50"
-                                >
-                                    {runningScraper === 'all' ? <RefreshCw className="h-5 w-5 animate-spin" /> : <Play className="h-5 w-5 fill-current" />}
-                                    DESPLEGAR TODO
-                                </button>
+                                <div className="flex flex-col gap-2">
+                                    <button
+                                        onClick={() => handleRunScraper('all')}
+                                        disabled={runningScraper === 'all'}
+                                        className="bg-brand-primary hover:bg-brand-primary/80 text-white px-6 py-3 rounded-2xl font-black text-sm transition-all shadow-lg shadow-brand-primary/20 flex items-center gap-2 disabled:opacity-50"
+                                    >
+                                        {runningScraper === 'all' ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4 fill-current" />}
+                                        INCURSIÓN TOTAL
+                                    </button>
+
+                                    <button
+                                        onClick={handleSyncNexus}
+                                        disabled={syncingNexus}
+                                        className="bg-white/10 hover:bg-white/20 border border-white/20 text-white px-6 py-3 rounded-2xl font-black text-sm transition-all flex items-center gap-2 disabled:opacity-50"
+                                    >
+                                        {syncingNexus ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Activity className="h-4 w-4 text-brand-primary" />}
+                                        SINCRONIZAR NEXO MAESTRO
+                                    </button>
+                                </div>
                             </motion.div>
 
                             <motion.div

@@ -359,5 +359,11 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
     - **Auditoría de Reliquias**: Ejecutada auditoría de paridad. Confirmado catálogo de 297 ítems (100% de coincidencia con el checklist de ActionFigure411).
     - **Bitácora Precisa**: Los logs de incursión ahora muestran fecha completa (dd/MM/yyyy HH:mm) además del tiempo relativo.
     - **Vigilancia Automática**: Verificado el ciclo de 2 ejecuciones diarias en GitHub Actions para las 11 fuentes integradas.
+- [x] **11.8 El Nexo Maestro & El Pabellón de Subastas (19/01/2026)**:
+    - **Nexus Automático**: Implementado `NexusService` para sincronización 100% autónoma con ActionFigure411 (Imágenes, Excel y DB).
+    - **Evolución del Daily Scan**: El catálogo se actualiza automáticamente antes de cada incursión de precios.
+    - **Mando de Arquitecto**: Añadido botón "Sincronizar Nexo Maestro" en el panel de Administración para control manual.
+    - **Estructura de Subastas**: Diseñada e implementada la base para el "Pabellón de Subastas", diferenciando ofertas `retail` vs `auction`.
+    - **Blindaje de Cohesión**: Auditoría completa de FigureIDs (100% paridad) y saneamiento del entorno virtual `.venv`.
 - [ ] **12.1 Infiltración Amazon**: Monitoreo de precios amazon.es.
 - [ ] **12.2 Inteligencia eBay**: Conector Browse API + OAuth 2.0.

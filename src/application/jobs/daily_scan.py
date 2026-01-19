@@ -30,6 +30,7 @@ from src.infrastructure.scrapers.vendiloshop_scraper import VendiloshopITScraper
 from src.infrastructure.scrapers.toymi_scraper import ToymiEUScraper
 from src.infrastructure.scrapers.time4actiontoys_scraper import Time4ActionToysDEScraper
 from src.infrastructure.scrapers.bbts_scraper import BigBadToyStoreScraper
+from src.application.services.nexus_service import NexusService
 
 async def run_daily_scan(progress_callback=None):
     # Ensure logging is set up
@@ -73,6 +74,7 @@ async def run_daily_scan(progress_callback=None):
     parser.add_argument("--shops", nargs="*", help="Specific shops to scrape (e.g. electropolis fantasia)")
     parser.add_argument("--random-delay", type=int, default=0, help="Wait up to X minutes before starting (jitter)")
     parser.add_argument("--deep-harvest", action="store_true", help="Visit individual product pages for EAN/GTIN extraction")
+    parser.add_argument("--no-nexus", action="store_true", help="Skip ActionFigure411 Catalog Synchronization")
     args, unknown = parser.parse_known_args()
     
     # --- STAGGERED START (KAIZEN) ---
@@ -96,6 +98,21 @@ async def run_daily_scan(progress_callback=None):
             migrate()
         except Exception as e:
             logger.warning(f"⚠️ Migration pre-check failed: {e}")
+
+        # --- PHASE 12.6: NEXO MAESTRO SYNC ---
+        if not args.no_nexus:
+            try:
+                logger.info("📡 Nexus: Engaging Master Catalog Sync...")
+                nexus_success = await NexusService.sync_catalog()
+                if nexus_success:
+                    logger.success("📡 Nexus: Master Catalog is UP TO DATE.")
+                else:
+                    logger.warning("📡 Nexus: Sync returned failure, proceeding with current catalog...")
+            except Exception as e:
+                logger.error(f"📡 Nexus: Critical Sync Error: {e}")
+        else:
+            logger.info("📡 Nexus: Sync skipped by user.")
+        # -------------------------------------
 
         # Initialize Pipeline
         pipeline = ScrapingPipeline([])

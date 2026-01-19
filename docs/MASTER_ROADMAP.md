@@ -135,6 +135,14 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
 
 ---
 
+### Fase 14: El Pabellón de Subastas (Wallapop & eBay) 🏗️
+*   **Segregación de ADN**: Categorización de ofertas en `Retail` vs `Auction` para preservar la pureza de precios de tienda.
+*   **Identidad Espejo**: Visualización dedicada para subastas utilizando las IDs y nomenclaturas maestras de Nueva Eternia.
+*   **Filtros de Oportunidad**: Sección para ítems que solo aparecen con ofertas asociadas desde el Purgatorio (Wallapop/eBay).
+*   **Match de Mercado**: Integración total con el motor SmartMatch para unificar el catálogo global.
+
+---
+
 ## ✅ Plan de Verificación
 
 1.  **Integridad de Datos**: Scripts de validación de catálogo post-migración.

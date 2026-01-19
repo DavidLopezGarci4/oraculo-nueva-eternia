@@ -52,6 +52,11 @@ def migrate():
             conn.execute(text("ALTER TABLE offers ADD COLUMN max_price FLOAT DEFAULT 0.0"))
             conn.commit()
 
+        if "origin_category" not in columns_offers:
+            logger.info("Adding 'origin_category' to offers table...")
+            conn.execute(text("ALTER TABLE offers ADD COLUMN origin_category VARCHAR(20) DEFAULT 'retail'"))
+            conn.commit()
+
         # --- Table: pending_matches ---
         columns_pending = [c['name'] for c in inspector.get_columns("pending_matches")]
         if "ean" not in columns_pending:
@@ -61,6 +66,11 @@ def migrate():
                 conn.commit()
             except Exception as e:
                 logger.warning(f"Could not add ean to pending_matches: {e}")
+
+        if "origin_category" not in columns_pending:
+            logger.info("Adding 'origin_category' to pending_matches table...")
+            conn.execute(text("ALTER TABLE pending_matches ADD COLUMN origin_category VARCHAR(20) DEFAULT 'retail'"))
+            conn.commit()
 
         # --- Table: price_alerts (Created by create_all, but check for created_at if old) ---
         # (Assuming it's new so skip for now)
