@@ -354,5 +354,10 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
 - [x] **11.4 Expansión Europea**: 14 scrapers integrados y operativos en UI dinámica.
 - [x] **11.5 Latido del Oráculo**: Implementado simulador de conexión y salud de scrapers.
 - [x] **11.6 Auditoría de Integridad**: Corregido fallo de inactividad en el Purgatorio (Bulk Discard & Blacklist Logic). Limpieza profunda de scripts temporales.
+- [x] **11.7 Consolidación de "Nueva Eternia" (19/01/2026)**:
+    - **Rebranding UI**: El Oráculo ahora se denomina oficialmente "Nueva Eternia" en Catálogo, Sidebar y Sidebar branding.
+    - **Auditoría de Reliquias**: Ejecutada auditoría de paridad. Confirmado catálogo de 297 ítems (100% de coincidencia con el checklist de ActionFigure411).
+    - **Bitácora Precisa**: Los logs de incursión ahora muestran fecha completa (dd/MM/yyyy HH:mm) además del tiempo relativo.
+    - **Vigilancia Automática**: Verificado el ciclo de 2 ejecuciones diarias en GitHub Actions para las 11 fuentes integradas.
 - [ ] **12.1 Infiltración Amazon**: Monitoreo de precios amazon.es.
 - [ ] **12.2 Inteligencia eBay**: Conector Browse API + OAuth 2.0.

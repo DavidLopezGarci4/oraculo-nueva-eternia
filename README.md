@@ -26,7 +26,7 @@
 ---
 
 ## 1. Visión General
-**El Oráculo de Eternia** es una plataforma integral diseñada para coleccionistas de alto nivel (específicamente de la línea *Masters of the Universe: Origins*). Su propósito es doble:
+**El Oráculo de Nueva Eternia** es una plataforma integral diseñada para coleccionistas de alto nivel (específicamente de la línea *Masters of the Universe: Origins*). Su propósito es doble:
 1.  **Vigilancia de Mercado**: Escanea automáticamente 14 tiendas en España y Europa para encontrar las mejores ofertas, detectar stock y alertar sobre bajadas de precio.
 2.  **Gestión Patrimonial**: Permite llevar un control exhaustivo de la colección personal, calculando el valor real de mercado frente a la inversión realizada (ROI).
 
@@ -142,7 +142,7 @@ TELEGRAM_BOT_TOKEN=tu_token
 *   **Fase 9 (Guardiana)**: ✅ Perfiles de usuario y Wishlist (Completado).
 *   **Fase 10 (Mercados)**: 🏗️ Integración de APIs de Amazon y eBay (En progreso).
 *   **Fase 11 (Continental)**: ✅ Expansión a 14 fuentes europeas y auditoría de precios OSS (Completado).
-*   **Fase 12 (Sentinel)**: ✅ Implementación de `simulated_connection.py` para monitoreo de salud y modernización de scrapers clave (BBTS, Vendilo, DeToyboys). Auditoría integral de Purgatorio y limpieza de sistema.
+*   **Fase 12 (Logística & Identidad)**: ✅ Implementación de `simulated_connection.py`, modernización de scrapers (BBTS, Vendilo, DeToyboys) y **Rebranding a "Nueva Eternia"** con auditoría total del catálogo (297 reliquias).
 *   **Fase 13 (IA)**: ⏳ Implementación de LLMs para matching semántico avanzado.
 
 ---

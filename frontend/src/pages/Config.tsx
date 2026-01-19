@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Play, Activity, Clock, AlertCircle, CheckCircle2, RefreshCw, Terminal, GitMerge, Target, Settings, Users } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getScrapersStatus, getScrapersLogs, runScraper, getDuplicates, mergeProducts, type ScraperStatus, type ScraperLog } from '../api/admin';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import WallapopImporter from '../components/admin/WallapopImporter';
 
@@ -272,7 +272,10 @@ const Config: React.FC = () => {
                                                     </td>
                                                     <td className="px-6 py-4 text-center font-black text-white">{log.items_found}</td>
                                                     <td className="px-6 py-4 text-[10px]">
-                                                        {formatDistanceToNow(new Date(log.start_time), { addSuffix: true, locale: es })}
+                                                        {format(new Date(log.start_time), "dd/MM/yyyy HH:mm", { locale: es })}
+                                                        <span className="block opacity-40 text-[9px]">
+                                                            ({formatDistanceToNow(new Date(log.start_time), { addSuffix: true, locale: es })})
+                                                        </span>
                                                     </td>
                                                 </tr>
                                             ))}

@@ -122,6 +122,12 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
 *   **Optimización de Legibilidad**: Rediseño de la rejilla de scrapers para evitar el colapso visual, priorizando la lectura horizontal y etiquetas claras.
 *   **Auditoría de Purgatorio**: Resolución de inactividad de botones mediante lógica `onSettled` y blindaje de lista negra en backend.
 
+### Fase 12.5: Consolidación de Identidad y Auditoría de Reliquias ✅
+*   **Rebranding "Nueva Eternia"**: Unificación de la nomenclatura en Catálogo, Sidebar y estados de carga.
+*   **Auditoría Total de Catálogo**: Confirmación de 297 Figure IDs únicos, logrando paridad del 100% con la fuente ActionFigure411.
+*   **Bitácora de Alta Precisión**: Mejora de la UI de logs para mostrar Fecha, Hora y Tiempo Relativo de cada incursión.
+*   **Validación de Automatización**: Confirmación de 2 ciclos diarios de scraping vía GitHub Actions para las 11 fuentes activas.
+
 ### Fase 6: Estrategia de Valor y Futuro (Innovación)
 *   **Estimador de Valor (Financial)**: Cálculo automático del valor de la colección basado en precios históricos y estado del item.
 *   **Buscador Óptico (Future Vision)**: Identificación de figuras mediante carga de fotos (comparativa de hashes).
