@@ -149,7 +149,7 @@ const Catalog: React.FC = () => {
         return (
             <div className="flex h-64 flex-col items-center justify-center gap-4 text-white/50">
                 <Loader2 className="h-10 w-10 animate-spin text-brand-primary" />
-                <p className="text-sm font-medium animate-pulse">Sincronizando con Eternia...</p>
+                <p className="text-sm font-medium animate-pulse">Sincronizando con Nueva Eternia...</p>
             </div>
         );
     }
@@ -168,7 +168,7 @@ const Catalog: React.FC = () => {
             {/* Header / Search Area */}
             <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
                 <div className="space-y-1">
-                    <h2 className="text-4xl font-black tracking-tighter text-white">Eternia</h2>
+                    <h2 className="text-4xl font-black tracking-tighter text-white">Nueva Eternia</h2>
                     <p className="text-sm font-bold text-white/30 uppercase tracking-widest">Almacén Sagrado de Reliquias</p>
                 </div>
                 <div className="flex items-center gap-3 rounded-2xl bg-white/[0.03] px-6 py-3 border border-white/5 backdrop-blur-3xl">
