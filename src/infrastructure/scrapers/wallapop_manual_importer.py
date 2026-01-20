@@ -135,7 +135,7 @@ class WallapopManualImporter:
                     url=offer['url'],
                     shop_name=self.shop_name,
                     image_url=None,
-                    origin_category="auction",
+                    source_type="Peer-to-Peer",
                     found_at=datetime.utcnow()
                 )
                 db.add(pending)

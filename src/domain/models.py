@@ -19,8 +19,10 @@ class ProductModel(Base):
     category: Mapped[str] = mapped_column(String, default="Masters of the Universe")
     sub_category: Mapped[Optional[str]] = mapped_column(String, index=True, nullable=True) # e.g. "Origins", "Turtles of Grayskull"
     
-    # Financial & Meta Data (Phase 6)
+    # Financial & Meta Data (Phase 6 & 16)
     retail_price: Mapped[Optional[float]] = mapped_column(Float, nullable=True, default=0.0)
+    avg_market_price: Mapped[Optional[float]] = mapped_column(Float, nullable=True, default=0.0) # Promedio histórico
+    p25_price: Mapped[Optional[float]] = mapped_column(Float, nullable=True, default=0.0) # Percentil 25 (Suelo de mercado)
     release_year: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     
     # Phase 0: Multivariant Identity
@@ -69,7 +71,7 @@ class OfferModel(Base):
     # Analytics
     min_price: Mapped[float] = mapped_column(Float, default=0.0)
     max_price: Mapped[float] = mapped_column(Float, default=0.0)
-    origin_category: Mapped[str] = mapped_column(String, default="retail") # retail, auction
+    source_type: Mapped[str] = mapped_column(String, default="Retail") # Retail, Peer-to-Peer
     
     # Relationships
     product: Mapped["ProductModel"] = relationship("ProductModel", back_populates="offers")
@@ -122,7 +124,7 @@ class PendingMatchModel(Base):
     url: Mapped[str] = mapped_column(String, unique=True) # Avoid dupe pending items
     shop_name: Mapped[str] = mapped_column(String)
     image_url: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    origin_category: Mapped[str] = mapped_column(String, default="retail") # retail, auction
+    source_type: Mapped[str] = mapped_column(String, default="Retail") # Retail, Peer-to-Peer
     
     # 3OX Audit Trail
     receipt_id: Mapped[Optional[str]] = mapped_column(String, nullable=True, index=True)

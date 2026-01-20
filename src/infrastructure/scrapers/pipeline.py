@@ -28,11 +28,11 @@ class ScrapingPipeline:
                 logger.error(f"Spider {spider.shop_name} failed for '{product_name}': {res}")
             else:
                 logger.info(f"Spider {spider.shop_name} found {len(res)} offers.")
-                # DNA Segregation (Phase 14): Inject origin based on scraper type
-                origin = "auction" if getattr(spider, 'is_auction_source', False) else "retail"
+                # DNA Segregation (Phase 14 & 16): Inject source type based on scraper type
+                source = "Peer-to-Peer" if getattr(spider, 'is_auction_source', False) else "Retail"
                 for offer in res:
                     if isinstance(offer, ScrapedOffer):
-                        offer.origin_category = origin
+                        offer.source_type = source
                 all_legacy_offers.extend(res)
         
         # 3OX.Bridge :: Transformación al Contrato dev/contract.ref
@@ -156,7 +156,7 @@ class ScrapingPipeline:
                         "currency": offer.get('currency'), 
                         "url": url_str,
                         "is_available": offer.get('is_available') if offer.get('is_available') is not None else True,
-                        "origin_category": offer.get('origin_category', 'retail')
+                        "source_type": offer.get('source_type', 'Retail')
                     }, commit=False)
                     
                     # Sentinel/Audit logic omitted for speed in updates or can be added selectively
@@ -171,9 +171,9 @@ class ScrapingPipeline:
                         # logger.info(f"📈 Purgatory Price Update: {pending_item.scraped_name} ({pending_item.price} -> {new_price})")
                         pending_item.price = new_price
                         pending_item.found_at = datetime.utcnow()
-                        # Update origin_category if it was missing or different
-                        if "origin_category" in offer:
-                            pending_item.origin_category = offer["origin_category"]
+                        # Update source_type if it was missing or different
+                        if "source_type" in offer:
+                            pending_item.source_type = offer["source_type"]
                         # Si quisiéramos alertas aquí (antes de vincular), se podrían añadir.
                     continue
 
@@ -205,7 +205,7 @@ class ScrapingPipeline:
                         "currency": offer.get('currency'), 
                         "url": url_str,
                         "is_available": offer.get('is_available') if offer.get('is_available') is not None else True,
-                        "origin_category": offer.get('origin_category', 'retail')
+                        "source_type": offer.get('source_type', 'Retail')
                     }, commit=False)
                     
                     # Audit new link
@@ -236,7 +236,7 @@ class ScrapingPipeline:
                         "shop_name": offer.get('shop_name'),
                         "image_url": offer.get('image_url'),
                         "ean": offer.get('ean'),
-                        "origin_category": offer.get('origin_category', 'retail'),
+                        "source_type": offer.get('source_type', 'Retail'),
                         "receipt_id": offer.get('receipt_id'),
                         "found_at": datetime.utcnow()
                     }

@@ -107,7 +107,10 @@ def migrate_excel_to_db(excel_path: str, session):
                             image_url=row.get('Image URL'),
                             category="Masters of the Universe",
                             sub_category=sub_category,
-                            variant_name=str(row.get('Wave', '')) # Using Wave as variant context
+                            variant_name=str(row.get('Wave', '')), # Using Wave as variant context
+                            retail_price=float(row.get('Retail', 0.0)) if pd.notna(row.get('Retail')) else 0.0,
+                            avg_market_price=float(row.get('Avg', 0.0)) if pd.notna(row.get('Avg')) else 0.0, # Mapeo de Columna Excel
+                            p25_price=float(row.get('P25', 0.0)) if pd.notna(row.get('P25')) else 0.0         # Mapeo de Columna Excel
                         )
                         session.add(product)
                         session.flush() # Get ID

@@ -45,6 +45,8 @@ class ProductOutput(BaseModel):
     # Financial & Intelligence (Computed)
     purchase_price: float = 0.0
     market_value: float = 0.0
+    avg_market_price: float = 0.0 # Phase 16
+    p25_price: float = 0.0        # Phase 16
     landing_price: float = 0.0 # Phase 15 Logistics
     is_grail: bool = False
     grail_score: float = 0.0
@@ -126,7 +128,7 @@ async def get_users():
         return [{"id": u.id, "username": u.username, "role": u.role} for u in users]
 
 @app.get("/api/products", response_model=List[ProductOutput])
-async def get_products(sub_category: str | None = None, origin_category: str | None = None):
+async def get_products(sub_category: str | None = None, source_type: str | None = None):
     """
     Retorna el catálogo de productos desde Supabase.
     """
@@ -135,9 +137,9 @@ async def get_products(sub_category: str | None = None, origin_category: str | N
         if sub_category:
             query = query.where(ProductModel.sub_category == sub_category)
         
-        if origin_category:
+        if source_type:
             # Filtrar productos que tengan al menos una oferta de la categoría especificada
-            query = query.join(OfferModel).where(OfferModel.origin_category == origin_category).distinct()
+            query = query.join(OfferModel).where(OfferModel.source_type == source_type).distinct()
         
         result = db.execute(query)
         products = result.scalars().all()
@@ -152,7 +154,7 @@ async def get_auction_products():
         query = (
             select(ProductModel)
             .join(OfferModel)
-            .where(OfferModel.origin_category == "auction")
+            .where(OfferModel.source_type == "Peer-to-Peer")
             .where(OfferModel.is_available == True)
             .distinct()
         )
@@ -187,6 +189,7 @@ async def get_collection(user_id: int):
             select(OfferModel.product_id, func.min(OfferModel.price))
             .where(OfferModel.product_id.in_(product_ids))
             .where(OfferModel.is_available == True)
+            .where(OfferModel.source_type == 'Retail')
             .group_by(OfferModel.product_id)
         )
         best_prices = dict(db.execute(best_price_query).all()) # {pid: min_price}
@@ -227,6 +230,8 @@ async def get_collection(user_id: int):
                 variant_name=product.variant_name,
                 purchase_price=collection_item.purchase_price or 0.0,
                 market_value=market_val,
+                avg_market_price=product.avg_market_price or 0.0,
+                p25_price=product.p25_price or 0.0,
                 landing_price=landing_val,
                 is_grail=is_grail,
                 grail_score=grail_score,
@@ -827,9 +832,9 @@ async def get_dashboard_stats(user_id: int = 1):
             market_value = 0.0
             
             try:
-                # Get best prices map
+                # Get best prices map (Solo RETAIL para Valor de Mercado)
                 all_prices = db.query(OfferModel.product_id, OfferModel.price)\
-                    .filter(OfferModel.is_available == True, OfferModel.product_id.isnot(None))\
+                    .filter(OfferModel.is_available == True, OfferModel.product_id.isnot(None), OfferModel.source_type == 'Retail')\
                     .all()
                     
                 best_price_map = {}
@@ -881,9 +886,9 @@ async def get_dashboard_stats(user_id: int = 1):
                 profit_loss = 0.0
                 roi = 0.0
 
-            # Distribución por tienda (Global, para inteligencia de mercado)
+            # Distribución por tienda (Global Retail para inteligencia de mercado)
             shop_dist = db.query(OfferModel.shop_name, func.count(OfferModel.id))\
-                .filter(OfferModel.product_id.isnot(None), OfferModel.is_available == True)\
+                .filter(OfferModel.product_id.isnot(None), OfferModel.is_available == True, OfferModel.source_type == 'Retail')\
                 .group_by(OfferModel.shop_name)\
                 .all()
             
@@ -1022,12 +1027,13 @@ async def get_dashboard_hall_of_fame(user_id: int = 1):
         if not items:
             return {"top_value": [], "top_roi": []}
             
-        # 2. Obtener mejores precios actuales
+        # 2. Obtener mejores precios actuales (SOLO RETAIL)
         product_ids = [item.product_id for item in items]
         best_price_query = (
             select(OfferModel.product_id, func.min(OfferModel.price))
             .where(OfferModel.product_id.in_(product_ids))
             .where(OfferModel.is_available == True)
+            .where(OfferModel.source_type == 'Retail')
             .group_by(OfferModel.product_id)
         )
         best_prices = dict(db.execute(best_price_query).all())
@@ -1099,12 +1105,13 @@ async def get_top_deals(user_id: int = 2):
         # 1. Obtenemos IDs de productos ya capturados por el usuario
         owned_ids = [p[0] for p in db.query(CollectionItemModel.product_id).filter(CollectionItemModel.owner_id == user_id).all()]
 
-        # 2. Subquery: Encontrar el precio mínimo para cada producto disponible
+        # 2. Subquery: Encontrar el precio mínimo para cada producto disponible (RETAIL)
         best_prices_subq = db.query(
             OfferModel.product_id,
             func.min(OfferModel.price).label('min_price')
         ).filter(
             OfferModel.is_available == True,
+            OfferModel.source_type == 'Retail',
             OfferModel.product_id.notin_(owned_ids) if owned_ids else True
         ).group_by(OfferModel.product_id).subquery()
 
@@ -1151,6 +1158,51 @@ async def get_top_deals(user_id: int = 2):
                 final_deals.append(r)
                 
         return final_deals[:20]
+
+@app.get("/api/radar/p2p-opportunities")
+async def get_p2p_opportunities(user_id: int = 2):
+    """
+    Fase 16: Radar de Oportunidades Particulares (Wallapop/eBay).
+    Muestra ofertas de particulares que están por debajo del percentil 25 histórico.
+    """
+    with SessionCloud() as db:
+        # Get user location for logistics
+        user_location = "ES"
+        user = db.query(UserModel).filter(UserModel.id == user_id).first()
+        if user: user_location = user.location
+
+        # Query Peer-to-Peer offers where price <= product.p25_price
+        # We also want p25_price > 0 (to avoid items without benchmark data)
+        opportunities = db.query(OfferModel).join(ProductModel).filter(
+            OfferModel.is_available == True,
+            OfferModel.source_type == 'Peer-to-Peer',
+            ProductModel.p25_price > 0,
+            OfferModel.price <= ProductModel.p25_price
+        ).all()
+
+        results = []
+        for o in opportunities:
+            # ROI de Oportunidad: Cuánto ahorras respecto al p25_price
+            saving = o.product.p25_price - o.price
+            saving_pct = (saving / o.product.p25_price * 100) if o.product.p25_price > 0 else 0.0
+
+            results.append({
+                "id": o.id,
+                "product_name": o.product.name,
+                "ean": o.product.ean,
+                "image_url": o.product.image_url,
+                "price": o.price,
+                "p25_price": o.product.p25_price,
+                "avg_market_price": o.product.avg_market_price,
+                "saving": round(saving, 2),
+                "saving_pct": round(saving_pct, 1),
+                "shop_name": o.shop_name,
+                "url": o.url,
+                "landing_price": LogisticsService.get_landing_price(o.price, o.shop_name, user_location)
+            })
+        
+        # Ordenar por el mayor porcentaje de ahorro
+        return sorted(results, key=lambda x: x["saving_pct"], reverse=True)
 
 @app.get("/api/dashboard/match-stats")
 async def get_dashboard_match_stats():

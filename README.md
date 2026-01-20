@@ -59,6 +59,7 @@ Donde llegan los hallazgos de los scrapers antes de ser "Verdad Absoluta".
 *   **Evolución de Precios**: Si un item en el Purgatorio cambia de precio antes de ser vinculado, el sistema actualiza su valor automáticamente, permitiendo rastrear ofertas y rebajas en tiempo real.
 *   **Validación Manual**: El usuario aprueba o descarta los vínculos.
 *   **Importación de Wallapop**: Debido a bloqueos anti-bot, Wallapop tiene un importador manual donde pegas texto/URL y el sistema lo procesa.
+*   **Radar de Oportunidades P2P**: Detección inteligente de gangas individuales bajo la "Teoría de la Cuarentena".
 
 ### Panel de Configuración e Inteligencia Geográfica
 *   **Oráculo Logístico**: Configuración de ubicación por usuario (España, USA, Europa) para recalcular precios con precisión legal.

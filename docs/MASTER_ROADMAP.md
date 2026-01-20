@@ -135,6 +135,11 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
 
 ---
 
+### Fase 16: Segregación P2P y "Teoría de la Cuarentena" ✅
+*   **Segregación lógica**: `Retail` vs `Peer-to-Peer` en `OfferModel`.
+*   **Blindaje patrimonial**: P2P excluido de métricas de colección.
+*   **Radar de Oportunidades**: Detección de gangas por debajo del Percentil 25.
+
 ### Fase 14: El Pabellón de Subastas (Wallapop & eBay) 🏗️
 *   **Segregación de ADN**: Categorización de ofertas en `Retail` vs `Auction` para preservar la pureza de precios de tienda.
 *   **Identidad Espejo**: Visualización dedicada para subastas utilizando las IDs y nomenclaturas maestras de Nueva Eternia.

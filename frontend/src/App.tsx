@@ -8,6 +8,7 @@ import Purgatory from './pages/Purgatory';
 import Dashboard from './pages/Dashboard';
 import Config from './pages/Config';
 import Auctions from './pages/Auctions';
+import RadarP2P from './pages/RadarP2P';
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -33,6 +34,7 @@ function App() {
             {activeTab === 'dashboard' && <Dashboard />}
             {activeTab === 'catalog' && <Catalog />}
             {activeTab === 'auctions' && <Auctions />}
+            {activeTab === 'radar' && <RadarP2P />}
             {activeTab === 'collection' && <Collection />}
             {activeTab === 'purgatory' && <Purgatory />}
             {activeTab === 'settings' && <Config />}

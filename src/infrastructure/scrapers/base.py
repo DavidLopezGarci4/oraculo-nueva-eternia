@@ -20,7 +20,7 @@ class ScrapedOffer(BaseModel):
     image_url: Optional[str] = None
     ean: Optional[str] = None
     scraped_at: datetime = Field(default_factory=datetime.utcnow)
-    origin_category: str = "retail" # retail, auction
+    source_type: str = "Retail" # Retail, Peer-to-Peer
 
 class BaseScraper(ABC):
     """

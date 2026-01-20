@@ -30,6 +30,21 @@ export interface TopDeal {
     image_url?: string;
 }
 
+export interface P2POpportunity {
+    id: number;
+    product_name: string;
+    ean: string | null;
+    image_url: string | null;
+    price: number;
+    p25_price: number;
+    avg_market_price: number;
+    saving: number;
+    saving_pct: number;
+    shop_name: string;
+    url: string;
+    landing_price: number;
+}
+
 export interface MatchHistoryEntry {
     id: number;
     product_name: string;
@@ -93,6 +108,14 @@ export interface HallOfFameResponse {
 export const getHallOfFame = async (): Promise<HallOfFameResponse> => {
     const userId = localStorage.getItem('active_user_id') || '1';
     const response = await axios.get(`${API_BASE}/dashboard/hall-of-fame`, {
+        params: { user_id: userId }
+    });
+    return response.data;
+};
+
+export const getPeerToPeerOpportunities = async (): Promise<P2POpportunity[]> => {
+    const userId = localStorage.getItem('active_user_id') || '1';
+    const response = await axios.get(`${API_BASE}/radar/p2p-opportunities`, {
         params: { user_id: userId }
     });
     return response.data;
