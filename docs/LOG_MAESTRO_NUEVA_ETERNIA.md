@@ -777,8 +777,9 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
     - **Integración Total**: El `ScrapingPipeline` ahora inyecta inteligencia financiera en cada hallazgo.
     - **Transparencia**: Exposición del score en Purgatorio, Radar y endpoints de Dashboard.
 
-- [x] **11.9 Restauración de Inteligencia Cloud & UI Polish (20/01/2026)**:
+- [x] **11.9 Restauración de Inteligencia Cloud & CI Recovery (20/01/2026)**:
+    - **CI/CD Recovery**: Solucionado error `ModuleNotFoundError: pandas` en GitHub Actions mediante la inyección de `pandas`, `openpyxl` y `xlsxwriter` en `requirements.txt`.
     - **Saneamiento Cloud**: Reparada discrepancia de esquemas (`source_type` vs `origin_category`) en Supabase.
-    - **Migración Progresiva**: Añadida columna `opportunity_score` a la nube y ejecutada restauración masiva (480 ofertas procesadas).
+    - **Daily Scan Fix**: Corregido el workflow `scrapers.yml` para apuntar a `SUPABASE_DATABASE_URL`, eliminando el modo de pruebas local en la nube.
     - **Nexus Refinement**: Corregida detección de `BASE_DIR` y limpieza de precios con símbolos de moneda (ej: $14.99).
-    - **Simetría Visual**: Eliminada duplicidad de buscadores en el Purgatorio mediante renderizado condicional del Navbar.
+    - **Simetría Visual**: Eliminada duplicidad de buscadores en el Purgatorio.
