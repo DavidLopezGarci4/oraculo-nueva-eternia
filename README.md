@@ -158,6 +158,8 @@ TELEGRAM_BOT_TOKEN=tu_token
 *   **Fase 15 (Oráculo Logístico)**: ✅ Implementación del **Landed Price** (IVA, Envío, Aduanas) y ROI de precisión (Completado).
 *   **Fase 17 (El Centinela)**: ✅ Detección de anomalías de precio y blindaje preventivo del catálogo (Completado).
 *   **Fase 18 (DealScorer)**: ✅ Algoritmo de puntuación de oportunidad y alertas críticas de "Compra Obligatoria" (Completado).
+*   **Fase 21 (Blindaje Operativo)**: ✅ Correcciones críticas de logging, serialización y diagnósticos CI/CD (Completado).
+*   **Fase 21.5 (Purgatory-First Policy)**: ✅ Nueva estrategia de flujo de datos: 100% de nuevas extracciones a revisión manual para precisión total (Completado).
 
 ## 6. El Motor de Inversión (DealScorer)
 El Oráculo ahora actúa como un analista de inversiones personal. Cada oferta es procesada por el `DealScorer`, que asigna una puntuación de 1 a 100 basada en tres vectores:

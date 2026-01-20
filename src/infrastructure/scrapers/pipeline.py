@@ -187,23 +187,28 @@ class ScrapingPipeline:
                 # --- IF HERE, IT IS A NEW CANDIDATE ---
                 best_match_product = None
                 best_match_score = 0.0
+                best_match_reason = "Bypassed (Purgatory-First Policy)"
                 
-                # Iterate all DB products to find best match
-                for p in all_products:
-                    is_match, score, reason = matcher.match(
-                        p.name, 
-                        offer.get('product_name'), 
-                        url_str,
-                        db_ean=p.ean,
-                        scraped_ean=offer.get('ean')
-                    )
-                    
-                    if is_match and score > best_match_score:
-                        best_match_score = score
-                        best_match_product = p
-                        if score >= 0.99: break
+                # REFACTOR: Purgatory-First Policy. Manual review is more reliable for new items.
+                # The following SmartMatch logic is disabled to prevent false positives (e.g. Dragstor -> Despara).
+                # To re-enable, uncomment the matching loop below.
                 
-                # SmartMatch Logic
+                # for p in all_products:
+                #     is_match, score, reason = matcher.match(
+                #         p.name, 
+                #         offer.get('product_name'), 
+                #         url_str,
+                #         db_ean=p.ean,
+                #         scraped_ean=offer.get('ean')
+                #     )
+                #     
+                #     if is_match and score > best_match_score:
+                #         best_match_score = score
+                #         best_match_product = p
+                #         best_match_reason = reason
+                #         if score >= 0.99: break
+                
+                # SmartMatch Logic (Will always be false now for new items)
                 if best_match_product and best_match_score >= 0.75:
                     # --- PHASE 17: CROSS-VALIDATION SENTINEL ---
                     is_blocked, status, flags = sentinel.validate_cross_reference(
@@ -281,7 +286,7 @@ class ScrapingPipeline:
                     opp_score = DealScorer.calculate_score(best_match_product, landed_price, is_wish)
 
                     # Normal SmartMatch flow if no anomalies
-                    logger.info(f"✅ SmartMatch (75%+): '{offer.get('product_name')}' -> '{best_match_product.name}' (Score: {opp_score})")
+                    logger.info(f"✅ SmartMatch: '{offer.get('product_name')}' -> '{best_match_product.name}' (Match: {best_match_score:.2f} | Reason: {best_match_reason} | Deal: {opp_score})")
                     repo.add_offer(best_match_product, {
                         "shop_name": offer.get('shop_name'),
                         "price": offer.get('price'),

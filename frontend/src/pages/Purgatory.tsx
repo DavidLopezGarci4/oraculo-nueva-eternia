@@ -21,6 +21,9 @@ import {
 } from 'lucide-react';
 import { getPurgatory, matchItem, discardItem, discardItemsBulk, getScrapersStatus, runScrapers, getScraperLogs, resetSmartMatches } from '../api/purgatory';
 import axios from 'axios';
+import { useEffect } from 'react';
+
+const PERSISTENCE_KEY = 'purgatory_offline_actions';
 
 const Purgatory: React.FC = () => {
     const queryClient = useQueryClient();
@@ -32,10 +35,14 @@ const Purgatory: React.FC = () => {
     const [confirmReset, setConfirmReset] = useState(false);
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
+    const [pendingActions, setPendingActions] = useState<any[]>(() => {
+        const saved = localStorage.getItem(PERSISTENCE_KEY);
+        return saved ? JSON.parse(saved) : [];
+    });
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 8;
+    const itemsPerPage = 15;
 
     // Helper: Check if URL is from Wallapop
     const isWallapopUrl = (url: string) => url?.toLowerCase().includes('wallapop.com');
@@ -51,10 +58,39 @@ const Purgatory: React.FC = () => {
         }
     };
 
+    // Persistence Persistence
+    useEffect(() => {
+        localStorage.setItem(PERSISTENCE_KEY, JSON.stringify(pendingActions));
+    }, [pendingActions]);
+
     // Mutations
     const discardBulkMutation = useMutation({
         mutationFn: (ids: number[]) => discardItemsBulk(ids),
-        onSuccess: () => {
+        onMutate: async (ids) => {
+            // Persistence: Add to local buffer immediately
+            setPendingActions(prev => [...prev, {
+                id: Date.now(),
+                type: 'bulk-discard',
+                pendingIds: ids,
+                timestamp: new Date().toISOString()
+            }]);
+
+            await queryClient.cancelQueries({ queryKey: ['purgatory'] });
+            // Snapshot the previous value
+            const previousItems = queryClient.getQueryData(['purgatory']);
+            // Optimistically update the cache
+            queryClient.setQueryData(['purgatory'], (old: any) =>
+                (old || []).filter((item: any) => !ids.includes(item.id))
+            );
+            return { previousItems };
+        },
+        onError: (err, _variables, context: any) => {
+            queryClient.setQueryData(['purgatory'], context.previousItems);
+            console.error('Bulk discard failed:', err);
+        },
+        onSuccess: (_, ids) => {
+            // Success: Remove from local buffer
+            setPendingActions(prev => prev.filter(a => !(a.type === 'bulk-discard' && JSON.stringify(a.pendingIds) === JSON.stringify(ids))));
             queryClient.invalidateQueries({ queryKey: ['purgatory'] });
         },
         onSettled: () => {
@@ -102,18 +138,60 @@ const Purgatory: React.FC = () => {
 
     const discardMutation = useMutation({
         mutationFn: (id: number) => discardItem(id),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['purgatory'] });
+        onMutate: async (id) => {
+            // Persistence: Add to local buffer
+            setPendingActions(prev => [...prev, {
+                id: Date.now(),
+                type: 'discard',
+                pendingIds: [id],
+                timestamp: new Date().toISOString()
+            }]);
+
+            await queryClient.cancelQueries({ queryKey: ['purgatory'] });
+            const previousItems = queryClient.getQueryData(['purgatory']);
+            queryClient.setQueryData(['purgatory'], (old: any) =>
+                (old || []).filter((item: any) => item.id !== id)
+            );
+            return { previousItems };
         },
-        onError: (err) => {
+        onError: (err, _id, context: any) => {
+            queryClient.setQueryData(['purgatory'], context.previousItems);
             console.error('Individual discard failed:', err);
+        },
+        onSuccess: (_, id) => {
+            // Success: Remove from local buffer
+            setPendingActions(prev => prev.filter(a => !(a.type === 'discard' && a.pendingIds[0] === id)));
+            queryClient.invalidateQueries({ queryKey: ['purgatory'] });
         }
     });
 
     const matchMutation = useMutation({
         mutationFn: ({ pendingId, productId }: { pendingId: number, productId: number }) =>
             matchItem(pendingId, productId),
-        onSuccess: () => {
+        onMutate: async ({ pendingId, productId }) => {
+            // Persistence: Add to local buffer
+            setPendingActions(prev => [...prev, {
+                id: Date.now(),
+                type: 'match',
+                pendingIds: [pendingId],
+                productId,
+                timestamp: new Date().toISOString()
+            }]);
+
+            await queryClient.cancelQueries({ queryKey: ['purgatory'] });
+            const previousItems = queryClient.getQueryData(['purgatory']);
+            queryClient.setQueryData(['purgatory'], (old: any) =>
+                (old || []).filter((item: any) => item.id !== pendingId)
+            );
+            return { previousItems };
+        },
+        onError: (err, _variables, context: any) => {
+            queryClient.setQueryData(['purgatory'], context.previousItems);
+            console.error('Match failed:', err);
+        },
+        onSuccess: (_, variables) => {
+            // Success: Remove from local buffer
+            setPendingActions(prev => prev.filter(a => !(a.type === 'match' && a.pendingIds[0] === variables.pendingId)));
             queryClient.invalidateQueries({ queryKey: ['purgatory'] });
             queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
             setSelectedPendingId(null);
@@ -130,6 +208,41 @@ const Purgatory: React.FC = () => {
         }
     });
 
+    // Background Sync Engine
+    useEffect(() => {
+        if (pendingActions.length === 0) return;
+
+        const syncPending = async () => {
+            // Process actions one by one to avoid race conditions and over-queueing
+            for (const action of [...pendingActions]) {
+                try {
+                    if (action.type === 'discard') {
+                        await discardItem(action.pendingIds[0]);
+                    } else if (action.type === 'bulk-discard') {
+                        await discardItemsBulk(action.pendingIds);
+                    } else if (action.type === 'match') {
+                        await matchItem(action.pendingIds[0], action.productId);
+                    }
+                    // If success, remove from buffer
+                    setPendingActions(prev => prev.filter(a => a.id !== action.id));
+                } catch (err) {
+                    console.error('Persistence sync failed for action:', action.id, err);
+                    // Keep it in buffer to retry later
+                }
+            }
+        };
+
+        const interval = setInterval(syncPending, 30000); // Retry every 30s
+
+        // Initial sync attempt when actions exist
+        const initialTimeout = setTimeout(syncPending, 2000);
+
+        return () => {
+            clearInterval(interval);
+            clearTimeout(initialTimeout);
+        };
+    }, [pendingActions.length]); // Re-run when action count changes
+
 
     const filteredProducts = products?.filter((p: any) =>
         p.name.toLowerCase().includes(manualSearchTerm.toLowerCase()) ||
@@ -137,7 +250,12 @@ const Purgatory: React.FC = () => {
     ).slice(0, 10);
 
     // Dynamic Filter for Pending Items (Main List)
+    const pendingIdsToHide = new Set(pendingActions.flatMap(a => a.pendingIds));
+
     const filteredPendingItems = (pendingItems || []).filter((item: any) => {
+        // Persistence Ghost Mode: Filter out locally hidden items
+        if (pendingIdsToHide.has(item.id)) return false;
+
         const term = searchTerm.toLowerCase();
         const matchesSearch = !searchTerm || (
             item.scraped_name.toLowerCase().includes(term) ||
@@ -213,6 +331,20 @@ const Purgatory: React.FC = () => {
                                 <Zap className="h-6 w-6" />
                             </div>
                         </div>
+
+                        {/* Persistence Sync Indicator */}
+                        {pendingActions.length > 0 && (
+                            <div className="flex items-center gap-4 px-5 py-3 rounded-2xl bg-brand-primary/10 border border-brand-primary/20 animate-in slide-in-from-right-4 duration-500 w-fit backdrop-blur-md">
+                                <div className="relative">
+                                    <Loader2 className="h-5 w-5 animate-spin text-brand-primary" />
+                                    <div className="absolute inset-0 h-4 w-4 rounded-full border border-brand-primary/20"></div>
+                                </div>
+                                <div className="space-y-0.5">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-brand-primary leading-none">Sincronización en curso</p>
+                                    <p className="text-[9px] font-bold text-white/50">{pendingActions.length} acciones pendientes en el búfer local</p>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Scraper Section Layout */}

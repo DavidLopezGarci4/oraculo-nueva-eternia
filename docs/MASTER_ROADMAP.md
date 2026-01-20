@@ -172,6 +172,15 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
 *   **Búsqueda Dual en Purgatorio**: Independencia total entre filtros de lista e integración con el Gran Catálogo. ✅
 *   **Ruteo Nativo P2P**: Integración de Wallapop directamente hacia El Pabellón mediante tipado de ADN dinámico. ✅
 
+### Fase 21: Blindaje Operativo & Diagnóstico ✅
+*   **Estabilidad de Logging**: Registro global del nivel `SUCCESS` para evitar errores de atributo. ✅
+*   **Serialización Robusta**: Implementación de `DateTimeEncoder` para backups JSON resilientes. ✅
+*   **Diagnóstico CI/CD**: Sistema de logs de arranque para verificación de secretos de Telegram. ✅
+
+### Fase 21.5: Purgatory-First Policy (Calidad Total) ✅
+*   **Filtrado Humano Proactivo**: Toda nueva extracción fluye directamente al Purgatorio, eliminando falsos positivos automáticos. ✅
+*   **Sanación Automática**: Capacidad de revertir retroactivamente emparejamientos defectuosos. ✅
+
 ---
 
 ## ✅ Plan de Verificación

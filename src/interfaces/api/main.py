@@ -587,7 +587,7 @@ async def match_purgatory(request: PurgatoryMatchRequest):
         db.commit()
         return {"status": "success", "message": "Vínculo sagrado establecido y registrado para la posteridad"}
 
-@app.post("/api/purgatory/discard")
+@app.post("/api/purgatory/discard", dependencies=[Depends(verify_api_key)])
 async def discard_purgatory(request: PurgatoryDiscardRequest):
     """Descarta un item del Purgatorio, lo añade a la lista negra y registra la acción"""
     from src.domain.models import OfferHistoryModel

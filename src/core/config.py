@@ -51,3 +51,12 @@ except Exception:
 except ValidationError as e:
     logger.error(f"Configuration Error: {e}")
     sys.exit(1)
+
+# Diagnostic Log for Shield and Alerts (No values leaked)
+if settings.TELEGRAM_BOT_TOKEN and settings.TELEGRAM_CHAT_ID:
+    logger.info("📡 System Cloud: Telegram Alerts ENABLED.")
+else:
+    missing = []
+    if not settings.TELEGRAM_BOT_TOKEN: missing.append("TOKEN")
+    if not settings.TELEGRAM_CHAT_ID: missing.append("CHAT_ID")
+    logger.warning(f"📡 System Cloud: Telegram Alerts DISABLED. Missing: {', '.join(missing)}")

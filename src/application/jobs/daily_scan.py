@@ -105,7 +105,7 @@ async def run_daily_scan(progress_callback=None):
                 logger.info("📡 Nexus: Engaging Master Catalog Sync...")
                 nexus_success = await NexusService.sync_catalog()
                 if nexus_success:
-                    logger.success("📡 Nexus: Master Catalog is UP TO DATE.")
+                    logger.info("📡 Nexus: Master Catalog is UP TO DATE.")
                 else:
                     logger.warning("📡 Nexus: Sync returned failure, proceeding with current catalog...")
             except Exception as e:

@@ -7,6 +7,12 @@ from typing import List, Dict, Any
 
 logger = logging.getLogger("backup_manager")
 
+class DateTimeEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        return super().default(obj)
+
 class BackupManager:
     """
     The Data Fortress of Eternia.
@@ -43,7 +49,7 @@ class BackupManager:
         file_path = self.snapshots_path / filename
         try:
             with open(file_path, "w", encoding="utf-8") as f:
-                json.dump(serializable_offers, f, ensure_ascii=False, indent=4)
+                json.dump(serializable_offers, f, ensure_ascii=False, indent=4, cls=DateTimeEncoder)
             logger.info(f"🛡️ Raw snapshot saved: {filename} ({len(offers)} items)")
             
             # Retention: Keep only last 15 snapshots
@@ -112,7 +118,7 @@ class BackupManager:
 
             file_path = self.db_backups_path / filename
             with open(file_path, "w", encoding="utf-8") as f:
-                json.dump(vault, f, ensure_ascii=False, indent=2)
+                json.dump(vault, f, ensure_ascii=False, indent=2, cls=DateTimeEncoder)
             
             logger.info(f"🏰 Database Vault created: {filename}")
             self._rotate_backups(self.db_backups_path, 7) # Keep 7 days of DB backups

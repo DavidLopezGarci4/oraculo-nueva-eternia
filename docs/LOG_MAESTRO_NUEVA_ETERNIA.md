@@ -798,6 +798,22 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
 
 - [x] **11.12 Wallapop DNA & Pavilion Routing (20/01/2026)**:
     - **P2P Tagging**: Corregido endpoint de importación para que los ítems de Wallapop se marquen como `Peer-to-Peer` automáticamente.
+
+### Fase 21: Blindaje Operativo & Diagnóstico (20/01/2026)
+- **Hitos**: Corrección de errores críticos de logging y serialización. Diagnóstico de infraestructura cloud.
+- **Estado**: ✅ COMPLETADO
+- **Detalle Técnico**:
+    - **Global Success Logging**: Registro del nivel `SUCCESS` (25) en el logger estándar de Python para evitar `AttributeError`.
+    - **DateTime Serialization**: Implementación de `DateTimeEncoder` en `BackupManager` para permitir el guardado de snapshots JSON con objetos `datetime`.
+    - **Infrastructure Diagnostics**: Logs de arranque en `config.py` para verificar la carga de secretos de Telegram en entornos CI/CD sin fugas de información.
+
+### Fase 21.5: Purgatory-First Policy & Sanación (20/01/2026)
+- **Hitos**: Cambio de estrategia de flujo de datos y limpieza retroactiva.
+- **Estado**: ✅ COMPLETADO
+- **Innovación Estratégica**:
+    - **Purgatory-First Policy**: Desactivación del SmartMatch automático para nuevos items del Daily Scan. El 100% de las nuevas extracciones se derivan ahora al Purgatorio para revisión manual del Arquitecto.
+    - **Sanación Retroactiva**: Ejecución del script `cleanup_last_matches.py` que revirtió 3 emparejamientos incorrectos (incluyendo el caso Dragstor) devolviéndolos a revisión manual.
+    - **Match Intelligence**: Mejora de los logs de matching para incluir Score, Reason y Deal Score detallados antes del bypass.
     - **Sanitize Purgatory**: Ejecutada migración para corregir el "ADN" de los ítems existentes de Wallapop en el Purgatorio.
     - **Routing Fix**: Ahora al vincular ítems de Wallapop, estos fluyen correctamente hacia **El Pabellón** en lugar del catálogo Retail.
 
