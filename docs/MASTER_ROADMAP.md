@@ -154,6 +154,18 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
 
 ---
 
+### Fase 17: El Centinela de Cross-Validation ✅
+*   **Detección de Anomalías**: Bloqueo automático de ofertas con desviación >40% del precio medio.
+*   **Integridad Visual**: Almacenamiento de `master_image_hash` para validación contra falsificaciones/bootlegs.
+*   **Gobernanza de Datos**: Sistema de bloqueo preventivo en Purgatorio y validación manual por el Arquitecto.
+
+### Fase 18: El Motor de Inversión (DealScorer) ✅
+*   **Algoritmo Ponderado**: Cruce de MSRP, P25 y Wishlist para obtener el Opportunity Score (1-100).
+*   **Alertas de Alta Prioridad**: Notificación "Compra Obligatoria" en Telegram para el "Alpha" del mercado.
+*   **Integridad de Datos**: Persistencia del score en el flujo de SmartMatch y Purgatorio.
+
+---
+
 ## ✅ Plan de Verificación
 
 1.  **Integridad de Datos**: Scripts de validación de catálogo post-migración.

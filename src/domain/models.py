@@ -29,6 +29,7 @@ class ProductModel(Base):
     figure_id: Mapped[Optional[str]] = mapped_column(String, index=True, unique=True, nullable=True)
     variant_name: Mapped[Optional[str]] = mapped_column(String, nullable=True) # e.g. "V2", "Repaint"
     image_hash: Mapped[Optional[str]] = mapped_column(String, index=True, nullable=True) # Perceptual Hash for visual dedupe
+    master_image_hash: Mapped[Optional[str]] = mapped_column(String, nullable=True) # ActionFigure411 reference hash
     
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -73,6 +74,12 @@ class OfferModel(Base):
     max_price: Mapped[float] = mapped_column(Float, default=0.0)
     source_type: Mapped[str] = mapped_column(String, default="Retail") # Retail, Peer-to-Peer
     
+    # Validation flags
+    validation_status: Mapped[str] = mapped_column(String, default="VALIDATED")
+    anomaly_flags: Mapped[Optional[str]] = mapped_column(String, nullable=True) 
+    is_blocked: Mapped[bool] = mapped_column(Boolean, default=False)
+    opportunity_score: Mapped[int] = mapped_column(Integer, default=0)
+
     # Relationships
     product: Mapped["ProductModel"] = relationship("ProductModel", back_populates="offers")
     price_history: Mapped[List["PriceHistoryModel"]] = relationship(
@@ -128,6 +135,12 @@ class PendingMatchModel(Base):
     
     # 3OX Audit Trail
     receipt_id: Mapped[Optional[str]] = mapped_column(String, nullable=True, index=True)
+    
+    # Validation flags
+    validation_status: Mapped[str] = mapped_column(String, default="PENDING") # PENDING, VALIDATED, REJECTED
+    anomaly_flags: Mapped[Optional[str]] = mapped_column(String, nullable=True) # JSON string with detected anomalies
+    is_blocked: Mapped[bool] = mapped_column(Boolean, default=False) # Manually blocked by admin/user
+    opportunity_score: Mapped[int] = mapped_column(Integer, default=0)
     
     found_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
@@ -228,7 +241,13 @@ class BlackcludedItemModel(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     url: Mapped[str] = mapped_column(String, unique=True, index=True)
     scraped_name: Mapped[str] = mapped_column(String)
-    reason: Mapped[str] = mapped_column(String, default="user_discarded")
+    source_type: Mapped[str] = mapped_column(String, default="Retail")
+    
+    # Validation flags
+    validation_status: Mapped[str] = mapped_column(String, default="VALIDATED")
+    anomaly_flags: Mapped[Optional[str]] = mapped_column(String, nullable=True) # JSON containing reasons
+    is_blocked: Mapped[bool] = mapped_column(Boolean, default=False)
+
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 class PriceHistoryModel(Base):

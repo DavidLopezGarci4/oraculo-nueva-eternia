@@ -51,6 +51,7 @@ class ProductOutput(BaseModel):
     is_grail: bool = False
     grail_score: float = 0.0
     is_wish: bool = False
+    opportunity_score: int = 0
     acquired_at: str | None = None
 
 from fastapi import BackgroundTasks
@@ -92,6 +93,10 @@ class ProductEditRequest(BaseModel):
 class ProductMergeRequest(BaseModel):
     source_id: int
     target_id: int     # "manual" or "scheduled"
+
+class AnomalyValidationRequest(BaseModel):
+    id: int
+    action: str # "validate" or "block"
 
 @app.get("/health")
 def health():
@@ -457,12 +462,39 @@ async def get_purgatory():
                 "shop_name": item.shop_name,
                 "image_url": item.image_url,
                 "found_at": item.found_at,
-                "origin_category": item.origin_category,
+                "source_type": item.source_type,
+                "validation_status": item.validation_status,
+                "is_blocked": item.is_blocked,
+                "opportunity_score": item.opportunity_score,
+                "anomaly_flags": json.loads(item.anomaly_flags) if item.anomaly_flags else [],
                 "suggestions": suggestions[:5] # Top 5 sugerencias
             }
             results.append(item_dict)
             
         return results
+
+@app.post("/api/admin/validate-anomaly", dependencies=[Depends(verify_api_key)])
+async def validate_anomaly(request: AnomalyValidationRequest):
+    """
+    Permite al Arquitecto validar o bloquear definitivamente un item con anomalías.
+    """
+    with SessionCloud() as db:
+        item = db.query(PendingMatchModel).filter(PendingMatchModel.id == request.id).first()
+        if not item:
+            raise HTTPException(status_code=404, detail="Item no encontrado en el Purgatorio")
+        
+        if request.action == "validate":
+            item.validation_status = "VALIDATED"
+            item.is_blocked = False
+            item.anomaly_flags = None
+            message = "Anomalía aceptada por el Arquitecto. Item desbloqueado."
+        else:
+            item.validation_status = "REJECTED"
+            item.is_blocked = True
+            message = "Item bloqueado definitivamente."
+            
+        db.commit()
+        return {"status": "success", "message": message}
 
 # --- ADMIN / DATA PURIFICATION ENDPOINTS ---
 
@@ -536,7 +568,7 @@ async def match_purgatory(request: PurgatoryMatchRequest):
             currency=item.currency,
             url=item.url,
             is_available=True,
-            origin_category=item.origin_category
+            source_type=item.source_type
         )
         db.add(new_offer)
         
@@ -963,6 +995,7 @@ async def get_product_offers(product_id: int):
                     "url": o.url,
                     "last_seen": o.last_seen.isoformat(),
                     "min_historical": o.min_price or o.price,
+                    "opportunity_score": o.opportunity_score,
                     "is_best": False
                 }
         
@@ -1143,6 +1176,7 @@ async def get_top_deals(user_id: int = 2):
                 "landing_price": landing_p,
                 "shop_name": o.shop_name,
                 "url": o.url,
+                "opportunity_score": o.opportunity_score,
                 "image_url": o.product.image_url
             })
         
@@ -1198,6 +1232,7 @@ async def get_p2p_opportunities(user_id: int = 2):
                 "saving_pct": round(saving_pct, 1),
                 "shop_name": o.shop_name,
                 "url": o.url,
+                "opportunity_score": o.opportunity_score,
                 "landing_price": LogisticsService.get_landing_price(o.price, o.shop_name, user_location)
             })
         

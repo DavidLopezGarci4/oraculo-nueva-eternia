@@ -57,12 +57,15 @@ class ProductRepository(BaseRepository[ProductModel]):
             existing_offer.is_available = offer_data.get("is_available", True)
             existing_offer.last_seen = datetime.utcnow()
             
-            if "origin_category" in offer_data:
-                existing_offer.origin_category = offer_data["origin_category"]
+            if "source_type" in offer_data:
+                existing_offer.source_type = offer_data["source_type"]
 
             # --- 3OX: Update Audit Receipt ---
             if "receipt_id" in offer_data:
                 existing_offer.receipt_id = offer_data["receipt_id"]
+            
+            if "opportunity_score" in offer_data:
+                existing_offer.opportunity_score = offer_data["opportunity_score"]
             
             self.db.add(existing_offer)
             if commit:
@@ -82,8 +85,9 @@ class ProductRepository(BaseRepository[ProductModel]):
                 is_available=offer_data.get("is_available", True),
                 min_price=current_price,
                 max_price=current_price,
-                origin_category=offer_data.get("origin_category", "retail"),
-                receipt_id=offer_data.get("receipt_id") # --- 3OX Audit ---
+                source_type=offer_data.get("source_type", "Retail"),
+                receipt_id=offer_data.get("receipt_id"), # --- 3OX Audit ---
+                opportunity_score=offer_data.get("opportunity_score", 0)
             )
             self.db.add(new_offer)
             self.db.flush() 

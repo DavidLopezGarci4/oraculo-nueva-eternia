@@ -54,5 +54,23 @@ class TelegramService:
         
         return await self.send_message(message)
 
+    async def send_mandatory_buy_alert(self, product_name: str, price: float, landed_price: float, score: int, shop_name: str, url: str):
+        """Alerta de ALTA PRIORIDAD para oportunidades de 90+ puntos."""
+        if not self.enabled:
+            return
+
+        message = (
+            f"<b>🚨 COMPRA OBLIGATORIA DETECTADA 🚨</b>\n\n"
+            f"🌟 <b>Opportunity Score:</b> {score}/100\n"
+            f"📦 <b>Producto:</b> {product_name}\n"
+            f"🏷️ <b>Precio Tienda:</b> {price:.2f}€\n"
+            f"🛬 <b>Landed Price:</b> {landed_price:.2f}€\n"
+            f"🏪 <b>Tienda:</b> {shop_name}\n\n"
+            f"🔥 <i>Esta oferta ha superado el análisis de inversión del Oráculo.</i>\n\n"
+            f"🔗 <a href='{url}'>IR A LA WEB AHORA</a>"
+        )
+        
+        return await self.send_message(message)
+
 # Instancia unica para toda la app
 telegram_service = TelegramService()

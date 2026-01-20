@@ -1,4 +1,5 @@
 import asyncio
+import json
 from typing import List
 from datetime import datetime
 from loguru import logger
@@ -8,6 +9,8 @@ from src.infrastructure.repositories.product import ProductRepository
 from sqlalchemy.orm import Session
 from src.infrastructure.database_cloud import SessionCloud, init_cloud_db
 from src.infrastructure.services.telegram_service import telegram_service
+from src.application.services.deal_scorer import DealScorer
+from src.application.services.logistics_service import LogisticsService
 
 class ScrapingPipeline:
     def __init__(self, spiders: List[BaseSpider]):
@@ -198,14 +201,91 @@ class ScrapingPipeline:
                 
                 # SmartMatch Logic
                 if best_match_product and best_match_score >= 0.75:
-                    logger.info(f"✅ SmartMatch (75%+): '{offer.get('product_name')}' -> '{best_match_product.name}'")
+                    # --- PHASE 17: CROSS-VALIDATION SENTINEL ---
+                    is_blocked, status, flags = sentinel.validate_cross_reference(
+                        best_match_product, 
+                        offer.get('price'), 
+                        offer.get('image_url')
+                    )
+                    
+                    if is_blocked:
+                        logger.warning(f"⚠️ ANOMALY DETECTED: '{offer.get('product_name')}' -> '{best_match_product.name}'. Blocking and moving to Purgatory.")
+                        # Auditor Event
+                        auditor.log_offer_event(
+                            "BLOCKED_BY_SENTINEL", 
+                            {"url": url_str, "name": best_match_product.name, "shop_name": offer.get('shop_name'), "price": offer.get('price')}, 
+                            details=f"Anomalies: {', '.join(flags)}"
+                        )
+                        
+                        # --- PHASE 18: DEAL SCORER (OPPORTUNITY SCORE) ---
+                        landed_price = LogisticsService.get_landing_price(offer.get('price'), offer.get('shop_name'), "ES")
+                        is_wish = any(ci.owner_id == 2 and not ci.acquired for ci in best_match_product.collection_items)
+                        opp_score = DealScorer.calculate_score(best_match_product, landed_price, is_wish)
+
+                        # Move to Purgatory (Already matched but blocked)
+                        pending_data = {
+                            "scraped_name": offer.get('product_name'),
+                            "price": offer.get('price'),
+                            "currency": offer.get('currency', 'EUR'),
+                            "url": url_str,
+                            "shop_name": offer.get('shop_name'),
+                            "image_url": offer.get('image_url'),
+                            "ean": offer.get('ean'),
+                            "source_type": offer.get('source_type', 'Retail'),
+                            "receipt_id": offer.get('receipt_id'),
+                            "validation_status": status,
+                            "is_blocked": True,
+                            "anomaly_flags": json.dumps(flags),
+                            "opportunity_score": opp_score,
+                            "found_at": datetime.utcnow()
+                        }
+                        
+                        # Atomic Upsert to Purgatory (Reusing same logic as below)
+                        try:
+                            with db.begin_nested():
+                                if 'postgresql' in db.bind.dialect.name.lower():
+                                    from sqlalchemy.dialects.postgresql import insert as pg_insert
+                                    stmt = pg_insert(PendingMatchModel).values(pending_data)
+                                    stmt = stmt.on_conflict_do_update(
+                                        index_elements=['url'],
+                                        set_={
+                                            "price": stmt.excluded.price,
+                                            "is_blocked": stmt.excluded.is_blocked,
+                                            "anomaly_flags": stmt.excluded.anomaly_flags,
+                                            "validation_status": stmt.excluded.validation_status
+                                        }
+                                    )
+                                    db.execute(stmt)
+                                else:
+                                    existing = db.query(PendingMatchModel).filter(PendingMatchModel.url == url_str).first()
+                                    if existing:
+                                        existing.price = pending_data["price"]
+                                        existing.is_blocked = True
+                                        existing.anomaly_flags = json.dumps(flags)
+                                        existing.validation_status = status
+                                    else:
+                                        db.add(PendingMatchModel(**pending_data))
+                            new_items_count += 1
+                        except Exception as e:
+                            logger.error(f"Failed to move blocked item to Purgatory: {e}")
+                            
+                        continue # Skip adding as active offer
+                    
+                    # --- PHASE 18: DEAL SCORER ---
+                    landed_price = LogisticsService.get_landing_price(offer.get('price'), offer.get('shop_name'), "ES")
+                    is_wish = any(ci.owner_id == 2 and not ci.acquired for ci in best_match_product.collection_items)
+                    opp_score = DealScorer.calculate_score(best_match_product, landed_price, is_wish)
+
+                    # Normal SmartMatch flow if no anomalies
+                    logger.info(f"✅ SmartMatch (75%+): '{offer.get('product_name')}' -> '{best_match_product.name}' (Score: {opp_score})")
                     repo.add_offer(best_match_product, {
                         "shop_name": offer.get('shop_name'),
                         "price": offer.get('price'),
                         "currency": offer.get('currency'), 
                         "url": url_str,
                         "is_available": offer.get('is_available') if offer.get('is_available') is not None else True,
-                        "source_type": offer.get('source_type', 'Retail')
+                        "source_type": offer.get('source_type', 'Retail'),
+                        "opportunity_score": opp_score
                     }, commit=False)
                     
                     # Audit new link
@@ -215,9 +295,17 @@ class ScrapingPipeline:
                         details=f"Match confidence: {best_match_score:.2f}"
                     )
 
-                    # --- PHASE 8.5: THE EYE OF SAURON (TELEGRAM ALERT) ---
-                    # Only alert for high-confidence matches to avoid noise
-                    if best_match_score >= 0.90:
+                    # --- PHASE 8.5 & 18: NOTIFICATIONS ---
+                    if DealScorer.is_mandatory_buy(best_match_product, landed_price, opp_score):
+                        asyncio.create_task(telegram_service.send_mandatory_buy_alert(
+                            product_name=best_match_product.name,
+                            price=offer.get('price'),
+                            landed_price=landed_price,
+                            score=opp_score,
+                            shop_name=offer.get('shop_name'),
+                            url=url_str
+                        ))
+                    elif best_match_score >= 0.90:
                         asyncio.create_task(telegram_service.send_deal_alert(
                             product_name=best_match_product.name,
                             price=offer.get('price'),
