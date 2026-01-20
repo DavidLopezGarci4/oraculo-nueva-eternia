@@ -47,35 +47,38 @@ const Dashboard: React.FC = () => {
         refetchInterval: 60000 // Refresh every 60s (Relaxed)
     });
 
-    const { data: topDeals, isLoading: isLoadingDeals } = useQuery({
+    const { data: topDeals } = useQuery({
         queryKey: ['top-deals'],
         queryFn: () => getTopDeals(),
         refetchInterval: 120000 // Refresh every 2 mins
     });
 
-    const { data: history, isLoading: isLoadingHistory } = useQuery({
+    const { data: history } = useQuery({
         queryKey: ['dashboard-history'],
         queryFn: getDashboardHistory,
         refetchInterval: 30000 // Refresh every 30s
     });
 
-    const { data: matchStats, isLoading: isLoadingMatchStats } = useQuery({
+    const { data: matchStats } = useQuery({
         queryKey: ['match-stats'],
         queryFn: getDashboardMatchStats,
         refetchInterval: 60000 // Refresh every 60s
     });
 
-    const { data: hallOfFame, isLoading: isLoadingHall } = useQuery({
+    const { data: hallOfFame } = useQuery({
         queryKey: ['hall-of-fame'],
         queryFn: getHallOfFame,
         refetchInterval: 60000
     });
 
-    if (isLoadingStats || isLoadingDeals || isLoadingHistory || isLoadingMatchStats || isLoadingHall) {
+    if (isLoadingStats) {
         return (
             <div className="flex h-[60vh] flex-col items-center justify-center gap-4 text-white/30">
                 <Loader2 className="h-10 w-10 animate-spin text-brand-primary" />
-                <p className="text-sm font-bold uppercase tracking-widest animate-pulse">Sincronizando Oráculo...</p>
+                <div className="space-y-1 text-center">
+                    <p className="text-sm font-bold uppercase tracking-widest animate-pulse">Sincronizando Oráculo...</p>
+                    <p className="text-[10px] text-white/10 uppercase font-black">Conjugando fuerzas del mercado</p>
+                </div>
             </div>
         );
     }

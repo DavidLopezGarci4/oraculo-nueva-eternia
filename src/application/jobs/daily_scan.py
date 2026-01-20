@@ -137,11 +137,14 @@ async def run_daily_scan(progress_callback=None):
         # Filter Scrapers
         scrapers = []
         if args.shops:
-            target_shops = [s.lower() for s in args.shops]
-            logger.info(f"🎯 Target Execution: {target_shops}")
-            for s in all_scrapers:
-                if any(t in s.spider_name.lower() for t in target_shops):
-                    scrapers.append(s)
+            target_shops = [s.lower() for s in args.shops if s.strip()]
+            if target_shops:
+                logger.info(f"🎯 Target Execution: {target_shops}")
+                for s in all_scrapers:
+                    if any(t in s.spider_name.lower() for t in target_shops):
+                        scrapers.append(s)
+            else:
+                scrapers = all_scrapers
         else:
             scrapers = all_scrapers
             

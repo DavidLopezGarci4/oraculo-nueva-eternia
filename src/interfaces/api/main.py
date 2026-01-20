@@ -859,25 +859,38 @@ async def get_dashboard_stats(user_id: int = 1):
                 CollectionItemModel.acquired == False
             ).count()
 
-            # --- FINANCIAL ENGINE (PHASE 6) ---
+            # --- FINANCIAL ENGINE (PHASE 18 OPTIMIZED) ---
             total_invested = 0.0
             market_value = 0.0
             
             try:
-                # Get best prices map (Solo RETAIL para Valor de Mercado)
-                all_prices = db.query(OfferModel.product_id, OfferModel.price)\
-                    .filter(OfferModel.is_available == True, OfferModel.product_id.isnot(None), OfferModel.source_type == 'Retail')\
-                    .all()
-                    
-                best_price_map = {}
-                for row in all_prices:
-                    pid, price = row
-                    if pid is None or price is None: continue
-                    if pid not in best_price_map or price < best_price_map[pid]:
-                        best_price_map[pid] = price
-                        
-                # Calcular Inversión y Valor de Mercado (SOLO POSEÍDOS)
-                # Get user location for logistics
+                # 1. Pre-cargar Reglas Logísticas (Ahorra cientos de consultas)
+                rules = db.query(LogisticRuleModel).all()
+                rules_map = {f"{r.shop_name}_{r.country_code}": r for r in rules}
+                
+                # 2. Get best prices map (Solo RETAIL para Valor de Mercado)
+                # Obtenemos la mejor oferta completa para tener acceso al shop_name para logística
+                from sqlalchemy import and_
+                best_price_subq = db.query(
+                    OfferModel.product_id,
+                    func.min(OfferModel.price).label('min_price')
+                ).filter(
+                    OfferModel.is_available == True,
+                    OfferModel.product_id.isnot(None),
+                    OfferModel.source_type == 'Retail'
+                ).group_by(OfferModel.product_id).subquery()
+
+                best_offers = db.query(OfferModel).join(
+                    best_price_subq,
+                    and_(
+                        OfferModel.product_id == best_price_subq.c.product_id,
+                        OfferModel.price == best_price_subq.c.min_price
+                    )
+                ).all()
+
+                best_offer_map = {o.product_id: o for o in best_offers}
+
+                # 3. Calcular Inversión y Valor de Mercado (SOLO POSEÍDOS)
                 user_location = "ES"
                 user = db.query(UserModel).filter(UserModel.id == user_id).first()
                 if user: user_location = user.location
@@ -887,36 +900,22 @@ async def get_dashboard_stats(user_id: int = 1):
                     CollectionItemModel.acquired == True
                 ).all()
 
-                total_invested_with_logistics = 0.0
                 for item in collection_items:
                     total_invested += (item.purchase_price or 0.0)
                     
                     # Para el valor de mercado, usamos el Landing Price del mejor precio disponible
-                    if item.product_id in best_price_map:
-                        base_price = best_price_map[item.product_id]
-                        market_value += base_price
-                        
-                        # Buscamos de qué tienda es esa mejor oferta para calcular su landing price
-                        best_offer = db.query(OfferModel).filter(
-                            OfferModel.product_id == item.product_id, 
-                            OfferModel.price == base_price,
-                            OfferModel.is_available == True
-                        ).first()
-                        
-                        if best_offer:
-                            landing_price = LogisticsService.get_landing_price(best_offer.price, best_offer.shop_name, user_location)
-                            total_invested_with_logistics += landing_price
+                    best_o = best_offer_map.get(item.product_id)
+                    if best_o:
+                        market_value += LogisticsService.optimized_get_landing_price(
+                            best_o.price, best_o.shop_name, user_location, rules_map
+                        )
                 
                 profit_loss = market_value - total_invested
-                # ROI tradicional vs ROI de mercado real (landing)
                 roi = (profit_loss / total_invested * 100) if total_invested > 0 else 0.0
                 
             except Exception as e:
-                logger.error(f"Financial Engine Error: {e}")
-                market_value = 0.0
-                total_invested = 0.0
-                profit_loss = 0.0
-                roi = 0.0
+                logger.error(f"Financial Engine Error (Optimized): {e}")
+                market_value, total_invested, profit_loss, roi = 0.0, 0.0, 0.0, 0.0
 
             # Distribución por tienda (Global Retail para inteligencia de mercado)
             shop_dist = db.query(OfferModel.shop_name, func.count(OfferModel.id))\
@@ -1060,38 +1059,43 @@ async def get_dashboard_hall_of_fame(user_id: int = 1):
         if not items:
             return {"top_value": [], "top_roi": []}
             
-        # 2. Obtener mejores precios actuales (SOLO RETAIL)
+        # 2. Pre-cargar Reglas y Mejores Ofertas
         product_ids = [item.product_id for item in items]
-        best_price_query = (
-            select(OfferModel.product_id, func.min(OfferModel.price))
+        rules = db.query(LogisticRuleModel).all()
+        rules_map = {f"{r.shop_name}_{r.country_code}": r for r in rules}
+
+        best_price_subq = (
+            select(OfferModel.product_id, func.min(OfferModel.price).label('min_p'))
             .where(OfferModel.product_id.in_(product_ids))
             .where(OfferModel.is_available == True)
             .where(OfferModel.source_type == 'Retail')
             .group_by(OfferModel.product_id)
+            .subquery()
         )
-        best_prices = dict(db.execute(best_price_query).all())
+        best_offers = db.query(OfferModel).join(
+            best_price_subq,
+            and_(
+                OfferModel.product_id == best_price_subq.c.product_id,
+                OfferModel.price == best_price_subq.c.min_p
+            )
+        ).all()
+        best_offer_map = {o.product_id: o for o in best_offers}
         
-        # 3. Calcular métricas para cada item
-        # Get user location for logistics
+        # 3. Calcular métricas (Optimizado)
         user_location = "ES"
         user = db.query(UserModel).filter(UserModel.id == user_id).first()
         if user: user_location = user.location
 
         analyzed_items = []
         for item in items:
-            market = best_prices.get(item.product_id, 0.0)
+            best_o = best_offer_map.get(item.product_id)
             invested = item.purchase_price if item.purchase_price is not None else 0.0
             
-            # Para el valor de mercado real, buscamos la mejor oferta y su landing price
-            landing_market = market
-            best_offer = db.query(OfferModel).filter(
-                OfferModel.product_id == item.product_id, 
-                OfferModel.price == market, 
-                OfferModel.is_available == True
-            ).first()
-            
-            if best_offer:
-                landing_market = LogisticsService.get_landing_price(best_offer.price, best_offer.shop_name, user_location)
+            landing_market = 0.0
+            if best_o:
+                landing_market = LogisticsService.optimized_get_landing_price(
+                    best_o.price, best_o.shop_name, user_location, rules_map
+                )
 
             roi = 0.0
             if invested > 0 and landing_market > 0:

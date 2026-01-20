@@ -13,7 +13,11 @@ import PriceHistoryChart from '../components/products/PriceHistoryChart';
 import { TrendingUp, History } from 'lucide-react';
 
 // Para desarrollo, usamos el ID de David
-const Catalog: React.FC = () => {
+interface CatalogProps {
+    searchQuery?: string;
+}
+
+const Catalog: React.FC<CatalogProps> = ({ searchQuery = "" }) => {
     const queryClient = useQueryClient();
     const [selectedProduct, setSelectedProduct] = React.useState<Product | null>(null);
     const [editingProduct, setEditingProduct] = React.useState<Product | null>(null);
@@ -145,6 +149,15 @@ const Catalog: React.FC = () => {
         });
     };
 
+    const filteredProducts = products?.filter(product => {
+        const query = searchQuery.toLowerCase();
+        return (
+            product.name.toLowerCase().includes(query) ||
+            product.figure_id.toLowerCase().includes(query) ||
+            product.sub_category?.toLowerCase().includes(query)
+        );
+    });
+
     if (isLoadingProducts || isLoadingCollection) {
         return (
             <div className="flex h-64 flex-col items-center justify-center gap-4 text-white/50">
@@ -180,7 +193,7 @@ const Catalog: React.FC = () => {
 
             {/* Grid */}
             <div className="grid grid-cols-2 gap-3 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {products?.map((product) => {
+                {filteredProducts?.map((product) => {
                     const owned = isOwned(product.id);
                     const wished = isWished(product.id);
                     const hasIntel = hasMarketIntel(product.id);

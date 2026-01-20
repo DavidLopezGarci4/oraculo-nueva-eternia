@@ -165,6 +165,12 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
 *   **Integridad de Datos**: Persistencia del score en el flujo de SmartMatch y Purgatorio. ✅
 *   **Restauración Cloud**: Sincronización masiva de inteligencia hacia Supabase. ✅
 
+### Fase 19: Optimización de Rendimiento & UX Core ✅
+*   **Eliminación de Cuellos de Botella N+1**: Refactorización del motor financiero para cargas masivas de datos y pre-caché logístico. ✅
+*   **Robustez del Daily Scan**: Desacoplamiento de CLIs y manejo de flags dinámicos para evitar fallos en CI/CD. ✅
+*   **Refactorización del Héroe**: Evolución del selector de usuarios hacia un sistema de recarga atómica y fiable. ✅
+*   **Búsqueda Global**: Habilitación de filtrado contextual en todo el ecosistema (Catálogo, Colección). ✅
+
 ---
 
 ## ✅ Plan de Verificación

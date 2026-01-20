@@ -5,7 +5,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { getCollection, toggleCollection } from '../api/collection';
 import type { Product } from '../api/collection';
 
-const Collection: React.FC = () => {
+interface CollectionProps {
+    searchQuery?: string;
+}
+
+const Collection: React.FC<CollectionProps> = ({ searchQuery = "" }) => {
     const queryClient = useQueryClient();
     const [activeTab, setActiveTab] = useState<'owned' | 'wish'>('owned');
 
@@ -27,8 +31,21 @@ const Collection: React.FC = () => {
         }
     });
 
-    const ownedItems = collection?.filter(p => !p.is_wish) || [];
-    const wishItems = collection?.filter(p => p.is_wish) || [];
+    const filteredItems = collection?.filter(product => {
+        const query = searchQuery.toLowerCase();
+        return (
+            product.name.toLowerCase().includes(query) ||
+            product.figure_id.toLowerCase().includes(query) ||
+            product.sub_category?.toLowerCase().includes(query)
+        );
+    }) || [];
+
+    const ownedItems = filteredItems.filter(p => !p.is_wish);
+    const wishItems = filteredItems.filter(p => p.is_wish);
+
+    // Total count for stats (unfiltered)
+    const totalOwned = collection?.filter(p => !p.is_wish).length || 0;
+    const totalWish = collection?.filter(p => p.is_wish).length || 0;
 
     if (isLoading) {
         return (
@@ -59,7 +76,7 @@ const Collection: React.FC = () => {
                     <div className="space-y-4">
                         <div className="flex items-center gap-3 text-brand-primary">
                             <Box className="h-6 w-6" />
-                            <span className="text-xs font-black uppercase tracking-[0.3em] opacity-80">Arquivos de Nueva Eternia</span>
+                            <span className="text-xs font-black uppercase tracking-[0.3em] opacity-80">Archivos de Nueva Eternia</span>
                         </div>
                         <h2 className="text-5xl font-black tracking-tighter text-white lg:text-7xl">
                             Mi <span className="text-brand-primary">Legado</span>
@@ -75,7 +92,7 @@ const Collection: React.FC = () => {
                                 <span className="text-[10px] font-black uppercase tracking-widest">Fortaleza</span>
                                 <Box className="h-4 w-4" />
                             </div>
-                            <span className="text-4xl font-black text-white">{ownedItems.length}</span>
+                            <span className="text-4xl font-black text-white">{totalOwned}</span>
                             <span className="text-[9px] font-bold text-white/20 uppercase">Items Poseídos</span>
                         </div>
 
@@ -84,7 +101,7 @@ const Collection: React.FC = () => {
                                 <span className="text-[10px] font-black uppercase tracking-widest">Deseos</span>
                                 <Star className="h-4 w-4" />
                             </div>
-                            <span className="text-4xl font-black text-brand-primary">{wishItems.length}</span>
+                            <span className="text-4xl font-black text-brand-primary">{totalWish}</span>
                             <span className="text-[9px] font-bold text-brand-primary/30 uppercase">En el Radar</span>
                         </div>
                     </div>
@@ -106,9 +123,9 @@ const Collection: React.FC = () => {
                 >
                     <Star className="h-4 w-4" />
                     Lista de Deseos
-                    {wishItems.length > 0 && (
+                    {totalWish > 0 && (
                         <span className="bg-white/10 text-brand-primary text-[10px] px-2 py-0.5 rounded-full ml-1">
-                            {wishItems.length}
+                            {totalWish}
                         </span>
                     )}
                 </button>
@@ -129,11 +146,15 @@ const Collection: React.FC = () => {
                             <Sparkles className="absolute -top-2 -right-2 h-6 w-6 text-brand-primary opacity-30 animate-pulse" />
                         </div>
                         <div className="max-w-xs space-y-3">
-                            <p className="text-2xl font-black text-white/80 uppercase tracking-tighter">Sector Vacío</p>
+                            <p className="text-2xl font-black text-white/80 uppercase tracking-tighter">
+                                {searchQuery ? 'Sin Resultados' : 'Sector Vacío'}
+                            </p>
                             <p className="text-sm text-white/40 leading-relaxed font-medium">
-                                {activeTab === 'owned'
-                                    ? 'Aún no has reclamado ninguna reliquia. El catálogo maestro te espera para forjar tu leyenda.'
-                                    : 'No tienes objetivos marcados. Encuentra tu próxima obsesión en el catálogo.'}
+                                {searchQuery
+                                    ? `Ninguna reliquia en tu ${activeTab === 'owned' ? 'fortaleza' : 'lista'} coincide con "${searchQuery}".`
+                                    : activeTab === 'owned'
+                                        ? 'Aún no has reclamado ninguna reliquia. El catálogo maestro te espera para forjar tu leyenda.'
+                                        : 'No tienes objetivos marcados. Encuentra tu próxima obsesión en el catálogo.'}
                             </p>
                         </div>
                     </motion.div>

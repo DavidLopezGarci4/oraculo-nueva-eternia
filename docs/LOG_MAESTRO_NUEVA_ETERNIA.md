@@ -783,3 +783,15 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
     - **Daily Scan Fix**: Corregido el workflow `scrapers.yml` para apuntar a `SUPABASE_DATABASE_URL`, eliminando el modo de pruebas local en la nube.
     - **Nexus Refinement**: Corregida detección de `BASE_DIR` y limpieza de precios con símbolos de moneda (ej: $14.99).
     - **Simetría Visual**: Eliminada duplicidad de buscadores en el Purgatorio.
+
+- [x] **11.10 Optimización de Rendimiento & UX Core (20/01/2026)**:
+    - **Dashboard Speedup**: Eliminadas consultas N+1 en `/api/dashboard/stats` y Hall of Fame. El backend ahora realiza cargas masivas, resolviendo el hang infinito en colecciones grandes.
+    - **Logistics Hyper-speed**: Implementado `optimized_get_landing_price` con pre-caché de reglas, reduciendo el tiempo de cálculo financiero de segundos a milisegundos.
+    - **Hero Switch Reliability**: Refactorizado el selector de usuarios en `Navbar.tsx` para asegurar recargas de identidad atómicas y consistencia visual entre roles.
+    - **Dashboard Resilience**: El Tablero ya no bloquea el renderizado por componentes secundarios; las métricas críticas cargan primero para una experiencia instantánea.
+    - **UI/UX Polish**: Habilitada búsqueda funcional en Catálogo/Colección y corregidos typos críticos.
+
+- [x] **11.11 Reparación de Daily Scan CLI (20/01/2026)**:
+    - **CLI Conflict Fix**: Resuelto error `unrecognized arguments: --shops` en el flujo automático. El culpable era `personal_collection.py` que ejecutaba su parsing de argumentos al ser llamado como librería por el Nexus.
+    - **Decoupling**: Refactorizada la lógica de scraping de ActionFigure411 para permitir ejecuciones programadas sin interferencias de argumentos CLI.
+    - **Robustez**: Mejorado el filtrado de tiendas en `daily_scan.py` para manejar parámetros vacíos de GitHub Actions.

@@ -649,12 +649,11 @@ def generate_text_report(sections: List[Tuple[str, pd.DataFrame]], path: Path):
 # Pipeline principal
 # =========================
 
-def main() -> None:
-    import argparse
-    parser = argparse.ArgumentParser(description="ActionFigures411 Scraper & Updater")
-    parser.add_argument("--report", action="store_true", help="Run in audit mode (no downloads, generates report)")
-    args = parser.parse_args()
-
+def main(audit_mode: bool = False) -> None:
+    """
+    Main entry point for scraping and updating the MOTU Catalog.
+    Can be called directly from CLI or as a library (NexusService).
+    """
     start_time = time.time()
     project_root, excel_path, images_dir = get_project_paths()
     
@@ -662,7 +661,7 @@ def main() -> None:
     
     # 1. Leer Excel PREVIO para incrementalidad
     existing_keys = set()
-    if not args.report:
+    if not audit_mode:
         logging.info("Leyendo Excel existente para modo incremental...")
         sections_old_preload = read_existing_excel(excel_path)
         for _, df_old in sections_old_preload:
@@ -689,14 +688,14 @@ def main() -> None:
     # Procesar tablas
     sections_new: List[Tuple[str, pd.DataFrame]] = []
     for title, tbl in sections_html:
-        logging.info("Procesando sección: %s (FastMode=%s, Incremental=%s)", title, args.report, not args.report)
+        logging.info("Procesando sección: %s (FastMode=%s, Incremental=%s)", title, audit_mode, not audit_mode)
         # Pasamos existing_keys
-        df = process_table(tbl, session, images_dir, fast_mode=args.report, existing_keys=existing_keys)
+        df = process_table(tbl, session, images_dir, fast_mode=audit_mode, existing_keys=existing_keys)
         sections_new.append((title, df))
-        if not args.report:
+        if not audit_mode:
             polite_pause()
 
-    if args.report:
+    if audit_mode:
         # Generate Report Only
         report_path = project_root.parent / "logs" / "scraping_report.txt"
         report_path.parent.mkdir(exist_ok=True)
@@ -715,7 +714,7 @@ def main() -> None:
     logging.info("Resultado guardado en: %s", excel_path)
 
 def get_scraped_data() -> List[Tuple[str, pd.DataFrame]]:
-    """Clean Architecture Entrypoint"""
+    """Clean Architecture Entrypoint (Returns Data instead of writing to File)"""
     project_root, excel_path, images_dir = get_project_paths()
     session = build_session()
     
@@ -734,4 +733,10 @@ def get_scraped_data() -> List[Tuple[str, pd.DataFrame]]:
     return sections_data
 
 if __name__ == "__main__":
-    main()
+    import argparse
+    parser = argparse.ArgumentParser(description="ActionFigures411 Scraper & Updater")
+    parser.add_argument("--report", action="store_true", help="Run in audit mode (no downloads, generates report)")
+    # Use parse_known_args to avoid crashing when called with other flags in multi-script environments
+    args, unknown = parser.parse_known_args()
+    
+    main(audit_mode=args.report)

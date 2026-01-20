@@ -5,9 +5,11 @@ import guardianRoleImg from '../../assets/role-guardian.png';
 interface NavbarProps {
     onMenuClick: () => void;
     showSearch?: boolean;
+    searchValue?: string;
+    onSearchChange?: (value: string) => void;
 }
 
-const Navbar: React.FC<NavbarProps> = ({ onMenuClick, showSearch = true }) => {
+const Navbar: React.FC<NavbarProps> = ({ onMenuClick, showSearch = true, searchValue = "", onSearchChange }) => {
     return (
         <nav className="sticky top-0 z-10 flex h-16 items-center border-b border-glass-border glass px-4 md:px-6 backdrop-blur-md gap-4">
             {/* Mobile Menu Button */}
@@ -25,6 +27,8 @@ const Navbar: React.FC<NavbarProps> = ({ onMenuClick, showSearch = true }) => {
                         <input
                             type="text"
                             placeholder="Buscar figuras..."
+                            value={searchValue}
+                            onChange={(e) => onSearchChange?.(e.target.value)}
                             className="w-full rounded-2xl bg-white/5 py-2 pl-9 pr-4 text-sm text-white border border-white/10 focus:border-brand-primary outline-none transition-all placeholder:text-white/20"
                         />
                     </div>
@@ -38,14 +42,15 @@ const Navbar: React.FC<NavbarProps> = ({ onMenuClick, showSearch = true }) => {
                 </button>
 
                 {/* Selector de Héroes */}
-                <div
+                <button
                     onClick={() => {
                         const currentUser = localStorage.getItem('active_user_id') || '1';
                         const nextUser = currentUser === '1' ? '2' : '1';
                         localStorage.setItem('active_user_id', nextUser);
-                        window.location.reload(); // Recarga simple para propagar el cambio de identidad
+                        window.location.reload(); // Recarga inmediata para propagar el cambio de identidad
                     }}
-                    className="flex items-center gap-3 border-l border-white/10 pl-3 md:pl-6 cursor-pointer group hover:bg-white/5 py-1 px-2 rounded-xl transition-all"
+                    className="flex items-center gap-3 border-l border-white/10 pl-3 md:pl-6 cursor-pointer group hover:bg-white/5 py-1 px-2 rounded-xl transition-all outline-none focus:ring-1 focus:ring-brand-primary/50"
+                    title="Cambiar de Héroe"
                 >
                     <div className="relative flex h-9 w-9 items-center justify-center rounded-full overflow-hidden border border-white/20 shadow-lg group-hover:scale-110 transition-transform bg-black/40">
                         <img
@@ -57,7 +62,7 @@ const Navbar: React.FC<NavbarProps> = ({ onMenuClick, showSearch = true }) => {
                             {localStorage.getItem('active_user_id') === '2' ? 'DA' : 'AD'}
                         </div>
                     </div>
-                    <div className="hidden md:flex flex-col">
+                    <div className="hidden md:flex flex-col items-start">
                         <span className="text-sm font-medium text-white/80 group-hover:text-white transition-colors leading-none">
                             {localStorage.getItem('active_user_id') === '2' ? 'David' : 'Admin'}
                         </span>
@@ -65,7 +70,7 @@ const Navbar: React.FC<NavbarProps> = ({ onMenuClick, showSearch = true }) => {
                             Cambiar Heroe
                         </span>
                     </div>
-                </div>
+                </button>
             </div>
         </nav>
     );
