@@ -1395,6 +1395,7 @@ async def import_wallapop_products(request: WallapopImportRequest):
                 currency="EUR",
                 url=product.url,
                 shop_name="Wallapop",
+                source_type="Peer-to-Peer", # Fase 16: ADN P2P
                 image_url=product.imageUrl,
                 found_at=datetime.utcnow()
             )

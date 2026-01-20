@@ -169,7 +169,8 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
 *   **Eliminación de Cuellos de Botella N+1**: Refactorización del motor financiero para cargas masivas de datos y pre-caché logístico. ✅
 *   **Robustez del Daily Scan**: Desacoplamiento de CLIs y manejo de flags dinámicos para evitar fallos en CI/CD. ✅
 *   **Refactorización del Héroe**: Evolución del selector de usuarios hacia un sistema de recarga atómica y fiable. ✅
-*   **Búsqueda Global**: Habilitación de filtrado contextual en todo el ecosistema (Catálogo, Colección). ✅
+*   **Búsqueda Dual en Purgatorio**: Independencia total entre filtros de lista e integración con el Gran Catálogo. ✅
+*   **Ruteo Nativo P2P**: Integración de Wallapop directamente hacia El Pabellón mediante tipado de ADN dinámico. ✅
 
 ---
 

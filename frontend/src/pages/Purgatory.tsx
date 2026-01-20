@@ -25,6 +25,7 @@ import axios from 'axios';
 const Purgatory: React.FC = () => {
     const queryClient = useQueryClient();
     const [searchTerm, setSearchTerm] = useState('');
+    const [manualSearchTerm, setManualSearchTerm] = useState('');
     const [selectedPendingId, setSelectedPendingId] = useState<number | null>(null);
     const [originFilter, setOriginFilter] = useState<'all' | 'retail' | 'auction'>('all');
     const [confirmScraper, setConfirmScraper] = useState<string | null>(null);
@@ -116,7 +117,7 @@ const Purgatory: React.FC = () => {
             queryClient.invalidateQueries({ queryKey: ['purgatory'] });
             queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
             setSelectedPendingId(null);
-            setSearchTerm('');
+            setManualSearchTerm('');
         }
     });
 
@@ -131,8 +132,8 @@ const Purgatory: React.FC = () => {
 
 
     const filteredProducts = products?.filter((p: any) =>
-        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.figure_id?.toLowerCase().includes(searchTerm.toLowerCase())
+        p.name.toLowerCase().includes(manualSearchTerm.toLowerCase()) ||
+        p.figure_id?.toLowerCase().includes(manualSearchTerm.toLowerCase())
     ).slice(0, 10);
 
     // Dynamic Filter for Pending Items (Main List)
@@ -726,7 +727,7 @@ const Purgatory: React.FC = () => {
                                         <button
                                             onClick={() => {
                                                 setSelectedPendingId(selectedPendingId === item.id ? null : item.id);
-                                                setSearchTerm('');
+                                                setManualSearchTerm('');
                                             }}
                                             className={`h-12 md:h-10 flex-1 md:flex-initial md:px-8 flex items-center justify-center rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg ${selectedPendingId === item.id
                                                 ? 'bg-white text-black shadow-white/10'
@@ -744,7 +745,7 @@ const Purgatory: React.FC = () => {
                                         <div className="max-w-4xl mx-auto space-y-8">
 
                                             {/* Section 1: Oracle Suggestions (The Main Banner) */}
-                                            {item.suggestions && item.suggestions.length > 0 && !searchTerm && (
+                                            {item.suggestions && item.suggestions.length > 0 && !manualSearchTerm && (
                                                 <div className="space-y-4">
                                                     <div className="flex items-center gap-3">
                                                         <div className="h-8 w-8 rounded-full bg-brand-primary/20 flex items-center justify-center animate-pulse">
@@ -806,14 +807,14 @@ const Purgatory: React.FC = () => {
                                                         type="text"
                                                         placeholder="Escribe el nombre de la figura..."
                                                         className="w-full rounded-2xl bg-black/40 border border-white/10 py-3.5 pl-12 pr-4 text-sm font-bold text-white placeholder:text-white/20 outline-none focus:border-brand-primary/50 focus:bg-black/60 transition-all focus:ring-1 focus:ring-brand-primary/20"
-                                                        value={searchTerm}
-                                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                                        value={manualSearchTerm}
+                                                        onChange={(e) => setManualSearchTerm(e.target.value)}
                                                     />
                                                 </div>
 
                                                 {/* Results List */}
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-60 overflow-y-auto custom-scrollbar pr-2">
-                                                    {(searchTerm ? filteredProducts : []).map((p: any) => (
+                                                    {(manualSearchTerm ? filteredProducts : []).map((p: any) => (
                                                         <button
                                                             key={p.id}
                                                             onClick={() => matchMutation.mutate({ pendingId: item.id, productId: p.id })}
@@ -829,7 +830,7 @@ const Purgatory: React.FC = () => {
                                                             <CheckCircle2 className="h-4 w-4 text-brand-primary opacity-0 group-hover/res:opacity-100 transition-opacity" />
                                                         </button>
                                                     ))}
-                                                    {searchTerm && filteredProducts?.length === 0 && (
+                                                    {manualSearchTerm && filteredProducts?.length === 0 && (
                                                         <div className="col-span-full py-8 text-center">
                                                             <p className="text-xs font-bold text-white/30">El Oráculo no ve nada...</p>
                                                         </div>

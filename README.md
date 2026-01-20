@@ -96,6 +96,8 @@ Es el cerebro que decide si una oferta de "Hordak" en una tienda alemana coincid
 ### Sistema de Sincronización
 Para evitar esperas, el Oráculo usa un flujo **Out-of-Band**:
 - **Dashboard Hyper-speed**: Optimización de consultas N+1 y pre-caché de reglas logísticas para cargas instantáneas.
+- **Doble Capa de Búsqueda (Purgatorio)**: Separación de estados para filtrar la lista de espera y el catálogo maestro de forma independiente.
+- **Wallapop P2P Native**: Las capturas de Wallapop se marcan como Peer-to-Peer para alimentar automáticamente "El Pabellón".
 - **Kaizen Learning Log**: Memoria persistente del oráculo que registra hallazgos cualitativos y patrones de mercado.
 - **Hero Dynamic Selector**: Cambio de identidad atómico entre "Guardian" y "Master" con persistencia local.
 - **Búsqueda Contextual**: Filtrado en tiempo real en Catálogo y Colección con gestión de estado global.

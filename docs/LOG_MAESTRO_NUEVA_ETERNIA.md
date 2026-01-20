@@ -795,3 +795,13 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
     - **CLI Conflict Fix**: Resuelto error `unrecognized arguments: --shops` en el flujo automático. El culpable era `personal_collection.py` que ejecutaba su parsing de argumentos al ser llamado como librería por el Nexus.
     - **Decoupling**: Refactorizada la lógica de scraping de ActionFigure411 para permitir ejecuciones programadas sin interferencias de argumentos CLI.
     - **Robustez**: Mejorado el filtrado de tiendas en `daily_scan.py` para manejar parámetros vacíos de GitHub Actions.
+
+- [x] **11.12 Wallapop DNA & Pavilion Routing (20/01/2026)**:
+    - **P2P Tagging**: Corregido endpoint de importación para que los ítems de Wallapop se marquen como `Peer-to-Peer` automáticamente.
+    - **Sanitize Purgatory**: Ejecutada migración para corregir el "ADN" de los ítems existentes de Wallapop en el Purgatorio.
+    - **Routing Fix**: Ahora al vincular ítems de Wallapop, estos fluyen correctamente hacia **El Pabellón** en lugar del catálogo Retail.
+
+- [x] **11.13 Búsqueda de Doble Capa en Purgatorio (20/01/2026)**:
+    - **Desacoplamiento de Estados**: Implementado `manualSearchTerm` para separar la búsqueda del catálogo maestro de la búsqueda de la lista del Purgatorio.
+    - **UX Multi-capa**: Al iniciar una vinculación, el filtro principal se mantiene intacto pero el buscador manual se presenta limpio, evitando la persistencia de términos de búsqueda entre contextos diferentes.
+    - **Foco Administrativo**: Mejorado el flujo de trabajo en el panel de Admin para una gestión de reliquias más ágil.
