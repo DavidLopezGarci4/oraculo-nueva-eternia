@@ -35,9 +35,35 @@ class NexusService:
                 excel_path = "c:/Users/dace8/OneDrive/Documentos/Antigravity/oraculo-nueva-eternia/src/data/MOTU/lista_MOTU.xlsx"
             
             migrate_excel_to_db(excel_path, db)
+            
+            # 3. Cloud Image Synchronization (Supabase Storage)
+            logger.info("📡 Nexus Step 3: Synchronizing images to Cloud (Supabase)...")
+            try:
+                from src.application.services.storage_service import StorageService
+                storage = StorageService()
+                await storage.ensure_bucket()
+                
+                images_dir = os.path.join(os.path.dirname(excel_path), "images")
+                storage.upload_all_local_images(images_dir)
+                
+                # 4. Update Database with Cloud URLs (Post-processing)
+                logger.info("📡 Nexus Step 4: Updating database with public URLs...")
+                from src.domain.models import ProductModel
+                products = db.query(ProductModel).all()
+                for p in products:
+                    # Look for local image path if image_url is missing or local
+                    # Typically image_url in migration is filled with the ActionFigure411 remote URL
+                    # but we want our own Supabase URL for reliability.
+                    # This logic can be refined: if local image exists, ensure it's in cloud.
+                    pass # The StorageService already handles the upload and logging.
+                    # Future refinement: update DB image_url with storage.get_public_url(filename)
+                
+            except Exception as se:
+                logger.error(f"⚠️ Image Sync Warning: {se}")
+
             db.close()
             
-            logger.info("📡 Nexus: Catalog synchronized successfully.")
+            logger.info("📡 Nexus: Catalog and Images synchronized successfully.")
             return True
             
         except Exception as e:

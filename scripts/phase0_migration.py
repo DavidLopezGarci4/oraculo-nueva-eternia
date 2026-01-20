@@ -112,10 +112,23 @@ def migrate_excel_to_db(excel_path: str, session):
 
                     if not product:
                         # Create NEW
+                        image_url = row.get('Image URL')
+                        image_path = row.get('Image Path')
+                        
+                        # Phase 26: If we have a local path, we assume it's synced to Supabase
+                        # The URL pattern for Supabase is predictable
+                        if image_path and os.path.exists(image_path):
+                            filename = os.path.basename(image_path)
+                            # Fallback if image_url is missing or ActionFigure411 specific
+                            from src.core.config import settings
+                            supabase_url = getattr(settings, "SUPABASE_URL", "")
+                            if supabase_url:
+                                image_url = f"{supabase_url}/storage/v1/object/public/motu-catalog/{filename}"
+
                         product = ProductModel(
                             name=name,
                             figure_id=figure_id,
-                            image_url=row.get('Image URL'),
+                            image_url=image_url,
                             category="Masters of the Universe",
                             sub_category=sub_category,
                             variant_name=str(row.get('Wave', '')), # Using Wave as variant context
@@ -130,7 +143,16 @@ def migrate_excel_to_db(excel_path: str, session):
                         # UPDATE existing if needed
                         if figure_id and not product.figure_id:
                             product.figure_id = figure_id
-                        if not product.image_url:
+                        
+                        # Ensure we have a cloud/valid image URL
+                        image_path = row.get('Image Path')
+                        if image_path and os.path.exists(image_path):
+                            filename = os.path.basename(image_path)
+                            from src.core.config import settings
+                            supabase_url = getattr(settings, "SUPABASE_URL", "")
+                            if supabase_url:
+                                product.image_url = f"{supabase_url}/storage/v1/object/public/motu-catalog/{filename}"
+                        elif not product.image_url:
                             product.image_url = row.get('Image URL')
                         
                         # Phase 18: Update intelligence fields even if product exists

@@ -38,7 +38,14 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
     - Para manejar cambios de nombre o versiones (ej. Michelangelo V2), se usará una **Capa de Alias**.
     - Cada URL de scraping se vincula a un `Product ID` interno. Si el nombre del item cambia en el catálogo, el mapeo persiste porque apunta al ID, no al nombre.
     - La imagen (`Image Hash`) servirá como validador visual independiente frente a colisiones de nombres **y como base para el futuro Buscador Óptico**.
-*   **Preservación de Datos en la Nube (Validación Estricta)**:
+*   **Preservación- [x] **11.12 Wallapop DNA & Pavilion Routing (20/01/2026)**:
+    - Integración nativa de Wallapop hacia El Pabellón.
+- [x] **Phase 25: API Security & Ghost Sync (20/01/2026)**:
+    - Refactorización del motor de persistencia y seguridad API.
+- [x] **Phase 26: Nexo Maestro Cloud & Supabase Images (20/01/2026)**:
+    - **Robustez**: Corrección de puntería en el scraper de catálogo maestro.
+    - **Cloud Architecture**: Sincronización automática de imágenes locales a Supabase Storage.
+    - **Acceso Universal**: Transición a URLs públicas para visualización cross-device sin PC encendido.
     - **Importación & De-duplicación**: Se descargarán las tablas de Supabase (`users`, `roles`, `collection_items`). Se aplicará una lógica de colisión para evitar duplicados y la creación de items "fantasma".
     - **Logs de Auditoría**: Cada decisión de fusión o descarte de datos de Supabase quedará registrada en un log de migración para trazabilidad total.
     - El nuevo catálogo se integrará con estos datos existentes para que ningún usuario pierda su configuración o inventario validado.

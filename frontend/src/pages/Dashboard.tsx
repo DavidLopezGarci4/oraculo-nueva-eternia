@@ -54,6 +54,9 @@ const Dashboard: React.FC = () => {
             queryClient.invalidateQueries({ queryKey: ['top-deals'] });
             queryClient.invalidateQueries({ queryKey: ['dashboard-history'] });
             alert(data.message);
+        },
+        onError: (error: any) => {
+            alert(error.response?.data?.detail || "Error al desvincular reliquia");
         }
     });
 
@@ -65,6 +68,9 @@ const Dashboard: React.FC = () => {
             setSelectedRelinkId(null);
             setManualSearchTerm('');
             alert(data.message);
+        },
+        onError: (error: any) => {
+            alert(error.response?.data?.detail || "Error al reasignar reliquia");
         }
     });
 
@@ -491,24 +497,26 @@ const Dashboard: React.FC = () => {
                                                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
                                                         <button
                                                             onClick={(e) => {
+                                                                e.stopPropagation();
                                                                 e.preventDefault();
                                                                 if (confirm(`¿Devolver '${deal.product_name}' al Purgatorio?`)) {
                                                                     unlinkMutation.mutate(deal.id);
                                                                 }
                                                             }}
                                                             disabled={unlinkMutation.isPending}
-                                                            className="h-7 w-7 flex items-center justify-center rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-all"
+                                                            className="h-7 w-7 flex items-center justify-center rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-all relative z-20"
                                                             title="Devolver al Purgatorio"
                                                         >
                                                             <Trash2 className="h-3 w-3" />
                                                         </button>
                                                         <button
                                                             onClick={(e) => {
+                                                                e.stopPropagation();
                                                                 e.preventDefault();
                                                                 setSelectedRelinkId(selectedRelinkId === deal.id ? null : deal.id);
                                                                 setManualSearchTerm('');
                                                             }}
-                                                            className={`h-7 w-7 flex items-center justify-center rounded-lg border transition-all ${selectedRelinkId === deal.id ? 'bg-white text-black border-white' : 'bg-brand-primary/10 border-brand-primary/20 text-brand-primary hover:bg-brand-primary hover:text-white'}`}
+                                                            className={`h-7 w-7 flex items-center justify-center rounded-lg border transition-all relative z-20 ${selectedRelinkId === deal.id ? 'bg-white text-black border-white' : 'bg-brand-primary/10 border-brand-primary/20 text-brand-primary hover:bg-brand-primary hover:text-white'}`}
                                                             title="Vincular a otro producto"
                                                         >
                                                             <Link className="h-3 w-3" />

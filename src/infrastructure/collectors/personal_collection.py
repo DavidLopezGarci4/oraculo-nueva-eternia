@@ -336,7 +336,12 @@ def process_table(
 
         row_data = ["No"] + cells
 
-        name_cell = tds[0] if tds else None
+        # Determine the name cell: 
+        # ActionFigure411 checklists often have a Checkbox in the first column (tds[0]).
+        # If tds[0] contains a checkbox, the name is in tds[1].
+        is_checkbox_col = tds[0].find("input", {"type": "checkbox"}) is not None
+        name_cell = tds[1] if is_checkbox_col and len(tds) > 1 else tds[0]
+        
         detail_link = extract_detail_link(name_cell)
 
         image_url = None

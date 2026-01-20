@@ -18,7 +18,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-def verify_api_key(x_api_key: str = Header(...)):
+def verify_api_key(x_api_key: str = Header(None, alias="X-API-Key")):
+    """
+    Verifica la llave de la API de Eternia. 
+    Soporta X-API-Key para consistencia con los clientes administrativos.
+    """
+    if not x_api_key:
+        # Fallback para x-api-key (minimal check)
+        pass
+    
     if x_api_key != settings.ORACULO_API_KEY:
         raise HTTPException(status_code=403, detail="Invalid API Key. Access Denied.")
     return x_api_key
@@ -420,7 +428,7 @@ async def toggle_collection(request: CollectionToggleRequest):
 
 # --- PURGATORY ENDPOINTS ---
 
-@app.get("/api/purgatory")
+@app.get("/api/purgatory", dependencies=[Depends(verify_api_key)])
 async def get_purgatory():
     """
     Retorna items en el Purgatorio con SUGERENCIAS INTELIGENTES.
@@ -541,7 +549,7 @@ async def reset_smartmatches():
             "message": f"Purificación TOTAL completada. {reverted_count} ofertas devueltas al Purgatorio."
         }
 
-@app.post("/api/purgatory/match")
+@app.post("/api/purgatory/match", dependencies=[Depends(verify_api_key)])
 async def match_purgatory(request: PurgatoryMatchRequest):
     """Vincula un item del Purgatorio con un Producto existente y registra el evento con datos completos"""
     from src.domain.models import OfferHistoryModel
@@ -575,7 +583,7 @@ async def match_purgatory(request: PurgatoryMatchRequest):
         )
         db.add(new_offer)
         
-        # Historial de Vínculo (Auditoría con metadatos completos)
+        # 2. Registrar historial (Auditoría con metadatos completos)
         history = OfferHistoryModel(
             offer_url=item.url,
             product_name=product.name,
@@ -586,6 +594,19 @@ async def match_purgatory(request: PurgatoryMatchRequest):
         )
         db.add(history)
         
+        # 3. Crear Alias (Aprendizaje del Sisema - Fase 25)
+        # Esto asegura que futuros escaneos de esta URL se auto-vinculen correctamente
+        from src.domain.models import ProductAliasModel
+        # Limpieza preventiva para evitar Unique Constraint errors si ya existia como manual o similar
+        db.query(ProductAliasModel).filter(ProductAliasModel.source_url == item.url).delete()
+        new_alias = ProductAliasModel(
+            product_id=product.id,
+            source_url=item.url,
+            confirmed=True
+        )
+        db.add(new_alias)
+        
+        # 4. Limpiar Purgatorio
         db.delete(item)
         db.commit()
         return {"status": "success", "message": "Vínculo sagrado establecido y registrado para la posteridad"}
@@ -1425,7 +1446,7 @@ async def relink_offer(offer_id: int, request: RelinkOfferRequest):
         new_alias = ProductAliasModel(
             product_id=new_product.id,
             source_url=offer.url,
-            is_verified=True
+            confirmed=True
         )
         db.add(new_alias)
 

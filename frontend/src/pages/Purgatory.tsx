@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { getPurgatory, matchItem, discardItem, discardItemsBulk, getScrapersStatus, runScrapers, getScraperLogs } from '../api/purgatory';
 import axios from 'axios';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 const PERSISTENCE_KEY = 'purgatory_offline_actions';
 
@@ -199,13 +199,20 @@ const Purgatory: React.FC = () => {
     });
 
 
-    // Background Sync Engine
+    // Background Sync Engine (Refined Phase 25)
+    const isSyncing = useRef(false);
+
     useEffect(() => {
-        if (pendingActions.length === 0) return;
+        if (pendingActions.length === 0 || isSyncing.current) return;
 
         const syncPending = async () => {
-            // Process actions one by one to avoid race conditions and over-queueing
-            for (const action of [...pendingActions]) {
+            if (isSyncing.current || pendingActions.length === 0) return;
+            isSyncing.current = true;
+
+            // Use a local copy for processing to avoid closure staleness issues
+            const actionsToProcess = [...pendingActions];
+
+            for (const action of actionsToProcess) {
                 try {
                     if (action.type === 'discard') {
                         await discardItem(action.pendingIds[0]);
@@ -214,25 +221,30 @@ const Purgatory: React.FC = () => {
                     } else if (action.type === 'match') {
                         await matchItem(action.pendingIds[0], action.productId);
                     }
-                    // If success, remove from buffer
+
+                    // Success: Remove from local state
                     setPendingActions(prev => prev.filter(a => a.id !== action.id));
+
+                    // Small delay to prevent overwhelming the server with sequential requests
+                    await new Promise(resolve => setTimeout(resolve, 500));
                 } catch (err) {
                     console.error('Persistence sync failed for action:', action.id, err);
-                    // Keep it in buffer to retry later
+                    // On error, we stop this cycle and retry later to avoid spamming a broken endpoint
+                    break;
                 }
             }
+
+            isSyncing.current = false;
         };
 
         const interval = setInterval(syncPending, 30000); // Retry every 30s
-
-        // Initial sync attempt when actions exist
-        const initialTimeout = setTimeout(syncPending, 2000);
+        const initialTimeout = setTimeout(syncPending, 3000); // Initial delay
 
         return () => {
             clearInterval(interval);
             clearTimeout(initialTimeout);
         };
-    }, [pendingActions.length]); // Re-run when action count changes
+    }, [pendingActions.length]); // Re-run mainly to ensure the check continues if length > 0
 
 
     const filteredProducts = products?.filter((p: any) =>
@@ -320,12 +332,25 @@ const Purgatory: React.FC = () => {
                         {pendingActions.length > 0 && (
                             <div className="flex items-center gap-4 px-5 py-3 rounded-2xl bg-brand-primary/10 border border-brand-primary/20 animate-in slide-in-from-right-4 duration-500 w-fit backdrop-blur-md">
                                 <div className="relative">
-                                    <Loader2 className="h-5 w-5 animate-spin text-brand-primary" />
+                                    <Loader2 className={`h-5 w-5 ${isSyncing.current ? 'animate-spin text-brand-primary' : 'text-white/20'}`} />
                                     <div className="absolute inset-0 h-4 w-4 rounded-full border border-brand-primary/20"></div>
                                 </div>
                                 <div className="space-y-0.5">
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-brand-primary leading-none">Sincronización en curso</p>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-brand-primary leading-none">
+                                        {isSyncing.current ? 'Sincronización en curso' : 'Sincronización en espera'}
+                                    </p>
                                     <p className="text-[9px] font-bold text-white/50">{pendingActions.length} acciones pendientes en el búfer local</p>
+                                    <button
+                                        onClick={() => {
+                                            if (confirm('¿Limpiar el búfer local? Esto cancelará las acciones no sincronizadas.')) {
+                                                setPendingActions([]);
+                                                localStorage.removeItem(PERSISTENCE_KEY);
+                                            }
+                                        }}
+                                        className="text-[8px] font-black uppercase tracking-widest text-red-400/60 hover:text-red-400 transition-colors mt-1 block"
+                                    >
+                                        [ Purificar Búfer ]
+                                    </button>
                                 </div>
                             </div>
                         )}

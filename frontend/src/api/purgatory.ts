@@ -6,7 +6,7 @@ const ORACULO_API_KEY = 'eternia-shield-2026';
 
 const adminHeaders = {
     headers: {
-        'x-api-key': ORACULO_API_KEY
+        'X-API-Key': ORACULO_API_KEY
     }
 };
 
@@ -50,7 +50,7 @@ export interface ScraperExecutionLog {
 }
 
 export const getPurgatory = async (): Promise<PendingItem[]> => {
-    const response = await axios.get(`${API_BASE}/purgatory`);
+    const response = await axios.get(`${API_BASE}/purgatory`, adminHeaders);
     return response.data;
 };
 
@@ -58,7 +58,7 @@ export const matchItem = async (pendingId: number, productId: number) => {
     const response = await axios.post(`${API_BASE}/purgatory/match`, {
         pending_id: pendingId,
         product_id: productId
-    });
+    }, adminHeaders);
     return response.data;
 };
 
