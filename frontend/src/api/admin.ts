@@ -85,3 +85,10 @@ export const unlinkOffer = async (offerId: number): Promise<{ status: string; me
     const response = await adminAxios.post(`/offers/${offerId}/unlink`);
     return response.data;
 };
+
+export const relinkOffer = async (offerId: number, targetProductId: number): Promise<{ status: string; message: string }> => {
+    const response = await adminAxios.post(`/offers/${offerId}/relink`, {
+        target_product_id: targetProductId
+    });
+    return response.data;
+};

@@ -11,9 +11,15 @@ import {
     TrendingUp,
     Euro,
     ExternalLink,
-    Copy
+    Copy,
+    Trash2,
+    Link,
+    Search,
+    CheckCircle2
 } from 'lucide-react';
 import { getDashboardStats, getTopDeals, getDashboardHistory, getDashboardMatchStats, revertDashboardAction, getHallOfFame } from '../api/dashboard';
+import { unlinkOffer, relinkOffer } from '../api/admin';
+import axios from 'axios';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -22,6 +28,8 @@ import guardianRoleImg from '../assets/role-guardian.png';
 
 const Dashboard: React.FC = () => {
     const queryClient = useQueryClient();
+    const [selectedRelinkId, setSelectedRelinkId] = React.useState<number | null>(null);
+    const [manualSearchTerm, setManualSearchTerm] = React.useState('');
 
     // Mutations
     const revertMutation = useMutation({
@@ -37,6 +45,26 @@ const Dashboard: React.FC = () => {
         },
         onError: (error: any) => {
             alert(error.response?.data?.detail || "Error al restaurar justicia");
+        }
+    });
+
+    const unlinkMutation = useMutation({
+        mutationFn: (id: number) => unlinkOffer(id),
+        onSuccess: (data) => {
+            queryClient.invalidateQueries({ queryKey: ['top-deals'] });
+            queryClient.invalidateQueries({ queryKey: ['dashboard-history'] });
+            alert(data.message);
+        }
+    });
+
+    const relinkMutation = useMutation({
+        mutationFn: ({ offerId, productId }: { offerId: number, productId: number }) => relinkOffer(offerId, productId),
+        onSuccess: (data) => {
+            queryClient.invalidateQueries({ queryKey: ['top-deals'] });
+            queryClient.invalidateQueries({ queryKey: ['dashboard-history'] });
+            setSelectedRelinkId(null);
+            setManualSearchTerm('');
+            alert(data.message);
         }
     });
 
@@ -70,6 +98,21 @@ const Dashboard: React.FC = () => {
         queryFn: getHallOfFame,
         refetchInterval: 60000
     });
+
+    const { data: products } = useQuery({
+        queryKey: ['products-dashboard'],
+        queryFn: async () => {
+            const response = await axios.get('/api/products');
+            return response.data;
+        }
+    });
+
+    const filteredProducts = products?.filter((p: any) =>
+        p.name.toLowerCase().includes(manualSearchTerm.toLowerCase()) ||
+        p.figure_id?.toLowerCase().includes(manualSearchTerm.toLowerCase())
+    ).slice(0, 50);
+
+    const isAdmin = true; // Hardcoded for now, could be dynamic
 
     if (isLoadingStats) {
         return (
@@ -402,44 +445,124 @@ const Dashboard: React.FC = () => {
                         {/* Grid de 2 columnas para el listado */}
                         <div className="grid grid-cols-1 md:grid-cols-2">
                             {topDeals?.map((deal, idx) => (
-                                <a
+                                <div
                                     key={deal.id}
-                                    href={deal.url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className={`group flex items-center gap-4 p-4 transition-all hover:bg-white/[0.04] border-white/[0.03] ${
+                                    className={`group flex flex-col transition-all border-white/[0.03] ${
                                         // Lógica de bordes para rejilla de 2 columnas
                                         (idx < topDeals.length - 1) ? 'border-b' : ''
                                         } ${(idx % 2 === 0 && idx < topDeals.length - 1) ? 'md:border-r' : ''}`}
                                 >
-                                    {/* Mini Thumbnail */}
-                                    <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-black/40 border border-white/5">
-                                        {deal.image_url ? (
-                                            <img src={deal.image_url} alt={deal.product_name} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
-                                        ) : (
-                                            <div className="flex h-full w-full items-center justify-center bg-brand-primary/5">
-                                                <ShoppingBag className="h-5 w-5 text-brand-primary/20" />
+                                    <div className="flex items-center gap-4 p-4 hover:bg-white/[0.04]">
+                                        <a
+                                            href={deal.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-black/40 border border-white/5"
+                                        >
+                                            {deal.image_url ? (
+                                                <img src={deal.image_url} alt={deal.product_name} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                                            ) : (
+                                                <div className="flex h-full w-full items-center justify-center bg-brand-primary/5">
+                                                    <ShoppingBag className="h-5 w-5 text-brand-primary/20" />
+                                                </div>
+                                            )}
+                                        </a>
+
+                                        {/* Info Grid */}
+                                        <div className="flex flex-1 items-center justify-between gap-4 overflow-hidden">
+                                            <div className="min-w-0 flex-1 space-y-0.5">
+                                                <a
+                                                    href={deal.url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="truncate text-sm font-bold text-white/90 group-hover:text-brand-primary transition-colors block"
+                                                >
+                                                    {deal.product_name}
+                                                </a>
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-white/20 group-hover:text-white/40">{deal.shop_name}</span>
                                             </div>
-                                        )}
+
+                                            <div className="flex items-center gap-3 shrink-0">
+                                                <div className="text-right">
+                                                    <div className="text-sm font-black text-brand-primary">{deal.price} €</div>
+                                                </div>
+
+                                                {isAdmin && (
+                                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.preventDefault();
+                                                                if (confirm(`¿Devolver '${deal.product_name}' al Purgatorio?`)) {
+                                                                    unlinkMutation.mutate(deal.id);
+                                                                }
+                                                            }}
+                                                            disabled={unlinkMutation.isPending}
+                                                            className="h-7 w-7 flex items-center justify-center rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-all"
+                                                            title="Devolver al Purgatorio"
+                                                        >
+                                                            <Trash2 className="h-3 w-3" />
+                                                        </button>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.preventDefault();
+                                                                setSelectedRelinkId(selectedRelinkId === deal.id ? null : deal.id);
+                                                                setManualSearchTerm('');
+                                                            }}
+                                                            className={`h-7 w-7 flex items-center justify-center rounded-lg border transition-all ${selectedRelinkId === deal.id ? 'bg-white text-black border-white' : 'bg-brand-primary/10 border-brand-primary/20 text-brand-primary hover:bg-brand-primary hover:text-white'}`}
+                                                            title="Vincular a otro producto"
+                                                        >
+                                                            <Link className="h-3 w-3" />
+                                                        </button>
+                                                    </div>
+                                                )}
+
+                                                <div className="hidden sm:flex h-7 w-7 items-center justify-center rounded-lg border border-white/5 bg-white/5 opacity-0 group-hover:opacity-100 transition-all transform translate-x-1 group-hover:translate-x-0">
+                                                    <Zap className="h-2.5 w-2.5 text-brand-primary fill-current" />
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
 
-                                    {/* Info Grid */}
-                                    <div className="flex flex-1 items-center justify-between gap-4 overflow-hidden">
-                                        <div className="min-w-0 flex-1 space-y-0.5">
-                                            <h5 className="truncate text-sm font-bold text-white/90 group-hover:text-brand-primary transition-colors">{deal.product_name}</h5>
-                                            <span className="text-[10px] font-black uppercase tracking-widest text-white/20 group-hover:text-white/40">{deal.shop_name}</span>
-                                        </div>
+                                    {/* Relink Drawer */}
+                                    {selectedRelinkId === deal.id && (
+                                        <div className="border-t border-white/10 bg-brand-primary/[0.03] p-4 space-y-4 animate-in slide-in-from-top-2">
+                                            <div className="flex items-center gap-2">
+                                                <div className="h-6 w-6 rounded-full bg-white/10 flex items-center justify-center">
+                                                    <Search className="h-3 w-3 text-white/50" />
+                                                </div>
+                                                <h6 className="text-[10px] font-black text-white uppercase tracking-widest">Reasignar Reliquia</h6>
+                                            </div>
 
-                                        <div className="flex items-center gap-4 shrink-0">
-                                            <div className="text-right">
-                                                <div className="text-sm font-black text-brand-primary">{deal.price} €</div>
-                                            </div>
-                                            <div className="hidden sm:flex h-7 w-7 items-center justify-center rounded-lg border border-white/5 bg-white/5 opacity-0 group-hover:opacity-100 transition-all transform translate-x-1 group-hover:translate-x-0">
-                                                <Zap className="h-2.5 w-2.5 text-brand-primary fill-current" />
+                                            <input
+                                                type="text"
+                                                placeholder="Buscar nuevo producto..."
+                                                className="w-full rounded-xl bg-black/40 border border-white/10 py-2.5 px-4 text-xs font-bold text-white outline-none focus:border-brand-primary/50 transition-all"
+                                                value={manualSearchTerm}
+                                                autoFocus
+                                                onChange={(e) => setManualSearchTerm(e.target.value)}
+                                            />
+
+                                            <div className="grid grid-cols-1 gap-1 max-h-40 overflow-y-auto custom-scrollbar-thin">
+                                                {(manualSearchTerm ? filteredProducts : [])?.map((p: any) => (
+                                                    <button
+                                                        key={p.id}
+                                                        onClick={() => relinkMutation.mutate({ offerId: deal.id, productId: p.id })}
+                                                        className="flex items-center justify-between gap-3 rounded-lg bg-white/5 p-2.5 text-left hover:bg-brand-primary/10 hover:border-brand-primary/30 border border-transparent transition-all group/res"
+                                                    >
+                                                        <div className="min-w-0 flex-1">
+                                                            <div className="text-[11px] font-bold text-white truncate">{p.name}</div>
+                                                            <div className="text-[8px] font-black text-white/20 uppercase tracking-tighter">{p.figure_id}</div>
+                                                        </div>
+                                                        <CheckCircle2 className="h-3.5 w-3.5 text-brand-primary opacity-0 group-hover/res:opacity-100 transition-opacity" />
+                                                    </button>
+                                                ))}
+                                                {manualSearchTerm && filteredProducts?.length === 0 && (
+                                                    <div className="py-4 text-center text-[10px] font-bold text-white/20">Sin resultados</div>
+                                                )}
                                             </div>
                                         </div>
-                                    </div>
-                                </a>
+                                    )}
+                                </div>
                             ))}
                         </div>
                         {(!topDeals || topDeals.length === 0) && (

@@ -189,6 +189,10 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
 *   **Confidencialidad de Acciones**: Desplazamiento de herramientas críticas a la zona de Configuración. ✅
 *   **Doble Autorización**: Sistema de confirmación en dos etapas para evitar el reset accidental del ecosistema. ✅
 
+### Fase 24: Dashboard Mastery (Control Ubicuo) ✅
+*   **Gestión en Tiempo Real**: Capacidad de corregir vinculaciones directamente desde las oportunidades del Tablero. ✅
+*   **Buscador Integrado**: Drawer de re-vinculación con búsqueda atómica para una corrección fluida. ✅
+
 ---
 
 ## ✅ Plan de Verificación

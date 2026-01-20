@@ -162,6 +162,7 @@ TELEGRAM_BOT_TOKEN=tu_token
 *   **Fase 21.5 (Purgatory-First Policy)**: ✅ Nueva estrategia de flujo de datos: 100% de nuevas extracciones a revisión manual para precisión total (Completado).
 *   **Fase 22 (Unlink Control)**: ✅ Botón de desvinculación administrativa y limpieza de alias para una "sanación" total del catálogo (Completado).
 *   **Fase 23 (Security Hardening)**: ✅ Doble confirmación y relocalización de acciones críticas de reset para protección del Reino (Completado).
+*   **Fase 24 (Dashboard Mastery)**: ✅ Control absoluto desde el Tablero: desvincular y re-vincular ofertas sin salir de la vista principal (Completado).
 
 ## 6. El Motor de Inversión (DealScorer)
 El Oráculo ahora actúa como un analista de inversiones personal. Cada oferta es procesada por el `DealScorer`, que asigna una puntuación de 1 a 100 basada en tres vectores:

@@ -781,8 +781,9 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
     - **CI/CD Recovery**: Solucionado error `ModuleNotFoundError: pandas` en GitHub Actions mediante la inyección de `pandas`, `openpyxl` y `xlsxwriter` en `requirements.txt`.
     - **Saneamiento Cloud**: Reparada discrepancia de esquemas (`source_type` vs `origin_category`) en Supabase.
     - **Daily Scan Fix**: Corregido el workflow `scrapers.yml` para apuntar a `SUPABASE_DATABASE_URL`, eliminando el modo de pruebas local en la nube.
-    - **Nexus Refinement**: Corregida detección de `BASE_DIR` y limpieza de precios con símbolos de moneda (ej: $14.99).
-    - **Simetría Visual**: Eliminada duplicidad de buscadores en el Purgatorio.
+  *   **Fase 22 (Unlink Control)**: ✅ Botón de desvinculación administrativa y limpieza de alias para una "sanación" total del catálogo (Completado).
+*   **Fase 23 (Security Hardening)**: ✅ Doble confirmación y relocalización de acciones críticas de reset para protección del Reino (Completado).
+*   **Fase 24 (Dashboard Mastery)**: ✅ Control absoluto desde el Tablero: desvincular y re-vincular ofertas sin salir de la vista principal (Completado).
 
 - [x] **11.10 Optimización de Rendimiento & UX Core (20/01/2026)**:
     - **Dashboard Speedup**: Eliminadas consultas N+1 en `/api/dashboard/stats` y Hall of Fame. El backend ahora realiza cargas masivas, resolviendo el hang infinito en colecciones grandes.
@@ -799,8 +800,13 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
 - [x] **11.12 Wallapop DNA & Pavilion Routing (20/01/2026)**:
     - **P2P Tagging**: Corregido endpoint de importación para que los ítems de Wallapop se marquen como `Peer-to-Peer` automáticamente.
 
-### Fase 21: Blindaje Operativo & Diagnóstico (20/01/2026)
-- **Hitos**: Corrección de errores críticos de logging y serialización. Diagnóstico de infraestructura cloud.
+### Fase 23: Blindaje de Poderes Administrativos ✅
+*   **Confidencialidad de Acciones**: Desplazamiento de herramientas críticas a la zona de Configuración. ✅
+*   **Doble Autorización**: Sistema de confirmación en dos etapas para evitar el reset accidental del ecosistema. ✅
+
+### Fase 24: Dashboard Mastery (Control Ubicuo) ✅
+*   **Gestión en Tiempo Real**: Capacidad de corregir vinculaciones directamente desde las oportunidades del Tablero. ✅
+*   **Buscador Integrado**: Drawer de re-vinculación con búsqueda atómica para una corrección fluida. ✅
 - **Estado**: ✅ COMPLETADO
 - **Detalle Técnico**:
     - **Global Success Logging**: Registro del nivel `SUCCESS` (25) en el logger estándar de Python para evitar `AttributeError`.
@@ -835,3 +841,12 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
     - **Relocalización Estratégica**: Movido el botón "Purificar Datos" (Reset SmartMatches) de la zona activa del Purgatorio a **Ajustes de Sistema** en Configuración.
     - **Double Confirmation Pulse**: Implementada lógica de confirmación en dos pasos ("¿Estás seguro?" -> "¡Último aviso!") con cambio dinámico de color y semántica visual para evitar ejecuciones accidentales.
     - **UX Protectora**: La nueva "Puerta de Purificación" requiere una intención clara y sostenida por parte del Arquitecto.
+
+### Fase 24: Dashboard Mastery - Control Ubicuo (20/01/2026)
+- **Hitos**: Gestión de ofertas directamente desde el Tablero de Inteligencia.
+- **Estado**: ✅ COMPLETADO
+- **Evolución de la UI**:
+    - **Dashboard Actions**: Las "Oportunidades de Captura" ahora cuentan con botones de acción rápida para el Arquitecto.
+    - **Relink Engine**: Implementado buscador de productos integrado en el Dashboard para re-asignar ofertas mal vinculadas sin navegar a otras páginas.
+    - **Flyover Unlink**: Botón de descarte inmediato (Trash2) que envía ofertas del Dashboard de vuelta al Purgatorio.
+    - **Backend Redirection**: Nuevo endpoint `/api/offers/{id}/relink` para el manejo atómico de redirecciones y actualización de alias.

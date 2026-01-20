@@ -98,6 +98,9 @@ class AnomalyValidationRequest(BaseModel):
     id: int
     action: str # "validate" or "block"
 
+class RelinkOfferRequest(BaseModel):
+    target_product_id: int
+
 @app.get("/health")
 def health():
     return {"status": "ok", "message": "Eternia is online"}
@@ -1395,6 +1398,54 @@ async def unlink_offer(offer_id: int):
 
         db.commit()
         return {"status": "success", "message": f"Justicia del Arquitecto: '{product_name}' ha sido devuelto al Purgatorio"}
+
+@app.post("/api/offers/{offer_id}/relink", dependencies=[Depends(verify_api_key)])
+async def relink_offer(offer_id: int, request: RelinkOfferRequest):
+    """
+    Desvincula una oferta de su producto actual y la vincula a uno nuevo.
+    (Admin Only)
+    """
+    from src.domain.models import ProductAliasModel
+    with SessionCloud() as db:
+        offer = db.query(OfferModel).filter(OfferModel.id == offer_id).first()
+        if not offer:
+            raise HTTPException(status_code=404, detail="Oferta no encontrada")
+
+        old_product_name = offer.product.name if offer.product else "Desconocido"
+        new_product = db.query(ProductModel).filter(ProductModel.id == request.target_product_id).first()
+        if not new_product:
+            raise HTTPException(status_code=404, detail="Producto destino no encontrado")
+
+        # 1. Actualizar vinculo
+        offer.product_id = new_product.id
+        
+        # 2. Actualizar/Crear Alias
+        # Eliminamos el viejo y creamos el nuevo para asegurar limpieza
+        db.query(ProductAliasModel).filter(ProductAliasModel.source_url == offer.url).delete()
+        new_alias = ProductAliasModel(
+            product_id=new_product.id,
+            source_url=offer.url,
+            is_verified=True
+        )
+        db.add(new_alias)
+
+        # 3. Registrar historial
+        history = OfferHistoryModel(
+            offer_url=offer.url,
+            product_name=new_product.name,
+            shop_name=offer.shop_name,
+            price=offer.price,
+            action_type="RELINKED_MANUAL_ADMIN",
+            details=json.dumps({
+                "from_product": old_product_name,
+                "to_product": new_product.name,
+                "reason": "Redirección manual por el Arquitecto"
+            })
+        )
+        db.add(history)
+
+        db.commit()
+        return {"status": "success", "message": f"Decreto del Arquitecto: Oferta reasignada a '{new_product.name}'"}
 
 @app.post("/api/scrapers/run", dependencies=[Depends(verify_api_key)])
 async def run_scrapers(request: ScraperRunRequest, background_tasks: BackgroundTasks):
