@@ -31,6 +31,7 @@ class WallapopScraper(BaseScraper):
     
     def __init__(self):
         super().__init__(shop_name="Wallapop", base_url="https://es.wallapop.com")
+        self.is_auction_source = True # DNA Segregation (Phase 14)
     
     def _get_headers(self) -> dict:
         """Genera headers con User-Agent aleatorio."""

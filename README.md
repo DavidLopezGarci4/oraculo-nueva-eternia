@@ -60,7 +60,8 @@ Donde llegan los hallazgos de los scrapers antes de ser "Verdad Absoluta".
 *   **Validación Manual**: El usuario aprueba o descarta los vínculos.
 *   **Importación de Wallapop**: Debido a bloqueos anti-bot, Wallapop tiene un importador manual donde pegas texto/URL y el sistema lo procesa.
 
-### Panel de Configuración
+### Panel de Configuración e Inteligencia Geográfica
+*   **Oráculo Logístico**: Configuración de ubicación por usuario (España, USA, Europa) para recalcular precios con precisión legal.
 *   **Control de Scrapers**: Activa o desactiva incursiones manuales y visualiza logs de ejecución en vivo.
 *   **Gestión de Datos**: Acceso a herramientas de limpieza y duplicados.
 
@@ -144,6 +145,7 @@ TELEGRAM_BOT_TOKEN=tu_token
 *   **Fase 11 (Continental)**: ✅ Expansión a 14 fuentes europeas y auditoría de precios OSS (Completado).
 *   **Fase 12 (Logística & Identidad)**: ✅ Rebranding a "Nueva Eternia", auditoría total del catálogo (297 reliquias) e implementación del **Nexo Maestro** para sincronización automática.
 *   **Fase 13 (Subastas & Amazon)**: 🏗️ Creación del **Pabellón de Subastas** (Wallapop/eBay) e infiltración en Amazon.es (En progreso).
+*   **Fase 15 (Oráculo Logístico)**: ✅ Implementación del **Landed Price** (IVA, Envío, Aduanas) y ROI de precisión (Completado).
 
 ---
 

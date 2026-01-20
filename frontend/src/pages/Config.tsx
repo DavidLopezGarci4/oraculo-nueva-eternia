@@ -16,17 +16,23 @@ const Config: React.FC = () => {
     const [mergingId, setMergingId] = useState<number | null>(null);
     const [syncingNexus, setSyncingNexus] = useState(false);
     const [showAddUserModal, setShowAddUserModal] = useState(false);
+    const [userSettings, setUserSettings] = useState<any>(null);
+    const [savingSettings, setSavingSettings] = useState(false);
+
+    const activeUserId = parseInt(localStorage.getItem('active_user_id') || '2');
 
     const fetchData = async () => {
         try {
-            const [s, l, d] = await Promise.all([
+            const [s, l, d, u] = await Promise.all([
                 getScrapersStatus(),
                 getScrapersLogs(),
-                getDuplicates()
+                getDuplicates(),
+                import('../api/admin').then(m => m.getUserSettings(activeUserId))
             ]);
             setStatuses(s);
             setLogs(l);
             setDuplicates(d);
+            setUserSettings(u);
         } catch (error) {
             console.error('Error fetching admin data:', error);
         } finally {
@@ -39,6 +45,19 @@ const Config: React.FC = () => {
         const interval = setInterval(fetchData, 10000); // Polling every 10s
         return () => clearInterval(interval);
     }, []);
+
+    const handleUpdateLocation = async (loc: string) => {
+        setSavingSettings(true);
+        try {
+            const { updateUserLocation } = await import('../api/admin');
+            await updateUserLocation(activeUserId, loc);
+            setUserSettings({ ...userSettings, location: loc });
+        } catch (error) {
+            console.error('Error updating location:', error);
+        } finally {
+            setSavingSettings(false);
+        }
+    };
 
     const handleRunScraper = async (name: string) => {
         setRunningScraper(name);
@@ -461,6 +480,51 @@ const Config: React.FC = () => {
                                             <div className="absolute right-1 top-1 h-2 w-2 bg-green-400 rounded-full"></div>
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+
+                            {/* Geographical Location (Oráculo Logístico) */}
+                            <div className="glass border border-brand-primary/30 p-6 rounded-3xl space-y-4 bg-brand-primary/5">
+                                <div className="flex items-center gap-3 text-brand-primary font-bold uppercase tracking-widest text-xs mb-2">
+                                    <Target className="h-4 w-4" />
+                                    Ubicación Geográfica (Oráculo)
+                                </div>
+                                <div className="space-y-4">
+                                    <p className="text-[10px] text-white/40 font-bold uppercase leading-tight">
+                                        Define tu contexto territorial para que el Oráculo calcule envíos, aduanas e IVA de importación automáticamente.
+                                    </p>
+
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {[
+                                            { code: 'ES', label: 'España 🇪🇸' },
+                                            { code: 'DE', label: 'Alemania 🇩🇪' },
+                                            { code: 'IT', label: 'Italia 🇮🇹' },
+                                            { code: 'FR', label: 'Francia 🇫🇷' },
+                                            { code: 'US', label: 'USA 🇺🇸' }
+                                        ].map((country) => (
+                                            <button
+                                                key={country.code}
+                                                onClick={() => handleUpdateLocation(country.code)}
+                                                disabled={savingSettings}
+                                                className={`flex items-center justify-between px-4 py-3 rounded-2xl border transition-all ${userSettings?.location === country.code
+                                                    ? 'bg-brand-primary border-brand-primary text-white shadow-lg shadow-brand-primary/20'
+                                                    : 'bg-white/5 border-white/10 text-white/50 hover:bg-white/10 hover:text-white'
+                                                    }`}
+                                            >
+                                                <span className="text-xs font-bold">{country.label}</span>
+                                                {userSettings?.location === country.code && (
+                                                    <CheckCircle2 className="h-4 w-4" />
+                                                )}
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    {savingSettings && (
+                                        <div className="flex items-center gap-2 text-[8px] font-black text-brand-primary uppercase animate-pulse justify-center">
+                                            <RefreshCw className="h-3 w-3 animate-spin" />
+                                            Sincronizando con el Núcleo...
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>

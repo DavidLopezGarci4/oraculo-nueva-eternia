@@ -20,6 +20,7 @@ class ScrapedOffer(BaseModel):
     image_url: Optional[str] = None
     ean: Optional[str] = None
     scraped_at: datetime = Field(default_factory=datetime.utcnow)
+    origin_category: str = "retail" # retail, auction
 
 class BaseScraper(ABC):
     """
@@ -35,6 +36,7 @@ class BaseScraper(ABC):
         self.blocked = False
         self.audit_logger = None # Optional AuditLogger injection
         self.max_pages = 100  # Default max pages to crawl
+        self.is_auction_source = False # True for Wallapop/eBay
 
     @abstractmethod
     async def search(self, query: str) -> List[ScrapedOffer]:

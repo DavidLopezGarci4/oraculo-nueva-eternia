@@ -68,3 +68,15 @@ export const syncNexus = async (): Promise<{ status: string; message: string }> 
     const response = await adminAxios.post('/admin/nexus/sync');
     return response.data;
 };
+
+export const updateUserLocation = async (userId: number, location: string): Promise<{ status: string; location: string }> => {
+    const response = await adminAxios.post(`/users/${userId}/location`, null, {
+        params: { location }
+    });
+    return response.data;
+};
+
+export const getUserSettings = async (userId: number): Promise<any> => {
+    const response = await adminAxios.get(`/users/${userId}`);
+    return response.data;
+};

@@ -411,6 +411,15 @@ const Catalog: React.FC = () => {
                                                 <div className="flex items-center gap-8">
                                                     <div className="text-right space-y-0.5">
                                                         <div className={`text-2xl font-black ${offer.is_best ? 'text-brand-primary' : 'text-white'}`}>{offer.price} €</div>
+                                                        {offer.landing_price && offer.landing_price !== offer.price && (
+                                                            <div className="text-[10px] font-black text-brand-secondary/80 flex flex-col items-end">
+                                                                <span className="flex items-center gap-1">
+                                                                    <Package className="h-2.5 w-2.5" />
+                                                                    {offer.landing_price} € (Landed)
+                                                                </span>
+                                                                <span className="text-[8px] text-white/20">Incl. Envío/Tasas</span>
+                                                            </div>
+                                                        )}
                                                         <div className="text-[9px] font-black uppercase tracking-tighter text-white/10">Mín. Histórico: {offer.min_historical}€</div>
                                                     </div>
 

@@ -15,6 +15,7 @@ export interface Product {
     // Financial Intelligence
     purchase_price?: number;
     market_value?: number;
+    landing_price?: number; // Phase 15 Logistics
     is_grail?: boolean;
     grail_score?: number;
     is_wish?: boolean;

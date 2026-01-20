@@ -7,6 +7,7 @@ import Collection from './pages/Collection';
 import Purgatory from './pages/Purgatory';
 import Dashboard from './pages/Dashboard';
 import Config from './pages/Config';
+import Auctions from './pages/Auctions';
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -31,6 +32,7 @@ function App() {
           <div className="max-w-7xl mx-auto w-full">
             {activeTab === 'dashboard' && <Dashboard />}
             {activeTab === 'catalog' && <Catalog />}
+            {activeTab === 'auctions' && <Auctions />}
             {activeTab === 'collection' && <Collection />}
             {activeTab === 'purgatory' && <Purgatory />}
             {activeTab === 'settings' && <Config />}

@@ -69,6 +69,7 @@ class OfferModel(Base):
     # Analytics
     min_price: Mapped[float] = mapped_column(Float, default=0.0)
     max_price: Mapped[float] = mapped_column(Float, default=0.0)
+    origin_category: Mapped[str] = mapped_column(String, default="retail") # retail, auction
     
     # Relationships
     product: Mapped["ProductModel"] = relationship("ProductModel", back_populates="offers")
@@ -121,6 +122,7 @@ class PendingMatchModel(Base):
     url: Mapped[str] = mapped_column(String, unique=True) # Avoid dupe pending items
     shop_name: Mapped[str] = mapped_column(String)
     image_url: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    origin_category: Mapped[str] = mapped_column(String, default="retail") # retail, auction
     
     # 3OX Audit Trail
     receipt_id: Mapped[Optional[str]] = mapped_column(String, nullable=True, index=True)
@@ -195,6 +197,7 @@ class UserModel(Base):
     hashed_password: Mapped[str] = mapped_column(String)
     role: Mapped[str] = mapped_column(String, default="viewer") # admin, viewer
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    location: Mapped[str] = mapped_column(String, default="ES") # e.g. 'ES', 'DE', 'IT' - Phase 15 Logistics
     
     price_alerts: Mapped[List["PriceAlertModel"]] = relationship("PriceAlertModel", back_populates="user", cascade="all, delete-orphan")
     collection_items: Mapped[List["CollectionItemModel"]] = relationship(
@@ -277,6 +280,24 @@ class SyncQueueModel(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     synced_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
+class LogisticRuleModel(Base):
+    """
+    Oráculo Logístico (Phase 15): Reglas de envío y tasas por tienda y ubicación.
+    """
+    __tablename__ = "logistic_rules"
+    
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    shop_name: Mapped[str] = mapped_column(String, index=True)
+    country_code: Mapped[str] = mapped_column(String, index=True, default="ES")
+    
+    base_shipping: Mapped[float] = mapped_column(Float, default=0.0)
+    free_shipping_threshold: Mapped[float] = mapped_column(Float, default=0.0)
+    vat_multiplier: Mapped[float] = mapped_column(Float, default=1.0) # e.g. 1.21 for ES
+    custom_fees: Mapped[float] = mapped_column(Float, default=0.0) # Gastos fijos aduana/gestión
+    strategy_key: Mapped[Optional[str]] = mapped_column(String, nullable=True) # Para lógica especial programática
+    
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
 class KaizenInsightModel(Base):
     """
     Qualitative repository for anti-bot findings, DOM changes, and improvement ideas.
@@ -312,6 +333,7 @@ __all__ = [
     "KaizenInsightModel",
     "ProductAliasModel",
     "SyncQueueModel",
+    "LogisticRuleModel",
     "DOMAIN_VERSION"
 ]
 

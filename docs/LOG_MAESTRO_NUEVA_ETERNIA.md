@@ -367,3 +367,10 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
     - **Blindaje de Cohesión**: Auditoría completa de FigureIDs (100% paridad) y saneamiento del entorno virtual `.venv`.
 - [ ] **12.1 Infiltración Amazon**: Monitoreo de precios amazon.es.
 - [ ] **12.2 Inteligencia eBay**: Conector Browse API + OAuth 2.0.
+### Fase 15: El Oráculo Logístico (Precisión de Compra)
+- **Hitos**: Implementación de `LogisticRuleModel` y `LogisticsService`. Cálculo de *Landed Price* basado en ubicación.
+- **Estado**: ✅ COMPLETADO Y REFINADO (20/01/2026)
+- **Detalle de Refinamiento**:
+    - **Fórmula de Precisión**: `(Precio + Envío) * IVA + Tasas Aduaneras`.
+    - **Estrategias**: Tarifa plana BBTS ($8) y Fantasia Personajes (5.89€ total).
+    - **UI**: Selector de ubicación en Configuración y desglose de costes en modales.

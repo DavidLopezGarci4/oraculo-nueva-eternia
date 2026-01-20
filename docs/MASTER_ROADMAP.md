@@ -140,6 +140,12 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
 *   **Identidad Espejo**: Visualización dedicada para subastas utilizando las IDs y nomenclaturas maestras de Nueva Eternia.
 *   **Filtros de Oportunidad**: Sección para ítems que solo aparecen con ofertas asociadas desde el Purgatorio (Wallapop/eBay).
 *   **Match de Mercado**: Integración total con el motor SmartMatch para unificar el catálogo global.
+### Fase 15: El Oráculo Logístico (Precisión de Compra) ✅
+*   **Identidad Geográfica**: Implementación de ubicación por usuario (`country_code`) para cálculos dinámicos.
+*   **Precio de Aterrizaje (Landed Price)**: Cálculo automático de: `(Precio + Envío) * IVA + Tasas Aduaneras`.
+*   **ROI de Realidad**: Ajuste de las métricas de inversión y revalorización basándose en el coste real de llegada a estantería.
+*   **Estrategias de Tienda**: Sistema flexible para manejar excepciones (ej: Tarifa plana de BBTS, envíos fijos de Fantasia Personajes).
+*   **Selector de Inteligencia**: UI en Configuración para cambiar la ubicación y recalcular todo el ecosistema al instante.
 
 ---
 
