@@ -80,3 +80,8 @@ export const getUserSettings = async (userId: number): Promise<any> => {
     const response = await adminAxios.get(`/users/${userId}`);
     return response.data;
 };
+
+export const unlinkOffer = async (offerId: number): Promise<{ status: string; message: string }> => {
+    const response = await adminAxios.post(`/offers/${offerId}/unlink`);
+    return response.data;
+};

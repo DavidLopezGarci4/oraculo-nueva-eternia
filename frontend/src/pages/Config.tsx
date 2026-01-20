@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Activity, Clock, AlertCircle, CheckCircle2, RefreshCw, Terminal, GitMerge, Target, Settings, Users } from 'lucide-react';
+import { Play, Activity, Clock, AlertCircle, CheckCircle2, RefreshCw, Terminal, GitMerge, Target, Settings, Users, ShieldAlert, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getScrapersStatus, getScrapersLogs, runScraper, getDuplicates, mergeProducts, syncNexus, type ScraperStatus, type ScraperLog } from '../api/admin';
+import { resetSmartMatches } from '../api/purgatory';
 import { formatDistanceToNow, format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import WallapopImporter from '../components/admin/WallapopImporter';
@@ -18,6 +19,8 @@ const Config: React.FC = () => {
     const [showAddUserModal, setShowAddUserModal] = useState(false);
     const [userSettings, setUserSettings] = useState<any>(null);
     const [savingSettings, setSavingSettings] = useState(false);
+    const [resetStep, setResetStep] = useState(0); // 0: idle, 1: first confirm, 2: second confirm
+    const [isResetting, setIsResetting] = useState(false);
 
     const activeUserId = parseInt(localStorage.getItem('active_user_id') || '2');
 
@@ -93,6 +96,21 @@ const Config: React.FC = () => {
             alert("❌ Nexus: Error al iniciar la sincronización.");
         } finally {
             setSyncingNexus(false);
+        }
+    };
+
+    const handleResetSmartMatches = async () => {
+        setIsResetting(true);
+        try {
+            await resetSmartMatches();
+            alert("🧹 Purificación completada: El SmartMatch ha sido reiniciado.");
+            setResetStep(0);
+            fetchData();
+        } catch (error) {
+            console.error('Error resetting smart matches:', error);
+            alert("❌ Error en la purificación.");
+        } finally {
+            setIsResetting(false);
         }
     };
 
@@ -527,6 +545,27 @@ const Config: React.FC = () => {
                                     )}
                                 </div>
                             </div>
+
+                            {/* Purification (Admin Power) */}
+                            <div className="glass border border-red-500/30 p-6 rounded-3xl space-y-4 bg-red-500/5 col-span-1 md:col-span-2 lg:col-span-1">
+                                <div className="flex items-center gap-3 text-red-500 font-bold uppercase tracking-widest text-xs mb-2">
+                                    <ShieldAlert className="h-4 w-4" />
+                                    Purificación del Abismo
+                                </div>
+                                <div className="space-y-4">
+                                    <p className="text-[10px] text-white/40 font-bold uppercase leading-tight">
+                                        Desvincula masivamente todos los items automatizados por SmartMatch. <span className="text-red-400">Acción irreversible que requiere doble autorización.</span>
+                                    </p>
+
+                                    <button
+                                        onClick={() => setResetStep(1)}
+                                        className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/30 py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2"
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                        PUERTA DE PURIFICACIÓN
+                                    </button>
+                                </div>
+                            </div>
                         </div>
 
                         <div className="p-8 glass border border-dashed border-white/10 rounded-[3rem] bg-brand-primary/5 flex flex-col items-center gap-4">
@@ -710,6 +749,61 @@ const Config: React.FC = () => {
                                         className="w-full py-2 text-white/30 text-xs font-bold hover:text-white transition-colors"
                                     >
                                         VOLVAR ATRÁS
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Double Confirmation Modal for Reset */}
+            <AnimatePresence>
+                {resetStep > 0 && (
+                    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => !isResetting && setResetStep(0)}
+                            className="absolute inset-0 bg-black/95 backdrop-blur-xl"
+                        />
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                            className={`relative w-full max-w-md overflow-hidden rounded-[2.5rem] border p-8 shadow-2xl ${resetStep === 1 ? 'border-orange-500/30 bg-orange-950/20' : 'border-red-500/50 bg-red-950/30'}`}
+                        >
+                            <div className="flex flex-col items-center gap-6 text-center">
+                                <div className={`h-20 w-20 rounded-full flex items-center justify-center border animate-pulse ${resetStep === 1 ? 'bg-orange-500/20 border-orange-500/50' : 'bg-red-500/20 border-red-500/80'}`}>
+                                    <ShieldAlert className={`h-10 w-10 ${resetStep === 1 ? 'text-orange-500' : 'text-red-500'}`} />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <h3 className="text-3xl font-black text-white uppercase tracking-tighter">
+                                        {resetStep === 1 ? '¿ESTÁS SEGURO?' : '¡ÚLTIMO AVISO!'}
+                                    </h3>
+                                    <p className="text-sm text-white/60 leading-relaxed font-bold">
+                                        {resetStep === 1
+                                            ? 'Esta acción devolverá todas las vinculaciones automáticas al Purgatorio. Las capturas manuales están a salvo.'
+                                            : 'Estás a un paso de reiniciar el ecosistema de SmartMatch. Esta acción no se puede deshacer.'}
+                                    </p>
+                                </div>
+
+                                <div className="grid w-full grid-cols-2 gap-4">
+                                    <button
+                                        disabled={isResetting}
+                                        onClick={() => setResetStep(0)}
+                                        className="rounded-2xl border border-white/10 bg-white/5 py-4 text-xs font-black text-white/40 hover:bg-white/10 transition-all uppercase tracking-widest"
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button
+                                        disabled={isResetting}
+                                        onClick={() => resetStep === 1 ? setResetStep(2) : handleResetSmartMatches()}
+                                        className={`rounded-2xl py-4 text-xs font-black text-white transition-all uppercase tracking-widest shadow-lg ${resetStep === 1 ? 'bg-orange-500 hover:bg-orange-600 shadow-orange-500/20' : 'bg-red-600 hover:bg-red-700 shadow-red-500/40'}`}
+                                    >
+                                        {isResetting ? 'PURIFICANDO...' : resetStep === 1 ? 'COMPRENDO' : 'PURIFICAR TODO'}
                                     </button>
                                 </div>
                             </div>

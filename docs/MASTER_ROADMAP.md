@@ -181,6 +181,14 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
 *   **Filtrado Humano Proactivo**: Toda nueva extracción fluye directamente al Purgatorio, eliminando falsos positivos automáticos. ✅
 *   **Sanación Automática**: Capacidad de revertir retroactivamente emparejamientos defectuosos. ✅
 
+### Fase 22: Unlink Control (Bastión de Justicia v2) ✅
+*   **Reversión Instantánea**: Botón de desvinculación en Catálogo para erradicar capturas erróneas. ✅
+*   **Protección de Futuro**: Limpieza de alias para evitar que el SmartMatch repita errores de vinculación conocidos. ✅
+
+### Fase 23: Blindaje de Poderes Administrativos ✅
+*   **Confidencialidad de Acciones**: Desplazamiento de herramientas críticas a la zona de Configuración. ✅
+*   **Doble Autorización**: Sistema de confirmación en dos etapas para evitar el reset accidental del ecosistema. ✅
+
 ---
 
 ## ✅ Plan de Verificación

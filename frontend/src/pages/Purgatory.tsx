@@ -19,7 +19,7 @@ import {
     ChevronRight,
     X
 } from 'lucide-react';
-import { getPurgatory, matchItem, discardItem, discardItemsBulk, getScrapersStatus, runScrapers, getScraperLogs, resetSmartMatches } from '../api/purgatory';
+import { getPurgatory, matchItem, discardItem, discardItemsBulk, getScrapersStatus, runScrapers, getScraperLogs } from '../api/purgatory';
 import axios from 'axios';
 import { useEffect } from 'react';
 
@@ -32,7 +32,6 @@ const Purgatory: React.FC = () => {
     const [selectedPendingId, setSelectedPendingId] = useState<number | null>(null);
     const [originFilter, setOriginFilter] = useState<'all' | 'retail' | 'auction'>('all');
     const [confirmScraper, setConfirmScraper] = useState<string | null>(null);
-    const [confirmReset, setConfirmReset] = useState(false);
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
     const [pendingActions, setPendingActions] = useState<any[]>(() => {
@@ -199,14 +198,6 @@ const Purgatory: React.FC = () => {
         }
     });
 
-    const resetSmartMatchesMutation = useMutation({
-        mutationFn: resetSmartMatches,
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['purgatory'] });
-            queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
-            setConfirmReset(false);
-        }
-    });
 
     // Background Sync Engine
     useEffect(() => {
@@ -314,13 +305,6 @@ const Purgatory: React.FC = () => {
                         </div>
 
                         <div className="flex items-center gap-4">
-                            <button
-                                onClick={() => setConfirmReset(true)}
-                                className="px-6 py-3 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-500 text-[10px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all shadow-lg shadow-red-500/5 group"
-                            >
-                                <RefreshCcw className="inline h-3.5 w-3.5 mr-2 group-hover:rotate-180 transition-transform duration-500" />
-                                Purificar Datos
-                            </button>
                             <div className="text-right hidden sm:block">
                                 <p className="text-[10px] font-black uppercase tracking-widest text-white/30">Estado Global</p>
                                 <p className={`text-xs font-bold ${isRunning ? 'text-green-400 animate-pulse' : 'text-white/50'}`}>
@@ -565,39 +549,6 @@ const Purgatory: React.FC = () => {
                 </div>
             )}
 
-            {/* Reset Modal */}
-            {confirmReset && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in zoom-in-95 duration-300">
-                    <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-red-500/30 bg-black/80 p-8 shadow-2xl">
-                        <div className="flex flex-col items-center gap-6 text-center">
-                            <div className="h-16 w-16 rounded-full bg-red-500/20 flex items-center justify-center border border-red-500/50 animate-pulse">
-                                <ShieldAlert className="h-8 w-8 text-red-500" />
-                            </div>
-                            <div className="space-y-2">
-                                <h3 className="text-3xl font-black text-white uppercase tracking-tighter">EL GRAN REAJUSTE</h3>
-                                <p className="text-sm text-white/50 leading-relaxed">
-                                    Esta maniobra desvinculará **todos** los items creados por el algoritmo (SmartMatch) y los devolverá al Purgatorio. <span className="text-red-400 font-bold">Tus capturas manuales no se verán afectadas.</span>
-                                </p>
-                            </div>
-                            <div className="grid w-full grid-cols-2 gap-4">
-                                <button
-                                    onClick={() => setConfirmReset(false)}
-                                    className="rounded-2xl border border-white/5 bg-white/5 py-4 text-xs font-black text-white/40 hover:bg-white/10 transition-all uppercase tracking-widest"
-                                >
-                                    Abortar
-                                </button>
-                                <button
-                                    onClick={() => resetSmartMatchesMutation.mutate()}
-                                    disabled={resetSmartMatchesMutation.isPending}
-                                    className="rounded-2xl bg-red-500 py-4 text-xs font-black text-white hover:bg-red-600 transition-all uppercase tracking-widest shadow-lg shadow-red-500/20 disabled:opacity-50"
-                                >
-                                    {resetSmartMatchesMutation.isPending ? 'PURIFICANDO...' : 'EJECUTAR RESET'}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {/* Origin Category Filter & Global Search Bar */}
             <div className={`space-y-6 transition-all duration-500 ${selectedPendingId ? 'opacity-20 grayscale pointer-events-none' : 'opacity-100'}`}>

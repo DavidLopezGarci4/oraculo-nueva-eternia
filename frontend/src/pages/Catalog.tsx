@@ -5,7 +5,7 @@ import { Package, AlertCircle, Loader2, Info, Plus, Check, ShoppingCart, Setting
 import { motion } from 'framer-motion';
 import { getCollection, toggleCollection } from '../api/collection';
 import type { Product } from '../api/collection';
-import { updateProduct } from '../api/admin';
+import { updateProduct, unlinkOffer } from '../api/admin';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { getProductPriceHistory } from '../api/products';
@@ -131,6 +131,14 @@ const Catalog: React.FC<CatalogProps> = ({ searchQuery = "" }) => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['products'] });
             setEditingProduct(null);
+        }
+    });
+
+    const unlinkMutation = useMutation({
+        mutationFn: (offerId: number) => unlinkOffer(offerId),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['product-offers', selectedProduct?.id] });
+            queryClient.invalidateQueries({ queryKey: ['products-with-offers'] });
         }
     });
 
@@ -436,14 +444,31 @@ const Catalog: React.FC<CatalogProps> = ({ searchQuery = "" }) => {
                                                         <div className="text-[9px] font-black uppercase tracking-tighter text-white/10">Mín. Histórico: {offer.min_historical}€</div>
                                                     </div>
 
-                                                    <a
-                                                        href={offer.url}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className={`flex h-12 w-12 items-center justify-center rounded-2xl transition-all border ${offer.is_best ? 'bg-brand-primary text-white border-brand-primary shadow-lg shadow-brand-primary/20' : 'bg-white/5 text-white/40 border-white/10 hover:bg-white/10 hover:text-white'}`}
-                                                    >
-                                                        <ShoppingCart className="h-5 w-5" />
-                                                    </a>
+                                                    <div className="flex items-center gap-3">
+                                                        {isAdmin && (
+                                                            <button
+                                                                onClick={() => {
+                                                                    if (confirm(`¿Arquitecto, está seguro de desterrar esta oferta de '${selectedProduct?.name}' al Purgatorio?`)) {
+                                                                        unlinkMutation.mutate(offer.id);
+                                                                    }
+                                                                }}
+                                                                disabled={unlinkMutation.isPending}
+                                                                className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-all shadow-lg"
+                                                                title="Desvincular y enviar al Purgatorio"
+                                                            >
+                                                                {unlinkMutation.isPending ? <RefreshCw className="h-5 w-5 animate-spin" /> : <RefreshCw className="h-5 w-5" />}
+                                                            </button>
+                                                        )}
+
+                                                        <a
+                                                            href={offer.url}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className={`flex h-12 w-12 items-center justify-center rounded-2xl transition-all border ${offer.is_best ? 'bg-brand-primary text-white border-brand-primary shadow-lg shadow-brand-primary/20' : 'bg-white/5 text-white/40 border-white/10 hover:bg-white/10 hover:text-white'}`}
+                                                        >
+                                                            <ShoppingCart className="h-5 w-5" />
+                                                        </a>
+                                                    </div>
                                                 </div>
                                             </div>
                                         ))}

@@ -1349,6 +1349,53 @@ async def revert_action(request: dict):
         
         return {"status": "success", "message": f"Justicia restaurada: '{history.product_name}' devuelto al Purgatorio"}
 
+@app.post("/api/offers/{offer_id}/unlink", dependencies=[Depends(verify_api_key)])
+async def unlink_offer(offer_id: int):
+    """
+    Desvincula una oferta de su producto y la devuelve al Purgatorio.
+    (Admin Only)
+    """
+    from src.domain.models import ProductAliasModel
+    with SessionCloud() as db:
+        offer = db.query(OfferModel).filter(OfferModel.id == offer_id).first()
+        if not offer:
+            raise HTTPException(status_code=404, detail="Oferta no encontrada")
+
+        product_name = offer.product.name if offer.product else "Reliquia Desconocida"
+
+        # 1. Crear item en Purgatorio
+        purgatory_item = PendingMatchModel(
+            scraped_name=product_name,
+            ean=None, 
+            price=offer.price,
+            currency=offer.currency,
+            url=offer.url,
+            shop_name=offer.shop_name,
+            image_url=None,
+            source_type=offer.source_type
+        )
+        db.add(purgatory_item)
+
+        # 2. Registrar historial
+        history = OfferHistoryModel(
+            offer_url=offer.url,
+            product_name=product_name,
+            shop_name=offer.shop_name,
+            price=offer.price,
+            action_type="UNLINKED_MANUAL_ADMIN",
+            details=json.dumps({"reason": "Desvinculación manual por el Arquitecto"})
+        )
+        db.add(history)
+
+        # 3. Eliminar Alias (para evitar que el SmartMatch lo re-vincule automáticamente)
+        db.query(ProductAliasModel).filter(ProductAliasModel.source_url == offer.url).delete()
+
+        # 4. Eliminar oferta vinculada
+        db.delete(offer)
+
+        db.commit()
+        return {"status": "success", "message": f"Justicia del Arquitecto: '{product_name}' ha sido devuelto al Purgatorio"}
+
 @app.post("/api/scrapers/run", dependencies=[Depends(verify_api_key)])
 async def run_scrapers(request: ScraperRunRequest, background_tasks: BackgroundTasks):
     """Inicia la recolección de reliquias en segundo plano (Admin Only)"""

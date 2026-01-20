@@ -817,7 +817,21 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
     - **Sanitize Purgatory**: Ejecutada migración para corregir el "ADN" de los ítems existentes de Wallapop en el Purgatorio.
     - **Routing Fix**: Ahora al vincular ítems de Wallapop, estos fluyen correctamente hacia **El Pabellón** en lugar del catálogo Retail.
 
-- [x] **11.13 Búsqueda de Doble Capa en Purgatorio (20/01/2026)**:
-    - **Desacoplamiento de Estados**: Implementado `manualSearchTerm` para separar la búsqueda del catálogo maestro de la búsqueda de la lista del Purgatorio.
-    - **UX Multi-capa**: Al iniciar una vinculación, el filtro principal se mantiene intacto pero el buscador manual se presenta limpio, evitando la persistencia de términos de búsqueda entre contextos diferentes.
     - **Foco Administrativo**: Mejorado el flujo de trabajo en el panel de Admin para una gestión de reliquias más ágil.
+
+### Fase 22: Unlink Control - Bastión de Justicia v2 (20/01/2026)
+- **Hitos**: Capacidad de revertir vinculaciones directamente desde el Catálogo.
+- **Estado**: ✅ COMPLETADO
+- **Control Total**:
+    - **Admin Unlink**: Implementada funcionalidad para que el Arquitecto pueda desvincular ofertas erróneas desde el Catálogo.
+    - **Purgatory Feedback**: Las ofertas desvinculadas regresan instantáneamente al Purgatorio como items pendientes.
+    - **Alias Cleanup**: Borrado automático del `ProductAlias` asociado a la URL desvinculada para prevenir rematches automáticos incorrectos en futuros escaneos.
+    - **Audit Log**: Registro de la acción como `UNLINKED_MANUAL_ADMIN`.
+
+### Fase 23: Admin Security Hardening (20/01/2026)
+- **Hitos**: Blindaje de acciones críticas y mejora de la jerarquía de UI.
+- **Estado**: ✅ COMPLETADO
+- **Seguridad**:
+    - **Relocalización Estratégica**: Movido el botón "Purificar Datos" (Reset SmartMatches) de la zona activa del Purgatorio a **Ajustes de Sistema** en Configuración.
+    - **Double Confirmation Pulse**: Implementada lógica de confirmación en dos pasos ("¿Estás seguro?" -> "¡Último aviso!") con cambio dinámico de color y semántica visual para evitar ejecuciones accidentales.
+    - **UX Protectora**: La nueva "Puerta de Purificación" requiere una intención clara y sostenida por parte del Arquitecto.
