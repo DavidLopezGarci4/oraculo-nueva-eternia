@@ -4,9 +4,10 @@ import guardianRoleImg from '../../assets/role-guardian.png';
 
 interface NavbarProps {
     onMenuClick: () => void;
+    showSearch?: boolean;
 }
 
-const Navbar: React.FC<NavbarProps> = ({ onMenuClick }) => {
+const Navbar: React.FC<NavbarProps> = ({ onMenuClick, showSearch = true }) => {
     return (
         <nav className="sticky top-0 z-10 flex h-16 items-center border-b border-glass-border glass px-4 md:px-6 backdrop-blur-md gap-4">
             {/* Mobile Menu Button */}
@@ -18,14 +19,16 @@ const Navbar: React.FC<NavbarProps> = ({ onMenuClick }) => {
             </button>
 
             <div className="flex items-center gap-4 flex-1">
-                <div className="relative w-full max-w-md">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
-                    <input
-                        type="text"
-                        placeholder="Buscar figuras..."
-                        className="w-full rounded-2xl bg-white/5 py-2 pl-9 pr-4 text-sm text-white border border-white/10 focus:border-brand-primary outline-none transition-all placeholder:text-white/20"
-                    />
-                </div>
+                {showSearch && (
+                    <div className="relative w-full max-w-md animate-in fade-in slide-in-from-left-4 duration-500">
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
+                        <input
+                            type="text"
+                            placeholder="Buscar figuras..."
+                            className="w-full rounded-2xl bg-white/5 py-2 pl-9 pr-4 text-sm text-white border border-white/10 focus:border-brand-primary outline-none transition-all placeholder:text-white/20"
+                        />
+                    </div>
+                )}
             </div>
 
             <div className="flex items-center gap-2 md:gap-6 shrink-0">

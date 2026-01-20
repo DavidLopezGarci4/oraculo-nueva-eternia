@@ -140,11 +140,11 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
 *   **Blindaje patrimonial**: P2P excluido de métricas de colección.
 *   **Radar de Oportunidades**: Detección de gangas por debajo del Percentil 25.
 
-### Fase 14: El Pabellón de Subastas (Wallapop & eBay) 🏗️
-*   **Segregación de ADN**: Categorización de ofertas en `Retail` vs `Auction` para preservar la pureza de precios de tienda.
-*   **Identidad Espejo**: Visualización dedicada para subastas utilizando las IDs y nomenclaturas maestras de Nueva Eternia.
-*   **Filtros de Oportunidad**: Sección para ítems que solo aparecen con ofertas asociadas desde el Purgatorio (Wallapop/eBay).
-*   **Match de Mercado**: Integración total con el motor SmartMatch para unificar el catálogo global.
+### Fase 13: El Pabellón de Subastas (Wallapop & eBay) [/]
+*   **Segregación de ADN**: Categorización de ofertas en `Retail` vs `Auction` para preservar la pureza de precios de tienda. ✅
+*   **Identidad Espejo**: Visualización dedicada para subastas utilizando las IDs y nomenclaturas maestras de Nueva Eternia. [/]
+*   **Filtros de Oportunidad**: Sección para ítems que solo aparecen con ofertas asociadas desde el Purgatorio (Wallapop/eBay). [/]
+*   **Match de Mercado**: Integración total con el motor SmartMatch para unificar el catálogo global. [/]
 ### Fase 15: El Oráculo Logístico (Precisión de Compra) ✅
 *   **Identidad Geográfica**: Implementación de ubicación por usuario (`country_code`) para cálculos dinámicos.
 *   **Precio de Aterrizaje (Landed Price)**: Cálculo automático de: `(Precio + Envío) * IVA + Tasas Aduaneras`.
@@ -160,9 +160,10 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
 *   **Gobernanza de Datos**: Sistema de bloqueo preventivo en Purgatorio y validación manual por el Arquitecto.
 
 ### Fase 18: El Motor de Inversión (DealScorer) ✅
-*   **Algoritmo Ponderado**: Cruce de MSRP, P25 y Wishlist para obtener el Opportunity Score (1-100).
-*   **Alertas de Alta Prioridad**: Notificación "Compra Obligatoria" en Telegram para el "Alpha" del mercado.
-*   **Integridad de Datos**: Persistencia del score en el flujo de SmartMatch y Purgatorio.
+*   **Algoritmo Ponderado**: Cruce de MSRP, P25 y Wishlist para obtener el Opportunity Score (1-100). ✅
+*   **Alertas de Alta Prioridad**: Notificación "Compra Obligatoria" en Telegram para el "Alpha" del mercado. ✅
+*   **Integridad de Datos**: Persistencia del score en el flujo de SmartMatch y Purgatorio. ✅
+*   **Restauración Cloud**: Sincronización masiva de inteligencia hacia Supabase. ✅
 
 ---
 

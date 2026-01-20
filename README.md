@@ -160,6 +160,8 @@ El Oráculo ahora actúa como un analista de inversiones personal. Cada oferta e
 
 Las ofertas de **90+ puntos** activan una alerta inmediata de **"Compra Obligatoria"** vía Telegram, asegurando que nunca pierdas una oportunidad de alto Alpha.
 
+*   **Sincronización Cloud Inteligente**: Sistema de paridad que restaura y recalcula scores en Supabase para mantener la inteligencia de mercado siempre disponible en la nube.
+
 ---
 
 > **Nota del Oráculo**: "Lo que no es seguro, al Purgatorio. Lo que es verdad, a la Fortaleza."

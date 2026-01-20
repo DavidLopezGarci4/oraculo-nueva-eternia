@@ -150,8 +150,13 @@ class ScrapingPipeline:
                 # c. Check Active Links (Update Logic)
                 if url_str in existing_offers:
                     existing_offer = existing_offers[url_str]
-                    # logger.info(f"🔗 Update: {offer.get('product_name')}")
-                    
+                    # --- PHASE 18: DEAL SCORER (UPDATE SCORE) ---
+                    # We assume user_id 2 for location/wishlist check
+                    user_location = "ES" # Default or inject from context
+                    landed_price = LogisticsService.get_landing_price(offer.get('price'), offer.get('shop_name'), user_location)
+                    is_wish = any(ci.owner_id == 2 and not ci.acquired for ci in existing_offer.product.collection_items)
+                    opp_score = DealScorer.calculate_score(existing_offer.product, landed_price, is_wish)
+
                     # Update without committing yet
                     repo.add_offer(existing_offer.product, {
                         "shop_name": offer.get('shop_name'),
@@ -159,10 +164,9 @@ class ScrapingPipeline:
                         "currency": offer.get('currency'), 
                         "url": url_str,
                         "is_available": offer.get('is_available') if offer.get('is_available') is not None else True,
-                        "source_type": offer.get('source_type', 'Retail')
+                        "source_type": offer.get('source_type', 'Retail'),
+                        "opportunity_score": opp_score
                     }, commit=False)
-                    
-                    # Sentinel/Audit logic omitted for speed in updates or can be added selectively
                     continue
 
                 # d. Check Pending (Update price if changed)

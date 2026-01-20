@@ -25,11 +25,14 @@ class NexusService:
             # 2. Migrate Excel to DB
             logger.info("📡 Nexus Step 2: Injecting data into Oracle DB...")
             db = SessionCloud()
-            excel_path = os.path.join(settings.BASE_DIR, "data", "MOTU", "lista_MOTU.xlsx")
+            
+            # Fix: Calculate BASE_DIR if missing from settings
+            base_dir = getattr(settings, "BASE_DIR", os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
+            excel_path = os.path.join(base_dir, "src", "data", "MOTU", "lista_MOTU.xlsx")
             
             if not os.path.exists(excel_path):
-                # Try fallback path
-                excel_path = "c:/Users/dace8/OneDrive/Documentos/Antigravity/oraculo-nueva-eternia/data/MOTU/lista_MOTU.xlsx"
+                # Fallback to absolute path provided by USER environment
+                excel_path = "c:/Users/dace8/OneDrive/Documentos/Antigravity/oraculo-nueva-eternia/src/data/MOTU/lista_MOTU.xlsx"
             
             migrate_excel_to_db(excel_path, db)
             db.close()

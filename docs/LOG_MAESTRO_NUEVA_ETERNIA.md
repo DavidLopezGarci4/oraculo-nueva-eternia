@@ -776,3 +776,9 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
     - **Compra Obligatoria**: Sistema de alertas críticas (>90 pts + 20% ahorro MSRP) con notificaciones vía Telegram.
     - **Integración Total**: El `ScrapingPipeline` ahora inyecta inteligencia financiera en cada hallazgo.
     - **Transparencia**: Exposición del score en Purgatorio, Radar y endpoints de Dashboard.
+
+- [x] **11.9 Restauración de Inteligencia Cloud & UI Polish (20/01/2026)**:
+    - **Saneamiento Cloud**: Reparada discrepancia de esquemas (`source_type` vs `origin_category`) en Supabase.
+    - **Migración Progresiva**: Añadida columna `opportunity_score` a la nube y ejecutada restauración masiva (480 ofertas procesadas).
+    - **Nexus Refinement**: Corregida detección de `BASE_DIR` y limpieza de precios con símbolos de moneda (ej: $14.99).
+    - **Simetría Visual**: Eliminada duplicidad de buscadores en el Purgatorio mediante renderizado condicional del Navbar.

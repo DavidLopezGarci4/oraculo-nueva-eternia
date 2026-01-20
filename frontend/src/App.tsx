@@ -26,7 +26,10 @@ function App() {
 
       <div className="flex flex-1 flex-col overflow-hidden relative w-full">
         {/* Barra Superior */}
-        <Navbar onMenuClick={() => setIsMobileMenuOpen(prev => !prev)} />
+        <Navbar
+          onMenuClick={() => setIsMobileMenuOpen(prev => !prev)}
+          showSearch={activeTab !== 'purgatory'}
+        />
 
         {/* Contenido Principal con Scroll */}
         <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-24 md:pb-6 scroll-smooth">

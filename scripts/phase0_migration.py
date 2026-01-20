@@ -19,6 +19,17 @@ from src.domain.models import (
     Base, ProductModel, ProductAliasModel, CollectionItemModel, UserModel
 )
 
+def clean_price(val):
+    """Limpia símbolos de moneda y convierte a float."""
+    if pd.isna(val): return 0.0
+    if isinstance(val, (int, float)): return float(val)
+    # Quitar $14.99 -> 14.99, tildes, símbolos, etc.
+    s = str(val).replace('$', '').replace('€', '').replace(',', '').strip()
+    try:
+        return float(s)
+    except:
+        return 0.0
+
 def migrate_excel_to_db(excel_path: str, session):
     """
     Core migration logic.
@@ -108,9 +119,9 @@ def migrate_excel_to_db(excel_path: str, session):
                             category="Masters of the Universe",
                             sub_category=sub_category,
                             variant_name=str(row.get('Wave', '')), # Using Wave as variant context
-                            retail_price=float(row.get('Retail', 0.0)) if pd.notna(row.get('Retail')) else 0.0,
-                            avg_market_price=float(row.get('Avg', 0.0)) if pd.notna(row.get('Avg')) else 0.0, # Mapeo de Columna Excel
-                            p25_price=float(row.get('P25', 0.0)) if pd.notna(row.get('P25')) else 0.0         # Mapeo de Columna Excel
+                            retail_price=clean_price(row.get('Retail')),
+                            avg_market_price=clean_price(row.get('Avg')), 
+                            p25_price=clean_price(row.get('P25'))
                         )
                         session.add(product)
                         session.flush() # Get ID
@@ -121,6 +132,11 @@ def migrate_excel_to_db(excel_path: str, session):
                             product.figure_id = figure_id
                         if not product.image_url:
                             product.image_url = row.get('Image URL')
+                        
+                        # Phase 18: Update intelligence fields even if product exists
+                        product.retail_price = clean_price(row.get('Retail'))
+                        product.avg_market_price = clean_price(row.get('Avg'))
+                        product.p25_price = clean_price(row.get('P25'))
 
                     # 2. ALIAS LAYER
                     if detail_link:
