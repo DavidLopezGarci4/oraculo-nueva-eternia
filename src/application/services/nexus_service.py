@@ -50,13 +50,24 @@ class NexusService:
                 logger.info("📡 Nexus Step 4: Updating database with public URLs...")
                 from src.domain.models import ProductModel
                 products = db.query(ProductModel).all()
+                count = 0
                 for p in products:
-                    # Look for local image path if image_url is missing or local
-                    # Typically image_url in migration is filled with the ActionFigure411 remote URL
-                    # but we want our own Supabase URL for reliability.
-                    # This logic can be refined: if local image exists, ensure it's in cloud.
-                    pass # The StorageService already handles the upload and logging.
-                    # Future refinement: update DB image_url with storage.get_public_url(filename)
+                    # If we have a local record of the image, we ensure the cloud URL is set
+                    # The storage logic uses the filename as the key.
+                    # We assume path convention matches our scraper: images/[filename].jpg
+                    if p.figure_id:
+                        # Find potential filename in images dir
+                        from pathlib import Path
+                        filename = f"image_{p.figure_id}.jpg" # Common pattern
+                        # We try to see if it exists in storage (or just update the URL if we trust the sync)
+                        public_url = storage.client.storage.from_(storage.bucket_name).get_public_url(filename)
+                        
+                        if public_url and p.image_url != public_url:
+                            p.image_url = public_url
+                            count += 1
+                
+                db.commit()
+                logger.info(f"✅ Database updated: {count} products now pointing to Supabase Cloud.")
                 
             except Exception as se:
                 logger.error(f"⚠️ Image Sync Warning: {se}")

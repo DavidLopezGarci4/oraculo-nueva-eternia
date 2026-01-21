@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const API_BASE = '/api';
 // Nota: En una app real, esto vendría de un estado global o .env
-const ORACULO_API_KEY = 'eternia-shield-2026';
+const ORACULO_API_KEY = import.meta.env.VITE_ORACULO_API_KEY || 'eternia-shield-2026';
 
 const adminHeaders = {
     headers: {

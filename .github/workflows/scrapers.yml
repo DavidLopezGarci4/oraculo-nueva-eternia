@@ -28,7 +28,16 @@ jobs:
           pip install -r requirements.txt
           playwright install chromium
           
-      - name: Run Scrapers (with Kaizen Stagger & Auto-Migration)
+      - name: Nexo Maestro - Master Catalog & Cloud Image Sync
+        env:
+          SUPABASE_DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          PYTHONPATH: .
+        run: |
+          python -c "import asyncio; from src.application.services.nexus_service import NexusService; asyncio.run(NexusService.sync_catalog())"
+
+      - name: Run Scrapers (Market Incursion)
         env:
           SUPABASE_DATABASE_URL: ${{ secrets.DATABASE_URL }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -39,4 +48,4 @@ jobs:
           DELAY=60
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then DELAY=0; fi
           
-          python src/application/jobs/daily_scan.py --shops "${{ github.event.inputs.shops }}" --random-delay $DELAY
+          python src/application/jobs/daily_scan.py --shops "${{ github.event.inputs.shops }}" --random-delay $DELAY --no-nexus

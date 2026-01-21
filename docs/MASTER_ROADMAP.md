@@ -42,7 +42,14 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
     - Integración nativa de Wallapop hacia El Pabellón.
 - [x] **Phase 25: API Security & Ghost Sync (20/01/2026)**:
     - Refactorización del motor de persistencia y seguridad API.
-- [x] **Phase 26: Nexo Maestro Cloud & Supabase Images (20/01/2026)**:
+- [x] **Phase 26: Nexo Maestro Robustness & Cloud Sync** ✅
+- [x] **Phase 27: Supabase Security Hardening (RLS)** ✅
+    - [x] Activación de Row Level Security en 15 tablas públicas.
+    - [x] Aislamiento de la vía pública de acceso a datos.
+- [x] **Phase 28: Cloud Sync & Catalog Resurrect** ✅
+    - [x] Unificación de API Keys en Purgatorio para desbloqueo de búfer.
+    - [x] Refactorización de GitHub Actions para soporte de Storage Secrets.
+    - [x] Actualización automática de URLs públicas en la base de datos.
     - **Robustez**: Corrección de puntería en el scraper de catálogo maestro.
     - **Cloud Architecture**: Sincronización automática de imágenes locales a Supabase Storage.
     - **Acceso Universal**: Transición a URLs públicas para visualización cross-device sin PC encendido.
@@ -61,6 +68,12 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
     - **Patrón Repositorio**: Desacoplar la lógica de negocio de la base de datos (SQLite/Supabase).
     - **Arquitectura de Cebolla (Onion)**: Las dependencias solo apuntan hacia adentro (Dominio -> Aplicación -> Infraestructura).
     - **Inyección de Dependencias**: Facilitar el testing mediante el paso de servicios e interfaces.
+- [x] **Phase 27: Supabase RLS Hardening (21/01/2026)**:
+    - Blindaje de 15 tablas críticas mediante políticas RLS para cerrar la puerta pública de Supabase.
+- [x] **Phase 28: Sync Buffer & Cloud Visibility Fix (21/01/2026)**:
+    - **Sync Hub**: Reparación de la API Key en el Purgatorio (desbloqueo del búfer de 153 acciones).
+    - **Visibility**: Automatización de URLs públicas en el Nexo Maestro para visualización cross-device.
+    - **CI/CD Robustness**: Inyección de Supabase Storage Secrets en GitHub Actions.
 *   **Estructura `src/`**: Separación en `core` (config), `domain` (entidades), `application` (casos de uso), `infrastructure` (DB/Scrapers) y `interfaces` (Web/API).
 *   **Hito de Consistencia**: Refactorización total de imports y eliminación de acoplamientos circulares.
 
