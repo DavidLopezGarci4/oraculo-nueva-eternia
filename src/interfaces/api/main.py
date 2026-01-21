@@ -860,7 +860,7 @@ async def get_scrapers_logs():
     """Retorna el historial de ejecuciones (Admin Only)"""
     from sqlalchemy import desc
     with SessionCloud() as db:
-        return db.query(ScraperExecutionLogModel).order_by(desc(ScraperExecutionLogModel.start_time)).limit(50).all()
+        return db.query(ScraperExecutionLogModel).order_by(desc(ScraperExecutionLogModel.start_time)).limit(75).all()
 
 @app.get("/api/dashboard/stats")
 async def get_dashboard_stats(user_id: int = 1):

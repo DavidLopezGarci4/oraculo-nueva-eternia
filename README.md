@@ -167,6 +167,7 @@ TELEGRAM_BOT_TOKEN=tu_token
 *   **Fase 26 (Nexo Maestro Cloud)**: ✅ Robustez del scraper de catálogo y sincronización de imágenes en Supabase Storage para acceso universal (Completado).
 *   **Fase 27 (Supabase Hardening)**: ✅ Activación de Row Level Security (RLS) y blindaje de la API pública de Supabase (Completado).
 *   **Fase 28 (Sync Engine Resurrect)**: ✅ Reparación del búfer de sincronización estancado y automatización total de imágenes en CI/CD (Completado).
+*   **Fase 29 (Log & Visibility Fix)**: ✅ Recuperación masiva de logs internacionales y blindaje del ciclo de escaneo diario (Completado).
 
 
 ## 6. El Motor de Inversión (DealScorer)

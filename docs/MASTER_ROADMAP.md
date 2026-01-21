@@ -51,6 +51,8 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
     - [x] Refactorización de GitHub Actions para soporte de Storage Secrets.
     - [x] Actualización automática de URLs públicas en la base de datos.
     - **Robustez**: Corrección de puntería en el scraper de catálogo maestro.
+    - **Fase 28: Sync Engine Resurrect** ✅ - Reparación del búfer de sincronización estancado y automatización total de imágenes en CI/CD. (Completado).
+- **Fase 29: Log Diagnostics & International Visibility** ✅ - Recuperación de visibilidad de scrapers internacionales y blindaje del motor de escaneo diario. (Completado).
     - **Cloud Architecture**: Sincronización automática de imágenes locales a Supabase Storage.
     - **Acceso Universal**: Transición a URLs públicas para visualización cross-device sin PC encendido.
     - **Importación & De-duplicación**: Se descargarán las tablas de Supabase (`users`, `roles`, `collection_items`). Se aplicará una lógica de colisión para evitar duplicados y la creación de items "fantasma".

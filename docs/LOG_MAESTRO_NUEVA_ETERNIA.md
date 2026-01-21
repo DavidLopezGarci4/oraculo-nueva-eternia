@@ -850,3 +850,12 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
     - **Relink Engine**: Implementado buscador de productos integrado en el Dashboard para re-asignar ofertas mal vinculadas sin navegar a otras páginas.
     - **Flyover Unlink**: Botón de descarte inmediato (Trash2) que envía ofertas del Dashboard de vuelta al Purgatorio.
     - **Backend Redirection**: Nuevo endpoint `/api/offers/{id}/relink` para el manejo atómico de redirecciones y actualización de alias.
+
+### Fase 29: Log Diagnostics & International Visibility - Operación Vigía Continental (22/01/2026)
+- **Hitos**: Recuperación de visibilidad de scrapers internacionales y blindaje del motor de escaneo.
+- **Estado**: ✅ COMPLETADO
+- **Cambios Críticos**:
+    - **Bitácora Extendida**: Ampliado el límite de la API `/api/scrapers/logs` de 50 a **75 registros** (historial semanal optimizado).
+    - **Blindaje del Ciclo**: Implementada capa de robustez doble en `daily_scan.py` para asegurar que el fallo de un scraper individual no detenga la ejecución global.
+    - **Reordenamiento Táctico**: Movido **DeToyboys** al final de la secuencia de ejecución para maximizar la estabilidad del flujo inicial.
+    - **Optimización de Infra**: Refactorizadas las importaciones y añadidos logs de "latido" (Heartbeat) para un monitoreo preciso en CI/CD.
