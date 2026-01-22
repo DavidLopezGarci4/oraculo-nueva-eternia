@@ -1104,14 +1104,27 @@ const Purgatory: React.FC = () => {
                                     <ShieldAlert className="h-6 w-6 text-red-400" />
                                     <h3 className="text-2xl font-black text-white uppercase tracking-tight">Sala de Autopsia Forense</h3>
                                 </div>
-                                <p className="text-xs text-white/40 uppercase tracking-widest font-bold">Inspección de acciones estancadas en el búfer</p>
+                                <p className="text-xs text-white/40 uppercase tracking-widest font-bold">Inspección de acciones estancadas en el búfer ({failedActions.length} items)</p>
                             </div>
-                            <button
-                                onClick={() => setShowForensic(false)}
-                                className="h-12 w-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40 hover:text-white transition-all"
-                            >
-                                <X className="h-6 w-6" />
-                            </button>
+                            <div className="flex items-center gap-3">
+                                {failedActions.length > 1 && (
+                                    <button
+                                        onClick={() => {
+                                            setFailedActions([]);
+                                            // Removing from failures allows the sync engine to pick them up in the next cycle
+                                        }}
+                                        className="px-6 py-2.5 rounded-2xl bg-brand-primary/20 border border-brand-primary/30 text-brand-primary text-[10px] font-black uppercase tracking-widest hover:bg-brand-primary hover:text-white transition-all"
+                                    >
+                                        Reintentar Todo ({failedActions.length})
+                                    </button>
+                                )}
+                                <button
+                                    onClick={() => setShowForensic(false)}
+                                    className="h-12 w-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40 hover:text-white transition-all"
+                                >
+                                    <X className="h-6 w-6" />
+                                </button>
+                            </div>
                         </div>
 
                         <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
@@ -1130,16 +1143,16 @@ const Purgatory: React.FC = () => {
                                                         <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-tighter ${f.action.type === 'match' ? 'bg-brand-primary text-white' : 'bg-orange-500 text-white'}`}>
                                                             {f.action.type === 'match' ? 'VINCULACIÓN' : 'DESCARTE'}
                                                         </span>
-                                                        <span className="text-[10px] font-bold text-white/20 font-mono">ID: {f.action.id}</span>
+                                                        <span className="text-[10px] font-bold text-white/20 font-mono">ID ACCIÓN: {f.action.id}</span>
                                                     </div>
 
                                                     <div className="space-y-1">
-                                                        <h4 className="text-lg font-bold text-white leading-tight truncate" title={f.action.scrapedName || 'Sin Nombre'}>
-                                                            {f.action.scrapedName || 'Ítem sin nombre (Carga previa)'}
+                                                        <h4 className="text-lg font-bold text-white leading-tight truncate" title={f.action.scrapedName || f.action.action_url || 'Sin Nombre'}>
+                                                            {f.action.scrapedName || (f.action.action_url ? `URL: ${f.action.action_url.substring(0, 50)}...` : 'Ítem sin nombre (Carga previa)')}
                                                         </h4>
                                                         <div className="flex items-center gap-4">
-                                                            {f.action.action_url && (
-                                                                <a href={f.action.action_url} target="_blank" rel="noreferrer" className="text-[10px] font-bold text-brand-primary hover:underline flex items-center gap-1">
+                                                            {(f.action.action_url || f.url) && (
+                                                                <a href={f.action.action_url || f.url} target="_blank" rel="noreferrer" className="text-[10px] font-bold text-brand-primary hover:underline flex items-center gap-1">
                                                                     <ExternalLink className="h-3 w-3" /> Ver Oferta Original
                                                                 </a>
                                                             )}

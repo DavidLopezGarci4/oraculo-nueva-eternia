@@ -97,6 +97,11 @@ def _sync_engine(engine, label: str):
                  logger.info(f"[{label}] Adding 'source_type' to blackcluded_items...")
                  conn.execute(text("ALTER TABLE blackcluded_items ADD COLUMN source_type VARCHAR(50) DEFAULT 'Retail'"))
                  conn.commit()
+
+             if "reason" not in columns_black:
+                 logger.info(f"[{label}] Adding 'reason' to blackcluded_items...")
+                 conn.execute(text("ALTER TABLE blackcluded_items ADD COLUMN reason TEXT"))
+                 conn.commit()
                  
              if "validation_status" not in columns_black:
                  logger.info(f"[{label}] Adding 'validation_status' to blackcluded_items...")

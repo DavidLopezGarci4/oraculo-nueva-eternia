@@ -242,6 +242,7 @@ class BlackcludedItemModel(Base):
     url: Mapped[str] = mapped_column(String, unique=True, index=True)
     scraped_name: Mapped[str] = mapped_column(String)
     source_type: Mapped[str] = mapped_column(String, default="Retail")
+    reason: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     
     # Validation flags
     validation_status: Mapped[str] = mapped_column(String, default="VALIDATED")

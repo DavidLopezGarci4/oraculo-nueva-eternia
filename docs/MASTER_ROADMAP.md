@@ -242,6 +242,8 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
 ### Fase 31: Debugging Sync Buffer Stagnation ✅
 *   **Motor Non-Blocking**: Sincronización resiliente que no se detiene ante fallos puntuales. ✅
 *   **Sala de Autopsia Forense**: Interfaz de inspección de fallos y manual intervention. ✅
+*   **Rescate de Datos**: Implementación de metadatos (URL/Name) en acciones de búfer y botón de "Reintentar Todo". ✅
+*   **Idempotencia Backend**: Refuerzo de esquemas de base de datos (columna `reason`) y manejo de conflictos 409. ✅
 
 ---
 

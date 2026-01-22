@@ -874,5 +874,6 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
 - **Innovaciones Forenses**:
     - **Non-Blocking Sync**: El motor de persistencia ahora salta los ítems fallidos y continúa con el resto de la cola, evitando bloqueos por "items envenenados".
     - **Forensic Inspection Panel**: Nueva UI para inspeccionar fallos atómicos, ver logs de error del servidor y acceder a las URLs de origen.
-    - **Intervención Directa**: Añadidas funciones de `Reintentar` y `Devolver al Abismo` (limpieza de estado fantasma) para items atascados.
+    - **Bulk Rescue**: Añadido botón de `Reintentar Todo` para procesar fallos masivos (como los 127 items atrapados por desajuste de esquema).
+    - **Esquema Expandido**: Añadido soporte para `reason` en `BlackcludedItemModel` y actualización de `universal_migrator.py` para asegurar consistencia en local y cloud.
     - **Backend Robustness**: Endpoints de `/match` y `/discard` ahora son idempotentes y manejan conflictos de integridad (409 Conflict) con logs descriptivos.
