@@ -142,7 +142,11 @@ async def get_users():
     with SessionCloud() as db:
         users = db.query(UserModel).all()
         return [{"id": u.id, "username": u.username, "role": u.role} for u in users]
-
+@app.get("/api/products", response_model=List[ProductOutput])
+async def get_products():
+    """Retorna el catálogo maestro completo para búsquedas en el Purgatorio."""
+    with SessionCloud() as db:
+        query = select(ProductModel)
         result = db.execute(query)
         products = result.scalars().all()
         return products

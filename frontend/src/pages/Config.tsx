@@ -253,31 +253,7 @@ const Config: React.FC = () => {
                                 </button>
                             </motion.div>
 
-                            <motion.div
-                                whileHover={{ scale: 1.02 }}
-                                className="glass border border-white/10 p-6 rounded-2xl flex flex-col gap-4"
-                            >
-                                <div className="flex items-center justify-between">
-                                    <div className="h-10 w-10 bg-white/5 rounded-lg flex items-center justify-center">
-                                        <span className="text-orange-400 font-bold">A</span>
-                                    </div>
-                                    <span className={`px-2 py-0.5 rounded-full text-[10px] uppercase font-bold border ${getStatusVariant(statuses.find(s => s.spider_name === 'amazon')?.status || 'idle')}`}>
-                                        {statuses.find(s => s.spider_name === 'amazon')?.status || 'Inactivo'}
-                                    </span>
-                                </div>
-                                <div>
-                                    <h3 className="font-bold text-white">Amazon</h3>
-                                    <p className="text-white/40 text-xs">Vigilancia centinela.</p>
-                                </div>
-                                <button
-                                    onClick={() => handleRunScraper('amazon')}
-                                    disabled={runningScraper === 'amazon'}
-                                    className="w-full bg-white/5 hover:bg-white/10 text-white py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 border border-white/10"
-                                >
-                                    {runningScraper === 'amazon' ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4 fill-current text-white/40" />}
-                                    Escanear
-                                </button>
-                            </motion.div>
+
                         </div>
 
                         {/* Individual Scrapers Grid */}
@@ -287,7 +263,7 @@ const Config: React.FC = () => {
                                 Estados Individuales
                             </h3>
                             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                                {statuses.filter(s => s.spider_name !== 'all' && s.spider_name !== 'harvester' && s.spider_name !== 'amazon').map((s) => (
+                                {statuses.filter(s => s.spider_name !== 'all' && s.spider_name !== 'harvester').map((s) => (
                                     <div key={s.spider_name} className="glass border border-white/5 p-3 rounded-xl flex flex-col gap-2 relative">
                                         <div className="flex items-center justify-between">
                                             <span className="text-[10px] font-bold text-white/70 uppercase tracking-wider">{s.spider_name}</span>
