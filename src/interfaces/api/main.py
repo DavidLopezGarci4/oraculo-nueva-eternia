@@ -67,7 +67,7 @@ from src.infrastructure.scrapers.harvester import run_harvester
 from src.domain.models import ProductModel, PendingMatchModel, ScraperStatusModel, BlackcludedItemModel, OfferModel, ScraperExecutionLogModel, CollectionItemModel, OfferHistoryModel, UserModel, LogisticRuleModel
 from src.application.services.logistics_service import LogisticsService
 import json
-from sqlalchemy import select
+from sqlalchemy import select, and_, or_, func
 
 class CollectionToggleRequest(BaseModel):
     product_id: int
@@ -1124,7 +1124,6 @@ async def get_dashboard_hall_of_fame(user_id: int = 1):
     Fase 6.3: Retorna los 'Griales del Reino' (Top Valor) y 'Potencial Oculto' (Top ROI).
     """
     from src.domain.models import CollectionItemModel, OfferModel, ProductModel
-    from sqlalchemy import func
     
     with SessionCloud() as db:
         # 1. Obtener todos los items de colección filtrados por el usuario
