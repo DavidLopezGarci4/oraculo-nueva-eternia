@@ -885,3 +885,13 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
     - **Search Limit Expansion**: Incrementado el límite de resultados en el buscador manual de 10 a **20 ítems**. Esto soluciona la invisibilidad de variantes para personajes populares como He-Man o Skeletor.
     - **UI Scroll Optimization**: Expandida la altura máxima del contenedor de resultados de `max-h-60` a `max-h-[400px]` para permitir una navegación cómoda entre las 20 opciones.
     - **Frontend Refactor**: Actualizada la lógica de filtrado en `Purgatory.tsx` para manejar la nueva cuota de resultados.
+
+### Fase 33: Decommissioning Scrapers - Poda de los Páramos (22/01/2026)
+- **Hitos**: Eliminación de motores de captura obsoletos y limpieza de base de datos.
+- **Estado**: ✅ COMPLETADO
+- **Acciones de Purificación**:
+    - **Scrapper Removal**: Eliminados físicamente `motuclassics_de_scraper.py` y `vendiloshop_scraper.py`.
+    - **Orchestration Cleanup**: Retirados de `daily_scan.py`, `main.py` (API) y `simulated_connection.py`.
+    - **DB Exorcism**: Ejecutado `cleanup_decommissioned_shops.py` para purgar registros de `scraper_status` y `scraper_execution_logs`.
+    - **UI Streamlining**: El panel de incursión individual ahora muestra solo **13 tiendas activas**, eliminando el ruido visual de tiendas inactivas.
+    - **Logistics Update**: Eliminadas las reglas de importación correspondientes en `seed_logistics.py`.

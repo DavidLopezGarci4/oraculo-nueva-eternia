@@ -23,8 +23,6 @@ from src.infrastructure.scrapers.electropolis_scraper import ElectropolisScraper
 
 # Phase 8.4: European Expansion Scrapers
 from src.infrastructure.scrapers.detoyboys_scraper import DeToyboysNLScraper
-from src.infrastructure.scrapers.motuclassics_de_scraper import MotuClassicsDEScraper
-from src.infrastructure.scrapers.vendiloshop_scraper import VendiloshopITScraper
 
 # Phase 8.4b: Advanced Expansion Scrapers
 from src.infrastructure.scrapers.toymi_scraper import ToymiEUScraper
@@ -134,8 +132,6 @@ async def run_daily_scan(progress_callback=None):
             PixelatoyScraper(),
             ElectropolisScraper(),
             # European Expansion
-            MotuClassicsDEScraper(),
-            VendiloshopITScraper(),
             ToymiEUScraper(),
             Time4ActionToysDEScraper(),
             BigBadToyStoreScraper(),

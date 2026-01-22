@@ -816,8 +816,6 @@ def run_scraper_task(scraper_name: str = "harvester", trigger_type: str = "manua
             
             # Phase 8. European Expansion
             from src.infrastructure.scrapers.detoyboys_scraper import DeToyboysNLScraper
-            from src.infrastructure.scrapers.motuclassics_de_scraper import MotuClassicsDEScraper
-            from src.infrastructure.scrapers.vendiloshop_scraper import VendiloshopITScraper
             from src.infrastructure.scrapers.toymi_scraper import ToymiEUScraper
             from src.infrastructure.scrapers.time4actiontoys_scraper import Time4ActionToysDEScraper
             from src.infrastructure.scrapers.bbts_scraper import BigBadToyStoreScraper
@@ -835,8 +833,6 @@ def run_scraper_task(scraper_name: str = "harvester", trigger_type: str = "manua
                 "kidinn": KidInnSpider(),
                 # European Expansion
                 "DeToyboys": DeToyboysNLScraper(),
-                "MotuClassicsDE": MotuClassicsDEScraper(),
-                "VendiloshopIT": VendiloshopITScraper(),
                 "ToymiEU": ToymiEUScraper(),
                 "Time4ActionToysDE": Time4ActionToysDEScraper(),
                 "BigBadToyStore": BigBadToyStoreScraper()

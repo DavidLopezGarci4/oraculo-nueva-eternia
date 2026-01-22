@@ -7,7 +7,6 @@ from typing import Dict, List
 
 from src.infrastructure.scrapers.bbts_scraper import BigBadToyStoreScraper
 from src.infrastructure.scrapers.detoyboys_scraper import DeToyboysNLScraper
-from src.infrastructure.scrapers.vendiloshop_scraper import VendiloshopITScraper
 from src.infrastructure.scrapers.action_toys_scraper import ActionToysScraper
 from src.infrastructure.scrapers.toymi_scraper import ToymiEUScraper
 
@@ -60,7 +59,6 @@ async def run_simulation():
     scrapers_to_test = [
         BigBadToyStoreScraper,
         DeToyboysNLScraper,
-        VendiloshopITScraper,
         ActionToysScraper,
         ToymiEUScraper
     ]

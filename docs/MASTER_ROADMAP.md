@@ -249,6 +249,11 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
 *   **Visibilidad Extendida**: Ampliación del límite de búsqueda manual de 10 a 20 resultados simultáneos. ✅
 *   **Optimización UI**: Reajuste de la altura del contenedor de búsqueda para mejorar el scroll en figuras con múltiples variantes. ✅
 
+### Fase 33: Decommissioning Scrapers ✅
+*   **Limpieza de Motores**: Eliminación de scrapers obsoletos (MotuClassicsDE, VendiloshopIT) para optimizar recursos. ✅
+*   **Santuario de Datos**: Preservación de ofertas históricas vinculadas mientras se limpian las bitácoras dinámicas. ✅
+*   **Optimización UI**: Reducción del panel de incursión individual de 15 a 13 tiendas activas. ✅
+
 ---
 
 ## ✅ Plan de Verificación
