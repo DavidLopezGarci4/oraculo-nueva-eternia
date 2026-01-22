@@ -702,14 +702,6 @@ async def discard_purgatory(request: PurgatoryDiscardRequest):
             db.rollback()
             logger.error(f"Error inesperado en discard_purgatory: {e}")
             raise HTTPException(status_code=500, detail=str(e))
-            action_type="DISCARDED",
-            details=json.dumps({"reason": request.reason, "original_item": item_data})
-        )
-        db.add(history)
-
-        db.delete(item)
-        db.commit()
-        return {"status": "success", "message": "Reliquia desterrada al abismo y registrada"}
 
 @app.post("/api/purgatory/discard/bulk", dependencies=[Depends(verify_api_key)])
 async def discard_purgatory_bulk(request: PurgatoryBulkDiscardRequest):
