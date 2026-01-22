@@ -129,6 +129,11 @@ class ScrapingPipeline:
             # Pre-fetch all products for matching (only if needed)
             all_products = repo.get_all(limit=5000)
 
+            # --- PHASE 34: LOGISTICS PRE-CACHE (Eliminate N+1) ---
+            rules = db.query(LogisticRuleModel).all()
+            rules_map = {f"{r.shop_name}_{r.country_code}": r for r in rules}
+            user_location = "ES" # Default
+
             logger.info(f"📊 Stats: {len(offers)} incoming | {len(existing_offers)} active links | {len(existing_pending_urls)} in Purgatory | {len(blocked_urls)} blocked")
 
             processed_urls_in_batch = set()
@@ -152,8 +157,7 @@ class ScrapingPipeline:
                     existing_offer = existing_offers[url_str]
                     # --- PHASE 18: DEAL SCORER (UPDATE SCORE) ---
                     # We assume user_id 2 for location/wishlist check
-                    user_location = "ES" # Default or inject from context
-                    landed_price = LogisticsService.get_landing_price(offer.get('price'), offer.get('shop_name'), user_location)
+                    landed_price = LogisticsService.optimized_get_landing_price(offer.get('price'), offer.get('shop_name'), user_location, rules_map)
                     is_wish = any(ci.owner_id == 2 and not ci.acquired for ci in existing_offer.product.collection_items)
                     opp_score = DealScorer.calculate_score(existing_offer.product, landed_price, is_wish)
 
@@ -227,7 +231,7 @@ class ScrapingPipeline:
                         )
                         
                         # --- PHASE 18: DEAL SCORER (OPPORTUNITY SCORE) ---
-                        landed_price = LogisticsService.get_landing_price(offer.get('price'), offer.get('shop_name'), "ES")
+                        landed_price = LogisticsService.optimized_get_landing_price(offer.get('price'), offer.get('shop_name'), user_location, rules_map)
                         is_wish = any(ci.owner_id == 2 and not ci.acquired for ci in best_match_product.collection_items)
                         opp_score = DealScorer.calculate_score(best_match_product, landed_price, is_wish)
 
@@ -281,7 +285,7 @@ class ScrapingPipeline:
                         continue # Skip adding as active offer
                     
                     # --- PHASE 18: DEAL SCORER ---
-                    landed_price = LogisticsService.get_landing_price(offer.get('price'), offer.get('shop_name'), "ES")
+                    landed_price = LogisticsService.optimized_get_landing_price(offer.get('price'), offer.get('shop_name'), user_location, rules_map)
                     is_wish = any(ci.owner_id == 2 and not ci.acquired for ci in best_match_product.collection_items)
                     opp_score = DealScorer.calculate_score(best_match_product, landed_price, is_wish)
 

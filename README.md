@@ -172,6 +172,7 @@ TELEGRAM_BOT_TOKEN=tu_token
 *   **Fase 31 (Ghost Sync Fix)**: ✅ Reparación del búfer estancado y creación de la **Sala de Autopsia Forense** con rescate masivo y blindaje de esquema de base de datos (Completado).
 *   **Fase 32 (Search Expansion)**: ✅ Ampliación del buscador manual de 10 a 20 resultados para visibilidad total de variantes (Completado).
 *   **Fase 33 (Scraper Decommission)**: ✅ Eliminación de scrapers obsoletos (MotuClassicsDE/VendiloshopIT) y unificación de "Fantasía Personajes" para una UI sin duplicados (Completado).
+*   **Fase 34 (Purificación & Eficiencia)**: ✅ Eliminación de código legado (Streamlit), indexación crítica de base de datos y eliminación de consultas N+1 en API y Pipeline (Completado).
 
 
 ## 6. El Motor de Inversión (DealScorer)

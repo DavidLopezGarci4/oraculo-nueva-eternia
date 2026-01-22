@@ -105,18 +105,29 @@ const Dashboard: React.FC = () => {
         refetchInterval: 60000
     });
 
-    const { data: products } = useQuery({
-        queryKey: ['products-dashboard'],
-        queryFn: async () => {
-            const response = await axios.get('/api/products');
-            return response.data;
-        }
-    });
+    const [searchResults, setSearchResults] = React.useState<any[]>([]);
+    const [isSearching, setIsSearching] = React.useState(false);
 
-    const filteredProducts = products?.filter((p: any) =>
-        p.name.toLowerCase().includes(manualSearchTerm.toLowerCase()) ||
-        p.figure_id?.toLowerCase().includes(manualSearchTerm.toLowerCase())
-    ).slice(0, 50);
+    // Búsqueda Atómica Reactiva (Fase 34)
+    React.useEffect(() => {
+        const delayDebounceFn = setTimeout(async () => {
+            if (manualSearchTerm.length >= 2) {
+                setIsSearching(true);
+                try {
+                    const response = await axios.get(`/api/products/search?q=${manualSearchTerm}`);
+                    setSearchResults(response.data);
+                } catch (error) {
+                    console.error("Search failed", error);
+                } finally {
+                    setIsSearching(false);
+                }
+            } else {
+                setSearchResults([]);
+            }
+        }, 300);
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [manualSearchTerm]);
 
     const isAdmin = true; // Hardcoded for now, could be dynamic
 
@@ -551,7 +562,12 @@ const Dashboard: React.FC = () => {
                                             />
 
                                             <div className="grid grid-cols-1 gap-1 max-h-40 overflow-y-auto custom-scrollbar-thin">
-                                                {(manualSearchTerm ? filteredProducts : [])?.map((p: any) => (
+                                                {isSearching && (
+                                                    <div className="py-4 text-center">
+                                                        <Loader2 className="h-4 w-4 animate-spin text-brand-primary mx-auto" />
+                                                    </div>
+                                                )}
+                                                {searchResults?.map((p: any) => (
                                                     <button
                                                         key={p.id}
                                                         onClick={() => relinkMutation.mutate({ offerId: deal.id, productId: p.id })}
@@ -564,7 +580,7 @@ const Dashboard: React.FC = () => {
                                                         <CheckCircle2 className="h-3.5 w-3.5 text-brand-primary opacity-0 group-hover/res:opacity-100 transition-opacity" />
                                                     </button>
                                                 ))}
-                                                {manualSearchTerm && filteredProducts?.length === 0 && (
+                                                {manualSearchTerm.length >= 2 && !isSearching && searchResults?.length === 0 && (
                                                     <div className="py-4 text-center text-[10px] font-bold text-white/20">Sin resultados</div>
                                                 )}
                                             </div>

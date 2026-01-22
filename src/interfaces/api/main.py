@@ -143,23 +143,36 @@ async def get_users():
         users = db.query(UserModel).all()
         return [{"id": u.id, "username": u.username, "role": u.role} for u in users]
 
-@app.get("/api/products", response_model=List[ProductOutput])
-async def get_products(sub_category: str | None = None, source_type: str | None = None):
-    """
-    Retorna el catálogo de productos desde Supabase.
-    """
-    with SessionCloud() as db:
-        query = select(ProductModel)
-        if sub_category:
-            query = query.where(ProductModel.sub_category == sub_category)
-        
-        if source_type:
-            # Filtrar productos que tengan al menos una oferta de la categoría especificada
-            query = query.join(OfferModel).where(OfferModel.source_type == source_type).distinct()
-        
         result = db.execute(query)
         products = result.scalars().all()
         return products
+
+@app.get("/api/products/search")
+async def search_products(q: str = ""):
+    """
+    Endpoint ultra-ligero para búsquedas rápidas (Ej: Relink Drawer).
+    Retorna solo lo mínimo necesario para identificar el producto.
+    """
+    if len(q) < 2:
+        return []
+        
+    with SessionCloud() as db:
+        query = select(ProductModel).where(
+            (ProductModel.name.ilike(f"%{q}%")) | 
+            (ProductModel.figure_id.ilike(f"%{q}%"))
+        ).limit(20)
+        
+        result = db.execute(query)
+        products = result.scalars().all()
+        return [
+            {
+                "id": p.id, 
+                "name": p.name, 
+                "figure_id": p.figure_id, 
+                "sub_category": p.sub_category,
+                "image_url": p.image_url
+            } for p in products
+        ]
 
 @app.get("/api/auctions/products", response_model=List[ProductOutput])
 async def get_auction_products():
@@ -1228,7 +1241,11 @@ async def get_top_deals(user_id: int = 2):
         ).join(ProductModel).filter(
             OfferModel.is_available == True
         )
-        # 4. Construir respuesta con Landing Price
+        # 4. Construir respuesta con Landing Price (OPTIMIZADO)
+        # Pre-cargar Reglas Logísticas para evitar N+1
+        rules = db.query(LogisticRuleModel).all()
+        rules_map = {f"{r.shop_name}_{r.country_code}": r for r in rules}
+
         # Get user location for logistics
         user_location = "ES"
         user = db.query(UserModel).filter(UserModel.id == user_id).first()
@@ -1238,7 +1255,7 @@ async def get_top_deals(user_id: int = 2):
         
         results = []
         for o in offers_pool:
-            landing_p = LogisticsService.get_landing_price(o.price, o.shop_name, user_location)
+            landing_p = LogisticsService.optimized_get_landing_price(o.price, o.shop_name, user_location, rules_map)
             results.append({
                 "id": o.id,
                 "product_name": o.product.name,

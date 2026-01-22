@@ -1,0 +1,299 @@
+PYTHON FILES:
+src/__init__.py
+src/application/jobs/check_thundercats.py
+src/application/jobs/daily_scan.py
+src/application/jobs/data_recovery.py
+src/application/jobs/dump_dvd_titles.py
+src/application/jobs/find_beastman.py
+src/application/jobs/ingest_json.py
+src/application/jobs/profile_scraper.py
+src/application/jobs/restore_vault.py
+src/application/jobs/run_frikiverso.py
+src/application/jobs/smoke_test.py
+src/application/jobs/sync_external.py
+src/application/jobs/sync_worker.py
+src/application/jobs/test_actiontoys_api.py
+src/application/jobs/test_dvdstore_brand_facet.py
+src/application/jobs/test_dvdstore_facet.py
+src/application/jobs/test_dvdstore_search.py
+src/application/jobs/test_dvdstore_url.py
+src/application/jobs/test_electropolis.py
+src/application/jobs/test_electropolis_aiohttp.py
+src/application/jobs/test_electropolis_pw.py
+src/application/jobs/test_pixelatoy_magic.py
+src/application/services/auditor.py
+src/application/services/deal_scorer.py
+src/application/services/logistics_service.py
+src/application/services/match_service.py
+src/application/services/nexus_service.py
+src/application/services/sentinel.py
+src/application/services/storage_service.py
+src/application/use_cases/__init__.py
+src/core/audit_logger.py
+src/core/backup_manager.py
+src/core/brain_engine.py
+src/core/circuit_breaker.py
+src/core/config.py
+src/core/logger.py
+src/core/matching.py
+src/core/mcp_server.py
+src/core/notifier.py
+src/core/rust_bridge.py
+src/core/scrape_run_report.py
+src/core/security.py
+src/core/weight_engine.py
+src/domain/base.py
+src/domain/models.py
+src/domain/schemas.py
+src/domain/__init__.py
+src/infrastructure/create_price_history.py
+src/infrastructure/database.py
+src/infrastructure/database_cloud.py
+src/infrastructure/migrate_blacklist.py
+src/infrastructure/migrate_db.py
+src/infrastructure/migrate_ownership.py
+src/infrastructure/migrate_pending.py
+src/infrastructure/migrate_users.py
+src/infrastructure/recover_blacklist.py
+src/infrastructure/recover_blacklist_v2.py
+src/infrastructure/recreate_collection_table.py
+src/infrastructure/relax_email_constraint.py
+src/infrastructure/reset_hunter.py
+src/infrastructure/restore_user.py
+src/infrastructure/sync_to_cloud.py
+src/infrastructure/universal_migrator.py
+src/infrastructure/collectors/migrate_collection.py
+src/infrastructure/collectors/personal_collection.py
+src/infrastructure/repositories/base.py
+src/infrastructure/repositories/collection.py
+src/infrastructure/repositories/product.py
+src/infrastructure/repositories/sync_queue.py
+src/infrastructure/scrapers/action_toys_scraper.py
+src/infrastructure/scrapers/adapter.py
+src/infrastructure/scrapers/base.py
+src/infrastructure/scrapers/bbts_scraper.py
+src/infrastructure/scrapers/conn_check.py
+src/infrastructure/scrapers/detoyboys_scraper.py
+src/infrastructure/scrapers/diagnose_spider.py
+src/infrastructure/scrapers/electropolis_scraper.py
+src/infrastructure/scrapers/evaluate_actiontoys.py
+src/infrastructure/scrapers/evaluate_electropolis.py
+src/infrastructure/scrapers/evaluate_fantasy.py
+src/infrastructure/scrapers/evaluate_frikiverso.py
+src/infrastructure/scrapers/evaluate_pixelatoy.py
+src/infrastructure/scrapers/fantasia_scraper.py
+src/infrastructure/scrapers/force_run.py
+src/infrastructure/scrapers/frikiverso_scraper.py
+src/infrastructure/scrapers/harvester.py
+src/infrastructure/scrapers/interface.py
+src/infrastructure/scrapers/match_analysis.py
+src/infrastructure/scrapers/pipeline.py
+src/infrastructure/scrapers/pixelatoy_scraper.py
+src/infrastructure/scrapers/run_single.py
+src/infrastructure/scrapers/simulated_connection.py
+src/infrastructure/scrapers/test_actiontoys.py
+src/infrastructure/scrapers/test_pipeline.py
+src/infrastructure/scrapers/test_snippet.py
+src/infrastructure/scrapers/time4actiontoys_scraper.py
+src/infrastructure/scrapers/toymi_scraper.py
+src/infrastructure/scrapers/wallapop_manual_importer.py
+src/infrastructure/scrapers/wallapop_scraper.py
+src/infrastructure/scrapers/__init__.py
+src/infrastructure/scrapers/legacy/actiontoys.py
+src/infrastructure/scrapers/legacy/dvdstorespain.py
+src/infrastructure/scrapers/legacy/electropolis.py
+src/infrastructure/scrapers/legacy/fantasiapersonajes.py
+src/infrastructure/scrapers/legacy/frikiverso.py
+src/infrastructure/scrapers/legacy/pixelatoy.py
+src/infrastructure/scrapers/spiders/actiontoys.py
+src/infrastructure/scrapers/spiders/amazon.py
+src/infrastructure/scrapers/spiders/dvdstorespain.py
+src/infrastructure/scrapers/spiders/electropolis.py
+src/infrastructure/scrapers/spiders/frikiverso.py
+src/infrastructure/scrapers/spiders/kidinn.py
+src/infrastructure/scrapers/spiders/pixelatoy.py
+src/infrastructure/scripts/reassign_to_david.py
+src/infrastructure/scripts/rollback_shops_to_purgatory.py
+src/infrastructure/services/telegram_service.py
+src/interfaces/api/main.py
+src/interfaces/web/app.py
+src/interfaces/web/shared.py
+src/interfaces/web/views/admin.py
+src/interfaces/web/views/alerts.py
+src/interfaces/web/views/catalog.py
+src/interfaces/web/views/collection.py
+src/interfaces/web/views/config.py
+src/interfaces/web/views/dashboard.py
+src/interfaces/web/views/hunter.py
+src/interfaces/web/views/kaizen_lab.py
+
+PYTHON GRAPH:
+src/__init__.py -> []
+src/application/jobs/check_thundercats.py -> [('src.domain.models', ''), ('src.infrastructure.database', '')]
+src/application/jobs/daily_scan.py -> [('src.application.services.deal_scorer', ''), ('src.application.services.logistics_service', ''), ('src.application.services.nexus_service', ''), ('src.core.audit_logger', ''), ('src.core.backup_manager', ''), ('src.core.logger', ''), ('src.core.notifier', ''), ('src.domain.models', ''), ('src.infrastructure.database_cloud', ''), ('src.infrastructure.scrapers.action_toys_scraper', ''), ('src.infrastructure.scrapers.bbts_scraper', ''), ('src.infrastructure.scrapers.detoyboys_scraper', ''), ('src.infrastructure.scrapers.electropolis_scraper', ''), ('src.infrastructure.scrapers.fantasia_scraper', ''), ('src.infrastructure.scrapers.frikiverso_scraper', ''), ('src.infrastructure.scrapers.pipeline', ''), ('src.infrastructure.scrapers.pixelatoy_scraper', ''), ('src.infrastructure.scrapers.time4actiontoys_scraper', ''), ('src.infrastructure.scrapers.toymi_scraper', ''), ('src.infrastructure.universal_migrator', '')]
+src/application/jobs/data_recovery.py -> [('src.domain.models', ''), ('src.infrastructure.database', '')]
+src/application/jobs/dump_dvd_titles.py -> []
+src/application/jobs/find_beastman.py -> [('src.domain.models', ''), ('src.infrastructure.database', '')]
+src/application/jobs/ingest_json.py -> [('src.core.logger', ''), ('src.infrastructure.scrapers.base', ''), ('src.infrastructure.scrapers.pipeline', '')]
+src/application/jobs/profile_scraper.py -> [('src.core.logger', ''), ('src.infrastructure.scrapers.spiders.dvdstorespain', ''), ('src.infrastructure.scrapers.spiders.electropolis', ''), ('src.infrastructure.scrapers.spiders.fantasia', ''), ('src.infrastructure.scrapers.spiders.frikiverso', ''), ('src.infrastructure.scrapers.spiders.pixelatoy', '')]
+src/application/jobs/restore_vault.py -> [('src.domain.models', ''), ('src.infrastructure.database', '')]
+src/application/jobs/run_frikiverso.py -> [('src.core.logger', ''), ('src.infrastructure.database', ''), ('src.infrastructure.scrapers.pipeline', ''), ('src.infrastructure.scrapers.spiders.frikiverso', '')]
+src/application/jobs/smoke_test.py -> [('src.core.notifier', ''), ('src.domain.models', ''), ('src.infrastructure.database', '')]
+src/application/jobs/sync_external.py -> [('src.core.logger', ''), ('src.infrastructure.collectors', '')]
+src/application/jobs/sync_worker.py -> [('src.core.config', ''), ('src.infrastructure.database', ''), ('src.infrastructure.repositories.sync_queue', '')]
+src/application/jobs/test_actiontoys_api.py -> []
+src/application/jobs/test_dvdstore_brand_facet.py -> []
+src/application/jobs/test_dvdstore_facet.py -> []
+src/application/jobs/test_dvdstore_search.py -> []
+src/application/jobs/test_dvdstore_url.py -> []
+src/application/jobs/test_electropolis.py -> []
+src/application/jobs/test_electropolis_aiohttp.py -> []
+src/application/jobs/test_electropolis_pw.py -> []
+src/application/jobs/test_pixelatoy_magic.py -> []
+src/application/services/auditor.py -> [('src.infrastructure.repositories.product', '')]
+src/application/services/deal_scorer.py -> [('src.domain.models', '')]
+src/application/services/logistics_service.py -> [('src.domain.models', ''), ('src.infrastructure.database_cloud', '')]
+src/application/services/match_service.py -> [('src.application.services.auditor', ''), ('src.application.services.sentinel', ''), ('src.domain.models', ''), ('src.infrastructure.repositories.product', ''), ('src.infrastructure.repositories.sync_queue', '')]
+src/application/services/nexus_service.py -> [('src.application.services.storage_service', ''), ('src.core.config', ''), ('src.domain.models', ''), ('src.infrastructure.collectors.personal_collection', ''), ('src.infrastructure.database_cloud', '')]
+src/application/services/sentinel.py -> [('src.domain.models', ''), ('src.infrastructure.repositories.product', '')]
+src/application/services/storage_service.py -> [('src.core.config', '')]
+src/application/use_cases/__init__.py -> []
+src/core/audit_logger.py -> [('src.domain.models', '')]
+src/core/backup_manager.py -> [('src.domain.models', '')]
+src/core/brain_engine.py -> [('src.core.weight_engine', '')]
+src/core/circuit_breaker.py -> []
+src/core/config.py -> []
+src/core/logger.py -> [('src.core.config', '')]
+src/core/matching.py -> [('src.core.brain_engine', ''), ('src.core.rust_bridge', '')]
+src/core/mcp_server.py -> [('src.domain.models', ''), ('src.infrastructure.database', ''), ('src.infrastructure.repositories.product', '')]
+src/core/notifier.py -> [('src.core.config', ''), ('src.domain.models', '')]
+src/core/rust_bridge.py -> [('src.core.brain_engine', '')]
+src/core/scrape_run_report.py -> []
+src/core/security.py -> []
+src/core/weight_engine.py -> [('src.core.config', ''), ('src.domain.models', '')]
+src/domain/base.py -> []
+src/domain/models.py -> [('src.domain.base', '')]
+src/domain/schemas.py -> []
+src/domain/__init__.py -> []
+src/infrastructure/create_price_history.py -> [('src.domain.models', ''), ('src.infrastructure.database', '')]
+src/infrastructure/database.py -> [('src.core.config', ''), ('src.domain.base', ''), ('src.infrastructure.universal_migrator', '')]
+src/infrastructure/database_cloud.py -> [('src.core.config', ''), ('src.domain.models', '')]
+src/infrastructure/migrate_blacklist.py -> [('src.core.config', ''), ('src.domain.models', '')]
+src/infrastructure/migrate_db.py -> [('src.core.config', '')]
+src/infrastructure/migrate_ownership.py -> [('src.infrastructure.database', '')]
+src/infrastructure/migrate_pending.py -> [('src.domain.models', ''), ('src.infrastructure.database', '')]
+src/infrastructure/migrate_users.py -> [('src.core.config', ''), ('src.domain.models', ''), ('src.infrastructure.repositories.base', '')]
+src/infrastructure/recover_blacklist.py -> [('src.domain.models', ''), ('src.infrastructure.database', '')]
+src/infrastructure/recover_blacklist_v2.py -> [('src.domain.models', ''), ('src.infrastructure.database', '')]
+src/infrastructure/recreate_collection_table.py -> [('src.domain.models', ''), ('src.infrastructure.database', '')]
+src/infrastructure/relax_email_constraint.py -> [('src.infrastructure.database', '')]
+src/infrastructure/reset_hunter.py -> [('src.domain.models', ''), ('src.infrastructure.database', '')]
+src/infrastructure/restore_user.py -> [('src.core.security', ''), ('src.domain.models', ''), ('src.infrastructure.database', '')]
+src/infrastructure/sync_to_cloud.py -> [('src.core.config', ''), ('src.domain.models', '')]
+src/infrastructure/universal_migrator.py -> [('src.domain.models', ''), ('src.infrastructure.database', ''), ('src.infrastructure.database_cloud', '')]
+src/infrastructure/collectors/migrate_collection.py -> [('src.domain.models', ''), ('src.infrastructure.database', ''), ('src.infrastructure.repositories.product', '')]
+src/infrastructure/collectors/personal_collection.py -> []
+src/infrastructure/repositories/base.py -> [('src.domain.models', '')]
+src/infrastructure/repositories/collection.py -> [('src.domain.models', ''), ('src.infrastructure.repositories.base', '')]
+src/infrastructure/repositories/product.py -> [('src.domain.models', ''), ('src.infrastructure.repositories.base', '')]
+src/infrastructure/repositories/sync_queue.py -> [('src.domain.models', '')]
+src/infrastructure/scrapers/action_toys_scraper.py -> [('src.infrastructure.scrapers.base', '')]
+src/infrastructure/scrapers/adapter.py -> [('src.infrastructure.scrapers.base', '')]
+src/infrastructure/scrapers/base.py -> []
+src/infrastructure/scrapers/bbts_scraper.py -> [('src.infrastructure.scrapers.base', '')]
+src/infrastructure/scrapers/conn_check.py -> []
+src/infrastructure/scrapers/detoyboys_scraper.py -> [('src.infrastructure.scrapers.base', '')]
+src/infrastructure/scrapers/diagnose_spider.py -> []
+src/infrastructure/scrapers/electropolis_scraper.py -> [('src.infrastructure.scrapers.base', '')]
+src/infrastructure/scrapers/evaluate_actiontoys.py -> []
+src/infrastructure/scrapers/evaluate_electropolis.py -> []
+src/infrastructure/scrapers/evaluate_fantasy.py -> []
+src/infrastructure/scrapers/evaluate_frikiverso.py -> []
+src/infrastructure/scrapers/evaluate_pixelatoy.py -> []
+src/infrastructure/scrapers/fantasia_scraper.py -> [('src.infrastructure.scrapers.base', '')]
+src/infrastructure/scrapers/force_run.py -> [('src.core.logger', ''), ('src.infrastructure.scrapers.spiders.actiontoys', '')]
+src/infrastructure/scrapers/frikiverso_scraper.py -> [('src.infrastructure.scrapers.base', '')]
+src/infrastructure/scrapers/harvester.py -> []
+src/infrastructure/scrapers/interface.py -> [('src.domain.models', '')]
+src/infrastructure/scrapers/match_analysis.py -> [('src.infrastructure.database', ''), ('src.infrastructure.repositories.product', ''), ('src.infrastructure.scrapers.pipeline', ''), ('src.infrastructure.scrapers.spiders.actiontoys', ''), ('src.infrastructure.scrapers.spiders.fantasia', '')]
+src/infrastructure/scrapers/pipeline.py -> [('src.application.services.auditor', ''), ('src.application.services.deal_scorer', ''), ('src.application.services.logistics_service', ''), ('src.application.services.sentinel', ''), ('src.core.backup_manager', ''), ('src.core.matching', ''), ('src.domain.models', ''), ('src.domain.schemas', ''), ('src.infrastructure.database_cloud', ''), ('src.infrastructure.repositories.product', ''), ('src.infrastructure.scrapers.adapter', ''), ('src.infrastructure.scrapers.base', ''), ('src.infrastructure.services.telegram_service', '')]
+src/infrastructure/scrapers/pixelatoy_scraper.py -> [('src.infrastructure.scrapers.base', '')]
+src/infrastructure/scrapers/run_single.py -> [('src.core.logger', ''), ('src.domain.models', ''), ('src.infrastructure.database', ''), ('src.infrastructure.scrapers.pipeline', ''), ('src.infrastructure.scrapers.spiders.actiontoys', ''), ('src.infrastructure.scrapers.spiders.amazon', ''), ('src.infrastructure.scrapers.spiders.electropolis', ''), ('src.infrastructure.scrapers.spiders.fantasia', ''), ('src.infrastructure.scrapers.spiders.kidinn', '')]
+src/infrastructure/scrapers/simulated_connection.py -> [('src.infrastructure.scrapers.action_toys_scraper', ''), ('src.infrastructure.scrapers.bbts_scraper', ''), ('src.infrastructure.scrapers.detoyboys_scraper', ''), ('src.infrastructure.scrapers.toymi_scraper', '')]
+src/infrastructure/scrapers/test_actiontoys.py -> [('src.infrastructure.scrapers.spiders.actiontoys', '')]
+src/infrastructure/scrapers/test_pipeline.py -> [('src.infrastructure.scrapers.pipeline', ''), ('src.infrastructure.scrapers.spiders.amazon', ''), ('src.infrastructure.scrapers.spiders.kidinn', '')]
+src/infrastructure/scrapers/test_snippet.py -> []
+src/infrastructure/scrapers/time4actiontoys_scraper.py -> [('src.infrastructure.scrapers.base', '')]
+src/infrastructure/scrapers/toymi_scraper.py -> [('src.infrastructure.scrapers.base', '')]
+src/infrastructure/scrapers/wallapop_manual_importer.py -> [('src.domain.models', ''), ('src.infrastructure.database_cloud', ''), ('src.infrastructure.scrapers.base', ''), ('src.infrastructure.scrapers.pipeline', '')]
+src/infrastructure/scrapers/wallapop_scraper.py -> [('src.infrastructure.scrapers.base', '')]
+src/infrastructure/scrapers/__init__.py -> []
+src/infrastructure/scrapers/legacy/actiontoys.py -> [('src.core.logger', ''), ('src.domain.models', ''), ('src.infrastructure.scrapers.base', '')]
+src/infrastructure/scrapers/legacy/dvdstorespain.py -> [('src.core.logger', ''), ('src.domain.models', ''), ('src.infrastructure.scrapers.base', '')]
+src/infrastructure/scrapers/legacy/electropolis.py -> [('src.core.logger', ''), ('src.domain.models', ''), ('src.infrastructure.scrapers.base', '')]
+src/infrastructure/scrapers/legacy/fantasiapersonajes.py -> [('src.core.logger', ''), ('src.domain.models', ''), ('src.infrastructure.scrapers.base', '')]
+src/infrastructure/scrapers/legacy/frikiverso.py -> [('src.core.logger', ''), ('src.domain.models', ''), ('src.infrastructure.scrapers.base', '')]
+src/infrastructure/scrapers/legacy/pixelatoy.py -> [('src.core.logger', ''), ('src.domain.models', ''), ('src.infrastructure.scrapers.base', '')]
+src/infrastructure/scrapers/spiders/actiontoys.py -> [('src.core.logger', ''), ('src.infrastructure.scrapers.base', '')]
+src/infrastructure/scrapers/spiders/amazon.py -> [('src.infrastructure.scrapers.base', '')]
+src/infrastructure/scrapers/spiders/dvdstorespain.py -> [('src.core.logger', ''), ('src.infrastructure.scrapers.base', '')]
+src/infrastructure/scrapers/spiders/electropolis.py -> [('src.core.logger', ''), ('src.infrastructure.scrapers.base', '')]
+src/infrastructure/scrapers/spiders/frikiverso.py -> [('src.core.logger', ''), ('src.infrastructure.scrapers.base', '')]
+src/infrastructure/scrapers/spiders/kidinn.py -> [('src.infrastructure.scrapers.base', '')]
+src/infrastructure/scrapers/spiders/pixelatoy.py -> [('src.core.logger', ''), ('src.infrastructure.scrapers.base', '')]
+src/infrastructure/scripts/reassign_to_david.py -> [('src.domain.models', ''), ('src.infrastructure.database_cloud', '')]
+src/infrastructure/scripts/rollback_shops_to_purgatory.py -> [('src.domain.models', ''), ('src.infrastructure.database_cloud', '')]
+src/infrastructure/services/telegram_service.py -> [('src.core.config', '')]
+src/interfaces/api/main.py -> [('src.application.services.logistics_service', ''), ('src.application.services.nexus_service', ''), ('src.core.brain_engine', ''), ('src.core.config', ''), ('src.domain.models', ''), ('src.infrastructure.database_cloud', ''), ('src.infrastructure.scrapers.action_toys_scraper', ''), ('src.infrastructure.scrapers.bbts_scraper', ''), ('src.infrastructure.scrapers.detoyboys_scraper', ''), ('src.infrastructure.scrapers.electropolis_scraper', ''), ('src.infrastructure.scrapers.fantasia_scraper', ''), ('src.infrastructure.scrapers.frikiverso_scraper', ''), ('src.infrastructure.scrapers.harvester', ''), ('src.infrastructure.scrapers.pipeline', ''), ('src.infrastructure.scrapers.pixelatoy_scraper', ''), ('src.infrastructure.scrapers.spiders.amazon', ''), ('src.infrastructure.scrapers.spiders.dvdstorespain', ''), ('src.infrastructure.scrapers.spiders.kidinn', ''), ('src.infrastructure.scrapers.time4actiontoys_scraper', ''), ('src.infrastructure.scrapers.toymi_scraper', '')]
+src/interfaces/web/app.py -> [('src.core.config', ''), ('src.core.security', ''), ('src.domain', ''), ('src.domain.models', ''), ('src.infrastructure.database', ''), ('src.infrastructure.repositories.product', ''), ('src.interfaces.web.views', '')]
+src/interfaces/web/shared.py -> [('src.domain.models', ''), ('src.infrastructure.database', '')]
+src/interfaces/web/views/admin.py -> [('src.application.jobs.restore_vault', ''), ('src.application.services.match_service', ''), ('src.core.backup_manager', ''), ('src.core.matching', ''), ('src.domain.models', ''), ('src.infrastructure.database', ''), ('src.infrastructure.repositories.product', ''), ('src.interfaces.web.shared', '')]
+src/interfaces/web/views/alerts.py -> [('src.domain.models', '')]
+src/interfaces/web/views/catalog.py -> [('src.domain.models', ''), ('src.infrastructure.database', ''), ('src.infrastructure.repositories.product', ''), ('src.interfaces.web.shared', ''), ('src.interfaces.web.views.admin', '')]
+src/interfaces/web/views/collection.py -> [('src.domain.models', ''), ('src.infrastructure.database', ''), ('src.interfaces.web.shared', '')]
+src/interfaces/web/views/config.py -> [('src.core.security', ''), ('src.domain.models', '')]
+src/interfaces/web/views/dashboard.py -> [('src.domain.models', ''), ('src.infrastructure.database', ''), ('src.interfaces.web.shared', '')]
+src/interfaces/web/views/hunter.py -> [('src.domain.models', ''), ('src.infrastructure.repositories.product', ''), ('src.interfaces.web.shared', '')]
+src/interfaces/web/views/kaizen_lab.py -> [('src.domain.models', '')]
+
+TS FILES:
+frontend/src/App.tsx
+frontend/src/main.tsx
+frontend/src/api/admin.ts
+frontend/src/api/collection.ts
+frontend/src/api/dashboard.ts
+frontend/src/api/products.ts
+frontend/src/api/purgatory.ts
+frontend/src/api/wallapop.ts
+frontend/src/components/admin/WallapopImporter.tsx
+frontend/src/components/layout/Navbar.tsx
+frontend/src/components/layout/Sidebar.tsx
+frontend/src/components/products/PriceHistoryChart.tsx
+frontend/src/pages/Auctions.tsx
+frontend/src/pages/Catalog.tsx
+frontend/src/pages/Collection.tsx
+frontend/src/pages/Config.tsx
+frontend/src/pages/Dashboard.tsx
+frontend/src/pages/Purgatory.tsx
+frontend/src/pages/RadarP2P.tsx
+
+TS GRAPH:
+frontend/src/App.tsx -> ['./components/layout/Navbar', './components/layout/Sidebar', './pages/Auctions', './pages/Catalog', './pages/Collection', './pages/Config', './pages/Dashboard', './pages/Purgatory', './pages/RadarP2P']
+frontend/src/main.tsx -> ['./App.tsx']
+frontend/src/api/admin.ts -> []
+frontend/src/api/collection.ts -> []
+frontend/src/api/dashboard.ts -> []
+frontend/src/api/products.ts -> []
+frontend/src/api/purgatory.ts -> []
+frontend/src/api/wallapop.ts -> []
+frontend/src/components/admin/WallapopImporter.tsx -> ['../../api/wallapop']
+frontend/src/components/layout/Navbar.tsx -> ['../../assets/role-guardian.png', '../../assets/role-master.png']
+frontend/src/components/layout/Sidebar.tsx -> ['../../assets/role-guardian.png', '../../assets/role-master.png']
+frontend/src/components/products/PriceHistoryChart.tsx -> ['../../api/products']
+frontend/src/pages/Auctions.tsx -> ['../api/collection', '../api/products', '../components/products/PriceHistoryChart']
+frontend/src/pages/Catalog.tsx -> ['../api/admin', '../api/collection', '../api/products', '../components/products/PriceHistoryChart']
+frontend/src/pages/Collection.tsx -> ['../api/collection']
+frontend/src/pages/Config.tsx -> ['../api/admin', '../api/purgatory', '../components/admin/WallapopImporter']
+frontend/src/pages/Dashboard.tsx -> ['../api/admin', '../api/dashboard', '../assets/role-guardian.png', '../assets/role-master.png']
+frontend/src/pages/Purgatory.tsx -> ['../api/purgatory']
+frontend/src/pages/RadarP2P.tsx -> ['../api/dashboard']

@@ -57,12 +57,12 @@ class OfferModel(Base):
     __tablename__ = "offers"
     
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    product_id: Mapped[int] = mapped_column(ForeignKey("products.id"))
+    product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), index=True)
     
-    shop_name: Mapped[str] = mapped_column(String)
+    shop_name: Mapped[str] = mapped_column(String, index=True)
     price: Mapped[float] = mapped_column(Float)
     currency: Mapped[str] = mapped_column(String, default="EUR")
-    url: Mapped[str] = mapped_column(String)
+    url: Mapped[str] = mapped_column(String, index=True)
     is_available: Mapped[bool] = mapped_column(Boolean, default=True)
     last_seen: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     
@@ -92,8 +92,8 @@ class CollectionItemModel(Base):
     __tablename__ = "collection_items"
     
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), unique=False) # Allow multiple users to own same product
-    owner_id: Mapped[int] = mapped_column(ForeignKey("users.id")) # Link to User
+    product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), unique=False, index=True) # Allow multiple users to own same product
+    owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True) # Link to User
     
     acquired: Mapped[bool] = mapped_column(Boolean, default=False)
     condition: Mapped[str] = mapped_column(String, default="New")
