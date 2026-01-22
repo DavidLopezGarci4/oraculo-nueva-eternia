@@ -8,7 +8,7 @@ from datetime import datetime
 from playwright.async_api import async_playwright
 
 # Add project root to Python path
-root_path = Path(__file__).resolve().parent.parent.parent
+root_path = Path(__file__).resolve().parent.parent.parent.parent
 sys.path.append(str(root_path))
 
 from src.core.logger import setup_logging
@@ -28,6 +28,7 @@ from src.infrastructure.scrapers.detoyboys_scraper import DeToyboysNLScraper
 from src.infrastructure.scrapers.toymi_scraper import ToymiEUScraper
 from src.infrastructure.scrapers.time4actiontoys_scraper import Time4ActionToysDEScraper
 from src.infrastructure.scrapers.bbts_scraper import BigBadToyStoreScraper
+from src.infrastructure.scrapers.amazon_scraper import AmazonScraper
 from src.application.services.nexus_service import NexusService
 
 # Domain & Infra Models
@@ -135,6 +136,7 @@ async def run_daily_scan(progress_callback=None):
             ToymiEUScraper(),
             Time4ActionToysDEScraper(),
             BigBadToyStoreScraper(),
+            AmazonScraper(),
             # DeToyboys at the end (User Request)
             DeToyboysNLScraper(),
         ]

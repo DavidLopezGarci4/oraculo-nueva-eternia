@@ -28,7 +28,7 @@
 
 ## 1. Visión General
 **El Oráculo de Nueva Eternia** es una plataforma integral diseñada para coleccionistas de alto nivel (específicamente de la línea *Masters of the Universe: Origins*). Su propósito es doble:
-1.  **Vigilancia de Mercado**: Escanea automáticamente 14 tiendas en España y Europa para encontrar las mejores ofertas, detectar stock y alertar sobre bajadas de precio.
+1.  **Vigilancia de Mercado**: Escanea automáticamente 15 tiendas en España y Europa para encontrar las mejores ofertas, detectar stock y alertar sobre bajadas de precio.
 2.  **Gestión Patrimonial**: Permite llevar un control exhaustivo de la colección personal, calculando el valor real de mercado frente a la inversión realizada (ROI).
 
 ---
@@ -151,10 +151,10 @@ TELEGRAM_BOT_TOKEN=tu_token
 ## 6. Roadmap y Evolución
 
 *   **Fase 9 (Guardiana)**: ✅ Perfiles de usuario y Wishlist (Completado).
-*   **Fase 10 (Mercados)**: 🏗️ Integración de APIs de Amazon y eBay (En progreso).
+*   **Fase 10 (Mercados)**: ✅ Integración de Amazon España (Completado).
 *   **Fase 11 (Continental)**: ✅ Expansión a 14 fuentes europeas y auditoría de precios OSS (Completado).
 *   **Fase 12 (Logística & Identidad)**: ✅ Rebranding a "Nueva Eternia", auditoría total del catálogo (297 reliquias) e implementación del **Nexo Maestro** para sincronización automática.
-*   **Fase 13 (Subastas & Amazon)**: 🏗️ Creación del **Pabellón de Subastas** (Wallapop/eBay) e infiltración en Amazon.es (En progreso).
+*   **Fase 13 (Subastas & Amazon)**: ✅ Creación del **Pabellón de Subastas** (Wallapop/eBay) e infiltración en Amazon.es (Completado).
 *   **Fase 15 (Oráculo Logístico)**: ✅ Implementación del **Landed Price** (IVA, Envío, Aduanas) y ROI de precisión (Completado).
 *   **Fase 17 (El Centinela)**: ✅ Detección de anomalías de precio y blindaje preventivo del catálogo (Completado).
 *   **Fase 18 (DealScorer)**: ✅ Algoritmo de puntuación de oportunidad y alertas críticas de "Compra Obligatoria" (Completado).
@@ -173,6 +173,7 @@ TELEGRAM_BOT_TOKEN=tu_token
 *   **Fase 32 (Search Expansion)**: ✅ Ampliación del buscador manual de 10 a 20 resultados para visibilidad total de variantes (Completado).
 *   **Fase 33 (Scraper Decommission)**: ✅ Eliminación de scrapers obsoletos (MotuClassicsDE/VendiloshopIT) y unificación de "Fantasía Personajes" para una UI sin duplicados (Completado).
 *   **Fase 34 (Purificación & Eficiencia)**: ✅ Eliminación de código legado (Streamlit), indexación crítica de base de datos y eliminación de consultas N+1 en API y Pipeline (Completado).
+*   **Fase 35 (Amazon Infiltration)**: ✅ Implementación de `AmazonScraper` con evasión de bloqueos y procesamiento de 54 nuevas ofertas (Completado).
 
 
 ## 6. El Motor de Inversión (DealScorer)

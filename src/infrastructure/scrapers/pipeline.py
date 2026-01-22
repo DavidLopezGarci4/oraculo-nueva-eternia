@@ -95,7 +95,7 @@ class ScrapingPipeline:
         repo = ProductRepository(db)
         from src.application.services.auditor import AuditorService
         from src.application.services.sentinel import SentinelService
-        from src.domain.models import PendingMatchModel, BlackcludedItemModel, OfferModel
+        from src.domain.models import PendingMatchModel, BlackcludedItemModel, OfferModel, LogisticRuleModel
         
         auditor = AuditorService(repo)
         sentinel = SentinelService(repo)
