@@ -170,6 +170,7 @@ TELEGRAM_BOT_TOKEN=tu_token
 *   **Fase 29 (Log & Visibility Fix)**: ✅ Recuperación masiva de logs internacionales y blindaje del ciclo de escaneo diario (Completado).
 *   **Fase 30 (Scraper Robustness)**: ✅ Superación de bloqueos en BBTS y estabilización del Nexo Maestro contra timeouts (Completado).
 *   **Fase 31 (Ghost Sync Fix)**: ✅ Reparación del búfer estancado y creación de la **Sala de Autopsia Forense** con rescate masivo y blindaje de esquema de base de datos (Completado).
+*   **Fase 32 (Search Expansion)**: ✅ Ampliación del buscador manual de 10 a 20 resultados para visibilidad total de variantes (Completado).
 
 
 ## 6. El Motor de Inversión (DealScorer)

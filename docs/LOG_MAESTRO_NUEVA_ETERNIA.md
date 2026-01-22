@@ -877,3 +877,11 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
     - **Bulk Rescue**: Añadido botón de `Reintentar Todo` para procesar fallos masivos (como los 127 items atrapados por desajuste de esquema).
     - **Esquema Expandido**: Añadido soporte para `reason` en `BlackcludedItemModel` y actualización de `universal_migrator.py` para asegurar consistencia en local y cloud.
     - **Backend Robustness**: Endpoints de `/match` y `/discard` ahora son idempotentes y manejan conflictos de integridad (409 Conflict) con logs descriptivos.
+
+### Fase 32: Expanding Manual Match Results - El Gran Catálogo Expandido (22/01/2026)
+- **Hitos**: Ampliación de la visibilidad en el buscador manual del Purgatorio.
+- **Estado**: ✅ COMPLETADO
+- **Mejoras de Visibilidad**:
+    - **Search Limit Expansion**: Incrementado el límite de resultados en el buscador manual de 10 a **20 ítems**. Esto soluciona la invisibilidad de variantes para personajes populares como He-Man o Skeletor.
+    - **UI Scroll Optimization**: Expandida la altura máxima del contenedor de resultados de `max-h-60` a `max-h-[400px]` para permitir una navegación cómoda entre las 20 opciones.
+    - **Frontend Refactor**: Actualizada la lógica de filtrado en `Purgatory.tsx` para manejar la nueva cuota de resultados.

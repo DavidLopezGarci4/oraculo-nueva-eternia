@@ -245,6 +245,10 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
 *   **Rescate de Datos**: Implementación de metadatos (URL/Name) en acciones de búfer y botón de "Reintentar Todo". ✅
 *   **Idempotencia Backend**: Refuerzo de esquemas de base de datos (columna `reason`) y manejo de conflictos 409. ✅
 
+### Fase 32: Expanding Manual Match Results ✅
+*   **Visibilidad Extendida**: Ampliación del límite de búsqueda manual de 10 a 20 resultados simultáneos. ✅
+*   **Optimización UI**: Reajuste de la altura del contenedor de búsqueda para mejorar el scroll en figuras con múltiples variantes. ✅
+
 ---
 
 ## ✅ Plan de Verificación

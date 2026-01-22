@@ -296,7 +296,7 @@ const Purgatory: React.FC = () => {
     const filteredProducts = products?.filter((p: any) =>
         p.name.toLowerCase().includes(manualSearchTerm.toLowerCase()) ||
         p.figure_id?.toLowerCase().includes(manualSearchTerm.toLowerCase())
-    ).slice(0, 10);
+    ).slice(0, 20);
 
     // Dynamic Filter for Pending Items (Main List)
     const pendingIdsToHide = new Set(pendingActions.flatMap(a => a.pendingIds));
@@ -980,8 +980,8 @@ const Purgatory: React.FC = () => {
                                                     />
                                                 </div>
 
-                                                {/* Results List */}
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-60 overflow-y-auto custom-scrollbar pr-2">
+                                                {/* Results List - Expanded height for Phase 32 */}
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
                                                     {(manualSearchTerm ? filteredProducts : []).map((p: any) => (
                                                         <button
                                                             key={p.id}
