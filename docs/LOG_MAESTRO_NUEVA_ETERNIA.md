@@ -859,3 +859,20 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
     - **Blindaje del Ciclo**: Implementada capa de robustez doble en `daily_scan.py` para asegurar que el fallo de un scraper individual no detenga la ejecución global.
     - **Reordenamiento Táctico**: Movido **DeToyboys** al final de la secuencia de ejecución para maximizar la estabilidad del flujo inicial.
     - **Optimización de Infra**: Refactorizadas las importaciones y añadidos logs de "latido" (Heartbeat) para un monitoreo preciso en CI/CD.
+
+### Fase 30: Scraper & Nexus Robustness - Escudo de Grayskull (22/01/2026)
+- **Hitos**: Superación de bloqueos en BBTS y resolución de errores en el Nexo Maestro.
+- **Estado**: ✅ COMPLETADO
+- **Mejoras de Combate**:
+    - **BBTS Pagination Fix**: Implementada rotación de User-Agents y detección de bloques en `bbts_scraper.py` para asegurar la recolección de ofertas.
+    - **Nexus Error 10 Fix**: Resuelto el error de índice en ActionFigure411 aumentando los timeouts y mejorando la captura de excepciones.
+    - **Universal Migrator**: Unificado el proceso de actualización de base de datos local y cloud para incluir todas las columnas de seguridad (blackcluded_items).
+
+### Fase 31: Debugging Sync Buffer Stagnation - Sala de Autopsia Forense (22/01/2026)
+- **Hitos**: Resolución del estancamiento del búfer local y creación de herramientas forenses.
+- **Estado**: ✅ COMPLETADO (Vía Antigravity)
+- **Innovaciones Forenses**:
+    - **Non-Blocking Sync**: El motor de persistencia ahora salta los ítems fallidos y continúa con el resto de la cola, evitando bloqueos por "items envenenados".
+    - **Forensic Inspection Panel**: Nueva UI para inspeccionar fallos atómicos, ver logs de error del servidor y acceder a las URLs de origen.
+    - **Intervención Directa**: Añadidas funciones de `Reintentar` y `Devolver al Abismo` (limpieza de estado fantasma) para items atascados.
+    - **Backend Robustness**: Endpoints de `/match` y `/discard` ahora son idempotentes y manejan conflictos de integridad (409 Conflict) con logs descriptivos.

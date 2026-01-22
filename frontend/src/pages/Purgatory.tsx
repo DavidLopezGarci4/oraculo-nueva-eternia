@@ -42,6 +42,7 @@ const Purgatory: React.FC = () => {
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 15;
+    const [showForensic, setShowForensic] = useState(false);
 
     // Helper: Check if URL is from Wallapop
     const isWallapopUrl = (url: string) => url?.toLowerCase().includes('wallapop.com');
@@ -66,11 +67,15 @@ const Purgatory: React.FC = () => {
     const discardBulkMutation = useMutation({
         mutationFn: (ids: number[]) => discardItemsBulk(ids),
         onMutate: async (ids) => {
+            // Find names/urls for forensic context
+            const affectedItems = queryClient.getQueryData<any[]>(['purgatory'])?.filter(i => ids.includes(i.id)) || [];
+
             // Persistence: Add to local buffer immediately
             setPendingActions(prev => [...prev, {
                 id: Date.now(),
                 type: 'bulk-discard',
                 pendingIds: ids,
+                items: affectedItems.map(i => ({ id: i.id, name: i.scraped_name, url: i.url })),
                 timestamp: new Date().toISOString()
             }]);
 
@@ -138,11 +143,15 @@ const Purgatory: React.FC = () => {
     const discardMutation = useMutation({
         mutationFn: (id: number) => discardItem(id),
         onMutate: async (id) => {
+            const item = queryClient.getQueryData<any[]>(['purgatory'])?.find(i => i.id === id);
+
             // Persistence: Add to local buffer
             setPendingActions(prev => [...prev, {
                 id: Date.now(),
                 type: 'discard',
                 pendingIds: [id],
+                scrapedName: item?.scraped_name,
+                action_url: item?.url,
                 timestamp: new Date().toISOString()
             }]);
 
@@ -168,12 +177,16 @@ const Purgatory: React.FC = () => {
         mutationFn: ({ pendingId, productId }: { pendingId: number, productId: number }) =>
             matchItem(pendingId, productId),
         onMutate: async ({ pendingId, productId }) => {
+            const item = queryClient.getQueryData<any[]>(['purgatory'])?.find(i => i.id === pendingId);
+
             // Persistence: Add to local buffer
             setPendingActions(prev => [...prev, {
                 id: Date.now(),
                 type: 'match',
                 pendingIds: [pendingId],
                 productId,
+                scrapedName: item?.scraped_name,
+                action_url: item?.url,
                 timestamp: new Date().toISOString()
             }]);
 
@@ -199,7 +212,17 @@ const Purgatory: React.FC = () => {
     });
 
 
-    // Background Sync Engine (Refined Phase 25)
+    // Forensic Failures State
+    const [failedActions, setFailedActions] = useState<any[]>(() => {
+        const saved = localStorage.getItem('purgatory_sync_failures');
+        return saved ? JSON.parse(saved) : [];
+    });
+
+    useEffect(() => {
+        localStorage.setItem('purgatory_sync_failures', JSON.stringify(failedActions));
+    }, [failedActions]);
+
+    // Background Sync Engine (Refined Phase 31 - Non-blocking & Forensic)
     const isSyncing = useRef(false);
 
     useEffect(() => {
@@ -209,8 +232,15 @@ const Purgatory: React.FC = () => {
             if (isSyncing.current || pendingActions.length === 0) return;
             isSyncing.current = true;
 
-            // Use a local copy for processing to avoid closure staleness issues
-            const actionsToProcess = [...pendingActions];
+            // Use a local copy for processing. We filter out actions that are already in failedActions
+            // to avoid re-attempting known poisoned actions automatically unless manually triggered.
+            const failedIds = new Set(failedActions.map(f => f.action.id));
+            const actionsToProcess = [...pendingActions].filter(a => !failedIds.has(a.id));
+
+            if (actionsToProcess.length === 0) {
+                isSyncing.current = false;
+                return;
+            }
 
             for (const action of actionsToProcess) {
                 try {
@@ -225,12 +255,28 @@ const Purgatory: React.FC = () => {
                     // Success: Remove from local state
                     setPendingActions(prev => prev.filter(a => a.id !== action.id));
 
-                    // Small delay to prevent overwhelming the server with sequential requests
-                    await new Promise(resolve => setTimeout(resolve, 500));
-                } catch (err) {
+                    // Small delay to prevent overwhelming the server
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                } catch (err: any) {
                     console.error('Persistence sync failed for action:', action.id, err);
-                    // On error, we stop this cycle and retry later to avoid spamming a broken endpoint
-                    break;
+
+                    // Forensic mark: Move to failed actions with error context
+                    const errorMessage = err.response?.data?.detail || err.message || 'Unknown Error';
+
+                    setFailedActions(prev => {
+                        // Avoid duplicates if already there
+                        if (prev.some(f => f.action.id === action.id)) return prev;
+                        return [...prev, {
+                            action,
+                            error: errorMessage,
+                            timestamp: new Date().toISOString(),
+                            // Store metadata for easy forensic access
+                            url: action.action_url || null, // We might need to ensure actions contain the URL
+                            productId: action.productId || null
+                        }];
+                    });
+
+                    // NON-BLOCKING: We DON'T break anymore. We continue with the next one.
                 }
             }
 
@@ -244,7 +290,7 @@ const Purgatory: React.FC = () => {
             clearInterval(interval);
             clearTimeout(initialTimeout);
         };
-    }, [pendingActions.length]); // Re-run mainly to ensure the check continues if length > 0
+    }, [pendingActions.length, failedActions.length]); // Re-run mainly to ensure the check continues
 
 
     const filteredProducts = products?.filter((p: any) =>
@@ -333,24 +379,38 @@ const Purgatory: React.FC = () => {
                             <div className="flex items-center gap-4 px-5 py-3 rounded-2xl bg-brand-primary/10 border border-brand-primary/20 animate-in slide-in-from-right-4 duration-500 w-fit backdrop-blur-md">
                                 <div className="relative">
                                     <Loader2 className={`h-5 w-5 ${isSyncing.current ? 'animate-spin text-brand-primary' : 'text-white/20'}`} />
-                                    <div className="absolute inset-0 h-4 w-4 rounded-full border border-brand-primary/20"></div>
+                                    {failedActions.length > 0 && (
+                                        <div className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-red-500 border-2 border-black flex items-center justify-center">
+                                            <span className="text-[10px] font-bold text-white leading-none">!</span>
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="space-y-0.5">
                                     <p className="text-[10px] font-black uppercase tracking-widest text-brand-primary leading-none">
                                         {isSyncing.current ? 'Sincronización en curso' : 'Sincronización en espera'}
                                     </p>
-                                    <p className="text-[9px] font-bold text-white/50">{pendingActions.length} acciones pendientes en el búfer local</p>
-                                    <button
-                                        onClick={() => {
-                                            if (confirm('¿Limpiar el búfer local? Esto cancelará las acciones no sincronizadas.')) {
-                                                setPendingActions([]);
-                                                localStorage.removeItem(PERSISTENCE_KEY);
-                                            }
-                                        }}
-                                        className="text-[8px] font-black uppercase tracking-widest text-red-400/60 hover:text-red-400 transition-colors mt-1 block"
-                                    >
-                                        [ Purificar Búfer ]
-                                    </button>
+                                    <p className="text-[9px] font-bold text-white/50">{pendingActions.length} acciones pendientes {failedActions.length > 0 && <span className="text-red-400">({failedActions.length} errores)</span>}</p>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={() => setShowForensic(true)}
+                                            className="text-[8px] font-black uppercase tracking-widest text-brand-primary hover:text-white transition-colors mt-1 block"
+                                        >
+                                            [ Inspección Forense ]
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                if (confirm('¿Limpiar el búfer local? Esto cancelará las acciones no sincronizadas.')) {
+                                                    setPendingActions([]);
+                                                    setFailedActions([]);
+                                                    localStorage.removeItem(PERSISTENCE_KEY);
+                                                    localStorage.removeItem('purgatory_sync_failures');
+                                                }
+                                            }}
+                                            className="text-[8px] font-black uppercase tracking-widest text-red-400/60 hover:text-red-400 transition-colors mt-1 block"
+                                        >
+                                            [ Purificar Búfer ]
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         )}
@@ -1028,6 +1088,119 @@ const Purgatory: React.FC = () => {
                             >
                                 {discardBulkMutation.isPending ? <RefreshCcw className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                                 Descartar Seleccionados
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Forensic Inspection Modal */}
+            {showForensic && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/90 backdrop-blur-xl animate-in fade-in duration-300">
+                    <div className="relative w-full max-w-5xl h-[80vh] flex flex-col overflow-hidden rounded-[2.5rem] border border-white/10 bg-gradient-to-br from-white/5 to-black shadow-2xl">
+                        <div className="p-8 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
+                            <div className="space-y-1">
+                                <div className="flex items-center gap-3">
+                                    <ShieldAlert className="h-6 w-6 text-red-400" />
+                                    <h3 className="text-2xl font-black text-white uppercase tracking-tight">Sala de Autopsia Forense</h3>
+                                </div>
+                                <p className="text-xs text-white/40 uppercase tracking-widest font-bold">Inspección de acciones estancadas en el búfer</p>
+                            </div>
+                            <button
+                                onClick={() => setShowForensic(false)}
+                                className="h-12 w-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40 hover:text-white transition-all"
+                            >
+                                <X className="h-6 w-6" />
+                            </button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                            {failedActions.length === 0 ? (
+                                <div className="h-full flex flex-col items-center justify-center gap-4 text-white/20">
+                                    <CheckCircle2 className="h-12 w-12" />
+                                    <p className="text-sm font-bold uppercase tracking-widest">No hay fallos registrados en esta sesión</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    {failedActions.map((f, idx) => (
+                                        <div key={idx} className="group relative overflow-hidden rounded-2xl border border-red-500/20 bg-red-500/[0.02] p-6 hover:bg-red-500/[0.04] transition-all">
+                                            <div className="flex flex-col md:flex-row gap-6 items-start">
+                                                <div className="flex-1 space-y-4 min-w-0">
+                                                    <div className="flex items-center gap-3">
+                                                        <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-tighter ${f.action.type === 'match' ? 'bg-brand-primary text-white' : 'bg-orange-500 text-white'}`}>
+                                                            {f.action.type === 'match' ? 'VINCULACIÓN' : 'DESCARTE'}
+                                                        </span>
+                                                        <span className="text-[10px] font-bold text-white/20 font-mono">ID: {f.action.id}</span>
+                                                    </div>
+
+                                                    <div className="space-y-1">
+                                                        <h4 className="text-lg font-bold text-white leading-tight truncate" title={f.action.scrapedName || 'Sin Nombre'}>
+                                                            {f.action.scrapedName || 'Ítem sin nombre (Carga previa)'}
+                                                        </h4>
+                                                        <div className="flex items-center gap-4">
+                                                            {f.action.action_url && (
+                                                                <a href={f.action.action_url} target="_blank" rel="noreferrer" className="text-[10px] font-bold text-brand-primary hover:underline flex items-center gap-1">
+                                                                    <ExternalLink className="h-3 w-3" /> Ver Oferta Original
+                                                                </a>
+                                                            )}
+                                                            {f.action.productId && (
+                                                                <span className="text-[10px] font-bold text-white/30 truncate">
+                                                                    Objetivo: Producto #{f.action.productId}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="p-3 rounded-xl bg-black/40 border border-white/5">
+                                                        <p className="text-[10px] font-black text-red-400 uppercase tracking-widest mb-1 opacity-50">Log del Servidor:</p>
+                                                        <p className="text-xs font-mono font-bold text-red-300 break-words">{f.error}</p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex flex-row md:flex-col gap-2 w-full md:w-auto shrink-0">
+                                                    <button
+                                                        onClick={() => {
+                                                            // Force retry: Remove from failedActions to let the sync engine pick it up again
+                                                            setFailedActions(prev => prev.filter(fail => fail.action.id !== f.action.id));
+                                                        }}
+                                                        className="flex-1 md:w-32 py-2.5 rounded-xl bg-brand-primary text-white text-[10px] font-black uppercase tracking-widest hover:brightness-110 transition-all"
+                                                    >
+                                                        Reintentar
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
+                                                            // Forced return to abyss: Remove from failedActions AND pendingActions
+                                                            setFailedActions(prev => prev.filter(fail => fail.action.id !== f.action.id));
+                                                            setPendingActions(prev => prev.filter(a => a.id !== f.action.id));
+                                                        }}
+                                                        className="flex-1 md:w-32 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white/60 text-[10px] font-black uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all"
+                                                    >
+                                                        Devolver al Abismo
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
+                                                            // Remove from failures but keep in ghost mode (uncommon case, but available)
+                                                            setFailedActions(prev => prev.filter(fail => fail.action.id !== f.action.id));
+                                                        }}
+                                                        className="p-2.5 rounded-xl bg-red-500/10 text-red-500/60 hover:bg-red-500 hover:text-white transition-all"
+                                                        title="Limpiar Log de Error"
+                                                    >
+                                                        <Trash2 className="h-4 w-4 mx-auto" />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="p-6 border-t border-white/5 bg-black/40 flex justify-end">
+                            <button
+                                onClick={() => setShowForensic(false)}
+                                className="px-8 py-3 rounded-2xl bg-white/10 text-white text-xs font-black uppercase tracking-widest hover:bg-white/20 transition-all"
+                            >
+                                Salir de Autopsia
                             </button>
                         </div>
                     </div>

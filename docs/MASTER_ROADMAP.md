@@ -217,6 +217,32 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
 *   **Gestión en Tiempo Real**: Capacidad de corregir vinculaciones directamente desde las oportunidades del Tablero. ✅
 *   **Buscador Integrado**: Drawer de re-vinculación con búsqueda atómica para una corrección fluida. ✅
 
+### Fase 25: API Security & Sync Engine ✅
+*   **Refuerzo de Seguridad**: Estandarización de `ORACULO_API_KEY` en todos los clientes frontend. ✅
+*   **Motor Ghost Sync**: Implementación de persistencia local para acciones offline o en espera de red. ✅
+
+### Fase 26: Nexo Maestro Cloud ✅
+*   **Cloud Hosting**: Sincronización automática de imágenes de catálogo a Supabase Storage. ✅
+*   **Robustez de Catálogo**: Fix de desplazamiento de columnas en ActionFigure411. ✅
+
+### Fase 27: Supabase Hardening ✅
+*   **RLS Activation**: Protección a nivel de fila en las 15 tablas públicas de la base de datos. ✅
+
+### Fase 28: Sync Engine Resurrect ✅
+*   **Reparación de Búfer**: Unificación de llaves API y automatización de despliegue de imágenes en CI/CD. ✅
+
+### Fase 29: Log Diagnostics & International Visibility ✅
+*   **Expansión de Logs**: Aumento del límite de auditoría a 75 registros para visibilidad semanal. ✅
+*   **Resiliencia del Ciclo**: Blindaje de `daily_scan.py` contra fallos de scrapers individuales. ✅
+
+### Fase 30: Scraper & Nexus Robustness ✅
+*   **Evasión de Bloqueos**: Fix de paginación en BBTS y timeouts en ActionFigure411. ✅
+*   **Migración Unificada**: Sincronización de esquemas locales y cloud en un solo paso. ✅
+
+### Fase 31: Debugging Sync Buffer Stagnation ✅
+*   **Motor Non-Blocking**: Sincronización resiliente que no se detiene ante fallos puntuales. ✅
+*   **Sala de Autopsia Forense**: Interfaz de inspección de fallos y manual intervention. ✅
+
 ---
 
 ## ✅ Plan de Verificación

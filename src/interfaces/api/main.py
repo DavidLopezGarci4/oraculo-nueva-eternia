@@ -553,101 +553,155 @@ async def reset_smartmatches():
 async def match_purgatory(request: PurgatoryMatchRequest):
     """Vincula un item del Purgatorio con un Producto existente y registra el evento con datos completos"""
     from src.domain.models import OfferHistoryModel
+    from sqlalchemy.exc import IntegrityError
+    
     with SessionCloud() as db:
         item = db.query(PendingMatchModel).filter(PendingMatchModel.id == request.pending_id).first()
         product = db.query(ProductModel).filter(ProductModel.id == request.product_id).first()
         
-        if not item or not product:
-            raise HTTPException(status_code=404, detail="Reliquia o Producto no encontrado")
+        # Idempotencia: Si el item ya no está en Purgatorio, comprobamos si ya se vinculó
+        if not item:
+            # Podría haber sido procesado por otra pestaña o una ejecución previa
+            existing_offer = db.query(OfferModel).filter(OfferModel.product_id == request.product_id).first() # Una simplificación
+            if existing_offer:
+                return {"status": "success", "message": "Reliquia ya procesada previamente (Idempotencia)"}
+            raise HTTPException(status_code=404, detail="Reliquia no encontrada en el Purgatorio")
+            
+        if not product:
+            raise HTTPException(status_code=404, detail="Producto objetivo no encontrado")
         
-        # Guardar copia de los datos originales para permitir reversión
-        item_data = {
-            "scraped_name": item.scraped_name,
-            "ean": item.ean,
-            "price": item.price,
-            "currency": item.currency,
-            "url": item.url,
-            "shop_name": item.shop_name,
-            "image_url": item.image_url,
-            "receipt_id": item.receipt_id
-        }
+        try:
+            # Guardar copia de los datos originales
+            item_data = {
+                "scraped_name": item.scraped_name,
+                "ean": item.ean,
+                "price": item.price,
+                "currency": item.currency,
+                "url": item.url,
+                "shop_name": item.shop_name,
+                "image_url": item.image_url,
+                "receipt_id": item.receipt_id
+            }
 
-        new_offer = OfferModel(
-            product_id=product.id,
-            shop_name=item.shop_name,
-            price=item.price,
-            currency=item.currency,
-            url=item.url,
-            is_available=True,
-            source_type=item.source_type
-        )
-        db.add(new_offer)
-        
-        # 2. Registrar historial (Auditoría con metadatos completos)
-        history = OfferHistoryModel(
-            offer_url=item.url,
-            product_name=product.name,
-            shop_name=item.shop_name,
-            price=item.price,
-            action_type="LINKED_MANUAL",
-            details=json.dumps({"product_id": product.id, "original_item": item_data})
-        )
-        db.add(history)
-        
-        # 3. Crear Alias (Aprendizaje del Sisema - Fase 25)
-        # Esto asegura que futuros escaneos de esta URL se auto-vinculen correctamente
-        from src.domain.models import ProductAliasModel
-        # Limpieza preventiva para evitar Unique Constraint errors si ya existia como manual o similar
-        db.query(ProductAliasModel).filter(ProductAliasModel.source_url == item.url).delete()
-        new_alias = ProductAliasModel(
-            product_id=product.id,
-            source_url=item.url,
-            confirmed=True
-        )
-        db.add(new_alias)
-        
-        # 4. Limpiar Purgatorio
-        db.delete(item)
-        db.commit()
-        return {"status": "success", "message": "Vínculo sagrado establecido y registrado para la posteridad"}
+            # 1. Crear Oferta
+            # Verificamos si la URL ya existe para evitar duplicados que rompan la sync
+            existing_url = db.query(OfferModel).filter(OfferModel.url == item.url).first()
+            if existing_url:
+                db.delete(item)
+                db.commit()
+                raise HTTPException(status_code=409, detail=f"Conflicto: Esta oferta ya estaba vinculada al producto #{existing_url.product_id}")
+
+            new_offer = OfferModel(
+                product_id=product.id,
+                shop_name=item.shop_name,
+                price=item.price,
+                currency=item.currency,
+                url=item.url,
+                is_available=True,
+                source_type=item.source_type
+            )
+            db.add(new_offer)
+            
+            # 2. Registrar historial
+            history = OfferHistoryModel(
+                offer_url=item.url,
+                product_name=product.name,
+                shop_name=item.shop_name,
+                price=item.price,
+                action_type="LINKED_MANUAL",
+                details=json.dumps({"product_id": product.id, "original_item": item_data})
+            )
+            db.add(history)
+            
+            # 3. Crear Alias
+            from src.domain.models import ProductAliasModel
+            db.query(ProductAliasModel).filter(ProductAliasModel.source_url == item.url).delete()
+            new_alias = ProductAliasModel(
+                product_id=product.id,
+                source_url=item.url,
+                confirmed=True
+            )
+            db.add(new_alias)
+            
+            # 4. Limpiar Purgatorio
+            db.delete(item)
+            db.commit()
+            return {"status": "success", "message": "Vínculo sagrado establecido para la posteridad"}
+            
+        except IntegrityError as e:
+            db.rollback()
+            logger.error(f"Error de integridad en match_purgatory: {e}")
+            raise HTTPException(status_code=409, detail="Error de integridad: Posible duplicidad de URL o Producto")
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Error inesperado en match_purgatory: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/purgatory/discard", dependencies=[Depends(verify_api_key)])
 async def discard_purgatory(request: PurgatoryDiscardRequest):
     """Descarta un item del Purgatorio, lo añade a la lista negra y registra la acción"""
     from src.domain.models import OfferHistoryModel
+    from sqlalchemy.exc import IntegrityError
+    
     with SessionCloud() as db:
         item = db.query(PendingMatchModel).filter(PendingMatchModel.id == request.pending_id).first()
-        if not item:
-            raise HTTPException(status_code=404, detail="Reliquia no encontrada")
         
-        # Guardar copia de los datos originales
-        item_data = {
-            "scraped_name": item.scraped_name,
-            "ean": item.ean,
-            "price": item.price,
-            "currency": item.currency,
-            "url": item.url,
-            "shop_name": item.shop_name,
-            "image_url": item.image_url,
-            "receipt_id": item.receipt_id
-        }
+        # Idempotencia
+        if not item:
+            # Quizás ya fue descartado
+            return {"status": "success", "message": "Reliquia ya procesada o inexistente (Idempotencia)"}
+        
+        try:
+            # Guardar copia de los datos originales
+            item_data = {
+                "scraped_name": item.scraped_name,
+                "ean": item.ean,
+                "price": item.price,
+                "currency": item.currency,
+                "url": item.url,
+                "shop_name": item.shop_name,
+                "image_url": item.image_url,
+                "receipt_id": item.receipt_id
+            }
 
-        # Evitar duplicados en lista negra para no causar 500
-        exists = db.query(BlackcludedItemModel).filter(BlackcludedItemModel.url == item.url).first()
-        if not exists:
-            bl = BlackcludedItemModel(
-                url=item.url,
-                scraped_name=item.scraped_name,
-                reason=request.reason
+            # 1. Añadir a Lista Negra (Evitando duplicados explícitamente)
+            exists = db.query(BlackcludedItemModel).filter(BlackcludedItemModel.url == item.url).first()
+            if not exists:
+                bl = BlackcludedItemModel(
+                    url=item.url,
+                    scraped_name=item.scraped_name,
+                    reason=request.reason,
+                    source_type=item.source_type
+                )
+                db.add(bl)
+
+            # 2. Registrar en historial
+            history = OfferHistoryModel(
+                offer_url=item.url,
+                product_name=item.scraped_name,
+                shop_name=item.shop_name,
+                price=item.price,
+                action_type="DISCARDED_MANUAL",
+                details=json.dumps({"reason": request.reason, "original_item": item_data})
             )
-            db.add(bl)
+            db.add(history)
 
-        # Registrar en historial para posible reversión
-        history = OfferHistoryModel(
-            offer_url=item.url,
-            product_name=item.scraped_name,
-            shop_name=item.shop_name,
-            price=item.price,
+            # 3. Limpiar Purgatorio
+            db.delete(item)
+            db.commit()
+            return {"status": "success", "message": "Item enviado a las sombras de la lista negra"}
+            
+        except IntegrityError as e:
+            db.rollback()
+            logger.error(f"Error de integridad en discard_purgatory: {e}")
+            # Si ya existía en lista negra pero no lo detectó el select anterior, simplemente limpiamos purgatorio
+            db.delete(item)
+            db.commit()
+            return {"status": "success", "message": "Item ya estaba en lista negra, purificado del Purgatorio"}
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Error inesperado en discard_purgatory: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
             action_type="DISCARDED",
             details=json.dumps({"reason": request.reason, "original_item": item_data})
         )
