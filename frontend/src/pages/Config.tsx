@@ -263,7 +263,7 @@ const Config: React.FC = () => {
                                 Estados Individuales
                             </h3>
                             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                                {statuses.filter(s => s.spider_name !== 'all' && s.spider_name !== 'harvester').map((s) => (
+                                {statuses.filter(s => s.spider_name !== 'all' && s.spider_name !== 'harvester' && s.spider_name !== 'amazon').map((s) => (
                                     <div key={s.spider_name} className="glass border border-white/5 p-3 rounded-xl flex flex-col gap-2 relative">
                                         <div className="flex items-center justify-between">
                                             <span className="text-[10px] font-bold text-white/70 uppercase tracking-wider">{s.spider_name}</span>
