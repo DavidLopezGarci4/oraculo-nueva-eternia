@@ -293,9 +293,9 @@ const Purgatory: React.FC = () => {
     }, [pendingActions.length, failedActions.length]); // Re-run mainly to ensure the check continues
 
 
-    const filteredProducts = products?.filter((p: any) =>
-        p.name.toLowerCase().includes(manualSearchTerm.toLowerCase()) ||
-        p.figure_id?.toLowerCase().includes(manualSearchTerm.toLowerCase())
+    const filteredProducts = (products || [])?.filter((p: any) =>
+        (p.name || "").toLowerCase().includes((manualSearchTerm || "").toLowerCase()) ||
+        (p.figure_id || "").toLowerCase().includes((manualSearchTerm || "").toLowerCase())
     ).slice(0, 20);
 
     // Dynamic Filter for Pending Items (Main List)
@@ -305,11 +305,11 @@ const Purgatory: React.FC = () => {
         // Persistence Ghost Mode: Filter out locally hidden items
         if (pendingIdsToHide.has(item.id)) return false;
 
-        const term = searchTerm.toLowerCase();
+        const term = (searchTerm || "").toLowerCase();
         const matchesSearch = !searchTerm || (
-            item.scraped_name.toLowerCase().includes(term) ||
-            item.shop_name.toLowerCase().includes(term) ||
-            item.ean?.toLowerCase().includes(term) ||
+            (item.scraped_name || "").toLowerCase().includes(term) ||
+            (item.shop_name || "").toLowerCase().includes(term) ||
+            (item.ean || "").toLowerCase().includes(term) ||
             item.id.toString().includes(term)
         );
 
