@@ -251,8 +251,9 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
 
 ### Fase 33: Decommissioning Scrapers ✅
 *   **Limpieza de Motores**: Eliminación de scrapers obsoletos (MotuClassicsDE, VendiloshopIT) para optimizar recursos. ✅
+*   **Unificación Fantasía**: Eliminación del scraper duplicado "Fantasia" y consolidación en "Fantasia Personajes" para evitar ruido visual. ✅
 *   **Santuario de Datos**: Preservación de ofertas históricas vinculadas mientras se limpian las bitácoras dinámicas. ✅
-*   **Optimización UI**: Reducción del panel de incursión individual de 15 a 13 tiendas activas. ✅
+*   **Optimización UI**: El panel de incursión individual ahora está unificado y libre de duplicidades. ✅
 
 ---
 

@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("cleanup_shops")
 
 def cleanup_shops():
-    shops_to_remove = ["MotuClassicsDE", "VendiloshopIT", "vendiloshopit"]
+    shops_to_remove = ["MotuClassicsDE", "VendiloshopIT", "vendiloshopit", "Fantasia"]
     
     db = Session()
     try:

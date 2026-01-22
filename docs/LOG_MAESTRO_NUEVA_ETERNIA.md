@@ -890,8 +890,9 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
 - **Hitos**: Eliminación de motores de captura obsoletos y limpieza de base de datos.
 - **Estado**: ✅ COMPLETADO
 - **Acciones de Purificación**:
-    - **Scrapper Removal**: Eliminados físicamente `motuclassics_de_scraper.py` y `vendiloshop_scraper.py`.
+    - **Scrapper Removal**: Eliminados físicamente `motuclassics_de_scraper.py`, `vendiloshop_scraper.py` y el legacy `spiders/fantasia.py`.
     - **Orchestration Cleanup**: Retirados de `daily_scan.py`, `main.py` (API) y `simulated_connection.py`.
-    - **DB Exorcism**: Ejecutado `cleanup_decommissioned_shops.py` para purgar registros de `scraper_status` y `scraper_execution_logs`.
-    - **UI Streamlining**: El panel de incursión individual ahora muestra solo **13 tiendas activas**, eliminando el ruido visual de tiendas inactivas.
+    - **Fantasia Unification**: Eliminada la entrada duplicada de "Fantasia" en la base de datos y unificado todo bajo "Fantasia Personajes" en la API.
+    - **DB Exorcism**: Ejecutado `cleanup_decommissioned_shops.py` para purgar registros de `scraper_status` y `scraper_execution_logs` (incluyendo Fantasia).
+    - **UI Streamlining**: Panel de incursión individual ahora unificado y libre de duplicados, mejorando la claridad para el Maestro.
     - **Logistics Update**: Eliminadas las reglas de importación correspondientes en `seed_logistics.py`.

@@ -824,7 +824,7 @@ def run_scraper_task(scraper_name: str = "harvester", trigger_type: str = "manua
 
             spiders_map = {
                 "ActionToys": ActionToysScraper(),
-                "Fantasia": FantasiaScraper(),
+                "Fantasia Personajes": FantasiaScraper(),
                 "Frikiverso": FrikiversoScraper(),
                 "Electropolis": ElectropolisScraper(),
                 "Pixelatoy": PixelatoyScraper(),
