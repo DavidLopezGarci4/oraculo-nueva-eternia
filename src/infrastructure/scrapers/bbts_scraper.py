@@ -2,6 +2,7 @@ from typing import List, Optional
 import asyncio
 import logging
 import random
+import re
 from playwright.async_api import BrowserContext, Page
 from bs4 import BeautifulSoup
 
@@ -129,39 +130,66 @@ class BigBadToyStoreScraper(BaseScraper):
                 consecutive_empty_pages = 0
                 has_next_page = True
                 
+                # Context Management for Rotation
+                current_context = context
+                current_page = page
+
                 while page_num <= self.max_pages and has_next_page:
                     # Construir URL con PageIndex
                     current_url = f"{self.base_url}&PageIndex={page_num}"
                     logger.info(f"[{self.spider_name}] Scraping página {page_num}: {current_url}")
                     
-                    # Delay inicial aleatorio largo (simular humano - MÁS CAUTELOSO)
+                    # Delay inicial aleatorio largo (simular humano)
                     if page_num == 1:
                         await asyncio.sleep(random.uniform(2, 4))
                     else:
-                        # Delay más largo entre páginas (8-15 segundos según petición del usuario)
+                        # Delay más largo entre páginas (8-15 segundos)
                         delay = random.uniform(8, 15)
                         logger.info(f"[{self.spider_name}] Esperando {delay:.1f}s antes de la siguiente página...")
                         await asyncio.sleep(delay)
                     
-                    if not await self._safe_navigate(page, current_url, timeout=90000):
-                        logger.error(f"[{self.spider_name}] Fallo al cargar BBTS página {page_num}")
+                    # Navigation with block detection
+                    nav_success = False
+                    for attempt in range(2): # Local retry with potential context refresh
+                        if await self._safe_navigate(current_page, current_url, timeout=90000):
+                            # Check if blocked
+                            content = await current_page.content()
+                            if "blocked" in content.lower() or "sorry, you have been blocked" in content.lower():
+                                logger.warning(f"[{self.spider_name}] 🚫 Block detected on page {page_num}. Attempting context refresh...")
+                                # Refresh context
+                                await current_page.close()
+                                await current_context.close()
+                                
+                                user_agent = random.choice(self.USER_AGENTS)
+                                current_context = await browser.new_context(user_agent=user_agent)
+                                current_page = await current_context.new_page()
+                                await asyncio.sleep(random.uniform(5, 10))
+                                continue # Retry navigation with new context
+                            
+                            nav_success = True
+                            break
+                        else:
+                            logger.warning(f"[{self.spider_name}] Navigation failed for page {page_num}, attempt {attempt+1}")
+                    
+                    if not nav_success:
+                        logger.error(f"[{self.spider_name}] Fallo definitivo al cargar BBTS página {page_num}")
                         self.blocked = True
                         break
                     
                     # Esperar renderizado JavaScript con timeout generoso
-                    await page.wait_for_timeout(random.randint(5000, 8000))
+                    await current_page.wait_for_timeout(random.randint(5000, 8000))
                     
                     # Scroll humanizado para cargar lazy content
                     for i in range(3):
-                        await page.keyboard.press("End")
+                        await current_page.keyboard.press("End")
                         await asyncio.sleep(random.uniform(0.8, 1.5))
                         
                         # Movimiento de mouse aleatorio (simular usuario real)
                         x = random.randint(100, 1800)
                         y = random.randint(100, 900)
-                        await page.mouse.move(x, y)
+                        await current_page.mouse.move(x, y)
                     
-                    html_content = await page.content()
+                    html_content = await current_page.content()
                     soup = BeautifulSoup(html_content, 'html.parser')
                     
                     # Selectores multiples para BBTS (la estructura puede variar)
@@ -195,11 +223,18 @@ class BigBadToyStoreScraper(BaseScraper):
                     logger.info(f"[{self.spider_name}] Página {page_num}: {len(unique_items_page)} items únicos")
                     
                     # Verificación de "Siguiente Página" en el DOM
-                    # Buscamos <a rel="next"> o <a aria-label="Next">
-                    next_link = soup.select_one('a[rel="next"]') or soup.select_one('a[aria-label="Next"]')
+                    # Buscamos <a rel="next"> o <a aria-label="Next"> o el símbolo »
+                    next_link = (
+                        soup.select_one('a[rel="next"]') or 
+                        soup.select_one('a[aria-label="Next"]') or
+                        soup.find('a', string=re.compile(r'Next|»'))
+                    )
                     if not next_link:
-                        logger.info(f"[{self.spider_name}] No se detectó botón 'Siguiente'. Fin de paginación.")
-                        has_next_page = False
+                        # Fallback: Verificar si existe el link a la siguiente página numérica
+                        next_page_url_part = f"PageIndex={page_num + 1}"
+                        if not any(next_page_url_part in str(a.get('href')) for a in soup.find_all('a', href=True)):
+                            logger.info(f"[{self.spider_name}] No se detectó botón 'Siguiente' ni link a pág {page_num+1}. Fin.")
+                            has_next_page = False
                     
                     # Si no hay items, hemos llegado al final
                     if len(unique_items_page) == 0:

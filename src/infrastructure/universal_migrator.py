@@ -1,6 +1,7 @@
 import logging
 from sqlalchemy import text, inspect
-from src.infrastructure.database import engine
+from src.infrastructure.database import engine as engine_local
+from src.infrastructure.database_cloud import engine_cloud
 from src.domain.models import Base
 
 logging.basicConfig(level=logging.INFO)
@@ -13,17 +14,30 @@ def migrate():
     """
     logger.info("Starting Universal Migration...")
     
+    # 1. Sync Local Database
+    _sync_engine(engine_local, "Local")
+    
+    # 2. Sync Cloud Database (if configured)
+    if engine_cloud and "sqlite" not in str(engine_cloud.url):
+        _sync_engine(engine_cloud, "Cloud")
+    else:
+        logger.info("Skipping Cloud Sync (No Cloud DB configured or is SQLite).")
+
+    logger.info("Universal Migration finished successfully.")
+
+def _sync_engine(engine, label: str):
+    """Internal helper to sync a specific engine."""
+    logger.info(f"--- Synchronizing {label} Engine ---")
     inspector = inspect(engine)
     
     # Tables to check
     tables = inspector.get_table_names()
     
-    # 1. Ensure new tables exist (price_alerts)
-    # create_all is safe, it only creates tables that don't exist
+    # A. Ensure all tables exist in Base.metadata
     Base.metadata.create_all(bind=engine)
-    logger.info("Checked/Created core tables (including OfferHistory).")
+    logger.info(f"[{label}] Core tables checked/created.")
 
-    # 2. Check for missing columns in existing tables
+    # B. Check for missing columns in existing tables
     with engine.connect() as conn:
         # --- Table: products ---
         columns_products = [c['name'] for c in inspector.get_columns("products")]
@@ -75,7 +89,34 @@ def migrate():
         # --- Table: price_alerts (Created by create_all, but check for created_at if old) ---
         # (Assuming it's new so skip for now)
 
-    logger.info("Universal Migration finished successfully.")
+        # --- Table: blackcluded_items (Check for all columns) ---
+        if "blackcluded_items" in inspector.get_table_names():
+             columns_black = [c['name'] for c in inspector.get_columns("blackcluded_items")]
+             
+             if "source_type" not in columns_black:
+                 logger.info(f"[{label}] Adding 'source_type' to blackcluded_items...")
+                 conn.execute(text("ALTER TABLE blackcluded_items ADD COLUMN source_type VARCHAR(50) DEFAULT 'Retail'"))
+                 conn.commit()
+                 
+             if "validation_status" not in columns_black:
+                 logger.info(f"[{label}] Adding 'validation_status' to blackcluded_items...")
+                 conn.execute(text("ALTER TABLE blackcluded_items ADD COLUMN validation_status VARCHAR(50) DEFAULT 'VALIDATED'"))
+                 conn.commit()
+
+             if "anomaly_flags" not in columns_black:
+                 logger.info(f"[{label}] Adding 'anomaly_flags' to blackcluded_items...")
+                 conn.execute(text("ALTER TABLE blackcluded_items ADD COLUMN anomaly_flags TEXT"))
+                 conn.commit()
+                 
+             if "is_blocked" not in columns_black:
+                 logger.info(f"[{label}] Adding 'is_blocked' to blackcluded_items...")
+                 conn.execute(text("ALTER TABLE blackcluded_items ADD COLUMN is_blocked BOOLEAN DEFAULT FALSE"))
+                 conn.commit()
+                 
+             if "created_at" not in columns_black:
+                 logger.info(f"[{label}] Adding 'created_at' to blackcluded_items...")
+                 conn.execute(text("ALTER TABLE blackcluded_items ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"))
+                 conn.commit()
 
 if __name__ == "__main__":
     migrate()

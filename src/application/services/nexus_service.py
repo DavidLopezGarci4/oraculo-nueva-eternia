@@ -78,5 +78,7 @@ class NexusService:
             return True
             
         except Exception as e:
+            import traceback
             logger.error(f"❌ Nexus Error: {e}")
+            logger.error(traceback.format_exc())
             return False

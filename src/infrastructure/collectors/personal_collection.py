@@ -45,9 +45,9 @@ DESIRED_ORDER = [
     "Imagen", "Image Path", "Image URL", "Detail Link"
 ]
 
-REQUEST_TIMEOUT = 20.0     # segundos por petición
-POLITE_SLEEP = 0.6         # pausa entre peticiones (cortesía)
-MAX_RETRIES = 4            # reintentos para 429/5xx
+REQUEST_TIMEOUT = 60.0     # segundos por petición (Aumentado para GitHub Actions)
+POLITE_SLEEP = 1.0         # pausa entre peticiones (cortesía)
+MAX_RETRIES = 5            # reintentos para 429/5xx (Aumentado para entornos inestables)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -677,7 +677,10 @@ def main(audit_mode: bool = False) -> None:
                      y = str(row["Year"]).strip() if has_year else ""
                      k = f"{n}|{y}"
                      existing_keys.add(k)
-        logging.info("Se encontraron %d figuras existentes. Se omitirá su descarga.", len(existing_keys))
+        if len(existing_keys) > 0:
+            logging.info("Se encontraron %d figuras existentes en el Excel. Se omitirá su descarga (Modo Incremental).", len(existing_keys))
+        else:
+            logging.info("No se encontraron figuras previas. Se realizará una descarga completa del catálogo.")
 
     logging.info("Descargando página índice...")
     resp = safe_get(session, CHECKLIST_URL)
@@ -709,10 +712,15 @@ def main(audit_mode: bool = False) -> None:
         return
 
     # Normal Flow: Merge and Write Excel
-    # Re-leemos el Excel para merge robusto
-    sections_old = read_existing_excel(excel_path)
-    sections_final = combine_sections(sections_new, sections_old)
-    write_excel_with_links(excel_path, sections_final)
+    try:
+        # Re-leemos el Excel para merge robusto
+        sections_old = read_existing_excel(excel_path)
+        sections_final = combine_sections(sections_new, sections_old)
+        write_excel_with_links(excel_path, sections_final)
+    except Exception as e:
+        import traceback
+        logging.error(f"❌ Error during Excel Merge/Write: {e}\n{traceback.format_exc()}")
+        raise
 
     elapsed = time.time() - start_time
     logging.info("Extracción completada en %s", time.strftime("%H:%M:%S", time.gmtime(elapsed)))
