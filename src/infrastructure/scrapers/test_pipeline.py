@@ -1,15 +1,13 @@
 import asyncio
 from src.infrastructure.scrapers.pipeline import ScrapingPipeline
-from src.infrastructure.scrapers.spiders.kidinn import KidInnSpider
-from src.infrastructure.scrapers.spiders.amazon import AmazonSpider
+from src.infrastructure.scrapers.amazon_scraper import AmazonScraper
 from loguru import logger
 
 async def test_pipeline():
-    logger.info("Initializing Spiders...")
-    kidinn = KidInnSpider()
-    amazon = AmazonSpider()
+    logger.info("Initializing Scrapers...")
+    amazon = AmazonScraper()
     
-    pipeline = ScrapingPipeline(spiders=[kidinn, amazon])
+    pipeline = ScrapingPipeline(scrapers=[amazon])
     
     # Test with a known MOTU product
     product_name = "He-Man Masterverse"

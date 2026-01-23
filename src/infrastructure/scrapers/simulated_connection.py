@@ -23,7 +23,7 @@ logger = logging.getLogger("ConnectionSimulator")
 
 async def check_connection(scraper_class) -> Dict:
     scraper = scraper_class()
-    name = scraper.spider_name
+    name = scraper.scraper_name
     start_time = datetime.datetime.now()
     
     try:
@@ -37,7 +37,7 @@ async def check_connection(scraper_class) -> Dict:
         duration = (datetime.datetime.now() - start_time).total_seconds()
         
         status = {
-            "spider": name,
+            "scraper": name,
             "status": "ONLINE" if not getattr(scraper, 'blocked', False) else "BLOCKED",
             "items_found": len(results),
             "errors": getattr(scraper, 'errors', 0),
@@ -49,7 +49,7 @@ async def check_connection(scraper_class) -> Dict:
     except Exception as e:
         logger.error(f"[FAIL] {name}: FAILED - {e}")
         return {
-            "spider": name,
+            "scraper": name,
             "status": "ERROR",
             "error": str(e),
             "timestamp": datetime.datetime.now().isoformat()

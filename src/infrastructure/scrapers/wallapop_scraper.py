@@ -53,7 +53,7 @@ class WallapopScraper(BaseScraper):
         """
         Busca productos en Wallapop usando la API interna.
         """
-        logger.info(f"[{self.spider_name}] Iniciando busqueda para: {query}")
+        logger.info(f"[{self.scraper_name}] Iniciando busqueda para: {query}")
         offers = []
         
         # Coordenadas de Madrid (centro de Espana para cobertura amplia)
@@ -82,17 +82,17 @@ class WallapopScraper(BaseScraper):
                     )
                     
                     if response.status_code == 403:
-                        logger.warning(f"[{self.spider_name}] 403 en intento {attempt+1}, reintentando...")
+                        logger.warning(f"[{self.scraper_name}] 403 en intento {attempt+1}, reintentando...")
                         await asyncio.sleep(random.uniform(1, 3))
                         continue
                     
                     if response.status_code != 200:
-                        logger.error(f"[{self.spider_name}] API respondio con: {response.status_code}")
+                        logger.error(f"[{self.scraper_name}] API respondio con: {response.status_code}")
                         continue
                     
                     data = response.json()
                     items = data.get("search_objects", [])
-                    logger.info(f"[{self.spider_name}] API devolvio {len(items)} items.")
+                    logger.info(f"[{self.scraper_name}] API devolvio {len(items)} items.")
                     
                     for item in items:
                         try:
@@ -120,26 +120,28 @@ class WallapopScraper(BaseScraper):
                                     price=price,
                                     currency="EUR",
                                     url=url,
-                                    shop_name=self.shop_name,
-                                    image_url=image_url
+                                    shop_name=self.scraper_name,
+                                    image_url=image_url,
+                                    source_type="Peer-to-Peer",
+                                    sale_type="Fixed_P2P"
                                 ))
                                 self.items_scraped += 1
                                 
                         except Exception as e:
-                            logger.warning(f"[{self.spider_name}] Error parseando item: {e}")
+                            logger.warning(f"[{self.scraper_name}] Error parseando item: {e}")
                             continue
                     
                     # Si llegamos aqui, exito
                     break
                     
             except httpx.TimeoutException:
-                logger.error(f"[{self.spider_name}] Timeout en intento {attempt+1}")
+                logger.error(f"[{self.scraper_name}] Timeout en intento {attempt+1}")
             except Exception as e:
-                logger.error(f"[{self.spider_name}] Error en intento {attempt+1}: {e}")
+                logger.error(f"[{self.scraper_name}] Error en intento {attempt+1}: {e}")
             
             await asyncio.sleep(random.uniform(1, 2))
         
-        logger.info(f"[{self.spider_name}] Scraping finalizado. Total ofertas: {len(offers)}")
+        logger.info(f"[{self.scraper_name}] Scraping finalizado. Total ofertas: {len(offers)}")
         return offers
 
 

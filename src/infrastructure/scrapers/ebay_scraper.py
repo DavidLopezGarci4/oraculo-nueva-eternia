@@ -137,6 +137,56 @@ class EbayScraper(BaseScraper):
                         img_el = await res.query_selector("img")
                         image_url = await img_el.get_attribute("src") if img_el else None
 
+                        # --- PHASE 39: AUCTION INTELLIGENCE ---
+                        sale_type = "Fixed_P2P"
+                        bids_count = 0
+                        time_left_raw = None
+                        expiry_at = None
+
+                        # Detect Auction vs Fixed
+                        bid_el = await res.query_selector(".s-item__bids, .s-item__bid-count")
+                        if bid_el:
+                            sale_type = "Auction"
+                            bid_text = await bid_el.inner_text()
+                            bids_match = re.search(r'(\d+)', bid_text)
+                            if bids_match:
+                                bids_count = int(bids_match.group(1))
+                        
+                        # Detect "Compra ya" (Fixed Price)
+                        purchase_options = await res.query_selector(".s-item__purchase-options")
+                        if purchase_options:
+                            opt_text = await purchase_options.inner_text()
+                            if "Compra ya" in opt_text or "¡Cómpralo ya!" in opt_text:
+                                sale_type = "Fixed_P2P"
+
+                        # Time Left
+                        time_el = await res.query_selector(".s-item__time-left, .s-item__time")
+                        if time_el:
+                            time_left_raw = await time_el.inner_text()
+                            # Basic string cleanup
+                            time_left_raw = time_left_raw.replace("¡Solo queda(n) ", "").replace("!", "").strip()
+                            
+                            # Simple expiration estimation (Phase 39)
+                            # Logic: If string has 'd', 'h', 'm', try to add to now.
+                            try:
+                                from datetime import timedelta
+                                now = datetime.utcnow()
+                                offset = timedelta()
+                                
+                                # Examples: "2 d 14 h", "13 h 5 m", "58 m"
+                                d_match = re.search(r'(\d+)\s*d', time_left_raw)
+                                h_match = re.search(r'(\d+)\s*h', time_left_raw)
+                                m_match = re.search(r'(\d+)\s*m', time_left_raw)
+                                
+                                if d_match: offset += timedelta(days=int(d_match.group(1)))
+                                if h_match: offset += timedelta(hours=int(h_match.group(1)))
+                                if m_match: offset += timedelta(minutes=int(m_match.group(1)))
+                                
+                                if offset.total_seconds() > 0:
+                                    expiry_at = now + offset
+                            except:
+                                pass
+
                         if price > 0 and full_url not in [o.url for o in offers]:
                             offers.append(ScrapedOffer(
                                 product_name=title,
@@ -145,7 +195,11 @@ class EbayScraper(BaseScraper):
                                 shop_name=self.shop_name,
                                 image_url=image_url,
                                 ean=None,
-                                source_type="Peer-to-Peer"
+                                source_type="Peer-to-Peer",
+                                sale_type=sale_type,
+                                bids_count=bids_count,
+                                time_left_raw=time_left_raw,
+                                expiry_at=expiry_at
                             ))
                             self.items_scraped += 1
 

@@ -174,6 +174,7 @@ TELEGRAM_BOT_TOKEN=tu_token
 *   **Fase 33 (Scraper Decommission)**: ✅ Eliminación de scrapers obsoletos (MotuClassicsDE/VendiloshopIT) y unificación de "Fantasía Personajes" para una UI sin duplicados (Completado).
 *   **Fase 34 (Purificación & Eficiencia)**: ✅ Eliminación de código legado (Streamlit), indexación crítica de base de datos y eliminación de consultas N+1 en API y Pipeline (Completado).
 *   **Fase 35 (Amazon Infiltration)**: ✅ Implementación de `AmazonScraper` con evasión de bloqueos y procesamiento de 54 nuevas ofertas (Completado).
+*   **Fase 40 (Scraper Estandarización)**: ✅ Unificación de toda la infraestructura bajo `BaseScraper` y `scraper_name`, eliminando el legado de "Spiders" (Completado).
 
 
 ## 6. El Motor de Inversión (DealScorer)

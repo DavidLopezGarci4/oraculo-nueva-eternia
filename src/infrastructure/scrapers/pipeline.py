@@ -3,7 +3,7 @@ import json
 from typing import List
 from datetime import datetime
 from loguru import logger
-from src.infrastructure.scrapers.base import BaseSpider, ScrapedOffer
+from src.infrastructure.scrapers.base import BaseScraper, ScrapedOffer
 from src.domain.schemas import ProductSchema
 from src.infrastructure.repositories.product import ProductRepository
 from sqlalchemy.orm import Session
@@ -13,26 +13,26 @@ from src.application.services.deal_scorer import DealScorer
 from src.application.services.logistics_service import LogisticsService
 
 class ScrapingPipeline:
-    def __init__(self, spiders: List[BaseSpider]):
-        self.spiders = spiders
+    def __init__(self, scrapers: List[BaseScraper]):
+        self.scrapers = scrapers
 
     async def run_product_search(self, product_name: str) -> List[dict]:
         """
         Runs all spiders in parallel and transforms results into 3OX Contract format.
         """
-        logger.info(f"Pipeline: Searching for '{product_name}' across {len(self.spiders)} spiders.")
+        logger.info(f"Pipeline: Searching for '{product_name}' across {len(self.scrapers)} scrapers.")
         
-        tasks = [spider.search(product_name) for spider in self.spiders]
+        tasks = [scraper.search(product_name) for scraper in self.scrapers]
         results = await asyncio.gather(*tasks, return_exceptions=True)
         
         all_legacy_offers = []
-        for spider, res in zip(self.spiders, results):
+        for scraper, res in zip(self.scrapers, results):
             if isinstance(res, Exception):
-                logger.error(f"Spider {spider.shop_name} failed for '{product_name}': {res}")
+                logger.error(f"Scraper {scraper.shop_name} failed for '{product_name}': {res}")
             else:
-                logger.info(f"Spider {spider.shop_name} found {len(res)} offers.")
+                logger.info(f"Scraper {scraper.shop_name} found {len(res)} offers.")
                 # DNA Segregation (Phase 14 & 16): Inject source type based on scraper type
-                source = "Peer-to-Peer" if getattr(spider, 'is_auction_source', False) else "Retail"
+                source = "Peer-to-Peer" if getattr(scraper, 'is_auction_source', False) else "Retail"
                 for offer in res:
                     if isinstance(offer, ScrapedOffer):
                         offer.source_type = source
@@ -169,7 +169,11 @@ class ScrapingPipeline:
                         "url": url_str,
                         "is_available": offer.get('is_available') if offer.get('is_available') is not None else True,
                         "source_type": offer.get('source_type', 'Retail'),
-                        "opportunity_score": opp_score
+                        "opportunity_score": opp_score,
+                        "sale_type": offer.get('sale_type', 'Retail'),
+                        "expiry_at": offer.get('expiry_at'),
+                        "bids_count": offer.get('bids_count', 0),
+                        "time_left_raw": offer.get('time_left_raw')
                     }, commit=False)
                     continue
 
@@ -185,6 +189,14 @@ class ScrapingPipeline:
                         # Update source_type if it was missing or different
                         if "source_type" in offer:
                             pending_item.source_type = offer["source_type"]
+                        if "sale_type" in offer:
+                            pending_item.sale_type = offer["sale_type"]
+                        if "expiry_at" in offer:
+                            pending_item.expiry_at = offer["expiry_at"]
+                        if "bids_count" in offer:
+                            pending_item.bids_count = offer["bids_count"]
+                        if "time_left_raw" in offer:
+                            pending_item.time_left_raw = offer["time_left_raw"]
                         # Si quisiéramos alertas aquí (antes de vincular), se podrían añadir.
                     continue
 
@@ -250,6 +262,10 @@ class ScrapingPipeline:
                             "is_blocked": True,
                             "anomaly_flags": json.dumps(flags),
                             "opportunity_score": opp_score,
+                            "sale_type": offer.get('sale_type', 'Retail'),
+                            "expiry_at": offer.get('expiry_at'),
+                            "bids_count": offer.get('bids_count', 0),
+                            "time_left_raw": offer.get('time_left_raw'),
                             "found_at": datetime.utcnow()
                         }
                         
@@ -339,6 +355,10 @@ class ScrapingPipeline:
                         "ean": offer.get('ean'),
                         "source_type": offer.get('source_type', 'Retail'),
                         "receipt_id": offer.get('receipt_id'),
+                        "sale_type": offer.get('sale_type', 'Retail'),
+                        "expiry_at": offer.get('expiry_at'),
+                        "bids_count": offer.get('bids_count', 0),
+                        "time_left_raw": offer.get('time_left_raw'),
                         "found_at": datetime.utcnow()
                     }
                     

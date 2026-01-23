@@ -798,6 +798,27 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
     - **Robustez**: Mejorado el filtrado de tiendas en `daily_scan.py` para manejar parámetros vacíos de GitHub Actions.
 
 - [x] **11.12 Wallapop DNA & Pavilion Routing (20/01/2026)**:
+    - **DNA Segregation**: Enhanced scrapers to inject source type accurately.
+    - **Pavilion Routing**: Verified Wallapop items are correctly routed to "El Pabellón".
+
+### 🕸️ Fase 40: El Gran Renacimiento de los Scrapers (Standardization - 23/01/2026)
+
+- **Hitos**: Refactorización total de la infraestructura de scraping para eliminar el legado de "Spiders" y consolidar el motor bajo la convención `BaseScraper`.
+- **Estado**: ✅ COMPLETADO Y VERIFICADO
+
+#### 40.1 Estandarización de Identidad
+*   **BaseScraper**: Renombramiento de la clase maestra `BaseSpider` a `BaseScraper`.
+*   **Atributo scraper_name**: Sustitución global de `spider_name` por `scraper_name` en todos los scrapers, modelos de base de datos (`ScraperStatusModel`, `ScraperExecutionLogModel`, `KaizenInsightModel`) y endpoints de la API.
+*   **Nomenclatura Uniforme**: Actualización de todas las clases individuales a la convención `*Scraper` (ej. `EbayScraper`, `AmazonScraper`).
+
+#### 40.2 Refuerzo de la Ingestión
+*   **Daily Scan CLI**: Actualización del flujo de escaneo diario para manejar los nuevos nombres de scrapers y asegurar la trazabilidad en Supabase.
+*   **Pipeline de Scraping**: Refactorización del `ScrapingPipeline` para usar `scrapers` en lugar de `spiders`, mejorando la semántica del código.
+*   **Simulador de Latidos**: Actualización del sistema de monitoreo de salud para usar el nuevo motor.
+
+#### 40.3 Limpieza de Legado (Tech Debt)
+*   **Eliminación de Alias**: Remoción definitiva del alias `BaseSpider` una vez verificada la integridad de todas las referencias.
+*   **Saneamiento de Imports**: Corrección de importaciones en scripts de prueba, utilidades y jobs de fondo.
     - **P2P Tagging**: Corregido endpoint de importación para que los ítems de Wallapop se marquen como `Peer-to-Peer` automáticamente.
 
 ### Fase 23: Blindaje de Poderes Administrativos ✅
