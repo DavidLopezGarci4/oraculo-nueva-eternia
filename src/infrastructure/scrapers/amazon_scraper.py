@@ -46,12 +46,43 @@ class AmazonScraper(BaseScraper):
             # we would use a shared browser context.
             from playwright.async_api import async_playwright
             async with async_playwright() as p:
-                browser = await p.chromium.launch(headless=True)
-                context = await browser.new_context(
-                    viewport={'width': 1920, 'height': 1080},
-                    user_agent=self._get_random_header()["User-Agent"]
+                # STEALTH: Anti-detection flags
+                browser = await p.chromium.launch(
+                    headless=True,
+                    args=[
+                        '--disable-blink-features=AutomationControlled',
+                        '--no-sandbox',
+                        '--disable-dev-shm-usage',
+                        '--window-size=1920,1080'
+                    ]
                 )
+                
+                # Contexto con fingerprint español realista
+                context = await browser.new_context(
+                    user_agent=self._get_random_header()["User-Agent"],
+                    viewport={'width': 1920, 'height': 1080},
+                    locale='es-ES',
+                    timezone_id='Europe/Madrid',
+                    permissions=['geolocation']
+                )
+                
+                # Headers adicionales anti-bloqueo
+                await context.set_extra_http_headers({
+                    'Accept-Language': 'es-ES,es;q=0.9',
+                    'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+                    'sec-ch-ua-mobile': '?0',
+                    'sec-ch-ua-platform': '"Windows"',
+                    'Upgrade-Insecure-Requests': '1'
+                })
+
                 page = await context.new_page()
+                
+                # Inyectar scripts para evadir detección de automatización
+                await page.add_init_script("""
+                    Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+                    window.chrome = { runtime: {} };
+                    Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+                """)
                 
                 success = await self._safe_navigate(page, url)
                 if not success:
@@ -68,10 +99,28 @@ class AmazonScraper(BaseScraper):
                 except:
                     pass
 
-                # Wait for results to load
-                await page.wait_for_selector("[data-component-type='s-search-result']", timeout=10000)
-                # Lazy loading wait
-                await asyncio.sleep(2)
+                # Wait for results to load with block detection
+                try:
+                    await page.wait_for_selector("[data-component-type='s-search-result']", timeout=15000)
+                except Exception:
+                    # Check if blocked by captcha or similar
+                    content = await page.content()
+                    if "sp-cc-accept" in content and "captcha" not in content.lower():
+                        logger.warning("⚠️ Amazon.es: Resultados no cargan pero el banner de cookies está presente. Intentando scroll...")
+                    elif "captcha" in content.lower() or "robot" in content.lower():
+                        logger.error("🚫 Amazon.es: Bot detectado (CAPTCHA).")
+                        self.blocked = True
+                        await browser.close()
+                        return []
+                    else:
+                        logger.error("❌ Amazon.es: Timeout esperando resultados.")
+                        await browser.close()
+                        return []
+
+                # Human-like interaction: random scroll
+                for _ in range(2):
+                    await page.keyboard.press("PageDown")
+                    await asyncio.sleep(random.uniform(0.5, 1.5))
                 
                 # Extract results
                 results = await page.query_selector_all("[data-component-type='s-search-result']")

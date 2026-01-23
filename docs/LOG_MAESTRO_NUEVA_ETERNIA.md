@@ -819,6 +819,20 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
 #### 40.3 Limpieza de Legado (Tech Debt)
 *   **Eliminación de Alias**: Remoción definitiva del alias `BaseSpider` una vez verificada la integridad de todas las referencias.
 *   **Saneamiento de Imports**: Corrección de importaciones en scripts de prueba, utilidades y jobs de fondo.
+
+### 🛡️ Fase 41: Resiliencia del Nexo y Sigilo en Amazon (24/01/2026)
+
+- **Hitos**: Resolución de errores críticos en la sincronización del catálogo y refuerzo de scrapers contra detección avanzada.
+- **Estado**: ✅ COMPLETADO Y VERIFICADO
+
+#### 41.1 Sanación del Nexo Maestro
+*   **Fix AssertionError: 10**: Implementación de un sistema de deduplicación de columnas en `personal_collection.py`. El sistema ahora detecta y renombra cabeceras duplicadas provenientes de ActionFigure411, permitiendo una reindexación segura en pandas.
+*   **Suministro Incremental**: Refuerzo de la lógica de mezcla (merge) para preservar metadatos de imágenes y IDs de figuras existentes.
+
+#### 41.2 Infiltración Fantasma (Amazon Stealth)
+*   **Bypass Anti-Bot**: Implementación de "Stealth Mode" en el `AmazonScraper` mediante flags de Playwright para ocultar la automatización (`AutomationControlled`).
+*   **Contexto Realista**: Configuración de huella digital humana (Locale `es-ES`, Timezone `Europe/Madrid`, Viewport real).
+*   **Interacción Humanizada**: Inyección de scripts de evasión de `webdriver` y patrones de navegación con scroll aleatorio para evitar bloqueos por timeout en `amazon.es`.
     - **P2P Tagging**: Corregido endpoint de importación para que los ítems de Wallapop se marquen como `Peer-to-Peer` automáticamente.
 
 ### Fase 23: Blindaje de Poderes Administrativos ✅
