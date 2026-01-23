@@ -833,6 +833,10 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
 *   **Bypass Anti-Bot**: Implementación de "Stealth Mode" en el `AmazonScraper` mediante flags de Playwright para ocultar la automatización (`AutomationControlled`).
 *   **Contexto Realista**: Configuración de huella digital humana (Locale `es-ES`, Timezone `Europe/Madrid`, Viewport real).
 *   **Interacción Humanizada**: Inyección de scripts de evasión de `webdriver` y patrones de navegación con scroll aleatorio para evitar bloqueos por timeout en `amazon.es`.
+
+#### 41.3 Alineación de Esquema (Hotfix)
+*   **Database Migration**: Creación de script SQL para renombrar `spider_name` a `scraper_name` en las tablas `scraper_status`, `scraper_execution_logs` y `kaizen_insights`.
+*   **Frontend Consistency**: Actualización de interfaces y componentes en React para consumir la nueva nomenclatura, resolviendo errores 500 en el panel de control.
     - **P2P Tagging**: Corregido endpoint de importación para que los ítems de Wallapop se marquen como `Peer-to-Peer` automáticamente.
 
 ### Fase 23: Blindaje de Poderes Administrativos ✅

@@ -235,8 +235,8 @@ const Config: React.FC = () => {
                                     <div className="h-10 w-10 bg-white/5 rounded-lg flex items-center justify-center">
                                         <RefreshCw className="h-5 w-5 text-purple-400" />
                                     </div>
-                                    <span className={`px-2 py-0.5 rounded-full text-[10px] uppercase font-bold border ${getStatusVariant(statuses.find(s => s.spider_name === 'harvester')?.status || 'idle')}`}>
-                                        {statuses.find(s => s.spider_name === 'harvester')?.status || 'Inactivo'}
+                                    <span className={`px-2 py-0.5 rounded-full text-[10px] uppercase font-bold border ${getStatusVariant(statuses.find(s => s.scraper_name === 'harvester')?.status || 'idle')}`}>
+                                        {statuses.find(s => s.scraper_name === 'harvester')?.status || 'Inactivo'}
                                     </span>
                                 </div>
                                 <div>
@@ -263,18 +263,18 @@ const Config: React.FC = () => {
                                 Estados Individuales
                             </h3>
                             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                                {statuses.filter(s => s.spider_name !== 'all' && s.spider_name !== 'harvester' && s.spider_name !== 'amazon').map((s) => (
-                                    <div key={s.spider_name} className="glass border border-white/5 p-3 rounded-xl flex flex-col gap-2 relative">
+                                {statuses.filter(s => s.scraper_name !== 'all' && s.scraper_name !== 'harvester' && s.scraper_name !== 'amazon').map((s) => (
+                                    <div key={s.scraper_name} className="glass border border-white/5 p-3 rounded-xl flex flex-col gap-2 relative">
                                         <div className="flex items-center justify-between">
-                                            <span className="text-[10px] font-bold text-white/70 uppercase tracking-wider">{s.spider_name}</span>
+                                            <span className="text-[10px] font-bold text-white/70 uppercase tracking-wider">{s.scraper_name}</span>
                                             <div className={`h-1.5 w-1.5 rounded-full ${s.status === 'running' ? 'bg-brand-primary animate-pulse' : s.status === 'completed' ? 'bg-green-400' : 'bg-white/20'}`}></div>
                                         </div>
                                         <button
-                                            onClick={() => handleRunScraper(s.spider_name)}
-                                            disabled={runningScraper === s.spider_name}
+                                            onClick={() => handleRunScraper(s.scraper_name)}
+                                            disabled={runningScraper === s.scraper_name}
                                             className="text-[11px] bg-white/5 py-1 rounded-md text-white/50 hover:bg-brand-primary/20 hover:text-brand-primary transition-all flex items-center justify-center gap-1"
                                         >
-                                            {runningScraper === s.spider_name ? <RefreshCw className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3 fill-current" />}
+                                            {runningScraper === s.scraper_name ? <RefreshCw className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3 fill-current" />}
                                             RUN
                                         </button>
                                     </div>
@@ -302,7 +302,7 @@ const Config: React.FC = () => {
                                         <tbody className="divide-y divide-white/5 text-white/70">
                                             {logs.map((log) => (
                                                 <tr key={log.id} className="hover:bg-white/5 transition-colors">
-                                                    <td className="px-6 py-4 font-bold">{log.spider_name}</td>
+                                                    <td className="px-6 py-4 font-bold">{log.scraper_name}</td>
                                                     <td className="px-6 py-4">
                                                         <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold ${log.status === 'success' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
                                                             {log.status}
