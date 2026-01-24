@@ -64,6 +64,17 @@ class ProductOutput(BaseModel):
 
 from fastapi import BackgroundTasks
 from src.infrastructure.scrapers.harvester import run_harvester
+from src.infrastructure.scrapers.action_toys_scraper import ActionToysScraper
+from src.infrastructure.scrapers.amazon_scraper import AmazonScraper
+from src.infrastructure.scrapers.fantasia_scraper import FantasiaScraper
+from src.infrastructure.scrapers.frikiverso_scraper import FrikiversoScraper
+from src.infrastructure.scrapers.electropolis_scraper import ElectropolisScraper
+from src.infrastructure.scrapers.pixelatoy_scraper import PixelatoyScraper
+from src.infrastructure.scrapers.detoyboys_scraper import DeToyboysNLScraper
+from src.infrastructure.scrapers.toymi_scraper import ToymiEUScraper
+from src.infrastructure.scrapers.time4actiontoys_scraper import Time4ActionToysDEScraper
+from src.infrastructure.scrapers.bbts_scraper import BigBadToyStoreScraper
+from src.infrastructure.scrapers.ebay_scraper import EbayScraper
 from src.domain.models import ProductModel, PendingMatchModel, ScraperStatusModel, BlackcludedItemModel, OfferModel, ScraperExecutionLogModel, CollectionItemModel, OfferHistoryModel, UserModel, LogisticRuleModel
 from src.application.services.logistics_service import LogisticsService
 import json
@@ -843,21 +854,23 @@ def run_scraper_task(spider_name: str = "harvester", trigger_type: str = "manual
                 "Frikiverso": FrikiversoScraper(),
                 "Electropolis": ElectropolisScraper(),
                 "Pixelatoy": PixelatoyScraper(),
-                "amazon": AmazonScraper(), 
-                # DvdStoreSpain and KidInn removed (Decommissioned)
+                "Amazon.es": AmazonScraper(), 
                 "DeToyboys": DeToyboysNLScraper(),
-                # European Expansion
-                "DeToyboys": DeToyboysNLScraper(),
+                "Ebay.es": EbayScraper(),
                 "ToymiEU": ToymiEUScraper(),
                 "Time4ActionToysDE": Time4ActionToysDEScraper(),
                 "BigBadToyStore": BigBadToyStoreScraper()
             }
+            
+            # Normalize requested name for matching
+            lookup_name = spider_name.lower()
+            matching_key = next((k for k in spiders_map.keys() if k.lower() == lookup_name), None)
 
             spiders_to_run = []
             if spider_name == "all":
                 spiders_to_run = list(spiders_map.values())
-            elif scraper_name in spiders_map:
-                spiders_to_run = [spiders_map[scraper_name]]
+            elif matching_key:
+                spiders_to_run = [spiders_map[matching_key]]
             
             if spiders_to_run:
                 pipeline = ScrapingPipeline(spiders_to_run)
@@ -872,7 +885,7 @@ def run_scraper_task(spider_name: str = "harvester", trigger_type: str = "manual
                 
                 pipeline.update_database(results)
                 items_found = len(results)
-                logger.info(f"💾 Persistidas {items_found} ofertas tras incursión de {scraper_name}.")
+                logger.info(f"💾 Persistidas {items_found} ofertas tras incursión de {spider_name}.")
 
         # 2. Marcar éxito en la base de datos y actualizar Log
         with SessionCloud() as db:
@@ -891,7 +904,7 @@ def run_scraper_task(spider_name: str = "harvester", trigger_type: str = "manual
             db.commit()
 
     except Exception as e:
-        logger.error(f"Scraper Error ({scraper_name}): {e}")
+        logger.error(f"Scraper Error ({spider_name}): {e}")
         with SessionCloud() as db:
             status = db.query(ScraperStatusModel).filter(ScraperStatusModel.spider_name == spider_name).first()
             if status:

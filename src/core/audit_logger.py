@@ -16,7 +16,7 @@ class AuditLogger:
 
     def log_insight(
         self, 
-        scraper_name: str, 
+        spider_name: str, 
         insight_type: str, 
         content: str, 
         pattern: Optional[str] = None,
