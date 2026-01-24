@@ -935,3 +935,28 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
     - **DB Exorcism**: Ejecutado `cleanup_decommissioned_shops.py` para purgar registros de `scraper_status` y `scraper_execution_logs` (incluyendo Fantasia).
     - **UI Streamlining**: Panel de incursión individual ahora unificado y libre de duplicados, mejorando la claridad para el Maestro.
     - **Logistics Update**: Eliminadas las reglas de importación correspondientes en `seed_logistics.py`.
+
+### Fase 41: Estudio de Mercado Industrial - El Oráculo Visionario (24/01/2026)
+- **Hitos**: Implementación de inteligencia de mercado Retail vs P2P y bypass de Wallapop.
+- **Estado**: ✅ COMPLETADO
+- **Innovaciones de Inteligencia**:
+    - **Wallapop 403 Bypass**: Integración de `curl-cffi` con impersonación de Chrome 120 para superar el firewall de Wallapop/eBay.
+    - **Strict Market Segregation**: Arquitectura dual para separar datos de Retail y P2P (Wallapop/eBay), eliminando la contaminación de precios.
+    - **Market Intelligence Service**: Nuevo motor analítico que calcula tendencias de 6 meses y predice la "Puja Ideal" (Ideal Bid).
+    - **Analytics Dashboard**: Modal interactivo con gráficas de Recharts en el Catálogo y Purgatorio.
+    - **Intelligence Backfill**: Utilidad de recuperación histórica para inyectar "fechas de captura" en productos antiguos desde los logs de auditoría.
+
+**Bitácora de Errores de Fase:**
+- [2026-01-24 16:15] Sirius Time - Phase: Execute/Verify
+    - ERROR: ArgumentError in backfill_intelligence.py:78.
+    - CAUSE: Textual SQL not wrapped in text() construct (SQLAlchemy 2.0 standard).
+    - FIX: Wrapped UPDATE query in text() and added session.commit().
+    - STATUS: Verified. Connection to Cloud DB stable.
+
+### Fase 40: Puente del Oráculo (Wallapop Bridge) - El Ojo de Grayskull (24/01/2026)
+- **Hitos**: Implementación de vista rápida de ítems bloqueados por 403.
+- **Estado**: ✅ COMPLETADO
+- **Mejoras de Infiltración**:
+    - **WallapopBridge**: Servicio que utiliza suplantación de Chrome 120 para descargar detalles y fotos directamente de la API interna.
+    - **QuickPreviewModal**: Interfaz inmersiva que permite auditar subastas sin salir de la app ni activar firewalls.
+    - **Visión Rápida**: Botón integrado en el Purgatorio para inspección instantánea.

@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { getPurgatory, matchItem, discardItem, discardItemsBulk, getScrapersStatus, runScrapers, getScraperLogs } from '../api/purgatory';
 import MarketIntelligenceModal from '../components/MarketIntelligenceModal';
+import QuickPreviewModal from '../components/QuickPreviewModal';
 import axios from 'axios';
 import { useEffect, useRef } from 'react';
 
@@ -46,6 +47,7 @@ const Purgatory: React.FC = () => {
     const itemsPerPage = 15;
     const [showForensic, setShowForensic] = useState(false);
     const [intelProductId, setIntelProductId] = useState<number | null>(null);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
     // Helper: Check if URL is from Wallapop
     const isWallapopUrl = (url: string) => url?.toLowerCase().includes('wallapop.com');
@@ -846,18 +848,29 @@ const Purgatory: React.FC = () => {
                                                 </div>
                                             )}
                                             <div className="flex-1"></div>
-                                            {isWallapopUrl(item.url) ? (
+                                            <div className="flex flex-wrap gap-2">
+                                                {isWallapopUrl(item.url) ? (
+                                                    <button
+                                                        onClick={() => copyToClipboard(item.url)}
+                                                        className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-xs font-black uppercase tracking-wider transition-all ${copiedUrl === item.url ? 'bg-green-500/20 border-green-500/50 text-green-400' : 'bg-white/5 border-white/5 text-white/40 hover:bg-white/10 hover:text-white'}`}
+                                                    >
+                                                        {copiedUrl === item.url ? 'Copiado!' : 'Copiar URL'} <Copy className="h-3 w-3" />
+                                                    </button>
+                                                ) : (
+                                                    <a href={item.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/5 text-xs font-black text-white/40 hover:bg-white/10 hover:text-white transition-all uppercase tracking-wider">
+                                                        Fuente Original <ExternalLink className="h-3 w-3" />
+                                                    </a>
+                                                )}
+
+                                                {/* Phase 40: Visión Rápida Trigger */}
                                                 <button
-                                                    onClick={() => copyToClipboard(item.url)}
-                                                    className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-xs font-black uppercase tracking-wider transition-all ${copiedUrl === item.url ? 'bg-green-500/20 border-green-500/50 text-green-400' : 'bg-white/5 border-white/5 text-white/40 hover:bg-white/10 hover:text-white'}`}
+                                                    onClick={() => setPreviewUrl(item.url)}
+                                                    className="inline-flex items-center gap-2 rounded-xl bg-brand-primary/10 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-brand-primary transition-all hover:bg-brand-primary/20 border border-brand-primary/20 shadow-lg shadow-brand-primary/10"
                                                 >
-                                                    {copiedUrl === item.url ? 'Copiado!' : 'Copiar URL'} <Copy className="h-3 w-3" />
+                                                    <CheckCircle2 className="h-3 w-3" />
+                                                    Visión Rápida
                                                 </button>
-                                            ) : (
-                                                <a href={item.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/5 text-xs font-black text-white/40 hover:bg-white/10 hover:text-white transition-all uppercase tracking-wider">
-                                                    Fuente Original <ExternalLink className="h-3 w-3" />
-                                                </a>
-                                            )}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -1233,11 +1246,19 @@ const Purgatory: React.FC = () => {
                 </div>
             )}
 
-            {/* MARKET INTELLIGENCE MODAL */}
+            {/* Phase 41: Market Intelligence Modal */}
             {intelProductId && (
                 <MarketIntelligenceModal
                     productId={intelProductId}
                     onClose={() => setIntelProductId(null)}
+                />
+            )}
+
+            {/* Phase 40: Wallapop Oracle Bridge - Quick Preview */}
+            {previewUrl && (
+                <QuickPreviewModal
+                    url={previewUrl}
+                    onClose={() => setPreviewUrl(null)}
                 />
             )}
         </div>

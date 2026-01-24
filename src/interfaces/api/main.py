@@ -219,6 +219,18 @@ async def get_market_intelligence(product_id: int):
             raise HTTPException(status_code=404, detail="Producto no encontrado")
         return summary
 
+@app.get("/api/wallapop/preview", dependencies=[Depends(verify_api_key)])
+async def get_wallapop_preview(url: str):
+    """
+    Puente de Visión (Phase 40): Obtiene detalles de un item de Wallapop 
+    suplantando el navegador para evitar el error 403.
+    """
+    from src.application.services.wallapop_bridge import WallapopBridge
+    details = await WallapopBridge.get_item_details(url)
+    if not details:
+        raise HTTPException(status_code=404, detail="No se pudo invocar el espíritu de Wallapop")
+    return details
+
 @app.get("/api/collection", response_model=List[ProductOutput])
 async def get_collection(user_id: int):
     """

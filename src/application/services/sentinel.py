@@ -36,13 +36,24 @@ class SentinelService:
         status = "VALIDATED"
         flags = []
 
-        # 1. Validación de Precio (Desviación > 40%)
-        if product.avg_market_price and product.avg_market_price > 0:
-            deviation = abs(price - product.avg_market_price) / product.avg_market_price
+        # 1. Validación de Precio Segregada (Desviación > 40%)
+        # Phase 41e: Comparar contra el promedio del mercado correspondiente
+        avg_price = 0.0
+        if getattr(product, 'avg_retail_price', 0) and product.avg_retail_price > 0:
+            avg_price = product.avg_retail_price
+            # Si el item es P2P, preferimos comparar contra el promedio P2P si existe
+            if hasattr(product, 'avg_p2p_price') and product.avg_p2p_price > 0:
+                # Si tenemos ambos, usamos el que coincida con la naturaleza del item (asumimos items de retailers externos)
+                # NOTA: En este punto recibimos 'price', pero no siempre el 'source_type'.
+                # Si no hay source_type claro, usamos el promedio global (avg_market_price) como fallback.
+                avg_price = product.avg_market_price or product.avg_retail_price
+
+        if avg_price > 0:
+            deviation = abs(price - avg_price) / avg_price
             if deviation > 0.40:
                 is_blocked = True
                 status = "PENDING"
-                flags.append("Alerta de Anomalía: Desviación de precio >40%")
+                flags.append(f"Alerta de Anomalía: Desviación >40% vs Ref ({avg_price}€)")
 
         # 2. Validación Visual (Comparación de Hash)
         # Nota: En esta fase, si el hash maestro existe y la imagen del scraper no coincide, bloqueamos.

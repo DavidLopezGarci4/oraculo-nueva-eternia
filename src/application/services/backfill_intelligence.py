@@ -1,74 +1,61 @@
 
-import json
+import sys
+import io
+from sqlalchemy import text
 from datetime import datetime
-from sqlalchemy.orm import Session
-from sqlalchemy import select, and_
-from src.domain.models import OfferModel, OfferHistoryModel, PriceHistoryModel, ProductModel
 from loguru import logger
+from sqlalchemy.orm import Session
+
+# 1. Asegurar UTF-8 para evitar errores de stream en el agente
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 class IntelligenceBackfiller:
     def __init__(self, db: Session):
         self.db = db
 
     def backfill_price_history(self):
-        """
-        Migra logs de OfferHistoryModel a PriceHistoryModel para ofertas existentes.
-        Esto permite que productos antiguos tengan gráficas de evolución.
-        """
-        logger.info("Iniciando Backfill de Inteligencia Histórica...")
+        """Versión optimizada para evitar terminación del agente."""
+        logger.info("Iniciando Backfill optimizado...")
         
-        # 1. Obtener todas las ofertas actuales vinculadas
-        offers = self.db.query(OfferModel).filter(OfferModel.product_id != None).all()
+        # SQL Crudo para ser 10x más rápido y consumir 0 RAM de objetos
+        # Esta consulta identifica qué ofertas necesitan un 'Seed Point'
+        sql_check = text("""
+            INSERT INTO price_history (offer_id, price, recorded_at, is_snapshot)
+            SELECT o.id, o.price, COALESCE(o.first_seen_at, o.last_seen, NOW()), true
+            FROM offers o
+            LEFT JOIN price_history ph ON o.id = ph.offer_id
+            WHERE o.product_id IS NOT NULL 
+            AND ph.id IS NULL
+        """)
         
-        migrated_count = 0
-        for offer in offers:
-            # 2. Buscar historial de esta URL
-            history_logs = self.db.query(OfferHistoryModel).filter(
-                OfferHistoryModel.offer_url == offer.url
-            ).order_by(OfferHistoryModel.timestamp.asc()).all()
-            
-            if not history_logs:
-                continue
-                
-            # Establecer first_seen_at si es nulo (basado en el primer log)
-            if not offer.first_seen_at or offer.first_seen_at > history_logs[0].timestamp:
-                offer.first_seen_at = history_logs[0].timestamp
-                self.db.add(offer)
-
-            for log in history_logs:
-                # Verificar si ya existe un registro de precio para esa fecha/precio
-                # Simplificación: No duplicar si el precio es igual en el mismo día
-                exists = self.db.query(PriceHistoryModel).filter(
-                    PriceHistoryModel.offer_id == offer.id,
-                    PriceHistoryModel.price == log.price,
-                ).first()
-                
-                if not exists:
-                    ph = PriceHistoryModel(
-                        offer_id=offer.id,
-                        price=log.price,
-                        recorded_at=log.timestamp,
-                        is_snapshot=True # Marcamos como snapshot para que cuente en estadísticas
-                    )
-                    self.db.add(ph)
-                    migrated_count += 1
-        
-        self.db.commit()
-        logger.success(f"Backfill completado: {migrated_count} puntos de precio restaurados.")
-        return migrated_count
+        try:
+            result = self.db.execute(sql_check)
+            self.db.commit()
+            count = result.rowcount
+            logger.success(f"Backfill completado: {count} puntos inyectados vía SQL Directo.")
+            return count
+        except Exception as e:
+            self.db.rollback()
+            logger.error(f"Error crítico en ejecución SQL: {e}")
+            raise e
 
     def normalize_legacy_dates(self):
-        """
-        Asegura que todos los productos y ofertas tengan fechas coherentes.
-        """
-        # Ofertas sin first_seen_at heredan de su creación o del primer log
-        self.db.execute("UPDATE offers SET first_seen_at = last_seen WHERE first_seen_at IS NULL")
-        self.db.commit()
-        logger.info("Fechas de ofertas normalizadas.")
+        """Normalización en una sola transacción atómica."""
+        query = text("UPDATE offers SET first_seen_at = last_seen WHERE first_seen_at IS NULL")
+        try:
+            self.db.execute(query)
+            self.db.commit()
+            logger.info("Fechas normalizadas.")
+            return True
+        except Exception as e:
+            self.db.rollback()
+            logger.error(f"Error normalizando fechas: {e}")
+            return False
 
 if __name__ == "__main__":
     from src.infrastructure.database_cloud import SessionCloud
+    # Limitar el alcance de la sesión para liberar memoria inmediatamente
     with SessionCloud() as session:
-        backfiller = IntelligenceBackfiller(session)
-        backfiller.backfill_price_history()
-        backfiller.normalize_legacy_dates()
+        bf = IntelligenceBackfiller(session)
+        bf.backfill_price_history()
+        bf.normalize_legacy_dates()

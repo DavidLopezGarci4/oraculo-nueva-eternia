@@ -21,8 +21,16 @@ class ProductModel(Base):
     
     # Financial & Meta Data (Phase 6 & 16)
     retail_price: Mapped[Optional[float]] = mapped_column(Float, nullable=True, default=0.0)
-    avg_market_price: Mapped[Optional[float]] = mapped_column(Float, nullable=True, default=0.0) # Promedio histórico
-    p25_price: Mapped[Optional[float]] = mapped_column(Float, nullable=True, default=0.0) # Percentil 25 (Suelo de mercado)
+    
+    # Phase 41e: Strict Market Segregation
+    avg_retail_price: Mapped[Optional[float]] = mapped_column(Float, nullable=True, default=0.0)
+    p25_retail_price: Mapped[Optional[float]] = mapped_column(Float, nullable=True, default=0.0)
+    avg_p2p_price: Mapped[Optional[float]] = mapped_column(Float, nullable=True, default=0.0)
+    p25_p2p_price: Mapped[Optional[float]] = mapped_column(Float, nullable=True, default=0.0)
+    
+    # Deprecated (kept for backward compatibility during transition)
+    avg_market_price: Mapped[Optional[float]] = mapped_column(Float, nullable=True, default=0.0) 
+    p25_price: Mapped[Optional[float]] = mapped_column(Float, nullable=True, default=0.0) 
     release_year: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     
     # Phase 0: Multivariant Identity

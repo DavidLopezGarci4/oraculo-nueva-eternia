@@ -92,13 +92,70 @@ class MarketIntelligenceService:
         evolution = self.get_monthly_price_evolution(product_id)
         bid_strategy = self.calculate_ideal_bid(product_id)
         
+        # Segregated Market Lows
+        retail_low = self.db.query(func.min(OfferModel.price)).filter(
+            OfferModel.product_id == product_id,
+            OfferModel.source_type == "Retail",
+            OfferModel.is_available == True
+        ).scalar()
+        
+        p2p_low = self.db.query(func.min(OfferModel.price)).filter(
+            OfferModel.product_id == product_id,
+            OfferModel.source_type == "Peer-to-Peer",
+            OfferModel.is_available == True
+        ).scalar()
+        
         return {
             "product_name": product.name,
             "retail_price_official": product.retail_price,
             "evolution": evolution,
             "bid_strategy": bid_strategy,
-            "current_market_low": self.db.query(func.min(OfferModel.price)).filter(
-                OfferModel.product_id == product_id,
-                OfferModel.is_available == True
-            ).scalar()
+            "current_retail_low": retail_low,
+            "current_p2p_low": p2p_low,
+            # Fallback for old UI
+            "current_market_low": retail_low or p2p_low
         }
+
+    def sync_product_statistics(self, product_id: int):
+        """
+        Calcula y persiste las estadísticas segregadas en el ProductModel.
+        """
+        # 1. Retail Stats
+        retail_avg = self.db.query(func.avg(OfferModel.price)).filter(
+            OfferModel.product_id == product_id,
+            OfferModel.source_type == "Retail",
+            OfferModel.is_available == True
+        ).scalar()
+        
+        # 2. P2P Stats (Using Sold prices if available, otherwise Active)
+        p2p_prices = self.db.query(OfferModel.price).filter(
+            OfferModel.product_id == product_id,
+            OfferModel.source_type == "Peer-to-Peer",
+            OfferModel.is_sold == True
+        ).all()
+        
+        if not p2p_prices:
+             p2p_prices = self.db.query(OfferModel.price).filter(
+                OfferModel.product_id == product_id,
+                OfferModel.source_type == "Peer-to-Peer",
+                OfferModel.is_available == True
+            ).all()
+            
+        p2p_vals = [float(p[0]) for p in p2p_prices if p[0] > 0]
+        p2p_avg = sum(p2p_vals) / len(p2p_vals) if p2p_vals else 0.0
+        
+        p2p_vals.sort()
+        p2p_p25 = p2p_vals[int(len(p2p_vals) * 0.25)] if p2p_vals else 0.0
+
+        # Update Product
+        product = self.db.query(ProductModel).filter(ProductModel.id == product_id).first()
+        if product:
+            product.avg_retail_price = retail_avg or 0.0
+            product.avg_p2p_price = p2p_avg
+            product.p25_p2p_price = p2p_p25
+            # Legacy sync
+            product.avg_market_price = retail_avg or p2p_avg
+            self.db.add(product)
+            self.db.commit()
+            return True
+        return False

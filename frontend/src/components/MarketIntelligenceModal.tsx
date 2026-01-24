@@ -104,16 +104,16 @@ const MarketIntelligenceModal: React.FC<MarketIntelligenceModalProps> = ({ produ
                         <div className="bg-white/[0.03] border border-white/5 p-6 rounded-3xl space-y-4">
                             <div className="flex items-center gap-2 text-white/40 uppercase text-[10px] font-black tracking-widest">
                                 <Calendar className="h-3 w-3" />
-                                <span>Mercio Actual</span>
+                                <span>Mercado Actual</span>
                             </div>
                             <div className="flex justify-between items-end">
                                 <div>
-                                    <p className="text-[10px] font-bold text-white/20 uppercase">Retail (Official)</p>
-                                    <h4 className="text-2xl font-black text-brand-primary">{marketData.retail_price_official || '---'} €</h4>
+                                    <p className="text-[10px] font-bold text-white/20 uppercase">Mínimo Retail</p>
+                                    <h4 className="text-2xl font-black text-brand-primary">{marketData.current_retail_low || '---'} €</h4>
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-[10px] font-bold text-white/20 uppercase">Mínimo Activo</p>
-                                    <h4 className="text-2xl font-black text-green-500">{marketData.current_market_low || '---'} €</h4>
+                                    <p className="text-[10px] font-bold text-white/20 uppercase">Mínimo P2P</p>
+                                    <h4 className="text-2xl font-black text-purple-500">{marketData.current_p2p_low || '---'} €</h4>
                                 </div>
                             </div>
                         </div>
