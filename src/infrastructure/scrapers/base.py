@@ -50,27 +50,39 @@ class BaseScraper(ABC):
         pass
 
     def _get_random_header(self) -> dict:
-        """Returns a randomized User-Agent header."""
+        """Returns a randomized User-Agent header and modern fingerprints."""
         user_agents = [
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         ]
-        return {"User-Agent": random.choice(user_agents)}
+        return {
+            "User-Agent": random.choice(user_agents),
+            "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
+            "sec-ch-ua": '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+            "sec-ch-ua-mobile": "?0",
+            "sec-ch-ua-platform": '"Windows"'
+        }
 
     async def run(self, *args, **kwargs):
         """Legacy compatibility wrapper."""
         raise NotImplementedError("Oracle Scrapers now use .search(query)")
 
-    async def _safe_navigate(self, page: Page, url: str, timeout: int = 45000) -> bool:
-        """Navigates with exponential backoff and anti-detection."""
+    async def _safe_navigate(self, page: Page, url: str, timeout: int = 60000) -> bool:
+        """Navigates with exponential backoff and randomized wait strategies."""
+        wait_strategies = ["domcontentloaded", "load", "networkidle"]
+        
         for attempt in range(3):
             try:
-                await page.goto(url, wait_until="domcontentloaded", timeout=timeout)
+                # Alternate wait strategies to bypass simple detection/loading issues
+                strategy = random.choice(wait_strategies) if attempt > 0 else "domcontentloaded"
+                await page.goto(url, wait_until=strategy, timeout=timeout)
                 return True
             except Exception as e:
-                logger.warning(f"[{self.scraper_name}] Navigation attempt {attempt+1} failed: {e}")
-                await asyncio.sleep(2 * (attempt + 1))
+                logger.warning(f"[{self.scraper_name}] Navigation attempt {attempt+1} failed ({url}): {e}")
+                # Exponential backoff: 3s, 6s, 12s...
+                await asyncio.sleep(3 * (2 ** attempt))
         
         self.blocked = True
         return False

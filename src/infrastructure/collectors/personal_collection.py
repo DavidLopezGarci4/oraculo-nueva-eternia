@@ -515,14 +515,28 @@ def combine_sections(
     for title, df_new in sections_new:
         df_old = old_map.get(title, pd.DataFrame())
 
-        # Alinea columnas
+        # Alinea columnas de forma segura (Evita AssertionError 10 en pandas)
         new_cols = df_new.columns.tolist()
         old_cols = df_old.columns.tolist()
-        missing_in_new = [c for c in old_cols if c not in new_cols]
-        final_cols = new_cols + missing_in_new
+        
+        # Combinamos todas las columnas únicas de ambos
+        all_unique_cols = list(dict.fromkeys(new_cols + old_cols))
+        
+        # Definimos las columnas finales basadas en el orden deseado + extras
+        final_cols = [c for c in DESIRED_ORDER if c in all_unique_cols]
+        final_cols += [c for c in all_unique_cols if c not in final_cols]
 
-        df_new = df_new.reindex(columns=final_cols, fill_value="")
-        df_old = df_old.reindex(columns=final_cols, fill_value="")
+        def _safe_align(df, target_cols):
+            if df.empty:
+                return pd.DataFrame(columns=target_cols)
+            # Aseguramos que existan todas las columnas antes del reindex
+            for c in target_cols:
+                if c not in df.columns:
+                    df[c] = ""
+            return df[target_cols]
+
+        df_new = _safe_align(df_new.copy(), final_cols)
+        df_old = _safe_align(df_old.copy(), final_cols)
 
         df_new_k = make_key(df_new).set_index("__key__", drop=False)
         df_old_k = make_key(df_old).set_index("__key__", drop=False)

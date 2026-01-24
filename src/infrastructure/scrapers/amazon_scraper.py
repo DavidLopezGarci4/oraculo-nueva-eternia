@@ -3,6 +3,7 @@ import logging
 import re
 import io
 import sys
+import random
 from typing import List, Optional
 from datetime import datetime
 from playwright.async_api import Page, BrowserContext
@@ -66,22 +67,35 @@ class AmazonScraper(BaseScraper):
                     permissions=['geolocation']
                 )
                 
-                # Headers adicionales anti-bloqueo
+                # Headers adicionales anti-bloqueo (Simulando Chrome 120+ en Windows)
                 await context.set_extra_http_headers({
                     'Accept-Language': 'es-ES,es;q=0.9',
                     'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
                     'sec-ch-ua-mobile': '?0',
                     'sec-ch-ua-platform': '"Windows"',
-                    'Upgrade-Insecure-Requests': '1'
+                    'Upgrade-Insecure-Requests': '1',
+                    'Service-Worker-Navigation-Preload': 'true'
                 })
 
                 page = await context.new_page()
                 
-                # Inyectar scripts para evadir detección de automatización
+                # Inyectar scripts avanzados para evadir detección de automatización profunda
                 await page.add_init_script("""
+                    // Hiding WebDriver
                     Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-                    window.chrome = { runtime: {} };
+                    // Mocking Chrome Runtime
+                    window.chrome = { runtime: {}, app: {}, loadTimes: {}, csi: {} };
+                    // Mocking Plugins
                     Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+                    // Mocking Languages
+                    Object.defineProperty(navigator, 'languages', { get: () => ['es-ES', 'es'] });
+                    // Mocking Permissions
+                    const originalQuery = window.navigator.permissions.query;
+                    window.navigator.permissions.query = (parameters) => (
+                        parameters.name === 'notifications' ?
+                        Promise.resolve({ state: Notification.permission }) :
+                        originalQuery(parameters)
+                    );
                 """)
                 
                 success = await self._safe_navigate(page, url)
@@ -99,28 +113,31 @@ class AmazonScraper(BaseScraper):
                 except:
                     pass
 
-                # Wait for results to load with block detection
+                # Wait for results to load with block detection (Increased timeout to 30s)
                 try:
-                    await page.wait_for_selector("[data-component-type='s-search-result']", timeout=15000)
+                    await page.wait_for_selector("[data-component-type='s-search-result']", timeout=30000)
                 except Exception:
                     # Check if blocked by captcha or similar
                     content = await page.content()
                     if "sp-cc-accept" in content and "captcha" not in content.lower():
                         logger.warning("⚠️ Amazon.es: Resultados no cargan pero el banner de cookies está presente. Intentando scroll...")
                     elif "captcha" in content.lower() or "robot" in content.lower():
-                        logger.error("🚫 Amazon.es: Bot detectado (CAPTCHA).")
+                        logger.error("🚫 Amazon.es: Bot detectado (CAPTCHA/ROBOT).")
                         self.blocked = True
                         await browser.close()
                         return []
                     else:
-                        logger.error("❌ Amazon.es: Timeout esperando resultados.")
+                        logger.error("❌ Amazon.es: Timeout esperando resultados tras 30s.")
                         await browser.close()
                         return []
 
-                # Human-like interaction: random scroll
-                for _ in range(2):
-                    await page.keyboard.press("PageDown")
-                    await asyncio.sleep(random.uniform(0.5, 1.5))
+                # --- HUMAN BEHAVIOR: Randomized vertical scroll-and-pause ---
+                # This makes Amazon think a human is looking at the search results.
+                scroll_steps = random.randint(2, 4)
+                for _ in range(scroll_steps):
+                    scroll_y = random.randint(300, 700)
+                    await page.evaluate(f"window.scrollBy(0, {scroll_y})")
+                    await self._random_sleep(0.8, 2.2)
                 
                 # Extract results
                 results = await page.query_selector_all("[data-component-type='s-search-result']")

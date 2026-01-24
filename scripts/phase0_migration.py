@@ -210,10 +210,13 @@ if __name__ == "__main__":
     Session = sessionmaker(bind=engine)
     session = Session()
     
-    excel_path = "c:/Users/dace8/OneDrive/Documentos/Antigravity/oraculo-nueva-eternia/data/MOTU/lista_MOTU.xlsx"
-    if not os.path.exists(excel_path):
+    # Resolve relative to project root
+    project_root = Path(__file__).resolve().parent.parent
+    excel_path = project_root / "data" / "MOTU" / "lista_MOTU.xlsx"
+    
+    if not excel_path.exists():
         logger.error(f"Excel file not found at {excel_path}")
         sys.exit(1)
         
-    migrate_excel_to_db(excel_path, session)
+    migrate_excel_to_db(str(excel_path), session)
     session.close()

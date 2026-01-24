@@ -40,8 +40,8 @@ class ActionToysScraper(BaseScraper):
                     if not await self._safe_navigate(page, current_url):
                         break
                     
-                    # Random delay to behave like a human (anti-ban)
-                    await asyncio.sleep(2.0)
+                    # Randomized human behavior (Anti-bot)
+                    await self._random_sleep(1.5, 3.5)
                     
                     # Extract HTML
                     html_content = await page.content()

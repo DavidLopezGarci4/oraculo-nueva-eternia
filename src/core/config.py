@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     CLOUDINARY_API_SECRET: str | None = None
     
     # Cloud Sync
+    SUPABASE_URL: str | None = None
+    SUPABASE_SERVICE_ROLE_KEY: str | None = None
     SUPABASE_DATABASE_URL: str | None = None
     ORACULO_API_KEY: str = "eternia-shield-2026" # Default key for dev
     
