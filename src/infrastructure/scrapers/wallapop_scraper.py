@@ -5,9 +5,10 @@ Inspirado en WallaPy pero sin lxml.
 """
 import asyncio
 import logging
-import httpx
+from curl_cffi.requests import AsyncSession
 import random
 from typing import List
+from datetime import datetime
 from src.infrastructure.scrapers.base import BaseScraper, ScrapedOffer
 
 logger = logging.getLogger(__name__)
@@ -71,14 +72,13 @@ class WallapopScraper(BaseScraper):
         # Reintentos con diferentes User-Agents
         for attempt in range(3):
             try:
-                async with httpx.AsyncClient(
-                    timeout=30.0,
-                    follow_redirects=True
-                ) as client:
-                    response = await client.get(
+                async with AsyncSession() as session:
+                    response = await session.get(
                         self.API_URL,
                         params=params,
-                        headers=self._get_headers()
+                        headers=self._get_headers(),
+                        impersonate="chrome120",
+                        timeout=30
                     )
                     
                     if response.status_code == 403:
@@ -123,7 +123,10 @@ class WallapopScraper(BaseScraper):
                                     shop_name=self.scraper_name,
                                     image_url=image_url,
                                     source_type="Peer-to-Peer",
-                                    sale_type="Fixed_P2P"
+                                    sale_type="Fixed_P2P",
+                                    # Phase 41: Market Intelligence
+                                    first_seen_at=datetime.utcnow(),
+                                    is_sold=False # Initially active
                                 ))
                                 self.items_scraped += 1
                                 

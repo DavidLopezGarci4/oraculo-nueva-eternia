@@ -28,6 +28,13 @@ class ScrapedOffer(BaseModel):
     bids_count: int = 0
     time_left_raw: Optional[str] = None
 
+    # Phase 41: Market Intelligence
+    first_seen_at: Optional[datetime] = None
+    sold_at: Optional[datetime] = None
+    is_sold: bool = False
+    original_listing_date: Optional[datetime] = None
+    last_price_update: Optional[datetime] = None
+
 class BaseScraper(ABC):
     """
     Base Class for all Oracle Scrapers.

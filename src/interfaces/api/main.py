@@ -206,6 +206,19 @@ async def get_auction_products():
         products = result.scalars().all()
         return products
 
+@app.get("/api/intelligence/market/{product_id}", dependencies=[Depends(verify_api_key)])
+async def get_market_intelligence(product_id: int):
+    """
+    Retorna el estudio de mercado para un producto (Estadísticas 3OX).
+    """
+    from src.application.services.market_intelligence import MarketIntelligenceService
+    with SessionCloud() as db:
+        service = MarketIntelligenceService(db)
+        summary = service.get_market_summary(product_id)
+        if not summary or summary == {}:
+            raise HTTPException(status_code=404, detail="Producto no encontrado")
+        return summary
+
 @app.get("/api/collection", response_model=List[ProductOutput])
 async def get_collection(user_id: int):
     """
@@ -599,37 +612,26 @@ async def match_purgatory(request: PurgatoryMatchRequest):
             raise HTTPException(status_code=404, detail="Producto objetivo no encontrado")
         
         try:
-            # Guardar copia de los datos originales
-            item_data = {
-                "scraped_name": item.scraped_name,
-                "ean": item.ean,
+            # 1. Usar el repositorio para añadir la oferta (Garantiza Phase 41 + Phase 39)
+            from src.infrastructure.repositories.product import ProductRepository
+            repo = ProductRepository(db)
+            
+            offer_data = {
+                "shop_name": item.shop_name,
                 "price": item.price,
                 "currency": item.currency,
                 "url": item.url,
-                "shop_name": item.shop_name,
-                "image_url": item.image_url,
-                "receipt_id": item.receipt_id
+                "is_available": True,
+                "source_type": item.source_type,
+                "receipt_id": item.receipt_id,
+                "opportunity_score": item.opportunity_score,
+                # Phase 41 Metadata
+                "first_seen_at": item.found_at,
+                "last_price_update": datetime.utcnow()
             }
-
-            # 1. Crear Oferta
-            # Verificamos si la URL ya existe para evitar duplicados que rompan la sync
-            existing_url = db.query(OfferModel).filter(OfferModel.url == item.url).first()
-            if existing_url:
-                db.delete(item)
-                db.commit()
-                raise HTTPException(status_code=409, detail=f"Conflicto: Esta oferta ya estaba vinculada al producto #{existing_url.product_id}")
-
-            new_offer = OfferModel(
-                product_id=product.id,
-                shop_name=item.shop_name,
-                price=item.price,
-                currency=item.currency,
-                url=item.url,
-                is_available=True,
-                source_type=item.source_type
-            )
-            db.add(new_offer)
             
+            new_offer, _ = repo.add_offer(product, offer_data, commit=False)
+
             # 2. Registrar historial
             history = OfferHistoryModel(
                 offer_url=item.url,
@@ -637,7 +639,7 @@ async def match_purgatory(request: PurgatoryMatchRequest):
                 shop_name=item.shop_name,
                 price=item.price,
                 action_type="LINKED_MANUAL",
-                details=json.dumps({"product_id": product.id, "original_item": item_data})
+                details=json.dumps({"product_id": product.id, "receipt_id": item.receipt_id})
             )
             db.add(history)
             

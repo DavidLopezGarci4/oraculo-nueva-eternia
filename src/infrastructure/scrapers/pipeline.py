@@ -173,7 +173,11 @@ class ScrapingPipeline:
                         "sale_type": offer.get('sale_type', 'Retail'),
                         "expiry_at": offer.get('expiry_at'),
                         "bids_count": offer.get('bids_count', 0),
-                        "time_left_raw": offer.get('time_left_raw')
+                        "time_left_raw": offer.get('time_left_raw'),
+                        "sold_at": offer.get('sold_at'),
+                        "is_sold": offer.get('is_sold', False),
+                        "original_listing_date": offer.get('original_listing_date'),
+                        "last_price_update": datetime.utcnow()
                     }, commit=False)
                     continue
 
@@ -197,6 +201,16 @@ class ScrapingPipeline:
                             pending_item.bids_count = offer["bids_count"]
                         if "time_left_raw" in offer:
                             pending_item.time_left_raw = offer["time_left_raw"]
+                        
+                        # Phase 41: Market Intelligence updates
+                        if "sold_at" in offer:
+                            pending_item.sold_at = offer["sold_at"]
+                        if "is_sold" in offer:
+                            pending_item.is_sold = offer["is_sold"]
+                        if "original_listing_date" in offer:
+                            pending_item.original_listing_date = offer["original_listing_date"]
+                        
+                        pending_item.last_price_update = datetime.utcnow()
                         # Si quisiéramos alertas aquí (antes de vincular), se podrían añadir.
                     continue
 
@@ -355,10 +369,12 @@ class ScrapingPipeline:
                         "ean": offer.get('ean'),
                         "source_type": offer.get('source_type', 'Retail'),
                         "receipt_id": offer.get('receipt_id'),
-                        "sale_type": offer.get('sale_type', 'Retail'),
-                        "expiry_at": offer.get('expiry_at'),
-                        "bids_count": offer.get('bids_count', 0),
                         "time_left_raw": offer.get('time_left_raw'),
+                        "first_seen_at": offer.get('first_seen_at') or datetime.utcnow(),
+                        "sold_at": offer.get('sold_at'),
+                        "is_sold": offer.get('is_sold', False),
+                        "original_listing_date": offer.get('original_listing_date'),
+                        "last_price_update": datetime.utcnow(),
                         "found_at": datetime.utcnow()
                     }
                     
@@ -376,7 +392,10 @@ class ScrapingPipeline:
                                     set_={
                                         "price": stmt.excluded.price,
                                         "found_at": stmt.excluded.found_at,
-                                        "scraped_name": stmt.excluded.scraped_name
+                                        "scraped_name": stmt.excluded.scraped_name,
+                                        "last_price_update": stmt.excluded.last_price_update,
+                                        "is_sold": stmt.excluded.is_sold,
+                                        "sold_at": stmt.excluded.sold_at
                                     }
                                 )
                                 db.execute(stmt)
@@ -386,6 +405,9 @@ class ScrapingPipeline:
                                 if existing:
                                     existing.price = pending_data["price"]
                                     existing.found_at = pending_data["found_at"]
+                                    existing.last_price_update = pending_data["last_price_update"]
+                                    existing.is_sold = pending_data["is_sold"]
+                                    existing.sold_at = pending_data["sold_at"]
                                 else:
                                     pending = PendingMatchModel(**pending_data)
                                     db.add(pending)

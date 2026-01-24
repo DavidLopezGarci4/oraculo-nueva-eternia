@@ -86,6 +86,13 @@ class OfferModel(Base):
     bids_count: Mapped[int] = mapped_column(Integer, default=0)
     time_left_raw: Mapped[Optional[str]] = mapped_column(String, nullable=True)
 
+    # Phase 41: Market Intelligence
+    first_seen_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    sold_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    is_sold: Mapped[bool] = mapped_column(Boolean, default=False)
+    original_listing_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    last_price_update: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
     # Relationships
     product: Mapped["ProductModel"] = relationship("ProductModel", back_populates="offers")
     price_history: Mapped[List["PriceHistoryModel"]] = relationship(
@@ -153,6 +160,13 @@ class PendingMatchModel(Base):
     expiry_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     bids_count: Mapped[int] = mapped_column(Integer, default=0)
     time_left_raw: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+
+    # Phase 41: Market Intelligence
+    first_seen_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    sold_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    is_sold: Mapped[bool] = mapped_column(Boolean, default=False)
+    original_listing_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    last_price_update: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     
     found_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 

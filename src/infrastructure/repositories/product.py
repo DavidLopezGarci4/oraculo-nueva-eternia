@@ -72,14 +72,18 @@ class ProductRepository(BaseRepository[ProductModel]):
                 existing_offer.source_type = offer_data["source_type"]
 
             # --- PHASE 39: AUCTION INTELLIGENCE ---
-            if "sale_type" in offer_data:
-                existing_offer.sale_type = offer_data["sale_type"]
-            if "expiry_at" in offer_data:
-                existing_offer.expiry_at = offer_data["expiry_at"]
-            if "bids_count" in offer_data:
-                existing_offer.bids_count = offer_data["bids_count"]
             if "time_left_raw" in offer_data:
                 existing_offer.time_left_raw = offer_data["time_left_raw"]
+
+            # Phase 41: Market Intelligence
+            if "sold_at" in offer_data:
+                existing_offer.sold_at = offer_data["sold_at"]
+            if "is_sold" in offer_data:
+                existing_offer.is_sold = offer_data["is_sold"]
+            if "original_listing_date" in offer_data:
+                existing_offer.original_listing_date = offer_data["original_listing_date"]
+            if "last_price_update" in offer_data:
+                existing_offer.last_price_update = offer_data["last_price_update"]
 
             # --- 3OX: Update Audit Receipt ---
             if "receipt_id" in offer_data:
@@ -110,10 +114,13 @@ class ProductRepository(BaseRepository[ProductModel]):
                 receipt_id=offer_data.get("receipt_id"), # --- 3OX Audit ---
                 opportunity_score=offer_data.get("opportunity_score", 0),
                 # Phase 39 Fields
-                sale_type=offer_data.get("sale_type", "Retail"),
-                expiry_at=offer_data.get("expiry_at"),
-                bids_count=offer_data.get("bids_count", 0),
-                time_left_raw=offer_data.get("time_left_raw")
+                time_left_raw=offer_data.get("time_left_raw"),
+                # Phase 41: Market Intelligence
+                first_seen_at=offer_data.get("first_seen_at", datetime.utcnow()),
+                sold_at=offer_data.get("sold_at"),
+                is_sold=offer_data.get("is_sold", False),
+                original_listing_date=offer_data.get("original_listing_date"),
+                last_price_update=offer_data.get("last_price_update", datetime.utcnow())
             )
             self.db.add(new_offer)
             self.db.flush() 

@@ -66,9 +66,32 @@ def _sync_engine(engine, label: str):
             conn.execute(text("ALTER TABLE offers ADD COLUMN max_price FLOAT DEFAULT 0.0"))
             conn.commit()
 
-        if "origin_category" not in columns_offers:
-            logger.info("Adding 'origin_category' to offers table...")
             conn.execute(text("ALTER TABLE offers ADD COLUMN origin_category VARCHAR(20) DEFAULT 'retail'"))
+            conn.commit()
+
+        if "first_seen_at" not in columns_offers:
+            logger.info("Adding 'first_seen_at' to offers table...")
+            conn.execute(text("ALTER TABLE offers ADD COLUMN first_seen_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"))
+            conn.commit()
+
+        if "sold_at" not in columns_offers:
+            logger.info("Adding 'sold_at' to offers table...")
+            conn.execute(text("ALTER TABLE offers ADD COLUMN sold_at TIMESTAMP NULL"))
+            conn.commit()
+
+        if "is_sold" not in columns_offers:
+            logger.info("Adding 'is_sold' to offers table...")
+            conn.execute(text("ALTER TABLE offers ADD COLUMN is_sold BOOLEAN DEFAULT FALSE"))
+            conn.commit()
+
+        if "original_listing_date" not in columns_offers:
+            logger.info("Adding 'original_listing_date' to offers table...")
+            conn.execute(text("ALTER TABLE offers ADD COLUMN original_listing_date TIMESTAMP NULL"))
+            conn.commit()
+
+        if "last_price_update" not in columns_offers:
+            logger.info("Adding 'last_price_update' to offers table...")
+            conn.execute(text("ALTER TABLE offers ADD COLUMN last_price_update TIMESTAMP NULL"))
             conn.commit()
 
         # --- Table: pending_matches ---
@@ -81,9 +104,32 @@ def _sync_engine(engine, label: str):
             except Exception as e:
                 logger.warning(f"Could not add ean to pending_matches: {e}")
 
-        if "origin_category" not in columns_pending:
-            logger.info("Adding 'origin_category' to pending_matches table...")
             conn.execute(text("ALTER TABLE pending_matches ADD COLUMN origin_category VARCHAR(20) DEFAULT 'retail'"))
+            conn.commit()
+
+        if "first_seen_at" not in columns_pending:
+            logger.info("Adding 'first_seen_at' to pending_matches table...")
+            conn.execute(text("ALTER TABLE pending_matches ADD COLUMN first_seen_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"))
+            conn.commit()
+
+        if "sold_at" not in columns_pending:
+            logger.info("Adding 'sold_at' to pending_matches table...")
+            conn.execute(text("ALTER TABLE pending_matches ADD COLUMN sold_at TIMESTAMP NULL"))
+            conn.commit()
+
+        if "is_sold" not in columns_pending:
+            logger.info("Adding 'is_sold' to pending_matches table...")
+            conn.execute(text("ALTER TABLE pending_matches ADD COLUMN is_sold BOOLEAN DEFAULT FALSE"))
+            conn.commit()
+
+        if "original_listing_date" not in columns_pending:
+            logger.info("Adding 'original_listing_date' to pending_matches table...")
+            conn.execute(text("ALTER TABLE pending_matches ADD COLUMN original_listing_date TIMESTAMP NULL"))
+            conn.commit()
+
+        if "last_price_update" not in columns_pending:
+            logger.info("Adding 'last_price_update' to pending_matches table...")
+            conn.execute(text("ALTER TABLE pending_matches ADD COLUMN last_price_update TIMESTAMP NULL"))
             conn.commit()
 
         # --- Table: price_alerts (Created by create_all, but check for created_at if old) ---
@@ -123,11 +169,12 @@ def _sync_engine(engine, label: str):
                  conn.execute(text("ALTER TABLE blackcluded_items ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"))
                  conn.commit()
 
-        # --- REFACTOR: Rename spider_name to scraper_name (Phase 41) ---
+        # --- Terminology Audit: Fix regressions and ensure 'spider_name' ---
+        # Note: If someone accidentally renamed to scraper_name, we undo it here.
         rename_targets = [
-            ("scraper_status", "spider_name", "scraper_name"),
-            ("scraper_execution_logs", "spider_name", "scraper_name"),
-            ("kaizen_insights", "spider_name", "scraper_name")
+            ("scraper_status", "scraper_name", "spider_name"),
+            ("scraper_execution_logs", "scraper_name", "spider_name"),
+            ("kaizen_insights", "scraper_name", "spider_name")
         ]
 
         for table, old_col, new_col in rename_targets:

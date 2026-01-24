@@ -10,7 +10,8 @@ import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { getProductPriceHistory } from '../api/products';
 import PriceHistoryChart from '../components/products/PriceHistoryChart';
-import { TrendingUp, History } from 'lucide-react';
+import { TrendingUp, History, LineChart as ChartIcon } from 'lucide-react';
+import MarketIntelligenceModal from '../components/MarketIntelligenceModal';
 
 // Para desarrollo, usamos el ID de David
 interface CatalogProps {
@@ -22,6 +23,7 @@ const Catalog: React.FC<CatalogProps> = ({ searchQuery = "" }) => {
     const [selectedProduct, setSelectedProduct] = React.useState<Product | null>(null);
     const [editingProduct, setEditingProduct] = React.useState<Product | null>(null);
     const [historyProductId, setHistoryProductId] = React.useState<number | null>(null);
+    const [intelProductId, setIntelProductId] = React.useState<number | null>(null);
 
     // Contexto de Autenticación (Fase 8.2)
     const activeUserId = parseInt(localStorage.getItem('active_user_id') || '2');
@@ -215,10 +217,16 @@ const Catalog: React.FC<CatalogProps> = ({ searchQuery = "" }) => {
                         >
                             {/* Market Intel Badge */}
                             {hasIntel && (
-                                <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-20 flex items-center gap-1 rounded-lg sm:rounded-xl bg-brand-primary/10 px-1.5 py-0.5 sm:px-2.5 sm:py-1 border border-brand-primary/20 backdrop-blur-md">
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setIntelProductId(product.id);
+                                    }}
+                                    className="absolute top-2 right-2 sm:top-4 sm:right-4 z-20 flex items-center gap-1 rounded-lg sm:rounded-xl bg-brand-primary/10 px-1.5 py-0.5 sm:px-2.5 sm:py-1 border border-brand-primary/20 backdrop-blur-md hover:bg-brand-primary/30 transition-all cursor-pointer shadow-lg shadow-brand-primary/20"
+                                >
                                     <span className="h-1 w-1 sm:h-1.5 sm:w-1.5 rounded-full bg-brand-primary animate-pulse"></span>
-                                    <span className="text-[6px] sm:text-[8px] font-black uppercase tracking-widest text-brand-primary">Live</span>
-                                </div>
+                                    <span className="text-[6px] sm:text-[8px] font-black uppercase tracking-widest text-brand-primary">Estudio de Mercado</span>
+                                </button>
                             )}
 
                             {/* Owned/Wish Badge */}
@@ -285,6 +293,16 @@ const Catalog: React.FC<CatalogProps> = ({ searchQuery = "" }) => {
                                         >
                                             <Info className="h-3 w-3 sm:h-5 sm:w-5" />
                                         </button>
+
+                                        {hasIntel && (
+                                            <button
+                                                onClick={() => setIntelProductId(product.id)}
+                                                className="flex h-8 w-8 sm:h-11 sm:w-11 items-center justify-center rounded-xl sm:rounded-2xl bg-brand-primary/20 text-brand-primary border border-brand-primary/40 transition-all hover:bg-white/10 hover:text-white"
+                                                title="Análisis de Mercado 3OX"
+                                            >
+                                                <ChartIcon className="h-3 w-3 sm:h-5 sm:w-5" />
+                                            </button>
+                                        )}
                                     </div>
 
                                     {/* Action: Toggle Wishlist */}
@@ -595,6 +613,14 @@ const Catalog: React.FC<CatalogProps> = ({ searchQuery = "" }) => {
                         </form>
                     </motion.div>
                 </div>
+            )}
+
+            {/* MARKET INTELLIGENCE MODAL */}
+            {intelProductId && (
+                <MarketIntelligenceModal
+                    productId={intelProductId}
+                    onClose={() => setIntelProductId(null)}
+                />
             )}
         </div>
     );

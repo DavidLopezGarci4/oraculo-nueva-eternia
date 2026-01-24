@@ -17,9 +17,11 @@ import {
     Copy,
     ChevronLeft,
     ChevronRight,
-    X
+    X,
+    LineChart as ChartIcon
 } from 'lucide-react';
 import { getPurgatory, matchItem, discardItem, discardItemsBulk, getScrapersStatus, runScrapers, getScraperLogs } from '../api/purgatory';
+import MarketIntelligenceModal from '../components/MarketIntelligenceModal';
 import axios from 'axios';
 import { useEffect, useRef } from 'react';
 
@@ -43,6 +45,7 @@ const Purgatory: React.FC = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 15;
     const [showForensic, setShowForensic] = useState(false);
+    const [intelProductId, setIntelProductId] = useState<number | null>(null);
 
     // Helper: Check if URL is from Wallapop
     const isWallapopUrl = (url: string) => url?.toLowerCase().includes('wallapop.com');
@@ -926,32 +929,42 @@ const Purgatory: React.FC = () => {
                                                     </div>
 
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                                        {item.suggestions.map((s: any) => (
-                                                            <button
-                                                                key={s.product_id}
-                                                                onClick={() => matchMutation.mutate({ pendingId: item.id, productId: s.product_id })}
-                                                                className="group/btn relative flex items-center gap-4 overflow-hidden rounded-2xl border border-brand-primary/20 bg-brand-primary/5 p-4 text-left transition-all hover:border-brand-primary hover:bg-brand-primary/10 hover:shadow-[0_0_30px_rgba(var(--brand-primary-rgb),0.15)]"
-                                                            >
+                                                        {item.suggestions.map((sug: any) => (
+                                                            <div key={sug.product_id} className="group/btn relative flex items-center gap-4 overflow-hidden rounded-2xl border border-brand-primary/20 bg-brand-primary/5 p-4 text-left transition-all hover:border-brand-primary hover:bg-brand-primary/10 hover:shadow-[0_0_30px_rgba(var(--brand-primary-rgb),0.15)]">
                                                                 {/* Score Ring */}
                                                                 <div className="relative h-14 w-14 shrink-0 flex items-center justify-center rounded-full bg-black border-2 border-brand-primary/30 group-hover/btn:border-brand-primary transition-colors">
-                                                                    <span className="text-xs font-black text-brand-primary">{s.match_score}%</span>
+                                                                    <span className="text-xs font-black text-brand-primary">{sug.match_score}%</span>
                                                                 </div>
 
                                                                 <div className="flex-1 min-w-0">
                                                                     <div className="flex items-center gap-2 mb-1">
                                                                         <span className="px-1.5 py-0.5 rounded bg-brand-primary/20 text-[9px] font-black text-brand-primary uppercase tracking-tighter">
-                                                                            {s.reason.toUpperCase()}
+                                                                            {sug.reason?.toUpperCase() || 'MATCH'}
                                                                         </span>
-                                                                        <span className="text-[9px] font-bold text-white/30 uppercase tracking-widest truncate">{s.sub_category}</span>
+                                                                        <span className="text-[9px] font-bold text-white/30 uppercase tracking-widest truncate">{sug.sub_category}</span>
                                                                     </div>
-                                                                    <h5 className="text-sm font-bold text-white leading-tight truncate">{s.name}</h5>
-                                                                    <p className="text-[10px] text-white/40 font-mono mt-0.5">{s.figure_id}</p>
+                                                                    <h5 className="text-sm font-bold text-white leading-tight truncate">{sug.name}</h5>
+                                                                    <p className="text-[10px] text-white/40 font-mono mt-0.5">{sug.figure_id}</p>
                                                                 </div>
 
-                                                                <div className="opacity-0 group-hover/btn:opacity-100 absolute right-4 transition-all transform translate-x-4 group-hover/btn:translate-x-0">
-                                                                    <CheckCircle2 className="h-6 w-6 text-brand-primary" />
+                                                                <div className="flex items-center gap-2">
+                                                                    <button
+                                                                        onClick={() => setIntelProductId(sug.product_id)}
+                                                                        className="h-8 w-8 flex items-center justify-center rounded-lg bg-brand-primary/10 text-brand-primary border border-brand-primary/20 hover:bg-brand-primary hover:text-white transition-all shadow-sm"
+                                                                        title="Análisis de Mercado 3OX"
+                                                                    >
+                                                                        <ChartIcon className="h-4 w-4" />
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => matchMutation.mutate({ pendingId: item.id, productId: sug.product_id })}
+                                                                        disabled={matchMutation.isPending}
+                                                                        className="flex items-center gap-2 rounded-xl bg-brand-primary/10 px-4 py-2 text-[10px] font-black uppercase text-brand-primary border border-brand-primary/20 hover:bg-brand-primary hover:text-white transition-all shadow-lg shadow-brand-primary/10 group/match"
+                                                                    >
+                                                                        <Link className="h-3 w-3" />
+                                                                        Vincular
+                                                                    </button>
                                                                 </div>
-                                                            </button>
+                                                            </div>
                                                         ))}
                                                     </div>
                                                 </div>
@@ -1218,6 +1231,14 @@ const Purgatory: React.FC = () => {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* MARKET INTELLIGENCE MODAL */}
+            {intelProductId && (
+                <MarketIntelligenceModal
+                    productId={intelProductId}
+                    onClose={() => setIntelProductId(null)}
+                />
             )}
         </div>
     );

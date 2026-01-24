@@ -196,10 +196,12 @@ class EbayScraper(BaseScraper):
                                 image_url=image_url,
                                 ean=None,
                                 source_type="Peer-to-Peer",
-                                sale_type=sale_type,
                                 bids_count=bids_count,
                                 time_left_raw=time_left_raw,
-                                expiry_at=expiry_at
+                                expiry_at=expiry_at,
+                                # Phase 41: Market Intelligence
+                                first_seen_at=datetime.utcnow(),
+                                is_sold=False # Initially active
                             ))
                             self.items_scraped += 1
 
