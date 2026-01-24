@@ -798,6 +798,45 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
     - **Robustez**: Mejorado el filtrado de tiendas en `daily_scan.py` para manejar parámetros vacíos de GitHub Actions.
 
 - [x] **11.12 Wallapop DNA & Pavilion Routing (20/01/2026)**:
+    - **DNA Segregation**: Enhanced scrapers to inject source type accurately.
+    - **Pavilion Routing**: Verified Wallapop items are correctly routed to "El Pabellón".
+
+### 🕸️ Fase 40: El Gran Renacimiento de los Scrapers (Standardization - 23/01/2026)
+
+- **Hitos**: Refactorización total de la infraestructura de scraping para eliminar el legado de "Spiders" y consolidar el motor bajo la convención `BaseScraper`.
+- **Estado**: ✅ COMPLETADO Y VERIFICADO
+
+#### 40.1 Estandarización de Identidad
+*   **BaseScraper**: Renombramiento de la clase maestra `BaseSpider` a `BaseScraper`.
+*   **Atributo scraper_name**: Sustitución global de `spider_name` por `scraper_name` en todos los scrapers, modelos de base de datos (`ScraperStatusModel`, `ScraperExecutionLogModel`, `KaizenInsightModel`) y endpoints de la API.
+*   **Nomenclatura Uniforme**: Actualización de todas las clases individuales a la convención `*Scraper` (ej. `EbayScraper`, `AmazonScraper`).
+
+#### 40.2 Refuerzo de la Ingestión
+*   **Daily Scan CLI**: Actualización del flujo de escaneo diario para manejar los nuevos nombres de scrapers y asegurar la trazabilidad en Supabase.
+*   **Pipeline de Scraping**: Refactorización del `ScrapingPipeline` para usar `scrapers` en lugar de `spiders`, mejorando la semántica del código.
+*   **Simulador de Latidos**: Actualización del sistema de monitoreo de salud para usar el nuevo motor.
+
+#### 40.3 Limpieza de Legado (Tech Debt)
+*   **Eliminación de Alias**: Remoción definitiva del alias `BaseSpider` una vez verificada la integridad de todas las referencias.
+*   **Saneamiento de Imports**: Corrección de importaciones en scripts de prueba, utilidades y jobs de fondo.
+
+### 🛡️ Fase 41: Resiliencia del Nexo y Sigilo en Amazon (24/01/2026)
+
+- **Hitos**: Resolución de errores críticos en la sincronización del catálogo y refuerzo de scrapers contra detección avanzada.
+- **Estado**: ✅ COMPLETADO Y VERIFICADO
+
+#### 41.1 Sanación del Nexo Maestro
+*   **Fix AssertionError: 10**: Implementación de un sistema de deduplicación de columnas en `personal_collection.py`. El sistema ahora detecta y renombra cabeceras duplicadas provenientes de ActionFigure411, permitiendo una reindexación segura en pandas.
+*   **Suministro Incremental**: Refuerzo de la lógica de mezcla (merge) para preservar metadatos de imágenes y IDs de figuras existentes.
+
+#### 41.2 Infiltración Fantasma (Amazon Stealth)
+*   **Bypass Anti-Bot**: Implementación de "Stealth Mode" en el `AmazonScraper` mediante flags de Playwright para ocultar la automatización (`AutomationControlled`).
+*   **Contexto Realista**: Configuración de huella digital humana (Locale `es-ES`, Timezone `Europe/Madrid`, Viewport real).
+*   **Interacción Humanizada**: Inyección de scripts de evasión de `webdriver` y patrones de navegación con scroll aleatorio para evitar bloqueos por timeout en `amazon.es`.
+
+#### 41.3 Alineación de Esquema (Hotfix)
+*   **Database Migration**: Creación de script SQL para renombrar `spider_name` a `scraper_name` en las tablas `scraper_status`, `scraper_execution_logs` y `kaizen_insights`.
+*   **Frontend Consistency**: Actualización de interfaces y componentes en React para consumir la nueva nomenclatura, resolviendo errores 500 en el panel de control.
     - **P2P Tagging**: Corregido endpoint de importación para que los ítems de Wallapop se marquen como `Peer-to-Peer` automáticamente.
 
 ### Fase 23: Blindaje de Poderes Administrativos ✅

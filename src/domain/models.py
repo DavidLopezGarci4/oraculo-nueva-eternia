@@ -79,6 +79,12 @@ class OfferModel(Base):
     anomaly_flags: Mapped[Optional[str]] = mapped_column(String, nullable=True) 
     is_blocked: Mapped[bool] = mapped_column(Boolean, default=False)
     opportunity_score: Mapped[int] = mapped_column(Integer, default=0)
+    
+    # Phase 39: Auction Intelligence
+    sale_type: Mapped[str] = mapped_column(String, default="Retail") # Retail, Auction, Fixed_P2P
+    expiry_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    bids_count: Mapped[int] = mapped_column(Integer, default=0)
+    time_left_raw: Mapped[Optional[str]] = mapped_column(String, nullable=True)
 
     # Relationships
     product: Mapped["ProductModel"] = relationship("ProductModel", back_populates="offers")
@@ -141,6 +147,12 @@ class PendingMatchModel(Base):
     anomaly_flags: Mapped[Optional[str]] = mapped_column(String, nullable=True) # JSON string with detected anomalies
     is_blocked: Mapped[bool] = mapped_column(Boolean, default=False) # Manually blocked by admin/user
     opportunity_score: Mapped[int] = mapped_column(Integer, default=0)
+
+    # Phase 39: Auction Intelligence
+    sale_type: Mapped[str] = mapped_column(String, default="Retail") # Retail, Auction, Fixed_P2P
+    expiry_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    bids_count: Mapped[int] = mapped_column(Integer, default=0)
+    time_left_raw: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     
     found_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
@@ -225,7 +237,7 @@ class ScraperStatusModel(Base):
     __tablename__ = "scraper_status"
     
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    spider_name: Mapped[str] = mapped_column(String)
+    scraper_name: Mapped[str] = mapped_column(String)
     status: Mapped[str] = mapped_column(String) # running, completed, error
     items_scraped: Mapped[int] = mapped_column(Integer, default=0)
     progress: Mapped[int] = mapped_column(Integer, default=0) # 0-100
@@ -259,6 +271,7 @@ class PriceHistoryModel(Base):
     offer_id: Mapped[int] = mapped_column(ForeignKey("offers.id"))
     price: Mapped[float] = mapped_column(Float)
     recorded_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    is_snapshot: Mapped[bool] = mapped_column(Boolean, default=False) # True if price didn't change but we recorded the state
     
     offer: Mapped["OfferModel"] = relationship("OfferModel", back_populates="price_history")
 
@@ -270,7 +283,7 @@ class ScraperExecutionLogModel(Base):
     __tablename__ = "scraper_execution_logs"
     
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    spider_name: Mapped[str] = mapped_column(String, index=True)
+    scraper_name: Mapped[str] = mapped_column(String, index=True)
     status: Mapped[str] = mapped_column(String) # success, error, interrupted
     items_found: Mapped[int] = mapped_column(Integer, default=0)
     new_items: Mapped[int] = mapped_column(Integer, default=0)
@@ -328,7 +341,7 @@ class KaizenInsightModel(Base):
     __tablename__ = "kaizen_insights"
     
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    spider_name: Mapped[str] = mapped_column(String, index=True)
+    scraper_name: Mapped[str] = mapped_column(String, index=True)
     
     insight_type: Mapped[str] = mapped_column(String) # dom_change, anti_bot_detected, idea, improvement
     severity: Mapped[str] = mapped_column(String, default="info") # info, warning, critical

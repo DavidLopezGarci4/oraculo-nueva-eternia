@@ -33,7 +33,7 @@ export interface PendingItem {
 }
 
 export interface ScraperStatus {
-    spider_name: string;
+    scraper_name: string;
     status: string;
     start_time?: string;
     end_time?: string;
@@ -41,7 +41,7 @@ export interface ScraperStatus {
 
 export interface ScraperExecutionLog {
     id: number;
-    spider_name: string;
+    scraper_name: string;
     status: string;
     items_found: number;
     start_time: string;

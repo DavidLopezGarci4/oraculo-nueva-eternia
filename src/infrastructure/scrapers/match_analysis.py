@@ -1,7 +1,6 @@
 import asyncio
 from src.infrastructure.scrapers.pipeline import ScrapingPipeline
-from src.infrastructure.scrapers.spiders.fantasia import FantasiaSpider
-# from src.infrastructure.scrapers.spiders.actiontoys import ActionToysSpider
+from src.infrastructure.scrapers.fantasia_scraper import FantasiaScraper
 from src.infrastructure.database import SessionLocal
 from src.infrastructure.repositories.product import ProductRepository
 from rapidfuzz import process, fuzz
@@ -27,7 +26,7 @@ async def analyze_matches():
     
     # 2. Scrape Real Data
     print("Scraping Fantasia (auto)...")
-    spider = FantasiaSpider()
+    spider = FantasiaScraper()
     # Use "auto" to trigger the full keyword list
     results = await spider.search("auto") 
     

@@ -122,7 +122,7 @@ class BigBadToyStoreScraper(BaseScraper):
             """)
             
             try:
-                logger.info(f"[{self.spider_name}] Navegando a BBTS con stealth mode (UA: {user_agent[:50]}...)")
+                logger.info(f"[{self.scraper_name}] Navegando a BBTS con stealth mode (UA: {user_agent[:50]}...)")
                 
                 # === PAGINACIÓN MEJORADA ===
                 # BBTS usa PageIndex para la paginación (1-indexed)
@@ -137,7 +137,7 @@ class BigBadToyStoreScraper(BaseScraper):
                 while page_num <= self.max_pages and has_next_page:
                     # Construir URL con PageIndex
                     current_url = f"{self.base_url}&PageIndex={page_num}"
-                    logger.info(f"[{self.spider_name}] Scraping página {page_num}: {current_url}")
+                    logger.info(f"[{self.scraper_name}] Scraping página {page_num}: {current_url}")
                     
                     # Delay inicial aleatorio largo (simular humano)
                     if page_num == 1:
@@ -145,7 +145,7 @@ class BigBadToyStoreScraper(BaseScraper):
                     else:
                         # Delay más largo entre páginas (8-15 segundos)
                         delay = random.uniform(8, 15)
-                        logger.info(f"[{self.spider_name}] Esperando {delay:.1f}s antes de la siguiente página...")
+                        logger.info(f"[{self.scraper_name}] Esperando {delay:.1f}s antes de la siguiente página...")
                         await asyncio.sleep(delay)
                     
                     # Navigation with block detection
@@ -155,7 +155,7 @@ class BigBadToyStoreScraper(BaseScraper):
                             # Check if blocked
                             content = await current_page.content()
                             if "blocked" in content.lower() or "sorry, you have been blocked" in content.lower():
-                                logger.warning(f"[{self.spider_name}] 🚫 Block detected on page {page_num}. Attempting context refresh...")
+                                logger.warning(f"[{self.scraper_name}] 🚫 Block detected on page {page_num}. Attempting context refresh...")
                                 # Refresh context
                                 await current_page.close()
                                 await current_context.close()
@@ -169,10 +169,10 @@ class BigBadToyStoreScraper(BaseScraper):
                             nav_success = True
                             break
                         else:
-                            logger.warning(f"[{self.spider_name}] Navigation failed for page {page_num}, attempt {attempt+1}")
+                            logger.warning(f"[{self.scraper_name}] Navigation failed for page {page_num}, attempt {attempt+1}")
                     
                     if not nav_success:
-                        logger.error(f"[{self.spider_name}] Fallo definitivo al cargar BBTS página {page_num}")
+                        logger.error(f"[{self.scraper_name}] Fallo definitivo al cargar BBTS página {page_num}")
                         self.blocked = True
                         break
                     
@@ -209,7 +209,7 @@ class BigBadToyStoreScraper(BaseScraper):
                         if found:
                             items.extend(found)
                             if page_num == 1:
-                                logger.info(f"[{self.spider_name}] Selector '{selector}' encontro {len(found)} elementos")
+                                logger.info(f"[{self.scraper_name}] Selector '{selector}' encontro {len(found)} elementos")
                     
                     # Deduplicar por href (dentro de esta página)
                     seen_urls_page = set()
@@ -220,7 +220,7 @@ class BigBadToyStoreScraper(BaseScraper):
                             seen_urls_page.add(href)
                             unique_items_page.append(item)
                     
-                    logger.info(f"[{self.spider_name}] Página {page_num}: {len(unique_items_page)} items únicos")
+                    logger.info(f"[{self.scraper_name}] Página {page_num}: {len(unique_items_page)} items únicos")
                     
                     # Verificación de "Siguiente Página" en el DOM
                     # Buscamos <a rel="next"> o <a aria-label="Next"> o el símbolo »
@@ -233,14 +233,14 @@ class BigBadToyStoreScraper(BaseScraper):
                         # Fallback: Verificar si existe el link a la siguiente página numérica
                         next_page_url_part = f"PageIndex={page_num + 1}"
                         if not any(next_page_url_part in str(a.get('href')) for a in soup.find_all('a', href=True)):
-                            logger.info(f"[{self.spider_name}] No se detectó botón 'Siguiente' ni link a pág {page_num+1}. Fin.")
+                            logger.info(f"[{self.scraper_name}] No se detectó botón 'Siguiente' ni link a pág {page_num+1}. Fin.")
                             has_next_page = False
                     
                     # Si no hay items, hemos llegado al final
                     if len(unique_items_page) == 0:
                         consecutive_empty_pages += 1
                         if consecutive_empty_pages >= 2:
-                            logger.info(f"[{self.spider_name}] Fin de resultados (2 páginas vacías consecutivas)")
+                            logger.info(f"[{self.scraper_name}] Fin de resultados (2 páginas vacías consecutivas)")
                             has_next_page = False
                             break
                     else:
@@ -258,12 +258,12 @@ class BigBadToyStoreScraper(BaseScraper):
                     page_num += 1
                         
             except Exception as e:
-                logger.error(f"[{self.spider_name}] Error critico: {e}", exc_info=True)
+                logger.error(f"[{self.scraper_name}] Error critico: {e}", exc_info=True)
                 self.errors += 1
             finally:
                 await browser.close()
                 
-        logger.info(f"[{self.spider_name}] Completado. Total: {len(products)} productos")
+        logger.info(f"[{self.scraper_name}] Completado. Total: {len(products)} productos")
         return products
 
 
@@ -301,7 +301,7 @@ class BigBadToyStoreScraper(BaseScraper):
             name_lower = name.lower()
             keywords = ['origin', 'master', 'motu', 'eternia', 'he-man', 'skeletor', 'mattel']
             if not any(kw in name_lower for kw in keywords):
-                logger.debug(f"[{self.spider_name}] Skipping item (no keywords in name): {name}")
+                logger.debug(f"[{self.scraper_name}] Skipping item (no keywords in name): {name}")
                 return None
             
             # Precio (USD -> EUR conversion)
@@ -318,7 +318,7 @@ class BigBadToyStoreScraper(BaseScraper):
                         break
             
             if price_val == 0.0:
-                logger.debug(f"[{self.spider_name}] Skipping item (price is 0): {name}")
+                logger.debug(f"[{self.scraper_name}] Skipping item (price is 0): {name}")
                 return None
             
             # Disponibilidad
@@ -338,9 +338,9 @@ class BigBadToyStoreScraper(BaseScraper):
                 price=price_val,
                 currency="EUR",
                 url=link,
-                shop_name=self.spider_name,
+                shop_name=self.scraper_name,
                 is_available=is_avl
             )
         except Exception as e:
-            logger.warning(f"[{self.spider_name}] Error parseando item: {e}")
+            logger.warning(f"[{self.scraper_name}] Error parseando item: {e}")
             return None

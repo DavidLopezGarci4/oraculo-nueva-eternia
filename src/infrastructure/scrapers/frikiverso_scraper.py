@@ -33,7 +33,7 @@ class FrikiversoScraper(BaseScraper):
                 max_pages = 25 
                 
                 while current_url and page_num <= max_pages:
-                    logger.info(f"[{self.spider_name}] Scraping page {page_num}: {current_url}")
+                    logger.info(f"[{self.scraper_name}] Scraping page {page_num}: {current_url}")
                     
                     if not await self._safe_navigate(page, current_url):
                         break
@@ -49,7 +49,7 @@ class FrikiversoScraper(BaseScraper):
                     soup = BeautifulSoup(html_content, 'html.parser')
                     
                     items = soup.select('article.js-product-miniature, article.ajax_block_product')
-                    logger.info(f"[{self.spider_name}] Found {len(items)} items on page {page_num}")
+                    logger.info(f"[{self.scraper_name}] Found {len(items)} items on page {page_num}")
                     
                     if not items:
                         break
@@ -71,12 +71,12 @@ class FrikiversoScraper(BaseScraper):
                         break
                         
             except Exception as e:
-                logger.error(f"[{self.spider_name}] Critical Error: {e}", exc_info=True)
+                logger.error(f"[{self.scraper_name}] Critical Error: {e}", exc_info=True)
                 self.errors += 1
             finally:
                 await browser.close()
                 
-            logger.info(f"[{self.spider_name}] Finished. Total items: {len(products)}")
+            logger.info(f"[{self.scraper_name}] Finished. Total items: {len(products)}")
             return products
 
     def _parse_html_item(self, item) -> Optional[ScrapedOffer]:
@@ -131,12 +131,12 @@ class FrikiversoScraper(BaseScraper):
                 price=price_val,
                 currency="EUR",
                 url=link,
-                shop_name=self.spider_name,
+                shop_name=self.scraper_name,
                 is_available=is_avl,
                 image_url=img_url
             )
         except Exception as e:
-            logger.warning(f"[{self.spider_name}] Item parsing error: {e}")
+            logger.warning(f"[{self.scraper_name}] Item parsing error: {e}")
             return None
 
     async def _handle_popups(self, page: Page):
@@ -147,14 +147,14 @@ class FrikiversoScraper(BaseScraper):
             # Cookie Consent (CookieScript)
             accept_cookies = page.locator("#cookiescript_accept")
             if await accept_cookies.is_visible(timeout=3000):
-                logger.info(f"[{self.spider_name}] 🍪 Accepting cookies...")
+                logger.info(f"[{self.scraper_name}] 🍪 Accepting cookies...")
                 await accept_cookies.click()
                 await asyncio.sleep(0.5)
 
             # Newsletter popup
             close_btn = page.locator(".newsletter-popup button.close, .newsletter-close, button[aria-label='Close'], #st_newsletter_popup .close")
             if await close_btn.is_visible(timeout=2000):
-                logger.info(f"[{self.spider_name}] 🤫 Closing newsletter popup...")
+                logger.info(f"[{self.scraper_name}] 🤫 Closing newsletter popup...")
                 await close_btn.click()
                 await asyncio.sleep(0.5)
         except Exception:

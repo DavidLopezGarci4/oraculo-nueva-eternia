@@ -67,7 +67,7 @@ from src.infrastructure.scrapers.harvester import run_harvester
 from src.domain.models import ProductModel, PendingMatchModel, ScraperStatusModel, BlackcludedItemModel, OfferModel, ScraperExecutionLogModel, CollectionItemModel, OfferHistoryModel, UserModel, LogisticRuleModel
 from src.application.services.logistics_service import LogisticsService
 import json
-from sqlalchemy import select
+from sqlalchemy import select, and_, or_, func
 
 class CollectionToggleRequest(BaseModel):
     product_id: int
@@ -142,7 +142,11 @@ async def get_users():
     with SessionCloud() as db:
         users = db.query(UserModel).all()
         return [{"id": u.id, "username": u.username, "role": u.role} for u in users]
-
+@app.get("/api/products", response_model=List[ProductOutput])
+async def get_products():
+    """Retorna el catálogo maestro completo para búsquedas en el Purgatorio."""
+    with SessionCloud() as db:
+        query = select(ProductModel)
         result = db.execute(query)
         products = result.scalars().all()
         return products
@@ -763,16 +767,16 @@ def run_scraper_task(scraper_name: str = "harvester", trigger_type: str = "manua
     # 1. Marcar inicio en la base de datos
     # 1. Marcar inicio en la base de datos y crear Log
     with SessionCloud() as db:
-        status = db.query(ScraperStatusModel).filter(ScraperStatusModel.spider_name == scraper_name).first()
+        status = db.query(ScraperStatusModel).filter(ScraperStatusModel.scraper_name == scraper_name).first()
         if not status:
-            status = ScraperStatusModel(spider_name=scraper_name)
+            status = ScraperStatusModel(scraper_name=scraper_name)
             db.add(status)
         status.status = "running"
         status.start_time = datetime.utcnow()
         
         # Crear entrada en la bitácora
         execution_log = ScraperExecutionLogModel(
-            spider_name=scraper_name,
+            scraper_name=scraper_name,
             status="running",
             start_time=status.start_time,
             trigger_type=trigger_type
@@ -823,9 +827,7 @@ def run_scraper_task(scraper_name: str = "harvester", trigger_type: str = "manua
             from src.infrastructure.scrapers.frikiverso_scraper import FrikiversoScraper
             from src.infrastructure.scrapers.electropolis_scraper import ElectropolisScraper
             from src.infrastructure.scrapers.pixelatoy_scraper import PixelatoyScraper
-            from src.infrastructure.scrapers.spiders.amazon import AmazonSpider
-            from src.infrastructure.scrapers.spiders.dvdstorespain import DVDStoreSpainSpider
-            from src.infrastructure.scrapers.spiders.kidinn import KidInnSpider
+            from src.infrastructure.scrapers.amazon_scraper import AmazonScraper
             
             # Phase 8. European Expansion
             from src.infrastructure.scrapers.detoyboys_scraper import DeToyboysNLScraper
@@ -841,9 +843,9 @@ def run_scraper_task(scraper_name: str = "harvester", trigger_type: str = "manua
                 "Frikiverso": FrikiversoScraper(),
                 "Electropolis": ElectropolisScraper(),
                 "Pixelatoy": PixelatoyScraper(),
-                "amazon": AmazonSpider(), # Old spider, keep lowercase if that's what it uses
-                "dvdstorespain": DVDStoreSpainSpider(),
-                "kidinn": KidInnSpider(),
+                "amazon": AmazonScraper(), 
+                # DvdStoreSpain and KidInn removed (Decommissioned)
+                "DeToyboys": DeToyboysNLScraper(),
                 # European Expansion
                 "DeToyboys": DeToyboysNLScraper(),
                 "ToymiEU": ToymiEUScraper(),
@@ -874,7 +876,7 @@ def run_scraper_task(scraper_name: str = "harvester", trigger_type: str = "manua
 
         # 2. Marcar éxito en la base de datos y actualizar Log
         with SessionCloud() as db:
-            status = db.query(ScraperStatusModel).filter(ScraperStatusModel.spider_name == scraper_name).first()
+            status = db.query(ScraperStatusModel).filter(ScraperStatusModel.scraper_name == scraper_name).first()
             if status:
                 status.status = "completed"
                 status.end_time = datetime.utcnow()
@@ -891,7 +893,7 @@ def run_scraper_task(scraper_name: str = "harvester", trigger_type: str = "manua
     except Exception as e:
         logger.error(f"Scraper Error ({scraper_name}): {e}")
         with SessionCloud() as db:
-            status = db.query(ScraperStatusModel).filter(ScraperStatusModel.spider_name == scraper_name).first()
+            status = db.query(ScraperStatusModel).filter(ScraperStatusModel.scraper_name == scraper_name).first()
             if status:
                 status.status = f"error: {str(e)}"
             
@@ -1074,7 +1076,13 @@ async def get_product_offers(product_id: int):
                     "last_seen": o.last_seen.isoformat(),
                     "min_historical": o.min_price or o.price,
                     "opportunity_score": o.opportunity_score,
-                    "is_best": False
+                    "source_type": o.source_type,
+                    "is_best": False,
+                    # Phase 39: Auction Intelligence
+                    "sale_type": o.sale_type,
+                    "expiry_at": o.expiry_at.isoformat() if o.expiry_at else None,
+                    "bids_count": o.bids_count,
+                    "time_left_raw": o.time_left_raw
                 }
         
         # Marcar la mejor global basada en Landing Price (Phase 15 Truth)
@@ -1084,6 +1092,37 @@ async def get_product_offers(product_id: int):
             results[0]["is_best"] = True
             
         return results
+
+@app.get("/api/market/analytics/{product_id}")
+async def get_market_analytics(product_id: int):
+    """
+    Fase 40: Estudio de mercado avanzado.
+    Separa estadísticas entre Retail (Tiendas) y P2P (Subastas/Particulares).
+    """
+    with SessionCloud() as db:
+        offers = db.query(OfferModel).filter(
+            OfferModel.product_id == product_id, 
+            OfferModel.is_available == True
+        ).all()
+        
+        retail_prices = [o.price for o in offers if o.source_type == "Retail"]
+        p2p_prices = [o.price for o in offers if o.source_type == "Peer-to-Peer"]
+        
+        # Stats Helpers
+        def get_stats(prices):
+            if not prices: return {"avg": 0, "min": 0, "max": 0, "count": 0}
+            return {
+                "avg": round(sum(prices) / len(prices), 2),
+                "min": min(prices),
+                "max": max(prices),
+                "count": len(prices)
+            }
+            
+        return {
+            "retail": get_stats(retail_prices),
+            "p2p": get_stats(p2p_prices),
+            "global_avg": get_stats(retail_prices + p2p_prices)["avg"]
+        }
 
 @app.get("/api/products/{product_id}/price-history")
 async def get_product_price_history(product_id: int):
@@ -1124,7 +1163,6 @@ async def get_dashboard_hall_of_fame(user_id: int = 1):
     Fase 6.3: Retorna los 'Griales del Reino' (Top Valor) y 'Potencial Oculto' (Top ROI).
     """
     from src.domain.models import CollectionItemModel, OfferModel, ProductModel
-    from sqlalchemy import func
     
     with SessionCloud() as db:
         # 1. Obtener todos los items de colección filtrados por el usuario

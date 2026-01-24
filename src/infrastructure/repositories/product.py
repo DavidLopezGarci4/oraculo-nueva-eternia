@@ -38,6 +38,17 @@ class ProductRepository(BaseRepository[ProductModel]):
             if abs(existing_offer.price - current_price) > 0.01:
                  ph = PriceHistoryModel(offer_id=existing_offer.id, price=current_price)
                  self.db.add(ph)
+            else:
+                # --- PHASE 40: MARKET ANALYTICS (SNAPSHOTS) ---
+                # Even if price didn't change, we record a snapshot if the last one was from > 24h ago
+                # This allow us to calculate "time on market" and time-weighted averages.
+                last_snapshot = self.db.query(PriceHistoryModel).filter(
+                    PriceHistoryModel.offer_id == existing_offer.id
+                ).order_by(PriceHistoryModel.recorded_at.desc()).first()
+                
+                if not last_snapshot or (datetime.utcnow() - last_snapshot.recorded_at).total_seconds() > 86400:
+                    ph = PriceHistoryModel(offer_id=existing_offer.id, price=current_price, is_snapshot=True)
+                    self.db.add(ph)
 
             # Check for Alert Condition (New Low + Significant Discount)
             if existing_offer.min_price > 0 and current_price < existing_offer.min_price:
@@ -59,6 +70,16 @@ class ProductRepository(BaseRepository[ProductModel]):
             
             if "source_type" in offer_data:
                 existing_offer.source_type = offer_data["source_type"]
+
+            # --- PHASE 39: AUCTION INTELLIGENCE ---
+            if "sale_type" in offer_data:
+                existing_offer.sale_type = offer_data["sale_type"]
+            if "expiry_at" in offer_data:
+                existing_offer.expiry_at = offer_data["expiry_at"]
+            if "bids_count" in offer_data:
+                existing_offer.bids_count = offer_data["bids_count"]
+            if "time_left_raw" in offer_data:
+                existing_offer.time_left_raw = offer_data["time_left_raw"]
 
             # --- 3OX: Update Audit Receipt ---
             if "receipt_id" in offer_data:
@@ -87,7 +108,12 @@ class ProductRepository(BaseRepository[ProductModel]):
                 max_price=current_price,
                 source_type=offer_data.get("source_type", "Retail"),
                 receipt_id=offer_data.get("receipt_id"), # --- 3OX Audit ---
-                opportunity_score=offer_data.get("opportunity_score", 0)
+                opportunity_score=offer_data.get("opportunity_score", 0),
+                # Phase 39 Fields
+                sale_type=offer_data.get("sale_type", "Retail"),
+                expiry_at=offer_data.get("expiry_at"),
+                bids_count=offer_data.get("bids_count", 0),
+                time_left_raw=offer_data.get("time_left_raw")
             )
             self.db.add(new_offer)
             self.db.flush() 

@@ -1,10 +1,10 @@
 import asyncio
-from src.infrastructure.scrapers.spiders.actiontoys import ActionToysSpider
+from src.infrastructure.scrapers.action_toys_scraper import ActionToysScraper
 
 async def test_actiontoys():
-    spider = ActionToysSpider()
+    scraper = ActionToysScraper()
     # Test query that should return results
-    results = await spider.search("Origins")
+    results = await scraper.search("Origins")
     
     print(f"\n--- Results ({len(results)}) ---")
     for r in results[:5]:

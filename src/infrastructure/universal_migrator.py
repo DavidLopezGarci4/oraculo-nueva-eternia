@@ -123,5 +123,26 @@ def _sync_engine(engine, label: str):
                  conn.execute(text("ALTER TABLE blackcluded_items ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"))
                  conn.commit()
 
+        # --- REFACTOR: Rename spider_name to scraper_name (Phase 41) ---
+        rename_targets = [
+            ("scraper_status", "spider_name", "scraper_name"),
+            ("scraper_execution_logs", "spider_name", "scraper_name"),
+            ("kaizen_insights", "spider_name", "scraper_name")
+        ]
+
+        for table, old_col, new_col in rename_targets:
+            if table in inspector.get_table_names():
+                cols = [c['name'] for c in inspector.get_columns(table)]
+                if old_col in cols and new_col not in cols:
+                    logger.info(f"[{label}] Renaming column in '{table}': '{old_col}' -> '{new_col}'...")
+                    try:
+                        # Standard SQL for renaming (Works on Postgres and recent SQLite)
+                        conn.execute(text(f'ALTER TABLE "{table}" RENAME COLUMN "{old_col}" TO "{new_col}"'))
+                        conn.commit()
+                        logger.info(f"[{label}] Table '{table}' column '{new_col}' rename successful.")
+                    except Exception as e:
+                        logger.error(f"[{label}] Failed to rename column in '{table}': {e}")
+                        conn.rollback()
+
 if __name__ == "__main__":
     migrate()

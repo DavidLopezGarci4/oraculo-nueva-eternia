@@ -37,7 +37,7 @@ def ingest_data():
 
     logger.info(f"Loaded {len(offers)} valid offers. Starting Database Update...")
     
-    # Initialize Pipeline with empty spiders list correctly (BaseSpider abstract might complain if we tried to mock it too hard, 
+    # Initialize Pipeline with empty spiders list correctly (BaseScraper abstract might complain if we tried to mock it too hard, 
     # but Pipeline only stores the list, doesn't validate types deeply in __init__)
     pipeline = ScrapingPipeline(spiders=[])
     
