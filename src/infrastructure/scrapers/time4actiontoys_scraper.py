@@ -42,7 +42,7 @@ class Time4ActionToysDEScraper(BaseScraper):
                     # Time4ActionToys uses ?p=1 format for pagination
                     current_url = f"{self.base_url}?p={page_num}"
                     
-                    logger.info(f"[{self.spider_name}] Scraping page {page_num}: {current_url}")
+                    logger.info(f"[{self.scraper_name}] Scraping page {page_num}: {current_url}")
                     
                     if not await self._safe_navigate(page, current_url):
                         break
@@ -58,7 +58,7 @@ class Time4ActionToysDEScraper(BaseScraper):
                     if not items:
                         items = soup.select('[class*="product"], .cms-listing-col')
                     
-                    logger.info(f"[{self.spider_name}] Found {len(items)} items on page {page_num}")
+                    logger.info(f"[{self.scraper_name}] Found {len(items)} items on page {page_num}")
                     
                     if not items:
                         break
@@ -72,12 +72,12 @@ class Time4ActionToysDEScraper(BaseScraper):
                     page_num += 1
                         
             except Exception as e:
-                logger.error(f"[{self.spider_name}] Critical Error: {e}", exc_info=True)
+                logger.error(f"[{self.scraper_name}] Critical Error: {e}", exc_info=True)
                 self.errors += 1
             finally:
                 await browser.close()
                 
-        logger.info(f"[{self.spider_name}] Finished. Total items: {len(products)}")
+        logger.info(f"[{self.scraper_name}] Finished. Total items: {len(products)}")
         return products
 
     def _parse_item(self, item) -> Optional[ScrapedOffer]:
@@ -123,9 +123,9 @@ class Time4ActionToysDEScraper(BaseScraper):
                 price=price_val,
                 currency="EUR",
                 url=link,
-                shop_name=self.spider_name,
+                shop_name=self.scraper_name,
                 is_available=is_avl
             )
         except Exception as e:
-            logger.warning(f"[{self.spider_name}] Item parsing error: {e}")
+            logger.warning(f"[{self.scraper_name}] Item parsing error: {e}")
             return None

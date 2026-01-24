@@ -293,9 +293,9 @@ const Purgatory: React.FC = () => {
     }, [pendingActions.length, failedActions.length]); // Re-run mainly to ensure the check continues
 
 
-    const filteredProducts = products?.filter((p: any) =>
-        p.name.toLowerCase().includes(manualSearchTerm.toLowerCase()) ||
-        p.figure_id?.toLowerCase().includes(manualSearchTerm.toLowerCase())
+    const filteredProducts = (products || [])?.filter((p: any) =>
+        (p.name || "").toLowerCase().includes((manualSearchTerm || "").toLowerCase()) ||
+        (p.figure_id || "").toLowerCase().includes((manualSearchTerm || "").toLowerCase())
     ).slice(0, 20);
 
     // Dynamic Filter for Pending Items (Main List)
@@ -305,11 +305,11 @@ const Purgatory: React.FC = () => {
         // Persistence Ghost Mode: Filter out locally hidden items
         if (pendingIdsToHide.has(item.id)) return false;
 
-        const term = searchTerm.toLowerCase();
+        const term = (searchTerm || "").toLowerCase();
         const matchesSearch = !searchTerm || (
-            item.scraped_name.toLowerCase().includes(term) ||
-            item.shop_name.toLowerCase().includes(term) ||
-            item.ean?.toLowerCase().includes(term) ||
+            (item.scraped_name || "").toLowerCase().includes(term) ||
+            (item.shop_name || "").toLowerCase().includes(term) ||
+            (item.ean || "").toLowerCase().includes(term) ||
             item.id.toString().includes(term)
         );
 
@@ -443,8 +443,8 @@ const Purgatory: React.FC = () => {
                                 className="group relative flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 transition-all hover:bg-white/10 disabled:opacity-50"
                             >
                                 <div className="flex items-center justify-between">
-                                    <RefreshCcw className={`h-5 w-5 ${scrapersStatus?.find((s: any) => s.spider_name === 'harvester')?.status === 'running' ? 'animate-spin text-green-400' : 'text-white/40'}`} />
-                                    <div className={`h-1.5 w-1.5 rounded-full ${scrapersStatus?.find((s: any) => s.spider_name === 'harvester')?.status === 'running' ? 'bg-green-400' : 'bg-white/10'}`}></div>
+                                    <RefreshCcw className={`h-5 w-5 ${scrapersStatus?.find((s: any) => s.scraper_name === 'harvester')?.status === 'running' ? 'animate-spin text-green-400' : 'text-white/40'}`} />
+                                    <div className={`h-1.5 w-1.5 rounded-full ${scrapersStatus?.find((s: any) => s.scraper_name === 'harvester')?.status === 'running' ? 'bg-green-400' : 'bg-white/10'}`}></div>
                                 </div>
                                 <div className="space-y-1 text-left">
                                     <p className="text-[10px] font-black uppercase tracking-tighter text-white/30">Local Playwright</p>
@@ -464,20 +464,20 @@ const Purgatory: React.FC = () => {
                                     if (!scrapersStatus) return null;
 
                                     const individualScrapers = scrapersStatus.filter((s: any) =>
-                                        !['all', 'harvester', 'Harvester'].includes(s.spider_name)
+                                        !['all', 'harvester', 'Harvester'].includes(s.scraper_name)
                                     );
 
                                     const uniqueMap = new Map();
                                     individualScrapers.forEach((s: any) => {
-                                        const key = s.spider_name.toLowerCase();
+                                        const key = s.scraper_name.toLowerCase();
                                         const existing = uniqueMap.get(key);
-                                        if (!existing || (s.spider_name.match(/[A-Z]/g) || []).length > (existing.spider_name.match(/[A-Z]/g) || []).length) {
+                                        if (!existing || (s.scraper_name.match(/[A-Z]/g) || []).length > (existing.scraper_name.match(/[A-Z]/g) || []).length) {
                                             uniqueMap.set(key, s);
                                         }
                                     });
 
                                     return Array.from(uniqueMap.values())
-                                        .sort((a, b) => a.spider_name.localeCompare(b.spider_name))
+                                        .sort((a, b) => a.scraper_name.localeCompare(b.scraper_name))
                                         .map((s: any) => {
                                             const status = s.status;
                                             const isActive = status === 'running';
@@ -485,15 +485,15 @@ const Purgatory: React.FC = () => {
 
                                             return (
                                                 <button
-                                                    key={s.spider_name}
-                                                    onClick={() => setConfirmScraper(s.spider_name)}
+                                                    key={s.scraper_name}
+                                                    onClick={() => setConfirmScraper(s.scraper_name)}
                                                     disabled={isRunning}
                                                     className={`group relative flex items-center justify-between rounded-xl border p-3 transition-all hover:bg-white/5 disabled:opacity-50 min-h-[52px] ${hasError ? 'border-red-500/20 bg-red-500/5' : 'border-white/5 bg-white/[0.02]'}`}
                                                 >
                                                     <div className="flex items-center gap-3 overflow-hidden">
                                                         <div className={`flex-shrink-0 h-1.5 w-1.5 rounded-full ${isActive ? 'bg-brand-primary animate-pulse shadow-[0_0_8px_rgba(var(--brand-primary-rgb),0.6)]' : status === 'completed' ? 'bg-green-500/50' : hasError ? 'bg-red-500' : 'bg-white/10'}`}></div>
                                                         <span className="text-[10px] font-black text-white/70 uppercase tracking-tight group-hover:text-white transition-colors truncate">
-                                                            {s.spider_name}
+                                                            {s.scraper_name}
                                                         </span>
                                                     </div>
                                                     <Search className={`flex-shrink-0 h-3 w-3 ${isActive ? 'text-brand-primary' : hasError ? 'text-red-400' : 'text-white/10'}`} />
@@ -534,7 +534,7 @@ const Purgatory: React.FC = () => {
                                         <tr key={log.id} className="group hover:bg-white/[0.01] transition-colors flex flex-col md:table-row p-3 md:p-0 border-b border-white/5 md:border-none gap-2 md:gap-0">
                                             <td className="px-0 md:px-4 py-1 md:py-3 flex justify-between md:table-cell">
                                                 <div className="flex flex-col">
-                                                    <span className="text-[10px] font-black text-white/80 uppercase tracking-tight">{log.spider_name}</span>
+                                                    <span className="text-[10px] font-black text-white/80 uppercase tracking-tight">{log.scraper_name}</span>
                                                     <span className="text-[9px] text-white/20 font-bold">{new Date(log.start_time).toLocaleTimeString()}</span>
                                                 </div>
                                                 {/* Mobile Status placed here for space efficiency */}

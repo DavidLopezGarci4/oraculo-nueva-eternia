@@ -33,7 +33,7 @@ class FantasiaScraper(BaseScraper):
                 max_pages = 20 # Increased limit for sanity, 8+ seen by user
                 
                 while current_url and page_num <= max_pages:
-                    logger.info(f"[{self.spider_name}] Scraping page {page_num}: {current_url}")
+                    logger.info(f"[{self.scraper_name}] Scraping page {page_num}: {current_url}")
                     
                     if not await self._safe_navigate(page, current_url):
                         break
@@ -46,7 +46,7 @@ class FantasiaScraper(BaseScraper):
                     
                     # Strategy 1: Verified CSS Selectors (Primary for results)
                     items = soup.select('article.product-miniature')
-                    logger.info(f"[{self.spider_name}] Found {len(items)} items using CSS.")
+                    logger.info(f"[{self.scraper_name}] Found {len(items)} items using CSS.")
                     
                     if not items:
                         # Fallback to secondary container pattern
@@ -67,16 +67,16 @@ class FantasiaScraper(BaseScraper):
                             current_url = f"https://fantasiapersonajes.es{current_url}"
                         page_num += 1
                     else:
-                        logger.info(f"[{self.spider_name}] End of pagination.")
+                        logger.info(f"[{self.scraper_name}] End of pagination.")
                         break
                         
             except Exception as e:
-                logger.error(f"[{self.spider_name}] Critical Error: {e}", exc_info=True)
+                logger.error(f"[{self.scraper_name}] Critical Error: {e}", exc_info=True)
                 self.errors += 1
             finally:
                 await browser.close()
                 
-            logger.info(f"[{self.spider_name}] Finished. Total items: {len(products)}")
+            logger.info(f"[{self.scraper_name}] Finished. Total items: {len(products)}")
             return products
 
     def _parse_html_item(self, item) -> Optional[ScrapedOffer]:
@@ -119,7 +119,7 @@ class FantasiaScraper(BaseScraper):
                         pass
             
             if price_val == 0.0:
-                logger.debug(f"[{self.spider_name}] Skipping item {name} - Price could not be parsed.")
+                logger.debug(f"[{self.scraper_name}] Skipping item {name} - Price could not be parsed.")
                 return None
 
             # 3. Availability
@@ -142,12 +142,12 @@ class FantasiaScraper(BaseScraper):
                 price=price_val,
                 currency="EUR",
                 url=link,
-                shop_name=self.spider_name,
+                shop_name=self.scraper_name,
                 is_available=is_avl,
                 image_url=img_url
             )
         except Exception as e:
-            logger.warning(f"[{self.spider_name}] Item parsing error: {e}")
+            logger.warning(f"[{self.scraper_name}] Item parsing error: {e}")
             return None
 
     def _extract_from_json_ld(self, soup) -> List[ScrapedOffer]:
@@ -189,7 +189,7 @@ class FantasiaScraper(BaseScraper):
                 except json.JSONDecodeError:
                     continue
         except Exception as e:
-            logger.warning(f"[{self.spider_name}] JSON-LD Error: {e}")
+            logger.warning(f"[{self.scraper_name}] JSON-LD Error: {e}")
             
         return scraped
 
@@ -223,7 +223,7 @@ class FantasiaScraper(BaseScraper):
                 price=float(price),
                 currency=currency,
                 url=link,
-                shop_name=self.spider_name,
+                shop_name=self.scraper_name,
                 is_available=is_avl,
                 image_url=img_url
             )
@@ -256,14 +256,14 @@ class FantasiaScraper(BaseScraper):
             # Based on audit, it has a "CERRAR AVISO" button.
             close_modal = page.locator("button:has-text('CERRAR AVISO'), .modal-header .close")
             if await close_modal.is_visible(timeout=3000):
-                logger.info(f"[{self.spider_name}] 📦 Closing Logistics modal...")
+                logger.info(f"[{self.scraper_name}] 📦 Closing Logistics modal...")
                 await close_modal.click()
                 await asyncio.sleep(0.5)
 
             # 2. Cookie Banner
             accept_cookies = page.locator("button:has-text('ACEPTO')")
             if await accept_cookies.is_visible(timeout=2000):
-                logger.info(f"[{self.spider_name}] 🍪 Accepting cookies...")
+                logger.info(f"[{self.scraper_name}] 🍪 Accepting cookies...")
                 await accept_cookies.click()
                 await asyncio.sleep(0.5)
         except Exception:

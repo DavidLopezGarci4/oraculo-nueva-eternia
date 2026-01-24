@@ -33,7 +33,7 @@ class PixelatoyScraper(BaseScraper):
                 max_pages = 25 
                 
                 while current_url and page_num <= max_pages:
-                    logger.info(f"[{self.spider_name}] Scraping page {page_num}: {current_url}")
+                    logger.info(f"[{self.scraper_name}] Scraping page {page_num}: {current_url}")
                     
                     if not await self._safe_navigate(page, current_url):
                         break
@@ -49,7 +49,7 @@ class PixelatoyScraper(BaseScraper):
                     soup = BeautifulSoup(html_content, 'html.parser')
                     
                     items = soup.select('article.product-miniature, article.js-product-miniature')
-                    logger.info(f"[{self.spider_name}] Found {len(items)} items on page {page_num}")
+                    logger.info(f"[{self.scraper_name}] Found {len(items)} items on page {page_num}")
                     
                     if not items:
                         break
@@ -71,12 +71,12 @@ class PixelatoyScraper(BaseScraper):
                         break
                         
             except Exception as e:
-                logger.error(f"[{self.spider_name}] Critical Error: {e}", exc_info=True)
+                logger.error(f"[{self.scraper_name}] Critical Error: {e}", exc_info=True)
                 self.errors += 1
             finally:
                 await browser.close()
                 
-            logger.info(f"[{self.spider_name}] Finished. Total items: {len(products)}")
+            logger.info(f"[{self.scraper_name}] Finished. Total items: {len(products)}")
             return products
 
     def _parse_html_item(self, item) -> Optional[ScrapedOffer]:
@@ -118,7 +118,7 @@ class PixelatoyScraper(BaseScraper):
                          pass
 
             if price_val == 0.0:
-                logger.debug(f"[{self.spider_name}] Skipping item {name} - Price could not be parsed.")
+                logger.debug(f"[{self.scraper_name}] Skipping item {name} - Price could not be parsed.")
                 return None
 
             # 3. Availability
@@ -140,12 +140,12 @@ class PixelatoyScraper(BaseScraper):
                 price=price_val,
                 currency="EUR",
                 url=link,
-                shop_name=self.spider_name,
+                shop_name=self.scraper_name,
                 is_available=is_avl,
                 image_url=img_url
             )
         except Exception as e:
-            logger.warning(f"[{self.spider_name}] Item parsing error: {e}")
+            logger.warning(f"[{self.scraper_name}] Item parsing error: {e}")
             return None
 
     async def _scrape_detail(self, page: Page, url: str) -> dict:
@@ -173,14 +173,14 @@ class PixelatoyScraper(BaseScraper):
             # Common PrestaShop cookie accept button + Pixelatoy specific
             accept_btn = page.locator("#iqitcookielaw-accept, button:has-text('ACEPTAR'), .btn-primary:has-text('Aceptar'), button[aria-label='Accept']")
             if await accept_btn.is_visible(timeout=3000):
-                logger.info(f"[{self.spider_name}] 🍪 Accepting cookies...")
+                logger.info(f"[{self.scraper_name}] 🍪 Accepting cookies...")
                 await accept_btn.click()
                 await asyncio.sleep(0.5)
             
             # Additional newsletter check (iqitnewsletter)
             close_newsletter = page.locator(".iqitnewsletter-close, #iqitnewsletter-close")
             if await close_newsletter.is_visible(timeout=2000):
-                logger.info(f"[{self.spider_name}] 📧 Closing newsletter...")
+                logger.info(f"[{self.scraper_name}] 📧 Closing newsletter...")
                 await close_newsletter.click()
         except Exception:
             pass

@@ -367,7 +367,19 @@ def process_table(
         row_data += [detail_link, image_url, image_path_str, "", figure_id]
         rows.append(row_data)
 
-    df = pd.DataFrame(rows, columns=out_cols)
+    # --- DEDUPLICAR COLUMNAS (Fix AssertionError: 10) ---
+    def _dedupe_cols(cols):
+        res = []
+        counts = {}
+        for c in cols:
+            if not c: c = "Unnamed"
+            n = counts.get(c, 0)
+            res.append(c if n == 0 else f"{c}_{n}")
+            counts[c] = n + 1
+        return res
+    
+    unique_cols = _dedupe_cols(out_cols)
+    df = pd.DataFrame(rows, columns=unique_cols)
 
     # Elimina todas las columnas Unnamed_* si quedaron
     unnamed = [c for c in df.columns if c.startswith("Unnamed_")]

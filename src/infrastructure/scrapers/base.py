@@ -21,6 +21,12 @@ class ScrapedOffer(BaseModel):
     ean: Optional[str] = None
     scraped_at: datetime = Field(default_factory=datetime.utcnow)
     source_type: str = "Retail" # Retail, Peer-to-Peer
+    
+    # Phase 39: Auction Intelligence
+    sale_type: str = "Retail" # Retail, Auction, Fixed_P2P
+    expiry_at: Optional[datetime] = None
+    bids_count: int = 0
+    time_left_raw: Optional[str] = None
 
 class BaseScraper(ABC):
     """
@@ -28,7 +34,7 @@ class BaseScraper(ABC):
     Provides robust navigation, anti-detection, and metrics.
     """
     def __init__(self, shop_name: str, base_url: str = ""):
-        self.spider_name = shop_name
+        self.scraper_name = shop_name # Renamed from spider_name
         self.shop_name = shop_name # For repository compatibility
         self.base_url = base_url
         self.items_scraped = 0
@@ -54,7 +60,7 @@ class BaseScraper(ABC):
 
     async def run(self, *args, **kwargs):
         """Legacy compatibility wrapper."""
-        raise NotImplementedError("Oracle Spiders now use .search(query)")
+        raise NotImplementedError("Oracle Scrapers now use .search(query)")
 
     async def _safe_navigate(self, page: Page, url: str, timeout: int = 45000) -> bool:
         """Navigates with exponential backoff and anti-detection."""
@@ -63,7 +69,7 @@ class BaseScraper(ABC):
                 await page.goto(url, wait_until="domcontentloaded", timeout=timeout)
                 return True
             except Exception as e:
-                logger.warning(f"[{self.spider_name}] Navigation attempt {attempt+1} failed: {e}")
+                logger.warning(f"[{self.scraper_name}] Navigation attempt {attempt+1} failed: {e}")
                 await asyncio.sleep(2 * (attempt + 1))
         
         self.blocked = True
@@ -90,5 +96,5 @@ class BaseScraper(ABC):
         import random
         await asyncio.sleep(random.uniform(min_sec, max_sec))
 
-# Alias for compatibility if needed
-BaseSpider = BaseScraper
+
+# end of file

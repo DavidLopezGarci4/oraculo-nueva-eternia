@@ -33,7 +33,7 @@ class ElectropolisScraper(BaseScraper):
                 max_pages = 5
                 
                 while current_url and page_num <= max_pages:
-                    logger.info(f"[{self.spider_name}] Scraping page {page_num}: {current_url}")
+                    logger.info(f"[{self.scraper_name}] Scraping page {page_num}: {current_url}")
                     
                     # Navigate
                     await page.goto(current_url, wait_until="domcontentloaded")
@@ -43,7 +43,7 @@ class ElectropolisScraper(BaseScraper):
                         # Wait for the main product container to appear
                         await page.wait_for_selector('.product-item-info', timeout=15000)
                     except Exception:
-                        logger.warning(f"[{self.spider_name}] Timeout waiting for selectors on {current_url}")
+                        logger.warning(f"[{self.scraper_name}] Timeout waiting for selectors on {current_url}")
                     
                     # Get content regardless of wait success
                     html_content = await page.content()
@@ -53,7 +53,7 @@ class ElectropolisScraper(BaseScraper):
                     soup = BeautifulSoup(html_content, 'html.parser')
                     
                     items = soup.select('.product-item-info')
-                    logger.info(f"[{self.spider_name}] Found {len(items)} items on page {page_num}")
+                    logger.info(f"[{self.scraper_name}] Found {len(items)} items on page {page_num}")
                     
                     for item in items:
                         prod = self._parse_html_item(item)
@@ -67,16 +67,16 @@ class ElectropolisScraper(BaseScraper):
                         current_url = next_tag.get('href')
                         page_num += 1
                     else:
-                        logger.info(f"[{self.spider_name}] End of pagination.")
+                        logger.info(f"[{self.scraper_name}] End of pagination.")
                         break
                         
             except Exception as e:
-                logger.error(f"[{self.spider_name}] Critical Error: {e}", exc_info=True)
+                logger.error(f"[{self.scraper_name}] Critical Error: {e}", exc_info=True)
                 self.errors += 1
             finally:
                 await browser.close()
                 
-            logger.info(f"[{self.spider_name}] Finished. Total items: {len(products)}")
+            logger.info(f"[{self.scraper_name}] Finished. Total items: {len(products)}")
             return products
 
     def _parse_html_item(self, item) -> Optional[ScrapedOffer]:
@@ -117,11 +117,11 @@ class ElectropolisScraper(BaseScraper):
                 price=price_val,
                 currency="EUR",
                 url=link,
-                shop_name=self.spider_name,
+                shop_name=self.scraper_name,
                 is_available=is_avl
             )
         except Exception as e:
-            logger.warning(f"[{self.spider_name}] Item parsing error: {e}")
+            logger.warning(f"[{self.scraper_name}] Item parsing error: {e}")
             return None
 
     async def _scrape_detail(self, page: Page, url: str) -> dict:
@@ -166,7 +166,7 @@ class ElectropolisScraper(BaseScraper):
             # Selector derived from audit
             accept_btn = page.locator("button:has-text('ACEPTAR COOKIES')")
             if await accept_btn.is_visible(timeout=3000):
-                logger.info(f"[{self.spider_name}] 🍪 Accepting cookies...")
+                logger.info(f"[{self.scraper_name}] 🍪 Accepting cookies...")
                 await accept_btn.click()
                 await asyncio.sleep(1.0)
         except Exception:
