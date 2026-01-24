@@ -283,7 +283,7 @@ class ScraperExecutionLogModel(Base):
     __tablename__ = "scraper_execution_logs"
     
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    scraper_name: Mapped[str] = mapped_column(String, index=True)
+    spider_name: Mapped[str] = mapped_column(String, index=True)
     status: Mapped[str] = mapped_column(String) # success, error, interrupted
     items_found: Mapped[int] = mapped_column(Integer, default=0)
     new_items: Mapped[int] = mapped_column(Integer, default=0)
@@ -341,7 +341,7 @@ class KaizenInsightModel(Base):
     __tablename__ = "kaizen_insights"
     
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    scraper_name: Mapped[str] = mapped_column(String, index=True)
+    spider_name: Mapped[str] = mapped_column(String, index=True)
     
     insight_type: Mapped[str] = mapped_column(String) # dom_change, anti_bot_detected, idea, improvement
     severity: Mapped[str] = mapped_column(String, default="info") # info, warning, critical

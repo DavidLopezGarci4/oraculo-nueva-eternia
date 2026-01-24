@@ -27,7 +27,7 @@ class AuditLogger:
         Records a qualitative finding in the database.
         """
         insight = KaizenInsightModel(
-            spider_name=scraper_name,
+            spider_name=spider_name,
             insight_type=insight_type,
             content=content,
             pattern_observed=pattern,
@@ -37,15 +37,15 @@ class AuditLogger:
         try:
             self.db.add(insight)
             self.db.commit()
-            logger.info(f"🧠 Kaizen Insight logged for {scraper_name}: {insight_type}")
+            logger.info(f"🧠 Kaizen Insight logged for {spider_name}: {insight_type}")
             
             # Also append to a markdown file for easy agent access across sessions
-            self._append_to_brain_log(scraper_name, insight_type, content, pattern, solution)
+            self._append_to_brain_log(spider_name, insight_type, content, pattern, solution)
         except Exception as e:
             self.db.rollback()
             logger.error(f"Failed to log Kaizen insight: {e}")
 
-    def _append_to_brain_log(self, scraper, type, content, pattern, solution):
+    def _append_to_brain_log(self, spider, type, content, pattern, solution):
         """
         Maintains the quantitative markdown log in the .gemini/antigravity/brain dir.
         """
@@ -54,7 +54,7 @@ class AuditLogger:
         brain_dir = os.environ.get("GEMINI_BRAIN_PATH", "c:/Users/dace8/.gemini/antigravity/brain/c8253c79-6713-4b80-994b-fcc3cfb22b08")
         brain_path = os.path.join(brain_dir, "kaizen_learning_log.md")
         
-        entry = f"\n### [{datetime.now().strftime('%Y-%m-%d %H:%M')}] {scraper} - {type.upper()}\n"
+        entry = f"\n### [{datetime.now().strftime('%Y-%m-%d %H:%M')}] {spider} - {type.upper()}\n"
         entry += f"- **Content:** {content}\n"
         if pattern: entry += f"- **Pattern:** `{pattern}`\n"
         if solution: entry += f"- **Proposed Solution:** {solution}\n"
