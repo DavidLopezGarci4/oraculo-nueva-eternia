@@ -27,7 +27,7 @@ class AuditLogger:
         Records a qualitative finding in the database.
         """
         insight = KaizenInsightModel(
-            scraper_name=scraper_name,
+            spider_name=scraper_name,
             insight_type=insight_type,
             content=content,
             pattern_observed=pattern,

@@ -33,7 +33,7 @@ export interface PendingItem {
 }
 
 export interface ScraperStatus {
-    scraper_name: string;
+    spider_name: string;
     status: string;
     start_time?: string;
     end_time?: string;
@@ -41,7 +41,7 @@ export interface ScraperStatus {
 
 export interface ScraperExecutionLog {
     id: number;
-    scraper_name: string;
+    spider_name: string;
     status: string;
     items_found: number;
     start_time: string;
@@ -83,9 +83,9 @@ export const getScrapersStatus = async (): Promise<ScraperStatus[]> => {
     return response.data;
 };
 
-export const runScrapers = async (scraperName: string = 'harvester', triggerType: string = 'manual') => {
+export const runScrapers = async (spiderName: string = 'harvester', triggerType: string = 'manual') => {
     const response = await axios.post(`${API_BASE}/scrapers/run`, {
-        scraper_name: scraperName,
+        spider_name: spiderName,
         trigger_type: triggerType
     }, adminHeaders);
     return response.data;

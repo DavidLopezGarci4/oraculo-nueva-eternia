@@ -11,7 +11,7 @@ const adminAxios = axios.create({
 });
 
 export interface ScraperStatus {
-    scraper_name: string;
+    spider_name: string;
     status: string;
     start_time: string | null;
     end_time: string | null;
@@ -19,7 +19,7 @@ export interface ScraperStatus {
 
 export interface ScraperLog {
     id: number;
-    scraper_name: string;
+    spider_name: string;
     status: string;
     start_time: string;
     end_time: string | null;
@@ -38,9 +38,9 @@ export const getScrapersLogs = async (): Promise<ScraperLog[]> => {
     return response.data;
 };
 
-export const runScraper = async (scraperName: string = 'harvester'): Promise<{ status: string; message: string }> => {
+export const runScraper = async (spiderName: string = 'harvester'): Promise<{ status: string; message: string }> => {
     const response = await adminAxios.post('/scrapers/run', {
-        scraper_name: scraperName,
+        spider_name: spiderName,
         trigger_type: 'manual_ui'
     });
     return response.data;

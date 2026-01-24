@@ -87,7 +87,7 @@ class PurgatoryBulkDiscardRequest(BaseModel):
     reason: str = "manual_bulk_discard"
 
 class ScraperRunRequest(BaseModel):
-    scraper_name: str = "harvester"  # "harvester", "all", or individual spider name
+    spider_name: str = "harvester"  # "harvester", "all", or individual spider name
     trigger_type: str = "manual"
 
 class ProductEditRequest(BaseModel):
@@ -759,7 +759,7 @@ async def discard_purgatory_bulk(request: PurgatoryBulkDiscardRequest):
 
 # --- SCRAPER CONTROL ENDPOINTS ---
 
-def run_scraper_task(scraper_name: str = "harvester", trigger_type: str = "manual"):
+def run_scraper_task(spider_name: str = "harvester", trigger_type: str = "manual"):
     """Wrapper para ejecutar recolectores y actualizar el estado en BD"""
     from datetime import datetime
     import os
@@ -767,16 +767,16 @@ def run_scraper_task(scraper_name: str = "harvester", trigger_type: str = "manua
     # 1. Marcar inicio en la base de datos
     # 1. Marcar inicio en la base de datos y crear Log
     with SessionCloud() as db:
-        status = db.query(ScraperStatusModel).filter(ScraperStatusModel.scraper_name == scraper_name).first()
+        status = db.query(ScraperStatusModel).filter(ScraperStatusModel.spider_name == spider_name).first()
         if not status:
-            status = ScraperStatusModel(scraper_name=scraper_name)
+            status = ScraperStatusModel(spider_name=spider_name)
             db.add(status)
         status.status = "running"
         status.start_time = datetime.utcnow()
         
         # Crear entrada en la bitácora
         execution_log = ScraperExecutionLogModel(
-            scraper_name=scraper_name,
+            spider_name=spider_name,
             status="running",
             start_time=status.start_time,
             trigger_type=trigger_type
@@ -789,7 +789,7 @@ def run_scraper_task(scraper_name: str = "harvester", trigger_type: str = "manua
     error_msg = None
 
     try:
-        if scraper_name == "harvester":
+        if spider_name == "harvester":
             # Ejecutar el recolector local (Playwright)
             run_harvester()
             
@@ -854,7 +854,7 @@ def run_scraper_task(scraper_name: str = "harvester", trigger_type: str = "manua
             }
 
             spiders_to_run = []
-            if scraper_name == "all":
+            if spider_name == "all":
                 spiders_to_run = list(spiders_map.values())
             elif scraper_name in spiders_map:
                 spiders_to_run = [spiders_map[scraper_name]]
@@ -876,7 +876,7 @@ def run_scraper_task(scraper_name: str = "harvester", trigger_type: str = "manua
 
         # 2. Marcar éxito en la base de datos y actualizar Log
         with SessionCloud() as db:
-            status = db.query(ScraperStatusModel).filter(ScraperStatusModel.scraper_name == scraper_name).first()
+            status = db.query(ScraperStatusModel).filter(ScraperStatusModel.spider_name == spider_name).first()
             if status:
                 status.status = "completed"
                 status.end_time = datetime.utcnow()
@@ -893,7 +893,7 @@ def run_scraper_task(scraper_name: str = "harvester", trigger_type: str = "manua
     except Exception as e:
         logger.error(f"Scraper Error ({scraper_name}): {e}")
         with SessionCloud() as db:
-            status = db.query(ScraperStatusModel).filter(ScraperStatusModel.scraper_name == scraper_name).first()
+            status = db.query(ScraperStatusModel).filter(ScraperStatusModel.spider_name == spider_name).first()
             if status:
                 status.status = f"error: {str(e)}"
             
@@ -1568,8 +1568,8 @@ async def relink_offer(offer_id: int, request: RelinkOfferRequest):
 @app.post("/api/scrapers/run", dependencies=[Depends(verify_api_key)])
 async def run_scrapers(request: ScraperRunRequest, background_tasks: BackgroundTasks):
     """Inicia la recolección de reliquias en segundo plano (Admin Only)"""
-    background_tasks.add_task(run_scraper_task, request.scraper_name, request.trigger_type)
-    return {"status": "success", "message": f"Incursión '{request.scraper_name}' ({request.trigger_type}) desplegada en los páramos de Eternia"}
+    background_tasks.add_task(run_scraper_task, request.spider_name, request.trigger_type)
+    return {"status": "success", "message": f"Incursión '{request.spider_name}' ({request.trigger_type}) desplegada en los páramos de Eternia"}
 
 # === WALLAPOP EXTENSION IMPORT ===
 class WallapopProduct(BaseModel):

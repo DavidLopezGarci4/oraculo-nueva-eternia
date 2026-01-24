@@ -237,7 +237,7 @@ class ScraperStatusModel(Base):
     __tablename__ = "scraper_status"
     
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    scraper_name: Mapped[str] = mapped_column(String)
+    spider_name: Mapped[str] = mapped_column(String)
     status: Mapped[str] = mapped_column(String) # running, completed, error
     items_scraped: Mapped[int] = mapped_column(Integer, default=0)
     progress: Mapped[int] = mapped_column(Integer, default=0) # 0-100
