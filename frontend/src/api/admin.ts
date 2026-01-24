@@ -11,7 +11,7 @@ const adminAxios = axios.create({
 });
 
 export interface ScraperStatus {
-    spider_name: string;
+    scraper_name: string;
     status: string;
     start_time: string | null;
     end_time: string | null;
@@ -19,7 +19,7 @@ export interface ScraperStatus {
 
 export interface ScraperLog {
     id: number;
-    spider_name: string;
+    scraper_name: string;
     status: string;
     start_time: string;
     end_time: string | null;

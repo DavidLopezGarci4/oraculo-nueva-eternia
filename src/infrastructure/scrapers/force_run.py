@@ -1,12 +1,12 @@
 import asyncio
-from src.infrastructure.scrapers.spiders.actiontoys import ActionToysSpider
+from src.infrastructure.scrapers.action_toys_scraper import ActionToysScraper
 from src.core.logger import setup_logging
 
 async def main():
     setup_logging()
-    spider = ActionToysSpider()
-    print("Running ActionToysSpider directly...")
-    items = await spider.search("auto")
+    scraper = ActionToysScraper()
+    print("Running ActionToysScraper directly...")
+    items = await scraper.search("auto")
     print(f"Found {len(items)} items.")
     for i in items[:3]:
         print(f"- {i.product_name} ({i.price} EUR)")

@@ -20,9 +20,9 @@ def run_rebrand_v2():
         ("offers", "shop_name"),
         ("pending_matches", "shop_name"),
         ("offer_history", "shop_name"),
-        ("scraper_status", "spider_name"),
-        ("scraper_execution_logs", "spider_name"),
-        ("kaizen_insights", "spider_name")
+        ("scraper_status", "scraper_name"),
+        ("scraper_execution_logs", "scraper_name"),
+        ("kaizen_insights", "scraper_name")
     ]
     
     total_affected = 0

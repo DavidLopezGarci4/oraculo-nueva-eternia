@@ -20,13 +20,13 @@ def cleanup_shops():
     try:
         # 1. Remove from ScraperStatusModel
         status_deleted = db.query(ScraperStatusModel).filter(
-            ScraperStatusModel.spider_name.in_(shops_to_remove)
+            ScraperStatusModel.scraper_name.in_(shops_to_remove)
         ).delete(synchronize_session=False)
         logger.info(f"🗑️ Removed {status_deleted} entries from scraper_status.")
         
         # 2. Remove from ScraperExecutionLogModel
         logs_deleted = db.query(ScraperExecutionLogModel).filter(
-            ScraperExecutionLogModel.spider_name.in_(shops_to_remove)
+            ScraperExecutionLogModel.scraper_name.in_(shops_to_remove)
         ).delete(synchronize_session=False)
         logger.info(f"🗑️ Removed {logs_deleted} entries from scraper_execution_logs.")
         

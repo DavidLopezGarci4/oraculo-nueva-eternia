@@ -10,6 +10,40 @@ import { es } from 'date-fns/locale';
 import { getProductPriceHistory } from '../api/products';
 import PriceHistoryChart from '../components/products/PriceHistoryChart';
 
+const MarketStatCard: React.FC<{ title: string, value: number, type: 'retail' | 'p2p' }> = ({ title, value, type }) => {
+    const { data: analytics, isLoading } = useQuery({
+        queryKey: ['market-analytics', value],
+        queryFn: async () => {
+            const response = await axios.get(`/api/market/analytics/${value}`);
+            return response.data;
+        },
+        enabled: !!value
+    });
+
+    if (isLoading) return (
+        <div className="glass p-4 rounded-2xl animate-pulse flex flex-col gap-1">
+            <div className="h-2 w-16 bg-white/5 rounded" />
+            <div className="h-6 w-24 bg-white/5 rounded" />
+        </div>
+    );
+
+    const stats = type === 'retail' ? analytics?.retail : analytics?.p2p;
+
+    return (
+        <div className="glass p-4 rounded-2xl border border-white/5 hover:bg-white/5 transition-all">
+            <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">{title}</p>
+            <div className="flex items-baseline gap-2">
+                <span className="text-xl font-black text-white">{stats?.avg || 0} €</span>
+                <span className="text-[10px] font-bold text-white/30">Avg</span>
+            </div>
+            <div className="flex items-center gap-2 mt-1">
+                <span className="text-[8px] font-bold text-green-500/60 uppercase">Min: {stats?.min || 0} €</span>
+                <span className="text-[8px] font-bold text-red-500/60 uppercase">Max: {stats?.max || 0} €</span>
+            </div>
+        </div>
+    );
+};
+
 const Auctions: React.FC = () => {
     const queryClient = useQueryClient();
     const [selectedProduct, setSelectedProduct] = React.useState<Product | null>(null);
@@ -38,8 +72,8 @@ const Auctions: React.FC = () => {
         queryFn: async () => {
             if (!selectedProduct) return [];
             const response = await axios.get(`/api/products/${selectedProduct.id}/offers`);
-            // Filtrar solo las de tipo auction para esta vista
-            return response.data.filter((o: any) => o.origin_category === 'auction');
+            // Filtrar solo las de tipo P2P para esta vista
+            return response.data.filter((o: any) => o.source_type === 'Peer-to-Peer');
         },
         enabled: !!selectedProduct
     });
@@ -193,31 +227,74 @@ const Auctions: React.FC = () => {
                                 {isLoadingOffers ? (
                                     <div className="flex h-40 items-center justify-center gap-3"><Loader2 className="h-6 w-6 animate-spin text-brand-primary" /><span className="text-xs font-bold uppercase tracking-widest text-white/20">Escudriñando el Abismo...</span></div>
                                 ) : (
-                                    <div className="space-y-3">
-                                        {productOffers?.map((offer) => (
-                                            <div key={offer.id} className="group flex items-center justify-between gap-4 rounded-3xl p-5 bg-white/[0.03] border border-white/5 hover:bg-white/[0.05] transition-all">
-                                                <div className="flex items-center gap-6 flex-1">
-                                                    <div className="space-y-1">
-                                                        <div className="flex items-center gap-3"><span className="text-xs font-black uppercase tracking-widest text-white/80">{offer.shop_name}</span><span className="rounded-full bg-orange-500/20 px-2 py-0.5 text-[8px] font-black uppercase text-orange-500 border border-orange-500/20">Auction Item</span></div>
-                                                        <div className="text-[9px] font-bold uppercase text-white/20">Visto hace: {formatDistanceToNow(new Date(offer.last_seen), { addSuffix: true, locale: es })}</div>
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center gap-8">
-                                                    <div className="text-right space-y-0.5">
-                                                        <div className="text-2xl font-black text-white">{offer.price} €</div>
-                                                        {offer.landing_price && offer.landing_price !== offer.price && (
-                                                            <div className="text-[10px] font-black text-orange-500/80 flex flex-col items-end">
-                                                                <span className="flex items-center gap-1">
-                                                                    <Package className="h-2.5 w-2.5" />
-                                                                    {offer.landing_price} € (Landed)
-                                                                </span>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                    <a href={offer.url} target="_blank" rel="noopener noreferrer" className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 text-white/40 border border-white/10 hover:bg-orange-500 hover:text-white transition-all"><ShoppingCart className="h-5 w-5" /></a>
-                                                </div>
+                                    <div className="space-y-6">
+                                        {/* PHASE 40: MARKET ANALYTICS SECTION */}
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pb-4">
+                                            <MarketStatCard
+                                                title="Media Retail"
+                                                value={selectedProduct.id}
+                                                type="retail"
+                                            />
+                                            <MarketStatCard
+                                                title="Media P2P/Subasta"
+                                                value={selectedProduct.id}
+                                                type="p2p"
+                                            />
+                                            <div className="rounded-2xl bg-brand-primary/10 border border-brand-primary/20 p-4 flex flex-col justify-center items-center">
+                                                <span className="text-[10px] font-black text-brand-primary uppercase tracking-widest">Estado Mercado</span>
+                                                <span className="text-lg font-black text-white">Saludable</span>
                                             </div>
-                                        ))}
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            {productOffers?.map((offer) => (
+                                                <div key={offer.id} className="group flex items-center justify-between gap-4 rounded-3xl p-5 bg-white/[0.03] border border-white/5 hover:bg-white/[0.05] transition-all">
+                                                    <div className="flex items-center gap-6 flex-1">
+                                                        <div className="space-y-1">
+                                                            <div className="flex items-center gap-3">
+                                                                <span className="text-xs font-black uppercase tracking-widest text-white/80">{offer.shop_name}</span>
+                                                                {offer.sale_type === 'Auction' ? (
+                                                                    <span className="rounded-full bg-orange-500/20 px-2 py-0.5 text-[8px] font-black uppercase text-orange-500 border border-orange-500/20">
+                                                                        Subasta ({offer.bids_count} pujas)
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="rounded-full bg-blue-500/20 px-2 py-0.5 text-[8px] font-black uppercase text-blue-400 border border-blue-500/20">
+                                                                        Venta Directa
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <div className="flex flex-col gap-0.5">
+                                                                <div className="text-[9px] font-bold uppercase text-white/20">Visto hace: {formatDistanceToNow(new Date(offer.last_seen), { addSuffix: true, locale: es })}</div>
+                                                                {offer.expiry_at && (
+                                                                    <div className="text-[9px] font-black uppercase text-orange-400">
+                                                                        Expira: {formatDistanceToNow(new Date(offer.expiry_at), { addSuffix: true, locale: es })}
+                                                                    </div>
+                                                                )}
+                                                                {offer.time_left_raw && !offer.expiry_at && (
+                                                                    <div className="text-[9px] font-black uppercase text-orange-400/60">
+                                                                        Quedan: {offer.time_left_raw}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-8">
+                                                        <div className="text-right space-y-0.5">
+                                                            <div className="text-2xl font-black text-white">{offer.price} €</div>
+                                                            {offer.landing_price && offer.landing_price !== offer.price && (
+                                                                <div className="text-[10px] font-black text-orange-500/80 flex flex-col items-end">
+                                                                    <span className="flex items-center gap-1">
+                                                                        <Package className="h-2.5 w-2.5" />
+                                                                        {offer.landing_price} € (Landed)
+                                                                    </span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <a href={offer.url} target="_blank" rel="noopener noreferrer" className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 text-white/40 border border-white/10 hover:bg-orange-500 hover:text-white transition-all"><ShoppingCart className="h-5 w-5" /></a>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
                                 )}
                             </div>
