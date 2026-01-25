@@ -1,5 +1,6 @@
 import os
 import logging
+from pathlib import Path
 from src.infrastructure.collectors.personal_collection import main as run_scraper
 from scripts.phase0_migration import migrate_excel_to_db
 from src.infrastructure.database_cloud import SessionCloud
