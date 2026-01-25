@@ -13,10 +13,15 @@ class NexusService:
     async def sync_catalog():
         """
         Orchestrates the full catalog sync:
+        0. Ensure DB is initialized (Phase 41 Guard)
         1. Run personal_collection.py (Web -> Excel & Images)
         2. Run phase0_migration.py (Excel -> DB)
         """
         logger.info("📡 Nexus: Starting Catalog Synchronization...")
+        
+        # 0. Infrastructure Guard
+        from src.infrastructure.universal_migrator import migrate
+        migrate()
         
         try:
             # 1. Scrape Web to Excel
