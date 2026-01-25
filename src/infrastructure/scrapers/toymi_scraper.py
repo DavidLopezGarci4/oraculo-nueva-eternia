@@ -50,10 +50,10 @@ class ToymiEUScraper(BaseScraper):
                     else:
                         current_url = f"https://www.toymi.eu/Masters-of-the-Universe_s{page_num}?af=60"
                     
-                    logger.info(f"[{self.scraper_name}] Scraping page {page_num}: {current_url}")
+                    logger.info(f"[{self.spider_name}] Scraping page {page_num}: {current_url}")
                     
                     if not await self._safe_navigate(page, current_url):
-                        logger.warning(f"[{self.scraper_name}] Navigation failed for page {page_num}")
+                        logger.warning(f"[{self.spider_name}] Navigation failed for page {page_num}")
                         break
                     
                     await self._random_sleep(2.0, 4.0)
@@ -100,26 +100,26 @@ class ToymiEUScraper(BaseScraper):
                             self.items_scraped += 1
                             items_on_page += 1
                     
-                    logger.info(f"[{self.scraper_name}] Page {page_num}: {items_on_page} new products")
+                    logger.info(f"[{self.spider_name}] Page {page_num}: {items_on_page} new products")
                     
                     # Si no hay items nuevos, probablemente terminamos
                     if items_on_page == 0 and page_num > 1:
-                        logger.info(f"[{self.scraper_name}] No more new items, stopping")
+                        logger.info(f"[{self.spider_name}] No more new items, stopping")
                         break
                         
             except Exception as e:
-                logger.error(f"[{self.scraper_name}] Critical Error: {e}", exc_info=True)
+                logger.error(f"[{self.spider_name}] Critical Error: {e}", exc_info=True)
                 self.errors += 1
             finally:
                 await browser.close()
                 
-        logger.info(f"[{self.scraper_name}] Finished. Total items: {len(products)}")
+        logger.info(f"[{self.spider_name}] Finished. Total items: {len(products)}")
         return products
 
     async def _set_country_spain(self, page: Page):
         """Sets the shipping country to Spain to get correct VAT/OSS prices."""
         try:
-            logger.info(f"[{self.scraper_name}] Setting shipping country to Spain (ES)...")
+            logger.info(f"[{self.spider_name}] Setting shipping country to Spain (ES)...")
             # Navigate to home if not already there or just try to find it on current page
             # Usually it's in the header or a popup
             
@@ -128,17 +128,17 @@ class ToymiEUScraper(BaseScraper):
             button = '.ws5_oss_button'
             
             if await page.query_selector(selector):
-                logger.debug(f"[{self.scraper_name}] OSS selector found. Selecting 'ES'...")
+                logger.debug(f"[{self.spider_name}] OSS selector found. Selecting 'ES'...")
                 # Note: select2 might be active, but select_option usually works on the underlying select
                 await page.select_option(selector, value='ES')
                 await page.click(button)
                 await page.wait_for_load_state('networkidle')
                 await asyncio.sleep(2)
-                logger.info(f"[{self.scraper_name}] Country successfully set to Spain.")
+                logger.info(f"[{self.spider_name}] Country successfully set to Spain.")
             else:
-                logger.debug(f"[{self.scraper_name}] OSS selector not found on initial load.")
+                logger.debug(f"[{self.spider_name}] OSS selector not found on initial load.")
         except Exception as e:
-            logger.warning(f"[{self.scraper_name}] Could not set country to ES: {e}")
+            logger.warning(f"[{self.spider_name}] Could not set country to ES: {e}")
 
     def _parse_link(self, link_tag, full_url: str) -> Optional[ScrapedOffer]:
         """Parsea un link a producto MOTU."""
@@ -198,9 +198,9 @@ class ToymiEUScraper(BaseScraper):
                 price=price_val if price_val > 0 else 19.99,  # Precio por defecto si no encontramos
                 currency="EUR",
                 url=full_url,
-                shop_name=self.scraper_name,
+                shop_name=self.spider_name,
                 is_available=is_avl
             )
         except Exception as e:
-            logger.warning(f"[{self.scraper_name}] Parse error: {e}")
+            logger.warning(f"[{self.spider_name}] Parse error: {e}")
             return None

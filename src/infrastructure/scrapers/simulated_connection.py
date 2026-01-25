@@ -23,7 +23,7 @@ logger = logging.getLogger("ConnectionSimulator")
 
 async def check_connection(scraper_class) -> Dict:
     scraper = scraper_class()
-    name = scraper.scraper_name
+    name = scraper.spider_name
     start_time = datetime.datetime.now()
     
     try:

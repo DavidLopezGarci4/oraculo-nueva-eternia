@@ -6,21 +6,21 @@ from src.infrastructure.scrapers.fantasia_scraper import FantasiaScraper
 from src.infrastructure.scrapers.amazon_scraper import AmazonScraper
 from src.core.logger import logger
 
-async def run_scraper(scraper_name: str):
-    logger.info(f"🚀 Launching scraper: {scraper_name}")
+async def run_scraper(spider_name: str):
+    logger.info(f"🚀 Launching scraper: {spider_name}")
     
     spiders = []
-    if scraper_name.lower() == "actiontoys":
+    if spider_name.lower() == "actiontoys":
         spiders.append(ActionToysScraper())
-    elif scraper_name.lower() == "fantasia":
+    elif spider_name.lower() == "fantasia":
         spiders.append(FantasiaScraper())
-    elif scraper_name.lower() == "electropolis":
+    elif spider_name.lower() == "electropolis":
         from src.infrastructure.scrapers.electropolis_scraper import ElectropolisScraper
         spiders.append(ElectropolisScraper())
-    elif scraper_name.lower() == "amazon":
+    elif spider_name.lower() == "amazon":
         spiders.append(AmazonScraper())
     else:
-        logger.error(f"Unknown scraper: {scraper_name}")
+        logger.error(f"Unknown scraper: {spider_name}")
         return
 
     # Scraper Status - Init
@@ -29,9 +29,9 @@ async def run_scraper(scraper_name: str):
     import datetime
     
     db = SessionLocal()
-    status_row = db.query(ScraperStatusModel).filter(ScraperStatusModel.scraper_name == scraper_name).first()
+    status_row = db.query(ScraperStatusModel).filter(ScraperStatusModel.spider_name == spider_name).first()
     if not status_row:
-        status_row = ScraperStatusModel(scraper_name=scraper_name)
+        status_row = ScraperStatusModel(spider_name=spider_name)
         db.add(status_row)
     
     status_row.status = "running"
@@ -64,6 +64,6 @@ async def run_scraper(scraper_name: str):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python src/scrapers/run_single.py <scraper_name>")
+        print("Usage: python src/scrapers/run_single.py <spider_name>")
     else:
         asyncio.run(run_scraper(sys.argv[1]))

@@ -8,18 +8,18 @@ from src.infrastructure.scrapers.pixelatoy_scraper import PixelatoyScraper
 from src.infrastructure.scrapers.electropolis_scraper import ElectropolisScraper
 from src.core.logger import logger
 
-async def profile(scraper_name):
+async def profile(spider_name):
     spider = None
-    if scraper_name.lower() == "frikiverso":
+    if spider_name.lower() == "frikiverso":
         spider = FrikiversoScraper()
-    elif scraper_name.lower() == "fantasia":
+    elif spider_name.lower() == "fantasia":
         spider = FantasiaScraper()
-    elif scraper_name.lower() == "pixelatoy":
+    elif spider_name.lower() == "pixelatoy":
         spider = PixelatoyScraper()
-    elif scraper_name.lower() == "electropolis":
+    elif spider_name.lower() == "electropolis":
         spider = ElectropolisScraper()
     else:
-        logger.error(f"❌ Unknown scraper: {scraper_name}")
+        logger.error(f"❌ Unknown scraper: {spider_name}")
         return
 
     logger.info(f"🔮 Profiling {spider.shop_name} (Dry Run)...")
@@ -29,7 +29,7 @@ async def profile(scraper_name):
         # Extract ONLY titles as requested
         titles = sorted([o.product_name for o in offers])
         
-        filename = f"data/profile_{scraper_name}.json"
+        filename = f"data/profile_{spider_name}.json"
         with open(filename, "w", encoding="utf-8") as f:
             json.dump(titles, f, indent=2, ensure_ascii=False)
             

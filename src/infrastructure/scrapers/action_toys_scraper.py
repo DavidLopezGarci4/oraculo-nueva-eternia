@@ -35,7 +35,7 @@ class ActionToysScraper(BaseScraper):
                 page_num = 1
                 
                 while current_url and page_num <= self.max_pages:
-                    logger.info(f"[{self.scraper_name}] Scraping page {page_num}: {current_url}")
+                    logger.info(f"[{self.spider_name}] Scraping page {page_num}: {current_url}")
                     
                     if not await self._safe_navigate(page, current_url):
                         break
@@ -49,7 +49,7 @@ class ActionToysScraper(BaseScraper):
                     
                     # Find Items
                     items = soup.select('li.product')
-                    logger.info(f"[{self.scraper_name}] Found {len(items)} items on page {page_num}")
+                    logger.info(f"[{self.spider_name}] Found {len(items)} items on page {page_num}")
                     
                     for item in items:
                         prod = self._parse_html_item(item)
@@ -74,16 +74,16 @@ class ActionToysScraper(BaseScraper):
                         page_num += 1
                     else:
                         # HEURISTIC: Check if there's any other indicator of a next page
-                        logger.info(f"[{self.scraper_name}] No more explicit 'Next' links found.")
+                        logger.info(f"[{self.spider_name}] No more explicit 'Next' links found.")
                         break
                         
             except Exception as e:
-                logger.error(f"[{self.scraper_name}] Critical Error: {e}", exc_info=True)
+                logger.error(f"[{self.spider_name}] Critical Error: {e}", exc_info=True)
                 self.errors += 1
             finally:
                 await browser.close()
                 
-            logger.info(f"[{self.scraper_name}] Finished. Total items: {len(products)}")
+            logger.info(f"[{self.spider_name}] Finished. Total items: {len(products)}")
             return products
 
     def _parse_html_item(self, item) -> Optional[ScrapedOffer]:
@@ -127,11 +127,11 @@ class ActionToysScraper(BaseScraper):
                 price=price_val,
                 currency="EUR",
                 url=link,
-                shop_name=self.scraper_name,
+                shop_name=self.spider_name,
                 is_available=is_avl
             )
         except Exception as e:
-            logger.warning(f"[{self.scraper_name}] Item parsing error: {e}")
+            logger.warning(f"[{self.spider_name}] Item parsing error: {e}")
             return None
 
     async def _scrape_detail(self, page: Page, url: str) -> dict:
