@@ -41,13 +41,47 @@ def _sync_engine(engine, label: str):
     with engine.connect() as conn:
         # --- Table: products ---
         columns_products = [c['name'] for c in inspector.get_columns("products")]
+        
+        # Phase 1: Basic & Identification
         if "ean" not in columns_products:
             logger.info("Adding 'ean' to products table...")
             try:
-                conn.execute(text("ALTER TABLE products ADD COLUMN ean VARCHAR(50) UNIQUE"))
+                conn.execute(text("ALTER TABLE products ADD COLUMN ean VARCHAR(50)"))
                 conn.commit()
-            except Exception as e:
-                logger.warning(f"Could not add ean: {e}")
+            except Exception as e: logger.warning(f"Could not add ean: {e}")
+
+        # Phase 41e: Strict Market Segregation & Financials
+        new_product_cols = [
+            ("retail_price", "FLOAT DEFAULT 0.0"),
+            ("avg_retail_price", "FLOAT DEFAULT 0.0"),
+            ("p25_retail_price", "FLOAT DEFAULT 0.0"),
+            ("avg_p2p_price", "FLOAT DEFAULT 0.0"),
+            ("p25_p2p_price", "FLOAT DEFAULT 0.0"),
+            ("avg_market_price", "FLOAT DEFAULT 0.0"), # Legacy compatibility
+            ("p25_price", "FLOAT DEFAULT 0.0"),        # Legacy compatibility
+            ("variant_name", "VARCHAR(100)"),
+            ("image_hash", "VARCHAR(100)"),
+            ("master_image_hash", "VARCHAR(100)"),
+            ("figure_id", "VARCHAR(100) UNIQUE"),
+            ("sub_category", "VARCHAR(100)")
+        ]
+
+        for col_name, col_type in new_product_cols:
+            if col_name not in columns_products:
+                logger.info(f"[{label}] Adding '{col_name}' to products table...")
+                try:
+                    conn.execute(text(f"ALTER TABLE products ADD COLUMN {col_name} {col_type}"))
+                    conn.commit()
+                except Exception as e:
+                    logger.warning(f"Could not add {col_name}: {e}")
+                    conn.rollback()
+
+        # Phase 14: Origin Category support for filtering
+        if "origin_category" not in columns_products:
+             try:
+                 conn.execute(text("ALTER TABLE products ADD COLUMN origin_category VARCHAR(20) DEFAULT 'retail'"))
+                 conn.commit()
+             except: pass
 
         # --- Table: offers ---
         columns_offers = [c['name'] for c in inspector.get_columns("offers")]

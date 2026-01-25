@@ -1,12 +1,32 @@
-from fastapi import FastAPI, HTTPException, Depends, Header
+from fastapi import FastAPI, HTTPException, Depends, Header, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import List
+from pydantic import BaseModel, ConfigDict
+from typing import List, Optional, Dict, Any
 from loguru import logger
-from src.core.config import settings
-from src.infrastructure.database_cloud import SessionCloud
-
+import json
 from datetime import datetime
+from sqlalchemy import func, select, and_, desc, text, or_
+from src.core.config import settings
+from src.infrastructure.database_cloud import SessionCloud, engine_cloud
+from src.domain.models import (
+    ProductModel, OfferModel, PendingMatchModel, CollectionItemModel, 
+    UserModel, ScraperStatusModel, BlackcludedItemModel, ScraperExecutionLogModel,
+    OfferHistoryModel, LogisticRuleModel, ProductAliasModel
+)
+from src.application.services.logistics_service import LogisticsService
+from src.infrastructure.scrapers.harvester import run_harvester
+from src.infrastructure.scrapers.action_toys_scraper import ActionToysScraper
+from src.infrastructure.scrapers.amazon_scraper import AmazonScraper
+from src.infrastructure.scrapers.fantasia_scraper import FantasiaScraper
+from src.infrastructure.scrapers.frikiverso_scraper import FrikiversoScraper
+from src.infrastructure.scrapers.electropolis_scraper import ElectropolisScraper
+from src.infrastructure.scrapers.pixelatoy_scraper import PixelatoyScraper
+from src.infrastructure.scrapers.detoyboys_scraper import DeToyboysNLScraper
+from src.infrastructure.scrapers.toymi_scraper import ToymiEUScraper
+from src.infrastructure.scrapers.time4actiontoys_scraper import Time4ActionToysDEScraper
+from src.infrastructure.scrapers.bbts_scraper import BigBadToyStoreScraper
+from src.infrastructure.scrapers.ebay_scraper import EbayScraper
+
 app = FastAPI(title="Oráculo API Broker", version="1.0.0")
 
 # Configurar CORS para permitir peticiones universales (Útil para acceso móvil y Docker)
@@ -31,9 +51,6 @@ def verify_api_key(x_api_key: str = Header(None, alias="X-API-Key")):
         raise HTTPException(status_code=403, detail="Invalid API Key. Access Denied.")
     return x_api_key
 
-from pydantic import BaseModel, ConfigDict
-# ... (existing imports will be handled by context if not explicit, but here I replace the class definition part)
-
 class SyncAction(BaseModel):
     action_type: str
     payload: dict
@@ -46,11 +63,18 @@ class ProductOutput(BaseModel):
     ean: str | None
     image_url: str | None
     category: str
-    sub_category: str
-    figure_id: str
-    variant_name: str | None
+    sub_category: Optional[str]
+    figure_id: Optional[str]
+    variant_name: Optional[str]
 
-    # Financial & Intelligence (Computed)
+    # Phase 41e Financials
+    retail_price: float = 0.0
+    avg_retail_price: float = 0.0
+    p25_retail_price: float = 0.0
+    avg_p2p_price: float = 0.0
+    p25_p2p_price: float = 0.0
+
+    # Financial & Intelligence (Computed/Legacy)
     purchase_price: float = 0.0
     market_value: float = 0.0
     avg_market_price: float = 0.0 # Phase 16
@@ -60,25 +84,7 @@ class ProductOutput(BaseModel):
     grail_score: float = 0.0
     is_wish: bool = False
     opportunity_score: int = 0
-    acquired_at: str | None = None
-
-from fastapi import BackgroundTasks
-from src.infrastructure.scrapers.harvester import run_harvester
-from src.infrastructure.scrapers.action_toys_scraper import ActionToysScraper
-from src.infrastructure.scrapers.amazon_scraper import AmazonScraper
-from src.infrastructure.scrapers.fantasia_scraper import FantasiaScraper
-from src.infrastructure.scrapers.frikiverso_scraper import FrikiversoScraper
-from src.infrastructure.scrapers.electropolis_scraper import ElectropolisScraper
-from src.infrastructure.scrapers.pixelatoy_scraper import PixelatoyScraper
-from src.infrastructure.scrapers.detoyboys_scraper import DeToyboysNLScraper
-from src.infrastructure.scrapers.toymi_scraper import ToymiEUScraper
-from src.infrastructure.scrapers.time4actiontoys_scraper import Time4ActionToysDEScraper
-from src.infrastructure.scrapers.bbts_scraper import BigBadToyStoreScraper
-from src.infrastructure.scrapers.ebay_scraper import EbayScraper
-from src.domain.models import ProductModel, PendingMatchModel, ScraperStatusModel, BlackcludedItemModel, OfferModel, ScraperExecutionLogModel, CollectionItemModel, OfferHistoryModel, UserModel, LogisticRuleModel
-from src.application.services.logistics_service import LogisticsService
-import json
-from sqlalchemy import select, and_, or_, func
+    acquired_at: Optional[str] = None
 
 class CollectionToggleRequest(BaseModel):
     product_id: int
@@ -406,42 +412,6 @@ async def merge_products(request: ProductMergeRequest):
         db.delete(source)
         db.commit()
         return {"status": "success", "message": f"Fusión divina: '{source_name}' ha sido absorbido por '{target.name}'"}
-        
-        # 3. Construct Response with Grail Logic
-        output_list = []
-        for product, item in results:
-            # Base data from product
-            p_out = ProductOutput.model_validate(product)
-            
-            # Financial Data
-            invested = item.purchase_price if item.purchase_price is not None else (product.retail_price or 0.0)
-            market = best_prices.get(product.id, 0.0)
-            
-            p_out.purchase_price = invested
-            p_out.market_value = market
-            
-            # Grail Detection Logic (Rule: ROI > 50% OR Value > 150€)
-            roi = 0.0
-            is_grail = False
-            
-            if invested > 0:
-                roi_val = (market - invested) / invested
-                roi = round(roi_val * 100, 1)
-                
-                # Rule 1: ROI > 50% (and confirmed match exists)
-                if market > 0 and roi > 50.0:
-                    is_grail = True
-            
-            # Rule 2: High Value Absolute (> 150€)
-            if market > 150.0:
-                is_grail = True
-                
-            p_out.is_grail = is_grail
-            p_out.grail_score = roi
-            
-            output_list.append(p_out)
-            
-        return output_list
 
 @app.post("/api/collection/toggle")
 async def toggle_collection(request: CollectionToggleRequest):
