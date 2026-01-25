@@ -1,4 +1,5 @@
 import asyncio
+import os
 import logging
 import re
 import io
@@ -81,22 +82,27 @@ class AmazonScraper(BaseScraper):
                 
                 # Inyectar scripts avanzados para evadir detección de automatización profunda (Stealth 3.0)
                 await page.add_init_script("""
-                    // Hiding WebDriver
+                    // 1. Hide WebDriver and Automation
                     Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-                    // Mocking Chrome Runtime
                     window.chrome = { runtime: {}, app: {}, loadTimes: {}, csi: {} };
-                    // Mocking Plugins
-                    Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
-                    // Mocking Languages
+                    
+                    // 2. Mock Hardware and Environment
+                    Object.defineProperty(navigator, 'deviceMemory', { get: () => 8 });
+                    Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 8 });
                     Object.defineProperty(navigator, 'languages', { get: () => ['es-ES', 'es'] });
-                    // Mocking WebGL Fingerprint
+                    
+                    // 3. Robust WebGL Fingerprint
                     const getParameter = WebGLRenderingContext.prototype.getParameter;
                     WebGLRenderingContext.prototype.getParameter = function(parameter) {
                         if (parameter === 37445) return 'Intel Inc.';
                         if (parameter === 37446) return 'Intel(R) Iris(R) Xe Graphics';
                         return getParameter.apply(this, arguments);
                     };
-                    // Mocking Permissions
+                    
+                    // 4. Overwrite broken/missing properties
+                    Object.defineProperty(navigator, 'maxTouchPoints', { get: () => 0 });
+                    
+                    // 5. Mock Permissions (Fixing broken browser prompt detection)
                     const originalQuery = window.navigator.permissions.query;
                     window.navigator.permissions.query = (parameters) => (
                         parameters.name === 'notifications' ?
