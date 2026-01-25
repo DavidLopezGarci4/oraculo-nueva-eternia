@@ -1,5 +1,13 @@
 import asyncio
 import sys
+import os
+from pathlib import Path
+
+# Add project root to Python path
+root_path = Path(__file__).resolve().parent.parent.parent.parent
+if str(root_path) not in sys.path:
+    sys.path.append(str(root_path))
+
 from src.infrastructure.scrapers.pipeline import ScrapingPipeline
 from src.infrastructure.scrapers.action_toys_scraper import ActionToysScraper
 from src.infrastructure.scrapers.fantasia_scraper import FantasiaScraper

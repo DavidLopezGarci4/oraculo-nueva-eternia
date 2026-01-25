@@ -79,7 +79,7 @@ class AmazonScraper(BaseScraper):
 
                 page = await context.new_page()
                 
-                # Inyectar scripts avanzados para evadir detección de automatización profunda
+                # Inyectar scripts avanzados para evadir detección de automatización profunda (Stealth 3.0)
                 await page.add_init_script("""
                     // Hiding WebDriver
                     Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
@@ -89,6 +89,13 @@ class AmazonScraper(BaseScraper):
                     Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
                     // Mocking Languages
                     Object.defineProperty(navigator, 'languages', { get: () => ['es-ES', 'es'] });
+                    // Mocking WebGL Fingerprint
+                    const getParameter = WebGLRenderingContext.prototype.getParameter;
+                    WebGLRenderingContext.prototype.getParameter = function(parameter) {
+                        if (parameter === 37445) return 'Intel Inc.';
+                        if (parameter === 37446) return 'Intel(R) Iris(R) Xe Graphics';
+                        return getParameter.apply(this, arguments);
+                    };
                     // Mocking Permissions
                     const originalQuery = window.navigator.permissions.query;
                     window.navigator.permissions.query = (parameters) => (
@@ -101,6 +108,9 @@ class AmazonScraper(BaseScraper):
                 success = await self._safe_navigate(page, url)
                 if not success:
                     logger.error("❌ Amazon.es: Bloqueado o error de navegación.")
+                    # Screenshot para diagnóstico post-mortem (Kaizen Phase)
+                    if not os.path.exists("logs/screenshots"): os.makedirs("logs/screenshots")
+                    await page.screenshot(path="logs/screenshots/amazon_nav_fail.png")
                     await browser.close()
                     return []
 
@@ -115,19 +125,26 @@ class AmazonScraper(BaseScraper):
 
                 # Wait for results to load with block detection (Increased timeout to 30s)
                 try:
-                    await page.wait_for_selector("[data-component-type='s-search-result']", timeout=30000)
+                    # Selector ampliado para mayor robustez
+                    await page.wait_for_selector("[data-component-type='s-search-result'], [data-asin]", timeout=30000)
                 except Exception:
                     # Check if blocked by captcha or similar
                     content = await page.content()
                     if "sp-cc-accept" in content and "captcha" not in content.lower():
                         logger.warning("⚠️ Amazon.es: Resultados no cargan pero el banner de cookies está presente. Intentando scroll...")
-                    elif "captcha" in content.lower() or "robot" in content.lower():
+                        await page.evaluate("window.scrollBy(0, 500)")
+                        await asyncio.sleep(2)
+                    elif "captcha" in content.lower() or "robot" in content.lower() or "api-services-support" in content.lower():
                         logger.error("🚫 Amazon.es: Bot detectado (CAPTCHA/ROBOT).")
                         self.blocked = True
+                        if not os.path.exists("logs/screenshots"): os.makedirs("logs/screenshots")
+                        await page.screenshot(path="logs/screenshots/amazon_captcha.png")
                         await browser.close()
                         return []
                     else:
                         logger.error("❌ Amazon.es: Timeout esperando resultados tras 30s.")
+                        if not os.path.exists("logs/screenshots"): os.makedirs("logs/screenshots")
+                        await page.screenshot(path="logs/screenshots/amazon_timeout.png")
                         await browser.close()
                         return []
 
@@ -139,8 +156,11 @@ class AmazonScraper(BaseScraper):
                     await page.evaluate(f"window.scrollBy(0, {scroll_y})")
                     await self._random_sleep(0.8, 2.2)
                 
-                # Extract results
+                # Extract results (Multiple selectors for agility)
                 results = await page.query_selector_all("[data-component-type='s-search-result']")
+                if not results:
+                    results = await page.query_selector_all(".s-result-item[data-asin]")
+                
                 logger.info(f"📊 Amazon.es: Encontrados {len(results)} posibles resultados.")
 
                 for res in results:
