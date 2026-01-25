@@ -43,11 +43,15 @@ def migrate_excel_to_db(excel_path: str, session):
             sheet_names = xl.sheet_names
             
             # Get default user for collection ownership
-            admin = session.query(UserModel).filter_by(username="admin").first()
-            if not admin:
-                # Fallback if admin doesn't exist (e.g. initial setup)
-                admin = UserModel(username="admin", email="admin@eternia.com", hashed_password="pw", role="admin")
-                session.add(admin)
+            # Get default user for collection ownership (Phase 42 Fix: David First)
+            target_user = session.query(UserModel).filter_by(username="David").first()
+            if not target_user:
+                target_user = session.query(UserModel).filter_by(username="admin").first()
+            
+            if not target_user:
+                # Fallback if no user exists (e.g. initial setup)
+                target_user = UserModel(username="David", email="dace81@gmail.com", hashed_password="pw", role="admin")
+                session.add(target_user)
                 session.commit()
 
             total_imported = 0
@@ -179,13 +183,13 @@ def migrate_excel_to_db(excel_path: str, session):
                         # Check if already in collection
                         exists = session.query(CollectionItemModel).filter_by(
                             product_id=product.id, 
-                            owner_id=admin.id
+                            owner_id=target_user.id
                         ).first()
                         
                         if not exists:
                             item = CollectionItemModel(
                                 product_id=product.id,
-                                owner_id=admin.id,
+                                owner_id=target_user.id,
                                 acquired=True,
                                 condition="New",
                                 notes=f"Imported from Phase 0 Excel ({sheet})"
