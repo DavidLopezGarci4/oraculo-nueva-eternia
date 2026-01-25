@@ -1,18 +1,15 @@
 import asyncio
 import sys
-import os
-from pathlib import Path
-
-# Add project root to Python path
-root_path = Path(__file__).resolve().parent.parent.parent.parent
-if str(root_path) not in sys.path:
-    sys.path.append(str(root_path))
-
+import datetime
+from vec3.dev.adapters import initialize_runtime
 from src.infrastructure.scrapers.pipeline import ScrapingPipeline
 from src.infrastructure.scrapers.action_toys_scraper import ActionToysScraper
 from src.infrastructure.scrapers.fantasia_scraper import FantasiaScraper
 from src.infrastructure.scrapers.amazon_scraper import AmazonScraper
 from src.core.logger import logger
+
+# Initialize 3OX Runtime
+initialize_runtime()
 
 async def run_scraper(spider_name: str):
     logger.info(f"🚀 Launching scraper: {spider_name}")

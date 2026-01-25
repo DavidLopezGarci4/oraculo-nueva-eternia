@@ -1,4 +1,10 @@
-# 🛠️ Tool Registry
+# 🛠️ Tool Registry: Oráculo Nueva Eternia
 tools:
-  - name: system_query
-    description: Read system state
+  - name: ScraperEngine
+    description: Distributed robots for Retail (Amazon, Toymi) and P2P (Ebay, Wallapop).
+  - name: NexusSync
+    description: Master Catalog synchronization and cross-reference logic.
+  - name: SentinelMonitor
+    description: Financial anomaly detection and market health tracking.
+  - name: UniversalMigrator
+    description: Idempotent DB schema synchronization (SQLite/Postgres).

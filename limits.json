@@ -1,4 +1,4 @@
 {
-  "max_memory": "512MB",
-  "max_execution_time": "300s"
+  "max_memory": "1024MB",
+  "max_execution_time": "1800s"
 }

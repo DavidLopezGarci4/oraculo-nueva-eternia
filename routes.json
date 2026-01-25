@@ -1,3 +1,8 @@
 {
-  "operations": { "default": "log_activity" }
+  "operations": {
+    "default": "log_activity",
+    "scan_daily": "src/application/jobs/daily_scan.py",
+    "sync_master": "src/application/services/nexus_service.py",
+    "market_report": "src/application/services/market_intelligence.py"
+  }
 }

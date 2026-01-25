@@ -1,0 +1,38 @@
+# 🗂️ Variable Modulation Dictionary (3OX T3)
+# Surface: vec3/rc/sys.ref/state_modulation.yml
+
+terminology_mapping:
+  # Business State Variables
+  catalogo_maestro:
+    variable: "MasterCatalog"
+    receipt_key: "nexus.catalog_id"
+    log_alias: "NEXO_SYNC"
+    description: "The source-of-truth for MOTU products."
+
+  oferta_purgatorio:
+    variable: "PendingOffer"
+    receipt_key: "purgatory.offer_hash"
+    log_alias: "SMARTMATCH_PENDING"
+    description: "Extracted data awaiting manual/automatic validation."
+
+  estatus_scraper:
+    variable: "ScraperStatus"
+    receipt_key: "sys.scraper_heartbeat"
+    log_alias: "ROBOT_HEALTH"
+    description: "Operational status of specialized spiders."
+
+  mercado_segregado:
+    variable: "MarketType"
+    receipt_key: "price.segregation_type"
+    log_alias: "SENTINEL_FLOW"
+    description: "Retail vs P2P identification for financial accuracy."
+
+execution_metadata:
+  SiriusLogFormat: "[SIRIUS] {timestamp} | Actor: {actor} | Action: {action} | Result: {result}"
+  ReceiptPath: "vec3/var/receipts/{action_id}.rec"
+  HashAlgorithm: "xxHash64"
+
+dependencies:
+  - source: "src/domain/models.py"
+    target: "vec3/rc/rules.ref"
+    logic: "State synchronization via Repository Pattern"

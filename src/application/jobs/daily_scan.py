@@ -1,18 +1,18 @@
 import asyncio
 import logging
-import json
-import sys
 import os
-from pathlib import Path
+import sys
+import json
 from datetime import datetime
-from playwright.async_api import async_playwright
+from pathlib import Path
+from vec3.dev.adapters import initialize_runtime, create_db_backup, manage_pid, check_stop_signal, save_json_report
 
-# Add project root to Python path
-root_path = Path(__file__).resolve().parent.parent.parent.parent
-sys.path.append(str(root_path))
+# Initialize 3OX Runtime (Force UTF-8, Path Resolution)
+root_path = initialize_runtime()
 
 from src.core.logger import setup_logging
 from src.infrastructure.scrapers.pipeline import ScrapingPipeline
+# ... (rest of imports)
 
 # New Refactored Scrapers
 from src.infrastructure.scrapers.action_toys_scraper import ActionToysScraper
@@ -46,35 +46,9 @@ async def run_daily_scan(progress_callback=None):
     logger = logging.getLogger("daily_scan")
     logger.info("🚀 Starting Daily Oracle Scan (Refactored Loop)...")
     
-    # --- AUTOMATIC BACKUP ---
-    try:
-        import shutil
-        import os
-        
-        backup_dir = "backups"
-        db_file = "oraculo.db"
-        
-        if os.path.exists(db_file):
-            if not os.path.exists(backup_dir):
-                os.makedirs(backup_dir)
-                
-            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-            backup_path = f"{backup_dir}/oraculo_{timestamp}.db"
-            
-            shutil.copy2(db_file, backup_path)
-            logger.info(f"🛡️ Backup created: {backup_path}")
-            
-            # Rotation: Keep last 7 items
-            files = [os.path.join(backup_dir, f) for f in os.listdir(backup_dir) if f.endswith(".db")]
-            files.sort(key=os.path.getmtime)
-            
-            if len(files) > 7:
-                for f_to_del in files[:-7]:
-                    os.remove(f_to_del)
-                    logger.info(f"🗑️ Rotated old backup: {f_to_del}")
-    except Exception as e:
-        logger.error(f"⚠️ Backup failed: {e}")
-    # ------------------------
+    # --- 3OX AUTOMATIC BACKUP ---
+    create_db_backup()
+    # ---------------------------
     
     # --- ARGUMENT PARSING ---
     import argparse
@@ -92,11 +66,9 @@ async def run_daily_scan(progress_callback=None):
         logger.info(f"⏳ Kaizen: Staggered start active. Waiting {wait_mins:.2f} minutes before engaging robots...")
         await asyncio.sleep(wait_mins * 60)
     
-    # --- PID MANAGEMENT ---
-    pid = os.getpid()
-    pid_file = ".scan_pid"
-    with open(pid_file, "w") as f:
-        f.write(str(pid))
+    # --- 3OX PID MANAGEMENT ---
+    manage_pid(action="create")
+    # --------------------------
         
     try:
         # PHASE 12: Ensure database schema is up to date before scanning
@@ -182,13 +154,8 @@ async def run_daily_scan(progress_callback=None):
     import random
 
     for idx, scraper in enumerate(scrapers):
-            # Check for Stop Signal
-            if os.path.exists(".stop_scan"):
-                logger.warning("🛑 Stop Signal Detected. Aborting scan sequence.")
-                try:
-                    os.remove(".stop_scan")
-                except:
-                    pass
+            # Check for 3OX Stop Signal
+            if check_stop_signal():
                 break
                 
             logger.info(f"🕸️ Engaging {scraper.spider_name}...")
@@ -340,19 +307,11 @@ async def run_daily_scan(progress_callback=None):
     duration = datetime.now() - start_time
     logger.info(f"🏁 Daily Scan Complete in {duration}. Total: {total_stats}")
     
-    # Dump report to file
-    report_file = f"logs/report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-    try:
-        os.makedirs("logs", exist_ok=True)
-        with open(report_file, "w", encoding="utf-8") as f:
-            json.dump(results, f, indent=2)
-        logger.info(f"📄 Report saved to {report_file}")
-    except Exception as e:
-        logger.warning(f"Could not save report json: {e}")
+    # 3OX Reporting
+    save_json_report(results, filename_prefix="daily_scan")
         
-    # Cleanup PID
-    if os.path.exists(pid_file):
-        os.remove(pid_file)
+    # 3OX PID Cleanup
+    manage_pid(action="remove")
 
 if __name__ == "__main__":
     try:

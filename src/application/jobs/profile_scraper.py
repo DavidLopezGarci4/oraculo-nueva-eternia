@@ -1,7 +1,9 @@
 import sys
 import asyncio
 import json
-# Import Scrapers
+from vec3.dev.adapters import initialize_runtime
+initialize_runtime()
+
 from src.infrastructure.scrapers.frikiverso_scraper import FrikiversoScraper
 from src.infrastructure.scrapers.fantasia_scraper import FantasiaScraper
 from src.infrastructure.scrapers.pixelatoy_scraper import PixelatoyScraper

@@ -21,8 +21,9 @@
   - [El Motor SmartMatch](#el-motor-smartmatch)
   - [Sistema de Sincronización](#sistema-de-sincronización)
 - [5. Guía Técnica y Despliegue](#5-guía-técnica-y-despliegue)
-- [6. El Motor de Inversión (DealScorer)](#6-el-motor-de-inversión-dealscorer)
-- [7. Roadmap y Evolución](#7-roadmap-y-evolución)
+- [6. Arquitectura 3OX (Kernel T3)](#6-arquitectura-3ox-kernel-t3)
+- [7. El Motor de Inversión (DealScorer)](#7-el-motor-de-inversión-dealscorer)
+- [8. Roadmap y Evolución](#8-roadmap-y-evolución)
 
 ---
 
@@ -76,6 +77,8 @@ La aplicación sigue una **Arquitectura de Cebolla (Clean Architecture)** ultra-
 
 | Capa | Tecnología | Propósito |
 | :--- | :--- | :--- |
+| **Kernel 3OX** | Sirius Protocol (Tier 3) | Control de misión, auditoría inmutable y gestión de límites. |
+| **Adapter (vec3)** | Python 3.11 (Adapters) | I/O robusto, UTF-8 forzado y mediación entre scripts. |
 | **Frontend** | React 19 + Vite + TypeScript | Interfaz premium, rápida y tipada. |
 | **Estilos** | Tailwind CSS 4.0 + Framer Motion | Estética "Glassmorphism" y animaciones. |
 | **API Broker** | FastAPI (Python 3.11) | Mediador de lógica de negocio y seguridad. |
@@ -176,6 +179,7 @@ TELEGRAM_BOT_TOKEN=tu_token
 *   **Fase 35 (Amazon Infiltration)**: ✅ Implementación de `AmazonScraper` con evasión de bloqueos y procesamiento de 54 nuevas ofertas (Completado).
 *   **Fase 40 (Scraper Estandarización)**: ✅ Unificación de toda la infraestructura bajo `BaseScraper` y `scraper_name`, eliminando el legado de "Spiders" (Completado).
 *   **Fase 41 (Nexus & Amazon Fixes)**: ✅ Resolución de `AssertionError` en Nexo Maestro y refuerzo de sigilo (Stealth Mode) en Amazon.es (Completado).
+*   **Fase 42 (3OX vec3 Architecture Integration)**: ✅ Refactorización de scripts de entrada y creación de adaptadores en `vec3/dev/`. Implementación de forzado UTF-8 y desequilibrio de bloques monolíticos (Completado).
 
 
 ## 6. El Motor de Inversión (DealScorer)
