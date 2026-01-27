@@ -11,6 +11,11 @@ export interface Product {
     figure_id: string;
     image_url: string | null;
     retail_price?: number;
+    avg_retail_price?: number;
+    p25_retail_price?: number;
+    p25_price?: number; // Alias or direct p25 metric
+    avg_p2p_price?: number;
+    p25_p2p_price?: number;
 
     // Financial Intelligence
     purchase_price?: number;

@@ -1,7 +1,7 @@
 import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { Gavel, AlertCircle, Loader2, Info, Plus, Check, ShoppingCart, RefreshCw, Star, TrendingUp, History, Package } from 'lucide-react';
+import { Gavel, AlertCircle, Loader2, Info, Plus, Check, ShoppingCart, RefreshCw, Star, TrendingUp, History, Package, X } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { getCollection, toggleCollection } from '../api/collection';
 import type { Product } from '../api/collection';
@@ -48,6 +48,7 @@ const Auctions: React.FC = () => {
     const queryClient = useQueryClient();
     const [selectedProduct, setSelectedProduct] = React.useState<Product | null>(null);
     const [historyProductId, setHistoryProductId] = React.useState<number | null>(null);
+    const [expandedImage, setExpandedImage] = React.useState<string | null>(null);
 
     const activeUserId = parseInt(localStorage.getItem('active_user_id') || '2');
 
@@ -174,13 +175,47 @@ const Auctions: React.FC = () => {
                                 </div>
                             )}
 
-                            <div className="relative aspect-square w-full overflow-hidden rounded-2xl sm:rounded-[2rem] bg-black/40 border border-white/10 shadow-inner group/img">
+                            <div
+                                className="relative aspect-square w-full overflow-hidden rounded-2xl sm:rounded-[2rem] bg-black/40 border border-white/10 shadow-inner group/img cursor-pointer"
+                                onClick={() => setSelectedProduct(product)}
+                            >
                                 {product.image_url ? (
                                     <img src={product.image_url} alt={product.name} className="h-full w-full object-cover transition-all duration-700 group-hover/img:scale-110" />
                                 ) : (
                                     <div className="flex h-full w-full items-center justify-center italic text-white/20 text-[10px] sm:text-xs font-black uppercase tracking-widest">Sin Imagen</div>
                                 )}
-                                <div className="absolute top-2 right-2 sm:top-4 sm:right-4 rounded-lg sm:rounded-xl bg-black/70 px-2 py-1 sm:px-3 sm:py-1.5 text-[8px] sm:text-[10px] font-black text-brand-primary backdrop-blur-md border border-brand-primary/20 opacity-0 group-hover:opacity-100 transition-all uppercase tracking-widest">#{product.figure_id}</div>
+
+                                {/* Right Strip Action (Collection Toggle) */}
+                                <div
+                                    className={`absolute top-0 right-0 h-full w-8 sm:w-12 flex flex-col items-center justify-center transition-all duration-300 z-30 border-l border-white/10 backdrop-blur-md hover:w-10 sm:hover:w-14 ${owned
+                                        ? 'bg-green-500/20 text-green-400 hover:bg-red-500/40 hover:text-white'
+                                        : wished
+                                            ? 'bg-brand-primary/10 text-brand-primary hover:bg-brand-primary hover:text-white'
+                                            : 'bg-white/5 text-white/10 hover:bg-brand-primary/20 hover:text-white'
+                                        }`}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggleMutation.mutate({ productId: product.id, wish: false });
+                                    }}
+                                    title={owned ? 'Liberar del Catálogo (Presionar Lateral)' : wished ? 'Reclamar Reliquia (Presionar Lateral)' : 'Asegurar en la Fortaleza (Presionar Lateral)'}
+                                >
+                                    {toggleMutation.isPending ? (
+                                        <Loader2 className="h-4 w-4 sm:h-6 sm:w-6 animate-spin text-brand-primary" />
+                                    ) : owned ? (
+                                        <div className="flex flex-col items-center gap-1 group/btn">
+                                            <Check className="h-4 w-4 sm:h-6 sm:w-6 group-hover/btn:hidden" />
+                                            <X className="h-4 w-4 sm:h-6 sm:w-6 hidden group-hover/btn:block" />
+                                            <span className="text-[6px] font-black uppercase vertical-text tracking-widest mt-2 hidden sm:block">BAJA</span>
+                                        </div>
+                                    ) : (
+                                        <div className="flex flex-col items-center gap-1">
+                                            {wished ? <ShoppingCart className="h-4 w-4 sm:h-6 sm:w-6" /> : <Plus className="h-4 w-4 sm:h-6 sm:w-6" />}
+                                            <span className="text-[6px] font-black uppercase vertical-text tracking-widest mt-2 hidden sm:block">{wished ? 'CAPTURAR' : 'AÑADIR'}</span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="absolute top-2 left-2 sm:top-4 sm:left-4 rounded-lg sm:rounded-xl bg-black/70 px-2 py-1 sm:px-3 sm:py-1.5 text-[8px] sm:text-[10px] font-black text-brand-primary backdrop-blur-md border border-brand-primary/20 opacity-0 group-hover:opacity-100 transition-all uppercase tracking-widest">#{product.figure_id}</div>
                             </div>
 
                             <div className="flex flex-1 flex-col gap-2 sm:gap-3 px-1">
@@ -195,7 +230,6 @@ const Auctions: React.FC = () => {
                                         <button onClick={() => setSelectedProduct(product)} className="flex h-8 w-8 sm:h-11 sm:w-11 items-center justify-center rounded-xl sm:rounded-2xl bg-white/5 text-white/40 border border-white/5 hover:bg-brand-primary/20 hover:text-brand-primary transition-all"><Info className="h-3 w-3 sm:h-5 sm:w-5" /></button>
                                     </div>
                                     <button onClick={() => toggleMutation.mutate({ productId: product.id, wish: true })} disabled={toggleMutation.isPending || owned} className={`flex h-8 w-8 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl transition-all border ${wished ? 'bg-brand-primary/20 text-brand-primary border-brand-primary/30' : 'bg-white/5 text-white/20 border-white/10 hover:bg-brand-primary/10 hover:text-brand-primary'} ${owned ? 'opacity-20' : ''}`}><Star className={`h-3 w-3 sm:h-5 sm:w-5 ${wished ? 'fill-current' : ''}`} /></button>
-                                    <button onClick={() => toggleMutation.mutate({ productId: product.id, wish: false })} disabled={toggleMutation.isPending} className={`flex h-8 w-8 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl bg-brand-primary text-white border-brand-primary shadow-lg shadow-brand-primary/20 hover:brightness-110 ${toggleMutation.isPending ? 'opacity-50' : ''}`}>{owned ? <Check className="h-3 w-3 sm:h-5 sm:w-5" /> : <Plus className="h-3 w-3 sm:h-5 sm:w-5" />}</button>
                                 </div>
 
                                 {historyProductId === product.id && (
@@ -215,7 +249,13 @@ const Auctions: React.FC = () => {
                     <div className="relative w-full max-w-4xl max-h-[90vh] overflow-hidden rounded-[3rem] border border-white/10 bg-[#0A0A0B] shadow-[0_50px_100px_-20px_rgba(0,0,0,1)] flex flex-col" onClick={(e) => e.stopPropagation()}>
                         <div className="p-8 pb-4 flex items-start justify-between">
                             <div className="flex gap-6 items-center">
-                                <div className="h-24 w-24 shrink-0 overflow-hidden rounded-3xl border border-white/10 bg-black/40"><img src={selectedProduct.image_url || ''} className="h-full w-full object-cover" /></div>
+                                <div
+                                    className="h-24 w-24 shrink-0 overflow-hidden rounded-3xl border border-white/10 bg-black/40 cursor-zoom-in hover:scale-105 transition-transform"
+                                    onClick={() => setExpandedImage(selectedProduct.image_url)}
+                                    title="Expandir Reliquia"
+                                >
+                                    <img src={selectedProduct.image_url || ''} className="h-full w-full object-cover" />
+                                </div>
                                 <div className="space-y-1"><h4 className="text-3xl font-black tracking-tighter text-white">Lote de <span className="text-orange-500">Subastas</span></h4><p className="text-sm font-bold text-white/30 uppercase tracking-widest">{selectedProduct.name}</p></div>
                             </div>
                             <button onClick={() => setSelectedProduct(null)} className="h-10 w-10 flex items-center justify-center rounded-xl bg-white/5 text-white/40 hover:bg-red-500/20 hover:text-red-400">&times;</button>
@@ -299,6 +339,29 @@ const Auctions: React.FC = () => {
                                 )}
                             </div>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* FULLSCREEN IMAGE EXPANSION */}
+            {expandedImage && (
+                <div
+                    className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-20 bg-black/95 backdrop-blur-3xl animate-in zoom-in duration-300 shadow-2xl"
+                    onClick={() => setExpandedImage(null)}
+                >
+                    <div className="relative max-w-full max-h-full group">
+                        <img
+                            src={expandedImage}
+                            alt="Expanded Relic"
+                            className="max-w-full max-h-[90vh] rounded-[2rem] sm:rounded-[3rem] border border-white/10 shadow-[0_0_100px_rgba(0,0,0,0.8)] object-contain"
+                            onClick={(e) => e.stopPropagation()}
+                        />
+                        <button
+                            onClick={() => setExpandedImage(null)}
+                            className="absolute -top-4 -right-4 sm:-top-8 sm:-right-8 h-10 w-10 sm:h-14 sm:w-14 flex items-center justify-center rounded-2xl bg-white/10 text-white hover:bg-red-500 hover:scale-110 transition-all border border-white/10 backdrop-blur-md shadow-2xl z-50"
+                        >
+                            <X className="h-6 w-6 sm:h-8 sm:w-8" />
+                        </button>
                     </div>
                 </div>
             )}

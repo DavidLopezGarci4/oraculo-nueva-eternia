@@ -98,6 +98,14 @@ Este documento registra la evolución técnica y estratégica del Oráculo. La P
 
 
 
+#### 4.7 Inteligencia Táctica (Nueva Eternia Evolution)
+
+- **Hitos**: Exclusión total de ítems capturados, jerarquía de "Ventana de Compra" (Risk/Sweet Spot/Exploration) y badges de edad por ID.
+
+- **Estado**: ✅ VALIDADO (27/01/2026)
+
+
+
 ### Fase 5: Refinamiento Táctico (La Gran Purificación)
 
 - **Hitos**: Reingeniería de calidad de datos y "Verdad del Oráculo".

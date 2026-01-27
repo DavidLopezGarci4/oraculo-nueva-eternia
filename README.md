@@ -39,9 +39,13 @@
 *   **Radar de Eternia (Admin Only)**: Un widget de actividad que muestra en tiempo real los últimos hallazgos de los scrapers.
 *   **Top Deals**: Algoritmo que filtra las mejores ofertas del mercado para productos que **aún no tienes** en tu colección. Los controles de gestión están reservados para administradores.
 
-### Catálogo Maestro
-La base de datos definitiva de todos los productos MOTU Origins.
-*   **Navegación Líquida**: Listado optimizado con filtros por subcategoría (Origins, Turtles of Grayskull, etc.).
+### Catálogo Maestro (Nueva Eternia)
+La base de datos definitiva de todos los productos MOTU Origins, refinada mediante la **Evolución 4.7**.
+*   **Gestión Táctica (Intelligent Hierarchy)**: El catálogo excluye automáticamente los ítems que ya posees, permitiéndote concentrarte en el "Abastecimiento".
+*   **Optimal Purchase Window**: Los ítems se ordenan dinámicamente por "Edad" (Figure ID) y Comportamiento de Mercado:
+    *   **Zonas de Riesgo**: Ítems antiguos que empiezan a revalorizarse.
+    *   **Punto Dulce**: Ítems en su precio mínimo histórico (Price Floor).
+    *   **Exploración**: Novedades en fase de enfriamiento para detectar el mejor momento de entrada.
 *   **Historial de Precios (Cronos)**: Gráficos y tablas que muestran la evolución del precio de un item en diferentes tiendas.
 *   **Indicadores "Live"**: Los items con ofertas activas brillan con un badge cyan, indicando oportunidad de compra.
 
@@ -98,6 +102,12 @@ Para evitar esperas, el Oráculo usa un flujo **Out-of-Band**:
 - **Doble Capa de Búsqueda (Purgatorio)**: Separación de estados para filtrar la lista de espera y el catálogo maestro de forma independiente.
 - **Wallapop P2P Native**: Las capturas de Wallapop se marcan como Peer-to-Peer para alimentar automáticamente "El Pabellón".
 - **Kaizen Learning Log**: Memoria persistente del oráculo que registra hallazgos cualitativos y patrones de mercado.
+
+### Jerarquía Táctica (Motivation Engine)
+Implementada en la Fase 4.7, esta lógica sustituye el orden estático por un algoritmo de priorización táctica:
+1.  **Exclusión de Propiedad**: Si el ítem ya está en la Fortaleza, se oculta de Nueva Eternia.
+2.  **Clasificación Cromática**: Los IDs de las figuras se categorizan por color (Ámbar para Vintage, Plata para Medios, Azul para Nuevos).
+3.  **Boost de Cierre de Set**: Los ítems pertenecientes a sub-categorías casi completadas reciben un empuje dinámico para motivar el cierre de la colección.
 - **Hero Dynamic Selector**: Cambio de identidad atómico entre "Guardian" y "Master" con persistencia local.
 - **Búsqueda Contextual**: Filtrado en tiempo real en Catálogo y Colección con gestión de estado global.
 - **Landed Price Engine**: Cálculo preciso de costes de importación (Estrategia BBTS, IVA, Aduanas).

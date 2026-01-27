@@ -54,6 +54,10 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
     - **Fase 28: Sync Engine Resurrect** ✅ - Reparación del búfer de sincronización estancado y automatización total de imágenes en CI/CD. (Completado).
 - **Phase 29: Log Diagnostics & International Visibility** (75 logs limit + Scraper robust loop) ✅
 - **Phase 30: Scraper & Nexus Robustness** (BBTS Block Evasion + Nexus Stability + Unified Migrations) ✅
+- **Phase 31: Intelligent Hierarchy & Tactical Management (27/01/2026)** ✅
+    - [x] Exclusión Total: Los ítems poseídos desaparecen de Nueva Eternia para focus absoluto.
+    - [x] Optimal Purchase Window: Clasificación dinámica por edad (ID) y comportamiento de mercado (Suelo/Riesgo).
+    - [x] UI Tactical: Badges de edad cromáticos y corrección de capas (z-index).
     - Recuperación de visibilidad de scrapers internacionales y blindaje del motor de escaneo diario. (Completado).
     - **Cloud Architecture**: Sincronización automática de imágenes locales a Supabase Storage.
     - **Acceso Universal**: Transición a URLs públicas para visualización cross-device sin PC encendido.

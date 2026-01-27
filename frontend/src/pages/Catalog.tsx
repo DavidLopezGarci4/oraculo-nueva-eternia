@@ -24,6 +24,7 @@ const Catalog: React.FC<CatalogProps> = ({ searchQuery = "" }) => {
     const [editingProduct, setEditingProduct] = React.useState<Product | null>(null);
     const [historyProductId, setHistoryProductId] = React.useState<number | null>(null);
     const [intelProductId, setIntelProductId] = React.useState<number | null>(null);
+    const [expandedImage, setExpandedImage] = React.useState<string | null>(null);
 
     // Contexto de Autenticación (Fase 8.2)
     const activeUserId = parseInt(localStorage.getItem('active_user_id') || '2');
@@ -114,18 +115,30 @@ const Catalog: React.FC<CatalogProps> = ({ searchQuery = "" }) => {
         }
     });
 
+    // 6. Mapa de Búsqueda Rápida (Optimización O(1) para Zero-Lag)
+    const collectionMap = React.useMemo(() => {
+        const map = new Map<number, Product>();
+        collection?.forEach(p => map.set(p.id, p));
+        return map;
+    }, [collection]);
+
     const getCollectionItem = (productId: number) => {
-        return collection?.find(p => p.id === productId);
+        return collectionMap.get(productId);
     };
 
-    const isOwned = (productId: number) => {
+    const isOwned = (productId: number): boolean => {
         const item = getCollectionItem(productId);
-        return item && !item.is_wish;
+        return !!(item && !item.is_wish);
     };
 
-    const isWished = (productId: number) => {
+    const isWished = (productId: number): boolean => {
         const item = getCollectionItem(productId);
-        return item && item.is_wish;
+        return !!(item && item.is_wish);
+    };
+
+    const isGrail = (productId: number): boolean => {
+        const item = getCollectionItem(productId);
+        return !!(item && item.is_grail);
     };
 
     const updateMutation = useMutation({
@@ -159,14 +172,94 @@ const Catalog: React.FC<CatalogProps> = ({ searchQuery = "" }) => {
         });
     };
 
-    const filteredProducts = products?.filter(product => {
-        const query = searchQuery.toLowerCase();
-        return (
-            product.name.toLowerCase().includes(query) ||
-            product.figure_id.toLowerCase().includes(query) ||
-            product.sub_category?.toLowerCase().includes(query)
-        );
-    });
+    // 7. Estadísticas de Sub-categoría (Cierre de Sets)
+    const subCatStats = React.useMemo(() => {
+        if (!products) return {};
+        const stats: Record<string, { total: number, owned: number }> = {};
+        products.forEach(p => {
+            const sub = p.sub_category || 'Desconocida';
+            if (!stats[sub]) stats[sub] = { total: 0, owned: 0 };
+            stats[sub].total++;
+            if (isOwned(p.id)) stats[sub].owned++;
+        });
+        return stats;
+    }, [products, collectionMap]);
+
+    // 8. Lógica de Ordenación Híbrida (VEC3/Hunting List)
+    const sortedProducts = React.useMemo(() => {
+        if (!products) return [];
+
+        return [...products]
+            .filter(product => {
+                const query = searchQuery.toLowerCase();
+                const owned = isOwned(product.id);
+
+                // EXCLUSIÓN TOTAL: Si ya es propiedad del usuario, no aparece en Nueva Eternia
+                if (owned) return false;
+
+                return (
+                    product.name.toLowerCase().includes(query) ||
+                    product.figure_id?.toLowerCase().includes(query) ||
+                    product.sub_category?.toLowerCase().includes(query)
+                );
+            })
+            .sort((a, b) => {
+                const aWished = isWished(a.id);
+                const bWished = isWished(b.id);
+                const aGrail = isGrail(a.id);
+                const bGrail = isGrail(b.id);
+
+                const getTacticalWeight = (p: Product, wished: boolean, grail: boolean) => {
+                    if (grail) return 10000; // Prioridad Sagrada
+
+                    const idNum = parseInt(p.figure_id?.replace(/[^0-9]/g, '') || '0');
+                    const isOld = idNum > 0 && idNum < 4500;
+                    const isMid = idNum >= 4500 && idNum <= 9500;
+                    const isNew = idNum > 9500;
+
+                    // Indicadores de estudio de mercado (Simulados/Derivados)
+                    const marketVal = p.market_value || 0;
+                    const retailPrice = p.retail_price || 0;
+                    const p25 = p.p25_price || p.p25_retail_price || retailPrice;
+
+                    const isPriceFloor = marketVal > 0 && marketVal <= p25 * 1.1; // Suelo detectado (dentro del 10%)
+                    const isRising = marketVal > 0 && retailPrice > 0 && marketVal > retailPrice * 1.4;
+
+                    // Boost por completitud de set (Fuerza del Cierre)
+                    const stats = subCatStats[p.sub_category || 'Desconocida'];
+                    const completionBoost = stats ? Math.floor((stats.owned / stats.total) * 500) : 0;
+                    const wishBoost = wished ? 1000 : 0;
+
+                    // 1. ZONA DE RIESGO: Antiguo/Descontinuado + Subiendo Precio
+                    if (isOld && isRising) return 8000 + wishBoost + completionBoost;
+
+                    // 2. PUNTO DULCE: Lanzamiento de maduración + Suelo encontrado
+                    if (isMid && isPriceFloor) return 7000 + wishBoost + completionBoost;
+
+                    // 3. EXPLORACIÓN ACTIVA: Nuevo que ha tocado suelo (Alerta de compra)
+                    if (isNew && isPriceFloor) return 6000 + wishBoost + completionBoost;
+
+                    // 4. TRANSICIÓN: Items de edad media
+                    if (isMid) return 5000 + wishBoost + completionBoost;
+
+                    // 5. SEGUIMIENTO PASIVO: Nuevos sin suelo detectado (Enfriamiento)
+                    if (isNew) return 3000 + wishBoost + completionBoost;
+
+                    // 6. FONDO DE CAZA: Antiguos estables
+                    return 2000 + wishBoost + completionBoost;
+                };
+
+                const weightA = getTacticalWeight(a, aWished, aGrail);
+                const weightB = getTacticalWeight(b, bWished, bGrail);
+
+                if (weightA !== weightB) return weightB - weightA;
+
+                // Orden secundario por ID (más antiguos primero dentro del mismo peso)
+                const idA = parseInt(a.figure_id?.replace(/[^0-9]/g, '') || '99999');
+                const idB = parseInt(b.figure_id?.replace(/[^0-9]/g, '') || '99999');
+                return idA - idB;
+            });
+    }, [products, collectionMap, searchQuery, subCatStats]);
 
     if (isLoadingProducts || isLoadingCollection) {
         return (
@@ -203,7 +296,7 @@ const Catalog: React.FC<CatalogProps> = ({ searchQuery = "" }) => {
 
             {/* Grid */}
             <div className="grid grid-cols-2 gap-3 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {filteredProducts?.map((product) => {
+                {sortedProducts?.map((product) => {
                     const owned = isOwned(product.id);
                     const wished = isWished(product.id);
                     const hasIntel = hasMarketIntel(product.id);
@@ -222,7 +315,7 @@ const Catalog: React.FC<CatalogProps> = ({ searchQuery = "" }) => {
                                         e.stopPropagation();
                                         setIntelProductId(product.id);
                                     }}
-                                    className="absolute top-2 right-2 sm:top-4 sm:right-4 z-20 flex items-center gap-1 rounded-lg sm:rounded-xl bg-brand-primary/10 px-1.5 py-0.5 sm:px-2.5 sm:py-1 border border-brand-primary/20 backdrop-blur-md hover:bg-brand-primary/30 transition-all cursor-pointer shadow-lg shadow-brand-primary/20"
+                                    className="absolute top-2 right-2 sm:top-4 sm:right-4 z-40 flex items-center gap-1 rounded-lg sm:rounded-xl bg-brand-primary/10 px-1.5 py-0.5 sm:px-2.5 sm:py-1 border border-brand-primary/20 backdrop-blur-md hover:bg-brand-primary/30 transition-all cursor-pointer shadow-lg shadow-brand-primary/20"
                                 >
                                     <span className="h-1 w-1 sm:h-1.5 sm:w-1.5 rounded-full bg-brand-primary animate-pulse"></span>
                                     <span className="text-[6px] sm:text-[8px] font-black uppercase tracking-widest text-brand-primary">Estudio de Mercado</span>
@@ -246,7 +339,10 @@ const Catalog: React.FC<CatalogProps> = ({ searchQuery = "" }) => {
                             )}
 
                             {/* Image Container */}
-                            <div className="relative aspect-square w-full overflow-hidden rounded-2xl sm:rounded-[2rem] bg-black/40 border border-white/10 shadow-inner group/img">
+                            <div
+                                className="relative aspect-square w-full overflow-hidden rounded-2xl sm:rounded-[2rem] bg-black/40 border border-white/10 shadow-inner group/img cursor-pointer"
+                                onClick={() => setSelectedProduct(product)}
+                            >
                                 {product.image_url ? (
                                     <img
                                         src={product.image_url}
@@ -258,9 +354,54 @@ const Catalog: React.FC<CatalogProps> = ({ searchQuery = "" }) => {
                                         Sin Imagen
                                     </div>
                                 )}
-                                <div className="absolute top-2 right-2 sm:top-4 sm:right-4 rounded-lg sm:rounded-xl bg-black/70 px-2 py-1 sm:px-3 sm:py-1.5 text-[8px] sm:text-[10px] font-black text-brand-primary backdrop-blur-md border border-brand-primary/20 shadow-2xl opacity-0 group-hover:opacity-100 transition-all transform translate-y-[-10px] group-hover:translate-y-0 uppercase tracking-widest">
-                                    #{product.figure_id}
+
+                                {/* Right Strip Action (Collection Toggle) */}
+                                <div
+                                    className={`absolute top-0 right-0 h-full w-8 sm:w-12 flex flex-col items-center justify-center transition-all duration-300 z-30 border-l border-white/10 backdrop-blur-md hover:w-10 sm:hover:w-14 ${owned
+                                        ? 'bg-green-500/20 text-green-400 hover:bg-red-500/40 hover:text-white'
+                                        : wished
+                                            ? 'bg-brand-primary/20 text-brand-primary hover:brightness-150'
+                                            : 'bg-white/5 text-white/10 hover:bg-brand-primary/20 hover:text-white'
+                                        }`}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggleMutation.mutate({ productId: product.id, wish: false });
+                                    }}
+                                    title={owned ? 'Liberar del Catálogo (Presionar Lateral)' : wished ? 'Reclamar Reliquia (Presionar Lateral)' : 'Asegurar en la Fortaleza (Presionar Lateral)'}
+                                >
+                                    {toggleMutation.isPending ? (
+                                        <Loader2 className="h-4 w-4 sm:h-6 sm:w-6 animate-spin" />
+                                    ) : owned ? (
+                                        <div className="flex flex-col items-center gap-1 group/btn">
+                                            <Check className="h-4 w-4 sm:h-6 sm:w-6 group-hover/btn:hidden" />
+                                            <X className="h-4 w-4 sm:h-6 sm:w-6 hidden group-hover/btn:block" />
+                                            <span className="text-[6px] font-black uppercase vertical-text tracking-widest mt-2 hidden sm:block">BAJA</span>
+                                        </div>
+                                    ) : wished ? (
+                                        <div className="flex flex-col items-center gap-1">
+                                            <ShoppingCart className="h-4 w-4 sm:h-6 sm:w-6" />
+                                            <span className="text-[6px] font-black uppercase vertical-text tracking-widest mt-2 hidden sm:block">CAPTURAR</span>
+                                        </div>
+                                    ) : (
+                                        <div className="flex flex-col items-center gap-1">
+                                            <Plus className="h-4 w-4 sm:h-6 sm:w-6" />
+                                            <span className="text-[6px] font-black uppercase vertical-text tracking-widest mt-2 hidden sm:block">AÑADIR</span>
+                                        </div>
+                                    )}
                                 </div>
+
+                                {(() => {
+                                    const idNum = parseInt(product.figure_id?.replace(/[^0-9]/g, '') || '0');
+                                    let colorClass = 'text-blue-400 border-blue-400/20 bg-blue-400/10'; // Recent/Blue
+                                    if (idNum > 0 && idNum < 4500) colorClass = 'text-amber-500 border-amber-500/20 bg-amber-500/10'; // Vintage/Amber
+                                    if (idNum >= 4500 && idNum <= 9500) colorClass = 'text-slate-300 border-slate-300/20 bg-slate-300/10'; // Mid/Silver
+
+                                    return (
+                                        <div className={`absolute top-2 left-2 sm:top-4 sm:left-4 z-40 rounded-lg sm:rounded-xl px-2 py-1 sm:px-3 sm:py-1.5 text-[8px] sm:text-[10px] font-black backdrop-blur-md border shadow-2xl transition-all transform uppercase tracking-widest ${colorClass}`}>
+                                            #{product.figure_id}
+                                        </div>
+                                    );
+                                })()}
                             </div>
 
                             {/* Content */}
@@ -272,6 +413,27 @@ const Catalog: React.FC<CatalogProps> = ({ searchQuery = "" }) => {
                                     <h3 className="line-clamp-2 min-h-[2rem] sm:min-h-[2.5rem] text-xs sm:text-lg font-black leading-tight text-white group-hover:text-brand-primary transition-colors">
                                         {product.name}
                                     </h3>
+
+                                    {/* Set Completion Mini-Progress (3OX Motivation) */}
+                                    {(() => {
+                                        const stats = subCatStats[product.sub_category || 'Desconocida'];
+                                        if (!stats || stats.total <= 1) return null;
+                                        const progress = (stats.owned / stats.total) * 100;
+                                        return (
+                                            <div className="mt-1 space-y-1">
+                                                <div className="flex items-center justify-between text-[6px] sm:text-[8px] font-black uppercase tracking-tighter">
+                                                    <span className={`${progress > 80 ? 'text-brand-primary' : 'text-white/30'}`}>Set Completion</span>
+                                                    <span className="text-white/40">{Math.round(progress)}%</span>
+                                                </div>
+                                                <div className="h-0.5 w-full bg-white/5 rounded-full overflow-hidden">
+                                                    <div
+                                                        className={`h-full transition-all duration-1000 ${progress > 80 ? 'bg-brand-primary shadow-[0_0_5px_rgba(14,165,233,0.5)]' : 'bg-white/20'}`}
+                                                        style={{ width: `${progress}%` }}
+                                                    ></div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
                                 </div>
 
                                 <div className="mt-auto flex items-center justify-between pt-2 sm:pt-4 gap-2 sm:gap-3">
@@ -318,20 +480,6 @@ const Catalog: React.FC<CatalogProps> = ({ searchQuery = "" }) => {
                                         <Star className={`h-3 w-3 sm:h-5 sm:w-5 ${wished ? 'fill-current' : ''}`} />
                                     </button>
 
-                                    {/* Action: Toggle Collection */}
-                                    <button
-                                        onClick={() => toggleMutation.mutate({ productId: product.id, wish: false })}
-                                        disabled={toggleMutation.isPending}
-                                        className={`flex h-8 w-8 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl transition-all border shadow-lg ${owned
-                                            ? 'bg-green-500/20 text-green-400 border-green-500/30 hover:bg-red-500/20 hover:text-red-400'
-                                            : wished
-                                                ? 'bg-brand-primary text-white border-brand-primary shadow-brand-primary/20 hover:brightness-110'
-                                                : 'bg-brand-primary/10 text-brand-primary border-brand-primary/20 hover:bg-brand-primary/20'
-                                            } ${toggleMutation.isPending ? 'opacity-50 cursor-wait' : ''}`}
-                                        title={owned ? 'Liberar del Catálogo' : wished ? 'Reclamar Reliquia' : 'Asegurar en la Fortaleza'}
-                                    >
-                                        {owned ? <Check className="h-3 w-3 sm:h-5 sm:w-5" /> : wished ? <ShoppingCart className="h-3 w-3 sm:h-5 sm:w-5" /> : <Plus className="h-3 w-3 sm:h-5 sm:w-5" />}
-                                    </button>
 
                                     {/* Admin Action: Edit */}
                                     {isAdmin && (
@@ -390,7 +538,11 @@ const Catalog: React.FC<CatalogProps> = ({ searchQuery = "" }) => {
                         {/* Modal Header */}
                         <div className="p-8 pb-4 flex items-start justify-between">
                             <div className="flex gap-6 items-center">
-                                <div className="h-24 w-24 shrink-0 overflow-hidden rounded-3xl border border-white/10 bg-black/40">
+                                <div
+                                    className="h-24 w-24 shrink-0 overflow-hidden rounded-3xl border border-white/10 bg-black/40 cursor-zoom-in hover:scale-105 transition-transform"
+                                    onClick={() => setExpandedImage(selectedProduct.image_url)}
+                                    title="Expandir Reliquia"
+                                >
                                     <img src={selectedProduct.image_url || ''} className="h-full w-full object-cover" />
                                 </div>
                                 <div className="space-y-1">
@@ -621,6 +773,28 @@ const Catalog: React.FC<CatalogProps> = ({ searchQuery = "" }) => {
                     productId={intelProductId}
                     onClose={() => setIntelProductId(null)}
                 />
+            )}
+            {/* FULLSCREEN IMAGE EXPANSION */}
+            {expandedImage && (
+                <div
+                    className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-20 bg-black/95 backdrop-blur-3xl animate-in zoom-in duration-300 shadow-2xl"
+                    onClick={() => setExpandedImage(null)}
+                >
+                    <div className="relative max-w-full max-h-full group">
+                        <img
+                            src={expandedImage}
+                            alt="Expanded Relic"
+                            className="max-w-full max-h-[90vh] rounded-[2rem] sm:rounded-[3rem] border border-white/10 shadow-[0_0_100px_rgba(0,0,0,0.8)] object-contain"
+                            onClick={(e) => e.stopPropagation()}
+                        />
+                        <button
+                            onClick={() => setExpandedImage(null)}
+                            className="absolute -top-4 -right-4 sm:-top-8 sm:-right-8 h-10 w-10 sm:h-14 sm:w-14 flex items-center justify-center rounded-2xl bg-white/10 text-white hover:bg-red-500 hover:scale-110 transition-all border border-white/10 backdrop-blur-md shadow-2xl z-50"
+                        >
+                            <X className="h-6 w-6 sm:h-8 sm:w-8" />
+                        </button>
+                    </div>
+                </div>
             )}
         </div>
     );

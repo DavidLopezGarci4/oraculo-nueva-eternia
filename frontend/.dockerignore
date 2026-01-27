@@ -1,0 +1,8 @@
+# .dockerignore
+node_modules/
+dist/
+build/
+.vscode/
+.idea/
+*.log
+.DS_Store

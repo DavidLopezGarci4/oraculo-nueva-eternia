@@ -279,8 +279,48 @@ const Dashboard: React.FC = () => {
                 </div>
             ) : (
                 // ADMIN VIEW: Exclusive Operational Sections (Top Deals & Activity)
-                <div className="space-y-6">
-                    {/* Admin Top Deals (Interactive) */}
+                <div className="space-y-10">
+                    {/* Admin Horizontal Sections: Conquistas & Actividad */}
+                    <div className="space-y-4">
+                        <h4 className="text-xs font-black uppercase tracking-widest text-white/40">Conquistas de Mercado</h4>
+                        <div className="rounded-[2.5rem] border border-white/5 bg-white/[0.02] p-4 md:p-8">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3 md:gap-4">
+                                {matchStats?.map((item) => (
+                                    <div key={item.shop} className="flex flex-col gap-1 rounded-2xl bg-white/[0.03] p-3 md:p-4 border border-white/5">
+                                        <span className="text-[8px] md:text-[9px] font-black uppercase text-white/30 tracking-widest truncate">{item.shop}</span>
+                                        <span className="text-xl md:text-2xl font-black text-white">{item.count}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="space-y-4">
+                        <h4 className="text-xs font-black uppercase tracking-widest text-white/40">Actividad Logística</h4>
+                        <div className="rounded-[2.5rem] border border-white/5 bg-white/[0.02] p-4 md:p-6 h-[300px] overflow-y-auto custom-scrollbar">
+                            <div className="space-y-2">
+                                {history?.map((entry) => (
+                                    <div key={entry.id} className="flex flex-col gap-1.5 rounded-xl border border-white/5 bg-white/[0.01] p-3 text-xs">
+                                        <div className="flex items-center justify-between gap-4">
+                                            <div className="flex items-center gap-2">
+                                                <div className={`h-1.5 w-1.5 rounded-full ${entry.action_type === 'LINKED_MANUAL' ? 'bg-brand-primary' : 'bg-green-500'}`}></div>
+                                                <span className="font-bold text-white/90 truncate max-w-[150px] md:max-w-none">{entry.product_name}</span>
+                                            </div>
+                                            <button onClick={() => revertMutation.mutate(entry.id)} className="p-1 rounded bg-white/5 hover:bg-white/10 text-white/40">
+                                                <RotateCcw className="h-3 w-3" />
+                                            </button>
+                                        </div>
+                                        <div className="flex items-center justify-between text-[8px] font-black text-white/20 uppercase">
+                                            <span>{entry.shop_name}</span>
+                                            <span>{formatDistanceToNow(new Date(entry.timestamp), { addSuffix: true, locale: es })}</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Admin Top Deals (Interactive) - Now at the bottom */}
                     <div className="space-y-4">
                         <div className="flex items-center justify-between">
                             <h4 className="text-xs font-black uppercase tracking-widest text-white/40">Oportunidades Bajo Seguimiento</h4>
@@ -293,7 +333,7 @@ const Dashboard: React.FC = () => {
                                         <div className="flex items-center justify-between gap-4">
                                             <div className="flex items-center gap-3 min-w-0">
                                                 <div className="h-10 w-10 shrink-0 rounded-lg bg-white/5 overflow-hidden">
-                                                    <img src={deal.image_url} alt="" className="h-full w-full object-cover" />
+                                                    <img src={deal.image_url || undefined} alt="" className="h-full w-full object-cover" />
                                                 </div>
                                                 <div className="min-w-0">
                                                     <p className="truncate text-xs font-bold text-white">{deal.product_name}</p>
@@ -331,47 +371,6 @@ const Dashboard: React.FC = () => {
                                         )}
                                     </div>
                                 ))}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-10 lg:grid-cols-2">
-                        <div className="space-y-4">
-                            <h4 className="text-xs font-black uppercase tracking-widest text-white/40">Conquistas por Mercado</h4>
-                            <div className="rounded-[2.5rem] border border-white/5 bg-white/[0.02] p-8">
-                                <div className="grid grid-cols-2 gap-4">
-                                    {matchStats?.map((item) => (
-                                        <div key={item.shop} className="flex flex-col gap-1 rounded-2xl bg-white/[0.03] p-4 border border-white/5">
-                                            <span className="text-[9px] font-black uppercase text-white/30 tracking-widest">{item.shop}</span>
-                                            <span className="text-2xl font-black text-white">{item.count}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="space-y-4">
-                            <h4 className="text-xs font-black uppercase tracking-widest text-white/40">Actividad Logística</h4>
-                            <div className="rounded-[2.5rem] border border-white/5 bg-white/[0.02] p-6 h-[400px] overflow-y-auto custom-scrollbar">
-                                <div className="space-y-2">
-                                    {history?.map((entry) => (
-                                        <div key={entry.id} className="flex flex-col gap-1.5 rounded-xl border border-white/5 bg-white/[0.01] p-3 text-xs">
-                                            <div className="flex items-center justify-between gap-4">
-                                                <div className="flex items-center gap-2">
-                                                    <div className={`h-1.5 w-1.5 rounded-full ${entry.action_type === 'LINKED_MANUAL' ? 'bg-brand-primary' : 'bg-green-500'}`}></div>
-                                                    <span className="font-bold text-white/90 truncate max-w-[150px]">{entry.product_name}</span>
-                                                </div>
-                                                <button onClick={() => revertMutation.mutate(entry.id)} className="p-1 rounded bg-white/5 hover:bg-white/10 text-white/40">
-                                                    <RotateCcw className="h-3 w-3" />
-                                                </button>
-                                            </div>
-                                            <div className="flex items-center justify-between text-[8px] font-black text-white/20 uppercase">
-                                                <span>{entry.shop_name}</span>
-                                                <span>{formatDistanceToNow(new Date(entry.timestamp), { addSuffix: true, locale: es })}</span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
                             </div>
                         </div>
                     </div>
