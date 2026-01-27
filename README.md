@@ -36,12 +36,8 @@
 
 ## 2. Áreas de la Aplicación
 
-### Dashboard de Inteligencia (El Centro de Mando)
-Es la pantalla de inicio y ofrece una vista de pájaro de todo el ecosistema.
-*   **Métricas Financieras**: Valor Total de la Colección, Inversión Total y ROI (Retorno de Inversión).
-*   **Griales del Reino**: Muestra las piezas con mayor valor de mercado o mayor revalorización.
-*   **Radar de Eternia**: Un widget de actividad que muestra en tiempo real los últimos hallazgos de los scrapers.
-*   **Top Deals**: Algoritmo que filtra las mejores ofertas del mercado para productos que **aún no tienes** en tu colección.
+*   **Radar de Eternia (Admin Only)**: Un widget de actividad que muestra en tiempo real los últimos hallazgos de los scrapers.
+*   **Top Deals**: Algoritmo que filtra las mejores ofertas del mercado para productos que **aún no tienes** en tu colección. Los controles de gestión están reservados para administradores.
 
 ### Catálogo Maestro
 La base de datos definitiva de todos los productos MOTU Origins.
@@ -180,6 +176,8 @@ TELEGRAM_BOT_TOKEN=tu_token
 *   **Fase 40 (Scraper Estandarización)**: ✅ Unificación de toda la infraestructura bajo `BaseScraper` y `scraper_name`, eliminando el legado de "Spiders" (Completado).
 *   **Fase 41 (Nexus & Amazon Fixes)**: ✅ Resolución de `AssertionError` en Nexo Maestro y refuerzo de sigilo (Stealth Mode) en Amazon.es (Completado).
 *   **Fase 42 (3OX vec3 Architecture Integration)**: ✅ Refactorización de scripts de entrada y creación de adaptadores en `vec3/dev/`. Implementación de forzado UTF-8 y desequilibrio de bloques monolíticos (Completado).
+*   **Fase 43 (Dashboard Role-Based Access)**: ✅ Restricción de secciones administrativas (Actividad y Conquistas) y botones de gestión a usuarios Admin para una experiencia limpia y segura (Completado).
+*   **Fase 44 (Dashboard Restructuring & Docker Fixes)**: ✅ Reordenación de secciones para Guardianes, herramientas operativas para Admin y resolución de fallos de arranque en contenedores (Completado).
 
 
 ## 6. El Motor de Inversión (DealScorer)

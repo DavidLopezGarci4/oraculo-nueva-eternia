@@ -318,6 +318,16 @@ Esta fase ha dividido el Oráculo en dos experiencias potentes y diferenciadas:
 
 - **Estado**: ✅ COMPLETADO
 
+#### 9.3 Justicia en el Dashboard (Role-Based Content)
+
+- **Hitos**: Reestructuración total del Dashboard. Los Guardianes ahora ven el contenido en orden de acción (**Oportunidades** → **Griales** → **Potencial**). Los Admins tienen una vista puramente operativa con herramientas de gestión atómica.
+- **Estado**: ✅ COMPLETADO
+
+#### 9.4 Estabilidad del Arca (Fixes Críticos)
+
+- **Hitos**: Resolución de errores de resolución de host en Nginx mediante resolver dinámico. Corrección de lints de TypeScript que bloqueaban la compilación de producción en Docker.
+- **Estado**: ✅ COMPLETADO
+
 
 
 ### 🛠️ Mecánica Técnica y Dockerización (Resumen de Arquitectura)
@@ -960,3 +970,14 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
     - **WallapopBridge**: Servicio que utiliza suplantación de Chrome 120 para descargar detalles y fotos directamente de la API interna.
     - **QuickPreviewModal**: Interfaz inmersiva que permite auditar subastas sin salir de la app ni activar firewalls.
     - **Visión Rápida**: Botón integrado en el Purgatorio para inspección instantánea.
+### Fase 43: Fortificación del Tablero (Dashboard Role-Based Access) - 27/01/2026
+
+- **Hitos**: Restricción de acceso a información operativa sensible basada en el rol del usuario para una experiencia personalizada y segura.
+- **Estado**: ✅ COMPLETADO Y VERIFICADO
+
+#### 43.1 Gobierno de Identidad en Dashboard
+*   **Detección Dinámica**: El componente `Dashboard.tsx` ahora detecta el rol del usuario consultando el `active_user_id` en `localStorage`, alineándose con la seguridad del Sidebar.
+*   **Filtro de Contenidos**:
+    - **Áreas Protegidas**: Las secciones "Actividad del Oráculo" (log de operaciones) y "Conquistas por Mercado" (métricas de éxito de scrapers) ahora solo son visibles para el **Maestro (Admin ID 1)**.
+    - **Gestión de Ofertas**: Los botones de acción crítica (Reasignar y Desvincular) en la lista de oportunidades están blindados y ocultos para usuarios sin privilegios.
+*   **Optimización UX**: Los usuarios de perfil Guardian/Dueño de Colección disfrutan ahora de una interfaz más limpia y enfocada en su patrimonio y las gangas del mercado, sin el ruido administrativo del motor.

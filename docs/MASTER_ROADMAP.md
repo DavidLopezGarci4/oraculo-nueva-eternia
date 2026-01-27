@@ -239,6 +239,13 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
 *   **Evasión de Bloqueos**: Fix de paginación en BBTS y timeouts en ActionFigure411. ✅
 *   **Migración Unificada**: Sincronización de esquemas locales y cloud en un solo paso. ✅
 
+- [x] **Phase 43: Dashboard Role-Based Access** ✅
+    - [x] Restricción de secciones administrativas (Actividad y Conquistas) a usuarios Admin.
+    - [x] Blindaje de botones de gestión en Top Deals.
+- [x] **Phase 44: Dashboard Restructuring & Docker Fixes** ✅
+    - [x] Reordenación de secciones para Guardianes: Oportunidades -> Griales -> Potencial.
+    - [x] Implementación de herramientas operativas exclusivas para Admin.
+    - [x] Resolución de errores de resolución de host en Nginx y lints de TS.
 ### Fase 31: Debugging Sync Buffer Stagnation ✅
 *   **Motor Non-Blocking**: Sincronización resiliente que no se detiene ante fallos puntuales. ✅
 *   **Sala de Autopsia Forense**: Interfaz de inspección de fallos y manual intervention. ✅
