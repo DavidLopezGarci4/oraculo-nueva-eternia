@@ -671,9 +671,10 @@ const Purgatory: React.FC = () => {
                                                     </div>
                                                 ))
                                             ) : (
-                                                <div className="flex items-center gap-2 animate-pulse">
-                                                    <Loader2 className="h-3 w-3 animate-spin" />
-                                                    <span>Sincronizando flujo de datos...</span>
+                                                <div className="flex flex-col items-center justify-center h-full gap-3 animate-pulse opacity-50">
+                                                    <Loader2 className="h-4 w-4 animate-spin text-brand-primary" />
+                                                    <span className="text-[10px] uppercase tracking-widest font-black">Sincronizando flujo de datos tácticos...</span>
+                                                    <span className="text-[9px] lowercase italic font-bold">Iniciando protocolo de extracción y sensores...</span>
                                                 </div>
                                             )}
                                         </div>

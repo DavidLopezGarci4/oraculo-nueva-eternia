@@ -147,14 +147,15 @@ async def run_daily_scan(progress_callback=None):
     
     # --- PHASE 42: PURGE OLD LOGS (7 DAYS) ---
     try:
-        from sqlalchemy import text
+        from datetime import timedelta
+        cutoff = datetime.now() - timedelta(days=7)
         with SessionLocal() as db_purge:
             logger.info("🧹 Purging ancient logs (older than 7 days)...")
-            result = db_purge.execute(text(
-                "DELETE FROM scraper_execution_logs WHERE start_time < datetime('now', '-7 days')"
-            ))
+            result = db_purge.query(ScraperExecutionLogModel).filter(
+                ScraperExecutionLogModel.start_time < cutoff
+            ).delete()
             db_purge.commit()
-            logger.info(f"🧹 Purged {result.rowcount} stale execution records. Systems optimized.")
+            logger.info(f"🧹 Purged {result} stale execution records. Systems optimized.")
     except Exception as e:
         logger.warning(f"⚠️ Failed to purge old logs: {e}")
     

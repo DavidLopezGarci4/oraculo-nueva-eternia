@@ -48,6 +48,7 @@ class BaseScraper(ABC):
         self.errors = 0
         self.blocked = False
         self.audit_logger = None # Optional AuditLogger injection
+        self.log_callback = None # Function(str) to bridge logs to UI
         self.max_pages = 100  # Default max pages to crawl
         self.is_auction_source = False # True for Wallapop/eBay
 
@@ -55,6 +56,19 @@ class BaseScraper(ABC):
     async def search(self, query: str) -> List[ScrapedOffer]:
         """Entry point for searching items by query or 'auto' for global scan."""
         pass
+    
+    def _log(self, message: str, level: str = "info"):
+        """Internal logger that also triggers the UI callback if registered."""
+        # 1. Standard Python Logging
+        lvl = getattr(logging, level.upper(), logging.INFO)
+        logger.log(lvl, f"[{self.spider_name}] {message}")
+        
+        # 2. UI Tactical Console Bridge
+        if self.log_callback:
+            try:
+                self.log_callback(message)
+            except:
+                pass
 
     def _get_random_header(self) -> dict:
         """Returns a randomized User-Agent header and modern fingerprints."""
@@ -85,10 +99,11 @@ class BaseScraper(ABC):
             try:
                 # Alternate wait strategies to bypass simple detection/loading issues
                 strategy = random.choice(wait_strategies) if attempt > 0 else "domcontentloaded"
+                self._log(f"🧭 Navegando a {url} (Intento {attempt+1}, Modo: {strategy})...")
                 await page.goto(url, wait_until=strategy, timeout=timeout)
                 return True
             except Exception as e:
-                logger.warning(f"[{self.spider_name}] Navigation attempt {attempt+1} failed ({url}): {e}")
+                self._log(f"⚠️ Reintento {attempt+1} fallido: {str(e)[:50]}...", level="warning")
                 # Exponential backoff: 3s, 6s, 12s...
                 await asyncio.sleep(3 * (2 ** attempt))
         

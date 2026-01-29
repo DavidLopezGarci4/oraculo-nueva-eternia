@@ -11,6 +11,7 @@ from datetime import datetime
 from sqlalchemy import func, select, and_, desc, text, or_
 from src.core.config import settings
 from src.infrastructure.database_cloud import SessionCloud, engine_cloud
+from src.infrastructure.universal_migrator import migrate
 from src.domain.models import (
     ProductModel, OfferModel, PendingMatchModel, CollectionItemModel, 
     UserModel, ScraperStatusModel, BlackcludedItemModel, ScraperExecutionLogModel,
@@ -31,6 +32,13 @@ from src.infrastructure.scrapers.bbts_scraper import BigBadToyStoreScraper
 from src.infrastructure.scrapers.ebay_scraper import EbayScraper
 
 app = FastAPI(title="Oráculo API Broker", version="1.0.0")
+
+# --- AUTO MIGRATION ---
+try:
+    migrate()
+except Exception as e:
+    logger.error(f"Migration failed at startup: {e}")
+# ----------------------
 
 # Configurar CORS para permitir peticiones universales (Útil para acceso móvil y Docker)
 app.add_middleware(
@@ -764,10 +772,12 @@ def run_scraper_task(spider_name: str = "harvester", trigger_type: str = "manual
     
     # PHASE 42: PURGE OLD LOGS (7 DAYS)
     try:
+        from datetime import timedelta
+        cutoff = datetime.now() - timedelta(days=7)
         with SessionCloud() as db_purge:
-            db_purge.execute(text(
-                "DELETE FROM scraper_execution_logs WHERE start_time < datetime('now', '-7 days')"
-            ))
+            db_purge.query(ScraperExecutionLogModel).filter(
+                ScraperExecutionLogModel.start_time < cutoff
+            ).delete()
             db_purge.commit()
     except Exception as e:
         logger.warning(f"⚠️ Log purge failed: {e}")
@@ -883,18 +893,29 @@ def run_scraper_task(spider_name: str = "harvester", trigger_type: str = "manual
             if spider_name == "all":
                 spiders_to_run = list(spiders_map.values())
             elif matching_key:
-                spiders_to_run = [spiders_map[matching_key]]
+                s = spiders_map[matching_key]
+                s.log_callback = update_live_log # Inject bridge
+                spiders_to_run = [s]
             
             if spiders_to_run:
+                # Ensure callback is set for all if 'all' was selected
+                for s in spiders_to_run: s.log_callback = update_live_log
+
                 pipeline = ScrapingPipeline(spiders_to_run)
                 # Ejecutar búsqueda asíncrona (usamos "auto" o similar)
-                # Nota: run_scraper_task se ejecuta en BackgroundTasks (hilo aparte)
-                # pero necesitamos un loop de eventos si queremos usar await.
-                # Uvicorn ya proporciona uno, pero para estar seguros:
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
                 update_live_log(f"📡 Buscando reliquias en {spider_name}...")
-                results = loop.run_until_complete(pipeline.run_product_search("auto"))
+                
+                # PHASE 42: Execution Timeout (Prevention against hangs)
+                try:
+                    results = loop.run_until_complete(
+                        asyncio.wait_for(pipeline.run_product_search("auto"), timeout=600)
+                    )
+                except asyncio.TimeoutError:
+                    update_live_log("⌛ [TIMEOUT] La incursión ha excedido los 10 minutos. Abortando.")
+                    results = []
+                
                 loop.close()
                 
                 update_live_log(f"💾 Persistiendo {len(results)} ofertas...")

@@ -203,6 +203,18 @@ def _sync_engine(engine, label: str):
                  conn.execute(text("ALTER TABLE blackcluded_items ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"))
                  conn.commit()
 
+        # --- Table: scraper_execution_logs ---
+        if "scraper_execution_logs" in inspector.get_table_names():
+            columns_logs = [c['name'] for c in inspector.get_columns("scraper_execution_logs")]
+            if "logs" not in columns_logs:
+                logger.info(f"[{label}] Adding 'logs' to scraper_execution_logs...")
+                try:
+                    conn.execute(text("ALTER TABLE scraper_execution_logs ADD COLUMN logs TEXT"))
+                    conn.commit()
+                except Exception as e:
+                    logger.warning(f"Could not add logs column to scraper_execution_logs: {e}")
+                    conn.rollback()
+
         # --- Terminology Audit: Fix regressions and ensure 'spider_name' ---
         # Note: If someone accidentally renamed to scraper_name, we undo it here.
         rename_targets = [
