@@ -6,6 +6,7 @@ from src.infrastructure.scrapers.pipeline import ScrapingPipeline
 from src.infrastructure.scrapers.action_toys_scraper import ActionToysScraper
 from src.infrastructure.scrapers.fantasia_scraper import FantasiaScraper
 from src.infrastructure.scrapers.amazon_scraper import AmazonScraper
+from src.infrastructure.scrapers.ebay_scraper import EbayScraper
 from src.core.logger import logger
 
 # Initialize 3OX Runtime
@@ -24,6 +25,8 @@ async def run_scraper(spider_name: str):
         spiders.append(ElectropolisScraper())
     elif spider_name.lower() == "amazon":
         spiders.append(AmazonScraper())
+    elif spider_name.lower() == "ebay":
+        spiders.append(EbayScraper())
     else:
         logger.error(f"Unknown scraper: {spider_name}")
         return
@@ -69,6 +72,8 @@ async def run_scraper(spider_name: str):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python src/scrapers/run_single.py <spider_name>")
+        print("Usage: python src/scrapers/run_single.py <spider_name> [--scraper name]")
     else:
-        asyncio.run(run_scraper(sys.argv[1]))
+        # Simple extraction to handle --scraper ebay or just ebay
+        spider = sys.argv[-1] 
+        asyncio.run(run_scraper(spider))
