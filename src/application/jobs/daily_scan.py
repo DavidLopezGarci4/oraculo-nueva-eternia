@@ -63,8 +63,20 @@ async def run_daily_scan(progress_callback=None):
     if args.random_delay > 0:
         import random
         wait_mins = random.uniform(0, args.random_delay)
-        logger.info(f"⏳ Kaizen: Staggered start active. Waiting {wait_mins:.2f} minutes before engaging robots...")
-        await asyncio.sleep(wait_mins * 60)
+        logger.info(f"⏳ Kaizen: Staggered start active. Target wait: {wait_mins:.2f} minutes.")
+        
+        # Split sleep into smaller chunks for heartbeat logging
+        total_wait_secs = int(wait_mins * 60)
+        chunk_size = 300 # 5 minutes heartbeat
+        slept = 0
+        
+        while slept < total_wait_secs:
+            to_sleep = min(chunk_size, total_wait_secs - slept)
+            logger.info(f"😴 Oracle Sleeping... ({slept//60}/{total_wait_secs//60} min elapsed)")
+            await asyncio.sleep(to_sleep)
+            slept += to_sleep
+            
+        logger.info("⚡ Oracle Awakening: Delay complete, engaging robots.")
     
     # --- 3OX PID MANAGEMENT ---
     manage_pid(action="create")
@@ -203,7 +215,13 @@ async def run_daily_scan(progress_callback=None):
             try: # Robustness Layer: Ensure loop continues even if a scraper crashes
                 try: # Main try block for scraping and persistence
                     # 1. Scrape (Modern scrapers use .search)
-                    offers = await scraper.search("auto")
+                    logger.info(f"🛡️  [START] Incursion {scraper.spider_name} initiated...")
+                    # Set 10-minute timeout per scraper for Cloud stability
+                    try:
+                        offers = await asyncio.wait_for(scraper.search("auto"), timeout=600)
+                    except asyncio.TimeoutError:
+                        logger.error(f"⌛ [TIMEOUT] {scraper.spider_name} exceeded 10-minute limit. Forcefully aborting this spider.")
+                        offers = []
                     
                     # PHASE 19: Health & Block Alerts (Sentinel)
                     if not offers:
@@ -262,7 +280,7 @@ async def run_daily_scan(progress_callback=None):
                         db.rollback()
 
                     results[scraper.spider_name] = stats
-                    logger.info(f"✅ {scraper.spider_name} Complete: {stats}")
+                    logger.info(f"✅ [END] {scraper.spider_name} Complete: {stats}")
                     
                 except Exception as e:
                     logger.error(f"❌ Failed {scraper.spider_name}: {e}")

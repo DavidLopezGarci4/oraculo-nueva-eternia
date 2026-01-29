@@ -96,6 +96,11 @@ export const getScraperLogs = async (): Promise<ScraperExecutionLog[]> => {
     return response.data;
 };
 
+export const stopScrapers = async () => {
+    const response = await axios.post(`${API_BASE}/scrapers/stop`, {}, adminHeaders);
+    return response.data;
+};
+
 export const resetSmartMatches = async () => {
     const response = await axios.post(`${API_BASE}/admin/reset-smartmatches`, {}, adminHeaders);
     return response.data;

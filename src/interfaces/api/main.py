@@ -4,6 +4,9 @@ from pydantic import BaseModel, ConfigDict
 from typing import List, Optional, Dict, Any
 from loguru import logger
 import json
+import psutil
+import os
+import signal
 from datetime import datetime
 from sqlalchemy import func, select, and_, desc, text, or_
 from src.core.config import settings
@@ -1567,6 +1570,60 @@ async def run_scrapers(request: ScraperRunRequest, background_tasks: BackgroundT
     """Inicia la recolección de reliquias en segundo plano (Admin Only)"""
     background_tasks.add_task(run_scraper_task, request.spider_name, request.trigger_type)
     return {"status": "success", "message": f"Incursión '{request.spider_name}' ({request.trigger_type}) desplegada en los páramos de Eternia"}
+
+@app.post("/api/scrapers/stop", dependencies=[Depends(verify_api_key)])
+async def stop_scrapers():
+    """
+    Protocolo de Emergencia: Mata procesos de scrapers activos y resetea estados en BD.
+    (Admin Only - URGENTE)
+    """
+    killed_count = 0
+    try:
+        # 1. Hardware Stop: Matar procesos hijos (Playwright/Browsers)
+        current_process = psutil.Process(os.getpid())
+        children = current_process.children(recursive=True)
+        
+        target_keywords = ['playwright', 'chromium', 'chrome', 'node', 'python']
+        
+        for child in children:
+            try:
+                cmdline = " ".join(child.cmdline()).lower()
+                # Solo matamos procesos que parezcan ser parte del engine de scraping
+                # No queremos matar al propio worker de uvicorn si es un child (depende de la config)
+                if any(kw in cmdline for kw in target_keywords):
+                    logger.warning(f"🚨 KILLING SCRAPER PROCESS: {child.pid} ({cmdline[:50]}...)")
+                    child.kill()
+                    killed_count += 1
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
+
+        # 2. Database Reset: Limpiar estados de 'running'
+        with SessionCloud() as db:
+            # Resetear estados globales
+            db.query(ScraperStatusModel).filter(ScraperStatusModel.status == "running").update({
+                "status": "stopped",
+                "end_time": datetime.utcnow()
+            })
+            
+            # Resetear la bitácora (fija el error en el log para visibilidad)
+            db.query(ScraperExecutionLogModel).filter(ScraperExecutionLogModel.status == "running").update({
+                "status": "stopped",
+                "end_time": datetime.utcnow(),
+                "error_message": "PARADA DE EMERGENCIA: Acción forzada por el Arquitecto"
+            })
+            
+            db.commit()
+
+        logger.success(f"🛑 Scrapers detenidos. {killed_count} procesos eliminados. BD purificada.")
+        return {
+            "status": "success", 
+            "message": f"Justicia de Eternia: {killed_count} procesos purgados y sistemas reseteados.",
+            "killed_processes": killed_count
+        }
+
+    except Exception as e:
+        logger.error(f"Error en Protocolo de Emergencia: {e}")
+        raise HTTPException(status_code=500, detail=f"Fallo en el protocolo de parada: {str(e)}")
 
 # === WALLAPOP EXTENSION IMPORT ===
 class WallapopProduct(BaseModel):

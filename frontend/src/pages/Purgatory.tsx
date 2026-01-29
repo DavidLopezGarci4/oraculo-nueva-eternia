@@ -20,7 +20,7 @@ import {
     X,
     LineChart as ChartIcon
 } from 'lucide-react';
-import { getPurgatory, matchItem, discardItem, discardItemsBulk, getScrapersStatus, runScrapers, getScraperLogs } from '../api/purgatory';
+import { getPurgatory, matchItem, discardItem, discardItemsBulk, getScrapersStatus, runScrapers, getScraperLogs, stopScrapers } from '../api/purgatory';
 import MarketIntelligenceModal from '../components/MarketIntelligenceModal';
 import QuickPreviewModal from '../components/QuickPreviewModal';
 import axios from 'axios';
@@ -139,6 +139,14 @@ const Purgatory: React.FC = () => {
     // Mutations
     const runScrapersMutation = useMutation({
         mutationFn: (scraperName: string) => runScrapers(scraperName, 'manual'),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['scrapers-status'] });
+            queryClient.invalidateQueries({ queryKey: ['scrapers-logs'] });
+        }
+    });
+
+    const stopScrapersMutation = useMutation({
+        mutationFn: stopScrapers,
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['scrapers-status'] });
             queryClient.invalidateQueries({ queryKey: ['scrapers-logs'] });
@@ -441,19 +449,25 @@ const Purgatory: React.FC = () => {
                                 </div>
                             </button>
 
-                            {/* Local Harvester Item */}
+                            {/* Emergency Stop Button (Replacing Local Harvester) */}
                             <button
-                                onClick={() => setConfirmScraper('harvester')}
-                                disabled={isRunning}
-                                className="group relative flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 transition-all hover:bg-white/10 disabled:opacity-50"
+                                onClick={() => {
+                                    if (confirm('¿DETENER TODAS LAS INCURSIONES? Esta acción forzará el cierre de todos los procesos de extracción.')) {
+                                        stopScrapersMutation.mutate();
+                                    }
+                                }}
+                                disabled={!isRunning}
+                                className={`group relative flex flex-col gap-3 rounded-2xl border p-4 transition-all shadow-lg ${isRunning
+                                    ? 'bg-red-500/10 border-red-500/50 hover:bg-red-500/20 active:scale-95'
+                                    : 'bg-white/5 border-white/10 opacity-30 grayscale'}`}
                             >
                                 <div className="flex items-center justify-between">
-                                    <RefreshCcw className={`h-5 w-5 ${scrapersStatus?.find((s: any) => s.spider_name === 'harvester')?.status === 'running' ? 'animate-spin text-green-400' : 'text-white/40'}`} />
-                                    <div className={`h-1.5 w-1.5 rounded-full ${scrapersStatus?.find((s: any) => s.spider_name === 'harvester')?.status === 'running' ? 'bg-green-400' : 'bg-white/10'}`}></div>
+                                    <ShieldAlert className={`h-5 w-5 ${isRunning ? 'text-red-500 animate-pulse' : 'text-white/20'}`} />
+                                    {isRunning && <div className="h-1.5 w-1.5 rounded-full bg-red-500 animate-ping"></div>}
                                 </div>
                                 <div className="space-y-1 text-left">
-                                    <p className="text-[10px] font-black uppercase tracking-tighter text-white/30">Local Playwright</p>
-                                    <p className="text-xs font-bold text-white uppercase">Incursión Manual</p>
+                                    <p className={`text-[10px] font-black uppercase tracking-tighter ${isRunning ? 'text-red-500' : 'text-white/30'}`}>Protocolo de Seguridad</p>
+                                    <p className="text-xs font-bold text-white uppercase">Parada de Emergencia</p>
                                 </div>
                             </button>
                         </div>
@@ -469,7 +483,7 @@ const Purgatory: React.FC = () => {
                                     if (!scrapersStatus) return null;
 
                                     const individualScrapers = scrapersStatus.filter((s: any) =>
-                                        !['all', 'harvester', 'Harvester'].includes(s.spider_name)
+                                        !['all'].includes(s.spider_name)
                                     );
 
                                     const uniqueMap = new Map();
