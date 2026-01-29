@@ -48,6 +48,8 @@ const Purgatory: React.FC = () => {
     const [showForensic, setShowForensic] = useState(false);
     const [intelProductId, setIntelProductId] = useState<number | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    const [selectedLogId, setSelectedLogId] = useState<number | null>(null);
+    const consoleRef = useRef<HTMLDivElement>(null);
 
     // Helper: Check if URL is from Wallapop
     const isWallapopUrl = (url: string) => url?.toLowerCase().includes('wallapop.com');
@@ -127,6 +129,13 @@ const Purgatory: React.FC = () => {
         queryFn: getScraperLogs,
         refetchInterval: isRunning ? 2000 : 10000
     });
+
+    // Auto-scroll console
+    useEffect(() => {
+        if (consoleRef.current) {
+            consoleRef.current.scrollTop = consoleRef.current.scrollHeight;
+        }
+    }, [selectedLogId, scrapersLogs]);
 
     const { data: products } = useQuery({
         queryKey: ['products-purgatory'],
@@ -550,7 +559,11 @@ const Purgatory: React.FC = () => {
                                 </thead>
                                 <tbody className="divide-y divide-white/5 block md:table-row-group">
                                     {scrapersLogs?.map((log) => (
-                                        <tr key={log.id} className="group hover:bg-white/[0.01] transition-colors flex flex-col md:table-row p-3 md:p-0 border-b border-white/5 md:border-none gap-2 md:gap-0">
+                                        <tr
+                                            key={log.id}
+                                            onClick={() => setSelectedLogId(log.id)}
+                                            className={`group hover:bg-white/[0.04] transition-colors cursor-pointer flex flex-col md:table-row p-3 md:p-0 border-b border-white/5 md:border-none gap-2 md:gap-0 ${selectedLogId === log.id ? 'bg-white/[0.03]' : ''}`}
+                                        >
                                             <td className="px-0 md:px-4 py-1 md:py-3 flex justify-between md:table-cell">
                                                 <div className="flex flex-col">
                                                     <span className="text-[10px] font-black text-white/80 uppercase tracking-tight">{log.spider_name}</span>
@@ -612,6 +625,61 @@ const Purgatory: React.FC = () => {
                                     )}
                                 </tbody>
                             </table>
+                        </div>
+
+                        {/* Live Tactical Console */}
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between px-2">
+                                <div className="flex items-center gap-2 text-white/30">
+                                    <div className="h-2 w-2 rounded-full bg-brand-primary animate-pulse"></div>
+                                    <h3 className="text-[10px] font-black uppercase tracking-widest text-white/40">Consola Táctica [ Real-Time ]</h3>
+                                </div>
+                                {selectedLogId && (
+                                    <button
+                                        onClick={() => setSelectedLogId(null)}
+                                        className="text-[9px] font-black uppercase text-brand-primary/60 hover:text-brand-primary"
+                                    >
+                                        [ Mostrar Último ]
+                                    </button>
+                                )}
+                            </div>
+
+                            <div
+                                ref={consoleRef}
+                                className="h-48 overflow-y-auto rounded-2xl border border-brand-primary/20 bg-black/60 p-4 font-mono text-[11px] leading-relaxed text-brand-primary/80 custom-scrollbar shadow-inner"
+                            >
+                                {(() => {
+                                    const logToShow = selectedLogId
+                                        ? scrapersLogs?.find(l => l.id === selectedLogId)
+                                        : scrapersLogs?.[0];
+
+                                    if (!logToShow) return <span className="opacity-20 italic">Esperando datos del flujo de datos de Eternia...</span>;
+
+                                    return (
+                                        <div className="space-y-1">
+                                            <div className="border-b border-brand-primary/10 pb-2 mb-2 flex justify-between items-center">
+                                                <span className="text-white font-bold uppercase tracking-tighter">{">>>"} SENSOR: {logToShow.spider_name}</span>
+                                                <span className="text-[9px] opacity-40">T-REF: {logToShow.id}</span>
+                                            </div>
+                                            {logToShow.logs ? (
+                                                logToShow.logs.split('\n').map((line, i) => (
+                                                    <div key={i} className="flex gap-3">
+                                                        <span className="opacity-20 select-none">{i + 1}</span>
+                                                        <span className={line.includes('❌') || line.includes('error') ? 'text-red-400' : line.includes('✅') ? 'text-green-400' : ''}>
+                                                            {line}
+                                                        </span>
+                                                    </div>
+                                                ))
+                                            ) : (
+                                                <div className="flex items-center gap-2 animate-pulse">
+                                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                                    <span>Sincronizando flujo de datos...</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })()}
+                            </div>
                         </div>
                     </div>
                 </div>

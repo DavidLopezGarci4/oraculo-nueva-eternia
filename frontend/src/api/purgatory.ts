@@ -47,6 +47,7 @@ export interface ScraperExecutionLog {
     start_time: string;
     end_time?: string;
     error_message?: string;
+    logs?: string;
 }
 
 export const getPurgatory = async (): Promise<PendingItem[]> => {

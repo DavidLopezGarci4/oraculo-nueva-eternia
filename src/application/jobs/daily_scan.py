@@ -11,6 +11,7 @@ from vec3.dev.adapters import initialize_runtime, create_db_backup, manage_pid, 
 root_path = initialize_runtime()
 
 from src.core.logger import setup_logging
+from loguru import logger
 from src.infrastructure.scrapers.pipeline import ScrapingPipeline
 # ... (rest of imports)
 
@@ -42,8 +43,7 @@ from src.application.services.logistics_service import LogisticsService
 
 async def run_daily_scan(progress_callback=None):
     # Ensure logging is set up
-    setup_logging()
-    logger = logging.getLogger("daily_scan")
+    # setup_logging() # Already called at module level or by importer
     logger.info("🚀 Starting Daily Oracle Scan (Refactored Loop)...")
     
     # --- 3OX AUTOMATIC BACKUP ---
@@ -145,6 +145,19 @@ async def run_daily_scan(progress_callback=None):
         logger.error(f"Failed to initialize scrapers: {e}")
         scrapers = []
     
+    # --- PHASE 42: PURGE OLD LOGS (7 DAYS) ---
+    try:
+        from sqlalchemy import text
+        with SessionLocal() as db_purge:
+            logger.info("🧹 Purging ancient logs (older than 7 days)...")
+            result = db_purge.execute(text(
+                "DELETE FROM scraper_execution_logs WHERE start_time < datetime('now', '-7 days')"
+            ))
+            db_purge.commit()
+            logger.info(f"🧹 Purged {result.rowcount} stale execution records. Systems optimized.")
+    except Exception as e:
+        logger.warning(f"⚠️ Failed to purge old logs: {e}")
+    
     results = {}
     total_stats = {"found": 0, "new": 0, "errors": 0}
     start_time = datetime.now()
@@ -203,24 +216,48 @@ async def run_daily_scan(progress_callback=None):
                 spider_name=scraper.spider_name,
                 status="running",
                 start_time=datetime.now(),
-                trigger_type="manual" if args.shops else "scheduled" # infer based on args
+                trigger_type="manual" if args.shops else "scheduled",
+                logs=f"[{datetime.now().strftime('%H:%M:%S')}] 🚀 Inicia incursion en {scraper.spider_name}\n"
             )
             try:
                 db.add(log_entry)
                 db.commit()
+                log_id = log_entry.id
             except Exception as e:
                 logger.error(f"Failed to create execution log: {e}")
                 db.rollback()
+                log_id = None
+
+            # Helper to append logs to DB entry safely
+            def update_task_log(msg):
+                if not log_id: return
+                try:
+                    # New session to avoid interferences with the main loop
+                    with SessionLocal() as db_log:
+                        entry = db_log.query(ScraperExecutionLogModel).get(log_id)
+                        if entry:
+                            ts = datetime.now().strftime("%H:%M:%S")
+                            new_line = f"[{ts}] {msg}"
+                            if entry.logs: entry.logs += "\n" + new_line
+                            else: entry.logs = new_line
+                            db_log.commit()
+                except Exception as ex:
+                    logger.warning(f"Log preservation failed: {ex}")
+
+            update_task_log(f"🕸️ Engaging {scraper.spider_name}...")
 
             try: # Robustness Layer: Ensure loop continues even if a scraper crashes
                 try: # Main try block for scraping and persistence
                     # 1. Scrape (Modern scrapers use .search)
                     logger.info(f"🛡️  [START] Incursion {scraper.spider_name} initiated...")
+                    update_task_log(f"🛡️  [START] Incursion {scraper.spider_name} initiated...")
                     # Set 10-minute timeout per scraper for Cloud stability
                     try:
                         offers = await asyncio.wait_for(scraper.search("auto"), timeout=600)
+                        update_task_log(f"📡 Found {len(offers)} potential relics.")
                     except asyncio.TimeoutError:
                         logger.error(f"⌛ [TIMEOUT] {scraper.spider_name} exceeded 10-minute limit. Forcefully aborting this spider.")
+                        update_task_log("⌛ [TIMEOUT] Exceeded 10-minute limit. Aborting.")
                         offers = []
                     
                     # PHASE 19: Health & Block Alerts (Sentinel)
@@ -254,6 +291,7 @@ async def run_daily_scan(progress_callback=None):
 
                         # Update Database
                         pipeline.update_database(offers)
+                        update_task_log("💾 Relics persisted in the Great Library.")
                         stats = {
                             "items_found": len(offers),
                             "status": "Success"
@@ -281,9 +319,11 @@ async def run_daily_scan(progress_callback=None):
 
                     results[scraper.spider_name] = stats
                     logger.info(f"✅ [END] {scraper.spider_name} Complete: {stats}")
+                    update_task_log(f"✅ [END] Complete: {stats['items_found']} found.")
                     
                 except Exception as e:
                     logger.error(f"❌ Failed {scraper.spider_name}: {e}")
+                    update_task_log(f"❌ ERROR: {str(e)}")
                     results[scraper.spider_name] = {"error": str(e)}
                     total_stats["errors"] += 1
                     

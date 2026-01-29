@@ -762,6 +762,16 @@ def run_scraper_task(spider_name: str = "harvester", trigger_type: str = "manual
     from datetime import datetime
     import os
     
+    # PHASE 42: PURGE OLD LOGS (7 DAYS)
+    try:
+        with SessionCloud() as db_purge:
+            db_purge.execute(text(
+                "DELETE FROM scraper_execution_logs WHERE start_time < datetime('now', '-7 days')"
+            ))
+            db_purge.commit()
+    except Exception as e:
+        logger.warning(f"⚠️ Log purge failed: {e}")
+
     # 1. Marcar inicio en la base de datos
     # 1. Marcar inicio en la base de datos y crear Log
     with SessionCloud() as db:
@@ -777,11 +787,27 @@ def run_scraper_task(spider_name: str = "harvester", trigger_type: str = "manual
             spider_name=spider_name,
             status="running",
             start_time=status.start_time,
-            trigger_type=trigger_type
+            trigger_type=trigger_type,
+            logs=f"[{datetime.utcnow().strftime('%H:%M:%S')}] 🚀 Desplegando incursión manual: {spider_name}\n"
         )
         db.add(execution_log)
         db.commit()
         log_id = execution_log.id
+
+    def update_live_log(msg: str):
+        if not log_id: return
+        try:
+            with SessionCloud() as db_l:
+                entry = db_l.query(ScraperExecutionLogModel).get(log_id)
+                if entry:
+                    ts = datetime.utcnow().strftime("%H:%M:%S")
+                    line = f"[{ts}] {msg}"
+                    if entry.logs: entry.logs += "\n" + line
+                    else: entry.logs = line
+                    db_l.commit()
+        except: pass
+
+    update_live_log(f"⚔️ Iniciando secuencia de extracción para {spider_name}...")
 
     items_found = 0
     error_msg = None
@@ -867,12 +893,15 @@ def run_scraper_task(spider_name: str = "harvester", trigger_type: str = "manual
                 # Uvicorn ya proporciona uno, pero para estar seguros:
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
+                update_live_log(f"📡 Buscando reliquias en {spider_name}...")
                 results = loop.run_until_complete(pipeline.run_product_search("auto"))
                 loop.close()
                 
+                update_live_log(f"💾 Persistiendo {len(results)} ofertas...")
                 pipeline.update_database(results)
                 items_found = len(results)
                 logger.info(f"💾 Persistidas {items_found} ofertas tras incursión de {spider_name}.")
+                update_live_log(f"✅ Incursión completada con éxito. {items_found} reliquias encontradas.")
 
         # 2. Marcar éxito en la base de datos y actualizar Log
         with SessionCloud() as db:
@@ -892,6 +921,7 @@ def run_scraper_task(spider_name: str = "harvester", trigger_type: str = "manual
 
     except Exception as e:
         logger.error(f"Scraper Error ({spider_name}): {e}")
+        update_live_log(f"❌ FALLO CRÍTICO: {str(e)}")
         with SessionCloud() as db:
             status = db.query(ScraperStatusModel).filter(ScraperStatusModel.spider_name == spider_name).first()
             if status:

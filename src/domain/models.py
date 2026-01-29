@@ -317,6 +317,7 @@ class ScraperExecutionLogModel(Base):
     # Context
     trigger_type: Mapped[str] = mapped_column(String, default="manual") # manual, scheduled
     error_message: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    logs: Mapped[Optional[str]] = mapped_column(String, nullable=True) # Full execution logs for UI
 
 class SyncQueueModel(Base):
     """
