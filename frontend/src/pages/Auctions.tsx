@@ -164,17 +164,6 @@ const Auctions: React.FC = () => {
                             key={product.id}
                             className="group relative flex flex-col gap-2 sm:gap-5 rounded-3xl sm:rounded-[2.5rem] border border-white/5 bg-white/[0.02] p-2.5 sm:p-5 hover:bg-white/[0.05] transition-all duration-500 hover:translate-y-[-8px] hover:shadow-[0_40px_80px_-20px_rgba(0,0,0,0.5)]"
                         >
-                            <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-20 flex items-center gap-1 rounded-lg sm:rounded-xl bg-orange-500/10 px-1.5 py-0.5 sm:px-2.5 sm:py-1 border border-orange-500/20 backdrop-blur-md">
-                                <span className="h-1 w-1 sm:h-1.5 sm:w-1.5 rounded-full bg-orange-500 animate-pulse"></span>
-                                <span className="text-[6px] sm:text-[8px] font-black uppercase tracking-widest text-orange-500">Subasta</span>
-                            </div>
-
-                            {owned && (
-                                <div className="absolute top-0 left-0 w-12 h-12 sm:w-16 sm:h-16 overflow-hidden z-20">
-                                    <div className="bg-green-500 text-white text-[7px] sm:text-[9px] font-black uppercase text-center w-[80px] sm:w-[100px] py-0.5 sm:py-1 absolute rotate-[-45deg] left-[-25px] sm:left-[-30px] top-[10px] sm:top-[15px] shadow-[0_5px_15px_rgba(34,197,94,0.4)] border-b border-white/20">Captivo</div>
-                                </div>
-                            )}
-
                             <div
                                 className="relative aspect-square w-full overflow-hidden rounded-2xl sm:rounded-[2rem] bg-black/40 border border-white/10 shadow-inner group/img cursor-pointer"
                                 onClick={() => setSelectedProduct(product)}
@@ -183,6 +172,19 @@ const Auctions: React.FC = () => {
                                     <img src={product.image_url} alt={product.name} className="h-full w-full object-cover transition-all duration-700 group-hover/img:scale-110" />
                                 ) : (
                                     <div className="flex h-full w-full items-center justify-center italic text-white/20 text-[10px] sm:text-xs font-black uppercase tracking-widest">Sin Imagen</div>
+                                )}
+
+                                {/* Auction Badge (Inside container for proper layering) */}
+                                <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-40 flex items-center gap-1 rounded-lg sm:rounded-xl bg-orange-500/10 px-1.5 py-0.5 sm:px-2.5 sm:py-1 border border-orange-500/20 backdrop-blur-md">
+                                    <span className="h-1 w-1 sm:h-1.5 sm:w-1.5 rounded-full bg-orange-500 animate-pulse"></span>
+                                    <span className="text-[6px] sm:text-[8px] font-black uppercase tracking-widest text-orange-500">Subasta</span>
+                                </div>
+
+                                {/* Captivo Ribbon (Inside container) */}
+                                {owned && (
+                                    <div className="absolute top-0 left-0 w-12 h-12 sm:w-16 sm:h-16 overflow-hidden z-40 pointer-events-none">
+                                        <div className="bg-green-500 text-white text-[7px] sm:text-[9px] font-black uppercase text-center w-[80px] sm:w-[100px] py-0.5 sm:py-1 absolute rotate-[-45deg] left-[-25px] sm:left-[-30px] top-[10px] sm:top-[15px] shadow-[0_5px_15px_rgba(34,197,94,0.4)] border-b border-white/20">Captivo</div>
+                                    </div>
                                 )}
 
                                 {/* Right Strip Action (Collection Toggle) */}
@@ -215,7 +217,7 @@ const Auctions: React.FC = () => {
                                     )}
                                 </div>
 
-                                <div className="absolute top-2 left-2 sm:top-4 sm:left-4 rounded-lg sm:rounded-xl bg-black/70 px-2 py-1 sm:px-3 sm:py-1.5 text-[8px] sm:text-[10px] font-black text-brand-primary backdrop-blur-md border border-brand-primary/20 opacity-0 group-hover:opacity-100 transition-all uppercase tracking-widest">#{product.figure_id}</div>
+                                <div className="absolute top-2 left-2 sm:top-4 sm:left-4 z-40 rounded-lg sm:rounded-xl bg-black/70 px-2 py-1 sm:px-3 sm:py-1.5 text-[8px] sm:text-[10px] font-black text-brand-primary backdrop-blur-md border border-brand-primary/20 opacity-0 group-hover:opacity-100 transition-all uppercase tracking-widest">#{product.figure_id}</div>
                             </div>
 
                             <div className="flex flex-1 flex-col gap-2 sm:gap-3 px-1">

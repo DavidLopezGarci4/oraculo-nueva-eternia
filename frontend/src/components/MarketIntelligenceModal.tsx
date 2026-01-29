@@ -47,14 +47,30 @@ const MarketIntelligenceModal: React.FC<MarketIntelligenceModalProps> = ({ produ
         );
     }
 
-    if (error || !marketData) {
+    // Distinguir entre error real y datos vacíos
+    const isError = error || (!marketData && !isLoading);
+    const hasData = marketData && (marketData.current_retail_low || marketData.current_p2p_low || marketData.bid_strategy?.ideal_bid > 0);
+
+    if (isError || !hasData) {
         return (
             <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md">
-                <div className="bg-red-500/10 border border-red-500/20 p-8 rounded-3xl text-center space-y-4 max-w-sm">
-                    <AlertCircle className="h-12 w-12 text-red-500 mx-auto" />
-                    <h3 className="text-white font-black text-xl uppercase italic">Error Arcano</h3>
-                    <p className="text-white/60 text-xs">No se han podido invocar los datos de mercado para este producto. Asegúrate de que tenga ofertas registradas.</p>
-                    <button onClick={onClose} className="w-full bg-white text-black py-3 rounded-xl font-bold uppercase transition-transform hover:scale-95 text-xs">Cerrar Visión</button>
+                <div className="bg-white/[0.03] border border-white/10 p-10 rounded-[2.5rem] text-center space-y-6 max-w-sm backdrop-blur-2xl shadow-2xl">
+                    <div className="relative mx-auto h-16 w-16">
+                        <AlertCircle className="h-16 w-16 text-brand-primary/40" />
+                        <div className="absolute inset-0 animate-ping rounded-full bg-brand-primary/20"></div>
+                    </div>
+                    <div className="space-y-2">
+                        <h3 className="text-white font-black text-2xl uppercase italic tracking-tighter">Sabiduría en Acumulación</h3>
+                        <p className="text-white/40 text-[10px] font-bold uppercase leading-relaxed tracking-widest">
+                            El Oráculo aún no ha recolectado suficientes reliquias de este tipo para generar un informe industrial fidedigno.
+                        </p>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className="w-full bg-brand-primary text-white py-4 rounded-2xl font-black uppercase transition-all hover:brightness-125 text-[10px] tracking-[0.2em] shadow-lg shadow-brand-primary/20"
+                    >
+                        Cerrar Visión
+                    </button>
                 </div>
             </div>
         );
@@ -127,17 +143,20 @@ const MarketIntelligenceModal: React.FC<MarketIntelligenceModalProps> = ({ produ
                                 </div>
                                 <h4 className="text-4xl font-black text-white">{bid.ideal_bid} €</h4>
                                 <p className="text-[10px] font-medium text-white/40 leading-tight max-w-[240px]">
-                                    {bid.reason || `Basado en el percentil 25 de ${bid.total_samples} ventas registradas.`}
+                                    {bid.reason}
                                 </p>
                             </div>
                             <div className="text-right space-y-4">
-                                <div className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-black border ${bid.confidence === 'high' ? 'bg-green-500/20 text-green-500 border-green-500/10' : 'bg-yellow-500/20 text-yellow-500 border-yellow-500/10'}`}>
+                                <div className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-black border ${bid.confidence === 'high' ? 'bg-green-500/20 text-green-500 border-green-500/10' :
+                                        bid.confidence === 'medium' ? 'bg-yellow-500/20 text-yellow-500 border-yellow-500/10' :
+                                            'bg-red-500/20 text-red-500 border-red-500/10'
+                                    }`}>
                                     <CheckCircle className="h-3 w-3" />
                                     CONFIDENCIA {bid.confidence.toUpperCase()}
                                 </div>
                                 <div className="space-y-1">
-                                    <p className="text-[10px] font-black text-white/20 uppercase">Media de Venta</p>
-                                    <p className="text-lg font-black text-white/60">{bid.avg_sold || '---'} €</p>
+                                    <p className="text-[10px] font-black text-white/20 uppercase">Muestra Industrial</p>
+                                    <p className="text-lg font-black text-white/60">{bid.total_samples || 0} items</p>
                                 </div>
                             </div>
                         </div>
@@ -148,7 +167,9 @@ const MarketIntelligenceModal: React.FC<MarketIntelligenceModalProps> = ({ produ
                         <div className="flex items-center justify-between">
                             <div className="space-y-1">
                                 <h3 className="text-white font-black text-lg">Evolución del Justiprecio</h3>
-                                <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest">Estativa histórica de los últimos 6 meses</p>
+                                <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest">
+                                    {chartData.length > 1 ? 'Estativa histórica de los últimos 6 meses' : 'Dato puntual actual (Sin historial registrado)'}
+                                </p>
                             </div>
                             <div className="flex gap-4">
                                 <div className="flex items-center gap-2">

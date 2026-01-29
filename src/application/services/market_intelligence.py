@@ -16,6 +16,8 @@ class MarketIntelligenceService:
         """
         # Obtenemos datos de los últimos 6 meses
         six_months_ago = datetime.utcnow() - timedelta(days=180)
+        now = datetime.utcnow()
+        current_month_key = f"{now.year}-{now.month:02d}"
         
         results = {
             "Retail": [],
@@ -24,7 +26,6 @@ class MarketIntelligenceService:
         
         for source_type in ["Retail", "Peer-to-Peer"]:
             # Query consolidada: Precio medio por mes/año
-            # Usamos PriceHistory si existe, o el precio actual de la oferta como fallback
             stats = self.db.query(
                 func.extract('year', PriceHistoryModel.recorded_at).label('year'),
                 func.extract('month', PriceHistoryModel.recorded_at).label('month'),
@@ -40,15 +41,29 @@ class MarketIntelligenceService:
                     "date": f"{int(s.year)}-{int(s.month):02d}",
                     "avg_price": round(s.avg_price, 2)
                 })
+
+            # FALLBACK: Si no hay historial, usamos el precio medio actual de las ofertas activas
+            if not results[source_type]:
+                current_avg = self.db.query(func.avg(OfferModel.price)).filter(
+                    OfferModel.product_id == product_id,
+                    OfferModel.source_type == source_type,
+                    OfferModel.is_available == True
+                ).scalar()
+                
+                if current_avg:
+                    results[source_type].append({
+                        "date": current_month_key,
+                        "avg_price": round(current_avg, 2)
+                    })
         
         return results
 
     def calculate_ideal_bid(self, product_id: int) -> Dict[str, Any]:
         """
         Calcula el precio idóneo para pujar basándose en el percentil 25 
-        de los items vendidos recientemente.
+        de los items vendidos recientemente, con fallback a items activos.
         """
-        # Obtenemos los precios de items marcados como "Vendidos" (o el min_price histórico)
+        # 1. Intentamos obtener precios de items VENDIDOS (Realidad de mercado)
         sold_prices = self.db.query(OfferModel.price).filter(
             OfferModel.product_id == product_id,
             OfferModel.source_type == "Peer-to-Peer",
@@ -56,17 +71,28 @@ class MarketIntelligenceService:
         ).all()
         
         prices = [p[0] for p in sold_prices if p[0] > 0]
-        
+        confidence = "high" if len(prices) > 5 else "medium"
+        reason = "Basado en transacciones reales (P2P Sold)"
+
         if not prices:
-            # Fallback a min histórico de items activos si no hay registros de venta
-            active_min = self.db.query(func.min(OfferModel.min_price)).filter(
+            # 2. FALLBACK TÁCTICO: Percentil 25 de items ACTIVOS
+            # (Si no hay ventas, buscamos el precio más competitivo de lo que hay ahora)
+            active_prices = self.db.query(OfferModel.price).filter(
                 OfferModel.product_id == product_id,
-                OfferModel.source_type == "Peer-to-Peer"
-            ).scalar()
+                OfferModel.source_type == "Peer-to-Peer",
+                OfferModel.is_available == True
+            ).all()
+            prices = [p[0] for p in active_prices if p[0] > 0]
+            confidence = "low"
+            reason = "Basado en el percentil 25 de ofertas activas (Cálculo Táctico)"
+
+        if not prices:
+            # 3. ÚLTIMO RECURSO: Precio de lanzamiento o 0
+            retail = self.db.query(ProductModel.retail_price).filter(ProductModel.id == product_id).scalar()
             return {
-                "ideal_bid": active_min or 0.0,
-                "confidence": "low",
-                "reason": "Basado en precio mínimo activo (sin datos de venta real)"
+                "ideal_bid": retail or 0.0,
+                "confidence": "minimum",
+                "reason": "Sin datos de mercado P2P. Se usa precio de venta sugerido (Retail)."
             }
             
         prices.sort()
@@ -76,9 +102,10 @@ class MarketIntelligenceService:
         
         return {
             "ideal_bid": round(ideal, 2),
-            "confidence": "high" if len(prices) > 5 else "medium",
+            "confidence": confidence,
             "avg_sold": round(sum(prices) / len(prices), 2),
-            "total_samples": len(prices)
+            "total_samples": len(prices),
+            "reason": reason
         }
 
     def get_market_summary(self, product_id: int) -> Dict[str, Any]:
