@@ -31,6 +31,7 @@ class EbayScraper(BaseScraper):
     async def search(self, query: str) -> List[ScrapedOffer]:
         """
         Infiltración masiva en ebay.es con paginación y técnicas de sigilo.
+        Implementa un 'Watchdog' para evitar bloqueos infinitos.
         """
         search_query = "masters of the universe origins" if query == "auto" else query
         params = [
@@ -44,7 +45,7 @@ class EbayScraper(BaseScraper):
         ]
         target_url = f"{self.search_url}?" + "&".join(params)
         
-        self._log(f"🕸️ Ebay.es: Iniciando extracción (España, Nuevo, BIN) para '{search_query}'...")
+        self._log(f"🕸️ Ebay.es: Iniciando extracción estratégica para '{search_query}'...")
         
         offers = []
         try:
@@ -59,45 +60,14 @@ class EbayScraper(BaseScraper):
                 )
                 page = await context.new_page()
                 
-                # 1. Navegación inicial
-                await self._safe_navigate(page, self.base_url)
-                await asyncio.sleep(random.uniform(1.0, 2.0))
-
-                # 2. Navegación a la URL de resultados
-                # Cambiado de networkidle a domcontentloaded para evitar esperas infinitas
-                await page.goto(target_url, wait_until="domcontentloaded", timeout=60000)
-                await asyncio.sleep(3) # Espera táctica para renderizado de JS
+                # Watchdog: Timeout total para la sesión de eBay (5 minutos p/ manual)
+                try:
+                    await asyncio.wait_for(self._run_search_session(page, target_url, offers), timeout=300)
+                except asyncio.TimeoutError:
+                    self._log("⚠️ Ebay.es: Watchdog activado - Tiempo límite de 5min excedido. Retornando resultados parciales.", level="warning")
+                except Exception as e:
+                    self._log(f"⚠️ Ebay.es: Error durante la sesión: {str(e)[:100]}", level="error")
                 
-                page_num = 1
-                while page_num <= 3:
-                    self._log(f"📄 Procesando página {page_num} de Ebay.es...")
-                    
-                    # Sigilo: Scroll
-                    await self._stealth_scroll(page)
-                    
-                    # Extración optimizada via JS injection
-                    self._log(f"🧠 Analizando grilla de reliquias en página {page_num}...")
-                    new_offers = await self._extract_page_items(page)
-                    self._log(f"🔭 Halladas {len(new_offers)} señales potenciales.")
-                    
-                    added_count = 0
-                    for offer in new_offers:
-                        if offer.url not in [o.url for o in offers]:
-                            offers.append(offer)
-                            self.items_scraped += 1
-                            added_count += 1
-                    
-                    # Paginación
-                    next_button = await page.query_selector("a.pagination__next")
-                    if next_button:
-                        await asyncio.sleep(random.uniform(2, 4))
-                        await next_button.click()
-                        await page.wait_for_load_state("domcontentloaded")
-                        await asyncio.sleep(2)
-                        page_num += 1
-                    else:
-                        break
-
                 await browser.close()
                 
         except Exception as e:
@@ -105,6 +75,48 @@ class EbayScraper(BaseScraper):
             self.errors += 1
         
         return offers
+
+    async def _run_search_session(self, page: Page, target_url: str, offers: List[ScrapedOffer]):
+        """Internal worker for the watchdog-protected session."""
+        # 1. Navegación inicial
+        await self._safe_navigate(page, self.base_url)
+        await asyncio.sleep(random.uniform(1.0, 2.0))
+
+        # 2. Navegación a la URL de resultados
+        await page.goto(target_url, wait_until="domcontentloaded", timeout=60000)
+        await asyncio.sleep(3) 
+        
+        page_num = 1
+        while page_num <= 3:
+            self._log(f"📄 Procesando página {page_num} de Ebay.es...")
+            
+            # Sigilo: Scroll
+            await self._stealth_scroll(page)
+            
+            # Extración optimizada via JS injection (Watchdog por página: 60s)
+            try:
+                new_offers = await asyncio.wait_for(self._extract_page_items(page), timeout=60)
+                self._log(f"🔭 Halladas {len(new_offers)} reliquias potenciales en página {page_num}.")
+                
+                added_count = 0
+                for offer in new_offers:
+                    if offer.url not in [o.url for o in offers]:
+                        offers.append(offer)
+                        self.items_scraped += 1
+                        added_count += 1
+            except asyncio.TimeoutError:
+                self._log(f"⚠️ Ebay.es: Timeout en página {page_num}, saltando a siguiente...", level="warning")
+            
+            # Paginación
+            next_button = await page.query_selector("a.pagination__next")
+            if next_button:
+                await asyncio.sleep(random.uniform(2, 4))
+                await next_button.click()
+                await page.wait_for_load_state("domcontentloaded")
+                await asyncio.sleep(2)
+                page_num += 1
+            else:
+                break
 
     async def _stealth_scroll(self, page: Page):
         for _ in range(random.randint(3, 6)):

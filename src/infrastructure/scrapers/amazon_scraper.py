@@ -7,6 +7,7 @@ import sys
 import random
 from typing import List, Optional
 from datetime import datetime
+from bs4 import BeautifulSoup
 from playwright.async_api import Page, BrowserContext
 from src.infrastructure.scrapers.base import BaseScraper, ScrapedOffer
 
@@ -30,22 +31,112 @@ class AmazonScraper(BaseScraper):
     async def search(self, query: str) -> List[ScrapedOffer]:
         """
         Searches Amazon.es for MOTU Origins items.
-        If query is 'auto', it uses the default MOTU Origins query.
+        Uses stealthy curl-cffi for initial infiltration, bypassing Playwright detection.
         """
         search_query = "masters of the universe origins" if query == "auto" else query
         url = f"{self.search_url}{search_query.replace(' ', '+')}"
+        self.blocked = False # Reset block status for new attempt
         
-        logger.info(f"🕸️ Amazon.es: Infiltrando búsqueda para '{search_query}'...")
+        self._log(f"🕸️ Amazon.es: Infiltrando búsqueda para '{search_query}' vía curl-cffi...")
         
         offers = []
-        try:
-            # We assume a context/page is provided by the caller or we manage one.
-            # For testing and standalone, we might need to launch a browser, 
-            # but usually the ScrapingPipeline will handle this in modern phases.
-            # For now, we use the _safe_navigate helper from base.
+        html = await self._curl_get(url)
+        
+        if not html:
+            self._log("❌ Amazon.es: No se pudo obtener HTML vía curl-cffi. Intentando fallback táctico...", level="warning")
+            return await self._search_playwright_fallback(url)
+
+        self._log(f"📄 Amazon.es: Recibidos {len(html)} bytes. Analizando estructura...")
+        soup = BeautifulSoup(html, "html.parser")
+        
+        # Detect block in soup too
+        if "captcha" in html.lower() or "robot" in html.lower():
+            self._log("🚫 Amazon.es: Bloqueado por CAPTCHA en curl-cffi. Intentando fallback táctico (Playwright)...", level="warning")
+            return await self._search_playwright_fallback(url)
+
+        # Extract results - More robust selection
+        # [data-asin] is the most consistent marker for a product card
+        results = soup.select("[data-asin]")
+        if not results:
+            results = soup.select(".s-result-item")
+        
+        self._log(f"📊 Amazon.es: Detectados {len(results)} bloques con [data-asin].")
+
+        for res in results:
+            asin = res.get("data-asin")
+            if not asin or len(asin) != 10:
+                continue # Skip non-product items (banners, etc)
+
+            try:
+                # Title - Try multiple common classes
+                title = "Unknown"
+                title_el = (
+                    res.select_one("h2 a span") or 
+                    res.select_one(".a-size-medium.a-color-base.a-text-normal") or
+                    res.select_one(".a-size-base-plus.a-color-base.a-text-normal") or
+                    res.select_one("h2")
+                )
+                if title_el:
+                    title = title_el.get_text(strip=True)
+                
+                # Price - Robust extraction
+                price = 0.0
+                price_el = (
+                    res.select_one(".a-price .a-offscreen") or
+                    res.select_one(".a-price-whole") or
+                    res.select_one(".a-color-price")
+                )
+                if price_el:
+                    price = self._normalize_price(price_el.get_text())
+
+                # URL
+                link_el = res.select_one("a.a-link-normal") or res.select_one("h2 a")
+                relative_url = link_el.get("href") if link_el else ""
+                
+                # Clean URL (remove refs)
+                if relative_url:
+                    full_url = f"https://www.amazon.es{relative_url.split('/ref=')[0]}"
+                else:
+                    full_url = f"https://www.amazon.es/dp/{asin}"
+                
+                # Image
+                img_el = res.select_one("img.s-image")
+                image_url = img_el.get("src") if img_el else None
+
+                if price > 0:
+                    offers.append(ScrapedOffer(
+                        product_name=title,
+                        price=price,
+                        url=full_url,
+                        shop_name=self.shop_name,
+                        image_url=image_url,
+                        source_type="Retail"
+                    ))
+                    self.items_scraped += 1
+                else:
+                    # Log if we found a product but no price (common block symptom)
+                    if title != "Unknown":
+                        self._log(f"🕵️ Amazon.es: Producto '{title[:30]}...' hallado pero sin precio.", level="debug")
+
+            except Exception as e:
+                continue
+        
+        if not offers:
+            title_tag = soup.title.string if soup.title else "No Title"
+            self._log(f"⚠️ Amazon.es: 0 ofertas extraídas. Título página: '{title_tag}'", level="warning")
+            snippet = html[:500].replace('\n', ' ')
+            self._log(f"🔍 Snippet: {snippet}...", level="debug")
             
-            # Note: This is a simplified version. In a production run, 
-            # we would use a shared browser context.
+            if results:
+                self._log("⚠️ Amazon.es: Se detectaron bloques pero no se extrajeron ofertas válidas (¿Selector de precio/título roto?).", level="warning")
+
+        return offers
+
+    async def _search_playwright_fallback(self, url: str) -> List[ScrapedOffer]:
+        """Original Playwright logic kept as emergency fallback."""
+        self._log(f"⚠️ Amazon.es: Ejecutando fallback de Playwright para {url}...", level="warning")
+        offers = []
+        try:
             from playwright.async_api import async_playwright
             async with async_playwright() as p:
                 # STEALTH: Anti-detection flags
@@ -113,10 +204,9 @@ class AmazonScraper(BaseScraper):
                 
                 success = await self._safe_navigate(page, url)
                 if not success:
-                    logger.error("❌ Amazon.es: Bloqueado o error de navegación.")
-                    # Screenshot para diagnóstico post-mortem (Kaizen Phase)
+                    self._log("❌ Amazon.es: Fallback de Playwright bloqueado o error de navegación.", level="error")
                     if not os.path.exists("logs/screenshots"): os.makedirs("logs/screenshots")
-                    await page.screenshot(path="logs/screenshots/amazon_nav_fail.png")
+                    await page.screenshot(path="logs/screenshots/amazon_nav_fail_fallback.png")
                     await browser.close()
                     return []
 
@@ -126,7 +216,7 @@ class AmazonScraper(BaseScraper):
                     if cookie_btn:
                         await cookie_btn.click()
                         await asyncio.sleep(1)
-                except:
+                except Exception:
                     pass
 
                 # Wait for results to load with block detection (Increased timeout to 30s)
@@ -137,20 +227,20 @@ class AmazonScraper(BaseScraper):
                     # Check if blocked by captcha or similar
                     content = await page.content()
                     if "sp-cc-accept" in content and "captcha" not in content.lower():
-                        logger.warning("⚠️ Amazon.es: Resultados no cargan pero el banner de cookies está presente. Intentando scroll...")
+                        self._log("⚠️ Amazon.es: Resultados no cargan pero el banner de cookies está presente. Intentando scroll...", level="warning")
                         await page.evaluate("window.scrollBy(0, 500)")
                         await asyncio.sleep(2)
                     elif "captcha" in content.lower() or "robot" in content.lower() or "api-services-support" in content.lower():
-                        logger.error("🚫 Amazon.es: Bot detectado (CAPTCHA/ROBOT).")
+                        self._log("🚫 Amazon.es: Bot detectado (CAPTCHA/ROBOT) en fallback de Playwright.", level="error")
                         self.blocked = True
                         if not os.path.exists("logs/screenshots"): os.makedirs("logs/screenshots")
-                        await page.screenshot(path="logs/screenshots/amazon_captcha.png")
+                        await page.screenshot(path="logs/screenshots/amazon_captcha_fallback.png")
                         await browser.close()
                         return []
                     else:
-                        logger.error("❌ Amazon.es: Timeout esperando resultados tras 30s.")
+                        self._log("❌ Amazon.es: Timeout esperando resultados tras 30s en fallback de Playwright.", level="error")
                         if not os.path.exists("logs/screenshots"): os.makedirs("logs/screenshots")
-                        await page.screenshot(path="logs/screenshots/amazon_timeout.png")
+                        await page.screenshot(path="logs/screenshots/amazon_timeout_fallback.png")
                         await browser.close()
                         return []
 
@@ -167,7 +257,7 @@ class AmazonScraper(BaseScraper):
                 if not results:
                     results = await page.query_selector_all(".s-result-item[data-asin]")
                 
-                logger.info(f"📊 Amazon.es: Encontrados {len(results)} posibles resultados.")
+                self._log(f"📊 Amazon.es: Encontrados {len(results)} posibles resultados con Playwright fallback.")
 
                 for res in results:
                     try:
@@ -231,13 +321,13 @@ class AmazonScraper(BaseScraper):
                             self.items_scraped += 1
 
                     except Exception as e:
-                        logger.warning(f"⚠️ Error procesando resultado de Amazon: {e}")
+                        self._log(f"⚠️ Error procesando resultado de Amazon (Playwright fallback): {e}", level="warning")
                         continue
 
                 await browser.close()
                 
         except Exception as e:
-            logger.error(f"❌ Fallo crítico en AmazonScraper: {e}")
+            self._log(f"❌ Fallo crítico en AmazonScraper (Playwright fallback): {e}", level="error")
             self.errors += 1
         
         return offers

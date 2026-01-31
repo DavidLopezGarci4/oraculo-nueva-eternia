@@ -6,6 +6,8 @@ import asyncio
 import logging
 import re
 import random
+import json
+from curl_cffi.requests import AsyncSession
 from playwright.async_api import Page, BrowserContext
 
 logger = logging.getLogger(__name__)
@@ -71,20 +73,30 @@ class BaseScraper(ABC):
                 pass
 
     def _get_random_header(self) -> dict:
-        """Returns a randomized User-Agent header and modern fingerprints."""
-        user_agents = [
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0",
-            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+        """Returns a consistent randomized header suite."""
+        # Use a fixed consistent set to avoid mismatch detection
+        versions = [
+            ("131.0.0.0", "131"),
+            ("130.0.0.0", "130"),
+            ("129.0.0.0", "129")
         ]
+        ver_full, ver_major = random.choice(versions)
+        
+        ua = f"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{ver_full} Safari/537.36"
+        
         return {
-            "User-Agent": random.choice(user_agents),
+            "User-Agent": ua,
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
             "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
-            "sec-ch-ua": '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+            "Accept-Encoding": "gzip, deflate, br",
+            "sec-ch-ua": f'"Not_A Brand";v="8", "Chromium";v="{ver_major}", "Google Chrome";v="{ver_major}"',
             "sec-ch-ua-mobile": "?0",
-            "sec-ch-ua-platform": '"Windows"'
+            "sec-ch-ua-platform": '"Windows"',
+            "sec-fetch-dest": "document",
+            "sec-fetch-mode": "navigate",
+            "sec-fetch-site": "none",
+            "sec-fetch-user": "?1",
+            "upgrade-insecure-requests": "1"
         }
 
     async def run(self, *args, **kwargs):
@@ -128,8 +140,51 @@ class BaseScraper(ABC):
             return 0.0
 
     async def _random_sleep(self, min_sec: float = 0.5, max_sec: float = 2.0):
-        import random
         await asyncio.sleep(random.uniform(min_sec, max_sec))
+
+    async def _curl_get(self, url: str, impersonate: str = "chrome120") -> Optional[str]:
+        """
+        Stealth GET request using curl-cffi impersonation.
+        Bypasses most TLS-based bot detection.
+        """
+        try:
+            headers = self._get_random_header()
+            async with AsyncSession() as session:
+                self._log(f"🌩️ Infiltración vía curl-cffi (impersonate={impersonate}) a {url}...")
+                resp = await session.get(url, headers=headers, impersonate=impersonate, timeout=30)
+                
+                if resp.status_code == 200:
+                    return resp.text
+                
+                if resp.status_code in [403, 429]:
+                    self._log(f"⚠️ Bloqueo detectado (HTTP {resp.status_code})...", level="warning")
+                    self._detect_block(resp.text)
+                    self.blocked = True
+                else:
+                    self._log(f"❌ Error HTTP {resp.status_code} en {url}", level="error")
+                
+                return None
+        except Exception as e:
+            self._log(f"❌ Fallo crítico en curl-get: {str(e)[:100]}", level="error")
+            return None
+
+    def _detect_block(self, html_content: str):
+        """Analyzes HTML for common block patterns and logs snippets."""
+        patterns = {
+            "CAPTCHA": r"captcha|robot|human|verify",
+            "Cloudflare": r"cloudflare|ray id|checking your browser",
+            "DataDome": r"datadome|dd=",
+            "Amazon Block": r"api-services-support|access denied"
+        }
+        
+        for name, pattern in patterns.items():
+            if re.search(pattern, html_content, re.IGNORECASE):
+                self._log(f"🛡️ Bloqueo detectado: {name}", level="warning")
+                # Log snippet for diagnosis
+                snippet = html_content[:200].replace('\n', ' ')
+                self._log(f"🔍 Snippet: {snippet}...", level="debug")
+                return True
+        return False
 
 
 # end of file

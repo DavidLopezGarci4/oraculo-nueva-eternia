@@ -7,6 +7,7 @@ import json
 import psutil
 import os
 import signal
+import re
 from datetime import datetime
 from sqlalchemy import func, select, and_, desc, text, or_
 from src.core.config import settings
@@ -463,7 +464,7 @@ async def toggle_collection(request: CollectionToggleRequest):
 # --- PURGATORY ENDPOINTS ---
 
 @app.get("/api/purgatory", dependencies=[Depends(verify_api_key)])
-async def get_purgatory():
+async def get_purgatory(page: int = 1, limit: int = 25):
     """
     Retorna items en el Purgatorio con SUGERENCIAS INTELIGENTES.
     Cada item incluye una lista de posibles productos match con su score de confianza.
@@ -472,49 +473,68 @@ async def get_purgatory():
     from sqlalchemy import select
     
     with SessionCloud() as db:
-        pending = db.query(PendingMatchModel).all()
+        # Paginación básica para evitar cuelgues de red/memoria
+        offset = (page - 1) * limit
+        pending = db.query(PendingMatchModel).order_by(desc(PendingMatchModel.found_at)).offset(offset).limit(limit).all()
         products = db.query(ProductModel).all()
         
         results = []
         for item in pending:
-            # Generar sugerencias al vuelo (optimizable con caché si crece mucho)
-            suggestions = []
-            for p in products:
-                # Usamos el engine para calcular el score
-                _, score, reason = engine.calculate_match(p.name, item.scraped_name, p.ean, item.ean)
+            try:
+                # Pre-calcular tokens de búsqueda para el item actual
+                suggestions = []
+                # Fallback seguro para nombres nulos
+                scraped_name_safe = (item.scraped_name or "").lower()
                 
-                # Mostrar TODAS las sugerencias con algun nivel de match (30%+), ordenadas por score
-                if score > 0.30:
-                    suggestions.append({
-                        "product_id": p.id,
-                        "name": p.name,
-                        "figure_id": p.figure_id,
-                        "sub_category": p.sub_category,
-                        "match_score": round(score * 100, 1),
-                        "reason": reason
-                    })
-            
-            # Ordenar sugerencias por score descendente
-            suggestions.sort(key=lambda x: x["match_score"], reverse=True)
-            
-            item_dict = {
-                "id": item.id,
-                "scraped_name": item.scraped_name,
-                "ean": item.ean,
-                "price": item.price,
-                "currency": item.currency,
-                "url": item.url,
-                "shop_name": item.shop_name,
-                "image_url": item.image_url,
-                "found_at": item.found_at,
-                "source_type": item.source_type,
-                "validation_status": item.validation_status,
-                "is_blocked": item.is_blocked,
-                "opportunity_score": item.opportunity_score,
-                "anomaly_flags": json.loads(item.anomaly_flags) if item.anomaly_flags else [],
-                "suggestions": suggestions[:5] # Top 5 sugerencias
-            }
-            results.append(item_dict)
+                search_tokens = set(re.findall(r'\w+', scraped_name_safe))
+                # Ignorar palabras genéricas comunes
+                search_tokens -= {"masters", "of", "the", "universe", "origins", "motu"}
+                
+                for p in products:
+                    # OPTIMIZACIÓN: Solo calcular match real si hay alguna coincidencia de palabras clave
+                    # o si tienen el mismo EAN (match directo)
+                    p_name_lower = (p.name or "").lower()
+                    has_keyword = any(token in p_name_lower for token in search_tokens) if search_tokens else True
+                    
+                    if has_keyword or (p.ean and p.ean == item.ean):
+                        # Usamos el engine para calcular el score fino
+                        _, score, reason = engine.calculate_match(p.name, item.scraped_name, p.ean, item.ean)
+                        
+                        if score > 0.30:
+                            suggestions.append({
+                                "product_id": p.id,
+                                "name": p.name,
+                                "figure_id": p.figure_id,
+                                "sub_category": p.sub_category,
+                                "match_score": round(score * 100, 1),
+                                "reason": reason
+                            })
+                
+                # Ordenar sugerencias por score descendente
+                suggestions.sort(key=lambda x: x["match_score"], reverse=True)
+                
+                item_dict = {
+                    "id": item.id,
+                    "scraped_name": item.scraped_name,
+                    "ean": item.ean,
+                    "price": item.price,
+                    "currency": item.currency,
+                    "url": item.url,
+                    "shop_name": item.shop_name,
+                    "image_url": item.image_url,
+                    "found_at": item.found_at,
+                    "source_type": item.source_type,
+                    "validation_status": item.validation_status,
+                    "is_blocked": item.is_blocked,
+                    "opportunity_score": item.opportunity_score,
+                    "anomaly_flags": json.loads(item.anomaly_flags) if item.anomaly_flags else [],
+                    "suggestions": suggestions[:5] # Top 5 sugerencias
+                }
+                results.append(item_dict)
+            except Exception as e:
+                logger.error(f"Error procesando item {getattr(item, 'id', 'unknown')} en Purgatorio: {e}")
+                # No añadir nada a results para este item fallido o añadir un placeholder seguro
+                continue
             
         return results
 
@@ -862,12 +882,14 @@ def run_scraper_task(spider_name: str = "harvester", trigger_type: str = "manual
             from src.infrastructure.scrapers.electropolis_scraper import ElectropolisScraper
             from src.infrastructure.scrapers.pixelatoy_scraper import PixelatoyScraper
             from src.infrastructure.scrapers.amazon_scraper import AmazonScraper
+            from src.infrastructure.scrapers.ebay_scraper import EbayScraper
             
             # Phase 8. European Expansion
             from src.infrastructure.scrapers.detoyboys_scraper import DeToyboysNLScraper
             from src.infrastructure.scrapers.toymi_scraper import ToymiEUScraper
             from src.infrastructure.scrapers.time4actiontoys_scraper import Time4ActionToysDEScraper
             from src.infrastructure.scrapers.bbts_scraper import BigBadToyStoreScraper
+            from src.infrastructure.scrapers.idealo_scraper import IdealoScraper
             
             import asyncio
 
@@ -882,7 +904,8 @@ def run_scraper_task(spider_name: str = "harvester", trigger_type: str = "manual
                 "Ebay.es": EbayScraper(),
                 "ToymiEU": ToymiEUScraper(),
                 "Time4ActionToysDE": Time4ActionToysDEScraper(),
-                "BigBadToyStore": BigBadToyStoreScraper()
+                "BigBadToyStore": BigBadToyStoreScraper(),
+                "Idealo.es": IdealoScraper()
             }
             
             # Normalize requested name for matching
@@ -1766,4 +1789,5 @@ async def update_user_location(user_id: int, location: str):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("src.interfaces.api.main:app", host="127.0.0.1", port=8000, reload=True)
+    # Escuchar en 0.0.0.0 para facilitar conectividad en Docker/Red Local
+    uvicorn.run("src.interfaces.api.main:app", host="0.0.0.0", port=8000, reload=True)
