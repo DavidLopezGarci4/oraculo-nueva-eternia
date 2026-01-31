@@ -464,7 +464,7 @@ async def toggle_collection(request: CollectionToggleRequest):
 # --- PURGATORY ENDPOINTS ---
 
 @app.get("/api/purgatory", dependencies=[Depends(verify_api_key)])
-async def get_purgatory(page: int = 1, limit: int = 25):
+async def get_purgatory(page: int = 1, limit: int = 500):
     """
     Retorna items en el Purgatorio con SUGERENCIAS INTELIGENTES.
     Cada item incluye una lista de posibles productos match con su score de confianza.
