@@ -1,14 +1,20 @@
-from abc import ABC, abstractmethod
-from typing import List, Optional
-from pydantic import BaseModel, Field
-from datetime import datetime
+import sys
+import io
 import asyncio
 import logging
 import re
 import random
 import json
+from abc import ABC, abstractmethod
+from typing import List, Optional
+from pydantic import BaseModel, Field
+from datetime import datetime
 from curl_cffi.requests import AsyncSession
 from playwright.async_api import Page, BrowserContext
+
+# [3OX] Unicode Resilience Shield
+if sys.stdout.encoding.lower() != 'utf-8':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 logger = logging.getLogger(__name__)
 

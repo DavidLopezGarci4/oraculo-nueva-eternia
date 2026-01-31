@@ -90,19 +90,26 @@ Este documento registra la evolución técnica y estratégica del Oráculo. La P
 
 
 
-#### 4.6 Bastión de Justicia (Reversión)
+#### 4.7 Incursión de Élite (Tradeinn Hyper-Resiliente)
 
-- **Hitos**: Implementación del sistema de "Deshacer" para vínculos y descartes. Restauración íntegra de metadatos al Purgatorio.
+- **Hitos**: Implementación de `TradeinnScraper` con estrategia de 3 fases (Directo -> Fallback Kidinn -> Interacción Humana Profunda). Bypass de bloqueos de Algolia y redirecciones.
+- **Estado**: ✅ VALIDADO Y OPERATIVO
 
-- **Estado**: ✅ VALIDADO
+### Fase 5: Refinamiento Táctico (La Gran Purificación) ✅
 
 
 
-#### 4.7 Inteligencia Táctica (Nueva Eternia Evolution)
+#### 4.6 Inteligencia Táctica (Nueva Eternia Evolution)
 
 - **Hitos**: Exclusión total de ítems capturados, jerarquía de "Ventana de Compra" (Risk/Sweet Spot/Exploration) y badges de edad por ID.
 
 - **Estado**: ✅ VALIDADO (27/01/2026)
+
+
+#### 4.8 Orquestador Táctico & Fidelidad Search (31/01/2026)
+
+- **Hitos**: Soporte para queries personalizadas en disparadores manuales. Implementación de búsquedas profundas ("masters of the universe origins") por defecto para Tradeinn, resolviendo la deriva de resultados genéricos. Integración de la "Incursión T3 Sirius" en el motor productivo.
+- **Estado**: ✅ VALIDADO Y OPERATIVO
 
 
 

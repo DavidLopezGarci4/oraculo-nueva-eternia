@@ -907,7 +907,7 @@ const Purgatory: React.FC = () => {
                                     {/* Desktop Info */}
                                     <div className="hidden md:flex flex-1 flex-col gap-3">
                                         <div className="flex items-center gap-3">
-                                            <span className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest border ${item.shop_name === 'kidinn' ? 'bg-orange-500/10 border-orange-500/20 text-orange-400' : 'bg-white/5 border-white/10 text-white/40'}`}>
+                                            <span className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest border ${['kidinn', 'tradeinn', 'diveinn', 'bikeinn', 'motardinn', 'dressinn', 'smashinn', 'trekkinn', 'runnerinn', 'snowinn', 'swiminn', 'waveinn', 'traininn', 'goalinn', 'xtremeinn'].includes(item.shop_name?.toLowerCase()) ? 'bg-orange-500/10 border-orange-500/20 text-orange-400' : 'bg-white/5 border-white/10 text-white/40'}`}>
                                                 {item.shop_name}
                                             </span>
                                             <span className="text-[10px] text-white/20 font-bold tracking-wider">

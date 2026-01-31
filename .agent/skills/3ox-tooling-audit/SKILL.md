@@ -3,29 +3,31 @@ name: 3ox-tooling-audit
 description: Diagnóstico de Entorno y Trazabilidad (3OX). Asegura que las herramientas de auditoría estén disponibles o usa fallbacks de PowerShell.
 ---
 
-# 🧩 SKILL: Tooling Audit & Command Resolution
+# 🧩 SKILL: Environment Integrity & Unicode Resilience (3OX)
 
-## Problem
-`CommandNotFoundException` para utilidades core como `grep` o `rg` en entornos Windows/PowerShell.
+**Propósito**: Garantizar que el agente tenga las herramientas necesarias (`rg`, `grep`) y la configuración de codificación correcta para procesar datos sin corrupción.
 
-## Context
-Necesario para auditorías iniciales y mantenimiento del `architecture_map.md`.
+## 1. Verificación de Comandos (Audit Phase)
+Antes de iniciar cualquier tarea de auditoría o búsqueda en el código:
 
-## 1. Mapeo de Equivalencias (Fallback)
-Si la herramienta no está instalada, usar el motor nativo de PowerShell:
+*   **Acción**: Validar disponibilidad de herramientas externas (`rg`, `grep`).
+*   **Fallback**: Si `rg` o `grep` fallan, conmutar automáticamente a `Select-String` en PowerShell para no detener el flujo:
+    *   **Grep**: `Select-String -Pattern "text" -Path "file"`
+    *   **Ripgrep**: `Select-String -Pattern "text" -Path "file" | Select-Object LineNumber, Line`
 
-*   **Para grep**: `Select-String -Pattern "text" -Path "file"`
-*   **Para rg**: `Select-String -Pattern "text" -Path "file" | Select-Object LineNumber, Line`
+## 2. Blindaje UTF-8 (Execute Phase)
+Para evitar el error de caracteres corruptos (``) y fallos en selectores CSS:
 
-## 2. Verificación de Dependencias (Assess Phase)
-Antes de ejecutar scripts de auditoría en `dev/`, verificar existencia:
+*   **Entorno**: Forzar `set PYTHONUTF8=1` (o `$env:PYTHONUTF8=1` en PowerShell) antes de cualquier ejecución.
+*   **Script**: Incluir obligatoriamente el wrapper de salida en el punto de entrada:
+    ```python
+    import sys, io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+    ```
+*   **Web Scraping**: En `dev/adapters` (o scrapers), usar siempre `response.encoding = response.apparent_encoding` antes de procesar el HTML si se usa `requests`. En Playwright, asegurar la captura en `utf-8`.
 
-```powershell
-if (!(Get-Command rg -ErrorAction SilentlyContinue)) { 
-    Write-Warning "ripgrep (rg) no detectado. Usando Select-String como fallback." 
-}
-```
+## 3. Trazabilidad y Registro (Log Phase)
+Actualizar el `3ox.log` con el estado del entorno:
 
-## 3. Trazabilidad en 3OX
-*   **Log**: Registrar en `3ox.log` si se usó una herramienta nativa o externa para la auditoría.
-*   **Verify**: Asegurar que la salida de `Select-String` sea parseada correctamente para mantener la consistencia del `architecture_map.md`.
+*   **[ASSESS]** Tooling check: `rg` found / `grep` missing (using fallback).
+*   **[VERIFY]** Encoding check: UTF-8 shield active. No mojibake detected.

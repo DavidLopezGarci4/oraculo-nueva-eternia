@@ -188,6 +188,8 @@ TELEGRAM_BOT_TOKEN=tu_token
 *   **Fase 42 (3OX vec3 Architecture Integration)**: ✅ Refactorización de scripts de entrada y creación de adaptadores en `vec3/dev/`. Implementación de forzado UTF-8 y desequilibrio de bloques monolíticos (Completado).
 *   **Fase 43 (Dashboard Role-Based Access)**: ✅ Restricción de secciones administrativas (Actividad y Conquistas) y botones de gestión a usuarios Admin para una experiencia limpia y segura (Completado).
 *   **Fase 44 (Dashboard Restructuring & Docker Fixes)**: ✅ Reordenación de secciones para Guardianes, herramientas operativas para Admin y resolución de fallos de arranque en contenedores (Completado).
+*   **Fase 45 (Tradeinn Hyper-Resiliente)**: ✅ Implementación de `TradeinnScraper` con bypass de redirecciones, modo sigilo avanzado y extracción de multi-tiendas (Diveinn, Kidinn, etc.) (Completado).
+*   **Fase 46 (Tactical Search Engine)**: ✅ Evolución del orquestador para soportar queries personalizadas y búsquedas de alta fidelidad para MOTU Origins en Tradeinn (Completado).
 
 
 ## 6. El Motor de Inversión (DealScorer)

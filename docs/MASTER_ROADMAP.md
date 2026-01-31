@@ -266,6 +266,28 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
 *   **Santuario de Datos**: Preservación de ofertas históricas vinculadas mientras se limpian las bitácoras dinámicas. ✅
 *   **Optimización UI**: El panel de incursión individual ahora está unificado y libre de duplicidades. ✅
 
+### Fase 36: Tradeinn Hyper-Resilience & Multi-Shop Incursion ✅
+*   **Target**: www.tradeinn.com / kidinn.com.
+*   **Estrategia Sirius T3**:
+    *   **Phase A**: Acceso directo legitimado mediante sesión previa y aceptación de cookies.
+    *   **Phase B**: Fallback a subdominio Kidinn para eludir redirecciones agresivas.
+    *   **Phase C**: Simulación humana profunda (escritura letra a letra, limpieza de buffer y click en lupa interactivo).
+*   **Algolia Synchro**: Sincronización con el contenedor `#js-content-buscador_ol` para carga dinámica.
+*   **DNA Identification**: Extracción dinámica de la sub-tienda (Tradeinn, Kidinn, Diveinn, etc.) basada en la URL. ✅
+
+---
+
+### Phase 37: Orquestación Táctica y Búsqueda Precisa (31/01/2026)
+*   **Hitos**:
+    *   **Custom Query Support**: Evolución de la API para permitir términos de búsqueda personalizados desde el disparador manual. ✅
+    *   **MOTU Search Accuracy**: Implementación de búsquedas profundas ("masters of the universe origins") para Tradeinn, eliminando el ruido de resultados genéricos. ✅
+    *   **Bridge Logístico**: Sincronización en tiempo real entre el motor de scraping y la Tactical Console. ✅
+
+### 🔮 Mejoras Futuras Sugeridas (Ojo de Grayskull)
+*   **Auto-Keyword Optimizer**: Motor que use la IA para expandir términos de búsqueda cortos a términos de alta fidelidad de coleccionista.
+*   **Anti-Bot Rotation v4**: Integración de rotación de proxies residenciales para incursiones de alto volumen.
+*   **Image Cross-Check**: Validación visual automática comparando miniaturas con la imagen maestra para evitar falsos positivos.
+
 ---
 
 ## ✅ Plan de Verificación

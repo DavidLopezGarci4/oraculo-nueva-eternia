@@ -118,6 +118,7 @@ class PurgatoryBulkDiscardRequest(BaseModel):
 class ScraperRunRequest(BaseModel):
     spider_name: str = "harvester"  # "harvester", "all", or individual spider name
     trigger_type: str = "manual"
+    query: str | None = None
 
 class ProductEditRequest(BaseModel):
     name: str | None = None
@@ -785,7 +786,7 @@ async def discard_purgatory_bulk(request: PurgatoryBulkDiscardRequest):
 
 # --- SCRAPER CONTROL ENDPOINTS ---
 
-def run_scraper_task(spider_name: str = "harvester", trigger_type: str = "manual"):
+def run_scraper_task(spider_name: str = "harvester", trigger_type: str = "manual", query: str | None = None):
     """Wrapper para ejecutar recolectores y actualizar el estado en BD"""
     from datetime import datetime
     import os
@@ -890,6 +891,7 @@ def run_scraper_task(spider_name: str = "harvester", trigger_type: str = "manual
             from src.infrastructure.scrapers.time4actiontoys_scraper import Time4ActionToysDEScraper
             from src.infrastructure.scrapers.bbts_scraper import BigBadToyStoreScraper
             from src.infrastructure.scrapers.idealo_scraper import IdealoScraper
+            from src.infrastructure.scrapers.tradeinn_scraper import TradeinnScraper
             
             import asyncio
 
@@ -905,7 +907,8 @@ def run_scraper_task(spider_name: str = "harvester", trigger_type: str = "manual
                 "ToymiEU": ToymiEUScraper(),
                 "Time4ActionToysDE": Time4ActionToysDEScraper(),
                 "BigBadToyStore": BigBadToyStoreScraper(),
-                "Idealo.es": IdealoScraper()
+                "Idealo.es": IdealoScraper(),
+                "Tradeinn": TradeinnScraper()
             }
             
             # Normalize requested name for matching
@@ -928,12 +931,16 @@ def run_scraper_task(spider_name: str = "harvester", trigger_type: str = "manual
                 # Ejecutar búsqueda asíncrona (usamos "auto" o similar)
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
-                update_live_log(f"📡 Buscando reliquias en {spider_name}...")
+                # PHASE 47: Use provided query or fallback to specific store defaults
+                search_term = query
+                if not search_term:
+                    search_term = "masters of the universe origins" if spider_name.lower() == "tradeinn" else "auto"
                 
-                # PHASE 42: Execution Timeout (Prevention against hangs)
+                update_live_log(f"📡 Buscando reliquias para '{search_term}' en {spider_name}...")
+                
                 try:
                     results = loop.run_until_complete(
-                        asyncio.wait_for(pipeline.run_product_search("auto"), timeout=600)
+                        asyncio.wait_for(pipeline.run_product_search(search_term), timeout=600)
                     )
                 except asyncio.TimeoutError:
                     update_live_log("⌛ [TIMEOUT] La incursión ha excedido los 10 minutos. Abortando.")
@@ -1642,8 +1649,8 @@ async def relink_offer(offer_id: int, request: RelinkOfferRequest):
 @app.post("/api/scrapers/run", dependencies=[Depends(verify_api_key)])
 async def run_scrapers(request: ScraperRunRequest, background_tasks: BackgroundTasks):
     """Inicia la recolección de reliquias en segundo plano (Admin Only)"""
-    background_tasks.add_task(run_scraper_task, request.spider_name, request.trigger_type)
-    return {"status": "success", "message": f"Incursión '{request.spider_name}' ({request.trigger_type}) desplegada en los páramos de Eternia"}
+    background_tasks.add_task(run_scraper_task, request.spider_name, request.trigger_type, request.query)
+    return {"status": "success", "message": f"Incursión '{request.spider_name}' para '{request.query or 'auto'}' desplegada en los páramos de Eternia"}
 
 @app.post("/api/scrapers/stop", dependencies=[Depends(verify_api_key)])
 async def stop_scrapers():
