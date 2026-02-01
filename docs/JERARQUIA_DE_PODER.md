@@ -1,38 +1,31 @@
 
 # ⚖️ Jerarquía de Poder: Guardianes vs. Masters
 
-David, tienes toda la razón. He realizado un escaneo completo del ADN del programa original (`app.py`, `config.py` y las vistas de `admin`) y he mapeado la jerarquía exacta de permisos tal y como estaba diseñada. 
+He mapeado la jerarquía exacta de permisos implementada en la Nueva Eternia para respetar la seguridad de tu colección.
 
-Así es como funcionará el nuevo sistema para respetar tus peticiones:
-
-## 🛡️ Guardián de Eternia (Perfil: David / Viewer)
+## 🛡️ Guardián de Eternia (Perfil: David / User)
 Este es tu espacio personal de consulta y gestión de colección.
 - **Acceso Permitido**:
-  - **Tablero (Dashboard)**: Ver métricas y mejores ofertas del mercado.
-  - **Catálogo Maestro**: Consultar todas las figuras y sus historiales de precios.
-  - **El Centinela**: Crear y recibir alertas personales de bajada de precio.
-  - **Cazador de Ofertas**: Ver y "capturar" oportunidades directas.
-  - **Mi Fortaleza (Colección)**: Agregar o eliminar figuras de tu vitrina personal.
-- **Restricciones**: No puedes ver pestañas de configuración técnica ni enviar items al purgatorio/blacklist de forma global.
+  - **Dashboard**: Ver métricas vivas, oportunidades ROI y salud de motores.
+  - **Catálogo Maestro**: Consultar figuras, historiales Cronos y disponibilidad.
+  - **La Fortaleza**: Gestionar tu colección (Poseído/Wishlist) y calcular ROI personal.
+- **Restricciones**: No puedes acceder al panel de Configuración, no puedes disparar incursiones manuales ni realizar ediciones administrativas en el catálogo.
 
 ---
 
-## 🔮 Master del Universo (Perfil: Super Usuario / Admin)
-Este perfil posee la **Llave Maestra** y es el único con "Control Total" sobre la infraestructura.
+## 🔮 Master del Universo (Perfil: Arquitecto / Admin)
+Este perfil posee la **Llave Maestra** para la gestión total del sistema.
 - **Poderes Únicos**:
-  - **Gestión de Población**: Crear nuevos usuarios, resetear contraseñas de cualquier persona y eliminar cuentas.
-  - **Control de Robots**: Ejecutar scrapers de forma manual y vigilar sus logs en vivo.
-  - **Justicia de Datos**: Enviar ítems al **Purgatorio** (para re-vincular) o al **Blacklist** (para el exilio eterno).
-  - **Manejo del Búnker**: Crear "Sellos" (backups) y restaurar la base de datos a un punto anterior.
-  - **Fusión Molecular**: Unir y purgar registros maestros del catálogo.
+  - **Control de Incursiones**: Disparar scrapers manualmente desde el Purgatorio y ver logs en vivo.
+  - **Gestión Administrativa**: Editar metadatos, fusionar productos y gestionar el Blacklist.
+  - **Configuración Profunda**: Importación manual de Wallapop y ajustes de sistema.
+  - **Sincronización Total**: Control del búfer Ghost Sync y reconexión con Supabase.
 
 ---
 
-### 🧬 ¿Cómo lo implementaremos en el nuevo Frontend?
+### 🧬 Implementación en la Interfaz Actual
 
-He ajustado el plan para que el sistema detecte el rol al iniciar sesión:
+El sistema detecta automáticamente tu rol al cargar la sesión:
 
-1.  **Si entra David (Guardián)**: El menú lateral solo mostrará las 5 opciones de visualización y colección. Los botones de "Admin" y "Purgatorio" simplemente no existirán para él.
-2.  **Si entra el Admin (Master)**: Se desbloqueará la pestaña de **Purgatorio** y un nuevo panel de **Configuración Maestra** para gestionar los robots y los usuarios.
-
-¿Es esta la distinción que buscabas? He verificado que en `config.py` original, solo el admin podía crear usuarios y cambiar roles, así que mantendremos esa seguridad férrea. ⚔️🛡️✨
+1.  **Si eres Guardián**: El menú lateral se simplifica. El panel de **Configuración** y las herramientas de disparo en el **Purgatorio** están ocultas.
+2.  **Si eres Master**: Se desbloquean todas las capacidades de gestión, permitiéndote actuar como el Arquitecto de los Datos.

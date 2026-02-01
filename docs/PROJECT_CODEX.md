@@ -38,18 +38,22 @@ No todos los precios son reales. El sistema calcula el **Landed Price**:
 - `(Precio + Envío) * IVA + Tasas aduaneras`.
 - Reglas específicas pre-cargadas para tiendas como **BigBadToyStore** (EE.UU.) y **Fantasia Personajes** (ES).
 
-### 3. El Radar de Oportunidades (Market Intelligence)
-El sistema compara cada precio con el **Percentil 25 (Suelo de Mercado)** generado por el histórico de ActionFigure411. Esto permite detectar un "Grial" antes de que el mercado reaccione.
+### 4. Flota de Incursión Sincronizada (Phase 50)
+El sistema ahora garantiza la visibilidad total de las 13 fuentes de datos.
+- **Auto-Discovery**: La API registra automáticamente cualquier nuevo scraper al inicio del servidor.
+- **Orquestación Dual**: Ejecución coordinada entre GitHub Actions (Daily Scan) y disparadores manuales desde el Purgatorio.
+- **Trazabilidad Total**: Cada incursión genera un `ScraperExecutionLog` detallado que incluye items procesados, nuevos hallazgos y errores de red.
 
 ---
 
 ## 🛡️ Protocolos de Resiliencia (3OX)
 
 Nueva Eternia está blindada contra:
-- **Detección Bot**: Mediante rotación de User-Agents y simulación humana (Sirius A1).
+- **Detección Bot**: Mediante rotación de User-Agents y simulación humana interactiva (Modo Sirius A1).
 - **Inconsistencia de Red**: Transacciones atómicas con ROLLBACK automático ante fallos de Supabase.
 - **Corrupción Visual**: Validaciones de UTF-8 y blindaje Unicode para terminales Windows.
+- **Ghost Sync**: Búfer local de acciones administrativas para resiliencia offline.
 
 ---
 
-*Última actualización: 01/02/2026 - Era de la Sincronización Total.*
+*Última actualización: 01/02/2026 - Fase 50: Sincronización Total del Reino.*
