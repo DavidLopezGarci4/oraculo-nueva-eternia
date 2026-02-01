@@ -38,7 +38,7 @@ export const getScrapersLogs = async (): Promise<ScraperLog[]> => {
     return response.data;
 };
 
-export const runScraper = async (spiderName: string = 'harvester'): Promise<{ status: string; message: string }> => {
+export const runScraper = async (spiderName: string = 'all'): Promise<{ status: string; message: string }> => {
     const response = await adminAxios.post('/scrapers/run', {
         spider_name: spiderName,
         trigger_type: 'manual_ui'

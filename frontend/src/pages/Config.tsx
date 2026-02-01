@@ -1,19 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Activity, Clock, AlertCircle, CheckCircle2, RefreshCw, Terminal, GitMerge, Target, Settings, Users, ShieldAlert, Trash2 } from 'lucide-react';
+import { Play, Activity, Clock, AlertCircle, CheckCircle2, RefreshCw, Terminal, GitMerge, Target, Settings, Users, ShieldAlert, Trash2, Zap, History, Database, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getScrapersStatus, getScrapersLogs, runScraper, getDuplicates, mergeProducts, syncNexus, type ScraperStatus, type ScraperLog } from '../api/admin';
-import { resetSmartMatches } from '../api/purgatory';
-import { formatDistanceToNow, format } from 'date-fns';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { getScrapersStatus, getDuplicates, mergeProducts, syncNexus, type ScraperStatus } from '../api/admin';
+import { resetSmartMatches, runScrapers, stopScrapers, getScraperLogs, type ScraperExecutionLog } from '../api/purgatory';
+import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import WallapopImporter from '../components/admin/WallapopImporter';
 
 const Config: React.FC = () => {
+    const consoleRef = React.useRef<HTMLDivElement>(null);
     const [activeTab, setActiveTab] = useState<'scrapers' | 'radar' | 'system' | 'users' | 'wallapop'>('scrapers');
     const [statuses, setStatuses] = useState<ScraperStatus[]>([]);
-    const [logs, setLogs] = useState<ScraperLog[]>([]);
     const [duplicates, setDuplicates] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [runningScraper, setRunningScraper] = useState<string | null>(null);
     const [mergingId, setMergingId] = useState<number | null>(null);
     const [syncingNexus, setSyncingNexus] = useState(false);
     const [showAddUserModal, setShowAddUserModal] = useState(false);
@@ -21,27 +21,55 @@ const Config: React.FC = () => {
     const [savingSettings, setSavingSettings] = useState(false);
     const [resetStep, setResetStep] = useState(0); // 0: idle, 1: first confirm, 2: second confirm
     const [isResetting, setIsResetting] = useState(false);
+    const [selectedLog, setSelectedLog] = useState<ScraperExecutionLog | null>(null);
+    const [advancedLogs, setAdvancedLogs] = useState<ScraperExecutionLog[]>([]);
+
+    const queryClient = useQueryClient();
 
     const activeUserId = parseInt(localStorage.getItem('active_user_id') || '2');
 
     const fetchData = async () => {
         try {
-            const [s, l, d, u] = await Promise.all([
+            const [s, d, u, al] = await Promise.all([
                 getScrapersStatus(),
-                getScrapersLogs(),
                 getDuplicates(),
-                import('../api/admin').then(m => m.getUserSettings(activeUserId))
+                import('../api/admin').then(m => m.getUserSettings(activeUserId)),
+                getScraperLogs()
             ]);
             setStatuses(s);
-            setLogs(l);
             setDuplicates(d);
             setUserSettings(u);
+            setAdvancedLogs(al);
+
+            // Si hay un log seleccionado que está corriendo, actualizarlo
+            if (selectedLog && al.find(log => log.id === selectedLog.id)) {
+                setSelectedLog(al.find(log => log.id === selectedLog.id) || null);
+            } else if (!selectedLog && al.length > 0) {
+                // Auto-seleccionar el último por defecto
+                setSelectedLog(al[0]);
+            }
         } catch (error) {
             console.error('Error fetching admin data:', error);
         } finally {
             setLoading(false);
         }
     };
+
+    const runScrapersMutation = useMutation({
+        mutationFn: (scraperName: string) => runScrapers(scraperName, 'manual'),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['scrapers-status'] });
+            fetchData();
+        }
+    });
+
+    const stopScrapersMutation = useMutation({
+        mutationFn: stopScrapers,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['scrapers-status'] });
+            fetchData();
+        }
+    });
 
     useEffect(() => {
         fetchData();
@@ -62,17 +90,6 @@ const Config: React.FC = () => {
         }
     };
 
-    const handleRunScraper = async (name: string) => {
-        setRunningScraper(name);
-        try {
-            await runScraper(name);
-            setTimeout(fetchData, 2000);
-        } catch (error) {
-            console.error('Error starting scraper:', error);
-        } finally {
-            setTimeout(() => setRunningScraper(null), 5000);
-        }
-    };
 
     const handleMerge = async (sourceId: number, targetId: number) => {
         setMergingId(sourceId);
@@ -91,9 +108,10 @@ const Config: React.FC = () => {
         try {
             await syncNexus();
             alert("📡 Nexus: Sincronización maestro iniciada en segundo plano. Las nuevas imágenes y datos se verán reflejados en unos minutos.");
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error syncing Nexus:', error);
-            alert("❌ Nexus: Error al iniciar la sincronización.");
+            const detail = error.response?.data?.detail || error.message || "Error de red o servidor";
+            alert(`❌ Nexus: Error al iniciar la sincronización. Detalle: ${detail}`);
         } finally {
             setSyncingNexus(false);
         }
@@ -114,12 +132,6 @@ const Config: React.FC = () => {
         }
     };
 
-    const getStatusVariant = (status: string) => {
-        if (status === 'running') return 'text-brand-primary bg-brand-primary/10 border-brand-primary/30';
-        if (status === 'completed' || status === 'success') return 'text-green-400 bg-green-400/10 border-green-400/30';
-        if (status.startsWith('error')) return 'text-red-400 bg-red-400/10 border-red-400/30';
-        return 'text-white/30 bg-white/5 border-white/10';
-    };
 
     if (loading && statuses.length === 0) {
         return (
@@ -191,134 +203,173 @@ const Config: React.FC = () => {
                         exit={{ opacity: 0, y: -10 }}
                         className="space-y-8"
                     >
-                        {/* Quick Actions / All Scrapers */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                            <motion.div
-                                whileHover={{ scale: 1.02 }}
-                                className="col-span-1 md:col-span-2 glass border border-brand-primary/30 p-6 rounded-2xl flex items-center justify-between bg-gradient-to-br from-brand-primary/10 to-transparent"
-                            >
-                                <div className="flex items-center gap-4">
-                                    <div className="bg-brand-primary/20 p-4 rounded-xl shadow-[0_0_20px_rgba(14,165,233,0.3)]">
-                                        <Activity className="h-8 w-8 text-brand-primary" />
-                                    </div>
+                        {/* CENTRO DE MANDO OPERATIVO */}
+                        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+
+                            {/* Banner de Control Global */}
+                            <div className="relative overflow-hidden rounded-[2.5rem] border border-white/5 bg-gradient-to-br from-white/[0.05] to-black p-6 md:p-8 backdrop-blur-xl">
+                                <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-brand-primary/10 blur-[100px]"></div>
+
+                                <div className="relative mb-8 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
                                     <div>
-                                        <h3 className="text-xl font-bold text-white">Incursión Global</h3>
-                                        <p className="text-white/50 text-sm">Escaneo completo de todas las tiendas.</p>
-                                    </div>
-                                </div>
-                                <div className="flex flex-col gap-2">
-                                    <button
-                                        onClick={() => handleRunScraper('all')}
-                                        disabled={runningScraper === 'all'}
-                                        className="bg-brand-primary hover:bg-brand-primary/80 text-white px-6 py-3 rounded-2xl font-black text-sm transition-all shadow-lg shadow-brand-primary/20 flex items-center gap-2 disabled:opacity-50"
-                                    >
-                                        {runningScraper === 'all' ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4 fill-current" />}
-                                        INCURSIÓN TOTAL
-                                    </button>
-
-                                    <button
-                                        onClick={handleSyncNexus}
-                                        disabled={syncingNexus}
-                                        className="bg-white/10 hover:bg-white/20 border border-white/20 text-white px-6 py-3 rounded-2xl font-black text-sm transition-all flex items-center gap-2 disabled:opacity-50"
-                                    >
-                                        {syncingNexus ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Activity className="h-4 w-4 text-brand-primary" />}
-                                        SINCRONIZAR NEXO MAESTRO
-                                    </button>
-                                </div>
-                            </motion.div>
-
-                            <motion.div
-                                whileHover={{ scale: 1.02 }}
-                                className="glass border border-white/10 p-6 rounded-2xl flex flex-col gap-4"
-                            >
-                                <div className="flex items-center justify-between">
-                                    <div className="h-10 w-10 bg-white/5 rounded-lg flex items-center justify-center">
-                                        <RefreshCw className="h-5 w-5 text-purple-400" />
-                                    </div>
-                                    <span className={`px-2 py-0.5 rounded-full text-[10px] uppercase font-bold border ${getStatusVariant(statuses.find(s => s.spider_name === 'harvester')?.status || 'idle')}`}>
-                                        {statuses.find(s => s.spider_name === 'harvester')?.status || 'Inactivo'}
-                                    </span>
-                                </div>
-                                <div>
-                                    <h3 className="font-bold text-white">Harvester</h3>
-                                    <p className="text-white/40 text-xs">Búsqueda manual dirigida.</p>
-                                </div>
-                                <button
-                                    onClick={() => handleRunScraper('harvester')}
-                                    disabled={runningScraper === 'harvester'}
-                                    className="w-full bg-white/5 hover:bg-white/10 text-white py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 border border-white/10"
-                                >
-                                    {runningScraper === 'harvester' ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4 fill-current text-white/40" />}
-                                    Lanzar
-                                </button>
-                            </motion.div>
-
-
-                        </div>
-
-                        {/* Individual Scrapers Grid */}
-                        <div className="space-y-4">
-                            <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                                <Activity className="h-5 w-5 text-brand-primary" />
-                                Estados Individuales
-                            </h3>
-                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                                {statuses.filter(s => s.spider_name !== 'all' && s.spider_name !== 'harvester' && s.spider_name !== 'amazon').map((s) => (
-                                    <div key={s.spider_name} className="glass border border-white/5 p-3 rounded-xl flex flex-col gap-2 relative">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-[10px] font-bold text-white/70 uppercase tracking-wider">{s.spider_name}</span>
-                                            <div className={`h-1.5 w-1.5 rounded-full ${s.status === 'running' ? 'bg-brand-primary animate-pulse' : s.status === 'completed' ? 'bg-green-400' : 'bg-white/20'}`}></div>
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <div className="h-2 w-2 rounded-full bg-brand-primary animate-pulse" />
+                                            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-brand-primary/70">Orquestador de Incursiones</span>
                                         </div>
+                                        <h2 className="text-3xl font-black tracking-tighter text-white md:text-4xl"> CENTRO DE <span className="text-brand-primary">MANDO</span></h2>
+                                    </div>
+
+                                    <div className="flex items-center gap-3">
                                         <button
-                                            onClick={() => handleRunScraper(s.spider_name)}
-                                            disabled={runningScraper === s.spider_name}
-                                            className="text-[11px] bg-white/5 py-1 rounded-md text-white/50 hover:bg-brand-primary/20 hover:text-brand-primary transition-all flex items-center justify-center gap-1"
+                                            onClick={() => {
+                                                if (confirm('¿DETENER TODAS LAS INCURSIONES? Esta acción forzará el cierre de todos los procesos de extracción.')) {
+                                                    stopScrapersMutation.mutate();
+                                                }
+                                            }}
+                                            disabled={!statuses.some(s => s.status === 'running')}
+                                            className={`group flex items-center gap-3 rounded-2xl border px-6 py-4 font-black transition-all shadow-xl ${statuses.some(s => s.status === 'running')
+                                                ? 'bg-red-500 text-white border-red-400 hover:scale-105 active:scale-95 shadow-red-500/20'
+                                                : 'bg-white/5 border-white/10 text-white/20 opacity-30 cursor-not-allowed'}`}
                                         >
-                                            {runningScraper === s.spider_name ? <RefreshCw className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3 fill-current" />}
-                                            RUN
+                                            <ShieldAlert className={`h-5 w-5 ${statuses.some(s => s.status === 'running') ? 'animate-pulse' : ''}`} />
+                                            <span className="text-sm uppercase tracking-widest">Protocolo Emergency</span>
+                                        </button>
+
+                                        <button
+                                            onClick={() => runScrapersMutation.mutate('all')}
+                                            disabled={statuses.some(s => s.status === 'running')}
+                                            className="group relative flex items-center gap-3 overflow-hidden rounded-2xl bg-brand-primary px-8 py-4 font-black text-white transition-all hover:scale-105 hover:bg-brand-primary/80 active:scale-95 shadow-xl shadow-brand-primary/20 disabled:opacity-50 disabled:hover:scale-100"
+                                        >
+                                            <Zap className="h-5 w-5 fill-current" />
+                                            <span className="text-sm uppercase tracking-widest">Incursión Total</span>
+                                            <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-1000 group-hover:translate-x-full"></div>
+                                        </button>
+
+                                        <button
+                                            onClick={handleSyncNexus}
+                                            disabled={syncingNexus || statuses.some(s => s.status === 'running')}
+                                            className="bg-white/10 hover:bg-white/20 border border-white/20 text-white px-6 py-4 rounded-2xl font-black text-sm transition-all flex items-center gap-3 disabled:opacity-30 disabled:scale-100 hover:scale-105 active:scale-95"
+                                        >
+                                            {syncingNexus ? <Loader2 className="h-5 w-5 animate-spin" /> : <Activity className="h-5 w-5 text-brand-primary" />}
+                                            <span className="uppercase tracking-widest">Sincro Nexus</span>
                                         </button>
                                     </div>
-                                ))}
-                            </div>
-                        </div>
+                                </div>
 
-                        {/* Recent logs */}
-                        <div className="space-y-4">
-                            <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                                <Clock className="h-5 w-5 text-brand-primary" />
-                                Bitácora de Incursiones
-                            </h3>
-                            <div className="glass border border-white/10 rounded-2xl overflow-hidden">
-                                <div className="overflow-x-auto text-sm">
-                                    <table className="w-full text-left">
-                                        <thead className="bg-white/5 text-white/30 uppercase text-[10px] font-bold">
-                                            <tr>
-                                                <th className="px-6 py-4">Scraper</th>
-                                                <th className="px-6 py-4">Estado</th>
-                                                <th className="px-6 py-4 text-center">Items</th>
-                                                <th className="px-6 py-4">Tiempo</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-white/5 text-white/70">
-                                            {logs.map((log) => (
-                                                <tr key={log.id} className="hover:bg-white/5 transition-colors">
-                                                    <td className="px-6 py-4 font-bold">{log.spider_name}</td>
-                                                    <td className="px-6 py-4">
-                                                        <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold ${log.status === 'success' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
-                                                            {log.status}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-6 py-4 text-center font-black text-white">{log.items_found}</td>
-                                                    <td className="px-6 py-4 text-[10px]">
-                                                        {format(new Date(log.start_time), "dd/MM/yyyy HH:mm", { locale: es })}
-                                                        <span className="block opacity-40 text-[9px]">
-                                                            ({formatDistanceToNow(new Date(log.start_time), { addSuffix: true, locale: es })})
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                                <div className="grid grid-cols-2 gap-4 lg:grid-cols-6">
+                                    {statuses.filter(s => !['all', 'nexus', 'harvester'].includes(s.spider_name.toLowerCase())).map((s) => (
+                                        <div
+                                            key={s.spider_name}
+                                            className={`group relative flex flex-col gap-3 rounded-2xl border p-4 transition-all hover:bg-white/5 ${s.status === 'running' ? 'bg-brand-primary/10 border-brand-primary/40 shadow-[0_0_20px_rgba(14,165,233,0.1)]' : 'bg-white/[0.02] border-white/5'}`}
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-white/40">{s.spider_name}</span>
+                                                <div className={`h-2 w-2 rounded-full ${s.status === 'running' ? 'bg-brand-primary animate-pulse shadow-[0_0_8px_rgba(14,165,233,0.8)]' : 'bg-white/10'}`}></div>
+                                            </div>
+                                            <div className="flex items-center justify-between mt-1">
+                                                <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase ${s.status === 'running' ? 'bg-blue-500/20 text-blue-400' : 'bg-white/5 text-white/30'}`}>
+                                                    {s.status === 'running' ? 'En Ejecución' : 'Standby'}
+                                                </span>
+                                                <button
+                                                    onClick={() => runScrapersMutation.mutate(s.spider_name)}
+                                                    disabled={statuses.some(stat => stat.status === 'running')}
+                                                    className={`h-8 w-8 rounded-xl flex items-center justify-center border transition-all ${statuses.some(stat => stat.status === 'running')
+                                                        ? 'bg-transparent border-transparent opacity-0 cursor-default'
+                                                        : 'bg-white/5 border-white/10 hover:bg-brand-primary/20 hover:border-brand-primary/40 text-white/40 hover:text-brand-primary active:scale-90 hover:scale-110'}`}
+                                                >
+                                                    <Play className="h-3 w-3 fill-current" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Consola Táctica y Bitácora */}
+                            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+                                {/* Lista de Incursiones Previas */}
+                                <div className="lg:col-span-1 space-y-4">
+                                    <div className="flex items-center gap-3 px-2">
+                                        <History className="h-5 w-5 text-brand-primary" />
+                                        <h3 className="text-sm font-black uppercase tracking-widest text-white">Historial Operativo</h3>
+                                    </div>
+                                    <div className="max-h-[500px] overflow-y-auto space-y-2 rounded-[2.5rem] border border-white/5 bg-black/40 p-3 scrollbar-none custom-scrollbar shadow-inner">
+                                        {advancedLogs.map((log) => (
+                                            <button
+                                                key={log.id}
+                                                onClick={() => setSelectedLog(log)}
+                                                className={`group w-full flex flex-col gap-2 rounded-2xl border p-4 text-left transition-all relative overflow-hidden ${selectedLog?.id === log.id
+                                                    ? 'bg-brand-primary/10 border-brand-primary/30 shadow-lg'
+                                                    : 'bg-white/[0.03] border-white/5 hover:bg-white/5'}`}
+                                            >
+                                                {selectedLog?.id === log.id && (
+                                                    <motion.div layoutId="log-active" className="absolute left-0 top-0 bottom-0 w-1 bg-brand-primary" />
+                                                )}
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-[10px] font-black uppercase tracking-widest text-white group-hover:text-brand-primary transition-colors">{log.spider_name}</span>
+                                                    <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-tighter ${log.status === 'success' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                                                        {log.status === 'success' ? 'Éxito' : 'Fallo'}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center justify-between text-[10px] text-white/30 font-bold">
+                                                    <span className="flex items-center gap-1.5"><Database className="h-3 w-3" /> {log.items_found} items</span>
+                                                    <span>{formatDistanceToNow(new Date(log.start_time), { addSuffix: true, locale: es })}</span>
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Consola de Salida Real-Time */}
+                                <div className="lg:col-span-2 space-y-4">
+                                    <div className="flex items-center justify-between px-2">
+                                        <div className="flex items-center gap-3">
+                                            <Terminal className="h-5 w-5 text-brand-primary" />
+                                            <h3 className="text-sm font-black uppercase tracking-widest text-white">Telemetría de Datos</h3>
+                                        </div>
+                                        {selectedLog && (
+                                            <div className="flex items-center gap-4">
+                                                <span className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] font-mono">
+                                                    {selectedLog.spider_name} #0x{selectedLog.id.toString(16)}
+                                                </span>
+                                                {selectedLog.status === 'running' && (
+                                                    <Loader2 className="h-3 w-3 text-brand-primary animate-spin" />
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="relative group">
+                                        <div className="absolute inset-0 bg-brand-primary/5 blur-3xl rounded-[2.5rem] -z-10 group-hover:bg-brand-primary/10 transition-all"></div>
+                                        <div className="overflow-hidden rounded-[2.5rem] border border-white/10 bg-black/90 p-1 shadow-2xl backdrop-blur-3xl ring-1 ring-white/5">
+                                            <div
+                                                ref={consoleRef}
+                                                className="h-[440px] overflow-y-auto p-8 font-mono text-[11px] leading-relaxed space-y-1.5 scrollbar-thin scrollbar-thumb-brand-primary/20 custom-scrollbar"
+                                            >
+                                                {selectedLog?.logs ? (
+                                                    selectedLog.logs.split('\\n').map((line, i) => {
+                                                        const isError = line.toLowerCase().includes('error') || line.toLowerCase().includes('fail') || line.toLowerCase().includes('exception');
+                                                        const isSuccess = line.toLowerCase().includes('success') || line.toLowerCase().includes('found') || line.toLowerCase().includes('completed');
+                                                        const isWarning = line.toLowerCase().includes('warning') || line.toLowerCase().includes('alert');
+
+                                                        return (
+                                                            <div key={i} className={`flex gap-4 group/line ${isError ? 'text-red-400' : isSuccess ? 'text-green-400' : isWarning ? 'text-yellow-400' : 'text-white/60'}`}>
+                                                                <span className="text-white/10 select-none w-8 text-right group-hover/line:text-white/30 transition-colors">{String(i + 1).padStart(3, '0')}</span>
+                                                                <p className="break-all whitespace-pre-wrap flex-1">{line}</p>
+                                                            </div>
+                                                        );
+                                                    })
+                                                ) : (
+                                                    <div className="flex h-full flex-col items-center justify-center text-white/5 gap-6">
+                                                        <div className="h-20 w-20 rounded-full border border-dashed border-white/5 flex items-center justify-center animate-spin-slow">
+                                                            <Terminal className="h-10 w-10" />
+                                                        </div>
+                                                        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-white/20">A la espera de enlace táctico...</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -787,7 +838,7 @@ const Config: React.FC = () => {
                     </div>
                 )}
             </AnimatePresence>
-        </div>
+        </div >
     );
 };
 

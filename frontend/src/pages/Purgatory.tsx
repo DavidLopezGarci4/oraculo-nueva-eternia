@@ -11,16 +11,14 @@ import {
     Search,
     CheckCircle2,
     ShieldAlert,
-    History,
     Database,
-    AlertCircle,
     Copy,
     ChevronLeft,
     ChevronRight,
     X,
     LineChart as ChartIcon
 } from 'lucide-react';
-import { getPurgatory, matchItem, discardItem, discardItemsBulk, getScrapersStatus, runScrapers, getScraperLogs, stopScrapers } from '../api/purgatory';
+import { getPurgatory, matchItem, discardItem, discardItemsBulk } from '../api/purgatory';
 import MarketIntelligenceModal from '../components/MarketIntelligenceModal';
 import QuickPreviewModal from '../components/QuickPreviewModal';
 import axios from 'axios';
@@ -34,7 +32,6 @@ const Purgatory: React.FC = () => {
     const [manualSearchTerm, setManualSearchTerm] = useState('');
     const [selectedPendingId, setSelectedPendingId] = useState<number | null>(null);
     const [originFilter, setOriginFilter] = useState<'all' | 'retail' | 'auction'>('all');
-    const [confirmScraper, setConfirmScraper] = useState<string | null>(null);
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
     const [pendingActions, setPendingActions] = useState<any[]>(() => {
@@ -48,8 +45,6 @@ const Purgatory: React.FC = () => {
     const [showForensic, setShowForensic] = useState(false);
     const [intelProductId, setIntelProductId] = useState<number | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-    const [selectedLogId, setSelectedLogId] = useState<number | null>(null);
-    const consoleRef = useRef<HTMLDivElement>(null);
 
     // Helper: Check if URL is from Wallapop
     const isWallapopUrl = (url: string) => url?.toLowerCase().includes('wallapop.com');
@@ -116,27 +111,6 @@ const Purgatory: React.FC = () => {
         refetchInterval: 5000 // Auto-refresh every 5s while in Purgatory
     });
 
-    const { data: scrapersStatus } = useQuery({
-        queryKey: ['scrapers-status'],
-        queryFn: getScrapersStatus,
-        refetchInterval: 3000
-    });
-
-    const isRunning = scrapersStatus?.some((s: any) => s.status === 'running');
-
-    const { data: scrapersLogs } = useQuery({
-        queryKey: ['scrapers-logs'],
-        queryFn: getScraperLogs,
-        refetchInterval: isRunning ? 2000 : 10000
-    });
-
-    // Auto-scroll console
-    useEffect(() => {
-        if (consoleRef.current) {
-            consoleRef.current.scrollTop = consoleRef.current.scrollHeight;
-        }
-    }, [selectedLogId, scrapersLogs]);
-
     const { data: products } = useQuery({
         queryKey: ['products-purgatory'],
         queryFn: async () => {
@@ -145,22 +119,6 @@ const Purgatory: React.FC = () => {
         }
     });
 
-    // Mutations
-    const runScrapersMutation = useMutation({
-        mutationFn: (scraperName: string) => runScrapers(scraperName, 'manual'),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['scrapers-status'] });
-            queryClient.invalidateQueries({ queryKey: ['scrapers-logs'] });
-        }
-    });
-
-    const stopScrapersMutation = useMutation({
-        mutationFn: stopScrapers,
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['scrapers-status'] });
-            queryClient.invalidateQueries({ queryKey: ['scrapers-logs'] });
-        }
-    });
 
     const discardMutation = useMutation({
         mutationFn: (id: number) => discardItem(id),
@@ -357,370 +315,71 @@ const Purgatory: React.FC = () => {
 
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 animate-in fade-in duration-700">
-            {/* Header / Scraper Control Panel */}
-            <div className="relative overflow-hidden rounded-3xl md:rounded-[2.5rem] border border-white/5 bg-gradient-to-br from-white/[0.05] to-black p-5 md:p-8 backdrop-blur-xl">
-                <div className="absolute -right-20 -top-20 h-48 w-48 md:h-64 md:w-64 rounded-full bg-brand-primary/5 blur-3xl"></div>
+            {/* Header / Purgatory Status */}
+            <div className="relative overflow-hidden rounded-[2.5rem] border border-white/5 bg-gradient-to-br from-white/[0.05] to-black p-8 md:p-12 backdrop-blur-xl">
+                <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-brand-primary/10 blur-[100px]"></div>
 
-                <div className="relative space-y-8">
-                    <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-                        <div className="space-y-2">
-                            <div className="flex items-center gap-2 text-brand-primary">
-                                <Flame className="h-4 w-4 md:h-5 md:w-5" />
-                                <span className="text-[10px] md:text-xs font-black uppercase tracking-widest opacity-70">El Espejo de Eternia</span>
-                            </div>
-                            <h2 className="text-3xl md:text-5xl font-black tracking-tight text-white flex items-center gap-4">
-                                Purgatorio
-                                {!isLoadingPending && pendingItems && pendingItems.length > 0 && (
-                                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-primary/10 border border-brand-primary/20 animate-in zoom-in-95 duration-500">
-                                        <div className="h-1.5 w-1.5 rounded-full bg-brand-primary animate-pulse"></div>
-                                        <span className="text-[10px] md:text-xs font-black uppercase tracking-widest text-brand-primary/80">
-                                            {pendingItems.length} En el Abismo
-                                        </span>
-                                    </div>
-                                )}
-                            </h2>
-                            <p className="max-w-md text-xs md:text-sm leading-relaxed text-white/50">
-                                Gestiona las reliquias que necesitan vinculación manual y despliega incursiones.
-                            </p>
+                <div className="relative flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-2 text-brand-primary">
+                            <Flame className="h-5 w-5" />
+                            <span className="text-xs font-black uppercase tracking-[0.3em] opacity-70">El Espejo de Eternia</span>
                         </div>
-
-                        <div className="flex items-center gap-4">
-                            <div className="text-right hidden sm:block">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-white/30">Estado Global</p>
-                                <p className={`text-xs font-bold ${isRunning ? 'text-green-400 animate-pulse' : 'text-white/50'}`}>
-                                    {isRunning ? 'INCURSIÓN ACTIVA' : 'SISTEMAS EN REPOSO'}
-                                </p>
-                            </div>
-                            <div className={`h-12 w-12 rounded-2xl flex items-center justify-center border ${isRunning ? 'bg-green-500/20 border-green-500/50 text-green-400 animate-pulse' : 'bg-white/5 border-white/10 text-white/20'}`}>
-                                <Zap className="h-6 w-6" />
-                            </div>
-                        </div>
-
-                        {/* Persistence Sync Indicator */}
-                        {pendingActions.length > 0 && (
-                            <div className="flex items-center gap-4 px-5 py-3 rounded-2xl bg-brand-primary/10 border border-brand-primary/20 animate-in slide-in-from-right-4 duration-500 w-fit backdrop-blur-md">
-                                <div className="relative">
-                                    <Loader2 className={`h-5 w-5 ${isSyncing.current ? 'animate-spin text-brand-primary' : 'text-white/20'}`} />
-                                    {failedActions.length > 0 && (
-                                        <div className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-red-500 border-2 border-black flex items-center justify-center">
-                                            <span className="text-[10px] font-bold text-white leading-none">!</span>
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="space-y-0.5">
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-brand-primary leading-none">
-                                        {isSyncing.current ? 'Sincronización en curso' : 'Sincronización en espera'}
-                                    </p>
-                                    <p className="text-[9px] font-bold text-white/50">{pendingActions.length} acciones pendientes {failedActions.length > 0 && <span className="text-red-400">({failedActions.length} errores)</span>}</p>
-                                    <div className="flex items-center gap-2">
-                                        <button
-                                            onClick={() => setShowForensic(true)}
-                                            className="text-[8px] font-black uppercase tracking-widest text-brand-primary hover:text-white transition-colors mt-1 block"
-                                        >
-                                            [ Inspección Forense ]
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                if (confirm('¿Limpiar el búfer local? Esto cancelará las acciones no sincronizadas.')) {
-                                                    setPendingActions([]);
-                                                    setFailedActions([]);
-                                                    localStorage.removeItem(PERSISTENCE_KEY);
-                                                    localStorage.removeItem('purgatory_sync_failures');
-                                                }
-                                            }}
-                                            className="text-[8px] font-black uppercase tracking-widest text-red-400/60 hover:text-red-400 transition-colors mt-1 block"
-                                        >
-                                            [ Purificar Búfer ]
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Scraper Section Layout */}
-                    <div className="space-y-8">
-                        {/* Primary Scraper Actions (Global / Manual) */}
-                        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-                            {/* Global Scan Item */}
-                            <button
-                                onClick={() => setConfirmScraper('all')}
-                                disabled={isRunning}
-                                className="group relative flex flex-col gap-3 rounded-2xl border border-brand-primary/30 bg-brand-primary/5 p-4 transition-all hover:bg-brand-primary/10 disabled:opacity-50"
-                            >
-                                <div className="flex items-center justify-between">
-                                    <Zap className="h-5 w-5 text-brand-primary" />
-                                    <div className="h-1.5 w-1.5 rounded-full bg-brand-primary"></div>
-                                </div>
-                                <div className="space-y-1 text-left">
-                                    <p className="text-[10px] font-black uppercase tracking-tighter text-brand-primary">Global Scan</p>
-                                    <p className="text-xs font-bold text-white uppercase">Toda Eternia</p>
-                                </div>
-                            </button>
-
-                            {/* Emergency Stop Button (Replacing Local Harvester) */}
-                            <button
-                                onClick={() => {
-                                    if (confirm('¿DETENER TODAS LAS INCURSIONES? Esta acción forzará el cierre de todos los procesos de extracción.')) {
-                                        stopScrapersMutation.mutate();
-                                    }
-                                }}
-                                disabled={!isRunning}
-                                className={`group relative flex flex-col gap-3 rounded-2xl border p-4 transition-all shadow-lg ${isRunning
-                                    ? 'bg-red-500/10 border-red-500/50 hover:bg-red-500/20 active:scale-95'
-                                    : 'bg-white/5 border-white/10 opacity-30 grayscale'}`}
-                            >
-                                <div className="flex items-center justify-between">
-                                    <ShieldAlert className={`h-5 w-5 ${isRunning ? 'text-red-500 animate-pulse' : 'text-white/20'}`} />
-                                    {isRunning && <div className="h-1.5 w-1.5 rounded-full bg-red-500 animate-ping"></div>}
-                                </div>
-                                <div className="space-y-1 text-left">
-                                    <p className={`text-[10px] font-black uppercase tracking-tighter ${isRunning ? 'text-red-500' : 'text-white/30'}`}>Protocolo de Seguridad</p>
-                                    <p className="text-xs font-bold text-white uppercase">Parada de Emergencia</p>
-                                </div>
-                            </button>
-                        </div>
-
-                        {/* Individual Spider Catalog */}
-                        <div className="space-y-3">
-                            <div className="flex items-center gap-2 px-1">
-                                <Search className="h-3 w-3 text-white/20" />
-                                <h3 className="text-[10px] font-black uppercase tracking-widest text-white/30">Motor de Incursión Individual</h3>
-                            </div>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                                {(() => {
-                                    if (!scrapersStatus) return null;
-
-                                    const individualScrapers = scrapersStatus.filter((s: any) =>
-                                        !['all'].includes(s.spider_name)
-                                    );
-
-                                    const uniqueMap = new Map();
-                                    individualScrapers.forEach((s: any) => {
-                                        const key = s.spider_name.toLowerCase();
-                                        const existing = uniqueMap.get(key);
-                                        if (!existing || (s.spider_name.match(/[A-Z]/g) || []).length > (existing.spider_name.match(/[A-Z]/g) || []).length) {
-                                            uniqueMap.set(key, s);
-                                        }
-                                    });
-
-                                    return Array.from(uniqueMap.values())
-                                        .sort((a, b) => a.spider_name.localeCompare(b.spider_name))
-                                        .map((s: any) => {
-                                            const status = s.status;
-                                            const isActive = status === 'running';
-                                            const hasError = status.startsWith('error');
-
-                                            return (
-                                                <button
-                                                    key={s.spider_name}
-                                                    onClick={() => setConfirmScraper(s.spider_name)}
-                                                    disabled={isRunning}
-                                                    className={`group relative flex items-center justify-between rounded-xl border p-3 transition-all hover:bg-white/5 disabled:opacity-50 min-h-[52px] ${hasError ? 'border-red-500/20 bg-red-500/5' : 'border-white/5 bg-white/[0.02]'}`}
-                                                >
-                                                    <div className="flex items-center gap-3 overflow-hidden">
-                                                        <div className={`flex-shrink-0 h-1.5 w-1.5 rounded-full ${isActive ? 'bg-brand-primary animate-pulse shadow-[0_0_8px_rgba(var(--brand-primary-rgb),0.6)]' : status === 'completed' ? 'bg-green-500/50' : hasError ? 'bg-red-500' : 'bg-white/10'}`}></div>
-                                                        <span className="text-[10px] font-black text-white/70 uppercase tracking-tight group-hover:text-white transition-colors truncate">
-                                                            {s.spider_name}
-                                                        </span>
-                                                    </div>
-                                                    <Search className={`flex-shrink-0 h-3 w-3 ${isActive ? 'text-brand-primary' : hasError ? 'text-red-400' : 'text-white/10'}`} />
-                                                </button>
-                                            );
-                                        });
-                                })()}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Compact Execution Logs */}
-                    <div className="space-y-4 pt-6 border-t border-white/5">
-                        <div className="flex items-center justify-between px-2">
-                            <div className="flex items-center gap-2 text-white/30">
-                                <History className="h-3.5 w-3.5" />
-                                <h3 className="text-[10px] font-black uppercase tracking-widest text-white/40">Bitácora de Incursiones</h3>
-                            </div>
-                            {isRunning && (
-                                <div className="flex items-center gap-2">
-                                    <Loader2 className="h-3 w-3 animate-spin text-brand-primary" />
-                                    <span className="text-[9px] font-bold text-brand-primary uppercase animate-pulse">Sincronizando...</span>
+                        <h2 className="text-4xl md:text-6xl font-black tracking-tighter text-white flex items-center gap-4">
+                            Purgatorio
+                            {!isLoadingPending && pendingItems && pendingItems.length > 0 && (
+                                <div className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-brand-primary/10 border border-brand-primary/20 animate-in zoom-in-95 duration-500">
+                                    <div className="h-2 w-2 rounded-full bg-brand-primary animate-pulse"></div>
+                                    <span className="text-xs font-black uppercase tracking-widest text-brand-primary/80">
+                                        {pendingItems.length} <span className="hidden sm:inline">Reliquias en el Abismo</span>
+                                    </span>
                                 </div>
                             )}
-                        </div>
+                        </h2>
+                        <p className="max-w-xl text-sm md:text-lg leading-relaxed text-white/40">
+                            Filtra, vincula y purifica las reliquias detectadas en las incursiones para que puedan ser manifestadas en el catálogo de Nueva Eternia.
+                        </p>
+                    </div>
 
-                        <div className="max-h-60 overflow-y-auto rounded-2xl border border-white/5 bg-black/20 custom-scrollbar pr-1">
-                            <table className="w-full text-left">
-                                <thead className="sticky top-0 z-10 border-b border-white/5 bg-black/80 backdrop-blur-md hidden md:table-header-group">
-                                    <tr>
-                                        <th className="px-4 py-3 text-[9px] font-black uppercase tracking-widest text-white/20">Registro</th>
-                                        <th className="px-4 py-3 text-[9px] font-black uppercase tracking-widest text-white/20">Hallazgos</th>
-                                        <th className="px-4 py-3 text-[9px] font-black uppercase tracking-widest text-white/20">Estado</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-white/5 block md:table-row-group">
-                                    {scrapersLogs?.map((log) => (
-                                        <tr
-                                            key={log.id}
-                                            onClick={() => setSelectedLogId(log.id)}
-                                            className={`group hover:bg-white/[0.04] transition-colors cursor-pointer flex flex-col md:table-row p-3 md:p-0 border-b border-white/5 md:border-none gap-2 md:gap-0 ${selectedLogId === log.id ? 'bg-white/[0.03]' : ''}`}
-                                        >
-                                            <td className="px-0 md:px-4 py-1 md:py-3 flex justify-between md:table-cell">
-                                                <div className="flex flex-col">
-                                                    <span className="text-[10px] font-black text-white/80 uppercase tracking-tight">{log.spider_name}</span>
-                                                    <span className="text-[9px] text-white/20 font-bold">{new Date(log.start_time).toLocaleTimeString()}</span>
-                                                </div>
-                                                {/* Mobile Status placed here for space efficiency */}
-                                                <div className="md:hidden">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className={`h-1.5 w-1.5 rounded-full ${log.status === 'success' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' : log.status === 'running' ? 'bg-orange-500 animate-pulse' : 'bg-red-500'}`}></div>
-                                                        <span className={`text-[9px] font-black uppercase ${log.status === 'success' ? 'text-green-500/60' : log.status === 'running' ? 'text-orange-500/60' : 'text-red-500/60'}`}>
-                                                            {log.status === 'success' ? 'OK' : log.status === 'running' ? 'WORK' : 'KO'}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-0 md:px-4 py-1 md:py-3 md:table-cell">
-                                                <div className="flex items-center gap-2">
-                                                    <Database className="h-3 w-3 text-brand-primary/40" />
-                                                    <span className="text-[10px] font-bold text-white/60">{log.items_found} items</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-0 md:px-4 py-1 md:py-3 hidden md:table-cell">
-                                                <div className="flex flex-col gap-1">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className={`h-1 w-1 rounded-full ${log.status === 'success' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' : log.status === 'running' ? 'bg-orange-500 animate-pulse' : 'bg-red-500'}`}></div>
-                                                        <span className={`text-[9px] font-black uppercase ${log.status === 'success' ? 'text-green-500/60' : log.status === 'running' ? 'text-orange-500/60' : 'text-red-500/60'}`}>
-                                                            {log.status === 'success' ? 'OK' : log.status === 'running' ? 'WORK' : 'KO'}
-                                                        </span>
-                                                        {log.error_message && (
-                                                            <AlertCircle className="h-3 w-3 text-red-500/40" />
-                                                        )}
-                                                    </div>
-                                                    {log.error_message && (
-                                                        <span className="text-[10px] font-bold text-red-400 bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20 max-w-[200px] truncate" title={log.error_message}>
-                                                            <AlertCircle className="inline h-3 w-3 mr-1 mb-0.5" />
-                                                            {log.error_message}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </td>
-                                            {/* Mobile Error Message */}
-                                            {log.error_message && (
-                                                <td className="px-0 pb-2 md:hidden max-w-0">
-                                                    <div className="w-full overflow-hidden">
-                                                        <span className="text-[10px] font-bold text-red-400 bg-red-500/10 px-2 py-1 rounded border border-red-500/20 block w-full truncate" title={log.error_message}>
-                                                            {log.error_message}
-                                                        </span>
-                                                    </div>
-                                                </td>
-                                            )}
-                                        </tr>
-                                    ))}
-                                    {(!scrapersLogs || scrapersLogs.length === 0) && (
-                                        <tr>
-                                            <td colSpan={3} className="px-4 py-8 text-center text-[9px] text-white/10 uppercase tracking-widest font-bold">
-                                                Sin registros previos
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        {/* Live Tactical Console */}
-                        <div className="space-y-3">
-                            <div className="flex items-center justify-between px-2">
-                                <div className="flex items-center gap-2 text-white/30">
-                                    <div className="h-2 w-2 rounded-full bg-brand-primary animate-pulse"></div>
-                                    <h3 className="text-[10px] font-black uppercase tracking-widest text-white/40">Consola Táctica [ Real-Time ]</h3>
-                                </div>
-                                {selectedLogId && (
-                                    <button
-                                        onClick={() => setSelectedLogId(null)}
-                                        className="text-[9px] font-black uppercase text-brand-primary/60 hover:text-brand-primary"
-                                    >
-                                        [ Mostrar Último ]
-                                    </button>
+                    {/* Persistence Sync Indicator (Condensed) */}
+                    {pendingActions.length > 0 && (
+                        <div className="flex items-center gap-6 px-6 py-4 rounded-3xl bg-brand-primary/10 border border-brand-primary/20 animate-in slide-in-from-right-4 duration-500 backdrop-blur-md">
+                            <div className="relative">
+                                <Loader2 className={`h-6 w-6 ${isSyncing.current ? 'animate-spin text-brand-primary' : 'text-white/20'}`} />
+                                {failedActions.length > 0 && (
+                                    <div className="absolute -right-1.5 -top-1.5 h-4 w-4 rounded-full bg-red-500 border-2 border-black flex items-center justify-center">
+                                        <span className="text-[10px] font-black text-white leading-none">!</span>
+                                    </div>
                                 )}
                             </div>
-
-                            <div
-                                ref={consoleRef}
-                                className="h-48 overflow-y-auto rounded-2xl border border-brand-primary/20 bg-black/60 p-4 font-mono text-[11px] leading-relaxed text-brand-primary/80 custom-scrollbar shadow-inner"
-                            >
-                                {(() => {
-                                    const logToShow = selectedLogId
-                                        ? scrapersLogs?.find(l => l.id === selectedLogId)
-                                        : scrapersLogs?.[0];
-
-                                    if (!logToShow) return <span className="opacity-20 italic">Esperando datos del flujo de datos de Eternia...</span>;
-
-                                    return (
-                                        <div className="space-y-1">
-                                            <div className="border-b border-brand-primary/10 pb-2 mb-2 flex justify-between items-center">
-                                                <span className="text-white font-bold uppercase tracking-tighter">{">>>"} SENSOR: {logToShow.spider_name}</span>
-                                                <span className="text-[9px] opacity-40">T-REF: {logToShow.id}</span>
-                                            </div>
-                                            {logToShow.logs ? (
-                                                logToShow.logs.split('\n').map((line, i) => (
-                                                    <div key={i} className="flex gap-3">
-                                                        <span className="opacity-20 select-none">{i + 1}</span>
-                                                        <span className={line.includes('❌') || line.includes('error') ? 'text-red-400' : line.includes('✅') ? 'text-green-400' : ''}>
-                                                            {line}
-                                                        </span>
-                                                    </div>
-                                                ))
-                                            ) : (
-                                                <div className="flex flex-col items-center justify-center h-full gap-3 animate-pulse opacity-50">
-                                                    <Loader2 className="h-4 w-4 animate-spin text-brand-primary" />
-                                                    <span className="text-[10px] uppercase tracking-widest font-black">Sincronizando flujo de datos tácticos...</span>
-                                                    <span className="text-[9px] lowercase italic font-bold">Iniciando protocolo de extracción y sensores...</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                })()}
+                            <div className="space-y-1">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-brand-primary leading-none">
+                                    Sincronización {isSyncing.current ? 'Activa' : 'Pendiente'}
+                                </p>
+                                <p className="text-[11px] font-bold text-white/50">{pendingActions.length} acciones restantes</p>
+                                <div className="flex items-center gap-4">
+                                    <button onClick={() => setShowForensic(true)} className="text-[9px] font-black uppercase tracking-widest text-brand-primary hover:text-white transition-colors">Forensics</button>
+                                    <button
+                                        onClick={() => {
+                                            if (confirm('¿Limpiar el búfer local? Esto cancelará las acciones no sincronizadas.')) {
+                                                setPendingActions([]);
+                                                setFailedActions([]);
+                                                localStorage.removeItem(PERSISTENCE_KEY);
+                                                localStorage.removeItem('purgatory_sync_failures');
+                                            }
+                                        }}
+                                        className="text-[9px] font-black uppercase tracking-widest text-red-500/40 hover:text-red-400 transition-colors"
+                                    >
+                                        Limpiar
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    )}
                 </div>
             </div>
 
-            {/* Confirmation Modal */}
-            {confirmScraper && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
-                    <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-white/10 to-black p-8 shadow-2xl">
-                        <div className="flex flex-col items-center gap-6 text-center">
-                            <div className="h-16 w-16 rounded-full bg-orange-500/20 flex items-center justify-center border border-orange-500/50">
-                                <ShieldAlert className="h-8 w-8 text-orange-400" />
-                            </div>
-                            <div className="space-y-2">
-                                <h3 className="text-2xl font-black text-white uppercase tracking-tight">¿Confirmar Incursión?</h3>
-                                <p className="text-sm text-white/50 leading-relaxed">
-                                    Estás a punto de desplegar el extractor <span className="text-white font-bold uppercase">"{confirmScraper}"</span>. Esta acción consume recursos de red y actualiza la base de datos.
-                                </p>
-                            </div>
-                            <div className="grid w-full grid-cols-2 gap-4">
-                                <button
-                                    onClick={() => setConfirmScraper(null)}
-                                    className="rounded-2xl border border-white/5 bg-white/5 py-4 text-xs font-black text-white/40 hover:bg-white/10 transition-all uppercase tracking-widest"
-                                >
-                                    Abortar
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        if (confirmScraper) runScrapersMutation.mutate(confirmScraper);
-                                        setConfirmScraper(null);
-                                    }}
-                                    className="rounded-2xl bg-orange-500 py-4 text-xs font-black text-white hover:bg-orange-600 transition-all uppercase tracking-widest shadow-lg shadow-orange-500/20"
-                                >
-                                    Desplegar
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
+
 
 
             {/* Origin Category Filter & Global Search Bar */}
@@ -1175,175 +834,183 @@ const Purgatory: React.FC = () => {
             </div>
 
             {/* Bulk Action Bar */}
-            {selectedIds.length > 0 && (
-                <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-8 duration-500">
-                    <div className="bg-black/80 backdrop-blur-2xl border border-brand-primary/30 rounded-full px-8 py-4 flex items-center gap-8 shadow-[0_0_50px_rgba(14,165,233,0.3)]">
-                        <div className="flex flex-col">
-                            <span className="text-[10px] font-black text-brand-primary uppercase tracking-widest">Seleccionados</span>
-                            <span className="text-xl font-black text-white">{selectedIds.length} <span className="text-sm text-white/40">ITEMS</span></span>
-                        </div>
-                        <div className="h-8 w-px bg-white/10"></div>
-                        <div className="flex items-center gap-4">
-                            <button
-                                onClick={() => setSelectedIds([])}
-                                className="text-xs font-black text-white/40 hover:text-white uppercase tracking-widest transition-all"
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                onClick={() => discardBulkMutation.mutate(selectedIds)}
-                                disabled={discardBulkMutation.isPending}
-                                className="bg-red-500 hover:bg-red-600 text-white px-8 py-3 rounded-full text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-red-500/20 flex items-center gap-2 disabled:opacity-50"
-                            >
-                                {discardBulkMutation.isPending ? <RefreshCcw className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                                Descartar Seleccionados
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Forensic Inspection Modal */}
-            {showForensic && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/90 backdrop-blur-xl animate-in fade-in duration-300">
-                    <div className="relative w-full max-w-5xl h-[80vh] flex flex-col overflow-hidden rounded-[2.5rem] border border-white/10 bg-gradient-to-br from-white/5 to-black shadow-2xl">
-                        <div className="p-8 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
-                            <div className="space-y-1">
-                                <div className="flex items-center gap-3">
-                                    <ShieldAlert className="h-6 w-6 text-red-400" />
-                                    <h3 className="text-2xl font-black text-white uppercase tracking-tight">Sala de Autopsia Forense</h3>
-                                </div>
-                                <p className="text-xs text-white/40 uppercase tracking-widest font-bold">Inspección de acciones estancadas en el búfer ({failedActions.length} items)</p>
+            {
+                selectedIds.length > 0 && (
+                    <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-8 duration-500">
+                        <div className="bg-black/80 backdrop-blur-2xl border border-brand-primary/30 rounded-full px-8 py-4 flex items-center gap-8 shadow-[0_0_50px_rgba(14,165,233,0.3)]">
+                            <div className="flex flex-col">
+                                <span className="text-[10px] font-black text-brand-primary uppercase tracking-widest">Seleccionados</span>
+                                <span className="text-xl font-black text-white">{selectedIds.length} <span className="text-sm text-white/40">ITEMS</span></span>
                             </div>
-                            <div className="flex items-center gap-3">
-                                {failedActions.length > 1 && (
-                                    <button
-                                        onClick={() => {
-                                            setFailedActions([]);
-                                            // Removing from failures allows the sync engine to pick them up in the next cycle
-                                        }}
-                                        className="px-6 py-2.5 rounded-2xl bg-brand-primary/20 border border-brand-primary/30 text-brand-primary text-[10px] font-black uppercase tracking-widest hover:bg-brand-primary hover:text-white transition-all"
-                                    >
-                                        Reintentar Todo ({failedActions.length})
-                                    </button>
-                                )}
+                            <div className="h-8 w-px bg-white/10"></div>
+                            <div className="flex items-center gap-4">
                                 <button
-                                    onClick={() => setShowForensic(false)}
-                                    className="h-12 w-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40 hover:text-white transition-all"
+                                    onClick={() => setSelectedIds([])}
+                                    className="text-xs font-black text-white/40 hover:text-white uppercase tracking-widest transition-all"
                                 >
-                                    <X className="h-6 w-6" />
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={() => discardBulkMutation.mutate(selectedIds)}
+                                    disabled={discardBulkMutation.isPending}
+                                    className="bg-red-500 hover:bg-red-600 text-white px-8 py-3 rounded-full text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-red-500/20 flex items-center gap-2 disabled:opacity-50"
+                                >
+                                    {discardBulkMutation.isPending ? <RefreshCcw className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                                    Descartar Seleccionados
                                 </button>
                             </div>
                         </div>
+                    </div>
+                )
+            }
 
-                        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-                            {failedActions.length === 0 ? (
-                                <div className="h-full flex flex-col items-center justify-center gap-4 text-white/20">
-                                    <CheckCircle2 className="h-12 w-12" />
-                                    <p className="text-sm font-bold uppercase tracking-widest">No hay fallos registrados en esta sesión</p>
+            {/* Forensic Inspection Modal */}
+            {
+                showForensic && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/90 backdrop-blur-xl animate-in fade-in duration-300">
+                        <div className="relative w-full max-w-5xl h-[80vh] flex flex-col overflow-hidden rounded-[2.5rem] border border-white/10 bg-gradient-to-br from-white/5 to-black shadow-2xl">
+                            <div className="p-8 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
+                                <div className="space-y-1">
+                                    <div className="flex items-center gap-3">
+                                        <ShieldAlert className="h-6 w-6 text-red-400" />
+                                        <h3 className="text-2xl font-black text-white uppercase tracking-tight">Sala de Autopsia Forense</h3>
+                                    </div>
+                                    <p className="text-xs text-white/40 uppercase tracking-widest font-bold">Inspección de acciones estancadas en el búfer ({failedActions.length} items)</p>
                                 </div>
-                            ) : (
-                                <div className="space-y-4">
-                                    {failedActions.map((f, idx) => (
-                                        <div key={idx} className="group relative overflow-hidden rounded-2xl border border-red-500/20 bg-red-500/[0.02] p-6 hover:bg-red-500/[0.04] transition-all">
-                                            <div className="flex flex-col md:flex-row gap-6 items-start">
-                                                <div className="flex-1 space-y-4 min-w-0">
-                                                    <div className="flex items-center gap-3">
-                                                        <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-tighter ${f.action.type === 'match' ? 'bg-brand-primary text-white' : 'bg-orange-500 text-white'}`}>
-                                                            {f.action.type === 'match' ? 'VINCULACIÓN' : 'DESCARTE'}
-                                                        </span>
-                                                        <span className="text-[10px] font-bold text-white/20 font-mono">ID ACCIÓN: {f.action.id}</span>
-                                                    </div>
+                                <div className="flex items-center gap-3">
+                                    {failedActions.length > 1 && (
+                                        <button
+                                            onClick={() => {
+                                                setFailedActions([]);
+                                                // Removing from failures allows the sync engine to pick them up in the next cycle
+                                            }}
+                                            className="px-6 py-2.5 rounded-2xl bg-brand-primary/20 border border-brand-primary/30 text-brand-primary text-[10px] font-black uppercase tracking-widest hover:bg-brand-primary hover:text-white transition-all"
+                                        >
+                                            Reintentar Todo ({failedActions.length})
+                                        </button>
+                                    )}
+                                    <button
+                                        onClick={() => setShowForensic(false)}
+                                        className="h-12 w-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40 hover:text-white transition-all"
+                                    >
+                                        <X className="h-6 w-6" />
+                                    </button>
+                                </div>
+                            </div>
 
-                                                    <div className="space-y-1">
-                                                        <h4 className="text-lg font-bold text-white leading-tight truncate" title={f.action.scrapedName || f.action.action_url || 'Sin Nombre'}>
-                                                            {f.action.scrapedName || (f.action.action_url ? `URL: ${f.action.action_url.substring(0, 50)}...` : 'Ítem sin nombre (Carga previa)')}
-                                                        </h4>
-                                                        <div className="flex items-center gap-4">
-                                                            {(f.action.action_url || f.url) && (
-                                                                <a href={f.action.action_url || f.url} target="_blank" rel="noreferrer" className="text-[10px] font-bold text-brand-primary hover:underline flex items-center gap-1">
-                                                                    <ExternalLink className="h-3 w-3" /> Ver Oferta Original
-                                                                </a>
-                                                            )}
-                                                            {f.action.productId && (
-                                                                <span className="text-[10px] font-bold text-white/30 truncate">
-                                                                    Objetivo: Producto #{f.action.productId}
-                                                                </span>
-                                                            )}
+                            <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                                {failedActions.length === 0 ? (
+                                    <div className="h-full flex flex-col items-center justify-center gap-4 text-white/20">
+                                        <CheckCircle2 className="h-12 w-12" />
+                                        <p className="text-sm font-bold uppercase tracking-widest">No hay fallos registrados en esta sesión</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {failedActions.map((f, idx) => (
+                                            <div key={idx} className="group relative overflow-hidden rounded-2xl border border-red-500/20 bg-red-500/[0.02] p-6 hover:bg-red-500/[0.04] transition-all">
+                                                <div className="flex flex-col md:flex-row gap-6 items-start">
+                                                    <div className="flex-1 space-y-4 min-w-0">
+                                                        <div className="flex items-center gap-3">
+                                                            <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-tighter ${f.action.type === 'match' ? 'bg-brand-primary text-white' : 'bg-orange-500 text-white'}`}>
+                                                                {f.action.type === 'match' ? 'VINCULACIÓN' : 'DESCARTE'}
+                                                            </span>
+                                                            <span className="text-[10px] font-bold text-white/20 font-mono">ID ACCIÓN: {f.action.id}</span>
+                                                        </div>
+
+                                                        <div className="space-y-1">
+                                                            <h4 className="text-lg font-bold text-white leading-tight truncate" title={f.action.scrapedName || f.action.action_url || 'Sin Nombre'}>
+                                                                {f.action.scrapedName || (f.action.action_url ? `URL: ${f.action.action_url.substring(0, 50)}...` : 'Ítem sin nombre (Carga previa)')}
+                                                            </h4>
+                                                            <div className="flex items-center gap-4">
+                                                                {(f.action.action_url || f.url) && (
+                                                                    <a href={f.action.action_url || f.url} target="_blank" rel="noreferrer" className="text-[10px] font-bold text-brand-primary hover:underline flex items-center gap-1">
+                                                                        <ExternalLink className="h-3 w-3" /> Ver Oferta Original
+                                                                    </a>
+                                                                )}
+                                                                {f.action.productId && (
+                                                                    <span className="text-[10px] font-bold text-white/30 truncate">
+                                                                        Objetivo: Producto #{f.action.productId}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="p-3 rounded-xl bg-black/40 border border-white/5">
+                                                            <p className="text-[10px] font-black text-red-400 uppercase tracking-widest mb-1 opacity-50">Log del Servidor:</p>
+                                                            <p className="text-xs font-mono font-bold text-red-300 break-words">{f.error}</p>
                                                         </div>
                                                     </div>
 
-                                                    <div className="p-3 rounded-xl bg-black/40 border border-white/5">
-                                                        <p className="text-[10px] font-black text-red-400 uppercase tracking-widest mb-1 opacity-50">Log del Servidor:</p>
-                                                        <p className="text-xs font-mono font-bold text-red-300 break-words">{f.error}</p>
+                                                    <div className="flex flex-row md:flex-col gap-2 w-full md:w-auto shrink-0">
+                                                        <button
+                                                            onClick={() => {
+                                                                // Force retry: Remove from failedActions to let the sync engine pick it up again
+                                                                setFailedActions(prev => prev.filter(fail => fail.action.id !== f.action.id));
+                                                            }}
+                                                            className="flex-1 md:w-32 py-2.5 rounded-xl bg-brand-primary text-white text-[10px] font-black uppercase tracking-widest hover:brightness-110 transition-all"
+                                                        >
+                                                            Reintentar
+                                                        </button>
+                                                        <button
+                                                            onClick={() => {
+                                                                // Forced return to abyss: Remove from failedActions AND pendingActions
+                                                                setFailedActions(prev => prev.filter(fail => fail.action.id !== f.action.id));
+                                                                setPendingActions(prev => prev.filter(a => a.id !== f.action.id));
+                                                            }}
+                                                            className="flex-1 md:w-32 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white/60 text-[10px] font-black uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all"
+                                                        >
+                                                            Devolver al Abismo
+                                                        </button>
+                                                        <button
+                                                            onClick={() => {
+                                                                // Remove from failures but keep in ghost mode (uncommon case, but available)
+                                                                setFailedActions(prev => prev.filter(fail => fail.action.id !== f.action.id));
+                                                            }}
+                                                            className="p-2.5 rounded-xl bg-red-500/10 text-red-500/60 hover:bg-red-500 hover:text-white transition-all"
+                                                            title="Limpiar Log de Error"
+                                                        >
+                                                            <Trash2 className="h-4 w-4 mx-auto" />
+                                                        </button>
                                                     </div>
                                                 </div>
-
-                                                <div className="flex flex-row md:flex-col gap-2 w-full md:w-auto shrink-0">
-                                                    <button
-                                                        onClick={() => {
-                                                            // Force retry: Remove from failedActions to let the sync engine pick it up again
-                                                            setFailedActions(prev => prev.filter(fail => fail.action.id !== f.action.id));
-                                                        }}
-                                                        className="flex-1 md:w-32 py-2.5 rounded-xl bg-brand-primary text-white text-[10px] font-black uppercase tracking-widest hover:brightness-110 transition-all"
-                                                    >
-                                                        Reintentar
-                                                    </button>
-                                                    <button
-                                                        onClick={() => {
-                                                            // Forced return to abyss: Remove from failedActions AND pendingActions
-                                                            setFailedActions(prev => prev.filter(fail => fail.action.id !== f.action.id));
-                                                            setPendingActions(prev => prev.filter(a => a.id !== f.action.id));
-                                                        }}
-                                                        className="flex-1 md:w-32 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white/60 text-[10px] font-black uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all"
-                                                    >
-                                                        Devolver al Abismo
-                                                    </button>
-                                                    <button
-                                                        onClick={() => {
-                                                            // Remove from failures but keep in ghost mode (uncommon case, but available)
-                                                            setFailedActions(prev => prev.filter(fail => fail.action.id !== f.action.id));
-                                                        }}
-                                                        className="p-2.5 rounded-xl bg-red-500/10 text-red-500/60 hover:bg-red-500 hover:text-white transition-all"
-                                                        title="Limpiar Log de Error"
-                                                    >
-                                                        <Trash2 className="h-4 w-4 mx-auto" />
-                                                    </button>
-                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
 
-                        <div className="p-6 border-t border-white/5 bg-black/40 flex justify-end">
-                            <button
-                                onClick={() => setShowForensic(false)}
-                                className="px-8 py-3 rounded-2xl bg-white/10 text-white text-xs font-black uppercase tracking-widest hover:bg-white/20 transition-all"
-                            >
-                                Salir de Autopsia
-                            </button>
+                            <div className="p-6 border-t border-white/5 bg-black/40 flex justify-end">
+                                <button
+                                    onClick={() => setShowForensic(false)}
+                                    className="px-8 py-3 rounded-2xl bg-white/10 text-white text-xs font-black uppercase tracking-widest hover:bg-white/20 transition-all"
+                                >
+                                    Salir de Autopsia
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Phase 41: Market Intelligence Modal */}
-            {intelProductId && (
-                <MarketIntelligenceModal
-                    productId={intelProductId}
-                    onClose={() => setIntelProductId(null)}
-                />
-            )}
+            {
+                intelProductId && (
+                    <MarketIntelligenceModal
+                        productId={intelProductId}
+                        onClose={() => setIntelProductId(null)}
+                    />
+                )
+            }
 
             {/* Phase 40: Wallapop Oracle Bridge - Quick Preview */}
-            {previewUrl && (
-                <QuickPreviewModal
-                    url={previewUrl}
-                    onClose={() => setPreviewUrl(null)}
-                />
-            )}
+            {
+                previewUrl && (
+                    <QuickPreviewModal
+                        url={previewUrl}
+                        onClose={() => setPreviewUrl(null)}
+                    />
+                )
+            }
         </div>
     );
 };

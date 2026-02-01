@@ -19,7 +19,6 @@ from src.domain.models import (
     OfferHistoryModel, LogisticRuleModel, ProductAliasModel
 )
 from src.application.services.logistics_service import LogisticsService
-from src.infrastructure.scrapers.harvester import run_harvester
 from src.infrastructure.scrapers.action_toys_scraper import ActionToysScraper
 from src.infrastructure.scrapers.amazon_scraper import AmazonScraper
 from src.infrastructure.scrapers.fantasia_scraper import FantasiaScraper
@@ -52,13 +51,13 @@ def ensure_scrapers_registered():
     from src.infrastructure.scrapers.time4actiontoys_scraper import Time4ActionToysDEScraper
     from src.infrastructure.scrapers.bbts_scraper import BigBadToyStoreScraper
     from src.infrastructure.scrapers.ebay_scraper import EbayScraper
-    from src.infrastructure.scrapers.idealo_scraper import IdealoScraper
     from src.infrastructure.scrapers.tradeinn_scraper import TradeinnScraper
+    from src.infrastructure.scrapers.dvdstorespain_scraper import DVDStoreSpainScraper
 
     spiders_to_check = [
         "ActionToys", "Fantasia Personajes", "Frikiverso", "Electropolis", 
         "Pixelatoy", "Amazon.es", "DeToyboys", "Ebay.es", "ToymiEU", 
-        "Time4ActionToysDE", "BigBadToyStore", "Idealo.es", "Tradeinn"
+        "Time4ActionToysDE", "BigBadToyStore", "Tradeinn", "DVDStoreSpain", "Nexus"
     ]
     
     with SessionCloud() as db:
@@ -154,7 +153,7 @@ class PurgatoryBulkDiscardRequest(BaseModel):
     reason: str = "manual_bulk_discard"
 
 class ScraperRunRequest(BaseModel):
-    spider_name: str = "harvester"  # "harvester", "all", or individual spider name
+    spider_name: str = "all"  # "all" or individual spider name
     trigger_type: str = "manual"
     query: str | None = None
 
@@ -426,12 +425,18 @@ async def sync_nexus(background_tasks: BackgroundTasks):
     """
     Dispara la sincronización manual del catálogo maestro de ActionFigure411.
     """
-    from src.application.services.nexus_service import NexusService
-    
-    # Lo ejecutamos en segundo plano para no bloquear la UI
-    background_tasks.add_task(NexusService.sync_catalog)
-    
-    return {"status": "success", "message": "Iniciando sincronización del Nexo Maestro en segundo plano..."}
+    try:
+        from src.application.services.nexus_service import NexusService
+        
+        # Lo ejecutamos en segundo plano para no bloquear la UI
+        background_tasks.add_task(NexusService.sync_catalog)
+        
+        return {"status": "success", "message": "Iniciando sincronización del Nexo Maestro en segundo plano..."}
+    except Exception as e:
+        logger.error(f"Failed to start Nexus sync: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"No se pudo iniciar Nexus: {str(e)}")
 
 @app.post("/api/products/merge", dependencies=[Depends(verify_api_key)])
 async def merge_products(request: ProductMergeRequest):
@@ -824,7 +829,7 @@ async def discard_purgatory_bulk(request: PurgatoryBulkDiscardRequest):
 
 # --- SCRAPER CONTROL ENDPOINTS ---
 
-def run_scraper_task(spider_name: str = "harvester", trigger_type: str = "manual", query: str | None = None):
+def run_scraper_task(spider_name: str = "all", trigger_type: str = "manual", query: str | None = None):
     """Wrapper para ejecutar recolectores y actualizar el estado en BD"""
     from datetime import datetime
     import os
@@ -882,115 +887,84 @@ def run_scraper_task(spider_name: str = "harvester", trigger_type: str = "manual
     error_msg = None
 
     try:
-        if spider_name == "harvester":
-            # Ejecutar el recolector local (Playwright)
-            run_harvester()
-            
-            # Procesar el snapshot
-            from src.infrastructure.scrapers.harvester import SNAPSHOT_FILE
-            from src.infrastructure.scrapers.pipeline import ScrapingPipeline
-            import json
-            
-            if os.path.exists(SNAPSHOT_FILE):
-                with open(SNAPSHOT_FILE, 'r', encoding='utf-8') as f:
-                    raw_data = json.load(f)
-                
-                mapped_offers = []
-                for item in raw_data:
-                    mapped_offers.append({
-                        "product_name": item["name"],
-                        "price": item["price_val"],
-                        "currency": "EUR",
-                        "url": item["url"],
-                        "shop_name": item["store_name"],
-                        "image_url": item["image_url"],
-                        "is_available": True
-                    })
-                
-                items_found = len(mapped_offers)
-                pipeline = ScrapingPipeline(spiders=[])
-                pipeline.update_database(mapped_offers)
-                logger.info(f"Procesadas {items_found} reliquias desde el recolector local.")
+        # Ejecutar spiders de fondo (ScrapingPipeline)
+        from src.infrastructure.scrapers.pipeline import ScrapingPipeline
+        from src.infrastructure.scrapers.action_toys_scraper import ActionToysScraper
+        from src.infrastructure.scrapers.fantasia_scraper import FantasiaScraper
+        from src.infrastructure.scrapers.frikiverso_scraper import FrikiversoScraper
+        from src.infrastructure.scrapers.electropolis_scraper import ElectropolisScraper
+        from src.infrastructure.scrapers.pixelatoy_scraper import PixelatoyScraper
+        from src.infrastructure.scrapers.amazon_scraper import AmazonScraper
+        from src.infrastructure.scrapers.ebay_scraper import EbayScraper
         
-        else:
-            # Ejecutar spiders de fondo (ScrapingPipeline)
-            from src.infrastructure.scrapers.pipeline import ScrapingPipeline
-            from src.infrastructure.scrapers.action_toys_scraper import ActionToysScraper
-            from src.infrastructure.scrapers.fantasia_scraper import FantasiaScraper
-            from src.infrastructure.scrapers.frikiverso_scraper import FrikiversoScraper
-            from src.infrastructure.scrapers.electropolis_scraper import ElectropolisScraper
-            from src.infrastructure.scrapers.pixelatoy_scraper import PixelatoyScraper
-            from src.infrastructure.scrapers.amazon_scraper import AmazonScraper
-            from src.infrastructure.scrapers.ebay_scraper import EbayScraper
-            
-            # Phase 8. European Expansion
-            from src.infrastructure.scrapers.detoyboys_scraper import DeToyboysNLScraper
-            from src.infrastructure.scrapers.toymi_scraper import ToymiEUScraper
-            from src.infrastructure.scrapers.time4actiontoys_scraper import Time4ActionToysDEScraper
-            from src.infrastructure.scrapers.bbts_scraper import BigBadToyStoreScraper
-            from src.infrastructure.scrapers.idealo_scraper import IdealoScraper
-            from src.infrastructure.scrapers.tradeinn_scraper import TradeinnScraper
-            
-            import asyncio
+        # Phase 8. European Expansion
+        from src.infrastructure.scrapers.detoyboys_scraper import DeToyboysNLScraper
+        from src.infrastructure.scrapers.toymi_scraper import ToymiEUScraper
+        from src.infrastructure.scrapers.time4actiontoys_scraper import Time4ActionToysDEScraper
+        from src.infrastructure.scrapers.bbts_scraper import BigBadToyStoreScraper
+        from src.infrastructure.scrapers.tradeinn_scraper import TradeinnScraper
+        from src.infrastructure.scrapers.dvdstorespain_scraper import DVDStoreSpainScraper
+        
+        import asyncio
 
-            spiders_map = {
-                "ActionToys": ActionToysScraper(),
-                "Fantasia Personajes": FantasiaScraper(),
-                "Frikiverso": FrikiversoScraper(),
-                "Electropolis": ElectropolisScraper(),
-                "Pixelatoy": PixelatoyScraper(),
-                "Amazon.es": AmazonScraper(), 
-                "DeToyboys": DeToyboysNLScraper(),
-                "Ebay.es": EbayScraper(),
-                "ToymiEU": ToymiEUScraper(),
-                "Time4ActionToysDE": Time4ActionToysDEScraper(),
-                "BigBadToyStore": BigBadToyStoreScraper(),
-                "Idealo.es": IdealoScraper(),
-                "Tradeinn": TradeinnScraper()
-            }
-            
-            # Normalize requested name for matching
-            lookup_name = spider_name.lower()
-            matching_key = next((k for k in spiders_map.keys() if k.lower() == lookup_name), None)
+        spiders_map = {
+            "ActionToys": ActionToysScraper(),
+            "Fantasia Personajes": FantasiaScraper(),
+            "Frikiverso": FrikiversoScraper(),
+            "Electropolis": ElectropolisScraper(),
+            "Pixelatoy": PixelatoyScraper(),
+            "Amazon.es": AmazonScraper(), 
+            "DeToyboys": DeToyboysNLScraper(),
+            "Ebay.es": EbayScraper(),
+            "ToymiEU": ToymiEUScraper(),
+            "Time4ActionToysDE": Time4ActionToysDEScraper(),
+            "BigBadToyStore": BigBadToyStoreScraper(),
+            "Tradeinn": TradeinnScraper(),
+            "DVDStoreSpain": DVDStoreSpainScraper()
+        }
+        
+        # Normalize requested name for matching
+        lookup_name = spider_name.lower()
+        matching_key = next((k for k in spiders_map.keys() if k.lower() == lookup_name), None)
 
-            spiders_to_run = []
-            if spider_name == "all":
-                spiders_to_run = list(spiders_map.values())
-            elif matching_key:
-                s = spiders_map[matching_key]
-                s.log_callback = update_live_log # Inject bridge
-                spiders_to_run = [s]
-            
-            if spiders_to_run:
-                # Ensure callback is set for all if 'all' was selected
-                for s in spiders_to_run: s.log_callback = update_live_log
+        spiders_to_run = []
+        if spider_name == "all":
+            spiders_to_run = list(spiders_map.values())
+        elif matching_key:
+            s = spiders_map[matching_key]
+            s.log_callback = update_live_log # Inject bridge
+            spiders_to_run = [s]
+        
+        if spiders_to_run:
+            # Ensure callback is set for all if 'all' was selected
+            for s in spiders_to_run: s.log_callback = update_live_log
 
-                pipeline = ScrapingPipeline(spiders_to_run)
-                # Ejecutar búsqueda asíncrona (usamos "auto" o similar)
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                # PHASE 47: Use provided query or fallback to specific store defaults
-                search_term = query
-                if not search_term:
-                    search_term = "masters of the universe origins" if spider_name.lower() == "tradeinn" else "auto"
-                
-                update_live_log(f"📡 Buscando reliquias para '{search_term}' en {spider_name}...")
-                
-                try:
-                    results = loop.run_until_complete(
-                        asyncio.wait_for(pipeline.run_product_search(search_term), timeout=600)
-                    )
-                except asyncio.TimeoutError:
-                    update_live_log("⌛ [TIMEOUT] La incursión ha excedido los 10 minutos. Abortando.")
-                    results = []
-                
-                loop.close()
-                
-                update_live_log(f"💾 Persistiendo {len(results)} ofertas...")
-                pipeline.update_database(results)
-                items_found = len(results)
-                logger.info(f"💾 Persistidas {items_found} ofertas tras incursión de {spider_name}.")
-                update_live_log(f"✅ Incursión completada con éxito. {items_found} reliquias encontradas.")
+            pipeline = ScrapingPipeline(spiders_to_run)
+            # Ejecutar búsqueda asíncrona (usamos "auto" o similar)
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            # PHASE 47: Use provided query or fallback to specific store defaults
+            search_term = query
+            if not search_term:
+                search_term = "masters of the universe origins" if spider_name.lower() == "tradeinn" else "auto"
+            
+            update_live_log(f"📡 Buscando reliquias para '{search_term}' en {spider_name}...")
+            
+            try:
+                results = loop.run_until_complete(
+                    asyncio.wait_for(pipeline.run_product_search(search_term), timeout=600)
+                )
+            except asyncio.TimeoutError:
+                update_live_log("⌛ [TIMEOUT] La incursión ha excedido los 10 minutos. Abortando.")
+                results = []
+            
+            loop.close()
+            
+            update_live_log(f"💾 Persistiendo {len(results)} ofertas...")
+            pipeline.update_database(results)
+            items_found = len(results)
+            logger.info(f"💾 Persistidas {items_found} ofertas tras incursión de {spider_name}.")
+            update_live_log(f"✅ Incursión completada con éxito. {items_found} reliquias encontradas.")
 
         # 2. Marcar éxito en la base de datos y actualizar Log
         with SessionCloud() as db:
@@ -1029,7 +1003,10 @@ def run_scraper_task(spider_name: str = "harvester", trigger_type: str = "manual
 async def get_scrapers_status():
     """Retorna el estado actual de los recolectores (Admin Only)"""
     with SessionCloud() as db:
-        return db.query(ScraperStatusModel).all()
+        # Backend filtering to hide System Scrapers from Grid Code
+        return db.query(ScraperStatusModel).filter(
+            ScraperStatusModel.spider_name.notin_(['Nexus', 'Harvester', 'harvester', 'all', 'idealo.es', 'Idealo.es'])
+        ).all()
 
 @app.get("/api/scrapers/logs", dependencies=[Depends(verify_api_key)])
 async def get_scrapers_logs():
@@ -1834,5 +1811,11 @@ async def update_user_location(user_id: int, location: str):
 
 if __name__ == "__main__":
     import uvicorn
+    try:
+        from scripts.ox3_shield import apply_3ox_shield
+        apply_3ox_shield()
+    except Exception:
+        pass
+        
     # Escuchar en 0.0.0.0 para facilitar conectividad en Docker/Red Local
     uvicorn.run("src.interfaces.api.main:app", host="0.0.0.0", port=8000, reload=True)

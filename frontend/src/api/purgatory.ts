@@ -84,7 +84,7 @@ export const getScrapersStatus = async (): Promise<ScraperStatus[]> => {
     return response.data;
 };
 
-export const runScrapers = async (spiderName: string = 'harvester', triggerType: string = 'manual') => {
+export const runScrapers = async (spiderName: string = 'all', triggerType: string = 'manual') => {
     const response = await axios.post(`${API_BASE}/scrapers/run`, {
         spider_name: spiderName,
         trigger_type: triggerType
