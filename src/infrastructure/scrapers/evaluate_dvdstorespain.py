@@ -14,7 +14,7 @@ async def test_scraper():
     # Redirigir logs a la consola
     scraper.log_callback = lambda msg: print(f"[LOG] {msg}")
     
-    results = await scraper.search("Terminator")
+    results = await scraper.search("masters of the universe origins")
     
     print("\n--- RESULTADOS ---")
     print(f"Total encontrados: {len(results)}")
