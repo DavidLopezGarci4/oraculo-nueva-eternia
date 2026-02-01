@@ -307,8 +307,8 @@ const Config: React.FC = () => {
                                                 )}
                                                 <div className="flex items-center justify-between">
                                                     <span className="text-[10px] font-black uppercase tracking-widest text-white group-hover:text-brand-primary transition-colors">{log.spider_name}</span>
-                                                    <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-tighter ${log.status === 'success' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-                                                        {log.status === 'success' ? 'Éxito' : 'Fallo'}
+                                                    <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-tighter ${log.status === 'success' ? 'bg-green-500/20 text-green-400' : log.status === 'running' ? 'bg-blue-500/20 text-blue-400' : 'bg-red-500/20 text-red-400'}`}>
+                                                        {log.status === 'success' ? 'Éxito' : log.status === 'running' ? 'En Ejecución' : 'Fallo'}
                                                     </span>
                                                 </div>
                                                 <div className="flex items-center justify-between text-[10px] text-white/30 font-bold">

@@ -57,13 +57,13 @@ def ensure_scrapers_registered():
     spiders_to_check = [
         "ActionToys", "Fantasia Personajes", "Frikiverso", "Electropolis", 
         "Pixelatoy", "Amazon.es", "DeToyboys", "Ebay.es", "ToymiEU", 
-        "Time4ActionToysDE", "BigBadToyStore", "Tradeinn", "DVDStoreSpain", "Nexus"
+        "Time4ActionToysDE", "BigBadToyStore", "Tradeinn", "DVDStoreSpain"
     ]
     
     with SessionCloud() as db:
         try:
             for name in spiders_to_check:
-                exists = db.query(ScraperStatusModel).filter(ScraperStatusModel.spider_name == name).first()
+                exists = db.query(ScraperStatusModel).filter(ScraperStatusModel.spider_name.ilike(name)).first()
                 if not exists:
                     logger.info(f"🆕 Registrando nuevo scraper en sistema: {name}")
                     db.add(ScraperStatusModel(spider_name=name, status="stopped"))
