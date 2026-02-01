@@ -25,7 +25,8 @@ Este perfil posee la **Llave Maestra** para la gestión total del sistema.
 
 ### 🧬 Implementación en la Interfaz Actual
 
-El sistema detecta automáticamente tu rol al cargar la sesión:
+El sistema detecta automáticamente tu rango mediante una **Validación de Identidad** al arrancar la aplicación (`App.tsx`):
 
-1.  **Si eres Guardián**: El menú lateral se simplifica. El panel de **Configuración** y las herramientas de disparo en el **Purgatorio** están ocultas.
-2.  **Si eres Master**: Se desbloquean todas las capacidades de gestión, permitiéndote actuar como el Arquitecto de los Datos.
+1.  **Si eres Guardián**: El menú lateral se simplifica. El panel de **Configuración** y las herramientas de disparo en el **Purgatorio** permanecen ocultos.
+2.  **Si eres Maestro**: Se desbloquean todas las capacidades de gestión, permitiéndote actuar como el Arquitecto de los Datos.
+3.  **Dinamismo Total**: El rango ya no es estático por ID de usuario. Un Administrador puede promover a un Guardián a Maestro desde la **Gestión de Héroes**, y los cambios de interfaz se reflejan al instante sin recarga manual.

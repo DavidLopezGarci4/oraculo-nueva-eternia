@@ -2,16 +2,23 @@ import React, { useState, useEffect } from 'react';
 import { Play, Activity, Clock, AlertCircle, CheckCircle2, RefreshCw, Terminal, GitMerge, Target, Settings, Users, ShieldAlert, Trash2, Zap, History, Database, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { getScrapersStatus, getDuplicates, mergeProducts, syncNexus, type ScraperStatus } from '../api/admin';
 import { resetSmartMatches, runScrapers, stopScrapers, getScraperLogs, type ScraperExecutionLog } from '../api/purgatory';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import WallapopImporter from '../components/admin/WallapopImporter';
 
-const Config: React.FC = () => {
+import { getScrapersStatus, getDuplicates, mergeProducts, syncNexus, type ScraperStatus, type Hero } from '../api/admin';
+
+interface ConfigProps {
+    user?: Hero | null;
+    onUserUpdate?: () => void;
+}
+
+const Config: React.FC<ConfigProps> = ({ user, onUserUpdate }) => {
     const consoleRef = React.useRef<HTMLDivElement>(null);
     const [activeTab, setActiveTab] = useState<'scrapers' | 'radar' | 'system' | 'users' | 'wallapop'>('scrapers');
     const [statuses, setStatuses] = useState<ScraperStatus[]>([]);
+    const [heroes, setHeroes] = useState<any[]>([]);
     const [duplicates, setDuplicates] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [mergingId, setMergingId] = useState<number | null>(null);
@@ -30,16 +37,18 @@ const Config: React.FC = () => {
 
     const fetchData = async () => {
         try {
-            const [s, d, u, al] = await Promise.all([
+            const [s, d, u, al, h] = await Promise.all([
                 getScrapersStatus(),
                 getDuplicates(),
                 import('../api/admin').then(m => m.getUserSettings(activeUserId)),
-                getScraperLogs()
+                getScraperLogs(),
+                import('../api/admin').then(m => m.getHeroes())
             ]);
             setStatuses(s);
             setDuplicates(d);
             setUserSettings(u);
             setAdvancedLogs(al);
+            setHeroes(h);
 
             // Si hay un log seleccionado que está corriendo, actualizarlo
             if (selectedLog && al.find(log => log.id === selectedLog.id)) {
@@ -132,6 +141,33 @@ const Config: React.FC = () => {
         }
     };
 
+    const handleUpdateRole = async (userId: number, newRole: string) => {
+        try {
+            const m = await import('../api/admin');
+            await m.updateHeroRole(userId, newRole);
+            const updatedHeroes = await m.getHeroes();
+            setHeroes(updatedHeroes);
+
+            // If we updated the current active user, refresh global state
+            if (userId === activeUserId && onUserUpdate) {
+                onUserUpdate();
+            }
+        } catch (error) {
+            console.error('Error updating role:', error);
+        }
+    };
+
+    const handlePasswordReset = async (userId: number) => {
+        if (!confirm('¿Seguro que deseas iniciar el Protocolo de Reseteo para este héroe?')) return;
+        try {
+            const m = await import('../api/admin');
+            await m.resetHeroPassword(userId);
+            alert('🛡️ Protocolo de reseteo iniciado satisfactoriamente en los registros del Oráculo.');
+        } catch (error) {
+            console.error('Error resetting password:', error);
+        }
+    };
+
 
     if (loading && statuses.length === 0) {
         return (
@@ -183,13 +219,15 @@ const Config: React.FC = () => {
                         <Settings className="h-4 w-4" />
                         Ajustes de Sistema
                     </button>
-                    <button
-                        onClick={() => setActiveTab('users')}
-                        className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'users' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'text-white/40 hover:text-white'}`}
-                    >
-                        <Users className="h-4 w-4" />
-                        Gestión de Héroes
-                    </button>
+                    {user?.role === 'admin' && (
+                        <button
+                            onClick={() => setActiveTab('users')}
+                            className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'users' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'text-white/40 hover:text-white'}`}
+                        >
+                            <Users className="h-4 w-4" />
+                            Gestión de Héroes
+                        </button>
+                    )}
                     {/* Wallapop tab disabled */}
                 </div>
             </div>
@@ -628,54 +666,84 @@ const Config: React.FC = () => {
                             </button>
                         </div>
 
-                        <div className="glass border border-white/10 rounded-3xl overflow-hidden opacity-60">
+                        <div className="glass border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
                             <table className="w-full text-left text-sm">
                                 <thead className="bg-white/5 text-white/30 uppercase text-[10px] font-bold">
                                     <tr>
-                                        <th className="px-6 py-4">Usuario</th>
-                                        <th className="px-6 py-4">Rol</th>
-                                        <th className="px-6 py-4">Colección</th>
-                                        <th className="px-6 py-4">Última Actividad</th>
-                                        <th className="px-6 py-4 text-right">Acciones</th>
+                                        <th className="px-6 py-4">Héroe</th>
+                                        <th className="px-6 py-4">Rango (Rol)</th>
+                                        <th className="px-6 py-4">Fortaleza (Items)</th>
+                                        <th className="px-6 py-4">Ubicación</th>
+                                        <th className="px-6 py-4 text-right">Acciones de Poder</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-white/5 text-white/70">
-                                    <tr className="hover:bg-white/5 transition-colors">
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className="h-8 w-8 rounded-full bg-brand-primary/20 flex items-center justify-center text-brand-primary font-bold text-xs border border-brand-primary/30">D</div>
-                                                <div>
-                                                    <p className="font-bold text-white">David</p>
-                                                    <p className="text-[10px] text-white/30">david@eternia.com</p>
+                                    {heroes.map((hero: Hero) => (
+                                        <tr key={hero.id} className="hover:bg-white/5 transition-colors group">
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="h-10 w-10 rounded-full bg-brand-primary/10 flex items-center justify-center text-brand-primary font-bold text-sm border border-brand-primary/30 shadow-inner group-hover:scale-110 transition-transform">
+                                                        {hero.username.charAt(0).toUpperCase()}
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-bold text-white group-hover:text-brand-primary transition-colors">{hero.username}</p>
+                                                        <p className="text-[10px] text-white/30 font-mono">{hero.email}</p>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span className="px-2 py-0.5 rounded bg-brand-primary/10 text-brand-primary text-[10px] uppercase font-bold border border-brand-primary/20">Admin</span>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-2">
-                                                <Target className="h-3 w-3 text-brand-primary" />
-                                                <span className="font-black text-white">75</span>
-                                                <span className="text-[10px] text-white/30 tracking-tighter">items</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 text-[10px]">Hace 5 minutos</td>
-                                        <td className="px-6 py-4 text-right">
-                                            <button disabled className="text-white/20 hover:text-white p-2"><Settings className="h-4 w-4" /></button>
-                                        </td>
-                                    </tr>
-                                    <tr className="hover:bg-white/5 transition-colors">
-                                        <td className="px-6 py-4 text-white/30 italic" colSpan={5}>
-                                            Espacio reservado para futuros reclutas...
-                                        </td>
-                                    </tr>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <select
+                                                    value={hero.role}
+                                                    onChange={(e) => handleUpdateRole(hero.id, e.target.value)}
+                                                    className="bg-brand-primary/10 text-brand-primary text-[10px] uppercase font-black border border-brand-primary/20 rounded px-2 py-0.5 outline-none cursor-pointer hover:bg-brand-primary/20"
+                                                >
+                                                    <option value="viewer" className="bg-black text-white">🛡️ Guardián</option>
+                                                    <option value="admin" className="bg-black text-white">⚔️ Maestro</option>
+                                                </select>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center gap-2">
+                                                    <Target className="h-3 w-3 text-brand-primary" />
+                                                    <span className="font-black text-lg text-white">{hero.collection_size}</span>
+                                                    <span className="text-[10px] text-brand-primary/50 font-black uppercase tracking-tighter">unidades</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest bg-white/5 px-2 py-1 rounded-md">{hero.location}</span>
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button
+                                                        onClick={() => handlePasswordReset(hero.id)}
+                                                        title="Protocolo de Reseteo"
+                                                        className="h-8 w-8 rounded-lg bg-orange-500/10 text-orange-400 hover:bg-orange-500 hover:text-white border border-orange-500/20 flex items-center justify-center transition-all shadow-lg shadow-orange-500/0 hover:shadow-orange-500/20"
+                                                    >
+                                                        <ShieldAlert className="h-4 w-4" />
+                                                    </button>
+                                                    <button
+                                                        disabled
+                                                        title="Editar Configuración"
+                                                        className="h-8 w-8 rounded-lg bg-white/5 text-white/20 border border-white/5 flex items-center justify-center cursor-not-allowed"
+                                                    >
+                                                        <Settings className="h-4 w-4" />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {heroes.length === 0 && (
+                                        <tr>
+                                            <td colSpan={5} className="px-6 py-8 text-center text-white/20 italic">
+                                                No hay héroes reclutados en este momento...
+                                            </td>
+                                        </tr>
+                                    )}
                                 </tbody>
                             </table>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 opacity-60">
-                            <div className="glass border border-white/10 p-5 rounded-2xl flex items-center justify-between">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="glass border border-white/10 p-5 rounded-2xl flex items-center justify-between group hover:bg-white/5 transition-all">
                                 <div className="flex items-center gap-4">
                                     <div className="bg-green-500/10 p-3 rounded-lg"><CheckCircle2 className="h-5 w-5 text-green-400" /></div>
                                     <div>
@@ -683,17 +751,17 @@ const Config: React.FC = () => {
                                         <p className="text-[10px] text-white/40">Permitir que nuevos usuarios se unan.</p>
                                     </div>
                                 </div>
-                                <div className="h-4 w-8 bg-brand-primary/30 rounded-full relative"><div className="absolute right-1 top-1 h-2 w-2 bg-brand-primary rounded-full"></div></div>
+                                <div className="h-4 w-8 bg-brand-primary/30 rounded-full relative shadow-inner cursor-pointer"><div className="absolute right-1 top-1 h-2 w-2 bg-brand-primary rounded-full shadow-[0_0_8px_rgba(14,165,233,0.5)]"></div></div>
                             </div>
-                            <div className="glass border border-white/10 p-5 rounded-2xl flex items-center justify-between">
+                            <div className="glass border border-white/10 p-5 rounded-2xl flex items-center justify-between group hover:bg-white/5 transition-all opacity-50">
                                 <div className="flex items-center gap-4">
-                                    <div className="bg-red-500/10 p-3 rounded-lg"><AlertCircle className="h-5 w-5 text-red-400" /></div>
+                                    <div className="bg-red-500/10 p-3 rounded-lg"><Activity className="h-5 w-5 text-red-400" /></div>
                                     <div>
-                                        <h4 className="text-sm font-bold text-white">Modo Invitado</h4>
-                                        <p className="text-[10px] text-white/40">Visualización sin registro.</p>
+                                        <h4 className="text-sm font-bold text-white">Vigilancia de Sesión</h4>
+                                        <p className="text-[10px] text-white/40">Cierre automático por inactividad.</p>
                                     </div>
                                 </div>
-                                <div className="h-4 w-8 bg-white/10 rounded-full relative"><div className="absolute left-1 top-1 h-2 w-2 bg-white/30 rounded-full"></div></div>
+                                <div className="h-4 w-8 bg-white/10 rounded-full relative cursor-not-allowed"><div className="absolute left-1 top-1 h-2 w-2 bg-white/30 rounded-full"></div></div>
                             </div>
                         </div>
                     </motion.div>

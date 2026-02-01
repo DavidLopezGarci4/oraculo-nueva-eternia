@@ -176,36 +176,80 @@ class AnomalyValidationRequest(BaseModel):
 class RelinkOfferRequest(BaseModel):
     target_product_id: int
 
-@app.get("/health")
-def health():
-    return {"status": "ok", "message": "Eternia is online"}
+class UserRoleUpdateRequest(BaseModel):
+    role: str
 
-@app.post("/sync/batch", dependencies=[Depends(verify_api_key)])
-async def sync_batch(actions: List[SyncAction]):
+class HeroOutput(BaseModel):
+    id: int
+    username: str
+    email: str
+    role: str
+    is_active: bool
+    collection_size: int
+    location: str
+
+@app.get("/api/admin/users", response_model=List[HeroOutput], dependencies=[Depends(verify_api_key)])
+async def get_all_heroes(db_session: SessionCloud = Depends(lambda: SessionCloud())):
     """
-    Recibe un lote de acciones y las persiste en la DB Cloud (Supabase).
+    Lista todos los héroes con su conteo real de items en colección.
     """
-    logger.info(f"Received sync batch with {len(actions)} actions.")
-    
-    synced_count = 0
+    with db_session as db:
+        # Subconsulta para contar items por usuario
+        counts = db.query(
+            CollectionItemModel.owner_id,
+            func.count(CollectionItemModel.id).label("item_count")
+        ).group_by(CollectionItemModel.owner_id).subquery()
+
+        # Join UserModel con el conteo
+        users = db.query(
+            UserModel,
+            func.coalesce(counts.c.item_count, 0).label("collection_size")
+        ).outerjoin(counts, UserModel.id == counts.c.owner_id).all()
+
+        results = []
+        for user, count in users:
+            results.append({
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "role": user.role,
+                "is_active": user.is_active,
+                "location": user.location,
+                "collection_size": count
+            })
+        return results
+
+@app.patch("/api/admin/users/{user_id}/role", dependencies=[Depends(verify_api_key)])
+async def update_hero_role(user_id: int, request: UserRoleUpdateRequest):
+    """
+    Actualiza el rango (rol) de un héroe en el Oráculo.
+    """
     with SessionCloud() as db:
-        try:
-            for action in actions:
-                # Ejemplo: Manejar LINK_OFFER
-                if action.action_type == "LINK_OFFER":
-                    pass
-                synced_count += 1
-            db.commit()
-            return {"status": "success", "synced_count": synced_count}
-        except Exception as e:
-            db.rollback()
-            logger.error(f"Sync error: {e}")
-            raise HTTPException(status_code=500, detail=str(e))
+        user = db.query(UserModel).filter(UserModel.id == user_id).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="Héroe no encontrado")
+        
+        user.role = request.role
+        db.commit()
+        return {"status": "success", "message": f"Rango de {user.username} actualizado a {request.role}"}
+
+@app.post("/api/admin/users/{user_id}/reset-password", dependencies=[Depends(verify_api_key)])
+async def reset_hero_password(user_id: int):
+    """
+    Registra una solicitud de reseteo de contraseña para un héroe.
+    En el futuro, esto enviará un email con un token.
+    """
+    with SessionCloud() as db:
+        user = db.query(UserModel).filter(UserModel.id == user_id).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="Héroe no encontrado")
+        
+        logger.warning(f"🛡️ PROTOCOLO DE RESETEO: Solicitud de cambio de contraseña para {user.username} ({user.email})")
+        return {"status": "success", "message": f"Protocolo de reseteo iniciado para {user.email}"}
 
 @app.get("/api/auth/users")
-async def get_users():
-    """Retorna la lista de usuarios disponibles (Modo Test)"""
-    from src.domain.models import UserModel
+async def get_users_minimal():
+    """Retorna la lista de usuarios para el selector rápido (Modo Legacy/Test)"""
     with SessionCloud() as db:
         users = db.query(UserModel).all()
         return [{"id": u.id, "username": u.username, "role": u.role} for u in users]
@@ -1790,7 +1834,7 @@ async def get_user_settings(user_id: int):
             "username": user.username,
             "email": user.email,
             "location": user.location,
-            "role": "Admin" if user.id == 1 else "Guardian"
+            "role": user.role
         }
 
 @app.post("/api/users/{user_id}/location")

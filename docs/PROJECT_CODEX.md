@@ -21,7 +21,8 @@ graph TD
 
 ### 🛠️ Herramientas de Infiltración (Tech Stack)
 1.  **Playwright**: El motor de navegación invisible que permite saltar protecciones de Amazon y BBTS.
-2.  **FastAPI Broker**: El puente entre la base de datos local (SQLite) y el estado global (Supabase).
+2.  **Sitemap Deep Scan (Eternia Shield)**: Estrategia de búsqueda de alta precisión para tiendas con motores internos mediocres (DVDStoreSpain), combinando descubrimiento XML con navegación directa.
+3.  **FastAPI Broker**: El puente entre la base de datos local (SQLite) y el estado global (Supabase).
 3.  **Vite + React 19**: Interfaz líquida que permite al Arquitecto tomar decisiones en milisegundos.
 
 ---

@@ -145,17 +145,21 @@ sequenceDiagram
         SM-->>Pipe: MatchResult (Score, Reason)
     end
     
-    Pipe->>DB: Bulk Insert (Purgatorio / Activas)
-    
-    API->>DB: Update Scraper Status (Completed)
-```
 
 ---
 
-## 7. Manejo de Errores y Resiliencia (Circuit Breaker)
+## 8. Estrategia de Precisión: Eternia Shield (Sitemap Fallback)
 
-El sistema incluye medidas de protección:
-1.  **Antigravity Lock**: Si el proceso principal muere, el archivo PID en el Daily Scan previene zombies.
-2.  **Anti-bot Sentinel**: Si un spider no devuelve resultados y el código es 403, se marca como `BLOCKED` y se envía una alerta a Telegram (Fase 19).
-3.  **Data Vault**: El Daily Scan genera un backup automático de la base de datos antes de cualquier modificación masiva.
-4.  **Savepoint Logic**: Las inserciones en base de datos usan transacciones anidadas (`begin_nested`), lo que significa que si un item falla, el resto de la incursión se guarda correctamente.
+Diseñado para tiendas con motores de búsqueda internos deficientes o imprecisos (ej: DVDStoreSpain).
+
+### Flujo de Decisión de Alta Fidelidad
+1.  **Fast Search**: Extracción estándar vía `curl-cffi`.
+2.  **Playwright Fallback**: Navegación asistida para contenido dinámico.
+3.  **Sitemap Deep Scan**: Si no se encuentran resultados de alta relevancia (específicamente la línea "Origins"), el sistema:
+    - Descarga los XML del sitemap de la tienda.
+    - Filtra URLs de productos mediante keywords locales (evitando palabras comunes).
+    - Extrae datos navegando directamente a la ficha del producto.
+
+### Filtrado de Relevancia
+- **Pesos Negativos**: Se ignoran palabras de ruido como "the", "of", "del".
+- **Obligatoriedad**: Si se busca "Origins", el sistema solo da por válidos resultados que contengan dicha palabra o pertenezcan a la categoría de merchandising, forzando el fallback si solo hay resultados genéricos.

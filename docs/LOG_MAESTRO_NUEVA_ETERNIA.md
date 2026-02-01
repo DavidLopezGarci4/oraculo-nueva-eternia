@@ -123,6 +123,11 @@ Este documento registra la evolución técnica y estratégica del Oráculo. La P
 - **Hitos**: Unificación del catálogo de scrapers en el orquestador. Registro automático de motores en la API (13 scrapers operativos). Integración de `Tradeinn` en el ciclo de escaneo diario de GitHub Actions.
 - **Estado**: ✅ VALIDADO Y OPERATIVO
 
+#### 4.12 Eternia Shield: DVDStoreSpain Sitemap Precision (01/02/2026)
+
+- **Hitos**: Superación de las limitaciones del buscador de DVDStoreSpain mediante una estrategia de 3 capas. Implementación de **Sitemap Fallback** para búsqueda profunda de URLs, filtrado de relevancia selectivo para la línea "Origins" y parseo directo de páginas de producto. Éxito en la detección de figuras previamente ocultas (Trap Jaw, He-Man Origins).
+- **Estado**: ✅ VALIDADO Y OPERATIVO
+
 - **Hitos**: Reingeniería de calidad de datos y "Verdad del Oráculo".
 
 - **Estado**: ✅ VALIDADO
@@ -350,6 +355,16 @@ Esta fase ha dividido el Oráculo en dos experiencias potentes y diferenciadas:
 
 - **Hitos**: Resolución de errores de resolución de host en Nginx mediante resolver dinámico. Corrección de lints de TypeScript que bloqueaban la compilación de producción en Docker.
 - **Estado**: ✅ COMPLETADO
+
+#### 9.5 Identidad Reactiva & Hero Management (01/02/2026)
+
+- **Hitos**: Implementación de la reactividad de roles global mediante el levantamiento del estado del usuario a `App.tsx`. Creación del panel de **Gestión de Héroes** en Configuración para el control dinámico de rangos y seguridad.
+- **Estado**: ✅ VALIDADO Y OPERATIVO
+- **Logros Técnicos**:
+    - **Global User State**: Transición de comprobaciones locales de ID a un estado reactivo centralizado que se propaga a Sidebar, Navbar y Configuración.
+    - **Hero Management API**: Nuevos endpoints para listar usuarios con estadísticas de colección reales y actualizar roles en la base de datos cloud.
+    - **Docker Build Fix**: Resolución definitiva de fallos de compilación en el frontend eliminando restos de variables no utilizadas en producción.
+    - **Sincronización de Identidad**: Implementación de una pantalla de carga para asegurar que los permisos se validan antes del renderizado de la interfaz.
 
 
 

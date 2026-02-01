@@ -2,14 +2,18 @@ import { Search, Bell, Menu } from 'lucide-react';
 import masterRoleImg from '../../assets/role-master.png';
 import guardianRoleImg from '../../assets/role-guardian.png';
 
+import { type Hero } from '../../api/admin';
+
 interface NavbarProps {
     onMenuClick: () => void;
     showSearch?: boolean;
     searchValue?: string;
     onSearchChange?: (value: string) => void;
+    user: Hero | null;
+    onIdentityChange: () => void;
 }
 
-const Navbar: React.FC<NavbarProps> = ({ onMenuClick, showSearch = true, searchValue = "", onSearchChange }) => {
+const Navbar: React.FC<NavbarProps> = ({ onMenuClick, showSearch = true, searchValue = "", onSearchChange, user, onIdentityChange }) => {
     return (
         <nav className="sticky top-0 z-10 flex h-16 items-center border-b border-glass-border glass px-4 md:px-6 backdrop-blur-md gap-4">
             {/* Mobile Menu Button */}
@@ -47,24 +51,24 @@ const Navbar: React.FC<NavbarProps> = ({ onMenuClick, showSearch = true, searchV
                         const currentUser = localStorage.getItem('active_user_id') || '1';
                         const nextUser = currentUser === '1' ? '2' : '1';
                         localStorage.setItem('active_user_id', nextUser);
-                        window.location.reload(); // Recarga inmediata para propagar el cambio de identidad
+                        onIdentityChange(); // Trigger re-fetch in App.tsx
                     }}
                     className="flex items-center gap-3 border-l border-white/10 pl-3 md:pl-6 cursor-pointer group hover:bg-white/5 py-1 px-2 rounded-xl transition-all outline-none focus:ring-1 focus:ring-brand-primary/50"
                     title="Cambiar de Héroe"
                 >
                     <div className="relative flex h-9 w-9 items-center justify-center rounded-full overflow-hidden border border-white/20 shadow-lg group-hover:scale-110 transition-transform bg-black/40">
                         <img
-                            src={localStorage.getItem('active_user_id') === '2' ? guardianRoleImg : masterRoleImg}
+                            src={user?.role === 'admin' ? masterRoleImg : guardianRoleImg}
                             alt="Hero"
                             className="h-full w-full object-cover"
                         />
                         <div className="absolute inset-0 flex items-center justify-center bg-black/20 text-[10px] font-black text-white pointer-events-none">
-                            {localStorage.getItem('active_user_id') === '2' ? 'DA' : 'AD'}
+                            {user?.username.slice(0, 2).toUpperCase()}
                         </div>
                     </div>
                     <div className="hidden md:flex flex-col items-start">
                         <span className="text-sm font-medium text-white/80 group-hover:text-white transition-colors leading-none">
-                            {localStorage.getItem('active_user_id') === '2' ? 'David' : 'Admin'}
+                            {user?.username}
                         </span>
                         <span className="text-[10px] text-white/40 group-hover:text-brand-primary transition-colors">
                             Cambiar Heroe

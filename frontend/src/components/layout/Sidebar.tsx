@@ -3,15 +3,18 @@ import { LayoutDashboard, Database, Box, ShieldAlert, Settings, LogOut, X, Gavel
 import masterRoleImg from '../../assets/role-master.png';
 import guardianRoleImg from '../../assets/role-guardian.png';
 
+import { type Hero } from '../../api/admin';
+
 interface SidebarProps {
     activeTab: string;
     setActiveTab: (tab: string) => void;
     isMobileOpen: boolean;
     onCloseMobile: () => void;
+    user: Hero | null;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen, onCloseMobile }) => {
-    const isAdmin = localStorage.getItem('active_user_id') === '1';
+const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen, onCloseMobile, user }) => {
+    const isAdmin = user?.role === 'admin';
 
     const menuItems = [
         { id: 'dashboard', label: 'Tablero', icon: LayoutDashboard },
@@ -45,7 +48,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen
                     <div className="flex items-center gap-3">
                         <div className="h-9 w-9 rounded-xl overflow-hidden border border-white/20 shadow-[0_0_15px_rgba(14,165,233,0.3)] bg-black/40">
                             <img
-                                src={localStorage.getItem('active_user_id') === '2' ? guardianRoleImg : masterRoleImg}
+                                src={user?.role === 'admin' ? masterRoleImg : guardianRoleImg}
                                 alt="Role Logo"
                                 className="h-full w-full object-cover"
                             />

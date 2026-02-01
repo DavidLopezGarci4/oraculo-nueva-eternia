@@ -92,3 +92,27 @@ export const relinkOffer = async (offerId: number, targetProductId: number): Pro
     });
     return response.data;
 };
+export interface Hero {
+    id: number;
+    username: string;
+    email: string;
+    role: string;
+    is_active: boolean;
+    collection_size: number;
+    location: string;
+}
+
+export const getHeroes = async (): Promise<Hero[]> => {
+    const response = await adminAxios.get('/admin/users');
+    return response.data;
+};
+
+export const updateHeroRole = async (userId: number, role: string): Promise<{ status: string; message: string }> => {
+    const response = await adminAxios.patch(`/admin/users/${userId}/role`, { role });
+    return response.data;
+};
+
+export const resetHeroPassword = async (userId: number): Promise<{ status: string; message: string }> => {
+    const response = await adminAxios.post(`/admin/users/${userId}/reset-password`);
+    return response.data;
+};

@@ -251,6 +251,12 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
     - [x] Reordenación de secciones para Guardianes: Oportunidades -> Griales -> Potencial.
     - [x] Implementación de herramientas operativas exclusivas para Admin.
     - [x] Resolución de errores de resolución de host en Nginx y lints de TS.
+    - [x] Resolución de fallo de build Docker (TypeScript unused vars en Config.tsx).
+- [x] **Phase 45: Protocolo de Ascenso Dinámico & Hero Management** ✅
+    - [x] Lifting state del usuario a `App.tsx` para reactividad global.
+    - [x] Implementación de endpoints `/api/admin/users` para gestión de personal.
+    - [x] Sincronización de roles en tiempo real sin recarga manual.
+    - [x] Corrección de rol predeterminado de David a Guardián (elevado a Maestro para pruebas).
 ### Fase 31: Debugging Sync Buffer Stagnation ✅
 *   **Motor Non-Blocking**: Sincronización resiliente que no se detiene ante fallos puntuales. ✅
 *   **Sala de Autopsia Forense**: Interfaz de inspección de fallos y manual intervention. ✅
@@ -300,6 +306,11 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
     - [x] Registro automático de motores en la API (13 scrapers operativos).
     - [x] Integración de `Tradeinn` en `daily_scan.py`.
     - [x] Unificación de nombres y visibilidad total en el Purgatorio.
+
+- [x] **Phase 40: Eternia Shield & Sitemap Precision (01/02/2026)**
+    - [x] Implementación de Sitemap Fallback para DVDStoreSpain.
+    - [x] Refinamiento de relevancia para la línea Origins.
+    - [x] Bypass del buscador impreciso de la tienda.
 
 ---
 

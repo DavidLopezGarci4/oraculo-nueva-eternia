@@ -19,13 +19,18 @@ Herramientas de limpieza profunda en el Purgatorio y Catálogo:
 ## 3. Mando de Incursiones (Bitácora en Vivo) 📡
 Tu centro de mando para los 13 scrapers activos:
 - **Incursión Individual**: Disparar manualmente cualquier motor (Amazon, Tradeinn, ActionToys, etc.) con un clic.
-- **Logs de Ejecución**: Visualización técnica en tiempo real de lo que el robot está viendo y procesando.
+- **Logs de Ejecución**: Visualización técnica en tiempo real integrada en la consola táctica, permitiendo ver qué está procesando el robot en cada instante.
 - **Registro Automático**: El sistema autodetecta nuevos motores al arrancar y los registra en el panel de control.
 
-## 4. Oráculo Logístico y Configuración 🏰
 - **Ajustes de Mercado**: Cambiar tu ubicación (España/USA/Europa) para recalcular instantáneamente el **Landed Price** de todo el catálogo.
 - **Importación Manual**: El Wallapop Importer permite procesar hallazgos de segunda mano sorteando bloqueos anti-bot.
 
-## 5. El Bastión de Datos (Auditoría) 🛡️
+## 5. Gestión de Héroes (Mando de Personal) 🛡️
+Como Arquitecto, tienes el control sobre quién accede al Oráculo y con qué permisos:
+- **Control de Rangos**: Promover Guardianes a Maestros o degradar perfiles dinámicamente.
+- **Protocolo de Reseteo**: Iniciar solicitudes de cambio de contraseña para otros héroes.
+- **Auditoría de Fortaleza**: Visualización del tamaño de la colección y actividad de cada usuario.
+
+## 6. El Bastión de Datos (Auditoría) 🏛️
 - **Ghost Sync**: Gestión del búfer de acciones pendientes para asegurar que ningún cambio administrativo se pierda por fallos de red.
 - **Trazabilidad Sirius**: Registro inmutable de quién y cuándo realizó cada acción crítica en el Reino.

@@ -39,6 +39,7 @@ Ecosistema moderno en React.
 - **src/pages/**: Vistas principales (`Dashboard`, `Catalog`, `Fortress`, `Purgatory`).
 - **src/components/**: Componentes atómicos y tácticos (`ItemCard`, `ScraperLogs`).
 - **src/api/**: Clientes para la comunicación con el FastAPI Broker.
+- **App.tsx**: Nodo maestro de estado y gestión reactiva de identidad (User State Lifting).
 
 ---
 
