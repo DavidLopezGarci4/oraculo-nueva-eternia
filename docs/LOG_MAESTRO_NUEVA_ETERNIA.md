@@ -118,6 +118,11 @@ Este documento registra la evolución técnica y estratégica del Oráculo. La P
 - **Hitos**: Implementación de la estrategia "Sirius A1" (Legitimación de Sesión + Simulación Humana Profunda). Superación de bloqueos 503/CAPTCHA y expansión de resultados mediante paginación y scroll profundo (135 reliquias capturadas). Blindaje Unicode 3OX integrado.
 - **Estado**: ✅ VALIDADO Y OPERATIVO
 
+#### 4.11 Sincronización Total de Incursiones (01/02/2026)
+
+- **Hitos**: Unificación del catálogo de scrapers en el orquestador. Registro automático de motores en la API (13 scrapers operativos). Integración de `Tradeinn` en el ciclo de escaneo diario de GitHub Actions.
+- **Estado**: ✅ VALIDADO Y OPERATIVO
+
 - **Hitos**: Reingeniería de calidad de datos y "Verdad del Oráculo".
 
 - **Estado**: ✅ VALIDADO

@@ -34,12 +34,50 @@ from src.infrastructure.scrapers.ebay_scraper import EbayScraper
 
 app = FastAPI(title="Oráculo API Broker", version="1.0.0")
 
-# --- AUTO MIGRATION ---
-try:
-    migrate()
-except Exception as e:
-    logger.error(f"Migration failed at startup: {e}")
 # ----------------------
+
+def ensure_scrapers_registered():
+    """
+    Fase 50: Asegura que todos los scrapers conocidos existan en ScraperStatusModel.
+    Esto garantiza su visibilidad en el Purgatorio desde el primer día.
+    """
+    from src.infrastructure.scrapers.action_toys_scraper import ActionToysScraper
+    from src.infrastructure.scrapers.amazon_scraper import AmazonScraper
+    from src.infrastructure.scrapers.fantasia_scraper import FantasiaScraper
+    from src.infrastructure.scrapers.frikiverso_scraper import FrikiversoScraper
+    from src.infrastructure.scrapers.electropolis_scraper import ElectropolisScraper
+    from src.infrastructure.scrapers.pixelatoy_scraper import PixelatoyScraper
+    from src.infrastructure.scrapers.detoyboys_scraper import DeToyboysNLScraper
+    from src.infrastructure.scrapers.toymi_scraper import ToymiEUScraper
+    from src.infrastructure.scrapers.time4actiontoys_scraper import Time4ActionToysDEScraper
+    from src.infrastructure.scrapers.bbts_scraper import BigBadToyStoreScraper
+    from src.infrastructure.scrapers.ebay_scraper import EbayScraper
+    from src.infrastructure.scrapers.idealo_scraper import IdealoScraper
+    from src.infrastructure.scrapers.tradeinn_scraper import TradeinnScraper
+
+    spiders_to_check = [
+        "ActionToys", "Fantasia Personajes", "Frikiverso", "Electropolis", 
+        "Pixelatoy", "Amazon.es", "DeToyboys", "Ebay.es", "ToymiEU", 
+        "Time4ActionToysDE", "BigBadToyStore", "Idealo.es", "Tradeinn"
+    ]
+    
+    with SessionCloud() as db:
+        try:
+            for name in spiders_to_check:
+                exists = db.query(ScraperStatusModel).filter(ScraperStatusModel.spider_name == name).first()
+                if not exists:
+                    logger.info(f"🆕 Registrando nuevo scraper en sistema: {name}")
+                    db.add(ScraperStatusModel(spider_name=name, status="stopped"))
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Failed to register scrapers: {e}")
+
+# Call at startup
+try:
+    ensure_scrapers_registered()
+except Exception as e:
+    logger.error(f"Scraper registration failed at startup: {e}")
 
 # Configurar CORS para permitir peticiones universales (Útil para acceso móvil y Docker)
 app.add_middleware(

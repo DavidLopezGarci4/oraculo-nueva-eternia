@@ -32,6 +32,7 @@ from src.infrastructure.scrapers.bbts_scraper import BigBadToyStoreScraper
 from src.infrastructure.scrapers.amazon_scraper import AmazonScraper
 from src.infrastructure.scrapers.ebay_scraper import EbayScraper
 from src.infrastructure.scrapers.idealo_scraper import IdealoScraper
+from src.infrastructure.scrapers.tradeinn_scraper import TradeinnScraper
 from src.application.services.nexus_service import NexusService
 
 # Domain & Infra Models
@@ -125,6 +126,7 @@ async def run_daily_scan(progress_callback=None):
             AmazonScraper(),
             EbayScraper(),
             IdealoScraper(),
+            TradeinnScraper(),
             # DeToyboys at the end (User Request)
             DeToyboysNLScraper(),
         ]
