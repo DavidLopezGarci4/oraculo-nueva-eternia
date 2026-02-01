@@ -29,4 +29,5 @@ El sistema detecta automáticamente tu rango mediante una **Validación de Ident
 
 1.  **Si eres Guardián**: El menú lateral se simplifica. El panel de **Configuración** y las herramientas de disparo en el **Purgatorio** permanecen ocultos.
 2.  **Si eres Maestro**: Se desbloquean todas las capacidades de gestión, permitiéndote actuar como el Arquitecto de los Datos.
-3.  **Dinamismo Total**: El rango ya no es estático por ID de usuario. Un Administrador puede promover a un Guardián a Maestro desde la **Gestión de Héroes**, y los cambios de interfaz se reflejan al instante sin recarga manual.
+3.  **Dinamismo Total**: El rango ya no es estático por ID de usuario. Un Administrador puede promover a un Guardián a Maestro desde la **Gestión de Héroes**, y los cambios de interfaz se reflejan al instante.
+4.  **Bóveda de Seguridad (Expulsión)**: Si un Guardián intenta permanecer en una zona de Maestro tras un cambio de identidad, el Oráculo lo detectará de inmediato y lo redirigirá al Tablero (Home), cerrando el acceso a las herramientas administrativas.

@@ -53,6 +53,17 @@ logs/
 debug_*.py
 inspect_*.py
 
+# Diagnostic Artifacts (Scrapers/Debug)
+*.html
+*.png
+*.jpg
+!frontend/public/*.png
+!frontend/src/assets/*.png
+!frontend/public/favicon.png
+!docs/*.png
+!docs/*.jpg
+!README.md
+
 # Database
 *.db
 oraculo.db

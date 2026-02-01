@@ -47,9 +47,16 @@ El sistema ahora garantiza la visibilidad total de las 13 fuentes de datos.
 
 ---
 
-## 🛡️ Protocolos de Resiliencia (3OX)
+## 🛡️ Protocolos de Resiliencia y Seguridad (3OX)
 
-Nueva Eternia está blindada contra:
+Nueva Eternia está blindada mediante estos pilares de seguridad:
+
+### 1. Gestión de Secretos (Zero-Leak Policy)
+- **Variables de Entorno**: Todas las claves (Supabase, API Key, Telegram) residen exclusivamente en archivos `.env` o secretos de GitHub.
+- **No Fallbacks**: Prohibida la inclusión de valores por defecto o hardcoded en el código fuente (especialmente en `admin.ts`).
+- **Ignore Rules**: El sistema ignora automáticamente archivos `.html`, `.png` y `.log` generados durante el diagnóstico para evitar filtraciones de datos scrapeados.
+
+### 2. Blindaje Operativo
 - **Detección Bot**: Mediante rotación de User-Agents y simulación humana interactiva (Modo Sirius A1).
 - **Inconsistencia de Red**: Transacciones atómicas con ROLLBACK automático ante fallos de Supabase.
 - **Corrupción Visual**: Validaciones de UTF-8 y blindaje Unicode para terminales Windows.
@@ -57,4 +64,4 @@ Nueva Eternia está blindada contra:
 
 ---
 
-*Última actualización: 01/02/2026 - Fase 50: Sincronización Total del Reino.*
+*Última actualización: 01/02/2026 - Fase 51: Hardening de Seguridad & Remediación de Secretos.*

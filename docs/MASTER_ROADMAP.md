@@ -255,8 +255,11 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
 - [x] **Phase 45: Protocolo de Ascenso Dinámico & Hero Management** ✅
     - [x] Lifting state del usuario a `App.tsx` para reactividad global.
     - [x] Implementación de endpoints `/api/admin/users` para gestión de personal.
-    - [x] Sincronización de roles en tiempo real sin recarga manual.
-    - [x] Corrección de rol predeterminado de David a Guardián (elevado a Maestro para pruebas).
+- [x] **Phase 51: Hardening de Seguridad & Redirección Reactiva (01/02/2026)** ✅
+    - [x] Remediación de filtración de secretos (Zero-Leak Policy).
+    - [x] Limpieza profunda de artefactos de diagnóstico (.html, .png).
+    - [x] Implementación de Redirección Automática por Rol en el cambio de identidad.
+    - [x] Fortificación de `.gitignore` y `.dockerignore`.
 ### Fase 31: Debugging Sync Buffer Stagnation ✅
 *   **Motor Non-Blocking**: Sincronización resiliente que no se detiene ante fallos puntuales. ✅
 *   **Sala de Autopsia Forense**: Interfaz de inspección de fallos y manual intervention. ✅

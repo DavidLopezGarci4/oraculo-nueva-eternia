@@ -366,6 +366,15 @@ Esta fase ha dividido el Oráculo en dos experiencias potentes y diferenciadas:
     - **Docker Build Fix**: Resolución definitiva de fallos de compilación en el frontend eliminando restos de variables no utilizadas en producción.
     - **Sincronización de Identidad**: Implementación de una pantalla de carga para asegurar que los permisos se validan antes del renderizado de la interfaz.
 
+#### 9.6 Hardening de Seguridad & Redirección Reactiva (01/02/2026)
+- **Hitos**: Blindaje total contra filtraciones y refuerzo de la jerarquía de poder en tiempo real.
+- **Estado**: ✅ VALIDADO Y OPERATIVO
+- **Logros Técnicos**:
+    - **Remediación de Secretos**: Eliminación de claves API hardcoded y limpieza de 20+ artefactos de diagnóstico (.html, .png) del repositorio.
+    - **Zero-Leak Policy**: Integración de la política de secretos en el Códice de Eternia.
+    - **Redirección por Rol**: Implementación de una salvaguarda en `App.tsx` que redirige a los no-admins al Tablero si el cambio de identidad ocurre en una zona restringida.
+    - **Bóveda .env**: Sincronización de llaves maestras en archivos de entorno protegidos.
+
 
 
 ### 🛠️ Mecánica Técnica y Dockerización (Resumen de Arquitectura)

@@ -17,7 +17,18 @@ node_modules/
 frontend/node_modules/
 frontend/dist/
 
-# Logs & DB (Optional, usually we don't want to bake DB into image but want it in volume)
-# We keep DB in context if we want to seed, but usually ignored
-# logs/
-# oraculo.db
+# Logs & DB
+logs/
+*.log
+*.db
+*.sqlite3
+
+# Diagnostic Artifacts
+*.html
+*.png
+*.jpg
+!frontend/public/*.png
+!frontend/src/assets/*.png
+!docs/*.png
+!docs/*.jpg
+!README.md

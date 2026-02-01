@@ -30,6 +30,12 @@ Como Arquitecto, tienes el control sobre quién accede al Oráculo y con qué pe
 - **Control de Rangos**: Promover Guardianes a Maestros o degradar perfiles dinámicamente.
 - **Protocolo de Reseteo**: Iniciar solicitudes de cambio de contraseña para otros héroes.
 - **Auditoría de Fortaleza**: Visualización del tamaño de la colección y actividad de cada usuario.
+- **Expulsión Reactiva**: El sistema monitoriza en tiempo real los cambios de identidad; si un Administrador cambia a un perfil de Guardián mientras está en el Mando, el sistema lo expulsará automáticamente al Tablero por seguridad.
+
+## 6. Blindaje de Secretos (Zero-Leak) 🛡️
+Como Arquitecto, la integridad del Reino depende de la discreción:
+- **Zero-Leak Policy**: Prohibición de claves hardcoded en el código. Todas las llaves maestras residen en la Bóveda de Secretos (.env / GitHub Secrets).
+- **Limpieza de Rastro**: El sistema ignora y purga automáticamente cualquier rastro de diagnóstico (.html, .png) generado durante las incursiones para no dejar huellas en los registros del Código.
 
 ## 6. El Bastión de Datos (Auditoría) 🏛️
 - **Ghost Sync**: Gestión del búfer de acciones pendientes para asegurar que ningún cambio administrativo se pierda por fallos de red.

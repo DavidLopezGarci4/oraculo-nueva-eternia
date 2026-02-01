@@ -41,6 +41,18 @@ function App() {
     fetchUser();
   };
 
+  // Redirección automática si un usuario no-admin está en una pestaña restringida
+  useEffect(() => {
+    // Si el usuario ya cargó y no es admin
+    if (currentUser && currentUser.role !== 'admin') {
+      const restrictedTabs = ['purgatory', 'settings'];
+      if (restrictedTabs.includes(activeTab)) {
+        console.log("🛡️ Seguridad: Redirigiendo a Tablero (Usuario no administrativo)");
+        setActiveTab('dashboard');
+      }
+    }
+  }, [currentUser, activeTab]);
+
   // Reset search when changing tabs
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
