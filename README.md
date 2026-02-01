@@ -190,6 +190,7 @@ TELEGRAM_BOT_TOKEN=tu_token
 *   **Fase 44 (Dashboard Restructuring & Docker Fixes)**: ✅ Reordenación de secciones para Guardianes, herramientas operativas para Admin y resolución de fallos de arranque en contenedores (Completado).
 *   **Fase 45 (Tradeinn Hyper-Resiliente)**: ✅ Implementación de `TradeinnScraper` con bypass de redirecciones, modo sigilo avanzado y extracción de multi-tiendas (Diveinn, Kidinn, etc.) (Completado).
 *   **Fase 46 (Tactical Search Engine)**: ✅ Evolución del orquestador para soportar queries personalizadas y búsquedas de alta fidelidad para MOTU Origins en Tradeinn (Completado).
+*   **Fase 47 (Amazon Sirius A1 Armor)**: ✅ Superación de bloqueos 503 y CAPTCHAs en Amazon.es mediante legitimación de sesión y simulación humana (Completado).
 
 
 ## 6. El Motor de Inversión (DealScorer)

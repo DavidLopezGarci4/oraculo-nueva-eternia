@@ -290,6 +290,14 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
 
 ---
 
+### Phase 38: Amazon.es Sirius A1 Armor & Expansion (01/02/2026)
+*   **Hitos**:
+    *   **Infiltración Sirius A1**: Superación de bloqueos 503/CAPTCHA mediante legitimación de sesión en Home y simulación de escritura humana. ✅
+    *   **Expansion Engine**: Implementación de paginación táctica y scroll profundo, logrando un volumen de 135+ ofertas. ✅
+    *   **3OX Unicode Shield**: Estandarización del motor base para resiliencia de caracteres en terminales Windows. ✅
+
+---
+
 ## ✅ Plan de Verificación
 
 1.  **Integridad de Datos**: Scripts de validación de catálogo post-migración.

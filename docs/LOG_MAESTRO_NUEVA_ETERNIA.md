@@ -113,7 +113,10 @@ Este documento registra la evolución técnica y estratégica del Oráculo. La P
 
 
 
-### Fase 5: Refinamiento Táctico (La Gran Purificación)
+#### 4.9 Amazon.es Resilience Armor & Expansion (01/02/2026)
+
+- **Hitos**: Implementación de la estrategia "Sirius A1" (Legitimación de Sesión + Simulación Humana Profunda). Superación de bloqueos 503/CAPTCHA y expansión de resultados mediante paginación y scroll profundo (135 reliquias capturadas). Blindaje Unicode 3OX integrado.
+- **Estado**: ✅ VALIDADO Y OPERATIVO
 
 - **Hitos**: Reingeniería de calidad de datos y "Verdad del Oráculo".
 

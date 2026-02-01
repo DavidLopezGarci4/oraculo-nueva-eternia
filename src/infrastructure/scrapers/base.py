@@ -13,8 +13,10 @@ from curl_cffi.requests import AsyncSession
 from playwright.async_api import Page, BrowserContext
 
 # [3OX] Unicode Resilience Shield
-if sys.stdout.encoding.lower() != 'utf-8':
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+elif isinstance(sys.stdout, io.TextIOWrapper):
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', line_buffering=True)
 
 logger = logging.getLogger(__name__)
 

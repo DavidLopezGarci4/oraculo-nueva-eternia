@@ -31,303 +31,229 @@ class AmazonScraper(BaseScraper):
     async def search(self, query: str) -> List[ScrapedOffer]:
         """
         Searches Amazon.es for MOTU Origins items.
-        Uses stealthy curl-cffi for initial infiltration, bypassing Playwright detection.
+        Evolved Strategy (Sirius A1): 
+        1. Try curl-cffi for fast infiltration.
+        2. If blocked or 0 items, escalate to Playwright with Human Interaction (Session Legitimization).
         """
         search_query = "masters of the universe origins" if query == "auto" else query
         url = f"{self.search_url}{search_query.replace(' ', '+')}"
-        self.blocked = False # Reset block status for new attempt
+        self.blocked = False
         
-        self._log(f"🕸️ Amazon.es: Infiltrando búsqueda para '{search_query}' vía curl-cffi...")
+        self._log(f"🕸️ Amazon.es: Iniciando incursión para '{search_query}'...")
         
-        offers = []
-        html = await self._curl_get(url)
+        # Phase 1: Fast Infiltration (curl-cffi)
+        offers = await self._fast_infiltration(url, search_query)
         
-        if not html:
-            self._log("❌ Amazon.es: No se pudo obtener HTML vía curl-cffi. Intentando fallback táctico...", level="warning")
-            return await self._search_playwright_fallback(url)
-
-        self._log(f"📄 Amazon.es: Recibidos {len(html)} bytes. Analizando estructura...")
-        soup = BeautifulSoup(html, "html.parser")
+        # Phase 2: Tactical Escalation (Playwright Human-Like)
+        if not offers or self.blocked:
+            self._log(f"⚠️ Amazon.es: Infiltración rápida fallida o bloqueada. Escalamiento a Sirius A1 (Buscador Humano)...", level="warning")
+            offers = await self._sirius_a1_human_search(search_query)
         
-        # Detect block in soup too
-        if "captcha" in html.lower() or "robot" in html.lower():
-            self._log("🚫 Amazon.es: Bloqueado por CAPTCHA en curl-cffi. Intentando fallback táctico (Playwright)...", level="warning")
-            return await self._search_playwright_fallback(url)
-
-        # Extract results - More robust selection
-        # [data-asin] is the most consistent marker for a product card
-        results = soup.select("[data-asin]")
-        if not results:
-            results = soup.select(".s-result-item")
-        
-        self._log(f"📊 Amazon.es: Detectados {len(results)} bloques con [data-asin].")
-
-        for res in results:
-            asin = res.get("data-asin")
-            if not asin or len(asin) != 10:
-                continue # Skip non-product items (banners, etc)
-
-            try:
-                # Title - Try multiple common classes
-                title = "Unknown"
-                title_el = (
-                    res.select_one("h2 a span") or 
-                    res.select_one(".a-size-medium.a-color-base.a-text-normal") or
-                    res.select_one(".a-size-base-plus.a-color-base.a-text-normal") or
-                    res.select_one("h2")
-                )
-                if title_el:
-                    title = title_el.get_text(strip=True)
-                
-                # Price - Robust extraction
-                price = 0.0
-                price_el = (
-                    res.select_one(".a-price .a-offscreen") or
-                    res.select_one(".a-price-whole") or
-                    res.select_one(".a-color-price")
-                )
-                if price_el:
-                    price = self._normalize_price(price_el.get_text())
-
-                # URL
-                link_el = res.select_one("a.a-link-normal") or res.select_one("h2 a")
-                relative_url = link_el.get("href") if link_el else ""
-                
-                # Clean URL (remove refs)
-                if relative_url:
-                    full_url = f"https://www.amazon.es{relative_url.split('/ref=')[0]}"
-                else:
-                    full_url = f"https://www.amazon.es/dp/{asin}"
-                
-                # Image
-                img_el = res.select_one("img.s-image")
-                image_url = img_el.get("src") if img_el else None
-
-                if price > 0:
-                    offers.append(ScrapedOffer(
-                        product_name=title,
-                        price=price,
-                        url=full_url,
-                        shop_name=self.shop_name,
-                        image_url=image_url,
-                        source_type="Retail"
-                    ))
-                    self.items_scraped += 1
-                else:
-                    # Log if we found a product but no price (common block symptom)
-                    if title != "Unknown":
-                        self._log(f"🕵️ Amazon.es: Producto '{title[:30]}...' hallado pero sin precio.", level="debug")
-
-            except Exception as e:
-                continue
-        
-        if not offers:
-            title_tag = soup.title.string if soup.title else "No Title"
-            self._log(f"⚠️ Amazon.es: 0 ofertas extraídas. Título página: '{title_tag}'", level="warning")
-            snippet = html[:500].replace('\n', ' ')
-            self._log(f"🔍 Snippet: {snippet}...", level="debug")
-            
-            if results:
-                self._log("⚠️ Amazon.es: Se detectaron bloques pero no se extrajeron ofertas válidas (¿Selector de precio/título roto?).", level="warning")
-
         return offers
 
-    async def _search_playwright_fallback(self, url: str) -> List[ScrapedOffer]:
-        """Original Playwright logic kept as emergency fallback."""
-        self._log(f"⚠️ Amazon.es: Ejecutando fallback de Playwright para {url}...", level="warning")
+    async def _fast_infiltration(self, url: str, search_query: str) -> List[ScrapedOffer]:
+        """Attempt fast extraction via curl-cffi."""
+        offers = []
+        html = await self._curl_get(url, impersonate="chrome120")
+        
+        if not html:
+            return []
+
+        if "captcha" in html.lower() or "robot" in html.lower() or "api-services-support" in html.lower():
+            self._log("🛡️ Amazon.es: Bloqueo detectado en curl-cffi (CAPTCHA/503).", level="debug")
+            self.blocked = True
+            return []
+
+        soup = BeautifulSoup(html, "html.parser")
+        results = soup.select("[data-asin]")
+        
+        for res in results:
+            asin = res.get("data-asin")
+            if not asin or len(asin) != 10: continue
+
+            try:
+                title_el = res.select_one("h2 a span") or res.select_one(".a-size-medium")
+                title = title_el.get_text(strip=True) if title_el else "Unknown"
+                
+                price_el = res.select_one(".a-price .a-offscreen") or res.select_one(".a-price-whole")
+                price = self._normalize_price(price_el.get_text()) if price_el else 0.0
+
+                if price > 0:
+                    link_el = res.select_one("a.a-link-normal")
+                    rel_url = link_el.get("href") if link_el else f"/dp/{asin}"
+                    full_url = f"https://www.amazon.es{rel_url.split('/ref=')[0]}"
+                    
+                    img_el = res.select_one("img.s-image")
+                    image_url = img_el.get("src") if img_el else None
+
+                    offers.append(ScrapedOffer(
+                        product_name=title, price=price, url=full_url,
+                        shop_name=self.shop_name, image_url=image_url, source_type="Retail"
+                    ))
+            except: continue
+            
+        return offers
+
+    async def _sirius_a1_human_search(self, search_query: str) -> List[ScrapedOffer]:
+        """
+        Ultra-Resilient Human-Like Search Strategy.
+        1. Navigate to Home
+        2. Accept Cookies
+        3. Type in search bar with delays
+        4. Scroll and extract
+        """
         offers = []
         try:
             from playwright.async_api import async_playwright
             async with async_playwright() as p:
-                # STEALTH: Anti-detection flags
                 browser = await p.chromium.launch(
                     headless=True,
-                    args=[
-                        '--disable-blink-features=AutomationControlled',
-                        '--no-sandbox',
-                        '--disable-dev-shm-usage',
-                        '--window-size=1920,1080'
-                    ]
+                    args=['--disable-blink-features=AutomationControlled', '--no-sandbox']
                 )
                 
-                # Contexto con fingerprint español realista
                 context = await browser.new_context(
                     user_agent=self._get_random_header()["User-Agent"],
                     viewport={'width': 1920, 'height': 1080},
-                    locale='es-ES',
-                    timezone_id='Europe/Madrid',
-                    permissions=['geolocation']
+                    locale='es-ES'
                 )
                 
-                # Headers adicionales anti-bloqueo (Simulando Chrome 120+ en Windows)
-                await context.set_extra_http_headers({
-                    'Accept-Language': 'es-ES,es;q=0.9',
-                    'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
-                    'sec-ch-ua-mobile': '?0',
-                    'sec-ch-ua-platform': '"Windows"',
-                    'Upgrade-Insecure-Requests': '1',
-                    'Service-Worker-Navigation-Preload': 'true'
-                })
-
+                # Enhanced Stealth
+                await context.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+                
                 page = await context.new_page()
                 
-                # Inyectar scripts avanzados para evadir detección de automatización profunda (Stealth 3.0)
-                await page.add_init_script("""
-                    // 1. Hide WebDriver and Automation
-                    Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-                    window.chrome = { runtime: {}, app: {}, loadTimes: {}, csi: {} };
-                    
-                    // 2. Mock Hardware and Environment
-                    Object.defineProperty(navigator, 'deviceMemory', { get: () => 8 });
-                    Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 8 });
-                    Object.defineProperty(navigator, 'languages', { get: () => ['es-ES', 'es'] });
-                    
-                    // 3. Robust WebGL Fingerprint
-                    const getParameter = WebGLRenderingContext.prototype.getParameter;
-                    WebGLRenderingContext.prototype.getParameter = function(parameter) {
-                        if (parameter === 37445) return 'Intel Inc.';
-                        if (parameter === 37446) return 'Intel(R) Iris(R) Xe Graphics';
-                        return getParameter.apply(this, arguments);
-                    };
-                    
-                    // 4. Overwrite broken/missing properties
-                    Object.defineProperty(navigator, 'maxTouchPoints', { get: () => 0 });
-                    
-                    // 5. Mock Permissions (Fixing broken browser prompt detection)
-                    const originalQuery = window.navigator.permissions.query;
-                    window.navigator.permissions.query = (parameters) => (
-                        parameters.name === 'notifications' ?
-                        Promise.resolve({ state: Notification.permission }) :
-                        originalQuery(parameters)
-                    );
-                """)
+                # 1. Navigate to Home (Legitimization)
+                self._log(f"🏠 Amazon.es: Legitimando sesión en la Home...")
+                await page.goto("https://www.amazon.es", wait_until="domcontentloaded", timeout=45000)
+                await self._random_sleep(1, 2)
                 
-                success = await self._safe_navigate(page, url)
-                if not success:
-                    self._log("❌ Amazon.es: Fallback de Playwright bloqueado o error de navegación.", level="error")
-                    if not os.path.exists("logs/screenshots"): os.makedirs("logs/screenshots")
-                    await page.screenshot(path="logs/screenshots/amazon_nav_fail_fallback.png")
+                # 2. Accept Cookies
+                try:
+                    cookie_btn = await page.wait_for_selector("#sp-cc-accept", timeout=5000)
+                    if cookie_btn:
+                        self._log("🍪 Amazon.es: Aceptando cookies...")
+                        await cookie_btn.click()
+                        await self._random_sleep(0.5, 1.5)
+                except:
+                    pass
+                
+                # 3. Type Search Term (Human Interaction)
+                self._log(f"⌨️ Amazon.es: Escribiendo '{search_query}' letra a letra...")
+                search_box = await page.wait_for_selector("#twotabsearchtextbox", timeout=10000)
+                if not search_box:
+                    self._log("❌ Amazon.es: No se encontró el cuadro de búsqueda.", level="error")
                     await browser.close()
                     return []
-
-                # Handle Cookie Banner
+                
+                await search_box.click()
+                for char in search_query:
+                    await page.keyboard.type(char)
+                    await asyncio.sleep(random.uniform(0.05, 0.2))
+                
+                await page.keyboard.press("Enter")
+                self._log("🔍 Amazon.es: Búsqueda enviada. Esperando resultados...")
+                
+                # 4. Wait for results with adaptive timeout
                 try:
-                    cookie_btn = await page.query_selector("#sp-cc-accept")
-                    if cookie_btn:
-                        await cookie_btn.click()
-                        await asyncio.sleep(1)
+                    await page.wait_for_selector("[data-component-type='s-search-result']", timeout=20000)
                 except Exception:
-                    pass
-
-                # Wait for results to load with block detection (Increased timeout to 30s)
-                try:
-                    # Selector ampliado para mayor robustez
-                    await page.wait_for_selector("[data-component-type='s-search-result'], [data-asin]", timeout=30000)
-                except Exception:
-                    # Check if blocked by captcha or similar
+                    # Check for CAPTCHA at this stage too
                     content = await page.content()
-                    if "sp-cc-accept" in content and "captcha" not in content.lower():
-                        self._log("⚠️ Amazon.es: Resultados no cargan pero el banner de cookies está presente. Intentando scroll...", level="warning")
-                        await page.evaluate("window.scrollBy(0, 500)")
-                        await asyncio.sleep(2)
-                    elif "captcha" in content.lower() or "robot" in content.lower() or "api-services-support" in content.lower():
-                        self._log("🚫 Amazon.es: Bot detectado (CAPTCHA/ROBOT) en fallback de Playwright.", level="error")
-                        self.blocked = True
+                    if "captcha" in content.lower() or "robot" in content.lower():
+                        self._log("🚫 Amazon.es: CAPTCHA detectado tras búsqueda humana.", level="error")
                         if not os.path.exists("logs/screenshots"): os.makedirs("logs/screenshots")
-                        await page.screenshot(path="logs/screenshots/amazon_captcha_fallback.png")
+                        await page.screenshot(path="logs/screenshots/amazon_sirius_captcha.png")
                         await browser.close()
                         return []
-                    else:
-                        self._log("❌ Amazon.es: Timeout esperando resultados tras 30s en fallback de Playwright.", level="error")
-                        if not os.path.exists("logs/screenshots"): os.makedirs("logs/screenshots")
-                        await page.screenshot(path="logs/screenshots/amazon_timeout_fallback.png")
-                        await browser.close()
-                        return []
+                    self._log("⚠️ Amazon.es: Sin resultados visibles tras 20s. Probando extracción de emergencia...", level="warning")
 
-                # --- HUMAN BEHAVIOR: Randomized vertical scroll-and-pause ---
-                # This makes Amazon think a human is looking at the search results.
-                scroll_steps = random.randint(2, 4)
-                for _ in range(scroll_steps):
-                    scroll_y = random.randint(300, 700)
-                    await page.evaluate(f"window.scrollBy(0, {scroll_y})")
-                    await self._random_sleep(0.8, 2.2)
+                # 5. Extraction Loop with Pagination
+                current_page = 1
+                max_pages = 2 # Target ~50+ items (Amazon usually has ~24 per page)
+                all_offers = []
                 
-                # Extract results (Multiple selectors for agility)
-                results = await page.query_selector_all("[data-component-type='s-search-result']")
-                if not results:
-                    results = await page.query_selector_all(".s-result-item[data-asin]")
-                
-                self._log(f"📊 Amazon.es: Encontrados {len(results)} posibles resultados con Playwright fallback.")
+                while current_page <= max_pages:
+                    self._log(f"📄 Amazon.es: Procesando página {current_page}...")
+                    
+                    # Deep Human-like Scroll to trigger lazy loading
+                    for i in range(3):
+                        scroll_y = 1000
+                        await page.evaluate(f"window.scrollBy(0, {scroll_y})")
+                        self._log(f"⏬ Amazon.es: Scroll profundo ({i+1}/3)...", level="debug")
+                        await self._random_sleep(1.0, 2.0)
+                    
+                    # Extract from current page
+                    page_results = await page.query_selector_all("[data-asin]")
+                    self._log(f"📊 Amazon.es: Detectados {len(page_results)} bloques en página {current_page}.")
 
-                for res in results:
-                    try:
-                        # Title extraction - Simple and effective
-                        title = "Unknown"
-                        title_el = await res.query_selector("h2")
-                        if title_el:
-                            title = await title_el.text_content()
+                    for res in page_results:
+                        try:
+                            asin = await res.get_attribute("data-asin")
+                            if not asin or len(asin) != 10: continue
+
+                            # Title
+                            title_el = await res.query_selector("h2")
+                            title = await title_el.text_content() if title_el else "Unknown"
                             title = title.strip() if title else "Unknown"
-                        
-                        # Price extraction
-                        price = 0.0
-                        price_el = await res.query_selector(".a-price .a-offscreen")
-                        if price_el:
-                            price_text = await price_el.text_content()
-                            price = self._normalize_price(price_text)
-                        
-                        if price == 0:
-                            # Try fallback legacy selector
-                            price_whole = await res.query_selector(".a-price-whole")
-                            if price_whole:
-                                p_whole = await price_whole.text_content()
-                                price = self._normalize_price(p_whole)
+                            
+                            # Price
+                            price_el = await res.query_selector(".a-price .a-offscreen")
+                            price = self._normalize_price(await price_el.text_content()) if price_el else 0.0
 
-                        # URL & ASIN extraction
-                        link_el = await res.query_selector("a.a-link-normal")
-                        if not link_el:
-                            link_el = await res.query_selector("h2 a")
-                        
-                        relative_url = await link_el.get_attribute("href") if link_el else ""
-                        full_url = f"https://www.amazon.es{relative_url.split('/ref=')[0]}" if relative_url else ""
-                        
-                        # ASIN recovery
-                        asin_match = re.search(r'/dp/([A-Z0-9]{10})', full_url)
-                        asin = asin_match.group(1) if asin_match else None
-                        
-                        if not asin:
-                            # Try to find data-csa-c-item-id (found in debug log)
-                            container = await res.query_selector("[data-csa-c-item-id]")
-                            if container:
-                                attr = await container.get_attribute("data-csa-c-item-id")
-                                if attr and "asin.1." in attr:
-                                    asin = attr.split("asin.1.")[1]
-                                    if not full_url:
-                                        full_url = f"https://www.amazon.es/dp/{asin}"
+                            if price > 0:
+                                link_el = await res.query_selector("h2 a") or await res.query_selector("a.a-link-normal")
+                                rel_url = await link_el.get_attribute("href") if link_el else f"/dp/{asin}"
+                                full_url = f"https://www.amazon.es{rel_url.split('/ref=')[0]}"
+                                
+                                img_el = await res.query_selector("img.s-image")
+                                image_url = await img_el.get_attribute("src") if img_el else None
 
-                        # Image
-                        img_el = await res.query_selector("img.s-image")
-                        image_url = await img_el.get_attribute("src") if img_el else None
+                                # Deduplicate by URL
+                                if not any(o.url == full_url for o in all_offers):
+                                    all_offers.append(ScrapedOffer(
+                                        product_name=title, price=price, url=full_url,
+                                        shop_name=self.shop_name, image_url=image_url, source_type="Retail"
+                                    ))
+                                    self.items_scraped += 1
+                        except:
+                            continue
 
-                        if price > 0 and asin:
-                            offers.append(ScrapedOffer(
-                                product_name=title,
-                                price=price,
-                                url=full_url,
-                                shop_name=self.shop_name,
-                                image_url=image_url,
-                                ean=None, # Amazon doesn't show EAN in search, need detail page
-                                source_type="Retail"
-                            ))
-                            self.items_scraped += 1
+                    if current_page >= max_pages:
+                        break
 
+                    # Tactical Page Flip
+                    try:
+                        self._log("↪️ Amazon.es: Intentando pasar a la siguiente página...")
+                        next_btn = await page.query_selector("a.s-pagination-next, .s-pagination-next")
+                        if next_btn and await next_btn.is_visible():
+                            await next_btn.click()
+                            await page.wait_for_load_state("domcontentloaded")
+                            await self._random_sleep(2, 4)
+                            current_page += 1
+                        else:
+                            self._log("🏁 Amazon.es: No se encontró botón 'Siguiente' o es el final.")
+                            break
                     except Exception as e:
-                        self._log(f"⚠️ Error procesando resultado de Amazon (Playwright fallback): {e}", level="warning")
-                        continue
+                        self._log(f"⚠️ Error al paginar: {e}", level="warning")
+                        break
 
                 await browser.close()
+                self._log(f"✅ Amazon.es: Extracción Sirius A1 completada con {len(all_offers)} ofertas totales.")
+                return all_offers
                 
         except Exception as e:
-            self._log(f"❌ Fallo crítico en AmazonScraper (Playwright fallback): {e}", level="error")
+            self._log(f"❌ Fallo crítico en Sirius A1: {e}", level="error")
             self.errors += 1
         
         return offers
+
+if __name__ == "__main__":
+    # Test block for internal verification
+    async def test():
+        scraper = AmazonScraper()
+        results = await scraper.search("auto")
+        print(f"\n--- RESULTADOS ({len(results)}) ---")
+        for res in results[:5]:
+            print(f"[{res.shop_name}] {res.product_name} - {res.price}{res.currency}")
+    
+    asyncio.run(test())
