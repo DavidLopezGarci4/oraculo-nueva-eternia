@@ -160,6 +160,7 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
 *   **Estimador de Valor (Financial)**: Cálculo automático del valor de la colección basado en precios históricos y estado del item.
 *   **Buscador Óptico (Future Vision)**: Identificación de figuras mediante carga de fotos (comparativa de hashes).
 *   **Exportación de Seguridad**: Generación de reportes PDF detallados para seguros y auditorías personales.
+*   **PROJECT_CODEX.md**: Guía incremental de sinergia técnica y arquitectura. ✅
 
 ---
 

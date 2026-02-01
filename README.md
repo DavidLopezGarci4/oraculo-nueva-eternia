@@ -197,7 +197,7 @@ TELEGRAM_BOT_TOKEN=tu_token
 
 ## 8. Arquitectura y Conocimiento (El Códice)
 Para entender la sinergia entre todas las tecnologías y procesos, consulta el documento incremental:
-- [📜 El Códice de Eternia](file:///c:/Users/dace8/OneDrive/Documentos/Antigravity/oraculo-nueva-eternia/docs/EL_CODICE_DE_ETERNIA.md)
+- [📜 El Códice de Eternia (PROJECT_CODEX.md)](file:///c:/Users/dace8/OneDrive/Documentos/Antigravity/oraculo-nueva-eternia/docs/PROJECT_CODEX.md)
 
 
 ## 6. El Motor de Inversión (DealScorer)
