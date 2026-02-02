@@ -38,9 +38,17 @@ class NexusService:
         """
         Orchestrates the full catalog sync with detailed telemetry.
         """
-        log_id = None
+        # 0. Infrastructure Guard: Ensure DB Schema is ready BEFORE any queries
+        try:
+            from src.infrastructure.universal_migrator import migrate
+            # Use a new event loop or run in executor if needed, but migrate() is sync
+            logger.info("📡 Paso 0 (Infraestructura): Sincronizando esquema de base de datos...")
+            migrate()
+        except Exception as me:
+            logger.error(f"❌ Error Crítico de Infraestructura: {me}")
+            # Even if it fails, we try to proceed to see if tables exist
         
-        # Initialize Telemetry entry
+        # Initialize Telemetry entry (Now safe because migrate() ran)
         with SessionCloud() as db:
             status = db.query(ScraperStatusModel).filter(ScraperStatusModel.spider_name == "Nexus").first()
             if not status:
@@ -72,14 +80,7 @@ class NexusService:
         try:
             loop = asyncio.get_event_loop()
             
-            # 0. Infrastructure Guard
-            try:
-                from src.infrastructure.universal_migrator import migrate
-                logger.info("📡 Paso 0: Sincronizando esquema de base de datos...")
-                await loop.run_in_executor(None, migrate)
-            except Exception as me:
-                logger.error(f"❌ Error Crítico de Infraestructura: {me}")
-                raise me
+            # Paso 0 was moved to the very beginning. Proceeding with Step 1.
 
             # 1. Scrape Web to Excel
             logger.info("📡 Paso 1: Capturando datos de ActionFigure411 (Raspado Web)...")
