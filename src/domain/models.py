@@ -22,6 +22,12 @@ class ProductModel(Base):
     # Financial & Meta Data (Phase 6 & 16)
     retail_price: Mapped[Optional[float]] = mapped_column(Float, nullable=True, default=0.0)
     
+    # Phase 50: Market Intelligence & Sentiment
+    popularity_score: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, default=0) # Total collectors from AF411
+    market_momentum: Mapped[Optional[float]] = mapped_column(Float, nullable=True, default=1.0) # Sentiment trend multiplier
+    asin: Mapped[Optional[str]] = mapped_column(String, index=True, nullable=True) # Amazon ID
+    upc: Mapped[Optional[str]] = mapped_column(String, index=True, nullable=True) # Universal Product Code
+    
     # Phase 41e: Strict Market Segregation
     avg_retail_price: Mapped[Optional[float]] = mapped_column(Float, nullable=True, default=0.0)
     p25_retail_price: Mapped[Optional[float]] = mapped_column(Float, nullable=True, default=0.0)

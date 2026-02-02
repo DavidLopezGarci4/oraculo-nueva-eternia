@@ -138,7 +138,12 @@ def migrate_excel_to_db(excel_path: str, session):
                             variant_name=str(row.get('Wave', '')), # Using Wave as variant context
                             retail_price=clean_price(row.get('Retail')),
                             avg_market_price=clean_price(row.get('Avg')), 
-                            p25_price=clean_price(row.get('P25'))
+                            p25_price=clean_price(row.get('P25')),
+                            # Phase 50 Intelligence
+                            popularity_score=int(row.get('Popularity', 0)) if pd.notna(row.get('Popularity')) else 0,
+                            market_momentum=float(row.get('Momentum', 1.0)) if pd.notna(row.get('Momentum')) else 1.0,
+                            asin=str(row.get('ASIN', '')).strip() if pd.notna(row.get('ASIN')) else None,
+                            upc=str(row.get('UPC', '')).strip() if pd.notna(row.get('UPC')) else None
                         )
                         session.add(product)
                         session.flush() # Get ID
@@ -163,6 +168,16 @@ def migrate_excel_to_db(excel_path: str, session):
                         product.retail_price = clean_price(row.get('Retail'))
                         product.avg_market_price = clean_price(row.get('Avg'))
                         product.p25_price = clean_price(row.get('P25'))
+                        
+                        # Phase 50 Updates
+                        if pd.notna(row.get('Popularity')):
+                            product.popularity_score = int(row.get('Popularity'))
+                        if pd.notna(row.get('Momentum')):
+                            product.market_momentum = float(row.get('Momentum'))
+                        if pd.notna(row.get('ASIN')):
+                            product.asin = str(row.get('ASIN')).strip()
+                        if pd.notna(row.get('UPC')):
+                            product.upc = str(row.get('UPC')).strip()
 
                     # 2. ALIAS LAYER
                     if detail_link:

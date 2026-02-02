@@ -26,7 +26,7 @@ import { useEffect, useRef } from 'react';
 
 const PERSISTENCE_KEY = 'purgatory_offline_actions';
 
-const Purgatory: React.FC = () => {
+const Purgatory: React.FC = React.memo(() => {
     const queryClient = useQueryClient();
     const [searchTerm, setSearchTerm] = useState('');
     const [manualSearchTerm, setManualSearchTerm] = useState('');
@@ -108,7 +108,7 @@ const Purgatory: React.FC = () => {
     const { data: pendingItems, isLoading: isLoadingPending } = useQuery({
         queryKey: ['purgatory'],
         queryFn: getPurgatory,
-        refetchInterval: 5000 // Auto-refresh every 5s while in Purgatory
+        refetchInterval: 30000 // Aumentado de 5s a 30s para reducir carga en navegación
     });
 
     const { data: products } = useQuery({
@@ -1013,6 +1013,6 @@ const Purgatory: React.FC = () => {
             }
         </div>
     );
-};
+});
 
 export default Purgatory;

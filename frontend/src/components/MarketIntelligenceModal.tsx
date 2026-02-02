@@ -9,7 +9,11 @@ import {
     Loader2,
     AlertCircle,
     Zap,
-    CheckCircle2
+    CheckCircle2,
+    Users,
+    TrendingUp,
+    Hash,
+    ShoppingBag
 } from 'lucide-react';
 import {
     LineChart,
@@ -148,8 +152,8 @@ const MarketIntelligenceModal: React.FC<MarketIntelligenceModalProps> = ({ produ
                             </div>
                             <div className="text-right space-y-4">
                                 <div className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-black border ${bid.confidence === 'high' ? 'bg-green-500/20 text-green-500 border-green-500/10' :
-                                        bid.confidence === 'medium' ? 'bg-yellow-500/20 text-yellow-500 border-yellow-500/10' :
-                                            'bg-red-500/20 text-red-500 border-red-500/10'
+                                    bid.confidence === 'medium' ? 'bg-yellow-500/20 text-yellow-500 border-yellow-500/10' :
+                                        'bg-red-500/20 text-red-500 border-red-500/10'
                                     }`}>
                                     <CheckCircle className="h-3 w-3" />
                                     CONFIDENCIA {bid.confidence.toUpperCase()}
@@ -158,6 +162,56 @@ const MarketIntelligenceModal: React.FC<MarketIntelligenceModalProps> = ({ produ
                                     <p className="text-[10px] font-black text-white/20 uppercase">Muestra Industrial</p>
                                     <p className="text-lg font-black text-white/60">{bid.total_samples || 0} items</p>
                                 </div>
+                            </div>
+                        </div>
+
+                        {/* NEW: Sentiment & Identifiers Card */}
+                        <div className="md:col-span-3 grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div className="bg-white/[0.03] border border-white/5 p-5 rounded-3xl space-y-2">
+                                <div className="flex items-center gap-2 text-white/40 uppercase text-[8px] font-black tracking-[0.2em]">
+                                    <Users className="h-3 w-3" />
+                                    <span>Popularidad</span>
+                                </div>
+                                <p className="text-xl font-black text-white">{marketData.popularity_score || 0}</p>
+                                <p className="text-[8px] font-bold text-white/20 uppercase">Coleccionistas</p>
+                            </div>
+
+                            <div className="bg-white/[0.03] border border-white/5 p-5 rounded-3xl space-y-2">
+                                <div className="flex items-center gap-2 text-white/40 uppercase text-[8px] font-black tracking-[0.2em]">
+                                    <TrendingUp className="h-3 w-3" />
+                                    <span>Momento</span>
+                                </div>
+                                <div className="flex items-baseline gap-2">
+                                    <p className={`text-xl font-black ${(marketData.market_momentum || 1.0) > 1.2 ? 'text-green-400' : (marketData.market_momentum || 1.0) < 0.9 ? 'text-brand-primary' : 'text-white'}`}>
+                                        {(marketData.market_momentum || 1.0).toFixed(2)}x
+                                    </p>
+                                    <span className="text-[8px] font-bold text-white/20 uppercase">Trend</span>
+                                </div>
+                            </div>
+
+                            <div className="bg-white/[0.03] border border-white/5 p-5 rounded-3xl space-y-2">
+                                <div className="flex items-center gap-2 text-white/40 uppercase text-[8px] font-black tracking-[0.2em]">
+                                    <Hash className="h-3 w-3" />
+                                    <span>UPC</span>
+                                </div>
+                                <p className="text-[10px] font-black text-white/60 truncate">{marketData.upc || 'N/A'}</p>
+                                <p className="text-[8px] font-bold text-white/20 uppercase">Universal ID</p>
+                            </div>
+
+                            <div className="bg-white/[0.03] border border-white/5 p-5 rounded-3xl space-y-2">
+                                <div className="flex items-center gap-2 text-white/40 uppercase text-[8px] font-black tracking-[0.2em]">
+                                    <ShoppingBag className="h-3 w-3" />
+                                    <span>ASIN</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <p className="text-[10px] font-black text-white/60">{marketData.asin || 'N/A'}</p>
+                                    {marketData.asin && (
+                                        <a href={`https://www.amazon.es/dp/${marketData.asin}`} target="_blank" rel="noopener noreferrer" className="text-brand-primary hover:text-white transition-colors">
+                                            <Zap className="h-3 w-3 fill-current" />
+                                        </a>
+                                    )}
+                                </div>
+                                <p className="text-[8px] font-bold text-white/20 uppercase">Amazon Reference</p>
                             </div>
                         </div>
                     </div>

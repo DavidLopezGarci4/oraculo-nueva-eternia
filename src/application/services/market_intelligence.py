@@ -139,6 +139,10 @@ class MarketIntelligenceService:
             "bid_strategy": bid_strategy,
             "current_retail_low": retail_low,
             "current_p2p_low": p2p_low,
+            "popularity_score": product.popularity_score,
+            "market_momentum": product.market_momentum,
+            "asin": product.asin,
+            "upc": product.upc,
             # Fallback for old UI
             "current_market_low": retail_low or p2p_low
         }

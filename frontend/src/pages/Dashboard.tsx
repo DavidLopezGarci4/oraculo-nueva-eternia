@@ -18,7 +18,7 @@ import { es } from 'date-fns/locale';
 import masterRoleImg from '../assets/role-master.png';
 import guardianRoleImg from '../assets/role-guardian.png';
 
-const Dashboard: React.FC = () => {
+const Dashboard: React.FC = React.memo(() => {
     const isAdmin = localStorage.getItem('active_user_id') === '1';
 
     const queryClient = useQueryClient();
@@ -68,13 +68,13 @@ const Dashboard: React.FC = () => {
     const { data: topDeals } = useQuery({
         queryKey: ['top-deals'],
         queryFn: () => getTopDeals(),
-        refetchInterval: 120000
+        refetchInterval: 300000 // 5 min
     });
 
     const { data: history } = useQuery({
         queryKey: ['dashboard-history'],
         queryFn: getDashboardHistory,
-        refetchInterval: 30000
+        refetchInterval: 60000 // 1 min
     });
 
     const { data: matchStats } = useQuery({
@@ -378,6 +378,6 @@ const Dashboard: React.FC = () => {
             )}
         </div>
     );
-};
+});
 
 export default Dashboard;

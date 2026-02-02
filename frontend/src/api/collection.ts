@@ -25,6 +25,13 @@ export interface Product {
     grail_score?: number;
     is_wish?: boolean;
     acquired_at?: string | null;
+
+    // Phase 50: Sentiment Intelligence
+    popularity_score?: number;
+    market_momentum?: number;
+    asin?: string | null;
+    upc?: string | null;
+    avg_market_price?: number;
 }
 
 export const getCollection = async (userId: number): Promise<Product[]> => {

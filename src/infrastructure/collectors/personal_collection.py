@@ -42,6 +42,7 @@ CHECKLIST_URL = "https://www.actionfigure411.com/masters-of-the-universe/origins
 SITE_BASE = "https://www.actionfigure411.com/"
 DESIRED_ORDER = [
     "Adquirido", "Name", "Wave", "Year", "Retail",
+    "Popularity", "Momentum", "ASIN", "UPC", "US MSRP",
     "Imagen", "Image Path", "Image URL", "Detail Link"
 ]
 
@@ -142,6 +143,27 @@ def safe_get(session: requests.Session, url: str, **kwargs) -> Optional[requests
 
 def urljoin(base: str, href: str) -> str:
     return urllib.parse.urljoin(base, href)
+
+def clean_numeric(text: str) -> float:
+    """
+    Sanitiza strings de precios ($14.99, $1,499.00, 20.0.) a float.
+    Maneja comas americanas y puntuación final.
+    """
+    if not text: return 0.0
+    # Buscamos el grupo de dígitos, comas y puntos
+    match = re.search(r"([\d,\.]+)", text)
+    if not match: return 0.0
+    
+    val = match.group(1)
+    # 1. Quitar comas (separador de miles US)
+    val = val.replace(",", "")
+    # 2. Quitar puntos finales (puntuación de frase)
+    val = val.rstrip(".")
+    
+    try:
+        return float(val)
+    except ValueError:
+        return 0.0
 
 def find_sections(soup: BeautifulSoup) -> List[Tuple[str, BeautifulSoup]]:
     """
@@ -260,6 +282,51 @@ def extract_image_url(detail_html: str, base: str) -> Optional[str]:
         return None
     return urljoin(base, href)
 
+def extract_deep_intelligence(detail_html: str) -> dict:
+    """
+    Extracts high-value identifiers and market sentiment from a product detail page.
+    Returns {upc, asin, collectors, msrp, momentum}
+    """
+    dsoup = BeautifulSoup(detail_html, "html.parser")
+    intelligence = {
+        "upc": "",
+        "asin": "",
+        "collectors": 0,
+        "msrp": 0.0,
+        "momentum": 1.0,
+        "avg": 0.0
+    }
+    
+    # 1. Physical Identifiers (UPC, ASIN)
+    desc_text = dsoup.get_text()
+    upc_match = re.search(r"UPC:\s*(\d+)", desc_text)
+    if upc_match: intelligence["upc"] = upc_match.group(1)
+    
+    asin_match = re.search(r"ASIN:\s*([A-Z0-9]+)", desc_text)
+    if asin_match: intelligence["asin"] = asin_match.group(1)
+    
+    # 2. Collector Count (Popularity)
+    coll_match = re.search(r"(\d+)\s+collectors\s+having\s+it", desc_text)
+    if coll_match: 
+        try:
+            intelligence["collectors"] = int(coll_match.group(1))
+        except (ValueError, IndexError):
+            pass
+    
+    # 3. MSRP & Trends
+    msrp_match = re.search(r"retail\s+price\s+of\s+\$([\d,\.]+)", desc_text, re.I)
+    if msrp_match: 
+        intelligence["msrp"] = clean_numeric(msrp_match.group(1))
+    
+    avg_match = re.search(r"average\s+selling\s+price\s+of\s+\$([\d,\.]+)", desc_text, re.I)
+    if avg_match:
+        intelligence["avg"] = clean_numeric(avg_match.group(1))
+        # Calculate Momentum (Sentiment trend)
+        if intelligence["msrp"] > 0:
+            intelligence["momentum"] = round(intelligence["avg"] / intelligence["msrp"], 2)
+
+    return intelligence
+
 def download_image(session: requests.Session, url: str, dest_path: Path) -> bool:
     """Descarga binaria con streaming si no existe. Devuelve True si queda en disco."""
     try:
@@ -294,8 +361,13 @@ def process_table(
         existing_keys = set()
         
     headers = clean_headers(table)
-    # AÑADIDO: 'Figure ID' para futuro uso robusto
-    out_cols = ["Adquirido"] + headers + ["Detail Link", "Image URL", "Image Path", "Imagen", "Figure ID"]
+    # AÑADIDO: 'Popularity', 'Momentum', 'ASIN', 'UPC', 'US MSRP'
+    out_cols = [
+        "Adquirido"
+    ] + headers + [
+        "Popularity", "Momentum", "ASIN", "UPC", "US MSRP", 
+        "Detail Link", "Image URL", "Image Path", "Imagen", "Figure ID"
+    ]
     rows = []
 
     for tr in table.find_all("tr"):
@@ -346,25 +418,47 @@ def process_table(
 
         image_url = None
         image_path_str = None
+        
+        # Intelligence Fields
+        popularity = 0
+        momentum = 1.0
+        asin = ""
+        upc = ""
+        us_msrp = 0.0
+
+        # En modo AUDIT (smoke test), forzamos el primer item
+        is_audit_sample = fast_mode and len(rows) == 0 and not is_existing
 
         # Solo procesar detalles si NO debemos saltar
-        if detail_link and not should_skip_detail:
+        if detail_link and (not fast_mode or is_audit_sample) and not is_existing:
             detail_url = urljoin(CHECKLIST_URL, detail_link)
             dresp = safe_get(session, detail_url)
             if dresp is not None:
-                img_url = extract_image_url(dresp.text, SITE_BASE)
+                html_text = dresp.text
+                
+                # Image
+                img_url = extract_image_url(html_text, SITE_BASE)
                 if img_url:
                     image_url = img_url
                     image_name = Path(urllib.parse.urlparse(img_url).path).name
                     image_path = images_dir / image_name
                     if download_image(session, img_url, image_path):
                         image_path_str = str(image_path)
+                
+                # Intelligence
+                intel = extract_deep_intelligence(html_text)
+                popularity = intel["collectors"]
+                momentum = intel["momentum"]
+                asin = intel["asin"]
+                upc = intel["upc"]
+                us_msrp = intel["msrp"]
+                
                 polite_pause()
         elif is_existing and not fast_mode:
              # Si existe, NO descargamos
              pass
 
-        row_data += [detail_link, image_url, image_path_str, "", figure_id]
+        row_data += [popularity, momentum, asin, upc, us_msrp, detail_link, image_url, image_path_str, "", figure_id]
         rows.append(row_data)
 
     # --- DEDUPLICAR COLUMNAS (Fix AssertionError: 10) ---
@@ -668,8 +762,20 @@ def generate_text_report(sections: List[Tuple[str, pd.DataFrame]], path: Path):
             if count > 0 and "Name" in df.columns:
                 names = df["Name"].tolist()
                 ids = df["Figure ID"].tolist() if "Figure ID" in df.columns else ["?"] * len(names)
-                for n, fid in zip(names, ids):
-                    f.write(f"    - [{fid}] {n}\n")
+                
+                # Intelligence fields if present
+                has_intel = "Popularity" in df.columns
+                
+                for i, (n, fid) in enumerate(zip(names, ids)):
+                    line = f"    - [{fid}] {n}"
+                    if has_intel:
+                        pop = df.iloc[i].get("Popularity", 0)
+                        mom = df.iloc[i].get("Momentum", 1.0)
+                        asin = df.iloc[i].get("ASIN", "")
+                        upc = df.iloc[i].get("UPC", "")
+                        if pop or mom != 1.0 or asin or upc:
+                            line += f" | Pop: {pop} | Mom: {mom}x | ASIN: {asin} | UPC: {upc}"
+                    f.write(line + "\n")
             f.write("-" * 40 + "\n")
             
         f.write(f"\nTOTAL ITEMS FOUND: {total_items}\n")
@@ -721,12 +827,16 @@ def main(audit_mode: bool = False) -> None:
 
     # Procesar tablas
     sections_new: List[Tuple[str, pd.DataFrame]] = []
-    for title, tbl in sections_html:
-        logging.info("Procesando sección: %s (FastMode=%s, Incremental=%s)", title, audit_mode, not audit_mode)
-        # Pasamos existing_keys
-        df = process_table(tbl, session, images_dir, fast_mode=audit_mode, existing_keys=existing_keys)
+    for i, (title, tbl) in enumerate(sections_html):
+        # In audit mode, we only fetch details for the FIRST item of the FIRST section as a "SMOKE TEST"
+        # unless user wants more. This improves visibility without a full slow scan.
+        is_smoke_test = audit_mode and i == 0
+        logging.info("Procesando sección: %s (AuditMode=%s, SmokeTest=%s)", title, audit_mode, is_smoke_test)
+        
+        # If smoke test, we tell process_table to fetch at least ONE detail even in fast mode
+        df = process_table(tbl, session, images_dir, fast_mode=(audit_mode and not is_smoke_test), existing_keys=existing_keys)
         sections_new.append((title, df))
-        if not audit_mode:
+        if not audit_mode or is_smoke_test:
             polite_pause()
 
     if audit_mode:

@@ -11,6 +11,14 @@ class ProductBase(BaseModel):
     figure_id: Optional[str] = None
     variant_name: Optional[str] = None
     image_hash: Optional[str] = None
+    
+    # Financial & Intelligence
+    retail_price: Optional[float] = 0.0
+    avg_market_price: Optional[float] = 0.0
+    popularity_score: Optional[int] = 0
+    market_momentum: Optional[float] = 1.0
+    asin: Optional[str] = None
+    upc: Optional[str] = None
 
 class ProductCreate(ProductBase):
     pass

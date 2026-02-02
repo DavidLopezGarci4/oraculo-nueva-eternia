@@ -10,7 +10,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { getProductPriceHistory } from '../api/products';
 import PriceHistoryChart from '../components/products/PriceHistoryChart';
-import { TrendingUp, History, LineChart as ChartIcon } from 'lucide-react';
+import { TrendingUp, History, LineChart as ChartIcon, Flame, ArrowUpRight, Gem, Search } from 'lucide-react';
 import MarketIntelligenceModal from '../components/MarketIntelligenceModal';
 
 // Para desarrollo, usamos el ID de David
@@ -18,7 +18,7 @@ interface CatalogProps {
     searchQuery?: string;
 }
 
-const Catalog: React.FC<CatalogProps> = ({ searchQuery = "" }) => {
+const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
     const queryClient = useQueryClient();
     const [selectedProduct, setSelectedProduct] = React.useState<Product | null>(null);
     const [editingProduct, setEditingProduct] = React.useState<Product | null>(null);
@@ -261,6 +261,40 @@ const Catalog: React.FC<CatalogProps> = ({ searchQuery = "" }) => {
             });
     }, [products, collectionMap, searchQuery, subCatStats]);
 
+    const getSentimentBadge = (product: Product) => {
+        const momentum = product.market_momentum || 1.0;
+        const popularity = product.popularity_score || 0;
+
+        const badges = [];
+
+        if (popularity > 1500) {
+            badges.push(
+                <div key="hot" className="flex items-center gap-1 rounded-full bg-orange-500/10 px-2 py-0.5 border border-orange-500/20 text-orange-400">
+                    <Flame className="h-2.5 w-2.5 animate-pulse" />
+                    <span className="text-[7px] font-black uppercase tracking-tighter">Codiciada</span>
+                </div>
+            );
+        }
+
+        if (momentum > 1.3) {
+            badges.push(
+                <div key="up" className="flex items-center gap-1 rounded-full bg-green-500/10 px-2 py-0.5 border border-green-500/20 text-green-400">
+                    <ArrowUpRight className="h-2.5 w-2.5" />
+                    <span className="text-[7px] font-black uppercase tracking-tighter">Al Alza</span>
+                </div>
+            );
+        } else if (momentum < 0.85) {
+            badges.push(
+                <div key="opp" className="flex items-center gap-1 rounded-full bg-brand-primary/10 px-2 py-0.5 border border-brand-primary/20 text-brand-primary">
+                    <Gem className="h-2.5 w-2.5" />
+                    <span className="text-[7px] font-black uppercase tracking-tighter">Oportunidad</span>
+                </div>
+            );
+        }
+
+        return badges;
+    };
+
     if (isLoadingProducts || isLoadingCollection) {
         return (
             <div className="flex h-64 flex-col items-center justify-center gap-4 text-white/50">
@@ -407,9 +441,12 @@ const Catalog: React.FC<CatalogProps> = ({ searchQuery = "" }) => {
                             {/* Content */}
                             <div className="flex flex-1 flex-col gap-2 sm:gap-3 px-1">
                                 <div className="space-y-0.5 sm:space-y-1">
-                                    <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-white/20 group-hover:text-brand-primary/50 transition-colors line-clamp-1">
-                                        {product.sub_category}
-                                    </span>
+                                    <div className="flex flex-wrap gap-1 mb-1">
+                                        <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-white/20 group-hover:text-brand-primary/50 transition-colors line-clamp-1">
+                                            {product.sub_category}
+                                        </span>
+                                        {getSentimentBadge(product)}
+                                    </div>
                                     <h3 className="line-clamp-2 min-h-[2rem] sm:min-h-[2.5rem] text-xs sm:text-lg font-black leading-tight text-white group-hover:text-brand-primary transition-colors">
                                         {product.name}
                                     </h3>
@@ -479,6 +516,17 @@ const Catalog: React.FC<CatalogProps> = ({ searchQuery = "" }) => {
                                     >
                                         <Star className={`h-3 w-3 sm:h-5 sm:w-5 ${wished ? 'fill-current' : ''}`} />
                                     </button>
+
+                                    {/* Action: Universal Search (EAN/ASIN) */}
+                                    <a
+                                        href={product.asin ? `https://www.amazon.es/s?k=${product.asin}` : `https://www.google.com/search?q=${encodeURIComponent(product.name + ' masters of the universe origins')}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex h-8 w-8 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl bg-white/5 text-white/20 border border-white/10 hover:bg-brand-secondary/20 hover:text-brand-secondary transition-all shadow-lg"
+                                        title={product.asin ? "Buscar en Amazon.es por ASIN" : "Buscar en Google"}
+                                    >
+                                        <Search className="h-3 w-3 sm:h-5 sm:w-5" />
+                                    </a>
 
 
                                     {/* Admin Action: Edit */}
@@ -798,6 +846,6 @@ const Catalog: React.FC<CatalogProps> = ({ searchQuery = "" }) => {
             )}
         </div>
     );
-};
+});
 
 export default Catalog;
