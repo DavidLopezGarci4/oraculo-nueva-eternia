@@ -1027,4 +1027,16 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
 *   **Filtro de Contenidos**:
     - **Áreas Protegidas**: Las secciones "Actividad del Oráculo" (log de operaciones) y "Conquistas por Mercado" (métricas de éxito de scrapers) ahora solo son visibles para el **Maestro (Admin ID 1)**.
     - **Gestión de Ofertas**: Los botones de acción crítica (Reasignar y Desvincular) en la lista de oportunidades están blindados y ocultos para usuarios sin privilegios.
-*   **Optimización UX**: Los usuarios de perfil Guardian/Dueño de Colección disfrutan ahora de una interfaz más limpia y enfocada en su patrimonio y las gangas del mercado, sin el ruido administrativo del motor.
+### 🕸️ Fase 42: Price Intelligence (Shipping & Scores - 05/02/2026)
+
+- **Hitos**: Mejora de la precisión financiera en el motor de eBay y reparación del sistema de puntuación de oportunidades.
+- **Estado**: ✅ COMPLETADO Y VERIFICADO
+- **Confirmación ActionFigure411**:
+    - **Extracción de Benchmarks**: Se ha confirmado que el `NexusService` extrae correctamente el **Precio Medio (Avg)**, **MSRP**, **Popularidad** (nº de coleccionistas) y **Market Momentum** de cada ítem de ActionFigure411.
+    - **Metodología**: El scraper `personal_collection.py` recorre el checklist maestro, accede a los links de detalle de cada figura y parsea el texto descriptivo mediante `extract_deep_intelligence` para capturar identificadores (UPC, ASIN) y valores de mercado.
+    - **Sincronización**: Los datos fluyen desde el Excel local (`lista_MOTU.xlsx`) a la base de datos cloud vía `phase0_migration.py`, normalizando divisas (USD a EUR) y segregando valores Retail de P2P.
+- **Logros de Tablero**:
+    - **Opportunity Score Repair**: Implementada la recalculación automática de scores durante los procesos de `match` y `relink` desde el Purgatorio.
+    - **Mantenimiento Masivo**: Ejecutado script de reparación global que actualizó scores para 122 ofertas retail, restaurando la visibilidad de la sección "Oportunidades de Captura" en el Dashboard.
+- **Refuerzo en eBay**:
+    - **Cálculo de Envío Exprés**: Optimizado el parseo de costes de envío en eBay.es para incluir impuestos y tasas en el cálculo del `landed_price`.

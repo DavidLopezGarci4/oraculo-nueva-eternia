@@ -87,6 +87,8 @@ const PriceHistoryChart: React.FC<Props> = ({ data }) => {
                             fillOpacity={1}
                             fill={`url(#color-${idx})`}
                             animationDuration={1500}
+                            dot={{ r: 4, strokeWidth: 2, stroke: colors[idx % colors.length], fill: '#fff' }}
+                            activeDot={{ r: 6, strokeWidth: 0 }}
                         />
                     ))}
                 </AreaChart>

@@ -310,10 +310,11 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
     - [x] Integración de `Tradeinn` en `daily_scan.py`.
     - [x] Unificación de nombres y visibilidad total en el Purgatorio.
 
-- [x] **Phase 40: Eternia Shield & Sitemap Precision (01/02/2026)**
-    - [x] Implementación de Sitemap Fallback para DVDStoreSpain.
-    - [x] Refinamiento de relevancia para la línea Origins.
-    - [x] Bypass del buscador impreciso de la tienda.
+- [x] **Phase 42: Price Intelligence (Shipping & Scores - 05/02/2026)**
+    - [x] Implementación de recalculación de `opportunity_score` en flujos manuales.
+    - [x] Mejora de precisión financiera en eBay.es (landed_price audit).
+    - [x] Saneamiento masivo de scores en DB Cloud (122 deals recuperados).
+    - [x] Confirmación de extracción de benchmarks Avg/MSRP desde ActionFigure411.
 
 ---
 

@@ -114,8 +114,15 @@ class FrikiversoScraper(BaseScraper):
 
             # 3. Availability
             is_avl = True
-            # Check for specific flags or classes
-            if item.select_one('.product-flag.out_of_stock, .out-of-stock, .product-unavailable'):
+            
+            # Selector-based check (Existing classes)
+            if item.select_one('.product-flag.out_of_stock, .out-of-stock, .product-unavailable, .available-from-date'):
+                is_avl = False
+            
+            # Text-based check (Robustness Kaizen)
+            # PrestaShop items might have "Agotado" or "Reservar" on the image or button
+            item_text = item.get_text(strip=True).lower()
+            if any(term in item_text for term in ["agotado", "no disponible", "reservar", "próximamente", "avísame"]):
                 is_avl = False
             
             # 4. Image

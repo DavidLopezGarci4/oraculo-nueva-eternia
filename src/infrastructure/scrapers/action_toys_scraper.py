@@ -119,7 +119,32 @@ class ActionToysScraper(BaseScraper):
 
             # 3. Availability
             is_avl = True
+            
+            # Check for explicit out-of-stock badge
             if item.select_one('.out-of-stock-badge'): 
+                is_avl = False
+            
+            # Check the action button or general item text for out-of-stock indicators
+            btn = item.select_one('.add_to_cart_button')
+            if btn:
+                btn_text = btn.get_text(strip=True).lower()
+                classes = btn.get('class', [])
+                
+                # [3OX] ActionToys Specific: Pre-order detection
+                if 'porto-pre-order' in classes or 'pre-pedido' in btn_text:
+                    is_avl = False
+                
+                # Detect "Read More" (usually means out of stock in Woo)
+                if 'leer más' in btn_text or 'sin existencias' in btn_text or 'agotado' in btn_text:
+                    is_avl = False
+            else:
+                # If no button at all, might be a complex product or out of stock
+                # For safety in ActionToys MOTU category, usually means not immediately buyable
+                is_avl = False
+                
+            # Final text-based safety check (Robustness Kaizen)
+            item_text = item.get_text(strip=True).lower()
+            if any(term in item_text for term in ["sin existencias", "agotado", "próximamente"]):
                 is_avl = False
             
             return ScrapedOffer(

@@ -56,14 +56,18 @@ def _sync_engine(engine, label: str):
             ("avg_retail_price", "FLOAT DEFAULT 0.0"),
             ("p25_retail_price", "FLOAT DEFAULT 0.0"),
             ("avg_p2p_price", "FLOAT DEFAULT 0.0"),
+            ("avg_p2p_price_us", "FLOAT DEFAULT 0.0"), # Master Nexus US Benchmark
+            ("avg_p2p_price_eu", "FLOAT DEFAULT 0.0"), # Master Nexus EU Signal
             ("p25_p2p_price", "FLOAT DEFAULT 0.0"),
             ("avg_market_price", "FLOAT DEFAULT 0.0"), # Legacy compatibility
             ("p25_price", "FLOAT DEFAULT 0.0"),        # Legacy compatibility
+            ("market_gap", "FLOAT DEFAULT 0.0"),       # Master Nexus Delta %
             ("variant_name", "VARCHAR(100)"),
             ("image_hash", "VARCHAR(100)"),
             ("master_image_hash", "VARCHAR(100)"),
             ("figure_id", "VARCHAR(100) UNIQUE"),
-            ("sub_category", "VARCHAR(100)")
+            ("sub_category", "VARCHAR(100)"),
+            ("release_year", "INTEGER")
         ]
 
         for col_name, col_type in new_product_cols:

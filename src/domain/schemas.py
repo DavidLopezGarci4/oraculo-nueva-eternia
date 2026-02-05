@@ -29,6 +29,9 @@ class ProductSchema(ProductBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
 
+# Backward compatibility alias
+Product = ProductSchema
+
 class CollectionItemBase(BaseModel):
     product_id: int
     owner_id: int

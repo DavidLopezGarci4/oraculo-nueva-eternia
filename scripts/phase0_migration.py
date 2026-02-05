@@ -30,6 +30,14 @@ def clean_price(val):
     except:
         return 0.0
 
+def normalize_us_price(val_usd: float) -> float:
+    """
+    Normalizes a US Dollar value to Euro for comparison.
+    Phase 10: Master Nexus baseline is 1 USD = 0.92 EUR (consistent with BBTS scraper).
+    """
+    if not val_usd or val_usd <= 0: return 0.0
+    return round(val_usd * 0.92, 2)
+
 def migrate_excel_to_db(excel_path: str, session):
     """
     Core migration logic.
@@ -129,6 +137,15 @@ def migrate_excel_to_db(excel_path: str, session):
                             if supabase_url:
                                 image_url = f"{supabase_url}/storage/v1/object/public/motu-catalog/{filename}"
 
+                        # Phase 10 (Master Nexus): Segregated Benchmarks
+                        currency = row.get('Currency', 'USD')
+                        avg_raw = clean_price(row.get('Avg'))
+                        
+                        if currency == 'USD':
+                             avg_us = normalize_us_price(avg_raw)
+                        else:
+                             avg_us = avg_raw # Already in EUR
+                             
                         product = ProductModel(
                             name=name,
                             figure_id=figure_id,
@@ -137,8 +154,12 @@ def migrate_excel_to_db(excel_path: str, session):
                             sub_category=sub_category,
                             variant_name=str(row.get('Wave', '')), # Using Wave as variant context
                             retail_price=clean_price(row.get('Retail')),
-                            avg_market_price=clean_price(row.get('Avg')), 
+                            avg_market_price=avg_us, 
                             p25_price=clean_price(row.get('P25')),
+                            # Phase 10 (Master Nexus): Segregated Benchmarks
+                            avg_p2p_price_us=avg_us,
+                            release_year=int(row.get('Year')) if pd.notna(row.get('Year')) and str(row.get('Year')).isdigit() else None,
+                            
                             # Phase 50 Intelligence
                             popularity_score=int(row.get('Popularity', 0)) if pd.notna(row.get('Popularity')) else 0,
                             market_momentum=float(row.get('Momentum', 1.0)) if pd.notna(row.get('Momentum')) else 1.0,
@@ -167,9 +188,29 @@ def migrate_excel_to_db(excel_path: str, session):
                         # Phase 18: Update intelligence fields even if product exists
                         product.retail_price = clean_price(row.get('Retail'))
                         product.avg_market_price = clean_price(row.get('Avg'))
-                        product.p25_price = clean_price(row.get('P25'))
+                        # Phase 18 & 10 Updates
+                        currency = row.get('Currency', 'USD')
+                        avg_raw = clean_price(row.get('Avg'))
+                        if currency == 'USD':
+                            avg_us = normalize_us_price(avg_raw)
+                        else:
+                            avg_us = avg_raw
+                            
+                        product.avg_p2p_price_us = avg_us
                         
-                        # Phase 50 Updates
+                        p25_raw = clean_price(row.get('P25'))
+                        if currency == 'USD':
+                            product.p25_p2p_price = normalize_us_price(p25_raw)
+                        else:
+                            product.p25_p2p_price = p25_raw
+                        
+                        if pd.notna(row.get('Year')) and str(row.get('Year')).isdigit():
+                            product.release_year = int(row.get('Year'))
+
+                        # Legacy sync
+                        product.avg_market_price = product.avg_p2p_price_us
+                        product.p25_price = product.p25_p2p_price
+
                         if pd.notna(row.get('Popularity')):
                             product.popularity_score = int(row.get('Popularity'))
                         if pd.notna(row.get('Momentum')):

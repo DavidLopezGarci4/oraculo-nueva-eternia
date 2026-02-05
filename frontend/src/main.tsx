@@ -14,10 +14,14 @@ const queryClient = new QueryClient({
   },
 })
 
+import { CartProvider } from './context/CartContext.tsx'
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <App />
+      <CartProvider>
+        <App />
+      </CartProvider>
     </QueryClientProvider>
   </StrictMode>,
 )

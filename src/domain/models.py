@@ -28,16 +28,21 @@ class ProductModel(Base):
     asin: Mapped[Optional[str]] = mapped_column(String, index=True, nullable=True) # Amazon ID
     upc: Mapped[Optional[str]] = mapped_column(String, index=True, nullable=True) # Universal Product Code
     
-    # Phase 41e: Strict Market Segregation
+    # Phase 41e & 10 (Master Nexus): Strict Market Segregation
     avg_retail_price: Mapped[Optional[float]] = mapped_column(Float, nullable=True, default=0.0)
     p25_retail_price: Mapped[Optional[float]] = mapped_column(Float, nullable=True, default=0.0)
-    avg_p2p_price: Mapped[Optional[float]] = mapped_column(Float, nullable=True, default=0.0)
+    
+    avg_p2p_price_us: Mapped[Optional[float]] = mapped_column(Float, nullable=True, default=0.0) # From AF411 (Master Benchmark)
+    avg_p2p_price_eu: Mapped[Optional[float]] = mapped_column(Float, nullable=True, default=0.0) # From Deep Scrape (Local Real-time)
     p25_p2p_price: Mapped[Optional[float]] = mapped_column(Float, nullable=True, default=0.0)
     
-    # Deprecated (kept for backward compatibility during transition)
+    market_gap: Mapped[Optional[float]] = mapped_column(Float, nullable=True, default=0.0) # Delta % between US and EU
+    release_year: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    
+    # Legacy Fallbacks (Synchronized with new fields for backward compatibility)
     avg_market_price: Mapped[Optional[float]] = mapped_column(Float, nullable=True, default=0.0) 
     p25_price: Mapped[Optional[float]] = mapped_column(Float, nullable=True, default=0.0) 
-    release_year: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    avg_p2p_price: Mapped[Optional[float]] = mapped_column(Float, nullable=True, default=0.0) # Backward compat alias for EU
     
     # Phase 0: Multivariant Identity
     figure_id: Mapped[Optional[str]] = mapped_column(String, index=True, unique=True, nullable=True)

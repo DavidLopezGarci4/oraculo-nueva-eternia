@@ -124,9 +124,14 @@ class FantasiaScraper(BaseScraper):
 
             # 3. Availability
             is_avl = True
-            # Check for badges or classes indicating out of stock
-            out_of_stock = item.select_one('.product-flags .out-of-stock, .product-unavailable')
-            if out_of_stock:
+            
+            # Selector-based check (Existing classes)
+            if item.select_one('.product-flags .out-of-stock, .product-unavailable, .available-from-date'):
+                is_avl = False
+            
+            # Text-based check (Robustness Kaizen)
+            item_text = item.get_text(strip=True).lower()
+            if any(term in item_text for term in ["agotado", "no disponible", "reservar", "próximamente", "sin existencias"]):
                 is_avl = False
             
             # 4. Image

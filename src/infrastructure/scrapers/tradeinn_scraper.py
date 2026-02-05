@@ -143,7 +143,7 @@ class TradeinnScraper(BaseScraper):
                             url=product['url'],
                             shop_name=product['shop_name'],
                             image_url=product['image_url'],
-                            is_available=True
+                            is_available=product.get('is_available', True)
                         ))
                 except Exception as e:
                     logger.debug(f"Error parseando reliquia en Tradeinn: {e}")
@@ -158,7 +158,11 @@ class TradeinnScraper(BaseScraper):
         try:
             # Selectores robustos basados en el debug HTML
             name_el = card.locator('p#js-nombre_producto_listado')
+            # Current price selector
             price_el = card.locator('p.js-precio_producto')
+            # Previous price selector (discount indicator)
+            old_price_el = card.locator('p.js-precio_producto_anterior')
+            
             link_el = card.locator('a.js-href_list_products')
             img_el = card.locator('img.js-image_list_product')
             
@@ -172,11 +176,22 @@ class TradeinnScraper(BaseScraper):
 
             if not link: return None
 
-            # Distribución de sub-tiendas (Kidinn, Diveinn, etc.)
+            # [3OX] Distribución de sub-tiendas (Kidinn, Diveinn, etc.)
             shop_name = "Tradeinn"
             parts = link.strip('/').split('/')
             if len(parts) > 0 and parts[0] != "es":
                 shop_name = f"Tradeinn ({parts[0].capitalize()})"
+            
+            # [3OX] Tradeinn Availability Logic: 
+            # Si aparece en la lista, normalmente está disponible, pero chequeamos indicadores visuales
+            is_available = True
+            if await price_el.count() == 0 or price_raw.strip() == "":
+                is_available = False
+            
+            # Robustness check for specific out-of-stock text in the card
+            item_text = (await card.inner_text()).lower()
+            if any(term in item_text for term in ["agotado", "no disponible", "avísame", "unavailable"]):
+                is_available = False
             
             price = self._normalize_price(price_raw)
             
@@ -185,7 +200,8 @@ class TradeinnScraper(BaseScraper):
                 'price': price,
                 'url': link if link.startswith('http') else f"https://www.tradeinn.com{link}",
                 'shop_name': shop_name,
-                'image_url': image_url
+                'image_url': image_url,
+                'is_available': is_available
             }
         except Exception as e:
             logger.debug(f"Error detallando producto: {str(e)[:50]}")

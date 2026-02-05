@@ -200,7 +200,16 @@ Para entender la sinergia entre todas las tecnologías y procesos, consulta el d
 - [📜 El Códice de Eternia (PROJECT_CODEX.md)](file:///c:/Users/dace8/OneDrive/Documentos/Antigravity/oraculo-nueva-eternia/docs/PROJECT_CODEX.md)
 
 
-## 6. El Motor de Inversión (DealScorer)
+### El Nexo Maestro (Inteligencia AF411)
+El sistema utiliza ActionFigure411 como Fuente de Verdad para benchmarks de mercado:
+*   **MSRP & Avg Price**: Extracción automática del precio original y el precio medio de subasta.
+*   **Market Momentum**: Un indicador dinámico (Avg/MSRP) que detecta si una figura se está apreciando.
+*   **Popularidad**: Conteo de coleccionistas para priorizar objetivos de caza.
+*   **Detección de Identificadores**: Captura automática de UPC y ASIN para vinculaciones precisas con Amazon y eBay.
+
+---
+
+## 7. El Motor de Inversión (DealScorer)
 El Oráculo ahora actúa como un analista de inversiones personal. Cada oferta es procesada por el `DealScorer`, que asigna una puntuación de 1 a 100 basada en tres vectores:
 1.  **Vector MSRP (40%)**: Descuento respecto al precio oficial.
 2.  **Vector P25 (40%)**: Ventaja respecto al suelo de mercado de segunda mano.

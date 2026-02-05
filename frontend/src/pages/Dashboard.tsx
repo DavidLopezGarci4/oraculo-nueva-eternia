@@ -7,8 +7,11 @@ import {
     ShoppingBag,
     Loader2,
     Trash2,
-    Link
+    Link,
+    ShoppingCart
 } from 'lucide-react';
+import { useCart } from '../context/CartContext';
+import OracleCart from '../components/cart/OracleCart';
 import { getDashboardStats, getTopDeals, getDashboardHistory, getDashboardMatchStats, revertDashboardAction, getHallOfFame } from '../api/dashboard';
 import { unlinkOffer, relinkOffer } from '../api/admin';
 import axios from 'axios';
@@ -19,6 +22,7 @@ import masterRoleImg from '../assets/role-master.png';
 import guardianRoleImg from '../assets/role-guardian.png';
 
 const Dashboard: React.FC = React.memo(() => {
+    const { addToCart } = useCart();
     const isAdmin = localStorage.getItem('active_user_id') === '1';
 
     const queryClient = useQueryClient();
@@ -143,22 +147,22 @@ const Dashboard: React.FC = React.memo(() => {
             </div>
 
             {/* Metrics Ribbon */}
-            <div className="grid grid-cols-3 gap-1.5 md:gap-6">
-                <div className="group relative overflow-hidden rounded-xl md:rounded-2xl border border-white/5 bg-white/[0.03] p-2 md:p-5">
+            <div className="grid grid-cols-2 gap-3 md:gap-6 md:grid-cols-3">
+                <div className="group relative overflow-hidden rounded-xl md:rounded-2xl border border-white/5 bg-white/[0.03] p-4 md:p-5">
                     <div className="relative flex flex-col items-center md:items-start gap-1 md:gap-3">
-                        <div className="flex h-6 w-6 md:h-10 md:w-10 items-center justify-center rounded-lg md:rounded-xl bg-brand-primary/10 border border-brand-primary/20 shrink-0">
-                            <Zap className="h-3 w-3 md:h-5 md:w-5 text-brand-primary" />
+                        <div className="flex h-8 w-8 md:h-10 md:w-10 items-center justify-center rounded-lg md:rounded-xl bg-brand-primary/10 border border-brand-primary/20 shrink-0">
+                            <Zap className="h-4 w-4 md:h-5 md:w-5 text-brand-primary" />
                         </div>
                         <div className="text-center md:text-left">
-                            <p className="text-[7px] md:text-[10px] font-black uppercase tracking-widest text-white/30 mb-1">{isAdmin ? 'Vínculos' : 'Colección'}</p>
-                            <h3 className="text-sm md:text-3xl font-black text-white">{isAdmin ? (stats?.match_count || 0) : (stats?.total_products || 302)}</h3>
+                            <p className="text-[7px] md:text-[10px] font-black uppercase tracking-widest text-white/30 mb-1">{isAdmin ? 'Vínculos' : 'Capítulo'}</p>
+                            <h3 className="text-sm md:text-3xl font-black text-white">{isAdmin ? (stats?.match_count || 0) : (stats?.total_products || 0)}</h3>
                         </div>
                     </div>
                 </div>
-                <div className="group relative overflow-hidden rounded-xl md:rounded-2xl border border-white/5 bg-white/[0.03] p-2 md:p-5">
+                <div className="group relative overflow-hidden rounded-xl md:rounded-2xl border border-white/5 bg-white/[0.03] p-4 md:p-5">
                     <div className="relative flex flex-col items-center md:items-start gap-1 md:gap-3">
-                        <div className="flex h-6 w-6 md:h-10 md:w-10 items-center justify-center rounded-lg md:rounded-xl bg-green-500/10 border border-green-500/20 shrink-0">
-                            <ShoppingBag className="h-3 w-3 md:h-5 md:w-5 text-green-500" />
+                        <div className="flex h-8 w-8 md:h-10 md:w-10 items-center justify-center rounded-lg md:rounded-xl bg-green-500/10 border border-green-500/20 shrink-0">
+                            <ShoppingBag className="h-4 w-4 md:h-5 md:w-5 text-green-500" />
                         </div>
                         <div className="text-center md:text-left">
                             <p className="text-[7px] md:text-[10px] font-black uppercase tracking-widest text-white/30 mb-1">Fortaleza</p>
@@ -166,13 +170,13 @@ const Dashboard: React.FC = React.memo(() => {
                         </div>
                     </div>
                 </div>
-                <div className="group relative overflow-hidden rounded-xl md:rounded-2xl border border-white/5 bg-white/[0.03] p-2 md:p-5">
+                <div className="group relative overflow-hidden rounded-xl md:rounded-2xl border border-white/5 bg-white/[0.03] p-4 md:p-5">
                     <div className="relative flex flex-col items-center md:items-start gap-1 md:gap-3">
-                        <div className="flex h-6 w-6 md:h-10 md:w-10 items-center justify-center rounded-lg md:rounded-xl bg-orange-500/10 border border-orange-500/20 shrink-0">
-                            <Euro className="h-3 w-3 md:h-5 md:w-5 text-orange-500" />
+                        <div className="flex h-8 w-8 md:h-10 md:w-10 items-center justify-center rounded-lg md:rounded-xl bg-orange-500/10 border border-orange-500/20 shrink-0">
+                            <Euro className="h-4 w-4 md:h-5 md:w-5 text-orange-500" />
                         </div>
                         <div className="text-center md:text-left">
-                            <p className="text-[7px] md:text-[10px] font-black uppercase tracking-widest text-white/30 mb-1">Valor</p>
+                            <p className="text-[7px] md:text-[10px] font-black uppercase tracking-widest text-white/30 mb-1">Valor Venta</p>
                             <h3 className="text-sm md:text-3xl font-black text-white">{stats?.financial?.market_value}€</h3>
                         </div>
                     </div>
@@ -182,7 +186,9 @@ const Dashboard: React.FC = React.memo(() => {
             {/* Conditional Content Based on Role */}
             {!isAdmin ? (
                 // GUARDIAN VIEW: Custom Order (Oportunidades -> Hall of Fame)
-                <div className="space-y-6">
+                <div className="space-y-10">
+                    <OracleCart />
+
                     {/* Top Deals Section (Oportunidades de Captura) */}
                     <div className="space-y-4">
                         <div className="flex items-center justify-between">
@@ -223,8 +229,22 @@ const Dashboard: React.FC = React.memo(() => {
 
                                                         <div className="flex items-center gap-3 shrink-0">
                                                             <div className="text-right">
-                                                                <div className="text-sm font-black text-brand-primary">{deal.price} €</div>
+                                                                <div className="text-xs font-black text-brand-primary">{deal.landing_price} € <span className="text-[8px] opacity-40">LANDED</span></div>
+                                                                <div className="text-[10px] font-bold text-white/30">{deal.price} € <span className="text-[8px] opacity-50">LIST</span></div>
                                                             </div>
+                                                            <button
+                                                                onClick={() => addToCart({
+                                                                    id: deal.id.toString(),
+                                                                    product_name: deal.product_name,
+                                                                    shop_name: deal.shop_name,
+                                                                    price: deal.price,
+                                                                    image_url: deal.image_url
+                                                                })}
+                                                                className="p-2 rounded-xl bg-white/5 hover:bg-brand-primary/20 text-white/20 hover:text-brand-primary transition-all"
+                                                                title="Simular en Oracle Cart"
+                                                            >
+                                                                <ShoppingCart className="h-4 w-4" />
+                                                            </button>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -280,6 +300,7 @@ const Dashboard: React.FC = React.memo(() => {
             ) : (
                 // ADMIN VIEW: Exclusive Operational Sections (Top Deals & Activity)
                 <div className="space-y-10">
+                    <OracleCart />
                     {/* Admin Horizontal Sections: Conquistas & Actividad */}
                     <div className="space-y-4">
                         <h4 className="text-xs font-black uppercase tracking-widest text-white/40">Conquistas de Mercado</h4>
@@ -341,6 +362,19 @@ const Dashboard: React.FC = React.memo(() => {
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-2">
+                                                <button
+                                                    onClick={() => addToCart({
+                                                        id: deal.id.toString(),
+                                                        product_name: deal.product_name,
+                                                        shop_name: deal.shop_name,
+                                                        price: deal.price,
+                                                        image_url: deal.image_url
+                                                    })}
+                                                    className="p-2 rounded-lg bg-white/5 text-white/40 hover:bg-brand-primary/20 hover:text-brand-primary transition-all"
+                                                    title="Simular en Oracle Cart"
+                                                >
+                                                    <ShoppingCart className="h-3.5 w-3.5" />
+                                                </button>
                                                 <button onClick={() => unlinkMutation.mutate(deal.id)} className="p-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all">
                                                     <Trash2 className="h-3.5 w-3.5" />
                                                 </button>

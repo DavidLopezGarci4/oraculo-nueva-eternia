@@ -18,10 +18,10 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen
 
     const menuItems = [
         { id: 'dashboard', label: 'Tablero', icon: LayoutDashboard },
+        { id: 'collection', label: 'Mi Fortaleza', icon: Box },
         { id: 'catalog', label: 'Nueva Eternia', icon: Database },
         { id: 'auctions', label: 'El Pabellón', icon: Gavel },
         { id: 'radar', label: 'Radar P2P', icon: Radar },
-        { id: 'collection', label: 'Mi Fortaleza', icon: Box },
         ...(isAdmin ? [{ id: 'purgatory', label: 'Purgatorio', icon: ShieldAlert }] : []),
     ];
 

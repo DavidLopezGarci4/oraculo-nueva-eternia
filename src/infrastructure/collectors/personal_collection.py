@@ -64,10 +64,10 @@ def get_project_paths() -> Tuple[Path, Path, Path]:
     Devuelve (project_root, excel_path, images_dir).
     project_root = carpeta de datos en data/MOTU
     """
-    # Assuming src/collectors/personal_collection.py
+    # src/infrastructure/collectors/personal_collection.py
     script_dir = Path(__file__).resolve().parent
-    # Go up to src, then to project root
-    project_base = script_dir.parent.parent
+    # Go up: collectors -> infrastructure -> src -> project root
+    project_base = script_dir.parent.parent.parent
     
     project_root = project_base / "data" / "MOTU"
     images_dir = project_root / "images"
@@ -144,15 +144,22 @@ def safe_get(session: requests.Session, url: str, **kwargs) -> Optional[requests
 def urljoin(base: str, href: str) -> str:
     return urllib.parse.urljoin(base, href)
 
-def clean_numeric(text: str) -> float:
+def clean_numeric(text: str) -> Tuple[float, str]:
     """
-    Sanitiza strings de precios ($14.99, $1,499.00, 20.0.) a float.
+    Sanitiza strings de precios ($14.99, 14.99€, etc.) a (float, currency).
     Maneja comas americanas y puntuación final.
     """
-    if not text: return 0.0
+    if not text: return 0.0, "EUR"
+    
+    currency = "EUR"
+    if "$" in text:
+        currency = "USD"
+    elif "€" in text or "EUR" in text.upper():
+        currency = "EUR"
+    
     # Buscamos el grupo de dígitos, comas y puntos
     match = re.search(r"([\d,\.]+)", text)
-    if not match: return 0.0
+    if not match: return 0.0, currency
     
     val = match.group(1)
     # 1. Quitar comas (separador de miles US)
@@ -161,9 +168,9 @@ def clean_numeric(text: str) -> float:
     val = val.rstrip(".")
     
     try:
-        return float(val)
+        return float(val), currency
     except ValueError:
-        return 0.0
+        return 0.0, currency
 
 def find_sections(soup: BeautifulSoup) -> List[Tuple[str, BeautifulSoup]]:
     """
@@ -294,7 +301,8 @@ def extract_deep_intelligence(detail_html: str) -> dict:
         "collectors": 0,
         "msrp": 0.0,
         "momentum": 1.0,
-        "avg": 0.0
+        "avg": 0.0,
+        "currency": "USD"
     }
     
     # 1. Physical Identifiers (UPC, ASIN)
@@ -314,13 +322,18 @@ def extract_deep_intelligence(detail_html: str) -> dict:
             pass
     
     # 3. MSRP & Trends
-    msrp_match = re.search(r"retail\s+price\s+of\s+\$([\d,\.]+)", desc_text, re.I)
+    msrp_match = re.search(r"retail\s+price\s+of\s+([\$€\d,\.]+)", desc_text, re.I)
     if msrp_match: 
-        intelligence["msrp"] = clean_numeric(msrp_match.group(1))
+        val, curr = clean_numeric(msrp_match.group(1))
+        intelligence["msrp"] = val
+        intelligence["currency"] = curr
     
-    avg_match = re.search(r"average\s+selling\s+price\s+of\s+\$([\d,\.]+)", desc_text, re.I)
+    avg_match = re.search(r"average\s+selling\s+price\s+of\s+([\$€\d,\.]+)", desc_text, re.I)
     if avg_match:
-        intelligence["avg"] = clean_numeric(avg_match.group(1))
+        val, curr = clean_numeric(avg_match.group(1))
+        intelligence["avg"] = val
+        intelligence["currency"] = curr # Overwrites if AVG has currency, usually same
+
         # Calculate Momentum (Sentiment trend)
         if intelligence["msrp"] > 0:
             intelligence["momentum"] = round(intelligence["avg"] / intelligence["msrp"], 2)
@@ -365,7 +378,7 @@ def process_table(
     out_cols = [
         "Adquirido"
     ] + headers + [
-        "Popularity", "Momentum", "ASIN", "UPC", "US MSRP", 
+        "Popularity", "Momentum", "ASIN", "UPC", "Avg", "US MSRP", "Currency",
         "Detail Link", "Image URL", "Image Path", "Imagen", "Figure ID"
     ]
     rows = []
@@ -424,7 +437,9 @@ def process_table(
         momentum = 1.0
         asin = ""
         upc = ""
+        avg_market = 0.0
         us_msrp = 0.0
+        currency = "USD"
 
         # En modo AUDIT (smoke test), forzamos el primer item
         is_audit_sample = fast_mode and len(rows) == 0 and not is_existing
@@ -451,14 +466,16 @@ def process_table(
                 momentum = intel["momentum"]
                 asin = intel["asin"]
                 upc = intel["upc"]
+                avg_market = intel["avg"]
                 us_msrp = intel["msrp"]
+                currency = intel["currency"]
                 
                 polite_pause()
         elif is_existing and not fast_mode:
              # Si existe, NO descargamos
              pass
 
-        row_data += [popularity, momentum, asin, upc, us_msrp, detail_link, image_url, image_path_str, "", figure_id]
+        row_data += [popularity, momentum, asin, upc, avg_market, us_msrp, currency, detail_link, image_url, image_path_str, "", figure_id]
         rows.append(row_data)
 
     # --- DEDUPLICAR COLUMNAS (Fix AssertionError: 10) ---

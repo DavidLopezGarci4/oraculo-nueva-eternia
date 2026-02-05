@@ -115,8 +115,28 @@ class Time4ActionToysDEScraper(BaseScraper):
             
             # Availability
             is_avl = True
+            
+            # Common Shopware classes for out of stock
             if item.select_one('.is--not-available, .out-of-stock, .sold-out'):
                 is_avl = False
+            
+            # [3OX] Time4ActionToys Specific: Pre-order and stock text checks
+            # We check the whole item text for German indicators
+            item_text = item.get_text(strip=True).lower()
+            
+            # "Vorbestellung" = Pre-order
+            # "Erscheint am" = Appears on (Future date)
+            # "Nicht lieferbar" = Not deliverable
+            if any(term in item_text for term in ["vorbestellung", "erscheint am", "nicht lieferbar", "ausverkauft"]):
+                is_avl = False
+            
+            # Shopware listing button check
+            btn = item.select_one('.buy-btn, .product--action, button')
+            if btn and "details" in btn.get_text(strip=True).lower():
+                # If the button says "Details" instead of "To cart", it's usually not in stock
+                # but this might be too aggressive for Shopware. Let's use it as a hint
+                # combined with the text check above.
+                pass
             
             return ScrapedOffer(
                 product_name=name,

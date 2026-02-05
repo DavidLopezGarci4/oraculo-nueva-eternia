@@ -22,9 +22,22 @@ def initialize_runtime():
         sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='surrogateescape', line_buffering=True)
         sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='surrogateescape', line_buffering=True)
 
-    # 3. Path Resolution
-    # We assume this file is in vec3/dev/adapters/
-    root_path = Path(__file__).resolve().parent.parent.parent.parent
+    # 3. Path Resolution (Hardened 3OX)
+    # Search for the root by looking for 'src' and 'vec3' directories upwards
+    current_path = Path(__file__).resolve().parent
+    root_path = None
+    
+    # Climb up to 5 levels to find the root
+    for _ in range(5):
+        if (current_path / "src").exists() and (current_path / "vec3").exists():
+            root_path = current_path
+            break
+        current_path = current_path.parent
+    
+    if not root_path:
+        # Fallback to the original assumption if not found
+        root_path = Path(__file__).resolve().parent.parent.parent.parent
+    
     if str(root_path) not in sys.path:
         sys.path.insert(0, str(root_path))
     

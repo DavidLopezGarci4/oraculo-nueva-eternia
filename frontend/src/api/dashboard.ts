@@ -5,6 +5,7 @@ const API_BASE = '/api';
 export interface FinancialHealth {
     total_invested: number;
     market_value: number;
+    landed_market_value: number;
     profit_loss: number;
     roi: number;
 }
@@ -24,6 +25,7 @@ export interface TopDeal {
     id: number;
     product_name: string;
     price: number;
+    landing_price: number;
     currency: string;
     shop_name: string;
     url: string;

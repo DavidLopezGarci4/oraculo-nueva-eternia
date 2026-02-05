@@ -19,6 +19,7 @@ from src.domain.models import (
     OfferHistoryModel, LogisticRuleModel, ProductAliasModel
 )
 from src.application.services.logistics_service import LogisticsService
+from src.application.services.deal_scorer import DealScorer
 from src.infrastructure.scrapers.action_toys_scraper import ActionToysScraper
 from src.infrastructure.scrapers.amazon_scraper import AmazonScraper
 from src.infrastructure.scrapers.fantasia_scraper import FantasiaScraper
@@ -30,6 +31,17 @@ from src.infrastructure.scrapers.toymi_scraper import ToymiEUScraper
 from src.infrastructure.scrapers.time4actiontoys_scraper import Time4ActionToysDEScraper
 from src.infrastructure.scrapers.bbts_scraper import BigBadToyStoreScraper
 from src.infrastructure.scrapers.ebay_scraper import EbayScraper
+
+# --- Pydantic Schemas for Cart (Phase 1) ---
+class CartItem(BaseModel):
+    product_name: str
+    shop_name: str
+    price: float
+    quantity: int = 1
+
+class CartRequest(BaseModel):
+    items: List[CartItem]
+    user_id: Optional[int] = 2
 
 app = FastAPI(title="Oráculo API Broker", version="1.0.0")
 
@@ -56,8 +68,10 @@ def ensure_scrapers_registered():
 
     spiders_to_check = [
         "ActionToys", "Fantasia Personajes", "Frikiverso", "Electropolis", 
-        "Pixelatoy", "Amazon.es", "DeToyboys", "Ebay.es", "ToymiEU", 
-        "Time4ActionToysDE", "BigBadToyStore", "Tradeinn", "DVDStoreSpain"
+        "Pixelatoy", "Amazon.es", "DeToyboys", "Ebay.es", 
+        "Vinted", "ToymiEU", "Time4ActionToysDE", 
+        "BigBadToyStore", "Tradeinn", "DVDStoreSpain"
+        # "Ebay.es PRO", "Wallapop" # Desactivados por orden superior (Fase 42)
     ]
     
     with SessionCloud() as db:
@@ -337,10 +351,18 @@ async def get_collection(user_id: int):
     Retorna la colección personal del usuario desde Supabase.
     """
     from src.domain.models import CollectionItemModel, OfferModel
-    from sqlalchemy import func
+    from src.application.services.valuation_service import ValuationService
     
     with SessionCloud() as db:
-        # 1. Fetch Products + Collection Data
+        # 0. Initialize Valuation service
+        valuation_service = ValuationService(db)
+
+        # 1. Fetch Location
+        user_location = "ES"
+        user = db.query(UserModel).filter(UserModel.id == user_id).first()
+        if user: user_location = user.location
+
+        # 2. Fetch Products + Collection Data
         query = (
             select(ProductModel, CollectionItemModel)
             .join(CollectionItemModel, ProductModel.id == CollectionItemModel.product_id)
@@ -351,40 +373,16 @@ async def get_collection(user_id: int):
         if not results:
             return []
 
-        # 2. Bulk Fetch Best Offers to avoid N+1
-        product_ids = [p.id for p, c in results]
-        
-        best_price_query = (
-            select(OfferModel.product_id, func.min(OfferModel.price))
-            .where(OfferModel.product_id.in_(product_ids))
-            .where(OfferModel.is_available == True)
-            .where(OfferModel.source_type == 'Retail')
-            .group_by(OfferModel.product_id)
-        )
-        best_prices = dict(db.execute(best_price_query).all()) # {pid: min_price}
-
-        # 3. Construct Response with Grail & Wish Logic
-        # Get user location for logistics
-        user_location = "ES"
-        user = db.query(UserModel).filter(UserModel.id == user_id).first()
-        if user: user_location = user.location
-
         output_list = []
         for product, collection_item in results:
-            market_val = best_price_map.get(product.id, {}).get('price', 0.0) if 'best_price_map' in locals() else best_prices.get(product.id, 0.0)
+            market_val = valuation_service.get_consolidated_value(product, user_location)
             
-            # Logistics Calculation
-            landing_val = market_val
-            best_offer = db.query(OfferModel).filter(OfferModel.product_id == product.id, OfferModel.price == market_val, OfferModel.is_available == True).first()
-            if best_offer:
-                landing_val = LogisticsService.get_landing_price(best_offer.price, best_offer.shop_name, user_location)
-
-            # Smart Grail Logic
+            # Smart Grail Logic (Simplified based on best available value)
             is_grail = False
             grail_score = 0.0
-            if landing_val > 0 and product.retail_price and product.retail_price > 0:
-                roi = ((market_val - product.retail_price) / product.retail_price) * 100 # ROI vs Retail
-                if roi > 200: 
+            if market_val > 0 and product.retail_price and product.retail_price > 0:
+                roi = ((market_val - product.retail_price) / product.retail_price) * 100 
+                if roi > 100: # Threshold for Grail
                     is_grail = True
                     grail_score = min(roi / 10, 100)
 
@@ -398,12 +396,12 @@ async def get_collection(user_id: int):
                 figure_id=product.figure_id,
                 variant_name=product.variant_name,
                 purchase_price=collection_item.purchase_price or 0.0,
-                market_value=market_val,
+                market_value=round(market_val, 2),
                 avg_market_price=product.avg_market_price or 0.0,
                 p25_price=product.p25_price or 0.0,
-                landing_price=landing_val,
+                landing_price=round(market_val, 2), # Using consolidated market_val as landing estimate
                 is_grail=is_grail,
-                grail_score=grail_score,
+                grail_score=round(grail_score, 1),
                 is_wish=not collection_item.acquired,
                 acquired_at=collection_item.acquired_at.isoformat() if collection_item.acquired_at else None
             ))
@@ -717,6 +715,15 @@ async def match_purgatory(request: PurgatoryMatchRequest):
             from src.infrastructure.repositories.product import ProductRepository
             repo = ProductRepository(db)
             
+            # PHASE 42: Fresh Opportunity Score Calculation
+            user_location = "ES"
+            user = db.query(UserModel).filter(UserModel.id == 1).first() # Default user
+            if user: user_location = user.location
+            
+            landed_p = LogisticsService.get_landing_price(item.price, item.shop_name, user_location)
+            is_wish = any(ci.owner_id == 1 and not ci.acquired for ci in product.collection_items)
+            fresh_score = DealScorer.calculate_score(product, landed_p, is_wish)
+
             offer_data = {
                 "shop_name": item.shop_name,
                 "price": item.price,
@@ -725,7 +732,7 @@ async def match_purgatory(request: PurgatoryMatchRequest):
                 "is_available": True,
                 "source_type": item.source_type,
                 "receipt_id": item.receipt_id,
-                "opportunity_score": item.opportunity_score,
+                "opportunity_score": fresh_score,
                 # Phase 41 Metadata
                 "first_seen_at": item.found_at,
                 "last_price_update": datetime.utcnow()
@@ -948,9 +955,13 @@ def run_scraper_task(spider_name: str = "all", trigger_type: str = "manual", que
         from src.infrastructure.scrapers.bbts_scraper import BigBadToyStoreScraper
         from src.infrastructure.scrapers.tradeinn_scraper import TradeinnScraper
         from src.infrastructure.scrapers.dvdstorespain_scraper import DVDStoreSpainScraper
+        from src.infrastructure.scrapers.vinted_scraper import VintedScraper
+        from src.infrastructure.scrapers.wallapop_scraper import WallapopScraper
         
         import asyncio
 
+        from src.infrastructure.scrapers.ebay_es_advanced_scraper import EbayESAdvancedScraper
+        
         spiders_map = {
             "ActionToys": ActionToysScraper(),
             "Fantasia Personajes": FantasiaScraper(),
@@ -960,6 +971,9 @@ def run_scraper_task(spider_name: str = "all", trigger_type: str = "manual", que
             "Amazon.es": AmazonScraper(), 
             "DeToyboys": DeToyboysNLScraper(),
             "Ebay.es": EbayScraper(),
+            # "Ebay.es PRO": EbayESAdvancedScraper(), # Desactivado por orden superior
+            "Vinted": VintedScraper(),
+            # "Wallapop": WallapopScraper(), # Desactivado por orden superior
             "ToymiEU": ToymiEUScraper(),
             "Time4ActionToysDE": Time4ActionToysDEScraper(),
             "BigBadToyStore": BigBadToyStoreScraper(),
@@ -1080,63 +1094,21 @@ async def get_dashboard_stats(user_id: int = 1):
                 CollectionItemModel.acquired == False
             ).count()
 
-            # --- FINANCIAL ENGINE (PHASE 18 OPTIMIZED) ---
-            total_invested = 0.0
-            market_value = 0.0
+            # --- FINANCIAL ENGINE (CENTRALIZED WATERFALL) ---
+            from src.application.services.valuation_service import ValuationService
             
-            try:
-                # 1. Pre-cargar Reglas Logísticas (Ahorra cientos de consultas)
-                rules = db.query(LogisticRuleModel).all()
-                rules_map = {f"{r.shop_name}_{r.country_code}": r for r in rules}
-                
-                # 2. Get best prices map (Solo RETAIL para Valor de Mercado)
-                # Obtenemos la mejor oferta completa para tener acceso al shop_name para logística
-                from sqlalchemy import and_
-                best_price_subq = db.query(
-                    OfferModel.product_id,
-                    func.min(OfferModel.price).label('min_price')
-                ).filter(
-                    OfferModel.is_available == True,
-                    OfferModel.product_id.isnot(None),
-                    OfferModel.source_type == 'Retail'
-                ).group_by(OfferModel.product_id).subquery()
-
-                best_offers = db.query(OfferModel).join(
-                    best_price_subq,
-                    and_(
-                        OfferModel.product_id == best_price_subq.c.product_id,
-                        OfferModel.price == best_price_subq.c.min_price
-                    )
-                ).all()
-
-                best_offer_map = {o.product_id: o for o in best_offers}
-
-                # 3. Calcular Inversión y Valor de Mercado (SOLO POSEÍDOS)
-                user_location = "ES"
-                user = db.query(UserModel).filter(UserModel.id == user_id).first()
-                if user: user_location = user.location
-
-                collection_items = db.query(CollectionItemModel).filter(
-                    CollectionItemModel.owner_id == user_id,
-                    CollectionItemModel.acquired == True
-                ).all()
-
-                for item in collection_items:
-                    total_invested += (item.purchase_price or 0.0)
-                    
-                    # Para el valor de mercado, usamos el Landing Price del mejor precio disponible
-                    best_o = best_offer_map.get(item.product_id)
-                    if best_o:
-                        market_value += LogisticsService.optimized_get_landing_price(
-                            best_o.price, best_o.shop_name, user_location, rules_map
-                        )
-                
-                profit_loss = market_value - total_invested
-                roi = (profit_loss / total_invested * 100) if total_invested > 0 else 0.0
-                
-            except Exception as e:
-                logger.error(f"Financial Engine Error (Optimized): {e}")
-                market_value, total_invested, profit_loss, roi = 0.0, 0.0, 0.0, 0.0
+            valuation_service = ValuationService(db)
+            user_location = "ES"
+            user = db.query(UserModel).filter(UserModel.id == user_id).first()
+            if user: user_location = user.location
+            
+            financials = valuation_service.get_collection_valuation(user_id, user_location)
+            
+            total_invested = financials["total_invested"]
+            market_value = financials["total_value"]
+            landed_market_value = financials["landed_market_value"] # Phase 15.2
+            profit_loss = financials["profit_loss"]
+            roi = financials["roi"]
 
             # Distribución por tienda (Global Retail para inteligencia de mercado)
             shop_dist = db.query(OfferModel.shop_name, func.count(OfferModel.id))\
@@ -1153,6 +1125,7 @@ async def get_dashboard_stats(user_id: int = 1):
                 "financial": {
                     "total_invested": round(total_invested, 2),
                     "market_value": round(market_value, 2),
+                    # "landed_market_value": round(landed_market_value, 2), # Desactivado por petición (Fase 42)
                     "profit_loss": round(profit_loss, 2),
                     "roi": round(roi, 1)
                 },
@@ -1218,6 +1191,7 @@ async def get_product_offers(product_id: int):
                     "opportunity_score": o.opportunity_score,
                     "source_type": o.source_type,
                     "is_best": False,
+                    "is_available": o.is_available,
                     # Phase 39: Auction Intelligence
                     "sale_type": o.sale_type,
                     "expiry_at": o.expiry_at.isoformat() if o.expiry_at else None,
@@ -1316,75 +1290,39 @@ async def get_dashboard_hall_of_fame(user_id: int = 1):
         if not items:
             return {"top_value": [], "top_roi": []}
             
-        # 2. Pre-cargar Reglas y Mejores Ofertas
-        product_ids = [item.product_id for item in items]
-        rules = db.query(LogisticRuleModel).all()
-        rules_map = {f"{r.shop_name}_{r.country_code}": r for r in rules}
-
-        best_price_subq = (
-            select(OfferModel.product_id, func.min(OfferModel.price).label('min_p'))
-            .where(OfferModel.product_id.in_(product_ids))
-            .where(OfferModel.is_available == True)
-            .where(OfferModel.source_type == 'Retail')
-            .group_by(OfferModel.product_id)
-            .subquery()
-        )
-        best_offers = db.query(OfferModel).join(
-            best_price_subq,
-            and_(
-                OfferModel.product_id == best_price_subq.c.product_id,
-                OfferModel.price == best_price_subq.c.min_p
-            )
-        ).all()
-        best_offer_map = {o.product_id: o for o in best_offers}
+        from src.application.services.valuation_service import ValuationService
+        valuation_service = ValuationService(db)
         
-        # 3. Calcular métricas (Optimizado)
         user_location = "ES"
         user = db.query(UserModel).filter(UserModel.id == user_id).first()
         if user: user_location = user.location
 
         analyzed_items = []
         for item in items:
-            best_o = best_offer_map.get(item.product_id)
-            invested = item.purchase_price if item.purchase_price is not None else 0.0
+            market_val = valuation_service.get_consolidated_value(item.product, user_location)
+            invested = item.purchase_price or 0.0
             
-            landing_market = 0.0
-            if best_o:
-                landing_market = LogisticsService.optimized_get_landing_price(
-                    best_o.price, best_o.shop_name, user_location, rules_map
-                )
-
             roi = 0.0
-            if invested > 0 and landing_market > 0:
-                roi = ((landing_market - invested) / invested) * 100
-            
+            if invested > 0:
+                roi = ((market_val - invested) / invested) * 100
+
             analyzed_items.append({
                 "id": item.product.id,
                 "name": item.product.name,
                 "image_url": item.product.image_url,
-                "market_value": round(landing_market, 2),
-                "invested_value": round(invested, 2),
-                "roi_percentage": round(roi, 1)
+                "figure_id": item.product.figure_id,
+                "market_value": round(market_val, 2),
+                "purchase_price": invested,
+                "roi": round(roi, 1)
             })
-            
-        # 4. Ordenar y filtrar
-        # Top Value (Solo si tienen valor de mercado)
-        top_value = sorted(
-            [x for x in analyzed_items if x["market_value"] > 0], 
-            key=lambda x: x["market_value"], 
-            reverse=True
-        )[:3]
         
-        # Top ROI (Solo si hay ganancia real y valoración de mercado)
-        top_roi = sorted(
-            [x for x in analyzed_items if x["market_value"] > 0 and x["roi_percentage"] > 0],
-            key=lambda x: x["roi_percentage"],
-            reverse=True
-        )[:3]
+        # 4. Sorting & Response
+        top_value = sorted(analyzed_items, key=lambda x: x["market_value"], reverse=True)[:5]
+        top_roi = sorted(analyzed_items, key=lambda x: x["roi"], reverse=True)[:5]
         
         return {
             "top_value": top_value,
-            "top_roi": top_roi
+            "top_roi": [i for i in top_roi if i["roi"] > 0] # Solo mostrar los que tienen ROI positivo
         }
 
 @app.get("/api/dashboard/top-deals")
@@ -1400,11 +1338,15 @@ async def get_top_deals(user_id: int = 2):
         owned_ids = [p[0] for p in db.query(CollectionItemModel.product_id).filter(CollectionItemModel.owner_id == user_id).all()]
 
         # 2. Subquery: Encontrar el precio mínimo para cada producto disponible (RETAIL)
+        from datetime import datetime, timedelta
+        freshness_threshold = datetime.utcnow() - timedelta(hours=72)
+        
         best_prices_subq = db.query(
             OfferModel.product_id,
             func.min(OfferModel.price).label('min_price')
         ).filter(
             OfferModel.is_available == True,
+            OfferModel.last_seen >= freshness_threshold, # Solo stock real detectado recientemente
             OfferModel.source_type == 'Retail',
             OfferModel.product_id.notin_(owned_ids) if owned_ids else True
         ).group_by(OfferModel.product_id).subquery()
@@ -1417,8 +1359,10 @@ async def get_top_deals(user_id: int = 2):
                 OfferModel.price == best_prices_subq.c.min_price
             )
         ).join(ProductModel).filter(
-            OfferModel.is_available == True
-        )
+            OfferModel.is_available == True,
+            OfferModel.last_seen >= freshness_threshold, # Doble check de frescura
+            OfferModel.opportunity_score > 0             # Solo gangas reales (>0)
+        ).order_by(OfferModel.opportunity_score.desc()) # Priorizar por calidad de oferta
         # 4. Construir respuesta con Landing Price (OPTIMIZADO)
         # Pre-cargar Reglas Logísticas para evitar N+1
         rules = db.query(LogisticRuleModel).all()
@@ -1676,6 +1620,15 @@ async def relink_offer(offer_id: int, request: RelinkOfferRequest):
 
         # 1. Actualizar vinculo
         offer.product_id = new_product.id
+
+        # PHASE 42: Recalculate Score for new product benchmark
+        user_location = "ES"
+        user = db.query(UserModel).filter(UserModel.id == 1).first()
+        if user: user_location = user.location
+        
+        landed_p = LogisticsService.get_landing_price(offer.price, offer.shop_name, user_location)
+        is_wish = any(ci.owner_id == 1 and not ci.acquired for ci in new_product.collection_items)
+        offer.opportunity_score = DealScorer.calculate_score(new_product, landed_p, is_wish)
         
         # 2. Actualizar/Crear Alias
         # Eliminamos el viejo y creamos el nuevo para asegurar limpieza
@@ -1863,3 +1816,25 @@ if __name__ == "__main__":
         
     # Escuchar en 0.0.0.0 para facilitar conectividad en Docker/Red Local
     uvicorn.run("src.interfaces.api.main:app", host="0.0.0.0", port=8000, reload=True)
+
+# --- Logistics & Cart (Phase 1) ---
+
+@app.post("/api/logistics/calculate-cart")
+async def api_calculate_cart(request: CartRequest):
+    """
+    Simulador de Factura (Fictional Cart).
+    Agrupa ítems por tienda y aplica reglas de envío/impuestos.
+    """
+    try:
+        user_location = "ES"
+        with SessionCloud() as db:
+            user = db.query(UserModel).filter(UserModel.id == request.user_id).first()
+            if user:
+                user_location = user.location
+
+        items_dict = [item.model_dump() for item in request.items]
+        result = LogisticsService.calculate_cart(items_dict, user_location)
+        return result
+    except Exception as e:
+        logger.error(f"Error calculating cart: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

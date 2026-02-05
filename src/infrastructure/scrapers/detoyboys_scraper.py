@@ -107,9 +107,14 @@ class DeToyboysNLScraper(BaseScraper):
             if price_val == 0.0:
                 return None
             
-            # Availability
+            # Availability: Selector + Text Analysis
             is_avl = True
-            if item.select_one('.out-of-stock, .sold-out, .unavailable'):
+            if item.select_one('.out-of-stock, .sold-out, .unavailable, .product-unavailable'):
+                is_avl = False
+            
+            # Text based check
+            item_text = item.get_text(strip=True).lower()
+            if any(term in item_text for term in ["sold out", "out of stock", "no disponible", "unavailable", "coming soon"]):
                 is_avl = False
             
             return ScrapedOffer(

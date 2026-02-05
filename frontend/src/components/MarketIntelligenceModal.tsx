@@ -265,8 +265,8 @@ const MarketIntelligenceModal: React.FC<MarketIntelligenceModalProps> = ({ produ
                                         dataKey="Retail"
                                         stroke="#00A3FF"
                                         strokeWidth={4}
-                                        dot={{ fill: '#00A3FF', strokeWidth: 2, r: 4 }}
-                                        activeDot={{ r: 6, strokeWidth: 0 }}
+                                        dot={{ fill: '#00A3FF', stroke: '#fff', strokeWidth: 2, r: 6 }}
+                                        activeDot={{ r: 8, strokeWidth: 0 }}
                                         connectNulls
                                     />
                                     <Line
@@ -274,8 +274,8 @@ const MarketIntelligenceModal: React.FC<MarketIntelligenceModalProps> = ({ produ
                                         dataKey="P2P"
                                         stroke="#A855F7"
                                         strokeWidth={4}
-                                        dot={{ fill: '#A855F7', strokeWidth: 2, r: 4 }}
-                                        activeDot={{ r: 6, strokeWidth: 0 }}
+                                        dot={{ fill: '#A855F7', stroke: '#fff', strokeWidth: 2, r: 6 }}
+                                        activeDot={{ r: 8, strokeWidth: 0 }}
                                         connectNulls
                                     />
                                 </LineChart>

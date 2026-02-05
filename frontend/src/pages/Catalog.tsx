@@ -1,7 +1,8 @@
 import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { Package, AlertCircle, Loader2, Info, Plus, Check, ShoppingCart, Settings, Save, X, RefreshCw, Star } from 'lucide-react';
+import { Package, AlertCircle, Loader2, Info, Plus, Check, ShoppingCart, ShoppingBasket, Settings, Save, X, RefreshCw, Star, ExternalLink } from 'lucide-react';
+import { useCart } from '../context/CartContext';
 import { motion } from 'framer-motion';
 import { getCollection, toggleCollection } from '../api/collection';
 import type { Product } from '../api/collection';
@@ -20,6 +21,7 @@ interface CatalogProps {
 
 const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
     const queryClient = useQueryClient();
+    const { addToCart } = useCart();
     const [selectedProduct, setSelectedProduct] = React.useState<Product | null>(null);
     const [editingProduct, setEditingProduct] = React.useState<Product | null>(null);
     const [historyProductId, setHistoryProductId] = React.useState<number | null>(null);
@@ -641,7 +643,10 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
                                                         <div className="flex items-center gap-4 text-[9px] font-bold uppercase text-white/20">
                                                             <span>Visto por última vez: {formatDistanceToNow(new Date(offer.last_seen), { addSuffix: true, locale: es })}</span>
                                                             <span className="flex items-center gap-1">
-                                                                <span className="h-1 w-1 rounded-full bg-green-500"></span> STOCK OK
+                                                                <span className={`h-1 w-1 rounded-full ${offer.is_available ? 'bg-green-500' : 'bg-red-500 shadow-[0_0_5px_rgba(239,68,68,0.5)]'}`}></span>
+                                                                <span className={offer.is_available ? '' : 'text-red-400 font-black'}>
+                                                                    {offer.is_available ? 'STOCK OK' : 'SIN STOCK'}
+                                                                </span>
                                                             </span>
                                                         </div>
                                                     </div>
@@ -678,14 +683,30 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
                                                             </button>
                                                         )}
 
-                                                        <a
-                                                            href={offer.url}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className={`flex h-12 w-12 items-center justify-center rounded-2xl transition-all border ${offer.is_best ? 'bg-brand-primary text-white border-brand-primary shadow-lg shadow-brand-primary/20' : 'bg-white/5 text-white/40 border-white/10 hover:bg-white/10 hover:text-white'}`}
-                                                        >
-                                                            <ShoppingCart className="h-5 w-5" />
-                                                        </a>
+                                                        <div className="flex items-center gap-2">
+                                                            <button
+                                                                onClick={() => addToCart({
+                                                                    id: offer.id.toString(),
+                                                                    product_name: selectedProduct?.name || 'Reliquia',
+                                                                    shop_name: offer.shop_name,
+                                                                    price: offer.price,
+                                                                    image_url: selectedProduct?.image_url || undefined
+                                                                })}
+                                                                className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 text-white/40 border border-white/10 hover:bg-brand-primary/20 hover:text-brand-primary transition-all shadow-lg"
+                                                                title="Simular en Oracle Cart"
+                                                            >
+                                                                <ShoppingBasket className="h-5 w-5" />
+                                                            </button>
+                                                            <a
+                                                                href={offer.url}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className={`flex h-12 w-12 items-center justify-center rounded-2xl transition-all border shadow-lg ${offer.is_best ? 'bg-orange-500 text-white border-orange-500 shadow-orange-500/20' : 'bg-white/5 text-white/40 border-white/10 hover:bg-white/10 hover:text-white'}`}
+                                                                title="Ver en Tienda"
+                                                            >
+                                                                <ExternalLink className="h-5 w-5" />
+                                                            </a>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>

@@ -150,43 +150,69 @@ class MarketIntelligenceService:
     def sync_product_statistics(self, product_id: int):
         """
         Calcula y persiste las estadísticas segregadas en el ProductModel.
+        Fase 10: Algoritmo de Convergencia Master Nexus (EU vs US).
         """
-        # 1. Retail Stats
+        product = self.db.query(ProductModel).filter(ProductModel.id == product_id).first()
+        if not product:
+            return False
+
+        # 1. RETAIL STATS (Local/EU Focus)
         retail_avg = self.db.query(func.avg(OfferModel.price)).filter(
             OfferModel.product_id == product_id,
             OfferModel.source_type == "Retail",
             OfferModel.is_available == True
-        ).scalar()
+        ).scalar() or 0.0
         
-        # 2. P2P Stats (Using Sold prices if available, otherwise Active)
-        p2p_prices = self.db.query(OfferModel.price).filter(
+        # 2. EU P2P STATS (Deep Local Signals)
+        # Preferimos precios de items VENDIDOS si existen, sino ACTIVOS
+        p2p_eu_prices = self.db.query(OfferModel.price).filter(
             OfferModel.product_id == product_id,
             OfferModel.source_type == "Peer-to-Peer",
             OfferModel.is_sold == True
         ).all()
         
-        if not p2p_prices:
-             p2p_prices = self.db.query(OfferModel.price).filter(
+        if not p2p_eu_prices:
+             p2p_eu_prices = self.db.query(OfferModel.price).filter(
                 OfferModel.product_id == product_id,
                 OfferModel.source_type == "Peer-to-Peer",
                 OfferModel.is_available == True
             ).all()
             
-        p2p_vals = [float(p[0]) for p in p2p_prices if p[0] > 0]
-        p2p_avg = sum(p2p_vals) / len(p2p_vals) if p2p_vals else 0.0
+        eu_vals = [float(p[0]) for p in p2p_eu_prices if p[0] > 0]
+        eu_avg = sum(eu_vals) / len(eu_vals) if eu_vals else 0.0
         
-        p2p_vals.sort()
-        p2p_p25 = p2p_vals[int(len(p2p_vals) * 0.25)] if p2p_vals else 0.0
+        eu_vals.sort()
+        p2p_p25 = eu_vals[int(len(eu_vals) * 0.25)] if eu_vals else 0.0
+
+        # 3. US REFERENCE BENCHMARK (Normalised)
+        us_avg = product.avg_p2p_price_us or 0.0
+        
+        # 4. MASTER NEXUS CONVERGENCE ALGORITHM
+        # Proyectamos un valor basado en 80% mercado local y 20% tendencia global (US)
+        if eu_avg > 0 and us_avg > 0:
+            weighted_avg = (eu_avg * 0.8) + (us_avg * 0.2)
+            # Market Gap: Brecha emocional/económica entre mercados
+            gap = ((eu_avg - us_avg) / us_avg * 100) if us_avg > 0 else 0.0
+        elif eu_avg > 0:
+            weighted_avg = eu_avg
+            gap = 0.0
+        else:
+            weighted_avg = us_avg
+            gap = 0.0
 
         # Update Product
-        product = self.db.query(ProductModel).filter(ProductModel.id == product_id).first()
-        if product:
-            product.avg_retail_price = retail_avg or 0.0
-            product.avg_p2p_price = p2p_avg
-            product.p25_p2p_price = p2p_p25
-            # Legacy sync
-            product.avg_market_price = retail_avg or p2p_avg
-            self.db.add(product)
-            self.db.commit()
-            return True
-        return False
+        product.avg_retail_price = retail_avg
+        product.avg_p2p_price_eu = eu_avg
+        product.p25_p2p_price = p2p_p25
+        product.market_gap = round(gap, 2)
+        
+        # Real Market Value (The "Master Nexus" result)
+        product.avg_market_price = round(weighted_avg, 2)
+        
+        # Legacy backward compat
+        product.avg_p2p_price = eu_avg 
+        product.p25_price = p2p_p25
+
+        self.db.add(product)
+        self.db.commit()
+        return True

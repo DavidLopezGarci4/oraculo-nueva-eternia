@@ -34,7 +34,36 @@ class TelemetryHandler(logging.Handler):
 
 class NexusService:
     @staticmethod
-    async def sync_catalog():
+    def purge_catalog(db, safe_mode: bool = True):
+        """
+        Wipes products and links. 
+        If safe_mode=True (default), user collection items are PRESERVED.
+        If safe_mode=False, a pre-flight backup is created before wiping everything.
+        """
+        from src.domain.models import ProductModel, CollectionItemModel, OfferModel, ProductAliasModel, PriceHistoryModel
+        from src.application.services.guardian_service import GuardianService
+        
+        if safe_mode:
+            logger.warning("🛡️ Guardian: PURGE (SAFE MODE) - Preserving user collection items.")
+        else:
+            logger.warning("☢️ Guardian: PURGE (FORCE) - Wiping EVERYTHING including collection.")
+            # FORCE BACKUP before nuclear wipe
+            GuardianService.backup_stock(db)
+
+        # Order matters for foreign keys: Price History references Offers
+        db.query(PriceHistoryModel).delete()
+        db.query(OfferModel).delete()
+        
+        if not safe_mode:
+            db.query(CollectionItemModel).delete()
+            
+        db.query(ProductAliasModel).delete()
+        db.query(ProductModel).delete()
+        db.commit()
+        logger.info(f"☢️ PURGE: Database is now clean (SafeMode={safe_mode}).")
+
+    @staticmethod
+    async def sync_catalog(purge_before_sync: bool = False):
         """
         Orchestrates the full catalog sync with detailed telemetry.
         """
@@ -80,7 +109,16 @@ class NexusService:
         try:
             loop = asyncio.get_event_loop()
             
-            # Paso 0 was moved to the very beginning. Proceeding with Step 1.
+            if purge_before_sync:
+                logger.warning("📡 Paso 0.5: Purgando catálogo existente por petición del usuario...")
+                with SessionCloud() as db_purge:
+                    # Guardian Safety is now default here
+                    NexusService.purge_catalog(db_purge, safe_mode=True)
+            
+            # 🛡️ ALWAYS backup stock before any sync, just in case
+            from src.application.services.guardian_service import GuardianService
+            with SessionCloud() as db_guard:
+                GuardianService.backup_stock(db_guard)
 
             # 1. Scrape Web to Excel
             logger.info("📡 Paso 1: Capturando datos de ActionFigure411 (Raspado Web)...")

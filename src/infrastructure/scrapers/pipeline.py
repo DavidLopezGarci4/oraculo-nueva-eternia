@@ -74,9 +74,22 @@ class ScrapingPipeline:
             logger.warning("🛡️ Circuit Breaker: No offers found to process. Skipping DB update for this batch.")
             return
 
-        # Ensure offers are dicts (Scrapers now return Pydantic objects)
-        if hasattr(offers[0], 'model_dump'):
-            offers = [o.model_dump() for o in offers]
+        # Ensure offers are dicts (Standardize objects from different Pydantic versions)
+        standardized_offers = []
+        for o in offers:
+            if hasattr(o, 'model_dump'):
+                standardized_offers.append(o.model_dump())
+            elif hasattr(o, 'dict'):
+                standardized_offers.append(o.dict())
+            elif isinstance(o, dict):
+                standardized_offers.append(o)
+            else:
+                # Fallback for generic objects with __dict__
+                try:
+                    standardized_offers.append(vars(o))
+                except:
+                    standardized_offers.append(o)
+        offers = standardized_offers
 
         # 1. Save Raw Snapshot (Black Box)
         try:

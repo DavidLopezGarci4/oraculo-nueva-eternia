@@ -7,6 +7,9 @@ from src.infrastructure.scrapers.action_toys_scraper import ActionToysScraper
 from src.infrastructure.scrapers.fantasia_scraper import FantasiaScraper
 from src.infrastructure.scrapers.amazon_scraper import AmazonScraper
 from src.infrastructure.scrapers.ebay_scraper import EbayScraper
+from src.infrastructure.scrapers.ebay_us_scraper import EbayUSScraper
+from src.infrastructure.scrapers.vinted_scraper import VintedScraper
+from src.infrastructure.scrapers.wallapop_scraper import WallapopScraper
 from src.core.logger import logger
 
 # Initialize 3OX Runtime
@@ -27,6 +30,12 @@ async def run_scraper(spider_name: str):
         spiders.append(AmazonScraper())
     elif spider_name.lower() == "ebay":
         spiders.append(EbayScraper())
+    elif spider_name.lower() == "ebay_us":
+        spiders.append(EbayUSScraper())
+    elif spider_name.lower() == "vinted":
+        spiders.append(VintedScraper())
+    elif spider_name.lower() == "wallapop":
+        spiders.append(WallapopScraper())
     else:
         logger.error(f"Unknown scraper: {spider_name}")
         return

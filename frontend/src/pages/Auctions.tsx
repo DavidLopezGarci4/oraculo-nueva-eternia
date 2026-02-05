@@ -1,7 +1,8 @@
 import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { Gavel, AlertCircle, Loader2, Info, Plus, Check, ShoppingCart, RefreshCw, Star, TrendingUp, History, Package, X } from 'lucide-react';
+import { Gavel, AlertCircle, Loader2, Info, Plus, Check, ShoppingCart, ShoppingBasket, RefreshCw, Star, TrendingUp, History, Package, X, ExternalLink } from 'lucide-react';
+import { useCart } from '../context/CartContext';
 import { motion } from 'framer-motion';
 import { getCollection, toggleCollection } from '../api/collection';
 import type { Product } from '../api/collection';
@@ -46,6 +47,7 @@ const MarketStatCard: React.FC<{ title: string, value: number, type: 'retail' | 
 
 const Auctions: React.FC = () => {
     const queryClient = useQueryClient();
+    const { addToCart } = useCart();
     const [selectedProduct, setSelectedProduct] = React.useState<Product | null>(null);
     const [historyProductId, setHistoryProductId] = React.useState<number | null>(null);
     const [expandedImage, setExpandedImage] = React.useState<string | null>(null);
@@ -332,7 +334,30 @@ const Auctions: React.FC = () => {
                                                                 </div>
                                                             )}
                                                         </div>
-                                                        <a href={offer.url} target="_blank" rel="noopener noreferrer" className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 text-white/40 border border-white/10 hover:bg-orange-500 hover:text-white transition-all"><ShoppingCart className="h-5 w-5" /></a>
+                                                        <div className="flex items-center gap-2">
+                                                            <button
+                                                                onClick={() => addToCart({
+                                                                    id: offer.id.toString(),
+                                                                    product_name: selectedProduct?.name || 'Reliquia',
+                                                                    shop_name: offer.shop_name,
+                                                                    price: offer.price,
+                                                                    image_url: selectedProduct?.image_url || undefined
+                                                                })}
+                                                                className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 text-white/40 border border-white/10 hover:bg-brand-primary/20 hover:text-brand-primary transition-all"
+                                                                title="Simular en Oracle Cart"
+                                                            >
+                                                                <ShoppingBasket className="h-5 w-5" />
+                                                            </button>
+                                                            <a
+                                                                href={offer.url}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 text-white/40 border border-white/10 hover:bg-orange-500 hover:text-white transition-all"
+                                                                title="Ver en Tienda"
+                                                            >
+                                                                <ExternalLink className="h-5 w-5" />
+                                                            </a>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             ))}

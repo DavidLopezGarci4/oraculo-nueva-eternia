@@ -190,12 +190,34 @@ class ToymiEUScraper(BaseScraper):
                 if price_match:
                     price_val = self._normalize_price(price_match.group(1))
             
-            # Disponibilidad: asumimos disponible si esta en la lista
+            # Disponibilidad: Buscar indicadores de stock real
             is_avl = True
             
+            # Toymi tiene un badge de "In Kürze" (Próximamente) o "Nicht lieferbar"
+            # Buscaremos en el contenedor del item
+            container = link_tag.parent
+            for _ in range(4): # Subir hasta encontrar el card completo si es posible
+                if container is None: break
+                
+                # Check for "In Kürze" / "Próximamente" badge
+                badge = container.select_one('.product-badge, .badge, .status')
+                if badge:
+                    badge_text = badge.get_text(strip=True).lower()
+                    if any(term in badge_text for term in ["kürze", "próximamente", "vorbestellung", "bald", "soon"]):
+                        is_avl = False
+                        break
+                
+                # Check for "Delivery time" or status text
+                status_text = container.get_text(strip=True).lower()
+                if any(term in status_text for term in ["nicht lieferbar", "agotado", "no disponible", "sold out"]):
+                    is_avl = False
+                    break
+                
+                container = container.parent
+
             return ScrapedOffer(
                 product_name=name,
-                price=price_val if price_val > 0 else 19.99,  # Precio por defecto si no encontramos
+                price=price_val if price_val > 0 else 19.99,
                 currency="EUR",
                 url=full_url,
                 shop_name=self.spider_name,

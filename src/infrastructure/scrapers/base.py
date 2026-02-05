@@ -44,6 +44,10 @@ class ScrapedOffer(BaseModel):
     is_sold: bool = False
     original_listing_date: Optional[datetime] = None
     last_price_update: Optional[datetime] = None
+    
+    # Phase 42: Price Intelligence (Research-backed)
+    shipping_price: Optional[float] = 0.0
+    total_price: Optional[float] = None
 
 class BaseScraper(ABC):
     """

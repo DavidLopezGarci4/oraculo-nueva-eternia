@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "oraculo-nueva-eternia"
+version = "1.0.0"
+description = "Oráculo de la Nueva Eternia - Sistema de Inteligencia de Mercado"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "playwright",
+    "beautifulsoup4",
+    "sqlalchemy",
+    "pydantic",
+    "python-dotenv",
+    "loguru"
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*", "vec3*"]
+
+[tool.pyright]
+include = ["src", "vec3", "scripts"]
+venvPath = "."
+venv = ".venv"
