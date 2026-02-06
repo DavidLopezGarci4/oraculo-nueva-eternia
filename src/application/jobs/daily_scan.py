@@ -127,7 +127,7 @@ async def run_daily_scan(progress_callback=None):
             AmazonScraper(),
             EbayScraper(),
             VintedScraper(),
-            # WallapopScraper(), # Desactivado por orden superior (Fase 42)
+            WallapopScraper(),
             TradeinnScraper(),
             # DeToyboys at the end (User Request)
             DeToyboysNLScraper(),

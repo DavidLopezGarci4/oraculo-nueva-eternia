@@ -1,209 +1,168 @@
-"""
-WallapopScraper: Versión basada en la API interna de Wallapop.
-Fase 10.3 - Implementación nativa sin dependencias externas problemáticas.
-Inspirado en WallaPy pero sin lxml.
-"""
 import asyncio
 import logging
-from curl_cffi.requests import AsyncSession
 import random
 import time
-from typing import List
+from typing import List, Optional
 from datetime import datetime
+from playwright.async_api import async_playwright, Page, BrowserContext
+from bs4 import BeautifulSoup
 from src.infrastructure.scrapers.base import BaseScraper, ScrapedOffer
-from src.infrastructure.scrapers.wallapop_signer import WallapopSigner
 
 logger = logging.getLogger(__name__)
 
 class WallapopScraper(BaseScraper):
     """
-    Scraper de Wallapop usando la API interna con X-Signature y rotación de User-Agents.
+    Scraper de Wallapop basado en Playwright (Phase 43).
+    Bypassa bloqueos 403 de CloudFront mediante renderizado real.
     """
-    
-    # Endpoint de búsqueda (mismo que usa la app móvil)
-    API_URL = "https://api.wallapop.com/api/v3/general/search"
-    
-    # Pool de User-Agents para rotación
-    USER_AGENTS = [
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
-    ]
     
     def __init__(self):
         super().__init__(shop_name="Wallapop", base_url="https://es.wallapop.com")
-        self.is_auction_source = True # DNA Segregation (Phase 14)
-        self.signer = WallapopSigner()
-        self._session: Optional[AsyncSession] = None
-    
-    async def _init_session(self):
-        """Inicializa la sesión visitando la home para obtener cookies."""
-        if self._session is None:
-            # Safari suele ser menos fiscalizado por algunos WAFs de Cloudfront
-            self._session = AsyncSession(impersonate="safari15_5")
-            
-        ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.5 Safari/605.1.15"
-        headers = {
-            "User-Agent": ua,
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "Accept-Language": "es-es",
-            "Connection": "keep-alive"
-        }
+        self.is_auction_source = True # Peer-to-Peer
         
-        try:
-            self._log("🍪 Wallapop: Inicializando sesión (Perfil Safari)...")
-            await self._session.get(self.base_url, headers=headers, timeout=30)
-            await asyncio.sleep(random.uniform(2, 4))
-        except Exception as e:
-            self._log(f"⚠️ Error inicializando sesión de Wallapop: {e}", level="warning")
-    
-    def _get_headers(self, method: str, path: str) -> dict:
-        """Genera headers con X-Signature y User-Agent aleatorio."""
-        timestamp = int(time.time() * 1000)
-        signature, _ = self.signer.generate_signature(method, path, timestamp)
-        
-        return {
-            "Accept": "application/json, text/plain, */*",
-            "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
-            "X-DeviceOS": "0",  # 0 = Web
-            "X-Source": "web_search",
-            "X-Signature": signature,
-            "X-Timestamp": str(timestamp),
-            "User-Agent": random.choice(self.USER_AGENTS),
-            "Origin": "https://es.wallapop.com",
-            "Referer": "https://es.wallapop.com/",
-            "Sec-Fetch-Dest": "empty",
-            "Sec-Fetch-Mode": "cors",
-            "Sec-Fetch-Site": "same-site"
-        }
-    
     async def search(self, query: str) -> List[ScrapedOffer]:
-        """
-        Busca productos en Wallapop usando la API interna.
-        """
-        logger.info(f"[{self.spider_name}] Iniciando busqueda para: {query}")
-        offers = []
+        search_query = "masters of the universe origins" if query == "auto" else query
+        url = f"{self.base_url}/search?keywords={search_query.replace(' ', '%20')}&order_by=newest"
         
-        # Coordenadas de Madrid (centro de Espana para cobertura amplia)
-        params = {
-            "keywords": query,
-            "latitude": 40.4168,
-            "longitude": -3.7038,
-            "order_by": "newest",
-            "items_count": 40,
-            "density_type": "20",
-            "filters_source": "search_box",
-            "country_code": "ES"
-        }
+        offers: List[ScrapedOffer] = []
         
-        # Reintentos con diferentes User-Agents
-        for page in range(self.max_pages):
-            offset = page * 40
-            params["offset"] = str(offset)
+        self._log(f"🌩️ Wallapop Playwright Nexus: Infiltrando búsqueda: {search_query}")
+        
+        async with async_playwright() as p:
+            # 1. Lanzar navegador con suite de sigilo básica
+            browser = await p.chromium.launch(headless=True)
+            context = await browser.new_context(
+                viewport={'width': 1280, 'height': 800},
+                user_agent=self._get_random_header()["User-Agent"],
+                locale="es-ES"
+            )
+            page = await context.new_page()
             
-            self._log(f"📄 Wallapop: Escaneando página {page+1} (Offset: {offset})...")
-            
-            for attempt in range(3):
+            try:
+                # 2. Navegar a Wallapop
+                self._log(f"🧭 Navegando a resultados: {url}")
+                await page.goto(url, wait_until="networkidle", timeout=60000)
+                
+                # 3. Gestionar Cookies (Aceptar si aparece el banner)
                 try:
-                    await self._init_session()
+                    # Intentamos varios selectores comunes (OneTrust / Texto)
+                    accept_btn = page.locator("#onetrust-accept-btn-handler").or_(
+                        page.get_by_role("button", name="Aceptar todo")
+                    ).or_(
+                        page.locator("button:has-text('Aceptar')")
+                    ).first
                     
-                    # El path para la firma debe ser /api/v3/general/search
-                    path_for_sig = "/api/v3/general/search"
-                    
-                    # Sincronizar headers de la sesión con los específicos de la firma
-                    headers = self._get_headers("GET", path_for_sig)
-                    
-                    response = await self._session.get(
-                        self.API_URL,
-                        params=params,
-                        headers=headers,
-                        timeout=30
-                    )
-                    
-                    if response.status_code == 403:
-                        logger.warning(f"[{self.spider_name}] 403 en intento {attempt+1}, reintentando con nueva sesión...")
-                        self._session = None # Reset session to get new cookies
-                        await asyncio.sleep(random.uniform(3, 7))
-                        continue
-                        
-                    if response.status_code != 200:
-                        logger.error(f"[{self.spider_name}] API respondio con: {response.status_code}")
-                        break
-                        
-                    data = response.json()
-                    items = data.get("search_objects", [])
-                    
-                    if not items:
-                        self._log(f"🏁 Wallapop: No hay más items en offset {offset}. Fin.")
-                        return offers
-                        
-                    self._log(f"🎁 Wallapop: Hallados {len(items)} items.")
-                    
-                    for item in items:
-                        try:
-                            item_id = item.get("id", "")
-                            title = item.get("title", "Producto")
-                            
-                            # Precio
-                            price_data = item.get("price", {})
-                            if isinstance(price_data, dict):
-                                price = float(price_data.get("amount", 0))
-                            else:
-                                price = float(price_data) if price_data else 0.0
-                            
-                            # URL
-                            web_slug = item.get("web_slug", item_id)
-                            url = f"https://es.wallapop.com/item/{web_slug}"
-                            
-                            # Imagen
-                            images = item.get("images", [])
-                            image_url = images[0].get("medium", "") if images else None
-                            
-                            if price > 0:
-                                offers.append(ScrapedOffer(
-                                    product_name=f"[Wallapop] {title}",
-                                    price=price,
-                                    currency="EUR",
-                                    url=url,
-                                    shop_name=self.spider_name,
-                                    image_url=image_url,
-                                    source_type="Peer-to-Peer",
-                                    sale_type="Fixed_P2P",
-                                    first_seen_at=datetime.utcnow(),
-                                    is_sold=False
-                                ))
-                                self.items_scraped += 1
-                                
-                        except Exception as e:
-                            logger.warning(f"[{self.spider_name}] Error parseando item: {e}")
-                            continue
-                    
-                    # Si llegamos aquí, éxito en esta página. Descanso antes de la siguiente.
-                    await asyncio.sleep(random.uniform(2, 5))
-                    break
-                    
+                    if await accept_btn.is_visible(timeout=5000):
+                        await accept_btn.click()
+                        self._log("🍪 Cookies aceptadas (Banner despejado).")
+                        await asyncio.sleep(1)
                 except Exception as e:
-                    logger.error(f"[{self.spider_name}] Error en intento {attempt+1}: {e}")
-                    await asyncio.sleep(random.uniform(2, 4))
-        
-        logger.info(f"[{self.spider_name}] Scraping finalizado. Total ofertas: {len(offers)}")
+                    self._log(f"ℹ️ No se detectó banner de cookies o ya fue gestionado.")
+
+                # 4. Fase de Expansión Maestra (Phase 43.1)
+                self._log("🧬 Iniciando secuencia de expansión profunda...")
+                
+                # Paso 4a: Scroll inicial para que aparezca el botón "Cargar más"
+                await page.keyboard.press("End")
+                await asyncio.sleep(2)
+
+                # Paso 4b: El Click Maestro (Botón turquesa)
+                # Buscamos el botón por texto para mayor precisión
+                try:
+                    # Selector basado en el texto del botón
+                    load_more_btn = page.get_by_role("button", name="Cargar más").or_(page.locator("button:has-text('Cargar más')")).first
+                    if await load_more_btn.is_visible():
+                        self._log("🖱️ Botón 'Cargar más' detectado. Ejecutando click de expansión.")
+                        await load_more_btn.click()
+                        await page.wait_for_load_state("networkidle")
+                        await asyncio.sleep(2)
+                except Exception as e:
+                    self._log(f"ℹ️ No se pudo pulsar 'Cargar más': {e}")
+
+                # Paso 4c: Descenso Profundo (Infinite Scroll)
+                self._log("🧭 Iniciando bucle de scroll infinito (Descenso Profundo)...")
+                for i in range(8):  # 8 ciclos de scroll
+                    await page.mouse.wheel(0, 1500)
+                    await asyncio.sleep(0.8)
+                    if i % 3 == 0:
+                        self._log(f"  - Nivel {i+1} de profundidad alcanzado.")
+
+                # 5. Extraer contenido HTML final expandido
+                content = await page.content()
+                soup = BeautifulSoup(content, 'html.parser')
+                
+                # 6. Parsing de items (Selectores refinados)
+                # Capturamos todos los links que parezcan items
+                cards = soup.select("a[href*='/item/']")
+                
+                self._log(f"🔎 Analizando {len(cards)} posibles reliquias...")
+                
+                for card in cards:
+                    try:
+                        # Extraer título y precio
+                        # El precio suele estar en un span con clase price
+                        price_node = card.select_one("span[class*='Price'], [class*='price']")
+                        title_node = card.select_one("p[class*='Title'], [class*='title']")
+                        img_node = card.select_one("img")
+                        
+                        if not price_node or not title_node:
+                            continue
+                            
+                        # Limpiar precio
+                        price_text = price_node.get_text(strip=True)
+                        price_val = float(re.sub(r'[^\d.,]', '', price_text).replace(',', '.'))
+                        
+                        if price_val <= 0: continue
+                        
+                        title = title_node.get_text(strip=True)
+                        href = card.get("href", "")
+                        full_url = href if href.startswith("http") else f"{self.base_url}{href}"
+                        
+                        image_url = img_node.get("src") if img_node else None
+                        
+                        offer = ScrapedOffer(
+                            product_name=title,
+                            price=price_val,
+                            url=full_url,
+                            shop_name=self.shop_name,
+                            image_url=image_url,
+                            source_type="Peer-to-Peer",
+                            sale_type="Fixed_P2P"
+                        )
+                        offers.append(offer)
+                        
+                    except Exception as e:
+                        continue
+                
+                self.items_scraped = len(offers)
+                self._log(f"✅ Wallapop: Halladas {len(offers)} reliquias en la superficie.")
+                
+            except Exception as e:
+                self._log(f"💥 Error crítico en Wallapop Playwright: {e}", level="error")
+                self.errors += 1
+            finally:
+                await browser.close()
+                
         return offers
 
+# Import regexp for price cleaning
+import re
 
 if __name__ == "__main__":
-    async def run_test():
-        print("=" * 60)
-        print(">>> TEST DE WALLAPOP (API v2) <<<")
-        print("=" * 60)
-        
+    import sys
+    import io
+    # [3OX] Unicode Resilience
+    if hasattr(sys.stdout, 'reconfigure'): sys.stdout.reconfigure(encoding='utf-8')
+    
+    # Enable logging to see _log output
+    logging.basicConfig(level=logging.INFO, format='%(message)s')
+    
+    async def test():
         scraper = WallapopScraper()
-        results = await scraper.search("motu origins")
-        print(f"\n>>> ENCONTRADOS: {len(results)} items <<<\n")
-        
-        for i, o in enumerate(results[:10], 1):
-            print(f"{i}. {o.product_name}")
-            print(f"   Precio: {o.price} EUR")
-            print(f"   URL: {o.url}")
-            print("-" * 40)
-
-    asyncio.run(run_test())
+        results = await scraper.search("masters of the universe origins")
+        print(f"\n--- RESULTADOS FINALES ---")
+        print(f"Total items hallados: {len(results)}")
+        for r in results[:10]:
+            print(f"- {r.product_name}: {r.price}€ -> {r.url}")
+            
+    asyncio.run(test())

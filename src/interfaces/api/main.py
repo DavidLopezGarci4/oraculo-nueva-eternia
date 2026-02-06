@@ -69,9 +69,8 @@ def ensure_scrapers_registered():
     spiders_to_check = [
         "ActionToys", "Fantasia Personajes", "Frikiverso", "Electropolis", 
         "Pixelatoy", "Amazon.es", "DeToyboys", "Ebay.es", 
-        "Vinted", "ToymiEU", "Time4ActionToysDE", 
+        "Vinted", "Wallapop", "ToymiEU", "Time4ActionToysDE", 
         "BigBadToyStore", "Tradeinn", "DVDStoreSpain"
-        # "Ebay.es PRO", "Wallapop" # Desactivados por orden superior (Fase 42)
     ]
     
     with SessionCloud() as db:
@@ -959,8 +958,6 @@ def run_scraper_task(spider_name: str = "all", trigger_type: str = "manual", que
         from src.infrastructure.scrapers.wallapop_scraper import WallapopScraper
         
         import asyncio
-
-        from src.infrastructure.scrapers.ebay_es_advanced_scraper import EbayESAdvancedScraper
         
         spiders_map = {
             "ActionToys": ActionToysScraper(),
@@ -971,9 +968,8 @@ def run_scraper_task(spider_name: str = "all", trigger_type: str = "manual", que
             "Amazon.es": AmazonScraper(), 
             "DeToyboys": DeToyboysNLScraper(),
             "Ebay.es": EbayScraper(),
-            # "Ebay.es PRO": EbayESAdvancedScraper(), # Desactivado por orden superior
             "Vinted": VintedScraper(),
-            # "Wallapop": WallapopScraper(), # Desactivado por orden superior
+            "Wallapop": WallapopScraper(),
             "ToymiEU": ToymiEUScraper(),
             "Time4ActionToysDE": Time4ActionToysDEScraper(),
             "BigBadToyStore": BigBadToyStoreScraper(),
