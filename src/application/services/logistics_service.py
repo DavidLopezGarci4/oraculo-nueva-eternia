@@ -71,12 +71,7 @@ class LogisticsService:
         base_shipping = rule.base_shipping
         
         # Estrategias especiales
-        if rule.strategy_key == "tradeinn_volume":
-            if item_count <= 5:
-                base_shipping = 2.99
-            else:
-                base_shipping = 3.49
-        elif rule.strategy_key == "bbts_flat_rate" or rule.strategy_key == "item_rate":
+        if rule.strategy_key == "bbts_flat_rate" or rule.strategy_key == "item_rate":
             # [3OX] El usuario pide "sumársele unos 7$ por item enviado"
             # Si es por item, multiplicamos el base_shipping por la cantidad.
             base_shipping = rule.base_shipping * item_count
@@ -187,9 +182,7 @@ class LogisticsService:
                 base_shipping = rule.base_shipping
                 item_count = data["total_qty"]
                 
-                if rule.strategy_key == "tradeinn_volume":
-                    base_shipping = 2.99 if item_count <= 5 else 3.49
-                elif rule.strategy_key == "bbts_flat_rate" or rule.strategy_key == "item_rate":
+                if rule.strategy_key == "bbts_flat_rate" or rule.strategy_key == "item_rate":
                     base_shipping = rule.base_shipping * item_count
                 
                 shipping_eur = base_shipping
