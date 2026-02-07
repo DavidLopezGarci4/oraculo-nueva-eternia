@@ -432,16 +432,32 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
                                     if (idNum > 0 && idNum < 4500) colorClass = 'text-amber-500 border-amber-500/20 bg-amber-500/10'; // Vintage/Amber
                                     if (idNum >= 4500 && idNum <= 9500) colorClass = 'text-slate-300 border-slate-300/20 bg-slate-300/10'; // Mid/Silver
 
+                                    // Valuation Priority Logic
+                                    const displayPrice = product.best_p2p_price || product.avg_market_price || 0;
+                                    const isMaster = !product.best_p2p_price && product.avg_market_price;
+
                                     return (
-                                        <div className={`absolute top-2 left-2 sm:top-4 sm:left-4 z-40 rounded-lg sm:rounded-xl px-2 py-1 sm:px-3 sm:py-1.5 text-[8px] sm:text-[10px] font-black backdrop-blur-md border shadow-2xl transition-all transform uppercase tracking-widest ${colorClass}`}>
-                                            #{product.figure_id}
+                                        <div className="absolute top-2 left-2 sm:top-4 sm:left-4 z-40 flex flex-col gap-1.5">
+                                            <div className={`rounded-lg sm:rounded-xl px-2 py-1 sm:px-3 sm:py-1.5 text-[8px] sm:text-[10px] font-black backdrop-blur-md border shadow-2xl transition-all transform uppercase tracking-widest ${colorClass}`}>
+                                                #{product.figure_id}
+                                            </div>
+                                            <div className={`rounded-lg sm:rounded-xl px-2 py-1 sm:px-3 sm:py-1.5 text-[8px] sm:text-[10px] font-black backdrop-blur-md border shadow-2xl transition-all transform uppercase tracking-widest flex items-center gap-1.5 ${isMaster ? 'border-purple-500/30 bg-purple-500/20 text-purple-300' : 'border-brand-primary/30 bg-brand-primary/20 text-white'}`}>
+                                                <Gem className={`h-2 w-2 sm:h-3 sm:w-3 ${isMaster ? 'text-purple-400' : 'text-brand-primary'}`} />
+                                                <span>{displayPrice}€</span>
+                                                {product.best_p2p_source && (
+                                                    <span className="opacity-40 text-[6px] sm:text-[7px] border-l border-white/20 pl-1.5 ml-0.5">{product.best_p2p_source}</span>
+                                                )}
+                                                {isMaster && !product.best_p2p_source && (
+                                                    <span className="opacity-40 text-[6px] sm:text-[7px] border-l border-white/20 pl-1.5 ml-0.5 whitespace-nowrap">Master Ref</span>
+                                                )}
+                                            </div>
                                         </div>
                                     );
                                 })()}
                             </div>
 
                             {/* Content */}
-                            <div className="flex flex-1 flex-col gap-2 sm:gap-3 px-1">
+                            <div className="flex flex-1 flex-col gap-2 sm:gap-4 px-1 pb-2">
                                 <div className="space-y-0.5 sm:space-y-1">
                                     <div className="flex flex-wrap gap-1 mb-1">
                                         <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-white/20 group-hover:text-brand-primary/50 transition-colors line-clamp-1">
@@ -475,72 +491,72 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
                                     })()}
                                 </div>
 
-                                <div className="mt-auto flex items-center justify-between pt-2 sm:pt-4 gap-2 sm:gap-3">
-                                    <div className="flex items-center gap-2">
+                                <div className="mt-auto flex flex-col gap-2">
+                                    {/* Action Buttons Row - Symmetrical Center Dock */}
+                                    <div className="flex items-center justify-center gap-1 sm:gap-1.5 rounded-2xl sm:rounded-3xl bg-white/[0.04] p-1 sm:p-1.5 border border-white/[0.05] group-hover:border-brand-primary/20 transition-all backdrop-blur-sm w-full">
                                         {/* Action: Toggle Price History */}
                                         <button
                                             onClick={() => setHistoryProductId(historyProductId === product.id ? null : product.id)}
-                                            className={`flex h-8 w-8 sm:h-11 sm:w-11 items-center justify-center rounded-xl sm:rounded-2xl transition-all border ${historyProductId === product.id ? 'bg-purple-500/20 text-purple-400 border-purple-500/50' : 'bg-white/5 text-white/30 border-white/5 hover:bg-white/10 hover:text-white'}`}
+                                            className={`flex h-7 w-7 sm:h-9 sm:w-9 items-center justify-center rounded-xl transition-all border ${historyProductId === product.id ? 'bg-purple-500/20 text-purple-400 border-purple-500/50' : 'bg-white/5 text-white/30 border-white/5 hover:bg-white/10 hover:text-white'}`}
                                             title="Ver Evolución de Precios"
                                         >
-                                            <History className="h-3 w-3 sm:h-5 sm:w-5" />
+                                            <History className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                         </button>
 
                                         {/* Action Button: Detail View */}
                                         <button
                                             onClick={() => setSelectedProduct(product)}
-                                            className="flex h-8 w-8 sm:h-11 sm:w-11 items-center justify-center rounded-xl sm:rounded-2xl bg-white/5 text-white/40 border border-white/5 transition-all hover:bg-brand-primary/20 hover:text-brand-primary hover:border-brand-primary/40"
+                                            className="flex h-7 w-7 sm:h-9 sm:w-9 items-center justify-center rounded-xl bg-white/5 text-white/40 border border-white/5 transition-all hover:bg-brand-primary/20 hover:text-brand-primary hover:border-brand-primary/40"
                                             title="Ver Mercado Live"
                                         >
-                                            <Info className="h-3 w-3 sm:h-5 sm:w-5" />
+                                            <Info className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                         </button>
 
                                         {hasIntel && (
                                             <button
                                                 onClick={() => setIntelProductId(product.id)}
-                                                className="flex h-8 w-8 sm:h-11 sm:w-11 items-center justify-center rounded-xl sm:rounded-2xl bg-brand-primary/20 text-brand-primary border border-brand-primary/40 transition-all hover:bg-white/10 hover:text-white"
+                                                className="flex h-7 w-7 sm:h-9 sm:w-9 items-center justify-center rounded-xl bg-brand-primary/20 text-brand-primary border border-brand-primary/40 transition-all hover:bg-white/10 hover:text-white"
                                                 title="Análisis de Mercado 3OX"
                                             >
-                                                <ChartIcon className="h-3 w-3 sm:h-5 sm:w-5" />
+                                                <ChartIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                            </button>
+                                        )}
+
+                                        {/* Action: Toggle Wishlist */}
+                                        <button
+                                            onClick={() => toggleMutation.mutate({ productId: product.id, wish: true })}
+                                            disabled={toggleMutation.isPending || owned}
+                                            className={`flex h-7 w-7 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-xl transition-all border shadow-lg ${wished
+                                                ? 'bg-brand-primary/20 text-brand-primary border-brand-primary/30 hover:bg-red-500/20 hover:text-red-400'
+                                                : 'bg-white/5 text-white/20 border-white/10 hover:bg-brand-primary/10 hover:text-brand-primary'
+                                                } ${owned ? 'opacity-20 cursor-not-allowed' : ''} ${toggleMutation.isPending ? 'opacity-50 cursor-wait' : ''}`}
+                                            title={wished ? 'Quitar de Deseos' : 'Añadir a Deseos'}
+                                        >
+                                            <Star className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${wished ? 'fill-current' : ''}`} />
+                                        </button>
+
+                                        {/* Action: Universal Search (EAN/ASIN) */}
+                                        <a
+                                            href={product.asin ? `https://www.amazon.es/s?k=${product.asin}` : `https://www.google.com/search?q=${encodeURIComponent(product.name + ' masters of the universe origins')}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex h-7 w-7 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-xl bg-white/5 text-white/20 border border-white/10 hover:bg-brand-secondary/20 hover:text-brand-secondary transition-all shadow-lg"
+                                            title={product.asin ? "Buscar en Amazon.es por ASIN" : "Buscar en Google"}
+                                        >
+                                            <Search className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                        </a>
+
+                                        {/* Admin Action: Edit */}
+                                        {isAdmin && (
+                                            <button
+                                                onClick={() => setEditingProduct(product)}
+                                                className="flex h-7 w-7 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-xl bg-white/5 text-white/40 border border-white/5 hover:bg-brand-primary/20 hover:text-brand-primary transition-all shadow-lg"
+                                                title="Editar Metadatos (Arquitecto)"
+                                            >
+                                                <Settings className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                             </button>
                                         )}
                                     </div>
-
-                                    {/* Action: Toggle Wishlist */}
-                                    <button
-                                        onClick={() => toggleMutation.mutate({ productId: product.id, wish: true })}
-                                        disabled={toggleMutation.isPending || owned}
-                                        className={`flex h-8 w-8 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl transition-all border shadow-lg ${wished
-                                            ? 'bg-brand-primary/20 text-brand-primary border-brand-primary/30 hover:bg-red-500/20 hover:text-red-400'
-                                            : 'bg-white/5 text-white/20 border-white/10 hover:bg-brand-primary/10 hover:text-brand-primary'
-                                            } ${owned ? 'opacity-20 cursor-not-allowed' : ''} ${toggleMutation.isPending ? 'opacity-50 cursor-wait' : ''}`}
-                                        title={wished ? 'Quitar de Deseos' : 'Añadir a Deseos'}
-                                    >
-                                        <Star className={`h-3 w-3 sm:h-5 sm:w-5 ${wished ? 'fill-current' : ''}`} />
-                                    </button>
-
-                                    {/* Action: Universal Search (EAN/ASIN) */}
-                                    <a
-                                        href={product.asin ? `https://www.amazon.es/s?k=${product.asin}` : `https://www.google.com/search?q=${encodeURIComponent(product.name + ' masters of the universe origins')}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex h-8 w-8 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl bg-white/5 text-white/20 border border-white/10 hover:bg-brand-secondary/20 hover:text-brand-secondary transition-all shadow-lg"
-                                        title={product.asin ? "Buscar en Amazon.es por ASIN" : "Buscar en Google"}
-                                    >
-                                        <Search className="h-3 w-3 sm:h-5 sm:w-5" />
-                                    </a>
-
-
-                                    {/* Admin Action: Edit */}
-                                    {isAdmin && (
-                                        <button
-                                            onClick={() => setEditingProduct(product)}
-                                            className="flex h-8 w-8 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl bg-white/5 text-white/40 border border-white/5 hover:bg-brand-primary/20 hover:text-brand-primary transition-all shadow-lg"
-                                            title="Editar Metadatos (Arquitecto)"
-                                        >
-                                            <Settings className="h-3 w-3 sm:h-5 sm:w-5" />
-                                        </button>
-                                    )}
                                 </div>
 
                                 {/* Inline Price History Chart (Cronos) */}

@@ -484,6 +484,8 @@ class ScrapingPipeline:
             if shop_names:
                 incoming_urls = [str(o.get('url', '')) for o in offers if o.get('url')]
                 self.sync_availability(incoming_urls, shop_names)
+            
+            return new_items_count
 
         except Exception as e:
             logger.error(f"❌ Pipeline Critical Error: {e}")

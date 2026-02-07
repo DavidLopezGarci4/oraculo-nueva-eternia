@@ -186,6 +186,7 @@ async def run_daily_scan(progress_callback=None):
     import random
 
     for idx, scraper in enumerate(scrapers):
+        try:
             # Check for 3OX Stop Signal
             if check_stop_signal():
                 break
@@ -218,13 +219,18 @@ async def run_daily_scan(progress_callback=None):
             # Heartbeat Log
             logger.info(f"💓 Heartbeat: Attempting to engage {scraper.spider_name}...")
 
+            # Determine trigger type (Corrected Phase 50)
+            event_name = os.getenv("GITHUB_EVENT_NAME", "manual")
+            trigger = "scheduled" if event_name == "schedule" else "manual"
+            if args.shops and not os.getenv("GITHUB_EVENT_NAME"): trigger = "manual"
+
             # Create Execution Log Entry
             log_entry = ScraperExecutionLogModel(
                 spider_name=scraper.spider_name,
                 status="running",
                 start_time=datetime.now(),
-                trigger_type="manual" if args.shops else "scheduled",
-                logs=f"[{datetime.now().strftime('%H:%M:%S')}] 🚀 Inicia incursion en {scraper.spider_name}\n"
+                trigger_type=trigger,
+                logs=f"[{datetime.now().strftime('%H:%M:%S')}] 🚀 Inicia incursion en {scraper.spider_name} ({trigger})\n"
             )
             try:
                 db.add(log_entry)
@@ -239,9 +245,8 @@ async def run_daily_scan(progress_callback=None):
             def update_task_log(msg):
                 if not log_id: return
                 try:
-                    # New session to avoid interferences with the main loop
                     with SessionLocal() as db_log:
-                        entry = db_log.query(ScraperExecutionLogModel).get(log_id)
+                        entry = db_log.get(ScraperExecutionLogModel, log_id)
                         if entry:
                             ts = datetime.now().strftime("%H:%M:%S")
                             new_line = f"[{ts}] {msg}"
@@ -254,102 +259,96 @@ async def run_daily_scan(progress_callback=None):
             update_task_log(f"🕸️ Engaging {scraper.spider_name}...")
 
             try: # Robustness Layer: Ensure loop continues even if a scraper crashes
-                try: # Main try block for scraping and persistence
-                    # 1. Scrape (Modern scrapers use .search)
-                    logger.info(f"🛡️  [START] Incursion {scraper.spider_name} initiated...")
-                    update_task_log(f"🛡️  [START] Incursion {scraper.spider_name} initiated...")
-                    # Set 10-minute timeout per scraper for Cloud stability
-                    try:
-                        offers = await asyncio.wait_for(scraper.search("auto"), timeout=600)
-                        update_task_log(f"📡 Found {len(offers)} potential relics.")
-                    except asyncio.TimeoutError:
-                        logger.error(f"⌛ [TIMEOUT] {scraper.spider_name} exceeded 10-minute limit. Forcefully aborting this spider.")
-                        update_task_log("⌛ [TIMEOUT] Exceeded 10-minute limit. Aborting.")
-                        offers = []
-                    
-                    # PHASE 19: Health & Block Alerts (Sentinel)
-                    if not offers:
-                        if getattr(scraper, 'blocked', False):
-                            logger.error(f"[{scraper.spider_name}] 🚫 Blocked by anti-bot measures.")
-                            msg = f"🚫 **DESTIERRO DETECTADO**\n\nEl Oráculo ha sido bloqueado por **{scraper.spider_name}**. Se requieren medidas de evasión táctica."
-                            await notifier.send_message(msg)
-                            log_entry.status = "blocked"
-                            log_entry.error_message = "Anti-bot block detected"
-                        else:
-                            logger.warning(f"[{scraper.spider_name}] ⚠️ Empty scan results.")
-                            # Alert if this is a shop that usually has items (most of them)
-                            msg = f"⚠️ **SALUD COMPROMETIDA**\n\nEl scraper de **{scraper.spider_name}** ha devuelto 0 resultados. Podría ser un cambio de estructura HTML o falta de stock real."
-                            await notifier.send_message(msg)
-                            log_entry.status = "empty_warning"
-                    
-                    # 2. Persist
-                    if offers:
-                        # PHASE 10: Deep Harvest (Precision)
-                        if args.deep_harvest and offers:
-                            logger.info(f"🔍 [{scraper.spider_name}] Deep Harvest active. Refining {len(offers)} items...")
-                            for item in offers:
-                                # Visit detail page if EAN is missing and we want precision
-                                if not getattr(item, 'ean', None):
-                                    # Ensure the scraper has a _scrape_detail method
-                                    if hasattr(scraper, '_scrape_detail') and callable(getattr(scraper, '_scrape_detail')):
-                                        logger.warning(f"⚠️ Deep harvest for {scraper.spider_name} skipped for {item.product_name} as 'context' is undefined.")
-                                    else:
-                                        logger.warning(f"⚠️ Scraper {scraper.spider_name} does not implement _scrape_detail for deep harvest.")
-
-                        # Update Database
-                        # Phase 44: Pasamos el nombre de la tienda para sincronizar disponibilidad
-                        pipeline.update_database(offers, shop_names=[scraper.shop_name])
-                        update_task_log("💾 Relics persisted in the Great Library.")
-                        stats = {
-                            "items_found": len(offers),
-                            "status": "Success"
-                        }
-                        total_stats["found"] += len(offers)
-                        
-                        # Log Update Success
-                        log_entry.items_found = len(offers)
-                        log_entry.status = "success"
+                # 1. Scrape (Modern scrapers use .search)
+                logger.info(f"🛡️  [START] Incursion {scraper.spider_name} initiated...")
+                update_task_log(f"🛡️  [START] Incursion {scraper.spider_name} initiated...")
+                
+                try:
+                    offers = await asyncio.wait_for(scraper.search("auto"), timeout=600)
+                    update_task_log(f"📡 Found {len(offers)} potential relics.")
+                except asyncio.TimeoutError:
+                    logger.error(f"⌛ [TIMEOUT] {scraper.spider_name} exceeded 10-minute limit.")
+                    update_task_log("⌛ [TIMEOUT] Exceeded 10-minute limit.")
+                    offers = []
+                
+                # PHASE 19: Health & Block Alerts (Sentinel)
+                if not offers:
+                    if getattr(scraper, 'blocked', False):
+                        logger.error(f"[{scraper.spider_name}] 🚫 Blocked by anti-bot measures.")
+                        msg = f"🚫 **DESTIERRO DETECTADO**\n\nEl Oráculo ha sido bloqueado por **{scraper.spider_name}**."
+                        await notifier.send_message(msg)
+                        log_entry.status = "blocked"
+                        log_entry.error_message = "Anti-bot block detected"
                     else:
-                        stats = {"items_found": 0, "status": "Empty"}
+                        logger.warning(f"[{scraper.spider_name}] ⚠️ Empty scan results.")
                         log_entry.status = "success_empty"
-                    
-                    # DB Status Update (Completed)
-                    try:
-                        status_row.status = "completed"
-                        status_row.items_scraped = len(offers) if offers else 0
-                        status_row.last_update = datetime.now()
-                        
-                        # Finalize Log
-                        log_entry.end_time = datetime.now()
-                        db.commit()
-                    except Exception:
-                        db.rollback()
+                
+                # 2. Persist
+                new_items_found = 0
+                if offers:
+                    # PHASE 10: Deep Harvest (Precision)
+                    if args.deep_harvest and offers:
+                        logger.info(f"🔍 [{scraper.spider_name}] Deep Harvest active. Refining {len(offers)} items...")
+                        for item in offers:
+                            # Visit detail page if EAN is missing and we want precision
+                            if not getattr(item, 'ean', None):
+                                # Ensure the scraper has a _scrape_detail method
+                                if hasattr(scraper, '_scrape_detail') and callable(getattr(scraper, '_scrape_detail')):
+                                    logger.warning(f"⚠️ Deep harvest for {scraper.spider_name} skipped for {item.product_name} as 'context' is undefined.")
+                                else:
+                                    logger.warning(f"⚠️ Scraper {scraper.spider_name} does not implement _scrape_detail for deep harvest.")
 
-                    results[scraper.spider_name] = stats
-                    logger.info(f"✅ [END] {scraper.spider_name} Complete: {stats}")
-                    update_task_log(f"✅ [END] Complete: {stats['items_found']} found.")
+                    # Update Database & Return new items count
+                    # Phase 44: Pasamos el nombre de la tienda para sincronizar disponibilidad
+                    new_items_found = pipeline.update_database(offers, shop_names=[scraper.shop_name])
+                    update_task_log(f"💾 {new_items_found} new relics added to Purgatory.")
+                    total_stats["found"] += len(offers)
+                    total_stats["new"] += new_items_found
                     
-                except Exception as e:
-                    logger.error(f"❌ Failed {scraper.spider_name}: {e}")
-                    update_task_log(f"❌ ERROR: {str(e)}")
-                    results[scraper.spider_name] = {"error": str(e)}
-                    total_stats["errors"] += 1
+                    # Log Update Success
+                    log_entry.items_found = len(offers)
+                    log_entry.new_items = new_items_found
+                    log_entry.status = "success"
+                else:
+                    log_entry.status = "success_empty"
+                
+                # DB Status Update (Completed)
+                try:
+                    status_row.status = "completed"
+                    status_row.items_scraped = len(offers) if offers else 0
+                    status_row.last_update = datetime.now()
                     
-                    # DB Status Update (Error)
-                    try:
-                        status_row.status = "error"
-                        
-                        # Finalize Log Error
-                        log_entry.status = "error"
-                        log_entry.error_message = str(e)[:500]
-                        log_entry.end_time = datetime.now()
-                        
-                        db.commit()
-                    except Exception:
-                        db.rollback()
-            except Exception as crash:
-                logger.critical(f"🔥 Catastrophic Scraper Crash ({scraper.spider_name}): {crash}")
+                    # Finalize Log
+                    log_entry.end_time = datetime.now()
+                    db.commit()
+                except Exception:
+                    db.rollback()
+
+                results[scraper.spider_name] = {"items_found": len(offers), "new_items": new_items_found, "status": "Success"}
+                logger.info(f"✅ [END] {scraper.spider_name} Complete (New: {new_items_found})")
+                update_task_log(f"✅ [END] Complete: {len(offers)} found, {new_items_found} new.")
+                
+            except Exception as e:
+                logger.error(f"❌ Failed {scraper.spider_name}: {e}")
+                update_task_log(f"❌ ERROR: {str(e)}")
+                results[scraper.spider_name] = {"error": str(e)}
                 total_stats["errors"] += 1
+                
+                # DB Status Update (Error)
+                try:
+                    status_row.status = "error"
+                    
+                    # Finalize Log Error
+                    log_entry.status = "error"
+                    log_entry.error_message = str(e)[:500]
+                    log_entry.end_time = datetime.now()
+                    
+                    db.commit()
+                except Exception:
+                    db.rollback()
+        except Exception as crash:
+            logger.critical(f"🔥 Catastrophic Scraper Crash ({scraper.spider_name}): {crash}")
+            total_stats["errors"] += 1
         
     # Final Callback
     if progress_callback:

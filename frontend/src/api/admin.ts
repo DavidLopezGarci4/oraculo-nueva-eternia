@@ -24,6 +24,7 @@ export interface ScraperLog {
     start_time: string;
     end_time: string | null;
     items_found: number;
+    new_items?: number;
     trigger_type: string;
     error_message: string | null;
 }

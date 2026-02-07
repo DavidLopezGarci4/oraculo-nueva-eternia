@@ -274,10 +274,44 @@ async def get_users_minimal():
 async def get_products():
     """Retorna el catálogo maestro completo para búsquedas en el Purgatorio."""
     with SessionCloud() as db:
-        query = select(ProductModel)
-        result = db.execute(query)
-        products = result.scalars().all()
-        return products
+        # Subconsulta para encontrar el precio mínimo por producto (P2P activa)
+        subq = (
+            select(
+                OfferModel.product_id,
+                func.min(OfferModel.price).label("min_price")
+            )
+            .where(OfferModel.source_type == "Peer-to-Peer")
+            .where(OfferModel.is_available == True)
+            .group_by(OfferModel.product_id)
+            .subquery()
+        )
+        
+        # Consulta principal con LEFT JOIN para traer todos los productos
+        # aunque no tengan ofertas P2P
+        query = (
+            select(ProductModel, OfferModel)
+            .outerjoin(subq, ProductModel.id == subq.c.product_id)
+            .outerjoin(OfferModel, and_(
+                OfferModel.product_id == ProductModel.id,
+                OfferModel.price == subq.c.min_price,
+                OfferModel.source_type == "Peer-to-Peer",
+                OfferModel.is_available == True
+            ))
+            .distinct(ProductModel.id)
+        )
+        
+        results = db.execute(query).all()
+        
+        final_products = []
+        for product, best_offer in results:
+            po = ProductOutput.model_validate(product)
+            po.avg_market_price = product.avg_market_price or 0.0
+            if best_offer:
+                po.best_p2p_price = best_offer.price
+                po.best_p2p_source = best_offer.shop_name
+            final_products.append(po)
+            
+        return final_products
 
 @app.get("/api/products/search")
 async def search_products(q: str = ""):

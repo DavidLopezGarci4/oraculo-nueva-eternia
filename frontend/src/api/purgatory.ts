@@ -44,6 +44,7 @@ export interface ScraperExecutionLog {
     spider_name: string;
     status: string;
     items_found: number;
+    new_items?: number;
     start_time: string;
     end_time?: string;
     error_message?: string;

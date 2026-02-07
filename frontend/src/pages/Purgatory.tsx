@@ -31,7 +31,6 @@ const Purgatory: React.FC = React.memo(() => {
     const [searchTerm, setSearchTerm] = useState('');
     const [manualSearchTerm, setManualSearchTerm] = useState('');
     const [selectedPendingId, setSelectedPendingId] = useState<number | null>(null);
-    const [originFilter, setOriginFilter] = useState<'all' | 'retail' | 'auction'>('all');
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
     const [pendingActions, setPendingActions] = useState<any[]>(() => {
@@ -293,13 +292,10 @@ const Purgatory: React.FC = React.memo(() => {
             item.id.toString().includes(term)
         );
 
-        // Origin Logic
-        const matchesOrigin = originFilter === 'all' || item.origin_category === originFilter;
-
         // ALWAYS keep the selected item visible so they don't lose context while matching
         if (item.id === selectedPendingId) return true;
 
-        return matchesSearch && matchesOrigin;
+        return matchesSearch;
     });
 
     // Pagination Logic
@@ -382,40 +378,8 @@ const Purgatory: React.FC = React.memo(() => {
 
 
 
-            {/* Origin Category Filter & Global Search Bar */}
+            {/* Global Search Bar */}
             <div className={`space-y-6 transition-all duration-500 ${selectedPendingId ? 'opacity-20 grayscale pointer-events-none' : 'opacity-100'}`}>
-                {/* Origin Selector Buttons */}
-                <div className="flex flex-wrap items-center gap-2">
-                    <button
-                        onClick={() => { setOriginFilter('all'); setCurrentPage(1); }}
-                        className={`px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition-all shadow-xl ${originFilter === 'all'
-                            ? 'bg-brand-primary text-white border-brand-primary shadow-brand-primary/20'
-                            : 'bg-white/[0.03] text-white/30 border-white/5 hover:border-white/10 hover:text-white'
-                            }`}
-                    >
-                        Todas las Entradas
-                    </button>
-                    <button
-                        onClick={() => { setOriginFilter('retail'); setCurrentPage(1); }}
-                        className={`px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition-all shadow-xl ${originFilter === 'retail'
-                            ? 'bg-brand-primary/20 text-brand-primary border-brand-primary/30 shadow-brand-primary/10'
-                            : 'bg-white/[0.03] text-white/30 border-white/5 hover:border-white/10 hover:text-white'
-                            }`}
-                    >
-                        🛒 Solo Retail
-                    </button>
-                    <button
-                        onClick={() => { setOriginFilter('auction'); setCurrentPage(1); }}
-                        className={`px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition-all shadow-xl ${originFilter === 'auction'
-                            ? 'bg-orange-500/20 text-orange-500 border-orange-500/30 shadow-orange-500/10'
-                            : 'bg-white/[0.03] text-white/30 border-white/5 hover:border-white/10 hover:text-white'
-                            }`}
-                    >
-                        🔨 Solo Subastas
-                    </button>
-
-                    <div className="h-4 w-px bg-white/10 mx-2 hidden md:block"></div>
-                </div>
 
                 {/* Search Bar */}
                 <div className="relative group">

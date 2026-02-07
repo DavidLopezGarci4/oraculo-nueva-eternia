@@ -350,7 +350,10 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate }) => {
                                                     </span>
                                                 </div>
                                                 <div className="flex items-center justify-between text-[10px] text-white/30 font-bold">
-                                                    <span className="flex items-center gap-1.5"><Database className="h-3 w-3" /> {log.items_found} items</span>
+                                                    <div className="flex items-center gap-3">
+                                                        <span className="flex items-center gap-1.5"><Database className="h-3 w-3" /> {log.items_found} items</span>
+                                                        <span className="flex items-center gap-1 text-brand-primary/60"><Zap className="h-3 w-3" /> {log.new_items || 0} nuevos</span>
+                                                    </div>
                                                     <span>{formatDistanceToNow(new Date(log.start_time), { addSuffix: true, locale: es })}</span>
                                                 </div>
                                             </button>
@@ -384,8 +387,18 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate }) => {
                                                 ref={consoleRef}
                                                 className="h-[440px] overflow-y-auto p-8 font-mono text-[11px] leading-relaxed space-y-1.5 scrollbar-thin scrollbar-thumb-brand-primary/20 custom-scrollbar"
                                             >
+                                                {selectedLog?.error_message && (
+                                                    <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 font-bold">
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <ShieldAlert className="h-4 w-4" />
+                                                            CRITICAL ERROR DETECTED
+                                                        </div>
+                                                        <p className="text-[10px] opacity-80 uppercase tracking-wider">{selectedLog.error_message}</p>
+                                                    </div>
+                                                )}
+
                                                 {selectedLog?.logs ? (
-                                                    selectedLog.logs.split('\\n').map((line, i) => {
+                                                    selectedLog.logs.split(/\n|\\n/).map((line, i) => {
                                                         const isError = line.toLowerCase().includes('error') || line.toLowerCase().includes('fail') || line.toLowerCase().includes('exception');
                                                         const isSuccess = line.toLowerCase().includes('success') || line.toLowerCase().includes('found') || line.toLowerCase().includes('completed');
                                                         const isWarning = line.toLowerCase().includes('warning') || line.toLowerCase().includes('alert');
