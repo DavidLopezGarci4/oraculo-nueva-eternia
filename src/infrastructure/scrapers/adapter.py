@@ -35,7 +35,17 @@ class Scraper3OXAdapter:
                     "ean": offer.ean,
                     "image_url": offer.image_url,
                     "scraped_at": offer.scraped_at.isoformat(),
-                    "receipt_id": receipt
+                    "receipt_id": receipt,
+                    # Phase 3OX.Auction :: Preservación de Metadatos de Subasta
+                    "source_type": offer.source_type,
+                    "sale_type": offer.sale_type,
+                    "expiry_at": offer.expiry_at.isoformat() if offer.expiry_at else None,
+                    "bids_count": offer.bids_count,
+                    "time_left_raw": offer.time_left_raw,
+                    "first_seen_at": offer.first_seen_at.isoformat() if offer.first_seen_at else None,
+                    "sold_at": offer.sold_at.isoformat() if offer.sold_at else None,
+                    "is_sold": offer.is_sold,
+                    "shipping_price": offer.shipping_price
                 }
                 transformed.append(transformed_item)
             except Exception as e:
