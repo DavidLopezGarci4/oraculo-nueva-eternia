@@ -297,7 +297,8 @@ async def run_daily_scan(progress_callback=None):
                                         logger.warning(f"⚠️ Scraper {scraper.spider_name} does not implement _scrape_detail for deep harvest.")
 
                         # Update Database
-                        pipeline.update_database(offers)
+                        # Phase 44: Pasamos el nombre de la tienda para sincronizar disponibilidad
+                        pipeline.update_database(offers, shop_names=[scraper.shop_name])
                         update_task_log("💾 Relics persisted in the Great Library.")
                         stats = {
                             "items_found": len(offers),

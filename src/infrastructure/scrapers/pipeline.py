@@ -64,13 +64,55 @@ class ScrapingPipeline:
         n = re.sub(r'[^a-zA-Z0-9\s]', '', n)
         return " ".join(n.split())
 
-    def update_database(self, offers: List[dict]):
+    def sync_availability(self, found_urls: List[str], shop_names: List[str]):
+        """
+        Fase 44: Sincroniza la disponibilidad de las ofertas.
+        Si una oferta activa de una de las tiendas escaneadas no está en found_urls,
+        se marca como no disponible (is_available = False).
+        """
+        from src.domain.models import OfferModel
+        from datetime import datetime, timedelta
+        
+        db: Session = SessionCloud()
+        try:
+            # Buscamos ofertas que estaban marcadas como disponibles pero no se han encontrado ahora
+            query = db.query(OfferModel).filter(
+                OfferModel.shop_name.in_(shop_names),
+                OfferModel.is_available == True,
+                ~OfferModel.url.in_(found_urls)
+            )
+            
+            missing_offers = query.all()
+            if not missing_offers:
+                # logger.debug(f"📊 Sync: No se encontraron items para desactivar en {shop_names}")
+                return
+
+            for offer in missing_offers:
+                # Regla eBay: 48h de gracia para evitar falsos negativos por micro-bloqueos
+                if offer.shop_name == "Ebay.es":
+                    if datetime.utcnow() - offer.last_seen < timedelta(hours=48):
+                        continue
+                
+                # Regla General (Vinted/Otros): Si desaparece de la búsqueda, ya no está disponible
+                offer.is_available = False
+                logger.info(f"🌑 Sync: Oferta marcada como no disponible: {offer.url} ({offer.shop_name})")
+            
+            db.commit()
+            logger.success(f"✔️ Sync: Finalizada sincronización de disponibilidad para {shop_names}.")
+        except Exception as e:
+            logger.error(f"❌ Error en sync_availability: {e}")
+            db.rollback()
+        finally:
+            db.close()
+
+    def update_database(self, offers: List[dict], shop_names: List[str] = None):
         """
         Persists found offers to the database using SmartMatcher.
         Includes Phase 18: Búnker & Circuit Breaker.
         REFACTOR 7.3: Bulk Pre-filtering Strategy (No more N+1 / Duplicate Errors).
+        Fase 44: Integración de sync_availability.
         """
-        if not offers:
+        if not offers and not shop_names:
             logger.warning("🛡️ Circuit Breaker: No offers found to process. Skipping DB update for this batch.")
             return
 
@@ -437,6 +479,11 @@ class ScrapingPipeline:
             
             db.commit()
             logger.success(f"⚡ Batch Complete: {new_items_count} new items added to Purgatory (Atomic Safe Mode).")
+
+            # --- PHASE 44: AVAILABILITY SYNC ---
+            if shop_names:
+                incoming_urls = [str(o.get('url', '')) for o in offers if o.get('url')]
+                self.sync_availability(incoming_urls, shop_names)
 
         except Exception as e:
             logger.error(f"❌ Pipeline Critical Error: {e}")

@@ -144,6 +144,10 @@ class ProductOutput(BaseModel):
     landing_price: float = 0.0 # Phase 15 Logistics
     is_grail: bool = False
     grail_score: float = 0.0
+    
+    # Best Offer Tracking (Phase 44 Upgrade)
+    best_p2p_price: float = 0.0
+    best_p2p_source: Optional[str] = None
     is_wish: bool = False
     opportunity_score: int = 0
     acquired_at: Optional[str] = None
@@ -308,16 +312,58 @@ async def get_auction_products():
     Retorna productos que tienen ofertas de subastas activas (Wallapop/eBay).
     """
     with SessionCloud() as db:
-        query = (
-            select(ProductModel)
-            .join(OfferModel)
+        # Consulta optimizada que trae el producto y su mejor oferta P2P
+        from sqlalchemy import func
+        
+        # Subconsulta para encontrar el precio mínimo por producto
+        subq = (
+            select(
+                OfferModel.product_id,
+                func.min(OfferModel.price).label("min_price")
+            )
             .where(OfferModel.source_type == "Peer-to-Peer")
             .where(OfferModel.is_available == True)
-            .distinct()
+            .group_by(OfferModel.product_id)
+            .subquery()
         )
-        result = db.execute(query)
-        products = result.scalars().all()
-        return products
+        
+        # Consulta principal que une producto con su mejor oferta para obtener el shop_name
+        query = (
+            select(ProductModel, OfferModel)
+            .join(subq, ProductModel.id == subq.c.product_id)
+            .join(OfferModel, and_(
+                OfferModel.product_id == ProductModel.id,
+                OfferModel.price == subq.c.min_price,
+                OfferModel.source_type == "Peer-to-Peer",
+                OfferModel.is_available == True
+            ))
+            .distinct(ProductModel.id) # Asegurar un solo resultado por producto si hay empates de precio
+        )
+        
+        results = db.execute(query).all()
+        
+        output = []
+        for product, best_offer in results:
+            # Convertimos a ProductOutput (manualmente para asegurar campos extra)
+            p_out = ProductOutput.model_validate(product)
+            p_out.best_p2p_price = best_offer.price
+            p_out.best_p2p_source = best_offer.shop_name
+            
+            # --- PHASE 44: LIVE ANALYTICS (FALLBACK) ---
+            # Si las estadísticas calculadas en el modelo son 0, intentamos un cálculo rápido live
+            if p_out.avg_retail_price == 0 or p_out.avg_p2p_price == 0:
+                offers = db.query(OfferModel).filter(OfferModel.product_id == product.id, OfferModel.is_available == True).all()
+                retail_prices = [o.price for o in offers if o.source_type == "Retail"]
+                p2p_prices = [o.price for o in offers if o.source_type == "Peer-to-Peer"]
+                
+                if retail_prices:
+                    p_out.avg_retail_price = round(sum(retail_prices) / len(retail_prices), 2)
+                if p2p_prices:
+                    p_out.avg_p2p_price = round(sum(p2p_prices) / len(p2p_prices), 2)
+            
+            output.append(p_out)
+            
+        return output
 
 @app.get("/api/intelligence/market/{product_id}", dependencies=[Depends(verify_api_key)])
 async def get_market_intelligence(product_id: int):
@@ -1015,7 +1061,8 @@ def run_scraper_task(spider_name: str = "all", trigger_type: str = "manual", que
             loop.close()
             
             update_live_log(f"💾 Persistiendo {len(results)} ofertas...")
-            pipeline.update_database(results)
+            # Phase 44: Pasamos los nombres de las tiendas para sincronizar disponibilidad
+            pipeline.update_database(results, shop_names=[s.shop_name for s in spiders_to_run])
             items_found = len(results)
             logger.info(f"💾 Persistidas {items_found} ofertas tras incursión de {spider_name}.")
             update_live_log(f"✅ Incursión completada con éxito. {items_found} reliquias encontradas.")
@@ -1238,33 +1285,56 @@ async def get_market_analytics(product_id: int):
 async def get_product_price_history(product_id: int):
     """
     Retorna la evolución de precios de un producto agrupada por tienda.
-    Fase 8.3: Cronos.
+    Fase 44: Consolidación por ShopName y eliminación de duplicados diarios.
     """
     from src.domain.models import OfferModel, PriceHistoryModel
+    from collections import defaultdict
     
     with SessionCloud() as db:
-        # Buscamos todas las ofertas vinculadas a este producto
+        # Buscamos todas las ofertas vinculadas a este producto (activas o no)
         offers = db.query(OfferModel).filter(OfferModel.product_id == product_id).all()
         
-        results = []
+        # Agrupamos historial por tienda
+        shop_groups = defaultdict(list)
+        
         for offer in offers:
-            # Para cada oferta (tienda), obtener su historial de precios
             history = db.query(PriceHistoryModel)\
                 .filter(PriceHistoryModel.offer_id == offer.id)\
                 .order_by(PriceHistoryModel.recorded_at.asc())\
                 .all()
             
-            if history:
-                results.append({
-                    "shop_name": offer.shop_name,
-                    "history": [
-                        {
-                            "date": h.recorded_at.isoformat(),
-                            "price": h.price
-                        } for h in history
-                    ]
+            for h in history:
+                date_key = h.recorded_at.date().isoformat()
+                shop_groups[offer.shop_name].append({
+                    "date": date_key,
+                    "price": h.price,
+                    "timestamp": h.recorded_at
                 })
         
+        results = []
+        for shop_name, history_points in shop_groups.items():
+            # Consolidamos por día: si hay varios registros el mismo día, tomamos el mínimo (Mejor oferta)
+            daily_best = {}
+            for p in history_points:
+                date = p["date"]
+                if date not in daily_best or p["price"] < daily_best[date]["price"]:
+                    daily_best[date] = p
+            
+            # Ordenamos por fecha
+            sorted_history = sorted(daily_best.values(), key=lambda x: x["timestamp"])
+            
+            results.append({
+                "shop_name": shop_name,
+                "history": [
+                    {
+                        "date": p["date"],
+                        "price": p["price"]
+                    } for p in sorted_history
+                ]
+            })
+        
+        # Ordenamos resultados por nombre de tienda para consistencia en el frontend
+        results.sort(key=lambda x: x["shop_name"])
         return results
 
 @app.get("/api/dashboard/hall-of-fame")

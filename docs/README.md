@@ -60,7 +60,7 @@ Donde llegan los hallazgos de los scrapers antes de ser "Verdad Absoluta".
 *   **Sistema de SmartMatch**: El motor sugiere a qué figura del catálogo pertenece cada oferta encontrada.
 *   **Evolución de Precios**: Si un item en el Purgatorio cambia de precio antes de ser vinculado, el sistema actualiza su valor automáticamente, permitiendo rastrear ofertas y rebajas en tiempo real.
 *   **Validación Manual**: El usuario aprueba o descarta los vínculos.
-*   **Importación de Wallapop**: Debido a bloqueos anti-bot, Wallapop tiene un importador manual donde pegas texto/URL y el sistema lo procesa.
+*   **Importación de Wallapop**: Sistema semi-automatizado mediante **Playwright Nexus**. Permite extracciones masivas (150+ items) saltando bloqueos 403 mediante una estrategia híbrida de "Click & Scroll" (Click en *Cargar más* y descenso infinito).
 *   **Radar de Oportunidades P2P**: Detección inteligente de gangas individuales bajo la "Teoría de la Cuarentena".
 *   **Centinela de Cross-Validation**: Protección automática contra anomalías de precio y validación visual de reliquias.
 

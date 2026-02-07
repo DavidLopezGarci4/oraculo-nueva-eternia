@@ -163,3 +163,12 @@ Diseñado para tiendas con motores de búsqueda internos deficientes o impreciso
 ### Filtrado de Relevancia
 - **Pesos Negativos**: Se ignoran palabras de ruido como "the", "of", "del".
 - **Obligatoriedad**: Si se busca "Origins", el sistema solo da por válidos resultados que contengan dicha palabra o pertenezcan a la categoría de merchandising, forzando el fallback si solo hay resultados genéricos.
+### 9. Estrategia de Expansión Híbrida (Hybrid Expansion - Phase 44)
+
+Diseñada específicamente para Wallapop y plataformas con carga bajo demanda agresiva.
+
+#### Protocolo de Descenso
+1.  **Detección de Cookies**: Uso de locators multivariantes (ID + Texto) para despejar el DOM.
+2.  **El Click Maestro**: Identificación del disparador de carga inicial ("Cargar más"). Sin este click, el scroll infinito suele estar desactivado o bloqueado por el CDN.
+3.  **Bucle de Descenso Profundo**: Ejecución de 8-10 ciclos de scroll asíncrono (`page.mouse.wheel`) para forzar la hidratación de items en el borde del viewport.
+4.  **Captura de DOM Expandido**: Extracción total de items una vez que el tamaño de la página se estabiliza.

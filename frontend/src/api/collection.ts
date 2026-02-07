@@ -32,6 +32,10 @@ export interface Product {
     asin?: string | null;
     upc?: string | null;
     avg_market_price?: number;
+
+    // Best Offer Tracking (Phase 44)
+    best_p2p_price?: number;
+    best_p2p_source?: string | null;
 }
 
 export const getCollection = async (userId: number): Promise<Product[]> => {

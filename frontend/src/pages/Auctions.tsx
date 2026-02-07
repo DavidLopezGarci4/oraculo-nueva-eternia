@@ -51,6 +51,8 @@ const Auctions: React.FC = () => {
     const [selectedProduct, setSelectedProduct] = React.useState<Product | null>(null);
     const [historyProductId, setHistoryProductId] = React.useState<number | null>(null);
     const [expandedImage, setExpandedImage] = React.useState<string | null>(null);
+    const [sortBy, setSortBy] = React.useState<'name' | 'price' | 'figure_id'>('name');
+    const [copiedId, setCopiedId] = React.useState<number | null>(null);
 
     const activeUserId = parseInt(localStorage.getItem('active_user_id') || '2');
 
@@ -125,6 +127,16 @@ const Auctions: React.FC = () => {
         return item && item.is_wish;
     };
 
+    const sortedProducts = React.useMemo(() => {
+        if (!products) return [];
+        return [...products].sort((a, b) => {
+            if (sortBy === 'name') return a.name.localeCompare(b.name);
+            if (sortBy === 'price') return (a.best_p2p_price || Infinity) - (b.best_p2p_price || Infinity);
+            if (sortBy === 'figure_id') return (parseInt(a.figure_id) || 0) - (parseInt(b.figure_id) || 0);
+            return 0;
+        });
+    }, [products, sortBy]);
+
     if (isLoadingProducts || isLoadingCollection) {
         return (
             <div className="flex h-64 flex-col items-center justify-center gap-4 text-white/50">
@@ -150,15 +162,37 @@ const Auctions: React.FC = () => {
                     <h2 className="text-4xl font-black tracking-tighter text-white">El Pabellón</h2>
                     <p className="text-sm font-bold text-white/30 uppercase tracking-widest">Subastas & Mercado de Segunda Mano</p>
                 </div>
-                <div className="flex items-center gap-3 rounded-2xl bg-white/[0.03] px-6 py-3 border border-white/5 backdrop-blur-3xl">
-                    <Gavel className="h-5 w-5 text-brand-primary" />
-                    <span className="text-2xl font-black text-white">{products?.length}</span>
-                    <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em] pt-1">Otras Reliquias Libres</span>
+                <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex items-center gap-2 p-1.5 rounded-xl bg-white/[0.03] border border-white/5">
+                        <button
+                            onClick={() => setSortBy('name')}
+                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${sortBy === 'name' ? 'bg-brand-primary text-white shadow-[0_0_15px_rgba(34,211,238,0.3)]' : 'text-white/20 hover:text-white/40'}`}
+                        >
+                            Nombre
+                        </button>
+                        <button
+                            onClick={() => setSortBy('price')}
+                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${sortBy === 'price' ? 'bg-brand-primary text-white shadow-[0_0_15px_rgba(34,211,238,0.3)]' : 'text-white/20 hover:text-white/40'}`}
+                        >
+                            Precio
+                        </button>
+                        <button
+                            onClick={() => setSortBy('figure_id')}
+                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${sortBy === 'figure_id' ? 'bg-brand-primary text-white shadow-[0_0_15px_rgba(34,211,238,0.3)]' : 'text-white/20 hover:text-white/40'}`}
+                        >
+                            ID
+                        </button>
+                    </div>
+                    <div className="flex items-center gap-3 rounded-2xl bg-white/[0.03] px-6 py-3 border border-white/5 backdrop-blur-3xl">
+                        <Gavel className="h-5 w-5 text-brand-primary" />
+                        <span className="text-2xl font-black text-white">{products?.length}</span>
+                        <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em] pt-1">Otras Reliquias Libres</span>
+                    </div>
                 </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {products?.map((product) => {
+                {sortedProducts?.map((product) => {
                     const owned = isOwned(product.id);
                     const wished = isWished(product.id);
                     return (
@@ -176,13 +210,31 @@ const Auctions: React.FC = () => {
                                     <div className="flex h-full w-full items-center justify-center italic text-white/20 text-[10px] sm:text-xs font-black uppercase tracking-widest">Sin Imagen</div>
                                 )}
 
-                                {/* Auction Badge (Inside container for proper layering) */}
-                                <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-40 flex items-center gap-1 rounded-lg sm:rounded-xl bg-orange-500/10 px-1.5 py-0.5 sm:px-2.5 sm:py-1 border border-orange-500/20 backdrop-blur-md">
-                                    <span className="h-1 w-1 sm:h-1.5 sm:w-1.5 rounded-full bg-orange-500 animate-pulse"></span>
-                                    <span className="text-[6px] sm:text-[8px] font-black uppercase tracking-widest text-orange-500">Subasta</span>
+                                {/* Auction Badges */}
+                                <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-40 flex flex-col items-end gap-1 sm:gap-2">
+                                    <div className="flex items-center gap-1 rounded-lg sm:rounded-xl bg-orange-500/10 px-1.5 py-0.5 sm:px-2.5 sm:py-1 border border-orange-500/20 backdrop-blur-md">
+                                        <span className="h-1 w-1 sm:h-1.5 sm:w-1.5 rounded-full bg-orange-500 animate-pulse"></span>
+                                        <span className="text-[6px] sm:text-[8px] font-black uppercase tracking-widest text-orange-500">Subasta</span>
+                                    </div>
+
+                                    {product.best_p2p_source?.toLowerCase().includes('wallapop') && (
+                                        <div className="flex items-center gap-1 rounded-lg sm:rounded-xl bg-[#c2f6ea]/10 px-1.5 py-0.5 sm:px-2.5 sm:py-1 border border-[#c2f6ea]/30 backdrop-blur-md">
+                                            <span className="text-[6px] sm:text-[8px] font-black uppercase tracking-widest text-[#c2f6ea]">Wallapop</span>
+                                        </div>
+                                    )}
+                                    {product.best_p2p_source?.toLowerCase().includes('ebay') && (
+                                        <div className="flex items-center gap-1 rounded-lg sm:rounded-xl bg-blue-500/10 px-1.5 py-0.5 sm:px-2.5 sm:py-1 border border-blue-500/30 backdrop-blur-md">
+                                            <span className="text-[6px] sm:text-[8px] font-black uppercase tracking-widest text-blue-400">eBay</span>
+                                        </div>
+                                    )}
+                                    {product.best_p2p_source?.toLowerCase().includes('vinted') && (
+                                        <div className="flex items-center gap-1 rounded-lg sm:rounded-xl bg-[#00c0ce]/10 px-1.5 py-0.5 sm:px-2.5 sm:py-1 border border-[#00c0ce]/30 backdrop-blur-md">
+                                            <span className="text-[6px] sm:text-[8px] font-black uppercase tracking-widest text-[#00c0ce]">Vinted</span>
+                                        </div>
+                                    )}
                                 </div>
 
-                                {/* Captivo Ribbon (Inside container) */}
+                                {/* Captivo Ribbon */}
                                 {owned && (
                                     <div className="absolute top-0 left-0 w-12 h-12 sm:w-16 sm:h-16 overflow-hidden z-40 pointer-events-none">
                                         <div className="bg-green-500 text-white text-[7px] sm:text-[9px] font-black uppercase text-center w-[80px] sm:w-[100px] py-0.5 sm:py-1 absolute rotate-[-45deg] left-[-25px] sm:left-[-30px] top-[10px] sm:top-[15px] shadow-[0_5px_15px_rgba(34,197,94,0.4)] border-b border-white/20">Captivo</div>
@@ -229,17 +281,38 @@ const Auctions: React.FC = () => {
                                 </div>
 
                                 <div className="mt-auto flex items-center justify-between pt-2 sm:pt-4 gap-2 sm:gap-3">
+                                    <div className="flex flex-col">
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="text-[8px] font-black text-white/20 uppercase tracking-widest">Mejor Precio</span>
+                                            {product.best_p2p_source && (
+                                                <span className="text-[8px] font-black text-brand-primary uppercase px-1.5 py-0.5 bg-brand-primary/10 rounded-md border border-brand-primary/20">{product.best_p2p_source}</span>
+                                            )}
+                                        </div>
+                                        <div className="text-xl sm:text-2xl font-black text-white">{product.best_p2p_price || 0} <span className="text-xs sm:text-sm text-white/40">€</span></div>
+                                    </div>
                                     <div className="flex items-center gap-2">
                                         <button onClick={() => setHistoryProductId(historyProductId === product.id ? null : product.id)} className={`flex h-8 w-8 sm:h-11 sm:w-11 items-center justify-center rounded-xl sm:rounded-2xl transition-all border ${historyProductId === product.id ? 'bg-purple-500/20 text-purple-400 border-purple-500/50' : 'bg-white/5 text-white/30 border-white/5 hover:bg-white/10 hover:text-white'}`}><History className="h-3 w-3 sm:h-5 sm:w-5" /></button>
                                         <button onClick={() => setSelectedProduct(product)} className="flex h-8 w-8 sm:h-11 sm:w-11 items-center justify-center rounded-xl sm:rounded-2xl bg-white/5 text-white/40 border border-white/5 hover:bg-brand-primary/20 hover:text-brand-primary transition-all"><Info className="h-3 w-3 sm:h-5 sm:w-5" /></button>
+                                        <button onClick={() => toggleMutation.mutate({ productId: product.id, wish: true })} disabled={toggleMutation.isPending || owned} className={`flex h-8 w-8 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl transition-all border ${wished ? 'bg-brand-primary/20 text-brand-primary border-brand-primary/30' : 'bg-white/5 text-white/20 border-white/10 hover:bg-brand-primary/10 hover:text-brand-primary'} ${owned ? 'opacity-20' : ''}`}><Star className={`h-3 w-3 sm:h-5 sm:w-5 ${wished ? 'fill-current' : ''}`} /></button>
                                     </div>
-                                    <button onClick={() => toggleMutation.mutate({ productId: product.id, wish: true })} disabled={toggleMutation.isPending || owned} className={`flex h-8 w-8 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl transition-all border ${wished ? 'bg-brand-primary/20 text-brand-primary border-brand-primary/30' : 'bg-white/5 text-white/20 border-white/10 hover:bg-brand-primary/10 hover:text-brand-primary'} ${owned ? 'opacity-20' : ''}`}><Star className={`h-3 w-3 sm:h-5 sm:w-5 ${wished ? 'fill-current' : ''}`} /></button>
                                 </div>
 
                                 {historyProductId === product.id && (
-                                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="overflow-hidden space-y-3">
+                                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="overflow-hidden space-y-3 mt-2">
                                         <div className="flex items-center justify-between text-[8px] font-black uppercase tracking-widest text-purple-400 pt-2 px-1"><span className="flex items-center gap-1"><TrendingUp className="h-3 w-3" /> Evolución Subastas</span></div>
                                         {isLoadingHistory ? <div className="h-20 flex items-center justify-center"><RefreshCw className="h-4 w-4 animate-spin text-purple-500/50" /></div> : priceHistory && priceHistory.length > 0 ? <PriceHistoryChart data={priceHistory} /> : <div className="p-4 text-[10px] font-bold text-center text-white/10 uppercase italic">Sin datos históricos</div>}
+
+                                        {/* Quick Averages Grid */}
+                                        <div className="grid grid-cols-2 gap-2 mt-2">
+                                            <div className="bg-white/5 p-2 rounded-xl flex flex-col items-center">
+                                                <span className="text-[7px] font-black text-white/20 uppercase">Media Retail</span>
+                                                <span className="text-xs font-black text-brand-primary">{product.avg_retail_price || '---'} €</span>
+                                            </div>
+                                            <div className="bg-white/5 p-2 rounded-xl flex flex-col items-center">
+                                                <span className="text-[7px] font-black text-white/20 uppercase">Media Subasta</span>
+                                                <span className="text-xs font-black text-purple-400">{product.avg_p2p_price || '---'} €</span>
+                                            </div>
+                                        </div>
                                     </motion.div>
                                 )}
                             </div>
@@ -272,7 +345,6 @@ const Auctions: React.FC = () => {
                                     <div className="flex h-40 items-center justify-center gap-3"><Loader2 className="h-6 w-6 animate-spin text-brand-primary" /><span className="text-xs font-bold uppercase tracking-widest text-white/20">Escudriñando el Abismo...</span></div>
                                 ) : (
                                     <div className="space-y-6">
-                                        {/* PHASE 40: MARKET ANALYTICS SECTION */}
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pb-4">
                                             <MarketStatCard
                                                 title="Media Retail"
@@ -284,9 +356,15 @@ const Auctions: React.FC = () => {
                                                 value={selectedProduct.id}
                                                 type="p2p"
                                             />
-                                            <div className="rounded-2xl bg-brand-primary/10 border border-brand-primary/20 p-4 flex flex-col justify-center items-center">
-                                                <span className="text-[10px] font-black text-brand-primary uppercase tracking-widest">Estado Mercado</span>
-                                                <span className="text-lg font-black text-white">Saludable</span>
+                                            <div className={`rounded-2xl border p-4 flex flex-col justify-center items-center transition-all ${productOffers && productOffers.length > 0
+                                                ? 'bg-brand-primary/10 border-brand-primary/20'
+                                                : 'bg-orange-500/10 border-orange-500/20'}`}>
+                                                <span className={`text-[10px] font-black uppercase tracking-widest ${productOffers && productOffers.length > 0 ? 'text-brand-primary' : 'text-orange-500'}`}>
+                                                    Estado Mercado
+                                                </span>
+                                                <span className="text-lg font-black text-white">
+                                                    {productOffers && productOffers.length > 0 ? 'Saludable' : 'Sin Ofertas'}
+                                                </span>
                                             </div>
                                         </div>
 
@@ -335,6 +413,17 @@ const Auctions: React.FC = () => {
                                                             )}
                                                         </div>
                                                         <div className="flex items-center gap-2">
+                                                            <button
+                                                                onClick={() => {
+                                                                    navigator.clipboard.writeText(offer.url);
+                                                                    setCopiedId(offer.id);
+                                                                    setTimeout(() => setCopiedId(null), 2000);
+                                                                }}
+                                                                className={`flex h-12 w-12 items-center justify-center rounded-2xl border transition-all ${copiedId === offer.id ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-white/5 text-white/40 border-white/10 hover:bg-white/10 hover:text-white'}`}
+                                                                title="Copiar Enlace"
+                                                            >
+                                                                {copiedId === offer.id ? <Check className="h-5 w-5" /> : <ExternalLink className="h-5 w-5" />}
+                                                            </button>
                                                             <button
                                                                 onClick={() => addToCart({
                                                                     id: offer.id.toString(),

@@ -63,7 +63,8 @@ async def run_scraper(spider_name: str):
         results = await pipeline.run_product_search("auto")
         
         logger.info(f"💾 Persisting {len(results)} offers to database...")
-        pipeline.update_database(results)
+        # Phase 44: Pasamos los nombres de las tiendas para sincronizar disponibilidad
+        pipeline.update_database(results, shop_names=[s.shop_name for s in spiders])
         
         status_row.status = "completed"
         status_row.items_scraped = len(results)

@@ -38,8 +38,8 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
     - Para manejar cambios de nombre o versiones (ej. Michelangelo V2), se usará una **Capa de Alias**.
     - Cada URL de scraping se vincula a un `Product ID` interno. Si el nombre del item cambia en el catálogo, el mapeo persiste porque apunta al ID, no al nombre.
     - La imagen (`Image Hash`) servirá como validador visual independiente frente a colisiones de nombres **y como base para el futuro Buscador Óptico**.
-*   **Preservación- [x] **11.12 Wallapop DNA & Pavilion Routing (20/01/2026)**:
-    - Integración nativa de Wallapop hacia El Pabellón.
+*   **Preservación- [x] **Phase 44: Wallapop Playwright Nexus & Hybrid Expansion (06/02/2026)**:
+    - Extracción masiva (150+ items) mediante bypass 403 y expansión de DOM (Click & Scroll).
 - [x] **Phase 25: API Security & Ghost Sync (20/01/2026)**:
     - Refactorización del motor de persistencia y seguridad API.
 - [x] **Phase 26: Nexo Maestro Robustness & Cloud Sync** ✅

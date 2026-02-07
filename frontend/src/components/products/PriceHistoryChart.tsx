@@ -1,8 +1,8 @@
 import React from 'react';
 import {
     ResponsiveContainer,
-    AreaChart,
-    Area,
+    LineChart,
+    Line,
     XAxis,
     YAxis,
     CartesianGrid,
@@ -19,10 +19,6 @@ interface Props {
 
 const PriceHistoryChart: React.FC<Props> = ({ data }) => {
     // Transform data for Recharts (Combine all shops into unified points by date)
-    // For simplicity in this version, we will map each shop's history
-
-    // We need a unified set of dates or just show them by shop if overlapping is hard.
-    // Better: Combine into a single array of { date, Shop1: price, Shop2: price, ... }
     const allDates = Array.from(new Set(data.flatMap(s => s.history.map(h => h.date)))).sort();
 
     const chartData = allDates.map(date => {
@@ -39,26 +35,29 @@ const PriceHistoryChart: React.FC<Props> = ({ data }) => {
         return point;
     });
 
-    const colors = ['#0ea5e9', '#ec4899', '#8b5cf6', '#10b981', '#f59e0b'];
+    // Mapeo fijo de colores para tiendas comunes para asegurar consistencia
+    const getShopColor = (name: string, idx: number) => {
+        const lowerName = name.toLowerCase();
+        if (lowerName.includes('ebay')) return '#0064D2'; // eBay Blue
+        if (lowerName.includes('vinted')) return '#00C0CE'; // Vinted Teal
+        if (lowerName.includes('wallapop')) return '#13C1AC'; // Wallapop Green
+        if (lowerName.includes('amazon')) return '#FF9900'; // Amazon Orange
+
+        const colors = ['#0ea5e9', '#ec4899', '#8b5cf6', '#10b981', '#f59e0b'];
+        return colors[idx % colors.length];
+    };
 
     return (
-        <div className="h-[300px] w-full mt-4 bg-white/5 rounded-[2rem] p-4 border border-white/10 backdrop-blur-xl">
+        <div className="h-[280px] w-full mt-4 bg-white/5 rounded-[2rem] p-4 border border-white/10 backdrop-blur-xl">
             <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                    <defs>
-                        {data.map((_, idx) => (
-                            <linearGradient key={`grad-${idx}`} id={`color-${idx}`} x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor={colors[idx % colors.length]} stopOpacity={0.3} />
-                                <stop offset="95%" stopColor={colors[idx % colors.length]} stopOpacity={0} />
-                            </linearGradient>
-                        ))}
-                    </defs>
+                <LineChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 10 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                     <XAxis
                         dataKey="name"
                         axisLine={false}
                         tickLine={false}
                         tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 700 }}
+                        dy={5}
                     />
                     <YAxis
                         axisLine={false}
@@ -68,30 +67,36 @@ const PriceHistoryChart: React.FC<Props> = ({ data }) => {
                     />
                     <Tooltip
                         contentStyle={{
-                            backgroundColor: 'rgba(0,0,0,0.8)',
+                            backgroundColor: '#000',
                             border: '1px solid rgba(255,255,255,0.1)',
-                            borderRadius: '1rem',
-                            backdropFilter: 'blur(10px)'
+                            borderRadius: '1.5rem',
+                            backdropFilter: 'blur(20px)',
+                            padding: '12px'
                         }}
                         itemStyle={{ fontSize: '12px', fontWeight: 900 }}
-                        labelStyle={{ color: 'rgba(255,255,255,0.4)', marginBottom: '4px', fontSize: '10px' }}
+                        labelStyle={{ color: 'rgba(255,255,255,0.4)', marginBottom: '6px', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase' }}
                     />
-                    <Legend iconType="circle" />
-                    {data.map((_, idx) => (
-                        <Area
-                            key={data[idx].shop_name}
-                            type="monotone"
-                            dataKey={data[idx].shop_name}
-                            stroke={colors[idx % colors.length]}
-                            strokeWidth={3}
-                            fillOpacity={1}
-                            fill={`url(#color-${idx})`}
-                            animationDuration={1500}
-                            dot={{ r: 4, strokeWidth: 2, stroke: colors[idx % colors.length], fill: '#fff' }}
-                            activeDot={{ r: 6, strokeWidth: 0 }}
-                        />
-                    ))}
-                </AreaChart>
+                    <Legend
+                        iconType="circle"
+                        wrapperStyle={{ paddingTop: '10px', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase' }}
+                    />
+                    {data.map((shop, idx) => {
+                        const color = getShopColor(shop.shop_name, idx);
+                        return (
+                            <Line
+                                key={shop.shop_name}
+                                type="monotone"
+                                dataKey={shop.shop_name}
+                                stroke={color}
+                                strokeWidth={4}
+                                dot={{ fill: color, stroke: '#fff', strokeWidth: 2, r: 4 }}
+                                activeDot={{ r: 7, strokeWidth: 0 }}
+                                animationDuration={1000}
+                                connectNulls
+                            />
+                        );
+                    })}
+                </LineChart>
             </ResponsiveContainer>
         </div>
     );

@@ -1040,3 +1040,16 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
     - **Mantenimiento Masivo**: Ejecutado script de reparación global que actualizó scores para 122 ofertas retail, restaurando la visibilidad de la sección "Oportunidades de Captura" en el Dashboard.
 - **Refuerzo en eBay**:
     - **Cálculo de Envío Exprés**: Optimizado el parseo de costes de envío en eBay.es para incluir impuestos y tasas en el cálculo del `landed_price`.
+### 🕸️ Fase 44: Wallapop Playwright Nexus (Hybrid Expansion - 06/02/2026)
+
+- **Hitos**: Superación del límite de 19 items mediante infiltración asistida y expansión profunda de la página.
+- **Estado**: ✅ COMPLETADO Y VERIFICADO
+- **Mejoras de Extracción**:
+    - **Wallapop Nexus Engine**: Evolución del scraper a Playwright para bypass total de CloudFront (403).
+    - **Hybrid Expansion Strategy**:
+        - **Bypass de Cookies**: Sistema robusto de detección y aceptación para evitar el bloqueo visual del banner OneTrust.
+        - **El Click Maestro**: Localización y activación del botón "Cargar más" (turquoise trigger) para habilitar el scroll infinito.
+        - **Descenso Profundo**: Implementación de 8 niveles de scroll infinito post-click, logrando saltar de 19 a **177 items** por ráfaga.
+- **Ruta a El Pabellón**:
+    - **P2P Tagging**: Configuración forzada de `source_type="Peer-to-Peer"` para poblar automáticamente la sección de Subastas/Mercado del Oráculo.
+- **Verificación**: Conteo masivo validado mediante logs y capturas de pantalla de depuración.
