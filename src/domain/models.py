@@ -330,6 +330,24 @@ class ScraperExecutionLogModel(Base):
     error_message: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     logs: Mapped[Optional[str]] = mapped_column(String, nullable=True) # Full execution logs for UI
 
+class StagedImportModel(Base):
+    """
+    Zona de Cuarentena (Shield Architecture): Almacena datos importados pendientes de validación.
+    """
+    __tablename__ = "staged_imports"
+    
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    
+    import_type: Mapped[str] = mapped_column(String, default="VAULT") # VAULT, EXCEL
+    status: Mapped[str] = mapped_column(String, default="PENDING") # PENDING, APPROVED, REJECTED
+    
+    data_payload: Mapped[str] = mapped_column(String) # JSON con los datos a importar
+    impact_summary: Mapped[str] = mapped_column(String) # Resumen legible: "Adds 20 items, updates 5"
+    
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    processed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
 class SyncQueueModel(Base):
     """
     Cola de Sincronización Transaccional (Fase 3).

@@ -117,3 +117,25 @@ export const resetHeroPassword = async (userId: number): Promise<{ status: strin
     const response = await adminAxios.post(`/admin/users/${userId}/reset-password`);
     return response.data;
 };
+
+// --- SHIELD ARCHITECTURE: VAULT & EXCEL BRIDGE ---
+
+export const downloadVault = async (userId: number = 2): Promise<void> => {
+    const response = await adminAxios.get(`/vault/generate?user_id=${userId}`, {
+        responseType: 'blob'
+    });
+
+    // Crear enlace de descarga
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `eternia_vault_${userId}_${new Date().getTime()}.db`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+};
+
+export const syncExcel = async (userId: number = 2): Promise<{ status: string; message: string }> => {
+    const response = await adminAxios.post(`/excel/sync?user_id=${userId}`);
+    return response.data;
+};

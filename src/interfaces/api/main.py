@@ -1906,6 +1906,71 @@ async def update_user_location(user_id: int, location: str):
         db.commit()
         return {"status": "success", "location": user.location}
 
+# --- SHIELD ARCHITECTURE: VAULT & EXCEL BRIDGE ---
+
+@app.get("/api/vault/generate")
+async def api_generate_vault(user_id: int = 2):
+    """Genera la Bóveda SQLite personal."""
+    from src.application.services.vault_service import VaultService
+    from fastapi.responses import FileResponse
+    
+    vault_service = VaultService()
+    with SessionCloud() as db:
+        try:
+            vault_path = vault_service.generate_user_vault(user_id, db)
+            return FileResponse(
+                path=vault_path, 
+                filename=os.path.basename(vault_path),
+                media_type='application/x-sqlite3'
+            )
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/vault/stage")
+async def api_stage_vault(user_id: int = 2, file_path: str = None):
+    """Sube una bóveda a la Zona de Cuarentena (Shield Protocol)."""
+    from src.application.services.vault_service import VaultService
+    from src.domain.models import StagedImportModel
+    
+    if not file_path or not os.path.exists(file_path):
+        raise HTTPException(status_code=400, detail="Archivo no encontrado.")
+        
+    vault_service = VaultService()
+    try:
+        vault_service.stage_vault_import(user_id, file_path)
+        
+        # Guardar en base de datos para aprobación de Admin
+        with SessionCloud() as db:
+            stage = StagedImportModel(
+                user_id=user_id,
+                import_type="VAULT",
+                status="PENDING",
+                data_payload=json.dumps({"source_file": file_path}),
+                impact_summary="Importación de Bóveda SQLite detectada. Pendiente de auditoría del Arquitecto."
+            )
+            db.add(stage)
+            db.commit()
+            
+        return {"status": "success", "message": "Bóveda en Cuarentena. Un administrador debe validar la inyección."}
+    except Exception as e:
+        raise HTTPException(status_code=403, detail=f"Shield Protocol Bloqueó Infección: {str(e)}")
+
+@app.post("/api/excel/sync")
+async def api_sync_excel(user_id: int = 2):
+    """Sincroniza el Excel local de David (Excel Bridge) con los datos del Oráculo."""
+    from src.application.services.excel_manager import ExcelManager
+    
+    # Ruta específica de David
+    DAVID_EXCEL = r"C:\Users\dace8\OneDrive\Documentos\Antigravity\oraculo-nueva-eternia\data\MOTU\lista_MOTU.xlsx"
+    
+    manager = ExcelManager(DAVID_EXCEL)
+    success = manager.sync_acquisitions_from_db(user_id)
+    
+    if success:
+        return {"status": "success", "message": "Excel Bridge sincronizado con éxito."}
+    else:
+        raise HTTPException(status_code=500, detail="Fallo en la sincronización del Excel. Verifique la ruta y el formato.")
+
 if __name__ == "__main__":
     import uvicorn
     try:
