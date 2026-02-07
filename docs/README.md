@@ -192,6 +192,7 @@ TELEGRAM_BOT_TOKEN=tu_token
 *   **Fase 46 (Tactical Search Engine)**: ✅ Evolución del orquestador para soportar queries personalizadas y búsquedas de alta fidelidad para MOTU Origins en Tradeinn (Completado).
 *   **Fase 47 (Amazon Sirius A1 Armor)**: ✅ Superación de bloqueos 503 y CAPTCHAs en Amazon.es mediante legitimación de sesión y simulación humana (Completado).
 *   **Fase 50 (Sincronización Total)**: ✅ Integración de todos los scrapers (13 fuentes) en la bitácora del Purgatorio y GitHub Actions. Implementación del **Eternia Shield** (Sitemap Fallback) para DVDStoreSpain, logrando precisión total en la línea Origins (Completado).
+*   **Fase 54 (Reparación & Paridad P2P)**: ✅ Reparación del scraper de Pixelatoy (120 items), preservación de metadatos de subasta (Wallapop/Vinted) y fijación de envíos Tradeinn a 2.99€ (Completado).
 
 ---
 

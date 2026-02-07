@@ -260,6 +260,10 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
     - [x] Limpieza profunda de artefactos de diagnóstico (.html, .png).
     - [x] Implementación de Redirección Automática por Rol en el cambio de identidad.
     - [x] Fortificación de `.gitignore` y `.dockerignore`.
+- [x] **Phase 54: Scraper Repair & P2P Parity (07/02/2026)**:
+    - [x] **Pixelatoy Resurrect**: Reparación del scraper (0 a 120 items) mediante categoría directa y selectores robustos.
+    - [x] **P2P Nexus**: Preservación de metadatos de subastas en el adapter y reparación de 539 registros en DB.
+    - [x] **Logística Tradeinn**: Fijado coste de envío a 2.99€ y limpieza de lógica `tradeinn_volume`.
 ### Fase 31: Debugging Sync Buffer Stagnation ✅
 *   **Motor Non-Blocking**: Sincronización resiliente que no se detiene ante fallos puntuales. ✅
 *   **Sala de Autopsia Forense**: Interfaz de inspección de fallos y manual intervention. ✅
