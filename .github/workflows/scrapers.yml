@@ -37,6 +37,26 @@ jobs:
         run: |
           python -c "import asyncio; from src.application.services.nexus_service import NexusService; asyncio.run(NexusService.sync_catalog())"
 
+      - name: Excel Reverse Sync (Cloud -> Local Heritage)
+        env:
+          SUPABASE_DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
+          PYTHONPATH: .
+        run: |
+          python scripts/sync_excel_from_db.py
+
+      - name: Auto-Commit Excel Updates
+        run: |
+          git config --global user.name "Oracle Guardian Bot"
+          git config --global user.email "guardian@nueva-eternia.com"
+          git add data/MOTU/lista_MOTU.xlsx
+          # Only commit if there are changes
+          if git diff --staged --quiet; then
+            echo "No changes in Excel to commit."
+          else
+            git commit -m "chore: auto-sync collection status to Excel [skip ci]"
+            git push
+          fi
+
       - name: Run Scrapers (Market Incursion)
         env:
           SUPABASE_DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}

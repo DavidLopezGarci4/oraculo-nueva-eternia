@@ -139,3 +139,29 @@ export const syncExcel = async (userId: number = 2): Promise<{ status: string; m
     const response = await adminAxios.post(`/excel/sync?user_id=${userId}`);
     return response.data;
 };
+
+export const exportCollectionExcel = async (userId: number = 1): Promise<void> => {
+    const response = await adminAxios.get(`/guardian/export/excel?user_id=${userId}`, {
+        responseType: 'blob'
+    });
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `Coleccion_Export_${new Date().getTime()}.xlsx`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+};
+
+export const exportCollectionSqlite = async (userId: number = 1): Promise<void> => {
+    const response = await adminAxios.get(`/guardian/export/sqlite?user_id=${userId}`, {
+        responseType: 'blob'
+    });
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `Eternia_Vault_${new Date().getTime()}.db`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+};

@@ -45,7 +45,7 @@ function App() {
   useEffect(() => {
     // Si el usuario ya cargó y no es admin
     if (currentUser && currentUser.role !== 'admin') {
-      const restrictedTabs = ['purgatory', 'settings'];
+      const restrictedTabs = ['purgatory'];
       if (restrictedTabs.includes(activeTab)) {
         console.log("🛡️ Seguridad: Redirigiendo a Tablero (Usuario no administrativo)");
         setActiveTab('dashboard');

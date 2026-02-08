@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, Depends, Header, BackgroundTasks
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict
 from typing import List, Optional, Dict, Any
@@ -589,6 +590,50 @@ async def merge_products(request: ProductMergeRequest):
         db.delete(source)
         db.commit()
         return {"status": "success", "message": f"Fusión divina: '{source_name}' ha sido absorbido por '{target.name}'"}
+
+@app.get("/api/guardian/export/excel")
+async def export_excel(user_id: int = 1): # Hardcoded David for now, should use Auth dependency
+    """
+    Genera y sirve el Excel Maestro sincronizado con la colección del usuario.
+    """
+    try:
+        from src.application.services.guardian_service import GuardianService
+        with SessionCloud() as db:
+            file_path = GuardianService.export_collection_to_excel(db, user_id)
+            
+        if not os.path.exists(file_path):
+             raise HTTPException(status_code=500, detail="Error al generar el archivo Excel")
+             
+        return FileResponse(
+            path=file_path, 
+            filename=os.path.basename(file_path),
+            media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+    except Exception as e:
+        logger.error(f"Excel Export failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/guardian/export/sqlite")
+async def export_sqlite(user_id: int = 1):
+    """
+    Genera y sirve la Bóveda SQLite (Bunker Físico).
+    """
+    try:
+        from src.application.services.guardian_service import GuardianService
+        with SessionCloud() as db:
+            file_path = GuardianService.export_collection_to_sqlite(db, user_id)
+            
+        if not os.path.exists(file_path):
+             raise HTTPException(status_code=500, detail="Error al generar la Bóveda SQLite")
+             
+        return FileResponse(
+            path=file_path, 
+            filename=os.path.basename(file_path),
+            media_type='application/x-sqlite3'
+        )
+    except Exception as e:
+        logger.error(f"SQLite Export failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/collection/toggle")
 async def toggle_collection(request: CollectionToggleRequest):

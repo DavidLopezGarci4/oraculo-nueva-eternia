@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Box, AlertCircle, Loader2, Info, Check, Trophy, TrendingUp, Euro, Star, ShoppingCart, Sparkles } from 'lucide-react';
+import { Box, AlertCircle, Loader2, Info, Check, Trophy, TrendingUp, Euro, Star, ShoppingCart, Sparkles, Download, Database } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getCollection, toggleCollection } from '../api/collection';
 import type { Product } from '../api/collection';
@@ -87,6 +87,42 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "" }) => {
                     </div>
 
                     <div className="flex flex-col sm:flex-row gap-4">
+                        {/* Bóveda Digital Buttons (Prominent) */}
+                        <div className="flex flex-col gap-2 justify-center">
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        const { exportCollectionExcel } = await import('../api/admin');
+                                        await exportCollectionExcel(activeUserId);
+                                        alert('📊 Excel: Tu colección ha sido exportada con éxito.');
+                                    } catch (error) {
+                                        console.error('Export error:', error);
+                                        alert('❌ Error al exportar Excel.');
+                                    }
+                                }}
+                                className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-green-500/10 text-green-400 border border-green-500/20 text-[10px] font-black uppercase tracking-widest hover:bg-green-500 hover:text-white transition-all shadow-lg shadow-green-500/0 hover:shadow-green-500/20 group/vault"
+                            >
+                                <Download className="h-4 w-4 group-hover/vault:scale-125 transition-transform" />
+                                Bóveda Excel
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        const { exportCollectionSqlite } = await import('../api/admin');
+                                        await exportCollectionSqlite(activeUserId);
+                                        alert('🗄️ SQLite: Bóveda portátil generada con éxito.');
+                                    } catch (error) {
+                                        console.error('Export error:', error);
+                                        alert('❌ Error al exportar SQLite.');
+                                    }
+                                }}
+                                className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-500 hover:text-white transition-all shadow-lg shadow-indigo-500/0 hover:shadow-indigo-500/20 group/vault"
+                            >
+                                <Database className="h-4 w-4 group-hover/vault:scale-125 transition-transform" />
+                                Bóveda SQLite
+                            </button>
+                        </div>
+
                         <div className="flex flex-col gap-1 rounded-[2rem] bg-white/5 p-6 border border-white/10 backdrop-blur-xl min-w-[160px] group hover:bg-white/10 transition-all">
                             <div className="flex items-center justify-between text-white/40 group-hover:text-brand-primary">
                                 <span className="text-[10px] font-black uppercase tracking-widest">Fortaleza</span>
@@ -109,7 +145,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "" }) => {
             </div>
 
             {/* Navigation Tabs */}
-            <div className="flex bg-white/5 p-1.5 rounded-[2rem] border border-white/10 backdrop-blur-3xl w-fit mx-auto sm:mx-0">
+            <div className="flex bg-white/5 p-1.5 rounded-[2rem] border border-white/10 backdrop-blur-3xl w-fit">
                 <button
                     onClick={() => setActiveTab('owned')}
                     className={`flex items-center gap-3 px-8 py-3.5 rounded-full text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'owned' ? 'bg-brand-primary text-white shadow-xl shadow-brand-primary/20 scale-105' : 'text-white/30 hover:text-white'}`}

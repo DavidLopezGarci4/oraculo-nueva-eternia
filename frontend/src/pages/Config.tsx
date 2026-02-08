@@ -35,6 +35,12 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate }) => {
 
     const activeUserId = parseInt(localStorage.getItem('active_user_id') || '2');
 
+    useEffect(() => {
+        if (user && user.role !== 'admin' && (activeTab === 'scrapers' || activeTab === 'radar')) {
+            setActiveTab('system');
+        }
+    }, [user, activeTab]);
+
     const fetchData = async () => {
         try {
             const [s, d, u, al, h] = await Promise.all([
@@ -191,6 +197,28 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate }) => {
         }
     };
 
+    const handleExportExcel = async (userId: number = activeUserId) => {
+        try {
+            const m = await import('../api/admin');
+            await m.exportCollectionExcel(userId);
+            alert('📦 Bóveda Digital: Excel generado y descargado con éxito.');
+        } catch (error) {
+            console.error('Error exporting excel:', error);
+            alert('❌ Error al exportar Excel.');
+        }
+    };
+
+    const handleExportSqlite = async (userId: number = activeUserId) => {
+        try {
+            const m = await import('../api/admin');
+            await m.exportCollectionSqlite(userId);
+            alert('🗄️ Bóveda Digital: SQLite generado y descargado con éxito.');
+        } catch (error) {
+            console.error('Error exporting sqlite:', error);
+            alert('❌ Error al exportar SQLite.');
+        }
+    };
+
 
     if (loading && statuses.length === 0) {
         return (
@@ -210,37 +238,41 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate }) => {
                 <div className="flex flex-col gap-2">
                     <h2 className="text-3xl font-bold tracking-tight text-white flex items-center gap-3">
                         <Terminal className="h-8 w-8 text-brand-primary" />
-                        Poderes del <span className="text-brand-primary">Arquitecto de Nueva Eternia</span>
+                        Poderes del <span className="text-brand-primary">{user?.role === 'admin' ? 'Arquitecto' : 'Guardián'} de Nueva Eternia</span>
                     </h2>
-                    <p className="text-white/50">Control absoluto sobre las reliquias y sus fuentes.</p>
+                    <p className="text-white/50">{user?.role === 'admin' ? 'Control absoluto sobre las reliquias y sus fuentes.' : 'Gestiona tu legado personal y sincroniza tu bóveda sagrada.'}</p>
                 </div>
 
                 <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10 backdrop-blur-xl">
-                    <button
-                        onClick={() => setActiveTab('scrapers')}
-                        className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'scrapers' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'text-white/40 hover:text-white'}`}
-                    >
-                        <Activity className="h-4 w-4" />
-                        Scrapers
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('radar')}
-                        className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'radar' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'text-white/40 hover:text-white'}`}
-                    >
-                        <Target className="h-4 w-4" />
-                        Radar Duplicados
-                        {duplicates.length > 0 && (
-                            <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full ml-1 animate-pulse">
-                                {duplicates.length}
-                            </span>
-                        )}
-                    </button>
+                    {user?.role === 'admin' && (
+                        <>
+                            <button
+                                onClick={() => setActiveTab('scrapers')}
+                                className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'scrapers' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'text-white/40 hover:text-white'}`}
+                            >
+                                <Activity className="h-4 w-4" />
+                                Scrapers
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('radar')}
+                                className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'radar' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'text-white/40 hover:text-white'}`}
+                            >
+                                <Target className="h-4 w-4" />
+                                Radar Duplicados
+                                {duplicates.length > 0 && (
+                                    <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full ml-1 animate-pulse">
+                                        {duplicates.length}
+                                    </span>
+                                )}
+                            </button>
+                        </>
+                    )}
                     <button
                         onClick={() => setActiveTab('system')}
                         className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'system' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'text-white/40 hover:text-white'}`}
                     >
                         <Settings className="h-4 w-4" />
-                        Ajustes de Sistema
+                        {user?.role === 'admin' ? 'Ajustes de Sistema' : 'Mi Bóveda Personal'}
                     </button>
                     {user?.role === 'admin' && (
                         <button
@@ -712,26 +744,88 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate }) => {
                                 </div>
                             </div>
 
-                            {/* Purification (Admin Power) */}
-                            <div className="glass border border-red-500/30 p-6 rounded-3xl space-y-4 bg-red-500/5 col-span-1 md:col-span-2 lg:col-span-1">
-                                <div className="flex items-center gap-3 text-red-500 font-bold uppercase tracking-widest text-xs mb-2">
-                                    <ShieldAlert className="h-4 w-4" />
-                                    Purificación del Abismo
+                            {/* --- MI BÓVEDA DIGITAL: UNIVERSAL ACCESS --- */}
+                            <div className="lg:col-span-3 space-y-6">
+                                <div className="flex items-center gap-3 px-2">
+                                    <ShieldAlert className="h-6 w-6 text-brand-primary" />
+                                    <h3 className="text-xl font-black uppercase tracking-[0.2em] text-white">Mi Bóveda Digital</h3>
                                 </div>
-                                <div className="space-y-4">
-                                    <p className="text-[10px] text-white/40 font-bold uppercase leading-tight">
-                                        Desvincula masivamente todos los items automatizados por SmartMatch. <span className="text-red-400">Acción irreversible que requiere doble autorización.</span>
-                                    </p>
 
-                                    <button
-                                        onClick={() => setResetStep(1)}
-                                        className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/30 py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2"
-                                    >
-                                        <Trash2 className="h-4 w-4" />
-                                        PUERTA DE PURIFICACIÓN
-                                    </button>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="relative overflow-hidden group">
+                                        <div className="absolute inset-0 bg-gradient-to-br from-brand-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-[2.5rem]"></div>
+                                        <div className="relative glass border border-white/10 p-8 rounded-[2.5rem] flex flex-col gap-6 shadow-2xl backdrop-blur-3xl h-full transition-all group-hover:border-brand-primary/30">
+                                            <div className="flex items-center justify-between">
+                                                <div className="bg-brand-primary/10 p-4 rounded-2xl">
+                                                    <FileSpreadsheet className="h-8 w-8 text-brand-primary" />
+                                                </div>
+                                                <span className="text-[10px] font-black text-brand-primary uppercase tracking-[0.3em] bg-brand-primary/10 px-3 py-1 rounded-full">Heritage Sync</span>
+                                            </div>
+                                            <div>
+                                                <h4 className="text-2xl font-black text-white mb-2 uppercase tracking-tighter">Bóveda Excel</h4>
+                                                <p className="text-sm text-white/50 leading-relaxed font-medium">
+                                                    Descarga tu colección completa en formato Excel. Ideal para visualización rápida y edición manual heredada.
+                                                </p>
+                                            </div>
+                                            <button
+                                                onClick={() => handleExportExcel()}
+                                                className="mt-auto w-full group relative flex items-center justify-center gap-3 overflow-hidden rounded-2xl bg-brand-primary py-5 font-black text-white transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl shadow-brand-primary/20"
+                                            >
+                                                <Download className="h-5 w-5" />
+                                                <span className="uppercase tracking-[0.1em]">Bajar Excel Actualizado</span>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="relative overflow-hidden group">
+                                        <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-[2.5rem]"></div>
+                                        <div className="relative glass border border-white/10 p-8 rounded-[2.5rem] flex flex-col gap-6 shadow-2xl backdrop-blur-3xl h-full transition-all group-hover:border-indigo-500/30">
+                                            <div className="flex items-center justify-between">
+                                                <div className="bg-indigo-500/10 p-4 rounded-2xl">
+                                                    <Database className="h-8 w-8 text-indigo-400" />
+                                                </div>
+                                                <span className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.3em] bg-indigo-500/10 px-3 py-1 rounded-full">Deep Backup</span>
+                                            </div>
+                                            <div>
+                                                <h4 className="text-2xl font-black text-white mb-2 uppercase tracking-tighter">Bóveda SQLite</h4>
+                                                <p className="text-sm text-white/50 leading-relaxed font-medium">
+                                                    Tu base de datos íntegra en un solo archivo. Es el respaldo definitivo de todas tus reliquias y su historial.
+                                                </p>
+                                            </div>
+                                            <button
+                                                onClick={() => handleExportSqlite()}
+                                                className="mt-auto w-full group relative flex items-center justify-center gap-3 overflow-hidden rounded-2xl bg-indigo-600 py-5 font-black text-white transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl shadow-indigo-600/20"
+                                            >
+                                                <Database className="h-5 w-5" />
+                                                <span className="uppercase tracking-[0.1em]">Bajar Base de Datos</span>
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
+
+                            {/* Purification (Admin Power) */}
+                            {user?.role === 'admin' && (
+                                <div className="glass border border-red-500/30 p-6 rounded-3xl space-y-4 bg-red-500/5 col-span-1 md:col-span-2 lg:col-span-1">
+                                    <div className="flex items-center gap-3 text-red-500 font-bold uppercase tracking-widest text-xs mb-2">
+                                        <ShieldAlert className="h-4 w-4" />
+                                        Purificación del Abismo
+                                    </div>
+                                    <div className="space-y-4">
+                                        <p className="text-[10px] text-white/40 font-bold uppercase leading-tight">
+                                            Desvincula masivamente todos los items automatizados por SmartMatch. <span className="text-red-400">Acción irreversible que requiere doble autorización.</span>
+                                        </p>
+
+                                        <button
+                                            onClick={() => setResetStep(1)}
+                                            className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/30 py-4 rounded-2xl font-black uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2"
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                            PUERTA DE PURIFICACIÓN
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         <div className="p-8 glass border border-dashed border-white/10 rounded-[3rem] bg-brand-primary/5 flex flex-col items-center gap-4">
@@ -815,18 +909,25 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate }) => {
                                             <td className="px-6 py-4 text-right">
                                                 <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <button
+                                                        onClick={() => handleExportExcel(hero.id)}
+                                                        title="Bajar Excel Personal"
+                                                        className="h-8 w-8 rounded-lg bg-green-500/10 text-green-400 hover:bg-green-500 hover:text-white border border-green-500/20 flex items-center justify-center transition-all shadow-lg shadow-green-500/0 hover:shadow-green-500/20"
+                                                    >
+                                                        <FileSpreadsheet className="h-4 w-4" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleExportSqlite(hero.id)}
+                                                        title="Bajar Bóveda SQLite"
+                                                        className="h-8 w-8 rounded-lg bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500 hover:text-white border border-indigo-500/20 flex items-center justify-center transition-all shadow-lg shadow-indigo-500/0 hover:shadow-indigo-500/20"
+                                                    >
+                                                        <Database className="h-4 w-4" />
+                                                    </button>
+                                                    <button
                                                         onClick={() => handlePasswordReset(hero.id)}
                                                         title="Protocolo de Reseteo"
                                                         className="h-8 w-8 rounded-lg bg-orange-500/10 text-orange-400 hover:bg-orange-500 hover:text-white border border-orange-500/20 flex items-center justify-center transition-all shadow-lg shadow-orange-500/0 hover:shadow-orange-500/20"
                                                     >
                                                         <ShieldAlert className="h-4 w-4" />
-                                                    </button>
-                                                    <button
-                                                        disabled
-                                                        title="Editar Configuración"
-                                                        className="h-8 w-8 rounded-lg bg-white/5 text-white/20 border border-white/5 flex items-center justify-center cursor-not-allowed"
-                                                    >
-                                                        <Settings className="h-4 w-4" />
                                                     </button>
                                                 </div>
                                             </td>

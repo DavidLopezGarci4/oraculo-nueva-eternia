@@ -100,3 +100,54 @@ class GuardianService:
             logger.error(f"🛡️ Guardian: Restoration error: {e}")
             db.rollback()
             return False
+
+    @staticmethod
+    def export_collection_to_excel(db: Session, user_id: int) -> str:
+        """
+        Generates a fresh Excel export of the user's collection.
+        If it's David, it syncs the Master MOTU Excel.
+        Returns the path to the generated file.
+        """
+        from src.domain.models import UserModel
+        from scripts.sync_excel_from_db import get_db_collection_status, sync_excel_from_db
+        import shutil
+        import tempfile
+
+        user = db.query(UserModel).filter(UserModel.id == user_id).first()
+        username = user.username if user else "David"
+
+        # 1. Capture DB state
+        status_map = get_db_collection_status(db, username)
+
+        # 2. Prepare Template
+        project_root = Path(__file__).resolve().parent.parent.parent.parent
+        master_excel = project_root / "data" / "MOTU" / "lista_MOTU.xlsx"
+        
+        if not master_excel.exists():
+             # Fallback if master doesn't exist (e.g. fresh install)
+             # In a real app, we'd have a base template
+             logger.error("Master Excel template not found for export.")
+             raise FileNotFoundError("Master Excel template not found.")
+
+        # Create a temp copy for export
+        temp_dir = Path("data/temp_exports")
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        export_filename = f"Coleccion_{username}_{datetime.now().strftime('%Y%m%d')}.xlsx"
+        export_path = temp_dir / export_filename
+
+        shutil.copy2(master_excel, export_path)
+
+        # 3. Apply Precision Sync to the copy
+        sync_excel_from_db(str(export_path), status_map)
+
+        logger.info(f"🛡️ Guardian: Excel export ready for user {username} at {export_path}")
+        return str(export_path)
+
+    @staticmethod
+    def export_collection_to_sqlite(db: Session, user_id: int) -> str:
+        """
+        Generates a SQLite vault for the user using VaultService.
+        """
+        from src.application.services.vault_service import VaultService
+        vault_service = VaultService()
+        return vault_service.generate_user_vault(user_id, db)
