@@ -129,6 +129,7 @@ class CollectionItemModel(Base):
     
     acquired: Mapped[bool] = mapped_column(Boolean, default=False)
     condition: Mapped[str] = mapped_column(String, default="New")
+    grading: Mapped[Optional[float]] = mapped_column(Float, nullable=True, default=10.0) # Condition Grade (1-10)
     purchase_price: Mapped[Optional[float]] = mapped_column(Float, nullable=True, default=0.0) # Financial Investment
     notes: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     acquired_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

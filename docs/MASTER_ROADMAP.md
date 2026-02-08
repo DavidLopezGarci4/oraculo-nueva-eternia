@@ -264,6 +264,11 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
     - [x] **Pixelatoy Resurrect**: Reparación del scraper (0 a 120 items) mediante categoría directa y selectores robustos.
     - [x] **P2P Nexus**: Preservación de metadatos de subastas en el adapter y reparación de 539 registros en DB.
     - [x] **Logística Tradeinn**: Fijado coste de envío a 2.99€ y limpieza de lógica `tradeinn_volume`.
+- [x] **Phase 55: Legado Restoration & Advanced Valuation (08/02/2026)**:
+    - [x] **Restauración del Botón (i)**: Reconexión del flujo de detalles privados del item.
+    - [x] **Motor de Multiplicadores**: Implementación de lógica de valoración basada en estado (MOC 1.0x, NEW 0.75x, LOOSE 0.5x).
+    - [x] **Graduación "Shelf Wear"**: Introducción del Grado 1-10 para ajustes de precisión financiera (4% de impacto por punto de grado).
+    - [x] **Aislamiento de Legado**: Blindaje de datos privados en `CollectionItemModel` contra purgas de catálogo.
 ### Fase 31: Debugging Sync Buffer Stagnation ✅
 *   **Motor Non-Blocking**: Sincronización resiliente que no se detiene ante fallos puntuales. ✅
 *   **Sala de Autopsia Forense**: Interfaz de inspección de fallos y manual intervention. ✅

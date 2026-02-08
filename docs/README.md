@@ -2,7 +2,7 @@
 
 **Centro de Inteligencia de Mercado y Gestión de Colecciones MOTU Origins**
 
-![Oráculo Dashboard](https://img.shields.io/badge/Version-2.0.0-gold?style=for-the-badge)
+![Oráculo Dashboard](https://img.shields.io/badge/Version-2.1.0-gold?style=for-the-badge)
 ![Status](https://img.shields.io/badge/Status-Operating-green?style=for-the-badge)
 ![Tech](https://img.shields.io/badge/Stack-React_19_|_FastAPI_|_Docker-blue?style=for-the-badge)
 
@@ -52,7 +52,7 @@ La base de datos definitiva de todos los productos MOTU Origins, refinada median
 ### La Fortaleza (Mi Colección)
 El espacio personal del coleccionista.
 *   **Pestañas Poseído/Deseado**: Diferencia lo que ya tienes de tu **Wishlist** (objetivos de caza).
-*   **Gestión de Estado**: Registro de precio de compra, estado (NIB/Loose) y notas personales.
+*   **Gestión de Estado (El Legado)**: Registro quirúrgico de precio de compra, estado (MOC/New/Loose) y **Grado de Conservación (1-10)** para detección de "Shelf Wear".
 *   **Claim System**: Al comprar un item de la wishlist, se "reclama" y pasa a la fortaleza pidiendo los datos de inversión real.
 
 ### El Purgatorio (Validación)
@@ -193,6 +193,7 @@ TELEGRAM_BOT_TOKEN=tu_token
 *   **Fase 47 (Amazon Sirius A1 Armor)**: ✅ Superación de bloqueos 503 y CAPTCHAs en Amazon.es mediante legitimación de sesión y simulación humana (Completado).
 *   **Fase 50 (Sincronización Total)**: ✅ Integración de todos los scrapers (13 fuentes) en la bitácora del Purgatorio y GitHub Actions. Implementación del **Eternia Shield** (Sitemap Fallback) para DVDStoreSpain, logrando precisión total en la línea Origins (Completado).
 *   **Fase 54 (Reparación & Paridad P2P)**: ✅ Reparación del scraper de Pixelatoy (120 items), preservación de metadatos de subasta (Wallapop/Vinted) y fijación de envíos Tradeinn a 2.99€ (Completado).
+*   **Fase 55 (Restauración del Legado & Grading)**: ✅ Reconexión del botón (i) con motor de multiplicadores automáticos por estado y ajuste fino de ROI mediante grados de conservación (Completado).
 
 ---
 

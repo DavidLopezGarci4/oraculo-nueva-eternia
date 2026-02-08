@@ -25,6 +25,9 @@ export interface Product {
     grail_score?: number;
     is_wish?: boolean;
     acquired_at?: string | null;
+    condition?: string;
+    grading?: number;
+    notes?: string;
 
     // Phase 50: Sentiment Intelligence
     popularity_score?: number;
@@ -50,6 +53,20 @@ export const toggleCollection = async (productId: number, userId: number, wish: 
         product_id: productId,
         user_id: userId,
         wish
+    });
+    return response.data;
+};
+
+export const updateCollectionItem = async (productId: number, userId: number, data: {
+    condition?: string;
+    grading?: number;
+    purchase_price?: number;
+    notes?: string;
+    acquired_at?: string;
+}) => {
+    const response = await axios.patch(`${API_BASE_URL}/collection/${productId}`, {
+        user_id: userId,
+        ...data
     });
     return response.data;
 };

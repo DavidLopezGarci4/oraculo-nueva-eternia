@@ -152,11 +152,22 @@ class ProductOutput(BaseModel):
     is_wish: bool = False
     opportunity_score: int = 0
     acquired_at: Optional[str] = None
+    condition: Optional[str] = "New"
+    grading: Optional[float] = 10.0
+    notes: Optional[str] = None
 
 class CollectionToggleRequest(BaseModel):
     product_id: int
     user_id: int
     wish: bool = False
+
+class CollectionItemUpdateRequest(BaseModel):
+    user_id: int
+    condition: Optional[str] = None
+    grading: Optional[float] = None
+    purchase_price: Optional[float] = None
+    notes: Optional[str] = None
+    acquired_at: Optional[str] = None # ISO format
 
 class PurgatoryMatchRequest(BaseModel):
     pending_id: int
@@ -483,7 +494,10 @@ async def get_collection(user_id: int):
                 is_grail=is_grail,
                 grail_score=round(grail_score, 1),
                 is_wish=not collection_item.acquired,
-                acquired_at=collection_item.acquired_at.isoformat() if collection_item.acquired_at else None
+                acquired_at=collection_item.acquired_at.isoformat() if collection_item.acquired_at else None,
+                condition=collection_item.condition or "New",
+                grading=collection_item.grading or 10.0,
+                notes=collection_item.notes
             ))
         
         return output_list
@@ -670,6 +684,35 @@ async def toggle_collection(request: CollectionToggleRequest):
         
         db.commit()
         return {"status": "success", "action": action, "product_id": request.product_id}
+
+@app.patch("/api/collection/{product_id}")
+async def update_collection_item(product_id: int, request: CollectionItemUpdateRequest):
+    """
+    Actualiza los detalles privados de un item de la colección (Legado).
+    """
+    with SessionCloud() as db:
+        item = db.query(CollectionItemModel).filter(
+            CollectionItemModel.product_id == product_id,
+            CollectionItemModel.owner_id == request.user_id
+        ).first()
+        
+        if not item:
+            raise HTTPException(status_code=404, detail="Item no encontrado en tu colección")
+        
+        if request.condition is not None: item.condition = request.condition
+        if request.grading is not None: item.grading = request.grading
+        if request.purchase_price is not None: item.purchase_price = request.purchase_price
+        if request.notes is not None: item.notes = request.notes
+        if request.acquired_at is not None:
+            try:
+                # Handle possible 'Z' or offset if any, usually from JS isoString
+                clean_date = request.acquired_at.replace('Z', '')
+                item.acquired_at = datetime.fromisoformat(clean_date)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Formato de fecha inválido")
+        
+        db.commit()
+        return {"status": "success", "message": "Detalles del legado actualizados"}
 
 # --- PURGATORY ENDPOINTS ---
 

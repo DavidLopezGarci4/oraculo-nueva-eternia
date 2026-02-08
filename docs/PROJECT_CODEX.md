@@ -65,6 +65,12 @@ Nueva Eternia está blindada mediante estos pilares de seguridad:
 ### 5. Incursión PrestaShop (Phase 54)
 - **Pixelatoy Engine**: Optimizado para navegar por categorías de alta densidad y extraer metadatos mediante atributos `content` de PrestaShop, eludiendo la inestabilidad de términos de búsqueda genéricos.
 
+### 6. El Legado y la Graduación ASTM/C (Phase 55)
+El sistema ahora permite una valoración quirúrgica de la colección personal mediante el **Legado**:
+- **Multiplicadores de Estado**: El Valor de Mercado se ajusta automáticamente según la condición (MOC, NEW, LOOSE).
+- **Ajuste Fino (Grading)**: Un deslizador de 1-10 permite capturar el "Shelf Wear" (esquinas dobladas, burbuja amarillenta). Cada reducción de grado aplica un decremento logarítmico del 4% sobre la base de mercado.
+- **ROI Dinámico**: El retorno de inversión se recalcula en tiempo real en el frontend mediante el `Advanced Valuation Engine` antes de persistir en el backend.
+
 ---
 
-*Última actualización: 07/02/2026 - Fase 54: Reparación de Scrapers & Paridad P2P.*
+*Última actualización: 08/02/2026 - Fase 55: Restauración del Legado & Graduación Avanzada.*

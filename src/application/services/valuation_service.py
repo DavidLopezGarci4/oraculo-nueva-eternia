@@ -67,8 +67,29 @@ class ValuationService:
 
         return 0.0
 
+    def get_condition_multiplier(self, condition: str, grade: float = 10.0) -> float:
+        """
+        Calculates the value multiplier based on condition and grade.
+        Standard Waterfall assumes MOC 10.
+        """
+        multipliers = {
+            "MOC": 1.0,
+            "NEW": 0.75,
+            "LOOSE": 0.5
+        }
+        
+        base_mult = multipliers.get(condition.upper(), 0.75) # Default to NEW if unknown
+        
+        # Grading Adjustment: -2% per 0.5 point below 10
+        # Grade 9.0 = 0.96 (4% reduction)
+        # Grade 8.0 = 0.92 (8% reduction)
+        grade_factor = 1.0 - ((10.0 - (grade or 10.0)) * 0.04)
+        grade_factor = max(0.1, grade_factor) # Never below 10%
+        
+        return base_mult * grade_factor
+
     def get_collection_valuation(self, user_id: int, user_location: str = "ES") -> dict:
-        """Calculates total value of a user's collection using the waterfall."""
+        """Calculates total value of a user's collection using the waterfall and legacy context."""
         from src.domain.models import CollectionItemModel
         
         items = self.db.query(CollectionItemModel).filter(
@@ -78,16 +99,22 @@ class ValuationService:
         
         total_value = 0.0
         total_invested = 0.0
-        total_landed_market = 0.0 # Phase 15: New Real Landed Metric
+        total_landed_market = 0.0 
         
         for item in items:
-            value = self.get_consolidated_value(item.product, user_location)
-            total_value += value
+            # 1. Base Market Value (The Oracle)
+            base_market_value = self.get_consolidated_value(item.product, user_location)
+            
+            # 2. Apply Personal Legado Multipliers (Condition & Grade)
+            multiplier = self.get_condition_multiplier(item.condition, item.grading)
+            adjusted_value = base_market_value * multiplier
+            
+            total_value += adjusted_value
             total_invested += (item.purchase_price or 0.0)
             
-            # Real Landed Value (Level 1 or 2 exclusively)
+            # 3. Real Landed Value (Market Context)
             landed = self.get_pure_landed_value(item.product, user_location)
-            total_landed_market += (landed or value)
+            total_landed_market += (landed * multiplier if landed else adjusted_value)
             
         profit_loss = total_value - total_invested
         roi = (profit_loss / total_invested * 100) if total_invested > 0 else 0.0

@@ -46,8 +46,8 @@ Ecosistema moderno en React.
 ## 🔎 Notas de Auditoría
 - El proyecto ha sido consolidado eliminando el legado de Streamlit.
 - Los scripts de la raíz están en proceso de migración hacia `scripts/` o `src/application/jobs/` para mantener la pureza de la raíz.
-- **Phase 44**: Implementación de Playwright Nexus para infiltración avanzada en Wallapop.
+- **Phase 55**: Restauración del Legado y Motor de Graduación Avanzada (ASTM/C).
 
 ---
 
-*Última actualización: 06/02/2026 - Fase 44: Wallapop Playwright Nexus & Hybrid Expansion.*
+*Última actualización: 08/02/2026 - Fase 55: Legado & Grading Implementation.*

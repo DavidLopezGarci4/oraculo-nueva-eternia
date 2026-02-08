@@ -4,6 +4,7 @@ import { Box, AlertCircle, Loader2, Info, Check, Trophy, TrendingUp, Euro, Star,
 import { motion, AnimatePresence } from 'framer-motion';
 import { getCollection, toggleCollection } from '../api/collection';
 import type { Product } from '../api/collection';
+import CollectionItemDetailModal from '../components/CollectionItemDetailModal';
 
 interface CollectionProps {
     searchQuery?: string;
@@ -12,6 +13,8 @@ interface CollectionProps {
 const Collection: React.FC<CollectionProps> = ({ searchQuery = "" }) => {
     const queryClient = useQueryClient();
     const [activeTab, setActiveTab] = useState<'owned' | 'wish'>('owned');
+    const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+    const [isDetailOpen, setIsDetailOpen] = useState(false);
 
     // Contexto de Autenticación (Fase 8.2)
     const activeUserId = parseInt(localStorage.getItem('active_user_id') || '2');
@@ -270,7 +273,13 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "" }) => {
 
                                     {/* Multi-Actions Bar */}
                                     <div className="mt-auto flex items-center gap-2">
-                                        <button className="h-12 flex-1 flex items-center justify-center rounded-2xl bg-white/5 border border-white/5 text-white/30 hover:bg-white/10 hover:text-white transition-all group/info">
+                                        <button
+                                            onClick={() => {
+                                                setSelectedProduct(product);
+                                                setIsDetailOpen(true);
+                                            }}
+                                            className="h-12 flex-1 flex items-center justify-center rounded-2xl bg-white/5 border border-white/5 text-white/30 hover:bg-white/10 hover:text-white transition-all group/info"
+                                        >
                                             <Info className="h-5 w-5 group-hover:scale-110 transition-transform" />
                                         </button>
 
@@ -317,6 +326,18 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "" }) => {
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {/* Detail Modal Integration (Legado Bridge) */}
+            {isDetailOpen && selectedProduct && (
+                <CollectionItemDetailModal
+                    product={selectedProduct}
+                    userId={activeUserId}
+                    onClose={() => {
+                        setIsDetailOpen(false);
+                        setSelectedProduct(null);
+                    }}
+                />
+            )}
         </div>
     );
 };
