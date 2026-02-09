@@ -73,6 +73,7 @@ oraculo.db
 backups/
 data/
 !data/MOTU/
+data/MOTU/*_backup_*.xlsx
 !data/MOTU/lista_MOTU.xlsx
 .env*
 node_modules/

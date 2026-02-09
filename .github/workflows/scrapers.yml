@@ -14,6 +14,8 @@ on:
 jobs:
   scrape:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       
@@ -48,12 +50,18 @@ jobs:
         run: |
           git config --global user.name "Oracle Guardian Bot"
           git config --global user.email "guardian@nueva-eternia.com"
+          # Safe reset to avoid committing accidental artifacts
+          git reset
+          # Force add only the Master Excel
           git add -f data/MOTU/lista_MOTU.xlsx
+          
           # Only commit if there are changes
           if git diff --staged --quiet; then
             echo "No changes in Excel to commit."
           else
             git commit -m "chore: auto-sync collection status to Excel [skip ci]"
+            # Handle potential concurrency conflicts with rebase
+            git pull --rebase origin main
             git push
           fi
 
