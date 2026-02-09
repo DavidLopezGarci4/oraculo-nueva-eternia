@@ -48,7 +48,7 @@ jobs:
         run: |
           git config --global user.name "Oracle Guardian Bot"
           git config --global user.email "guardian@nueva-eternia.com"
-          git add data/MOTU/lista_MOTU.xlsx
+          git add -f data/MOTU/lista_MOTU.xlsx
           # Only commit if there are changes
           if git diff --staged --quiet; then
             echo "No changes in Excel to commit."

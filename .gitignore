@@ -72,6 +72,8 @@ oraculo.db
 # Local Backups & Data
 backups/
 data/
+!data/MOTU/
+!data/MOTU/lista_MOTU.xlsx
 .env*
 node_modules/
 dist/
