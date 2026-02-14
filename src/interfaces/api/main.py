@@ -2047,9 +2047,11 @@ async def api_stage_vault(user_id: int = 2, file_path: str = None):
 async def api_sync_excel(user_id: int = 2):
     """Sincroniza el Excel local de David (Excel Bridge) con los datos del Oráculo."""
     from src.application.services.excel_manager import ExcelManager
+    from pathlib import Path
     
-    # Ruta específica de David
-    DAVID_EXCEL = r"C:\Users\dace8\OneDrive\Documentos\Antigravity\oraculo-nueva-eternia\data\MOTU\lista_MOTU.xlsx"
+    # Ruta relativa al proyecto (funciona en Windows local Y dentro de Docker)
+    project_root = Path(__file__).resolve().parents[3]  # src/interfaces/api/main.py -> 3 niveles hasta raíz
+    DAVID_EXCEL = str(project_root / "data" / "MOTU" / "lista_MOTU.xlsx")
     
     manager = ExcelManager(DAVID_EXCEL)
     success = manager.sync_acquisitions_from_db(user_id)
@@ -2058,6 +2060,7 @@ async def api_sync_excel(user_id: int = 2):
         return {"status": "success", "message": "Excel Bridge sincronizado con éxito."}
     else:
         raise HTTPException(status_code=500, detail="Fallo en la sincronización del Excel. Verifique la ruta y el formato.")
+
 
 if __name__ == "__main__":
     import uvicorn

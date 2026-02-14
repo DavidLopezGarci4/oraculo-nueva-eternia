@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   backend:
     build:
@@ -10,18 +8,17 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      # We ONLY map the database and logs in production for maximum stability
-      - ./oraculo.db:/app/oraculo.db
-      - ./logs:/app/logs
+      # Persistent data: images, Excel, logs
       - ./data:/app/data
+      - ./logs:/app/logs
     environment:
-      # Use cloud database by default in production
-      - DATABASE_URL=${DATABASE_URL:-sqlite:///./oraculo.db}
+      # Supabase Cloud (Nexo Central) — same for local and OCI
       - SUPABASE_DATABASE_URL=${SUPABASE_DATABASE_URL}
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///./oraculo.db}
       - PYTHONUNBUFFERED=1
       - ENV=production
-    # No --reload in production for performance and stability
-    command: uvicorn src.interfaces.api.main:app --host 0.0.0.0 --port 8000
+    # Multi-worker for production performance (no --reload)
+    command: uvicorn src.interfaces.api.main:app --host 0.0.0.0 --port 8000 --workers 2
     networks:
       - eternia-net-prod
     restart: always
@@ -33,7 +30,8 @@ services:
     image: oraculo-frontend-prod
     container_name: oraculo_frontend_prod
     ports:
-      - "8080:80" # Production port
+      # Port 80 — accesible directamente desde el navegador
+      - "80:80"
     depends_on:
       - backend
     networks:

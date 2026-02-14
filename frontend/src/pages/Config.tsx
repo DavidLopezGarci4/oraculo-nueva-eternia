@@ -197,7 +197,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate }) => {
         }
     };
 
-    const handleExportExcel = async (userId: number = activeUserId) => {
+    const handleExportExcelAdmin = async (userId: number) => {
         try {
             const m = await import('../api/admin');
             await m.exportCollectionExcel(userId);
@@ -208,7 +208,18 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate }) => {
         }
     };
 
-    const handleExportSqlite = async (userId: number = activeUserId) => {
+    const handleExportExcel = async () => {
+        let userId: number = activeUserId;
+        if (user?.role === 'admin') {
+            const input = prompt('🕵️ ACCESO AL ARCHIVO MAESTRO\nIngrese el ID del Héroe para exportar su Colección Excel:', activeUserId.toString());
+            if (input === null) return;
+            const parsed = parseInt(input);
+            if (!isNaN(parsed)) userId = parsed;
+        }
+        await handleExportExcelAdmin(userId);
+    };
+
+    const handleExportSqliteAdmin = async (userId: number) => {
         try {
             const m = await import('../api/admin');
             await m.exportCollectionSqlite(userId);
@@ -217,6 +228,17 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate }) => {
             console.error('Error exporting sqlite:', error);
             alert('❌ Error al exportar SQLite.');
         }
+    };
+
+    const handleExportSqlite = async () => {
+        let userId: number = activeUserId;
+        if (user?.role === 'admin') {
+            const input = prompt('🗄️ ACCESO AL BÚNKER DE DATOS\nIngrese el ID del Héroe para extraer su Bóveda SQLite:', activeUserId.toString());
+            if (input === null) return;
+            const parsed = parseInt(input);
+            if (!isNaN(parsed)) userId = parsed;
+        }
+        await handleExportSqliteAdmin(userId);
     };
 
 
@@ -551,14 +573,18 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate }) => {
                         exit={{ opacity: 0, y: -10 }}
                         className="space-y-6"
                     >
-                        <div className="flex flex-col gap-2 mb-4">
-                            <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                                <Settings className="h-6 w-6 text-brand-primary" />
-                                Configuración del Núcleo
-                            </h3>
-                            <p className="text-white/40 text-sm">Ajustes sistémicos del Oráculo. Actualmente en modo lectura (inactivos).</p>
+                        <div className="flex justify-between items-center mb-6">
+                            <div>
+                                <h2 className="text-2xl font-bold flex items-center gap-2">
+                                    <Database className="w-6 h-6 text-blue-400" />
+                                    {user?.role === 'admin' ? 'Cámara de Reliquias de Eternia' : 'Mi Bóveda Digital'}
+                                </h2>
+                                <p className="text-gray-400 text-sm">Resguardo y sincronización de tu legado físico.</p>
+                            </div>
+                            <div className="px-3 py-1 rounded-full bg-blue-900/30 text-blue-400 text-xs font-mono border border-blue-800/50">
+                                SHIELD LAYER 2
+                            </div>
                         </div>
-
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {/* Sentinel Settings */}
                             <div className="glass border border-white/10 p-6 rounded-3xl space-y-4 opacity-60">
@@ -866,6 +892,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate }) => {
                                 <thead className="bg-white/5 text-white/30 uppercase text-[10px] font-bold">
                                     <tr>
                                         <th className="px-6 py-4">Héroe</th>
+                                        <th className="px-3 py-4 text-center w-12">ID</th>
                                         <th className="px-6 py-4">Rango (Rol)</th>
                                         <th className="px-6 py-4">Fortaleza (Items)</th>
                                         <th className="px-6 py-4">Ubicación</th>
@@ -885,6 +912,9 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate }) => {
                                                         <p className="text-[10px] text-white/30 font-mono">{hero.email}</p>
                                                     </div>
                                                 </div>
+                                            </td>
+                                            <td className="px-3 py-4 text-center">
+                                                <span className="text-xs font-mono text-brand-primary/70 bg-brand-primary/10 px-2 py-0.5 rounded-md border border-brand-primary/20">{hero.id}</span>
                                             </td>
                                             <td className="px-6 py-4">
                                                 <select
@@ -909,14 +939,14 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate }) => {
                                             <td className="px-6 py-4 text-right">
                                                 <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <button
-                                                        onClick={() => handleExportExcel(hero.id)}
+                                                        onClick={() => handleExportExcelAdmin(hero.id)}
                                                         title="Bajar Excel Personal"
                                                         className="h-8 w-8 rounded-lg bg-green-500/10 text-green-400 hover:bg-green-500 hover:text-white border border-green-500/20 flex items-center justify-center transition-all shadow-lg shadow-green-500/0 hover:shadow-green-500/20"
                                                     >
                                                         <FileSpreadsheet className="h-4 w-4" />
                                                     </button>
                                                     <button
-                                                        onClick={() => handleExportSqlite(hero.id)}
+                                                        onClick={() => handleExportSqliteAdmin(hero.id)}
                                                         title="Bajar Bóveda SQLite"
                                                         className="h-8 w-8 rounded-lg bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500 hover:text-white border border-indigo-500/20 flex items-center justify-center transition-all shadow-lg shadow-indigo-500/0 hover:shadow-indigo-500/20"
                                                     >
@@ -935,7 +965,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate }) => {
                                     ))}
                                     {heroes.length === 0 && (
                                         <tr>
-                                            <td colSpan={5} className="px-6 py-8 text-center text-white/20 italic">
+                                            <td colSpan={6} className="px-6 py-8 text-center text-white/20 italic">
                                                 No hay héroes reclutados en este momento...
                                             </td>
                                         </tr>
