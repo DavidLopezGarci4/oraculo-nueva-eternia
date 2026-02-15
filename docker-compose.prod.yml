@@ -20,6 +20,11 @@ services:
       - ORACULO_API_KEY=${ORACULO_API_KEY}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+      - SMTP_FROM=${SMTP_FROM}
     # Multi-worker for production performance (no --reload)
     command: uvicorn src.interfaces.api.main:app --host 0.0.0.0 --port 8000 --workers 2
     networks:
