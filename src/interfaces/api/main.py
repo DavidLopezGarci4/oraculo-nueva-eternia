@@ -1398,7 +1398,7 @@ def run_scraper_task(spider_name: str = "all", trigger_type: str = "manual", que
             
             try:
                 results = loop.run_until_complete(
-                    asyncio.wait_for(pipeline.run_product_search(search_term), timeout=600)
+                    asyncio.wait_for(pipeline.run_product_search(search_term), timeout=1800)
                 )
             except asyncio.TimeoutError:
                 update_live_log("⌛ [TIMEOUT] La incursión ha excedido los 10 minutos. Abortando.")

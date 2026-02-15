@@ -107,7 +107,7 @@ const Purgatory: React.FC = React.memo(() => {
     const { data: pendingItems, isLoading: isLoadingPending } = useQuery({
         queryKey: ['purgatory'],
         queryFn: getPurgatory,
-        refetchInterval: 30000 // Aumentado de 5s a 30s para reducir carga en navegación
+        refetchInterval: 300000 // 5 min — evita refrescos constantes que estropean la UX
     });
 
     const { data: products } = useQuery({
@@ -262,7 +262,7 @@ const Purgatory: React.FC = React.memo(() => {
             isSyncing.current = false;
         };
 
-        const interval = setInterval(syncPending, 30000); // Retry every 30s
+        const interval = setInterval(syncPending, 300000); // Retry every 5 min
         const initialTimeout = setTimeout(syncPending, 3000); // Initial delay
 
         return () => {

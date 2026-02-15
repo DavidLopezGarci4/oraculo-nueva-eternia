@@ -70,31 +70,31 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
     const { data: stats, isLoading: isLoadingStats } = useQuery({
         queryKey: ['dashboard-stats', user?.id],
         queryFn: () => getDashboardStats(user?.id || 2),
-        refetchInterval: 60000
+        refetchInterval: 300000 // 5 min
     });
 
     const { data: topDeals } = useQuery({
         queryKey: ['top-deals', user?.id],
         queryFn: () => getTopDeals(user?.id || 2),
-        refetchInterval: 300000 // 5 min
+        refetchInterval: 600000 // 10 min
     });
 
     const { data: history } = useQuery({
         queryKey: ['dashboard-history', user?.id],
         queryFn: () => getDashboardHistory(user?.id || 2),
-        refetchInterval: 60000 // 1 min
+        refetchInterval: 300000 // 5 min
     });
 
     const { data: matchStats } = useQuery({
         queryKey: ['match-stats', user?.id],
         queryFn: () => getDashboardMatchStats(user?.id || 2),
-        refetchInterval: 60000
+        refetchInterval: 300000 // 5 min
     });
 
     const { data: hallOfFame } = useQuery({
         queryKey: ['hall-of-fame', user?.id],
         queryFn: () => getHallOfFame(user?.id || 2),
-        refetchInterval: 60000
+        refetchInterval: 300000 // 5 min
     });
 
     // Search Logic

@@ -8,7 +8,7 @@ const RadarP2P: React.FC = () => {
     const { data: opportunities, isLoading } = useQuery<P2POpportunity[]>({
         queryKey: ['p2p-opportunities'],
         queryFn: getPeerToPeerOpportunities,
-        refetchInterval: 60000, // Cada minuto
+        refetchInterval: 300000, // 5 min
     });
 
     if (isLoading) {

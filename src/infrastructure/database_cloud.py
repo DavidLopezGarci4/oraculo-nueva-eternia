@@ -20,9 +20,12 @@ else:
 
 engine_cloud = create_engine(
     cloud_url,
+    pool_pre_ping=True,
+    pool_recycle=1800,  # Recicla conexiones cada 30 min (previene desconexiones de Supabase)
     connect_args={"check_same_thread": False, "timeout": 30} if "sqlite" in cloud_url else {}
 )
 SessionCloud = sessionmaker(autocommit=False, autoflush=False, bind=engine_cloud)
+
 
 def init_cloud_db():
     from src.domain.models import Base

@@ -110,7 +110,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
 
     useEffect(() => {
         fetchData();
-        const interval = setInterval(fetchData, 10000); // Polling every 10s
+        const interval = setInterval(fetchData, 60000); // Polling every 60s
         return () => clearInterval(interval);
     }, []);
 
