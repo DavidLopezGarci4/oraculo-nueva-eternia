@@ -1,5 +1,6 @@
 import asyncio
 import json
+import threading
 from typing import List
 from datetime import datetime
 from loguru import logger
@@ -13,30 +14,43 @@ from src.application.services.deal_scorer import DealScorer
 from src.application.services.logistics_service import LogisticsService
 
 class ScrapingPipeline:
-    def __init__(self, scrapers: List[BaseScraper]):
+    def __init__(self, scrapers: List[BaseScraper], cancel_event: threading.Event | None = None):
         self.scrapers = scrapers
+        self.cancel_event = cancel_event
 
     async def run_product_search(self, product_name: str) -> List[dict]:
         """
-        Runs all spiders in parallel and transforms results into 3OX Contract format.
+        Runs all spiders with cancellation support.
+        If cancel_event is set, aborts remaining scrapers.
         """
         logger.info(f"Pipeline: Searching for '{product_name}' across {len(self.scrapers)} scrapers.")
         
-        tasks = [scraper.search(product_name) for scraper in self.scrapers]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-        
         all_legacy_offers = []
-        for scraper, res in zip(self.scrapers, results):
-            if isinstance(res, Exception):
-                logger.error(f"Scraper {scraper.shop_name} failed for '{product_name}': {res}")
-            else:
+        
+        for scraper in self.scrapers:
+            # 🛡️ Check cancellation before each scraper
+            if self.cancel_event and self.cancel_event.is_set():
+                logger.warning(f"🛑 Pipeline ABORTADO: Señal de cancelación recibida antes de {scraper.shop_name}.")
+                break
+            
+            try:
+                res = await asyncio.wait_for(scraper.search(product_name), timeout=300)  # 5 min per scraper max
                 logger.info(f"Scraper {scraper.shop_name} found {len(res)} offers.")
-                # DNA Segregation (Phase 14 & 16): Inject source type based on scraper type
                 source = "Peer-to-Peer" if getattr(scraper, 'is_auction_source', False) else "Retail"
                 for offer in res:
                     if isinstance(offer, ScrapedOffer):
                         offer.source_type = source
                 all_legacy_offers.extend(res)
+            except asyncio.TimeoutError:
+                logger.warning(f"⏳ Scraper {scraper.shop_name} TIMEOUT (5 min). Saltando.")
+            except asyncio.CancelledError:
+                logger.warning(f"🛑 Scraper {scraper.shop_name} CANCELADO.")
+                break
+            except Exception as e:
+                logger.error(f"Scraper {scraper.shop_name} failed for '{product_name}': {e}")
+        
+        if self.cancel_event and self.cancel_event.is_set():
+            logger.warning(f"🛑 Pipeline cancelado. Devolviendo {len(all_legacy_offers)} ofertas parciales recolectadas.")
         
         # 3OX.Bridge :: Transformación al Contrato dev/contract.ref
         from src.infrastructure.scrapers.adapter import adapter

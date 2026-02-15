@@ -8,6 +8,7 @@ import json
 import psutil
 import os
 import signal
+import threading
 import re
 from datetime import datetime
 from sqlalchemy import func, select, and_, desc, text, or_
@@ -1271,8 +1272,13 @@ async def discard_purgatory_bulk(request: PurgatoryBulkDiscardRequest):
 
 # --- SCRAPER CONTROL ENDPOINTS ---
 
+# 🛡️ Flag global de cancelación cooperativa
+scraper_cancel_event = threading.Event()
+
 def run_scraper_task(spider_name: str = "all", trigger_type: str = "manual", query: str | None = None):
     """Wrapper para ejecutar recolectores y actualizar el estado en BD"""
+    global scraper_cancel_event
+    scraper_cancel_event.clear()  # Reset flag al iniciar nueva incursión
     from datetime import datetime
     import os
     
@@ -1385,7 +1391,7 @@ def run_scraper_task(spider_name: str = "all", trigger_type: str = "manual", que
             # Ensure callback is set for all if 'all' was selected
             for s in spiders_to_run: s.log_callback = update_live_log
 
-            pipeline = ScrapingPipeline(spiders_to_run)
+            pipeline = ScrapingPipeline(spiders_to_run, cancel_event=scraper_cancel_event)
             # Ejecutar búsqueda asíncrona (usamos "auto" o similar)
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
@@ -1401,10 +1407,14 @@ def run_scraper_task(spider_name: str = "all", trigger_type: str = "manual", que
                     asyncio.wait_for(pipeline.run_product_search(search_term), timeout=1800)
                 )
             except asyncio.TimeoutError:
-                update_live_log("⌛ [TIMEOUT] La incursión ha excedido los 10 minutos. Abortando.")
+                update_live_log("⌛ [TIMEOUT] La incursión ha excedido los 30 minutos. Abortando.")
                 results = []
             
             loop.close()
+            
+            # Check if cancelled mid-flight
+            if scraper_cancel_event.is_set():
+                update_live_log(f"🛑 Incursión cancelada manualmente. {len(results)} ofertas parciales recolectadas.")
             
             update_live_log(f"💾 Persistiendo {len(results)} ofertas...")
             # Phase 44: Pasamos los nombres de las tiendas para sincronizar disponibilidad
@@ -1412,6 +1422,7 @@ def run_scraper_task(spider_name: str = "all", trigger_type: str = "manual", que
             items_found = len(results)
             logger.info(f"💾 Persistidas {items_found} ofertas tras incursión de {spider_name}.")
             update_live_log(f"✅ Incursión completada con éxito. {items_found} reliquias encontradas.")
+
 
         # 2. Marcar éxito en la base de datos y actualizar Log
         with SessionCloud() as db:
@@ -2089,6 +2100,10 @@ async def stop_scrapers():
     """
     killed_count = 0
     try:
+        # 0. Software Stop: Señal cooperativa de cancelación
+        scraper_cancel_event.set()
+        logger.warning("🚨 CANCEL FLAG SET: Señal de parada enviada al pipeline.")
+
         # 1. Hardware Stop: Matar procesos hijos (Playwright/Browsers)
         current_process = psutil.Process(os.getpid())
         children = current_process.children(recursive=True)
