@@ -1407,7 +1407,12 @@ async def get_dashboard_stats(user_id: int = 1):
                 "shop_distribution": [{"shop": s, "count": c} for s, c in shop_dist]
             }
     except Exception as e:
-        logger.error(f"CRITICAL DASHBOARD ERROR: {e}")
+        logger.error(f"CRITICAL DASHBOARD ERROR for user {user_id}: {e}")
+        # Phase 15: Don't return null, return an error so the frontend can react
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Error al recuperar datos del tablero: {str(e)}"
+        )
         return {
             "total_products": 0, "owned_count": 0, "wish_count": 0,
             "financial": {"total_invested": 0, "market_value": 0, "profit_loss": 0, "roi": 0},
@@ -2090,20 +2095,27 @@ async def get_user_settings(user_id: int):
 @app.get("/api/system/audit", dependencies=[Depends(verify_api_key)])
 async def system_audit():
     """
-    Fase 15: Auditoría de salud del sistema y conectividad.
+    Fase 15: Auditoría de salud del sistema y conectividad PROFUNDA.
     """
-    from src.infrastructure.database_cloud import cloud_url
-    from src.domain.models import UserModel, ProductModel, CollectionItemModel
+    from src.infrastructure.database_cloud import cloud_url, engine_cloud
+    from src.domain.models import UserModel, ProductModel, CollectionItemModel, OfferModel, AuthorizedDeviceModel
+    import sqlalchemy
     
     db_type = "Postgres/Supabase" if "postgresql" in cloud_url else "SQLite/Local"
     
     with SessionCloud() as db:
         try:
+            # 1. Connectivity Check
+            db.execute(sqlalchemy.text("SELECT 1"))
+            
+            # 2. Schema Check
             u_count = db.query(UserModel).count()
             p_count = db.query(ProductModel).count()
             c_count = db.query(CollectionItemModel).count()
+            o_count = db.query(OfferModel).count()
+            ad_count = db.query(AuthorizedDeviceModel).count()
             
-            # Diagnostic check for David (ID 2)
+            # 3. Diagnostic check for David (ID 2)
             david = db.query(UserModel).filter(UserModel.id == 2).first()
             david_items = 0
             if david:
@@ -2112,27 +2124,42 @@ async def system_audit():
                     CollectionItemModel.acquired == True
                 ).count()
             
+            # 4. Connection Details (Safe)
+            conn_info = str(engine_cloud.url).split("@")[-1] if "@" in str(engine_cloud.url) else "local_sqlite"
+            
             return {
                 "status": "ONLINE",
                 "database_engine": db_type,
+                "connection_target": conn_info,
                 "counts": {
                     "users": u_count,
                     "products": p_count,
-                    "collection_items": c_count
+                    "collection_items": c_count,
+                    "offers": o_count,
+                    "authorized_devices": ad_count
                 },
                 "david_diagnostic": {
                     "exists": david is not None,
+                    "id": david.id if david else None,
                     "username": david.username if david else None,
-                    "acquired_items_target": 120,
-                    "acquired_items_reality": david_items
+                    "role": david.role if david else None,
+                    "acquired_items_reality": david_items,
+                    "target_expected": 120
                 },
                 "environment": {
-                    "SUPABASE_DATABASE_URL_SET": settings.SUPABASE_DATABASE_URL is not None,
+                    "SUPABASE_DATABASE_URL_SET": settings.SUPABASE_DATABASE_URL is not None and len(settings.SUPABASE_DATABASE_URL) > 10,
+                    "DATABASE_URL": settings.DATABASE_URL,
                     "PYTHON_VERSION": sys.version
                 }
             }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Database connectivity issue: {str(e)}")
+            logger.error(f"AUDIT FAILURE: {e}")
+            return {
+                "status": "ERROR",
+                "database_engine": db_type,
+                "error_detail": str(e),
+                "hint": "Check if DB credentials are correct or if the DB server is reachable."
+            }
 
 @app.post("/api/users/{user_id}/location")
 async def update_user_location(user_id: int, location: str):
