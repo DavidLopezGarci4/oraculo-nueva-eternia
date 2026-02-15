@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Lock, ArrowRight, Loader2, Sparkles } from 'lucide-react';
+import { User, Lock, ArrowRight, Loader2, Sparkles, UserPlus } from 'lucide-react';
 import axios from 'axios';
 
 interface LoginPageProps {
@@ -7,31 +7,42 @@ interface LoginPageProps {
 }
 
 const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
+    const [mode, setMode] = useState<'login' | 'register'>('login');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [successMessage, setSuccessMessage] = useState('');
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         setError('');
+        setSuccessMessage('');
 
         try {
-            const response = await axios.post('/api/auth/login', { email, password });
-            if (response.data.status === 'success') {
-                const { user, is_sovereign } = response.data;
+            if (mode === 'login') {
+                const response = await axios.post('/api/auth/login', { email, password });
+                if (response.data.status === 'success') {
+                    const { user, is_sovereign } = response.data;
 
-                // Persistencia local
-                localStorage.setItem('active_user_id', user.id.toString());
-                localStorage.setItem('is_sovereign', is_sovereign ? 'true' : 'false');
-                localStorage.setItem('user_email', email);
-                localStorage.setItem('is_logged_in', 'true');
+                    // Persistencia local
+                    localStorage.setItem('active_user_id', user.id.toString());
+                    localStorage.setItem('is_sovereign', is_sovereign ? 'true' : 'false');
+                    localStorage.setItem('user_email', email);
+                    localStorage.setItem('is_logged_in', 'true');
 
-                onLoginSuccess(user, is_sovereign);
+                    onLoginSuccess(user, is_sovereign);
+                }
+            } else {
+                const response = await axios.post('/api/auth/register', { email, password });
+                if (response.data.status === 'success') {
+                    setSuccessMessage('¡Héroe reclutado! Ahora puedes entrar.');
+                    setMode('login');
+                }
             }
         } catch (err: any) {
-            console.error("Login failed", err);
+            console.error(`${mode === 'login' ? 'Login' : 'Register'} failed`, err);
             setError(err.response?.data?.detail || 'Error de conexión con el Oráculo.');
         } finally {
             setLoading(false);
@@ -53,18 +64,22 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                         <div className="mb-6 relative">
                             <div className="absolute inset-0 bg-brand-primary/20 blur-2xl rounded-full" />
                             <div className="relative flex h-20 w-20 items-center justify-center rounded-3xl bg-black border border-white/10 shadow-2xl">
-                                <Sparkles className="h-10 w-10 text-brand-primary animate-pulse" />
+                                {mode === 'login' ? (
+                                    <Sparkles className="h-10 w-10 text-brand-primary animate-pulse" />
+                                ) : (
+                                    <UserPlus className="h-10 w-10 text-brand-primary animate-pulse" />
+                                )}
                             </div>
                         </div>
                         <h1 className="text-3xl font-black uppercase tracking-[0.2em] text-white">
                             Nueva <span className="text-brand-primary">Eternia</span>
                         </h1>
                         <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.4em] text-white/30">
-                            Identificación de Héroe
+                            {mode === 'login' ? 'Identificación de Héroe' : 'Reclutamiento de Héroe'}
                         </p>
                     </div>
 
-                    {/* Login Form */}
+                    {/* Form */}
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <div className="space-y-2">
                             <label className="text-[9px] font-black uppercase tracking-widest text-white/40 ml-1">
@@ -97,7 +112,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                                     type="password"
                                     name="password"
                                     id="password"
-                                    autoComplete="current-password"
+                                    autoComplete={mode === 'login' ? "current-password" : "new-password"}
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     placeholder="••••••••••••"
@@ -113,6 +128,12 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                             </div>
                         )}
 
+                        {successMessage && (
+                            <div className="rounded-xl border border-green-500/20 bg-green-500/10 p-3 text-center text-[10px] font-bold text-green-400 animate-in fade-in duration-500">
+                                {successMessage}
+                            </div>
+                        )}
+
                         <button
                             type="submit"
                             disabled={loading}
@@ -123,7 +144,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                                     <Loader2 className="h-4 w-4 animate-spin" />
                                 ) : (
                                     <>
-                                        Entrar al Oráculo
+                                        {mode === 'login' ? 'Entrar al Oráculo' : 'Unirse a la Resistencia'}
                                         <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                                     </>
                                 )}
@@ -132,10 +153,19 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                         </button>
                     </form>
 
-                    <div className="mt-8 text-center">
-                        <button className="text-[9px] font-bold text-white/20 hover:text-white/60 transition-colors uppercase tracking-widest">
-                            ¿Olvidaste tu llave? Solicita una nueva
+                    <div className="mt-8 flex flex-col items-center gap-4">
+                        <button
+                            onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
+                            className="text-[9px] font-black text-brand-primary hover:text-white transition-colors uppercase tracking-[0.2em]"
+                        >
+                            {mode === 'login' ? '¿Eres un nuevo Héroe? Regístrate aquí' : '¿Ya tienes una llave? Entra al Oráculo'}
                         </button>
+
+                        {mode === 'login' && (
+                            <button className="text-[9px] font-bold text-white/20 hover:text-white/60 transition-colors uppercase tracking-widest">
+                                ¿Olvidaste tu llave? Solicita una nueva
+                            </button>
+                        )}
                     </div>
                 </div>
 

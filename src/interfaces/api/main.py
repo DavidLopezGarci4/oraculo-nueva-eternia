@@ -261,6 +261,33 @@ class RelinkOfferRequest(BaseModel):
 class UserRoleUpdateRequest(BaseModel):
     role: str
 
+@app.post("/api/auth/register")
+async def register(request: LoginRequest):
+    """
+    Fase de Reclutamiento: Permite a nuevos usuarios unirse como Guardianes.
+    """
+    with SessionCloud() as db:
+        # Extraer username del email (antes de la @)
+        username = request.email.split("@")[0].capitalize()
+        
+        # Verificar duplicados
+        exists = db.query(UserModel).filter(or_(UserModel.email == request.email, UserModel.username == username)).first()
+        if exists:
+            raise HTTPException(status_code=400, detail="Este héroe ya existe en el Oráculo.")
+            
+        new_user = UserModel(
+            username=username,
+            email=request.email,
+            hashed_password=SecurityShield.hash_password(request.password),
+            role="viewer" # Todos los nuevos son Guardianes
+        )
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+        
+        logger.info(f"👤 Nuevo Héroe Reclutado: {new_user.username} ({new_user.role})")
+        return {"status": "success", "message": "Héroe reclutado con éxito. Ahora puedes entrar."}
+
 @app.post("/api/auth/login")
 async def login(request: LoginRequest):
     """
