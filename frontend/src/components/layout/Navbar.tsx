@@ -74,10 +74,7 @@ const Navbar = ({ onMenuClick, showSearch = true, searchValue = "", onSearchChan
                     {(user?.id === 1 || isSovereign) && (
                         <button
                             onClick={() => {
-                                const currentUser = localStorage.getItem('active_user_id') || '1';
-                                const nextUser = currentUser === '1' ? '2' : '1';
-                                localStorage.setItem('active_user_id', nextUser);
-                                if (onIdentityChange) onIdentityChange(); // Trigger re-fetch in App.tsx
+                                if (onIdentityChange) onIdentityChange();
                             }}
                             className="ml-2 p-2 rounded-lg bg-brand-primary/10 text-brand-primary hover:bg-brand-primary hover:text-white transition-all border border-brand-primary/20"
                             title="Alternar Identidad (Admin/David)"

@@ -12,7 +12,7 @@ import RadarP2P from './pages/RadarP2P';
 import ShieldBypass from './components/ShieldBypass';
 import MasterLogin from './components/auth/MasterLogin';
 import LoginPage from './pages/LoginPage';
-import { type Hero } from './api/admin';
+import { getUserSettings, type Hero } from './api/admin';
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -29,7 +29,6 @@ function App() {
     try {
       setLoading(true);
       setIsUnauthorized(false);
-      const { getUserSettings } = await import('./api/admin');
       const data = await getUserSettings(userId);
       setCurrentUser(data);
     } catch (err: any) {
@@ -79,12 +78,7 @@ function App() {
       return;
     }
 
-    let newId: number;
-    if (targetId) {
-      newId = targetId;
-    } else {
-      newId = activeUserId === 1 ? 2 : 1;
-    }
+    const newId = targetId || (activeUserId === 1 ? 2 : 1);
 
     localStorage.setItem('active_user_id', newId.toString());
     setActiveUserId(newId);
