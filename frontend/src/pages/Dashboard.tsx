@@ -13,7 +13,7 @@ import {
 import { useCart } from '../context/CartContext';
 import OracleCart from '../components/cart/OracleCart';
 import { getDashboardStats, getTopDeals, getDashboardHistory, getDashboardMatchStats, revertDashboardAction, getHallOfFame } from '../api/dashboard';
-import { unlinkOffer, relinkOffer } from '../api/admin';
+import { unlinkOffer, relinkOffer, type Hero } from '../api/admin';
 import axios from 'axios';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
@@ -21,7 +21,11 @@ import { es } from 'date-fns/locale';
 import masterRoleImg from '../assets/role-master.png';
 import guardianRoleImg from '../assets/role-guardian.png';
 
-const Dashboard: React.FC = React.memo(() => {
+interface DashboardProps {
+    user: Hero | null;
+}
+
+const Dashboard: React.FC<DashboardProps> = React.memo(({ user }) => {
     const { addToCart } = useCart();
     const isAdmin = localStorage.getItem('active_user_id') === '1';
 
@@ -141,7 +145,7 @@ const Dashboard: React.FC = React.memo(() => {
                         </h2>
                     </div>
                     <p className="max-w-xl text-[11px] md:text-sm text-white/40 font-medium">
-                        Bienvenido, {isAdmin ? 'Maestro' : 'Guardián'}. La inteligencia de mercaderes converge.
+                        Bienvenido, <span className="text-white font-bold">{user?.username || (isAdmin ? 'Maestro' : 'Guardián')}</span>. La inteligencia de mercaderes converge.
                     </p>
                 </div>
             </div>

@@ -107,7 +107,7 @@ function App() {
         {/* Contenido Principal con Scroll */}
         <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-24 md:pb-6 scroll-smooth">
           <div className="max-w-7xl mx-auto w-full">
-            {activeTab === 'dashboard' && <Dashboard />}
+            {activeTab === 'dashboard' && <Dashboard user={currentUser} />}
             {activeTab === 'catalog' && <Catalog searchQuery={searchQuery} />}
             {activeTab === 'auctions' && <Auctions />}
             {activeTab === 'radar' && <RadarP2P />}
