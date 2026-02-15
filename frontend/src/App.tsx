@@ -10,6 +10,7 @@ import Config from './pages/Config';
 import Auctions from './pages/Auctions';
 import RadarP2P from './pages/RadarP2P';
 import ShieldBypass from './components/ShieldBypass';
+import MasterLogin from './components/auth/MasterLogin';
 import { type Hero } from './api/admin';
 
 function App() {
@@ -19,19 +20,18 @@ function App() {
   const [currentUser, setCurrentUser] = useState<Hero | null>(null);
   const [loading, setLoading] = useState(true);
   const [isUnauthorized, setIsUnauthorized] = useState(false);
+  const [isSovereign, setIsSovereign] = useState<boolean>(localStorage.getItem('is_sovereign') === 'true');
+  const [activeUserId, setActiveUserId] = useState<number>(parseInt(localStorage.getItem('active_user_id') || '2'));
 
-  const activeUserId = parseInt(localStorage.getItem('active_user_id') || '2');
-
-  const fetchUser = async () => {
+  const fetchUser = async (userId: number) => {
     try {
       setLoading(true);
       setIsUnauthorized(false);
       const { getUserSettings } = await import('./api/admin');
-      const data = await getUserSettings(activeUserId);
+      const data = await getUserSettings(userId);
       setCurrentUser(data);
     } catch (err: any) {
       console.error("Failed to fetch current user", err);
-      // Si recibimos 403 de la API, es probable que sea el Shield (Dispositivo No Autorizado)
       if (err.response?.status === 403) {
         setIsUnauthorized(true);
       }
@@ -41,12 +41,16 @@ function App() {
   };
 
   useEffect(() => {
-    fetchUser();
-  }, [activeUserId]);
+    if (isSovereign) {
+      fetchUser(activeUserId);
+    } else {
+      setLoading(false);
+    }
+  }, [activeUserId, isSovereign]);
 
-  // Re-fetch when active_user_id changes (due to Navbar switcher)
   const handleIdentityChange = () => {
-    fetchUser();
+    const newId = parseInt(localStorage.getItem('active_user_id') || '2');
+    setActiveUserId(newId);
   };
 
   // Redirección automática si un usuario no-admin está en una pestaña restringida
@@ -78,8 +82,16 @@ function App() {
     );
   }
 
+  if (!isSovereign) {
+    return <MasterLogin onSuccess={(isSov) => {
+      setIsSovereign(isSov);
+      const currentId = parseInt(localStorage.getItem('active_user_id') || '2');
+      setActiveUserId(currentId);
+    }} />;
+  }
+
   if (isUnauthorized) {
-    return <ShieldBypass onRetry={fetchUser} />;
+    return <ShieldBypass onRetry={() => fetchUser(activeUserId)} />;
   }
 
   return (
@@ -102,6 +114,7 @@ function App() {
           onSearchChange={setSearchQuery}
           user={currentUser}
           onIdentityChange={handleIdentityChange}
+          isSovereign={isSovereign}
         />
 
         {/* Contenido Principal con Scroll */}
@@ -113,7 +126,7 @@ function App() {
             {activeTab === 'radar' && <RadarP2P />}
             {activeTab === 'collection' && <Collection searchQuery={searchQuery} />}
             {activeTab === 'purgatory' && <Purgatory />}
-            {activeTab === 'settings' && <Config user={currentUser} onUserUpdate={fetchUser} />}
+            {activeTab === 'settings' && <Config user={currentUser} onUserUpdate={() => fetchUser(activeUserId)} />}
           </div>
         </main>
       </div>

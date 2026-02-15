@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends, Header, BackgroundTasks
+from fastapi import FastAPI, HTTPException, Depends, Header, BackgroundTasks, Request
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict
@@ -45,6 +45,9 @@ class CartItem(BaseModel):
 class CartRequest(BaseModel):
     items: List[CartItem]
     user_id: Optional[int] = 2
+
+class LoginRequest(BaseModel):
+    api_key: str
 
 app = FastAPI(title="Oráculo API Broker", version="1.0.0")
 
@@ -247,6 +250,19 @@ class RelinkOfferRequest(BaseModel):
 
 class UserRoleUpdateRequest(BaseModel):
     role: str
+
+@app.post("/api/auth/login")
+async def login(request: LoginRequest):
+    """
+    Verifica la Llave Maestra y devuelve el estatus soberano.
+    """
+    if request.api_key == settings.ORACULO_API_KEY:
+        return {
+            "status": "success",
+            "message": "Soberanía confirmada. Bienvenido, Arquitecto.",
+            "is_sovereign": True
+        }
+    raise HTTPException(status_code=401, detail="Llave Maestra incorrecta.")
 
 class HeroOutput(BaseModel):
     id: int
