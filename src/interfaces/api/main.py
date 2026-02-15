@@ -298,7 +298,7 @@ async def register(request: RegisterRequest):
         return {"status": "success", "message": "¡Héroe reclutado con éxito! Ahora puedes entrar."}
 
 @app.post("/api/auth/forgot-password")
-async def forgot_password(request: ForgotPasswordRequest):
+async def forgot_password(request: ForgotPasswordRequest, background_tasks: BackgroundTasks):
     """
     Fase 15: Genera un token de reseteo y lo envía por correo.
     """
@@ -317,8 +317,8 @@ async def forgot_password(request: ForgotPasswordRequest):
         user.reset_token_expiry = datetime.utcnow() + timedelta(hours=1)
         db.commit()
         
-        # Enviar email (esto es asíncrono en un mundo ideal, pero aquí es síncrono para esta fase)
-        sent = EmailService.send_reset_email(user.email, user.username, token)
+        # Enviar email asíncronamente para evitar timeouts si el SMTP es lento o está bloqueado
+        background_tasks.add_task(EmailService.send_reset_email, user.email, user.username, token)
         
         return {
             "status": "success", 

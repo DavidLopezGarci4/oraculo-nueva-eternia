@@ -78,7 +78,9 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             }
         } catch (err: any) {
             console.error(`${mode} failed`, err);
-            setError(err.response?.data?.detail || 'Error de conexión con el Oráculo.');
+            const status = err.response?.status;
+            const detail = err.response?.data?.detail;
+            setError(detail || (status ? `Error ${status} del Oráculo.` : 'Error de conexión con el Oráculo.'));
         } finally {
             setLoading(false);
         }
