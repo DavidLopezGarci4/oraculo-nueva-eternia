@@ -149,7 +149,6 @@ function App() {
           onSearchChange={setSearchQuery}
           user={currentUser}
           onIdentityChange={handleIdentityChange}
-          isSovereign={isSovereign}
         />
 
         {/* Contenido Principal con Scroll */}

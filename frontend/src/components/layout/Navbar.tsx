@@ -11,10 +11,9 @@ interface NavbarProps {
     onSearchChange?: (value: string) => void;
     user: Hero | null;
     onIdentityChange: () => void;
-    isSovereign: boolean;
 }
 
-const Navbar: React.FC<NavbarProps> = ({ onMenuClick, showSearch = true, searchValue = "", onSearchChange, user, onIdentityChange, isSovereign }) => {
+const Navbar: React.FC<NavbarProps> = ({ onMenuClick, showSearch = true, searchValue = "", onSearchChange, user, onIdentityChange }) => {
     return (
         <nav className="sticky top-0 z-10 flex h-16 items-center border-b border-glass-border glass px-4 md:px-6 backdrop-blur-md gap-4">
             {/* Mobile Menu Button */}
