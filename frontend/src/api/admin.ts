@@ -143,7 +143,7 @@ export const syncExcel = async (userId: number = 2): Promise<{ status: string; m
     return response.data;
 };
 
-export const exportCollectionExcel = async (userId: number = 1): Promise<void> => {
+export const exportCollectionExcel = async (userId: number = 2): Promise<void> => {
     const response = await adminAxios.get(`/guardian/export/excel?user_id=${userId}`, {
         responseType: 'blob'
     });
@@ -156,7 +156,7 @@ export const exportCollectionExcel = async (userId: number = 1): Promise<void> =
     document.body.removeChild(link);
 };
 
-export const exportCollectionSqlite = async (userId: number = 1): Promise<void> => {
+export const exportCollectionSqlite = async (userId: number = 2): Promise<void> => {
     const response = await adminAxios.get(`/guardian/export/sqlite?user_id=${userId}`, {
         responseType: 'blob'
     });

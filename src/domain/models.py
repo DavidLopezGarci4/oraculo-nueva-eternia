@@ -401,6 +401,15 @@ class AuthorizedDeviceModel(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 class KaizenInsightModel(Base):
+    """
+    Kaizen Insights: Almacena sugerencias de mejora automática detectadas por el sistema.
+    """
+    __tablename__ = "kaizen_insights"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    target_type: Mapped[str] = mapped_column(String) # "product", "price", "logistics"
+    description: Mapped[str] = mapped_column(String)
+    priority: Mapped[int] = mapped_column(Integer, default=1)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 __all__ = [
     "Base", 
@@ -419,6 +428,7 @@ __all__ = [
     "SyncQueueModel",
     "LogisticRuleModel",
     "AuthorizedDeviceModel",
+    "StagedImportModel",
     "DOMAIN_VERSION"
 ]
 

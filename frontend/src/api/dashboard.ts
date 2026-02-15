@@ -74,7 +74,7 @@ axios.interceptors.request.use((config) => {
 });
 
 export const getDashboardStats = async (): Promise<DashboardStats> => {
-    const userId = localStorage.getItem('active_user_id') || '1';
+    const userId = localStorage.getItem('active_user_id') || '2';
     const response = await axios.get(`${API_BASE}/dashboard/stats`, {
         params: { user_id: userId }
     });
@@ -82,7 +82,7 @@ export const getDashboardStats = async (): Promise<DashboardStats> => {
 };
 
 export const getTopDeals = async (): Promise<TopDeal[]> => {
-    const userId = localStorage.getItem('active_user_id') || '1';
+    const userId = localStorage.getItem('active_user_id') || '2';
     const response = await axios.get(`${API_BASE}/dashboard/top-deals`, {
         params: { user_id: userId }
     });
@@ -119,7 +119,7 @@ export interface HallOfFameResponse {
 }
 
 export const getHallOfFame = async (): Promise<HallOfFameResponse> => {
-    const userId = localStorage.getItem('active_user_id') || '1';
+    const userId = localStorage.getItem('active_user_id') || '2';
     const response = await axios.get(`${API_BASE}/dashboard/hall-of-fame`, {
         params: { user_id: userId }
     });
@@ -127,7 +127,7 @@ export const getHallOfFame = async (): Promise<HallOfFameResponse> => {
 };
 
 export const getPeerToPeerOpportunities = async (): Promise<P2POpportunity[]> => {
-    const userId = localStorage.getItem('active_user_id') || '1';
+    const userId = localStorage.getItem('active_user_id') || '2';
     const response = await axios.get(`${API_BASE}/radar/p2p-opportunities`, {
         params: { user_id: userId }
     });

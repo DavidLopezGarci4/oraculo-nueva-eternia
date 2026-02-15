@@ -119,19 +119,31 @@ def verify_api_key(x_api_key: str = Header(None, alias="X-API-Key")):
 async def verify_device(
     request: Request,
     x_device_id: str = Header(None, alias="X-Device-ID"),
-    x_device_name: str = Header("Desconocido", alias="X-Device-Name")
+    x_device_name: str = Header("Desconocido", alias="X-Device-Name"),
+    x_api_key: str = Header(None, alias="X-API-Key")
 ):
     """
     Middleware protector (Ojo de Sauron).
-    Valida si el dispositivo está autorizado. Si es nuevo, envía una alerta de Telegram.
+    Valida si el dispositivo está autorizado. 
+    --- SOBERANÍA 3OX ---
+    Si se presenta la X-API-Key correcta, el dispositivo se autoriza automáticamente.
     """
-    # Si la API Key es válida y estamos en modo 'Bypass Local', podríamos saltar esto.
-    # Pero para Cloud, el blindaje es TOTAL.
     if not x_device_id:
-        # Si no hay ID, bloqueamos por seguridad (Phase 6 Shield)
         raise HTTPException(status_code=403, detail="X-Device-ID header missing. Access Denied by 3OX Shield.")
 
     with SessionCloud() as db:
+        # Lógica de Soberanía: Si tienes la Llave Maestra, eres el Dueño.
+        if x_api_key == settings.ORACULO_API_KEY:
+            # Asegurar que el dispositivo existe y está autorizado (Bypass Soberano)
+            device = db.query(AuthorizedDeviceModel).filter(AuthorizedDeviceModel.device_id == x_device_id).first()
+            if not device:
+                device = AuthorizedDeviceModel(device_id=x_device_id, device_name=x_device_name, is_authorized=True)
+                db.add(device)
+            else:
+                device.is_authorized = True
+            db.commit()
+            return x_device_id
+
         ip_address = request.client.host if request.client else "Unknown IP"
         is_authorized = await SecurityShield.check_access(x_device_id, x_device_name, ip_address, db)
         
@@ -1986,7 +1998,7 @@ async def import_wallapop_products(request: WallapopImportRequest):
     logger.info(f"[Wallapop Extension] Importados {imported} productos al Purgatorio")
     return {"status": "success", "imported": imported, "total_received": len(request.products)}
 
-@app.get("/api/users/{user_id}")
+@app.get("/api/users/{user_id}", dependencies=[Depends(verify_device)])
 async def get_user_settings(user_id: int):
     """
     Fase 15: Obtiene la configuración del usuario.
