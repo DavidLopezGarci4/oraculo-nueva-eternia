@@ -12,6 +12,7 @@ import re
 from datetime import datetime
 from sqlalchemy import func, select, and_, desc, text, or_
 from src.core.config import settings
+import sys
 from src.infrastructure.database_cloud import SessionCloud, engine_cloud
 from src.infrastructure.universal_migrator import migrate
 from src.domain.models import (
@@ -100,9 +101,11 @@ def ensure_scrapers_registered():
 
 # Call at startup
 try:
+    from src.infrastructure.database_cloud import init_cloud_db
+    init_cloud_db()
     ensure_scrapers_registered()
 except Exception as e:
-    logger.error(f"Scraper registration failed at startup: {e}")
+    logger.error(f"Startup initialization failed: {e}")
 
 # Configurar CORS para permitir peticiones universales (Útil para acceso móvil y Docker)
 app.add_middleware(
