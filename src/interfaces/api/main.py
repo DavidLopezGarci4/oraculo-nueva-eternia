@@ -2087,6 +2087,53 @@ async def get_user_settings(user_id: int):
             "role": user.role
         }
 
+@app.get("/api/system/audit", dependencies=[Depends(verify_api_key)])
+async def system_audit():
+    """
+    Fase 15: Auditoría de salud del sistema y conectividad.
+    """
+    from src.infrastructure.database_cloud import cloud_url
+    from src.domain.models import UserModel, ProductModel, CollectionItemModel
+    
+    db_type = "Postgres/Supabase" if "postgresql" in cloud_url else "SQLite/Local"
+    
+    with SessionCloud() as db:
+        try:
+            u_count = db.query(UserModel).count()
+            p_count = db.query(ProductModel).count()
+            c_count = db.query(CollectionItemModel).count()
+            
+            # Diagnostic check for David (ID 2)
+            david = db.query(UserModel).filter(UserModel.id == 2).first()
+            david_items = 0
+            if david:
+                david_items = db.query(CollectionItemModel).filter(
+                    CollectionItemModel.owner_id == 2, 
+                    CollectionItemModel.acquired == True
+                ).count()
+            
+            return {
+                "status": "ONLINE",
+                "database_engine": db_type,
+                "counts": {
+                    "users": u_count,
+                    "products": p_count,
+                    "collection_items": c_count
+                },
+                "david_diagnostic": {
+                    "exists": david is not None,
+                    "username": david.username if david else None,
+                    "acquired_items_target": 120,
+                    "acquired_items_reality": david_items
+                },
+                "environment": {
+                    "SUPABASE_DATABASE_URL_SET": settings.SUPABASE_DATABASE_URL is not None,
+                    "PYTHON_VERSION": sys.version
+                }
+            }
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Database connectivity issue: {str(e)}")
+
 @app.post("/api/users/{user_id}/location")
 async def update_user_location(user_id: int, location: str):
     """
