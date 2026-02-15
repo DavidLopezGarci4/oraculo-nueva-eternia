@@ -145,7 +145,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                         </h2>
                     </div>
                     <p className="max-w-xl text-[11px] md:text-sm text-white/40 font-medium">
-                        Bienvenido, <span className="text-white font-bold">{user?.username || (isAdmin ? 'Maestro' : 'Guardián')}</span>. La inteligencia de mercaderes converge.
+                        Bienvenido al Mando Central, <span className="text-white font-bold">{user?.username || (isAdmin ? 'Maestro' : 'Guardián')}</span>. La inteligencia de Nueva Eternia converge.
                     </p>
                 </div>
             </div>
@@ -158,8 +158,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                             <Zap className="h-4 w-4 md:h-5 md:w-5 text-brand-primary" />
                         </div>
                         <div className="text-center md:text-left">
-                            <p className="text-[7px] md:text-[10px] font-black uppercase tracking-widest text-white/30 mb-1">{isAdmin ? 'Vínculos Activos' : 'Catálogo Maestro'}</p>
-                            <h3 className="text-sm md:text-3xl font-black text-white">{isAdmin ? (stats?.match_count || 0) : (stats?.total_products || 0)}</h3>
+                            <p className="text-[7px] md:text-[10px] font-black uppercase tracking-widest text-white/30 mb-1">Vínculos Activos</p>
+                            <h3 className="text-sm md:text-3xl font-black text-white">{stats?.total_products || 0}</h3>
                         </div>
                     </div>
                 </div>
@@ -170,7 +170,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                         </div>
                         <div className="text-center md:text-left">
                             <p className="text-[7px] md:text-[10px] font-black uppercase tracking-widest text-white/30 mb-1">Fortaleza</p>
-                            <h3 className="text-sm md:text-3xl font-black text-white">{stats?.owned_count}</h3>
+                            <h3 className="text-sm md:text-3xl font-black text-white">{stats?.owned_count || 0}</h3>
                         </div>
                     </div>
                 </div>
@@ -181,7 +181,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                         </div>
                         <div className="text-center md:text-left">
                             <p className="text-[7px] md:text-[10px] font-black uppercase tracking-widest text-white/30 mb-1">Valor Venta</p>
-                            <h3 className="text-sm md:text-3xl font-black text-white">{stats?.financial?.market_value}€</h3>
+                            <h3 className="text-sm md:text-3xl font-black text-white">{(stats?.financial?.market_value || 0).toLocaleString('es-ES')}€</h3>
                         </div>
                     </div>
                 </div>

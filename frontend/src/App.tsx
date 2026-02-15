@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import Sidebar from './components/layout/Sidebar';
 import Navbar from './components/layout/Navbar';
 import Catalog from './pages/Catalog';
@@ -19,6 +20,7 @@ function App() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentUser, setCurrentUser] = useState<Hero | null>(null);
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(true);
   const [isUnauthorized, setIsUnauthorized] = useState(false);
   const [isSovereign, setIsSovereign] = useState<boolean>(localStorage.getItem('is_sovereign') === 'true');
@@ -86,7 +88,10 @@ function App() {
     // 2. Cambio de estado atómico
     setActiveUserId(newId);
 
-    // 3. Forzar refresco inmediato de datos de usuario para que el saludo cambie YA
+    // 3. Forzar reset absoluto de todas las consultas para David/Admin
+    queryClient.resetQueries();
+
+    // 4. Forzar refresco inmediato de datos de usuario para que el saludo cambie YA
     await fetchUser(newId);
   };
 
