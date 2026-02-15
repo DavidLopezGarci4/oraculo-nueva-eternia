@@ -260,6 +260,10 @@ class UserModel(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     location: Mapped[str] = mapped_column(String, default="ES") # e.g. 'ES', 'DE', 'IT' - Phase 15 Logistics
     
+    # 🔐 Seguridad & Recuperación
+    reset_token: Mapped[Optional[str]] = mapped_column(String, nullable=True, index=True)
+    reset_token_expiry: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    
     price_alerts: Mapped[List["PriceAlertModel"]] = relationship("PriceAlertModel", back_populates="user", cascade="all, delete-orphan")
     collection_items: Mapped[List["CollectionItemModel"]] = relationship(
         "CollectionItemModel",

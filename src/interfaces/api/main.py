@@ -51,6 +51,18 @@ class LoginRequest(BaseModel):
     email: str
     password: str
 
+class RegisterRequest(BaseModel):
+    username: str
+    email: str
+    password: str
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
 class CreateUserRequest(BaseModel):
     username: str
     email: str
@@ -262,21 +274,18 @@ class UserRoleUpdateRequest(BaseModel):
     role: str
 
 @app.post("/api/auth/register")
-async def register(request: LoginRequest):
+async def register(request: RegisterRequest):
     """
-    Fase de Reclutamiento: Permite a nuevos usuarios unirse como Guardianes.
+    Fase de Reclutamiento: Permite a nuevos usuarios unirse como Guardianes con nombre propio.
     """
     with SessionCloud() as db:
-        # Extraer username del email (antes de la @)
-        username = request.email.split("@")[0].capitalize()
-        
         # Verificar duplicados
-        exists = db.query(UserModel).filter(or_(UserModel.email == request.email, UserModel.username == username)).first()
+        exists = db.query(UserModel).filter(or_(UserModel.email == request.email, UserModel.username == request.username)).first()
         if exists:
-            raise HTTPException(status_code=400, detail="Este héroe ya existe en el Oráculo.")
+            raise HTTPException(status_code=400, detail="Este nombre de héroe o email ya existe en el Oráculo.")
             
         new_user = UserModel(
-            username=username,
+            username=request.username,
             email=request.email,
             hashed_password=SecurityShield.hash_password(request.password),
             role="viewer" # Todos los nuevos son Guardianes
@@ -286,7 +295,58 @@ async def register(request: LoginRequest):
         db.refresh(new_user)
         
         logger.info(f"👤 Nuevo Héroe Reclutado: {new_user.username} ({new_user.role})")
-        return {"status": "success", "message": "Héroe reclutado con éxito. Ahora puedes entrar."}
+        return {"status": "success", "message": "¡Héroe reclutado con éxito! Ahora puedes entrar."}
+
+@app.post("/api/auth/forgot-password")
+async def forgot_password(request: ForgotPasswordRequest):
+    """
+    Fase 15: Genera un token de reseteo y lo envía por correo.
+    """
+    import secrets
+    from datetime import timedelta
+    from src.infrastructure.email_service import EmailService
+    
+    with SessionCloud() as db:
+        user = db.query(UserModel).filter(UserModel.email == request.email).first()
+        if not user:
+            # Por seguridad, no decimos si el email existe o no
+            return {"status": "success", "message": "Si el correo es correcto, recibirás un enlace de recuperación."}
+            
+        token = secrets.token_urlsafe(32)
+        user.reset_token = token
+        user.reset_token_expiry = datetime.utcnow() + timedelta(hours=1)
+        db.commit()
+        
+        # Enviar email (esto es asíncrono en un mundo ideal, pero aquí es síncrono para esta fase)
+        sent = EmailService.send_reset_email(user.email, user.username, token)
+        
+        return {
+            "status": "success", 
+            "message": "Enlace enviado. Revisa tu correo (y el SPAM).",
+            "debug_token": token if settings.DEBUG else None # Solo para pruebas locales
+        }
+
+@app.post("/api/auth/reset-password")
+async def reset_password(request: ResetPasswordRequest):
+    """
+    Fase 15: Valida el token y cambia la contraseña.
+    """
+    with SessionCloud() as db:
+        user = db.query(UserModel).filter(
+            UserModel.reset_token == request.token,
+            UserModel.reset_token_expiry > datetime.utcnow()
+        ).first()
+        
+        if not user:
+            raise HTTPException(status_code=400, detail="El token es inválido o ha caducado.")
+            
+        user.hashed_password = SecurityShield.hash_password(request.new_password)
+        user.reset_token = None
+        user.reset_token_expiry = None
+        db.commit()
+        
+        logger.info(f"🔑 Contraseña reseteada para: {user.username}")
+        return {"status": "success", "message": "Tu llave ha sido renovada. Ya puedes entrar al Oráculo."}
 
 @app.post("/api/auth/login")
 async def login(request: LoginRequest):

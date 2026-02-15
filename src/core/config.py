@@ -27,6 +27,13 @@ class Settings(BaseSettings):
     TELEGRAM_BOT_TOKEN: str | None = None
     TELEGRAM_CHAT_ID: str | None = None
 
+    # Email (SMTP) - Phase 15 Recovery
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USER: str | None = None
+    SMTP_PASS: str | None = None
+    SMTP_FROM: str = "Oráculo de Nueva Eternia <notificaciones@eternia.com>"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_ignore_empty=True,

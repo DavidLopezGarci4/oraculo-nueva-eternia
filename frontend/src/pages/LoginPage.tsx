@@ -7,12 +7,25 @@ interface LoginPageProps {
 }
 
 const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
-    const [mode, setMode] = useState<'login' | 'register'>('login');
+    const [mode, setMode] = useState<'login' | 'register' | 'forgot' | 'reset'>('login');
     const [email, setEmail] = useState('');
+    const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
+    const [token, setToken] = useState<string | null>(null);
+
+    // Capturar token de la URL si existe (para el modo reset)
+    React.useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.hash.split('?')[1]);
+        const resetToken = urlParams.get('token');
+        if (resetToken) {
+            setToken(resetToken);
+            setMode('reset');
+        }
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -25,24 +38,46 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                 const response = await axios.post('/api/auth/login', { email, password });
                 if (response.data.status === 'success') {
                     const { user, is_sovereign } = response.data;
-
-                    // Persistencia local
                     localStorage.setItem('active_user_id', user.id.toString());
                     localStorage.setItem('is_sovereign', is_sovereign ? 'true' : 'false');
                     localStorage.setItem('user_email', email);
                     localStorage.setItem('is_logged_in', 'true');
-
                     onLoginSuccess(user, is_sovereign);
                 }
-            } else {
-                const response = await axios.post('/api/auth/register', { email, password });
+            } else if (mode === 'register') {
+                const response = await axios.post('/api/auth/register', {
+                    email,
+                    username: username || email.split('@')[0],
+                    password
+                });
                 if (response.data.status === 'success') {
                     setSuccessMessage('¡Héroe reclutado! Ahora puedes entrar.');
                     setMode('login');
                 }
+            } else if (mode === 'forgot') {
+                const response = await axios.post('/api/auth/forgot-password', { email });
+                if (response.data.status === 'success') {
+                    setSuccessMessage(response.data.message);
+                }
+            } else if (mode === 'reset') {
+                if (password !== confirmPassword) {
+                    setError('Las contraseñas no coinciden.');
+                    setLoading(false);
+                    return;
+                }
+                const response = await axios.post('/api/auth/reset-password', {
+                    token,
+                    new_password: password
+                });
+                if (response.data.status === 'success') {
+                    setSuccessMessage(response.data.message);
+                    setMode('login');
+                    // Limpiar URL
+                    window.location.hash = '/';
+                }
             }
         } catch (err: any) {
-            console.error(`${mode === 'login' ? 'Login' : 'Register'} failed`, err);
+            console.error(`${mode} failed`, err);
             setError(err.response?.data?.detail || 'Error de conexión con el Oráculo.');
         } finally {
             setLoading(false);
@@ -64,63 +99,108 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                         <div className="mb-6 relative">
                             <div className="absolute inset-0 bg-brand-primary/20 blur-2xl rounded-full" />
                             <div className="relative flex h-20 w-20 items-center justify-center rounded-3xl bg-black border border-white/10 shadow-2xl">
-                                {mode === 'login' ? (
-                                    <Sparkles className="h-10 w-10 text-brand-primary animate-pulse" />
-                                ) : (
-                                    <UserPlus className="h-10 w-10 text-brand-primary animate-pulse" />
-                                )}
+                                {mode === 'login' && <Sparkles className="h-10 w-10 text-brand-primary animate-pulse" />}
+                                {mode === 'register' && <UserPlus className="h-10 w-10 text-brand-primary animate-pulse" />}
+                                {(mode === 'forgot' || mode === 'reset') && <Lock className="h-10 w-10 text-brand-primary animate-pulse" />}
                             </div>
                         </div>
                         <h1 className="text-3xl font-black uppercase tracking-[0.2em] text-white">
                             Nueva <span className="text-brand-primary">Eternia</span>
                         </h1>
                         <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.4em] text-white/30">
-                            {mode === 'login' ? 'Identificación de Héroe' : 'Reclutamiento de Héroe'}
+                            {mode === 'login' && 'Identificación de Héroe'}
+                            {mode === 'register' && 'Reclutamiento de Héroe'}
+                            {mode === 'forgot' && 'Recuperación de Eternia'}
+                            {mode === 'reset' && 'Renovación de Llave'}
                         </p>
                     </div>
 
                     {/* Form */}
                     <form onSubmit={handleSubmit} className="space-y-6">
-                        <div className="space-y-2">
-                            <label className="text-[9px] font-black uppercase tracking-widest text-white/40 ml-1">
-                                Correo Electrónico
-                            </label>
-                            <div className="relative group">
-                                <User className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-white/20 group-focus-within:text-brand-primary transition-colors" />
-                                <input
-                                    type="email"
-                                    name="email"
-                                    id="email"
-                                    autoComplete="username"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    placeholder="arquitecto@eternia.com"
-                                    className="w-full rounded-2xl border border-white/10 bg-white/5 py-4 pl-12 pr-4 text-sm text-white placeholder:text-white/10 outline-none transition-all focus:border-brand-primary/50 focus:ring-1 focus:ring-brand-primary/20"
-                                    required
-                                    autoFocus
-                                />
+                        {mode === 'register' && (
+                            <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-500">
+                                <label className="text-[9px] font-black uppercase tracking-widest text-white/40 ml-1">
+                                    Nombre de Héroe
+                                </label>
+                                <div className="relative group">
+                                    <User className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-white/20 group-focus-within:text-brand-primary transition-colors" />
+                                    <input
+                                        type="text"
+                                        name="username"
+                                        id="username"
+                                        value={username}
+                                        onChange={(e) => setUsername(e.target.value)}
+                                        placeholder="David, Héroe de Eternia..."
+                                        className="w-full rounded-2xl border border-white/10 bg-white/5 py-4 pl-12 pr-4 text-sm text-white placeholder:text-white/10 outline-none transition-all focus:border-brand-primary/50 focus:ring-1 focus:ring-brand-primary/20"
+                                        required={mode === 'register'}
+                                    />
+                                </div>
                             </div>
-                        </div>
+                        )}
 
-                        <div className="space-y-2">
-                            <label className="text-[9px] font-black uppercase tracking-widest text-white/40 ml-1">
-                                Contraseña
-                            </label>
-                            <div className="relative group">
-                                <Lock className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-white/20 group-focus-within:text-brand-primary transition-colors" />
-                                <input
-                                    type="password"
-                                    name="password"
-                                    id="password"
-                                    autoComplete={mode === 'login' ? "current-password" : "new-password"}
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    placeholder="••••••••••••"
-                                    className="w-full rounded-2xl border border-white/10 bg-white/5 py-4 pl-12 pr-4 text-sm text-white placeholder:text-white/10 outline-none transition-all focus:border-brand-primary/50 focus:ring-1 focus:ring-brand-primary/20"
-                                    required
-                                />
+                        {mode !== 'reset' && (
+                            <div className="space-y-2">
+                                <label className="text-[9px] font-black uppercase tracking-widest text-white/40 ml-1">
+                                    Correo Electrónico
+                                </label>
+                                <div className="relative group">
+                                    <User className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-white/20 group-focus-within:text-brand-primary transition-colors" />
+                                    <input
+                                        type="email"
+                                        name="email"
+                                        id="email"
+                                        autoComplete="username"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        placeholder="arquitecto@eternia.com"
+                                        className="w-full rounded-2xl border border-white/10 bg-white/5 py-4 pl-12 pr-4 text-sm text-white placeholder:text-white/10 outline-none transition-all focus:border-brand-primary/50 focus:ring-1 focus:ring-brand-primary/20"
+                                        required
+                                        autoFocus={mode === 'login' || mode === 'forgot'}
+                                    />
+                                </div>
                             </div>
-                        </div>
+                        )}
+
+                        {mode !== 'forgot' && (
+                            <div className="space-y-2">
+                                <label className="text-[9px] font-black uppercase tracking-widest text-white/40 ml-1">
+                                    {mode === 'reset' ? 'Nueva Contraseña' : 'Contraseña'}
+                                </label>
+                                <div className="relative group">
+                                    <Lock className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-white/20 group-focus-within:text-brand-primary transition-colors" />
+                                    <input
+                                        type="password"
+                                        name="password"
+                                        id="password"
+                                        autoComplete={mode === 'register' || mode === 'reset' ? "new-password" : "current-password"}
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        placeholder="••••••••••••"
+                                        className="w-full rounded-2xl border border-white/10 bg-white/5 py-4 pl-12 pr-4 text-sm text-white placeholder:text-white/10 outline-none transition-all focus:border-brand-primary/50 focus:ring-1 focus:ring-brand-primary/20"
+                                        required
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        {mode === 'reset' && (
+                            <div className="space-y-2">
+                                <label className="text-[9px] font-black uppercase tracking-widest text-white/40 ml-1">
+                                    Confirmar Nueva Contraseña
+                                </label>
+                                <div className="relative group">
+                                    <Lock className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-white/20 group-focus-within:text-brand-primary transition-colors" />
+                                    <input
+                                        type="password"
+                                        value={confirmPassword}
+                                        onChange={(e) => setConfirmPassword(e.target.value)}
+                                        placeholder="••••••••••••"
+                                        className="w-full rounded-2xl border border-white/10 bg-white/5 py-4 pl-12 pr-4 text-sm text-white placeholder:text-white/10 outline-none transition-all focus:border-brand-primary/50 focus:ring-1 focus:ring-brand-primary/20"
+                                        required
+                                    />
+                                </div>
+                            </div>
+                        )}
 
                         {error && (
                             <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-center text-[10px] font-bold text-red-400 animate-in shake duration-500">
@@ -144,7 +224,10 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                                     <Loader2 className="h-4 w-4 animate-spin" />
                                 ) : (
                                     <>
-                                        {mode === 'login' ? 'Entrar al Oráculo' : 'Unirse a la Resistencia'}
+                                        {mode === 'login' && 'Entrar al Oráculo'}
+                                        {mode === 'register' && 'Unirse a la Resistencia'}
+                                        {mode === 'forgot' && 'Enviar Enlace de Recuperación'}
+                                        {mode === 'reset' && 'Confirmar Nueva Llave'}
                                         <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                                     </>
                                 )}
@@ -154,16 +237,31 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                     </form>
 
                     <div className="mt-8 flex flex-col items-center gap-4">
-                        <button
-                            onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
-                            className="text-[9px] font-black text-brand-primary hover:text-white transition-colors uppercase tracking-[0.2em]"
-                        >
-                            {mode === 'login' ? '¿Eres un nuevo Héroe? Regístrate aquí' : '¿Ya tienes una llave? Entra al Oráculo'}
-                        </button>
-
                         {mode === 'login' && (
-                            <button className="text-[9px] font-bold text-white/20 hover:text-white/60 transition-colors uppercase tracking-widest">
-                                ¿Olvidaste tu llave? Solicita una nueva
+                            <>
+                                <button
+                                    onClick={() => setMode('register')}
+                                    className="text-[9px] font-black text-brand-primary hover:text-white transition-colors uppercase tracking-[0.2em]"
+                                >
+                                    ¿Eres un nuevo Héroe? Regístrate aquí
+                                </button>
+                                <button
+                                    onClick={() => setMode('forgot')}
+                                    className="text-[9px] font-bold text-white/20 hover:text-white/60 transition-colors uppercase tracking-widest"
+                                >
+                                    ¿Olvidaste tu llave? Solicita una nueva
+                                </button>
+                            </>
+                        )}
+                        {(mode === 'register' || mode === 'forgot' || mode === 'reset') && (
+                            <button
+                                onClick={() => {
+                                    setMode('login');
+                                    window.location.hash = '/';
+                                }}
+                                className="text-[9px] font-black text-brand-primary hover:text-white transition-colors uppercase tracking-[0.2em]"
+                            >
+                                Volver a Identificación
                             </button>
                         )}
                     </div>
