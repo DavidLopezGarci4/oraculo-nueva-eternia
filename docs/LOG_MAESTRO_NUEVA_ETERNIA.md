@@ -1053,3 +1053,35 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
 - **Ruta a El Pabellón**:
     - **P2P Tagging**: Configuración forzada de `source_type="Peer-to-Peer"` para poblar automáticamente la sección de Subastas/Mercado del Oráculo.
 - **Verificación**: Conteo masivo validado mediante logs y capturas de pantalla de depuración.
+
+### 🛡️ Fase 56: Blindaje Operativo & Cancelación Cooperativa (15/02/2026)
+
+- **Hitos**: Estabilización de conexiones de base de datos para incursiones largas, diagnóstico SMTP, eliminación de usuarios, cancelación manual de scrapers y optimización UX de refrescos.
+- **Estado**: ✅ COMPLETADO Y VERIFICADO
+
+#### 56.1 Pool de Conexiones (Database Armor)
+*   **Pool Pre-Ping**: Añadido `pool_pre_ping=True` al engine de SQLAlchemy para verificar conexiones antes de usarlas.
+*   **Pool Recycle**: Configurado `pool_recycle=1800` (30 min) para reciclar conexiones automáticamente durante incursiones largas.
+*   **Timeout de Incursión**: Aumentado de 600s (10 min) a 1800s (30 min) para acomodar escaneos comprehensivos.
+
+#### 56.2 Cancelación Cooperativa de Scrapers
+*   **Flag de Cancelación**: Implementado `threading.Event` global (`scraper_cancel_event`) como mecanismo de parada cooperativa.
+*   **Ejecución Secuencial**: Los scrapers ahora corren secuencialmente (en lugar de en paralelo) con timeout individual de 5 min por scraper.
+*   **Parada Limpia**: El endpoint `POST /api/scrapers/stop` activa la señal antes de matar procesos hijos, permitiendo que el pipeline aborte entre scrapers.
+*   **Persistencia Parcial**: Las ofertas recolectadas antes de la cancelación se persisten correctamente en la base de datos.
+
+#### 56.3 Gestión de Héroes (User Deletion)
+*   **Endpoint de Eliminación**: Nuevo `DELETE /api/admin/users/{user_id}` para borrado definitivo de usuarios y sus items de colección asociados.
+*   **Blindaje Admin**: Protección contra la eliminación accidental de cuentas de administrador.
+*   **UI de Borrado**: Botón con icono Trash2 y diálogo de confirmación en el panel de Configuración.
+
+#### 56.4 Diagnóstico SMTP & Email
+*   **Mapeo Docker**: Añadidas las 5 variables SMTP (`HOST`, `PORT`, `USER`, `PASS`, `FROM`) al `docker-compose.prod.yml`.
+*   **Audit Endpoint**: El endpoint `/api/system/audit` ahora reporta el estado de configuración SMTP.
+*   **Logging Mejorado**: `EmailService` con logs detallados de errores de conexión, autenticación y envío.
+
+#### 56.5 Optimización UX de Refrescos
+*   **Dashboard**: Intervals de 60s → 5 min (stats, history, matchStats, hallOfFame) y 5 min → 10 min (topDeals).
+*   **Purgatorio**: De 30s → 5 min (refetch + sync retry).
+*   **Config**: De 10s → 60s (polling admin).
+*   **RadarP2P**: De 60s → 5 min.

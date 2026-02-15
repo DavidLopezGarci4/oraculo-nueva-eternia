@@ -325,6 +325,13 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
     - [x] Saneamiento masivo de scores en DB Cloud (122 deals recuperados).
     - [x] Confirmación de extracción de benchmarks Avg/MSRP desde ActionFigure411.
 
+- [x] **Phase 56: Blindaje Operativo & Cancelación Cooperativa (15/02/2026)**
+    - [x] Pool de conexiones BD (`pool_pre_ping`, `pool_recycle=1800`) contra desconexiones en incursiones largas.
+    - [x] Cancelación cooperativa de scrapers con `threading.Event` y ejecución secuencial.
+    - [x] Eliminación de usuarios (`DELETE /api/admin/users/{id}`) con protección admin.
+    - [x] Diagnóstico SMTP en audit endpoint y mapeo Docker de variables de email.
+    - [x] Optimización masiva de intervalos de refresco frontend (60s→5min).
+
 ---
 
 ## ✅ Plan de Verificación

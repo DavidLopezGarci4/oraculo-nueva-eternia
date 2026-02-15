@@ -31,10 +31,12 @@ Cuando un Administrador activa la **Incursión Total** desde el Panel de Configu
 3.  **Estado Global**: Actualiza la tabla `scraper_status` a `running` y crea una entrada en `scraper_execution_log`.
 4.  **Inyección de Callback**: Se inyecta una función de log en vivo en cada spider para que el usuario pueda ver el progreso en tiempo real desde la consola táctica.
 
-### Fase C: Ejecución Paralela
-1.  **Pipeline Initialization**: El `ScrapingPipeline` recibe la lista de objetos Scraper.
-2.  **`asyncio.gather`**: Orquesta la ejecución de todos los métodos `.search()` de forma concurrente.
-3.  **Timeouts**: Cada spider tiene un límite rígido de 10 minutos (600s). Si una tienda no responde, se cancela individualmente para no bloquear al resto.
+### Fase C: Ejecución Secuencial con Cancelación (Phase 56)
+1.  **Pipeline Initialization**: El `ScrapingPipeline` recibe la lista de objetos Scraper y un `cancel_event` (`threading.Event`) para soporte de cancelación cooperativa.
+2.  **Ejecución Secuencial**: Los scrapers se ejecutan uno tras otro (ya no en paralelo con `asyncio.gather`). Esto permite cancelación limpia entre cada spider.
+3.  **Timeouts**: Cada spider tiene un límite de **5 minutos (300s)** individual. El timeout global de la incursión es de **30 minutos (1800s)**.
+4.  **Cancelación Cooperativa**: El pipeline consulta el `cancel_event` antes de ejecutar cada scraper. Si la señal está activa (activada por `POST /api/scrapers/stop`), aborta el ciclo y devuelve las ofertas parciales recolectadas.
+5.  **Persistencia Parcial**: Las ofertas recolectadas antes de la cancelación se persisten normalmente en la base de datos.
 
 ---
 
@@ -145,6 +147,9 @@ sequenceDiagram
         SM-->>Pipe: MatchResult (Score, Reason)
     end
     
+
+> [!IMPORTANT]
+> **[Phase 56] Cambio de Arquitectura**: A partir de Febrero 2026, los scrapers corren **secuencialmente** en lugar de en paralelo. Esto permite cancelación cooperativa entre cada scraper y timeouts individuales de 5 min. Ver `scraper_cancel_event` en `main.py` y `cancel_event` en `pipeline.py`.
 
 ---
 

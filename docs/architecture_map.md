@@ -47,7 +47,8 @@ Ecosistema moderno en React.
 - El proyecto ha sido consolidado eliminando el legado de Streamlit.
 - Los scripts de la raíz están en proceso de migración hacia `scripts/` o `src/application/jobs/` para mantener la pureza de la raíz.
 - **Phase 55**: Restauración del Legado y Motor de Graduación Avanzada (ASTM/C).
+- **Phase 56**: Blindaje de conexión BD (`pool_pre_ping`, `pool_recycle`), cancelación cooperativa de scrapers (`threading.Event`), eliminación de usuarios, diagnóstico SMTP y optimización de intervalos de refresco frontend.
 
 ---
 
-*Última actualización: 08/02/2026 - Fase 55: Legado & Grading Implementation.*
+*Última actualización: 15/02/2026 - Fase 56: Blindaje Operativo & Cancelación Cooperativa.*

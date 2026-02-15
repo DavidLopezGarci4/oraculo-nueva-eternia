@@ -29,6 +29,7 @@ Tu centro de mando para los 13 scrapers activos:
 Como Arquitecto, tienes el control sobre quién accede al Oráculo y con qué permisos:
 - **Control de Rangos**: Promover Guardianes a Maestros o degradar perfiles dinámicamente.
 - **Protocolo de Reseteo**: Iniciar solicitudes de cambio de contraseña para otros héroes.
+- **Eliminación Definitiva**: Borrado permanente de usuarios y todos sus datos de colección asociados (**protección anti-borrado de admins integrada**).
 - **Auditoría de Fortaleza**: Visualización del tamaño de la colección y actividad de cada usuario.
 - **Expulsión Reactiva**: El sistema monitoriza en tiempo real los cambios de identidad; si un Administrador cambia a un perfil de Guardián mientras está en el Mando, el sistema lo expulsará automáticamente al Tablero por seguridad.
 
@@ -37,6 +38,13 @@ Como Arquitecto, la integridad del Reino depende de la discreción:
 - **Zero-Leak Policy**: Prohibición de claves hardcoded en el código. Todas las llaves maestras residen en la Bóveda de Secretos (.env / GitHub Secrets).
 - **Limpieza de Rastro**: El sistema ignora y purga automáticamente cualquier rastro de diagnóstico (.html, .png) generado durante las incursiones para no dejar huellas en los registros del Código.
 
-## 6. El Bastión de Datos (Auditoría) 🏛️
+## 7. El Bastión de Datos (Auditoría) 🏛️
 - **Ghost Sync**: Gestión del búfer de acciones pendientes para asegurar que ningún cambio administrativo se pierda por fallos de red.
 - **Trazabilidad Sirius**: Registro inmutable de quién y cuándo realizó cada acción crítica en el Reino.
+- **Diagnóstico SMTP**: El endpoint `/api/system/audit` reporta el estado de la configuración de correo electrónico.
+
+## 8. Control de Incursiones (Parada & Cancelación) 🛑
+- **Cancelación Cooperativa**: El botón "Detener Scrapers" envía una señal de cancelación que aborta la incursión entre scrapers sin pérdida de datos.
+- **Persistencia Parcial**: Las ofertas recolectadas antes de la cancelación se guardan automáticamente en la base de datos.
+- **Hardware Kill**: Los procesos hijos de Playwright/Chromium se eliminan como respaldo para liberar recursos del servidor.
+- **Reset de Cola**: Tras una parada, el sistema queda libre para iniciar nuevas incursiones inmediatamente.

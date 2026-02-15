@@ -71,6 +71,18 @@ El sistema ahora permite una valoración quirúrgica de la colección personal m
 - **Ajuste Fino (Grading)**: Un deslizador de 1-10 permite capturar el "Shelf Wear" (esquinas dobladas, burbuja amarillenta). Cada reducción de grado aplica un decremento logarítmico del 4% sobre la base de mercado.
 - **ROI Dinámico**: El retorno de inversión se recalcula en tiempo real en el frontend mediante el `Advanced Valuation Engine` antes de persistir en el backend.
 
+### 7. Blindaje de Conexión BD (Phase 56)
+La resiliencia de las incursiones largas depende de la salud de la conexión a Supabase:
+- **Pool Pre-Ping**: Cada query verifica que la conexión esté viva antes de ejecutarse. Si no, se crea una nueva automáticamente.
+- **Pool Recycle (1800s)**: Las conexiones se reciclan cada 30 minutos, evitando que Supabase las cierre por inactividad durante incursiones de 3+ horas.
+- **Timeout Global**: 30 minutos por incursión completa. Timeout individual de 5 min por scraper.
+
+### 8. Cancelación Cooperativa de Scrapers (Phase 56)
+El sistema de parada de incursiones ahora opera en dos capas:
+- **Capa Software**: Un `threading.Event` global actúa como señal de cancelación. El `ScrapingPipeline` consulta este flag entre cada scraper. Si está activo, aborta limpiamente y devuelve las ofertas parciales.
+- **Capa Hardware**: `psutil` mata procesos hijo de Playwright/Chromium como respaldo.
+- **Ejecución Secuencial**: Los scrapers corren uno tras otro (no en paralelo), permitiendo cancelación precisa e individual timeouts de 5 min.
+
 ---
 
-*Última actualización: 08/02/2026 - Fase 55: Restauración del Legado & Graduación Avanzada.*
+*Última actualización: 15/02/2026 - Fase 56: Blindaje Operativo & Cancelación Cooperativa.*

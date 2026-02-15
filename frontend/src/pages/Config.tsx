@@ -108,11 +108,14 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
         }
     });
 
+    // Adaptive polling: 5s when scrapers running, 60s when idle
+    const hasRunning = statuses.some(s => s.status === 'running');
     useEffect(() => {
         fetchData();
-        const interval = setInterval(fetchData, 60000); // Polling every 60s
+        const pollMs = hasRunning ? 5000 : 60000;
+        const interval = setInterval(fetchData, pollMs);
         return () => clearInterval(interval);
-    }, []);
+    }, [hasRunning]);
 
     const handleUpdateLocation = async (loc: string) => {
         setSavingSettings(true);
@@ -366,18 +369,18 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                     <div className="flex items-center gap-3">
                                         <button
                                             onClick={() => {
-                                                if (confirm('¿DETENER TODAS LAS INCURSIONES? Esta acción forzará el cierre de todos los procesos de extracción.')) {
+                                                if (confirm('¿DETENER TODAS LAS INCURSIONES? Esta acción forzará el cierre de todos los procesos de extracción y limpiará la cola.')) {
                                                     stopScrapersMutation.mutate();
                                                 }
                                             }}
-                                            disabled={!statuses.some(s => s.status === 'running')}
-                                            className={`group flex items-center gap-3 rounded-2xl border px-6 py-4 font-black transition-all shadow-xl ${statuses.some(s => s.status === 'running')
-                                                ? 'bg-red-500 text-white border-red-400 hover:scale-105 active:scale-95 shadow-red-500/20'
-                                                : 'bg-white/5 border-white/10 text-white/20 opacity-30 cursor-not-allowed'}`}
+                                            className={`group flex items-center gap-3 rounded-2xl border px-6 py-4 font-black transition-all shadow-xl hover:scale-105 active:scale-95 ${statuses.some(s => s.status === 'running')
+                                                ? 'bg-red-500 text-white border-red-400 shadow-red-500/20 animate-pulse'
+                                                : 'bg-red-500/20 text-red-300 border-red-500/30 hover:bg-red-500/40 hover:text-red-200 shadow-red-500/10'}`}
                                         >
-                                            <ShieldAlert className={`h-5 w-5 ${statuses.some(s => s.status === 'running') ? 'animate-pulse' : ''}`} />
-                                            <span className="text-sm uppercase tracking-widest">Protocolo Emergency</span>
+                                            <ShieldAlert className={`h-5 w-5 ${statuses.some(s => s.status === 'running') ? 'animate-bounce' : ''}`} />
+                                            <span className="text-sm uppercase tracking-widest">🛑 Detener Todo</span>
                                         </button>
+
 
                                         <button
                                             onClick={() => runScrapersMutation.mutate('all')}
@@ -414,15 +417,19 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                                 <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase ${s.status === 'running' ? 'bg-blue-500/20 text-blue-400' : 'bg-white/5 text-white/30'}`}>
                                                     {s.status === 'running' ? 'En Ejecución' : 'Standby'}
                                                 </span>
-                                                <button
-                                                    onClick={() => runScrapersMutation.mutate(s.spider_name)}
-                                                    disabled={statuses.some(stat => stat.status === 'running')}
-                                                    className={`h-8 w-8 rounded-xl flex items-center justify-center border transition-all ${statuses.some(stat => stat.status === 'running')
-                                                        ? 'bg-transparent border-transparent opacity-0 cursor-default'
-                                                        : 'bg-white/5 border-white/10 hover:bg-brand-primary/20 hover:border-brand-primary/40 text-white/40 hover:text-brand-primary active:scale-90 hover:scale-110'}`}
-                                                >
-                                                    <Play className="h-3 w-3 fill-current" />
-                                                </button>
+                                                {s.status === 'running' ? (
+                                                    <div className="h-8 w-8 rounded-xl flex items-center justify-center border border-brand-primary/40 bg-brand-primary/10">
+                                                        <Loader2 className="h-3.5 w-3.5 animate-spin text-brand-primary" />
+                                                    </div>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => runScrapersMutation.mutate(s.spider_name)}
+                                                        disabled={statuses.some(stat => stat.status === 'running')}
+                                                        className="h-8 w-8 rounded-xl flex items-center justify-center border bg-white/5 border-white/10 hover:bg-brand-primary/20 hover:border-brand-primary/40 text-white/40 hover:text-brand-primary active:scale-90 hover:scale-110 transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:scale-100"
+                                                    >
+                                                        <Play className="h-3 w-3 fill-current" />
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
                                     ))}
