@@ -1,4 +1,4 @@
-import { Search, Bell, Menu } from 'lucide-react';
+import { Search, Bell, Menu, Repeat } from 'lucide-react';
 import masterRoleImg from '../../assets/role-master.png';
 import guardianRoleImg from '../../assets/role-guardian.png';
 
@@ -9,11 +9,13 @@ interface NavbarProps {
     showSearch?: boolean;
     searchValue?: string;
     onSearchChange?: (value: string) => void;
-    user: Hero | null;
-    onIdentityChange: () => void;
+    notifications?: number; // Added
+    isSovereign?: boolean; // Added
+    user: Hero | null; // Kept
+    onIdentityChange?: () => void; // Changed to optional
 }
 
-const Navbar: React.FC<NavbarProps> = ({ onMenuClick, showSearch = true, searchValue = "", onSearchChange, user, onIdentityChange }) => {
+const Navbar = ({ onMenuClick, showSearch = true, searchValue = "", onSearchChange, user, notifications = 3, isSovereign = false, onIdentityChange }: NavbarProps) => {
     return (
         <nav className="sticky top-0 z-10 flex h-16 items-center border-b border-glass-border glass px-4 md:px-6 backdrop-blur-md gap-4">
             {/* Mobile Menu Button */}
@@ -40,9 +42,11 @@ const Navbar: React.FC<NavbarProps> = ({ onMenuClick, showSearch = true, searchV
             </div>
 
             <div className="flex items-center gap-2 md:gap-6 shrink-0">
-                <button className="relative p-2 text-white/60 hover:text-white transition-colors">
+                <button className="relative p-2 text-white/60 hover:text-white group">
                     <Bell className="h-5 w-5" />
-                    <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-brand-primary"></span>
+                    {notifications > 0 && (
+                        <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-brand-primary border border-black shadow-[0_0_8px_rgba(14,165,233,0.5)]" title={`${notifications} notificaciones`} />
+                    )}
                 </button>
 
                 {/* Identidad del Héroe */}
@@ -66,19 +70,19 @@ const Navbar: React.FC<NavbarProps> = ({ onMenuClick, showSearch = true, searchV
                         </span>
                     </div>
 
-                    {/* Botón de Cambio Rápido (Solo para Admin ID 1) */}
-                    {user?.id === 1 && (
+                    {/* Botón de Cambio Rápido (Solo para Admin ID 1 o Sesión Soberana) */}
+                    {(user?.id === 1 || isSovereign) && (
                         <button
                             onClick={() => {
                                 const currentUser = localStorage.getItem('active_user_id') || '1';
                                 const nextUser = currentUser === '1' ? '2' : '1';
                                 localStorage.setItem('active_user_id', nextUser);
-                                onIdentityChange(); // Trigger re-fetch in App.tsx
+                                if (onIdentityChange) onIdentityChange(); // Trigger re-fetch in App.tsx
                             }}
-                            className="ml-2 p-2 rounded-lg bg-brand-primary/10 text-brand-primary hover:bg-brand-primary/20 transition-all border border-brand-primary/20"
-                            title="Cambiar de Héroe"
+                            className="ml-2 p-2 rounded-lg bg-brand-primary/10 text-brand-primary hover:bg-brand-primary hover:text-white transition-all border border-brand-primary/20"
+                            title="Alternar Identidad (Admin/David)"
                         >
-                            <Menu className="h-4 w-4" />
+                            <Repeat className="h-4 w-4" />
                         </button>
                     )}
                 </div>

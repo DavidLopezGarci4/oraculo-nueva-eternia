@@ -68,14 +68,20 @@ function App() {
     setActiveUserId(2); // Reset to default
   };
 
-  const handleIdentityChange = () => {
-    // Solo permitimos el switch si el usuario actual tiene ID 1 (Admin/David Maestro)
-    const storedId = parseInt(localStorage.getItem('active_user_id') || '2');
-    if (storedId !== 1 && !isSovereign) {
+  const handleIdentityChange = (targetId?: number) => {
+    // Solo permitimos el switch si el usuario actual tiene ID 1 (Admin/David Maestro) o es Soberano
+    if (!isSovereign && activeUserId !== 1) {
       console.warn("Hero Switch Denied: Solo el Arquitecto (Admin) tiene este poder.");
       return;
     }
-    const newId = (parseInt(localStorage.getItem('active_user_id') || '2')) === 1 ? 2 : 1;
+
+    let newId: number;
+    if (targetId) {
+      newId = targetId;
+    } else {
+      newId = activeUserId === 1 ? 2 : 1;
+    }
+
     localStorage.setItem('active_user_id', newId.toString());
     setActiveUserId(newId);
   };
@@ -154,6 +160,7 @@ function App() {
           searchValue={searchQuery}
           onSearchChange={setSearchQuery}
           user={currentUser}
+          isSovereign={isSovereign}
           onIdentityChange={handleIdentityChange}
         />
 
@@ -166,7 +173,13 @@ function App() {
             {activeTab === 'radar' && <RadarP2P />}
             {activeTab === 'collection' && <Collection searchQuery={searchQuery} />}
             {activeTab === 'purgatory' && <Purgatory />}
-            {activeTab === 'settings' && <Config user={currentUser} onUserUpdate={() => fetchUser(activeUserId)} />}
+            {activeTab === 'settings' && (
+              <Config
+                user={currentUser}
+                onUserUpdate={() => fetchUser(activeUserId)}
+                onIdentityChange={handleIdentityChange}
+              />
+            )}
           </div>
         </main>
       </div>

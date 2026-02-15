@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Activity, Clock, AlertCircle, CheckCircle2, RefreshCw, Terminal, GitMerge, Target, Settings, Users, ShieldAlert, Trash2, Zap, History, Database, Loader2, Download, Upload, FileSpreadsheet } from 'lucide-react';
+import { Play, Activity, Clock, AlertCircle, CheckCircle2, RefreshCw, Terminal, GitMerge, Target, Settings, Users, ShieldAlert, Trash2, Zap, History, Database, Loader2, Download, Upload, FileSpreadsheet, Repeat } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { resetSmartMatches, runScrapers, stopScrapers, getScraperLogs, type ScraperExecutionLog } from '../api/purgatory';
@@ -7,14 +7,31 @@ import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import WallapopImporter from '../components/admin/WallapopImporter';
 
-import { getScrapersStatus, getDuplicates, mergeProducts, syncNexus, type ScraperStatus, type Hero } from '../api/admin';
+import {
+    getScrapersStatus,
+    getDuplicates,
+    mergeProducts,
+    syncNexus,
+    getUserSettings,
+    getHeroes,
+    updateHeroRole,
+    resetHeroPassword,
+    downloadVault,
+    syncExcel,
+    exportCollectionExcel,
+    exportCollectionSqlite,
+    updateUserLocation,
+    type ScraperStatus,
+    type Hero
+} from '../api/admin';
 
 interface ConfigProps {
     user?: Hero | null;
     onUserUpdate?: () => void;
+    onIdentityChange?: (targetId: number) => void;
 }
 
-const Config: React.FC<ConfigProps> = ({ user, onUserUpdate }) => {
+const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange }) => {
     const consoleRef = React.useRef<HTMLDivElement>(null);
     const [activeTab, setActiveTab] = useState<'scrapers' | 'radar' | 'system' | 'users' | 'wallapop'>('scrapers');
     const [statuses, setStatuses] = useState<ScraperStatus[]>([]);
@@ -43,25 +60,29 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate }) => {
 
     const fetchData = async () => {
         try {
+            // Fetch everything, but handle individual failures gracefully
             const [s, d, u, al, h] = await Promise.all([
-                getScrapersStatus(),
-                getDuplicates(),
-                import('../api/admin').then(m => m.getUserSettings(activeUserId)),
-                getScraperLogs(),
-                import('../api/admin').then(m => m.getHeroes())
+                getScrapersStatus().catch(e => { console.error("Scrapers error:", e); return []; }),
+                getDuplicates().catch(e => { console.error("Duplicates error:", e); return []; }),
+                getUserSettings(activeUserId).catch(e => { console.error("User settings error:", e); return null; }),
+                getScraperLogs().catch(e => { console.error("Logs error:", e); return []; }),
+                getHeroes().catch(e => { console.error("Heroes list error:", e); return []; })
             ]);
-            setStatuses(s);
-            setDuplicates(d);
-            setUserSettings(u);
-            setAdvancedLogs(al);
-            setHeroes(h);
 
-            // Si hay un log seleccionado que está corriendo, actualizarlo
-            if (selectedLog && al.find(log => log.id === selectedLog.id)) {
-                setSelectedLog(al.find(log => log.id === selectedLog.id) || null);
-            } else if (!selectedLog && al.length > 0) {
-                // Auto-seleccionar el último por defecto
-                setSelectedLog(al[0]);
+            setStatuses(s || []);
+            setDuplicates(d || []);
+            if (u) setUserSettings(u);
+            setAdvancedLogs(al || []);
+            setHeroes(h || []);
+
+            // update selected log if necessary
+            if (al && al.length > 0) {
+                if (selectedLog) {
+                    const current = al.find(l => l.id === selectedLog.id);
+                    if (current) setSelectedLog(current);
+                } else {
+                    setSelectedLog(al[0]);
+                }
             }
         } catch (error) {
             console.error('Error fetching admin data:', error);
@@ -95,7 +116,6 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate }) => {
     const handleUpdateLocation = async (loc: string) => {
         setSavingSettings(true);
         try {
-            const { updateUserLocation } = await import('../api/admin');
             await updateUserLocation(activeUserId, loc);
             setUserSettings({ ...userSettings, location: loc });
         } catch (error) {
@@ -149,9 +169,8 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate }) => {
 
     const handleUpdateRole = async (userId: number, newRole: string) => {
         try {
-            const m = await import('../api/admin');
-            await m.updateHeroRole(userId, newRole);
-            const updatedHeroes = await m.getHeroes();
+            await updateHeroRole(userId, newRole);
+            const updatedHeroes = await getHeroes();
             setHeroes(updatedHeroes);
 
             // If we updated the current active user, refresh global state
@@ -166,8 +185,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate }) => {
     const handlePasswordReset = async (userId: number) => {
         if (!confirm('¿Seguro que deseas iniciar el Protocolo de Reseteo para este héroe?')) return;
         try {
-            const m = await import('../api/admin');
-            await m.resetHeroPassword(userId);
+            await resetHeroPassword(userId);
             alert('🛡️ Protocolo de reseteo iniciado satisfactoriamente en los registros del Oráculo.');
         } catch (error) {
             console.error('Error resetting password:', error);
@@ -176,8 +194,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate }) => {
 
     const handleDownloadVault = async () => {
         try {
-            const m = await import('../api/admin');
-            await m.downloadVault(activeUserId);
+            await downloadVault(activeUserId);
             alert('📦 Bóveda Personal generada y descargada. Guárdala en un lugar seguro.');
         } catch (error) {
             console.error('Error downloading vault:', error);
@@ -187,8 +204,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate }) => {
 
     const handleSyncExcel = async () => {
         try {
-            const m = await import('../api/admin');
-            const res = await m.syncExcel(activeUserId);
+            const res = await syncExcel(activeUserId);
             alert(`📊 Excel Bridge: ${res.message}`);
         } catch (error: any) {
             console.error('Error syncing excel:', error);
@@ -199,8 +215,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate }) => {
 
     const handleExportExcelAdmin = async (userId: number) => {
         try {
-            const m = await import('../api/admin');
-            await m.exportCollectionExcel(userId);
+            await exportCollectionExcel(userId);
             alert('📦 Bóveda Digital: Excel generado y descargado con éxito.');
         } catch (error) {
             console.error('Error exporting excel:', error);
@@ -221,8 +236,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate }) => {
 
     const handleExportSqliteAdmin = async (userId: number) => {
         try {
-            const m = await import('../api/admin');
-            await m.exportCollectionSqlite(userId);
+            await exportCollectionSqlite(userId);
             alert('🗄️ Bóveda Digital: SQLite generado y descargado con éxito.');
         } catch (error) {
             console.error('Error exporting sqlite:', error);
@@ -938,6 +952,13 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate }) => {
                                             </td>
                                             <td className="px-6 py-4 text-right">
                                                 <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button
+                                                        onClick={() => onIdentityChange?.(hero.id)}
+                                                        title={`Asumir Identidad de ${hero.username}`}
+                                                        className="h-8 w-8 rounded-lg bg-brand-primary/10 text-brand-primary hover:bg-brand-primary hover:text-white border border-brand-primary/20 flex items-center justify-center transition-all shadow-lg shadow-brand-primary/0 hover:shadow-brand-primary/20"
+                                                    >
+                                                        <Repeat className="h-4 w-4" />
+                                                    </button>
                                                     <button
                                                         onClick={() => handleExportExcelAdmin(hero.id)}
                                                         title="Bajar Excel Personal"
