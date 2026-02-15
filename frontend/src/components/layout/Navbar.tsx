@@ -45,38 +45,43 @@ const Navbar: React.FC<NavbarProps> = ({ onMenuClick, showSearch = true, searchV
                     <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-brand-primary"></span>
                 </button>
 
-                {/* Selector de Héroes (Solo para Admin ID 1) */}
-                {user?.id === 1 && (
-                    <button
-                        onClick={() => {
-                            const currentUser = localStorage.getItem('active_user_id') || '1';
-                            const nextUser = currentUser === '1' ? '2' : '1';
-                            localStorage.setItem('active_user_id', nextUser);
-                            onIdentityChange(); // Trigger re-fetch in App.tsx
-                        }}
-                        className="flex items-center gap-3 border-l border-white/10 pl-3 md:pl-6 cursor-pointer group hover:bg-white/5 py-1 px-2 rounded-xl transition-all outline-none focus:ring-1 focus:ring-brand-primary/50"
-                        title="Cambiar de Héroe"
-                    >
-                        <div className="relative flex h-9 w-9 items-center justify-center rounded-full overflow-hidden border border-white/20 shadow-lg group-hover:scale-110 transition-transform bg-black/40">
-                            <img
-                                src={user?.role === 'admin' ? masterRoleImg : guardianRoleImg}
-                                alt="Hero"
-                                className="h-full w-full object-cover"
-                            />
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/20 text-[10px] font-black text-white pointer-events-none">
-                                {user?.username?.slice(0, 2).toUpperCase()}
-                            </div>
+                {/* Identidad del Héroe */}
+                <div className="flex items-center gap-2 md:gap-3 border-l border-white/10 pl-3 md:pl-6 group py-1 px-2 rounded-xl transition-all">
+                    <div className="relative flex h-9 w-9 items-center justify-center rounded-full overflow-hidden border border-white/20 shadow-lg bg-black/40">
+                        <img
+                            src={user?.role === 'admin' ? masterRoleImg : guardianRoleImg}
+                            alt="Hero"
+                            className="h-full w-full object-cover"
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/20 text-[10px] font-black text-white pointer-events-none">
+                            {user?.username?.slice(0, 2).toUpperCase()}
                         </div>
-                        <div className="hidden md:flex flex-col items-start">
-                            <span className="text-sm font-medium text-white/80 group-hover:text-white transition-colors leading-none">
-                                {user?.username}
-                            </span>
-                            <span className="text-[10px] text-white/40 group-hover:text-brand-primary transition-colors">
-                                Cambiar Heroe
-                            </span>
-                        </div>
-                    </button>
-                )}
+                    </div>
+                    <div className="flex flex-col items-start pr-2">
+                        <span className="text-sm font-black text-white leading-none tracking-tight">
+                            {user?.username || 'Cargando...'}
+                        </span>
+                        <span className="text-[9px] font-bold text-white/30 uppercase tracking-widest mt-0.5">
+                            {user?.role === 'admin' ? 'Arquitecto' : 'Guardián'}
+                        </span>
+                    </div>
+
+                    {/* Botón de Cambio Rápido (Solo para Admin ID 1) */}
+                    {user?.id === 1 && (
+                        <button
+                            onClick={() => {
+                                const currentUser = localStorage.getItem('active_user_id') || '1';
+                                const nextUser = currentUser === '1' ? '2' : '1';
+                                localStorage.setItem('active_user_id', nextUser);
+                                onIdentityChange(); // Trigger re-fetch in App.tsx
+                            }}
+                            className="ml-2 p-2 rounded-lg bg-brand-primary/10 text-brand-primary hover:bg-brand-primary/20 transition-all border border-brand-primary/20"
+                            title="Cambiar de Héroe"
+                        >
+                            <Menu className="h-4 w-4" />
+                        </button>
+                    )}
+                </div>
             </div>
         </nav>
     );

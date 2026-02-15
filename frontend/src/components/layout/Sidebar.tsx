@@ -11,9 +11,10 @@ interface SidebarProps {
     isMobileOpen: boolean;
     onCloseMobile: () => void;
     user: Hero | null;
+    onLogout: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen, onCloseMobile, user }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen, onCloseMobile, user, onLogout }) => {
     const isAdmin = user?.role === 'admin';
 
     const menuItems = [
@@ -104,7 +105,10 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen
                             Configuración
                         </button>
                     )}
-                    <button className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-red-400/60 hover:bg-red-500/10 hover:text-red-400 transition-all">
+                    <button
+                        onClick={onLogout}
+                        className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-red-400/60 hover:bg-red-500/10 hover:text-red-400 transition-all"
+                    >
                         <LogOut className="h-5 w-5" />
                         Cerrar Sesión
                     </button>

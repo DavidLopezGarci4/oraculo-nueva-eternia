@@ -74,6 +74,9 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                                 <User className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-white/20 group-focus-within:text-brand-primary transition-colors" />
                                 <input
                                     type="email"
+                                    name="email"
+                                    id="email"
+                                    autoComplete="username"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     placeholder="arquitecto@eternia.com"
@@ -92,6 +95,9 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                                 <Lock className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-white/20 group-focus-within:text-brand-primary transition-colors" />
                                 <input
                                     type="password"
+                                    name="password"
+                                    id="password"
+                                    autoComplete="current-password"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     placeholder="••••••••••••"

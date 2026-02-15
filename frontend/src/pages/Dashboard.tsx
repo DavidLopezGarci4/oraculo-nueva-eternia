@@ -27,7 +27,7 @@ interface DashboardProps {
 
 const Dashboard: React.FC<DashboardProps> = React.memo(({ user }) => {
     const { addToCart } = useCart();
-    const isAdmin = localStorage.getItem('active_user_id') === '1';
+    const isAdmin = user?.role === 'admin';
 
     const queryClient = useQueryClient();
     const [selectedRelinkId, setSelectedRelinkId] = React.useState<number | null>(null);
@@ -68,31 +68,31 @@ const Dashboard: React.FC<DashboardProps> = React.memo(({ user }) => {
 
     // Queries
     const { data: stats, isLoading: isLoadingStats } = useQuery({
-        queryKey: ['dashboard-stats'],
+        queryKey: ['dashboard-stats', user?.id],
         queryFn: getDashboardStats,
         refetchInterval: 60000
     });
 
     const { data: topDeals } = useQuery({
-        queryKey: ['top-deals'],
+        queryKey: ['top-deals', user?.id],
         queryFn: () => getTopDeals(),
         refetchInterval: 300000 // 5 min
     });
 
     const { data: history } = useQuery({
-        queryKey: ['dashboard-history'],
+        queryKey: ['dashboard-history', user?.id],
         queryFn: getDashboardHistory,
         refetchInterval: 60000 // 1 min
     });
 
     const { data: matchStats } = useQuery({
-        queryKey: ['match-stats'],
+        queryKey: ['match-stats', user?.id],
         queryFn: getDashboardMatchStats,
         refetchInterval: 60000
     });
 
     const { data: hallOfFame } = useQuery({
-        queryKey: ['hall-of-fame'],
+        queryKey: ['hall-of-fame', user?.id],
         queryFn: getHallOfFame,
         refetchInterval: 60000
     });
@@ -158,7 +158,7 @@ const Dashboard: React.FC<DashboardProps> = React.memo(({ user }) => {
                             <Zap className="h-4 w-4 md:h-5 md:w-5 text-brand-primary" />
                         </div>
                         <div className="text-center md:text-left">
-                            <p className="text-[7px] md:text-[10px] font-black uppercase tracking-widest text-white/30 mb-1">{isAdmin ? 'Vínculos' : 'Capítulo'}</p>
+                            <p className="text-[7px] md:text-[10px] font-black uppercase tracking-widest text-white/30 mb-1">{isAdmin ? 'Vínculos Activos' : 'Catálogo Maestro'}</p>
                             <h3 className="text-sm md:text-3xl font-black text-white">{isAdmin ? (stats?.match_count || 0) : (stats?.total_products || 0)}</h3>
                         </div>
                     </div>

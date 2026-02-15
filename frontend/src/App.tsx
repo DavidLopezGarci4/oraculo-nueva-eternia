@@ -57,6 +57,17 @@ function App() {
     setCurrentUser(user);
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('active_user_id');
+    localStorage.removeItem('is_sovereign');
+    localStorage.removeItem('is_logged_in');
+    localStorage.removeItem('user_email');
+    setIsLoggedIn(false);
+    setCurrentUser(null);
+    setIsSovereign(false);
+    setActiveUserId(2); // Reset to default
+  };
+
   const handleIdentityChange = () => {
     // Solo permitimos el switch si el usuario actual tiene ID 1 (Admin/David Maestro)
     const storedId = parseInt(localStorage.getItem('active_user_id') || '2');
@@ -80,12 +91,6 @@ function App() {
       }
     }
   }, [currentUser, activeTab]);
-
-  // Reset search when changing tabs
-  const handleTabChange = (tab: string) => {
-    setActiveTab(tab);
-    setSearchQuery('');
-  };
 
   const [showMasterLogin, setShowMasterLogin] = useState(false);
 
@@ -130,14 +135,15 @@ function App() {
   }
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-transparent">
+    <div className="flex h-screen w-screen overflow-hidden bg-black text-white font-inter">
       {/* Menu Lateral (Responsive Drawer) */}
       <Sidebar
         activeTab={activeTab}
-        setActiveTab={handleTabChange}
+        setActiveTab={setActiveTab}
         isMobileOpen={isMobileMenuOpen}
         onCloseMobile={() => setIsMobileMenuOpen(false)}
         user={currentUser}
+        onLogout={handleLogout}
       />
 
       <div className="flex flex-1 flex-col overflow-hidden relative w-full">
