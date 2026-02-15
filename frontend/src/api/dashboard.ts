@@ -73,29 +73,31 @@ axios.interceptors.request.use((config) => {
     return Promise.reject(error);
 });
 
-export const getDashboardStats = async (): Promise<DashboardStats> => {
-    const userId = localStorage.getItem('active_user_id') || '2';
+export const getDashboardStats = async (userId: number): Promise<DashboardStats> => {
     const response = await axios.get(`${API_BASE}/dashboard/stats`, {
         params: { user_id: userId }
     });
     return response.data;
 };
 
-export const getTopDeals = async (): Promise<TopDeal[]> => {
-    const userId = localStorage.getItem('active_user_id') || '2';
+export const getTopDeals = async (userId: number): Promise<TopDeal[]> => {
     const response = await axios.get(`${API_BASE}/dashboard/top-deals`, {
         params: { user_id: userId }
     });
     return response.data;
 };
 
-export const getDashboardHistory = async (): Promise<MatchHistoryEntry[]> => {
-    const response = await axios.get(`${API_BASE}/dashboard/history`);
+export const getDashboardHistory = async (userId: number): Promise<MatchHistoryEntry[]> => {
+    const response = await axios.get(`${API_BASE}/dashboard/history`, {
+        params: { user_id: userId }
+    });
     return response.data;
 };
 
-export const getDashboardMatchStats = async (): Promise<MatchStat[]> => {
-    const response = await axios.get(`${API_BASE}/dashboard/match-stats`);
+export const getDashboardMatchStats = async (userId: number): Promise<MatchStat[]> => {
+    const response = await axios.get(`${API_BASE}/dashboard/match-stats`, {
+        params: { user_id: userId }
+    });
     return response.data;
 };
 
@@ -118,8 +120,7 @@ export interface HallOfFameResponse {
     top_roi: HallOfFameItem[];
 }
 
-export const getHallOfFame = async (): Promise<HallOfFameResponse> => {
-    const userId = localStorage.getItem('active_user_id') || '2';
+export const getHallOfFame = async (userId: number): Promise<HallOfFameResponse> => {
     const response = await axios.get(`${API_BASE}/dashboard/hall-of-fame`, {
         params: { user_id: userId }
     });

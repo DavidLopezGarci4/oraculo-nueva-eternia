@@ -71,7 +71,7 @@ function App() {
     setActiveUserId(2); // Reset to default
   };
 
-  const handleIdentityChange = (targetId?: number) => {
+  const handleIdentityChange = async (targetId?: number) => {
     // Solo permitimos el switch si el usuario actual tiene ID 1 (Admin/David Maestro) o es Soberano
     if (!isSovereign && activeUserId !== 1) {
       console.warn("Hero Switch Denied: Solo el Arquitecto (Admin) tiene este poder.");
@@ -80,8 +80,14 @@ function App() {
 
     const newId = targetId || (activeUserId === 1 ? 2 : 1);
 
+    // 1. Persistencia física
     localStorage.setItem('active_user_id', newId.toString());
+
+    // 2. Cambio de estado atómico
     setActiveUserId(newId);
+
+    // 3. Forzar refresco inmediato de datos de usuario para que el saludo cambie YA
+    await fetchUser(newId);
   };
 
   // Redirección automática si un usuario no-admin está en una pestaña restringida

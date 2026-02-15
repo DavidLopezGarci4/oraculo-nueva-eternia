@@ -59,20 +59,42 @@ sudo docker run -it --rm --name certbot -v "$(pwd)/certbot/conf:/etc/letsencrypt
 
 ---
 
-## 🛠️ Solución de Problemas (Troubleshooting)
+## ⚔️ Ritual de Mantenimiento y Actualización
 
-### 🔴 Error: "Your local changes would be overwritten by merge"
-Si el servidor se niega a actualizarse (git pull), limpia el repositorio con este comando:
-```bash
-git reset --hard origin/main && git pull origin main
-```
+Cada vez que apliquemos cambios en el código, el ritual para que el servidor los adopte es el siguiente:
 
-### 🔴 Error de Certbot: "Timeout during connect"
-1. Verifica que el puerto **80** esté abierto en la consola de Oracle (Security List).
-2. Asegúrate de que DuckDNS apunta a la IP correcta (79.72.50.244).
+1. **Limpieza y Sincronización**:
+   ```bash
+   # Navegar a la carpeta (si no estás en ella)
+   cd ~/oraculo-nueva-eternia
 
-### 🔴 Error de Certbot: "docker run... certbot: error"
-**IMPORTANTE**: El comando debe empezar por `sudo docker`. No escribas la palabra `certbot` antes del comando de docker.
+   # Limpiar cambios locales y bajar lo último
+   git reset --hard origin/main && git pull origin main
+   ```
+
+2. **Despertar del Oráculo**:
+   ```bash
+   # Reconstruir y levantar (usando solo docker compose)
+   sudo docker compose -f docker-compose.prod.yml up -d --build
+   ```
 
 ---
-**Versión**: 1.2.0-FINAL-SHIELD | **Arquitecto**: Antigravity (IA 3OX) | **Estado**: Escudo Máximo Activo
+
+## 🛠️ Comandos de Supervivencia (Troubleshooting)
+
+### 🔴 Error: "command not found: docker-compose"
+**Causa**: Estás usando la versión antigua.
+**Solución**: Siempre usa `sudo docker compose` (con espacio, sin guion).
+
+### 🟡 El Tablero no muestra mis datos (David)
+**Causa**: Caché del navegador antigua.
+**Solución**: Pulsa **Ctrl + F5** en tu navegador. El sistema ahora fuerza la sincronización, pero el navegador puede ser terco.
+
+### 🟢 ¿Está vivo el Backend? (Logs)
+```bash
+sudo docker logs oraculo_backend_prod
+```
+*Busca la línea: `Cloud DB :: Connection to Supabase/Postgres detected.`*
+
+---
+**Arquitecto**: Antigravity (IA 3OX) | **Versión**: 1.3.0-FINAL-SHIELD | **Estado**: Escudo de Identidad Sincronizado 🛡️🤝
