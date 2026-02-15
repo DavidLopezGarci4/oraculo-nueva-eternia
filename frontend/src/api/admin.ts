@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { ShieldIdentity } from './shield-identity';
 
 const API_BASE = '/api';
 const API_KEY = import.meta.env.VITE_ORACULO_API_KEY || 'eternia-shield-2026';
@@ -6,7 +7,9 @@ const API_KEY = import.meta.env.VITE_ORACULO_API_KEY || 'eternia-shield-2026';
 const adminAxios = axios.create({
     baseURL: API_BASE,
     headers: {
-        'X-API-Key': API_KEY
+        'X-API-Key': API_KEY,
+        'X-Device-ID': ShieldIdentity.getDeviceId(),
+        'X-Device-Name': ShieldIdentity.getDeviceName()
     }
 });
 

@@ -9,6 +9,7 @@ import Dashboard from './pages/Dashboard';
 import Config from './pages/Config';
 import Auctions from './pages/Auctions';
 import RadarP2P from './pages/RadarP2P';
+import ShieldBypass from './components/ShieldBypass';
 import { type Hero } from './api/admin';
 
 function App() {
@@ -17,16 +18,23 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentUser, setCurrentUser] = useState<Hero | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isUnauthorized, setIsUnauthorized] = useState(false);
 
   const activeUserId = parseInt(localStorage.getItem('active_user_id') || '2');
 
   const fetchUser = async () => {
     try {
+      setLoading(true);
+      setIsUnauthorized(false);
       const { getUserSettings } = await import('./api/admin');
       const data = await getUserSettings(activeUserId);
       setCurrentUser(data);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to fetch current user", err);
+      // Si recibimos 403 de la API, es probable que sea el Shield (Dispositivo No Autorizado)
+      if (err.response?.status === 403) {
+        setIsUnauthorized(true);
+      }
     } finally {
       setLoading(false);
     }
@@ -68,6 +76,10 @@ function App() {
         </div>
       </div>
     );
+  }
+
+  if (isUnauthorized) {
+    return <ShieldBypass onRetry={fetchUser} />;
   }
 
   return (

@@ -386,25 +386,21 @@ class LogisticRuleModel(Base):
     
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-class KaizenInsightModel(Base):
+class AuthorizedDeviceModel(Base):
     """
-    Qualitative repository for anti-bot findings, DOM changes, and improvement ideas.
-    This is the primary source of 'Trial & Error' knowledge.
+    Escudo de Eternia (Phase 6): Almacena dispositivos autorizados para acceder a la red.
     """
-    __tablename__ = "kaizen_insights"
+    __tablename__ = "authorized_devices"
     
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    spider_name: Mapped[str] = mapped_column(String, index=True)
+    device_id: Mapped[str] = mapped_column(String, unique=True, index=True) # Unique Fingerprint
+    device_name: Mapped[Optional[str]] = mapped_column(String, nullable=True) # e.g. "iPhone de David"
+    is_authorized: Mapped[bool] = mapped_column(Boolean, default=False)
     
-    insight_type: Mapped[str] = mapped_column(String) # dom_change, anti_bot_detected, idea, improvement
-    severity: Mapped[str] = mapped_column(String, default="info") # info, warning, critical
-    
-    content: Mapped[str] = mapped_column(String) # Detailed description
-    pattern_observed: Mapped[Optional[str]] = mapped_column(String, nullable=True) # CSS selectors, timing, etc.
-    proposed_solution: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    
-    status: Mapped[str] = mapped_column(String, default="pending") # pending, implemented, rejected
+    last_access_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+class KaizenInsightModel(Base):
 
 __all__ = [
     "Base", 
@@ -422,6 +418,7 @@ __all__ = [
     "ProductAliasModel",
     "SyncQueueModel",
     "LogisticRuleModel",
+    "AuthorizedDeviceModel",
     "DOMAIN_VERSION"
 ]
 

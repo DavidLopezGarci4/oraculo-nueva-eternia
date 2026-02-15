@@ -32,6 +32,8 @@ from src.infrastructure.scrapers.toymi_scraper import ToymiEUScraper
 from src.infrastructure.scrapers.time4actiontoys_scraper import Time4ActionToysDEScraper
 from src.infrastructure.scrapers.bbts_scraper import BigBadToyStoreScraper
 from src.infrastructure.scrapers.ebay_scraper import EbayScraper
+from src.core.security import SecurityShield
+from src.domain.models import AuthorizedDeviceModel
 
 # --- Pydantic Schemas for Cart (Phase 1) ---
 class CartItem(BaseModel):
@@ -113,6 +115,32 @@ def verify_api_key(x_api_key: str = Header(None, alias="X-API-Key")):
     if x_api_key != settings.ORACULO_API_KEY:
         raise HTTPException(status_code=403, detail="Invalid API Key. Access Denied.")
     return x_api_key
+
+async def verify_device(
+    request: Request,
+    x_device_id: str = Header(None, alias="X-Device-ID"),
+    x_device_name: str = Header("Desconocido", alias="X-Device-Name")
+):
+    """
+    Middleware protector (Ojo de Sauron).
+    Valida si el dispositivo está autorizado. Si es nuevo, envía una alerta de Telegram.
+    """
+    # Si la API Key es válida y estamos en modo 'Bypass Local', podríamos saltar esto.
+    # Pero para Cloud, el blindaje es TOTAL.
+    if not x_device_id:
+        # Si no hay ID, bloqueamos por seguridad (Phase 6 Shield)
+        raise HTTPException(status_code=403, detail="X-Device-ID header missing. Access Denied by 3OX Shield.")
+
+    with SessionCloud() as db:
+        ip_address = request.client.host if request.client else "Unknown IP"
+        is_authorized = await SecurityShield.check_access(x_device_id, x_device_name, ip_address, db)
+        
+        if not is_authorized:
+            raise HTTPException(
+                status_code=403, 
+                detail="Dispositivo no autorizado. El Gran Arquitecto ha sido notificado."
+            )
+    return x_device_id
 
 class SyncAction(BaseModel):
     action_type: str
@@ -1238,7 +1266,7 @@ async def get_scrapers_logs():
     with SessionCloud() as db:
         return db.query(ScraperExecutionLogModel).order_by(desc(ScraperExecutionLogModel.start_time)).limit(75).all()
 
-@app.get("/api/dashboard/stats")
+@app.get("/api/dashboard/stats", dependencies=[Depends(verify_device)])
 async def get_dashboard_stats(user_id: int = 1):
     """
     Retorna métricas globales para el Tablero de Inteligencia, filtradas por usuario.
@@ -1305,7 +1333,7 @@ async def get_dashboard_stats(user_id: int = 1):
             "match_count": 0, "shop_distribution": []
         }
 
-@app.get("/api/products/with-offers")
+@app.get("/api/products/with-offers", dependencies=[Depends(verify_device)])
 async def get_products_with_offers():
     """
     Retorna una lista de IDs de productos que tienen ofertas activas vinculadas.
@@ -1318,7 +1346,7 @@ async def get_products_with_offers():
             .all()
         return [p[0] for p in product_ids]
 
-@app.get("/api/products/{product_id}/offers")
+@app.get("/api/products/{product_id}/offers", dependencies=[Depends(verify_device)])
 async def get_product_offers(product_id: int):
     """
     Retorna la mejor oferta actual por TIENDA para un producto.
@@ -1459,7 +1487,7 @@ async def get_product_price_history(product_id: int):
         results.sort(key=lambda x: x["shop_name"])
         return results
 
-@app.get("/api/dashboard/hall-of-fame")
+@app.get("/api/dashboard/hall-of-fame", dependencies=[Depends(verify_device)])
 async def get_dashboard_hall_of_fame(user_id: int = 1):
     """
     Fase 6.3: Retorna los 'Griales del Reino' (Top Valor) y 'Potencial Oculto' (Top ROI).
@@ -1513,7 +1541,7 @@ async def get_dashboard_hall_of_fame(user_id: int = 1):
             "top_roi": [i for i in top_roi if i["roi"] > 0] # Solo mostrar los que tienen ROI positivo
         }
 
-@app.get("/api/dashboard/top-deals")
+@app.get("/api/dashboard/top-deals", dependencies=[Depends(verify_device)])
 async def get_top_deals(user_id: int = 2):
     """
     Retorna las 20 mejores ofertas actuales de items NO CAPTURADOS.
@@ -2094,3 +2122,39 @@ async def api_calculate_cart(request: CartRequest):
     except Exception as e:
         logger.error(f"Error calculating cart: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# --- DISPOSITIVOS Y SEGURIDAD (OJO DE SAURON) ---
+
+@app.get("/api/admin/devices", dependencies=[Depends(verify_api_key)])
+async def get_all_devices():
+    """Lista todos los dispositivos que han intentado conectar."""
+    with SessionCloud() as db:
+        devices = db.query(AuthorizedDeviceModel).order_by(desc(AuthorizedDeviceModel.created_at)).all()
+        return devices
+
+@app.post("/api/admin/devices/{device_id}/authorize", dependencies=[Depends(verify_api_key)])
+async def authorize_device(device_id: str):
+    """Autoriza un dispositivo para acceso permanente."""
+    with SessionCloud() as db:
+        success = SecurityShield.authorize_device(device_id, db)
+        if not success:
+            raise HTTPException(status_code=404, detail="Dispositivo no encontrado")
+        
+        # Opcional: Notificar por Telegram que ya está autorizado
+        alert_msg = f"✅ *ORÁCULO INFORMA*\n\nEl dispositivo `{device_id}` ha sido **AUTORIZADO** con éxito."
+        import asyncio
+        asyncio.create_task(SecurityShield.send_telegram_alert(alert_msg))
+        
+        return {"status": "success", "message": f"Dispositivo {device_id} autorizado."}
+
+@app.delete("/api/admin/devices/{device_id}", dependencies=[Depends(verify_api_key)])
+async def revoke_device(device_id: str):
+    """Revoca el acceso de un dispositivo."""
+    with SessionCloud() as db:
+        device = db.query(AuthorizedDeviceModel).filter(AuthorizedDeviceModel.device_id == device_id).first()
+        if not device:
+            raise HTTPException(status_code=404, detail="Dispositivo no encontrado")
+        
+        db.delete(device)
+        db.commit()
+        return {"status": "success", "message": f"Acceso revocado para {device_id}."}

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { ShieldIdentity } from './shield-identity';
 
 const API_BASE = '/api';
 
@@ -61,6 +62,16 @@ export interface MatchStat {
     shop: string;
     count: number;
 }
+
+// --- 3OX SHIELD INTERCEPTOR ---
+// Configuración global de cabeceras para el Ojo de Sauron
+axios.interceptors.request.use((config) => {
+    config.headers['X-Device-ID'] = ShieldIdentity.getDeviceId();
+    config.headers['X-Device-Name'] = ShieldIdentity.getDeviceName();
+    return config;
+}, (error) => {
+    return Promise.reject(error);
+});
 
 export const getDashboardStats = async (): Promise<DashboardStats> => {
     const userId = localStorage.getItem('active_user_id') || '1';

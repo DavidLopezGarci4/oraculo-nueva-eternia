@@ -17,6 +17,9 @@ services:
       - DATABASE_URL=${DATABASE_URL:-sqlite:///./oraculo.db}
       - PYTHONUNBUFFERED=1
       - ENV=production
+      - ORACULO_API_KEY=${ORACULO_API_KEY}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
     # Multi-worker for production performance (no --reload)
     command: uvicorn src.interfaces.api.main:app --host 0.0.0.0 --port 8000 --workers 2
     networks:
@@ -30,8 +33,13 @@ services:
     image: oraculo-frontend-prod
     container_name: oraculo_frontend_prod
     ports:
-      # Port 80 — accesible directamente desde el navegador
+      # Puertos estándar HTTP y HTTPS
       - "80:80"
+      - "443:443"
+    volumes:
+      - ./frontend/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
     depends_on:
       - backend
     networks:
