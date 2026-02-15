@@ -55,6 +55,10 @@ function App() {
     setIsSovereign(sovereign);
     setActiveUserId(user.id);
     setCurrentUser(user);
+    // Asegurar persistencia para refrescos de página
+    localStorage.setItem('is_sovereign', sovereign ? 'true' : 'false');
+    localStorage.setItem('is_logged_in', 'true');
+    localStorage.setItem('active_user_id', user.id.toString());
   };
 
   const handleLogout = () => {
