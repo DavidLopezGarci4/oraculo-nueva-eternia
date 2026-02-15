@@ -4,9 +4,10 @@ import axios from 'axios';
 
 interface MasterLoginProps {
     onSuccess: (isSovereign: boolean) => void;
+    onCancel?: () => void;
 }
 
-const MasterLogin: React.FC<MasterLoginProps> = ({ onSuccess }) => {
+const MasterLogin: React.FC<MasterLoginProps> = ({ onSuccess, onCancel }) => {
     const [apiKey, setApiKey] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -98,6 +99,16 @@ const MasterLogin: React.FC<MasterLoginProps> = ({ onSuccess }) => {
                             </div>
                             <div className="absolute inset-0 z-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
                         </button>
+
+                        {onCancel && (
+                            <button
+                                type="button"
+                                onClick={onCancel}
+                                className="w-full py-2 text-[9px] font-black uppercase tracking-widest text-white/20 hover:text-white/60 transition-colors"
+                            >
+                                Volver a Sala de Espera
+                            </button>
+                        )}
                     </form>
 
                     {/* Footer decoration */}

@@ -5,9 +5,10 @@ import { motion } from 'framer-motion';
 
 interface ShieldBypassProps {
     onRetry: () => void;
+    onSovereignClick?: () => void;
 }
 
-const ShieldBypass: React.FC<ShieldBypassProps> = ({ onRetry }) => {
+const ShieldBypass: React.FC<ShieldBypassProps> = ({ onRetry, onSovereignClick }) => {
     const deviceId = ShieldIdentity.getDeviceId();
     const deviceName = ShieldIdentity.getDeviceName();
 
@@ -50,6 +51,15 @@ const ShieldBypass: React.FC<ShieldBypassProps> = ({ onRetry }) => {
                         <RefreshCw className="h-4 w-4" />
                         Comprobar Autorización
                     </button>
+
+                    {onSovereignClick && (
+                        <button
+                            onClick={onSovereignClick}
+                            className="mt-4 text-[9px] font-black uppercase tracking-[0.2em] text-white/10 hover:text-brand-primary transition-colors py-2"
+                        >
+                            ¿Eres el Soberano? Entrar con Llave
+                        </button>
+                    )}
                 </div>
             </motion.div>
         </div>

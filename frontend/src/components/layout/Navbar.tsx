@@ -46,8 +46,8 @@ const Navbar: React.FC<NavbarProps> = ({ onMenuClick, showSearch = true, searchV
                     <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-brand-primary"></span>
                 </button>
 
-                {/* Selector de Héroes (Solo para Soberanos) */}
-                {isSovereign && (
+                {/* Selector de Héroes (Solo para Admin ID 1) */}
+                {user?.id === 1 && (
                     <button
                         onClick={() => {
                             const currentUser = localStorage.getItem('active_user_id') || '1';

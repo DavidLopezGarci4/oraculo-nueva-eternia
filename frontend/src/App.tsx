@@ -11,6 +11,7 @@ import Auctions from './pages/Auctions';
 import RadarP2P from './pages/RadarP2P';
 import ShieldBypass from './components/ShieldBypass';
 import MasterLogin from './components/auth/MasterLogin';
+import LoginPage from './pages/LoginPage';
 import { type Hero } from './api/admin';
 
 function App() {
@@ -21,6 +22,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [isUnauthorized, setIsUnauthorized] = useState(false);
   const [isSovereign, setIsSovereign] = useState<boolean>(localStorage.getItem('is_sovereign') === 'true');
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(localStorage.getItem('is_logged_in') === 'true');
   const [activeUserId, setActiveUserId] = useState<number>(parseInt(localStorage.getItem('active_user_id') || '2'));
 
   const fetchUser = async (userId: number) => {
@@ -41,15 +43,29 @@ function App() {
   };
 
   useEffect(() => {
-    if (isSovereign) {
+    if (isSovereign || isLoggedIn) {
       fetchUser(activeUserId);
     } else {
       setLoading(false);
     }
-  }, [activeUserId, isSovereign]);
+  }, [activeUserId, isSovereign, isLoggedIn]);
+
+  const handleLoginSuccess = (user: any, sovereign: boolean) => {
+    setIsLoggedIn(true);
+    setIsSovereign(sovereign);
+    setActiveUserId(user.id);
+    setCurrentUser(user);
+  };
 
   const handleIdentityChange = () => {
-    const newId = parseInt(localStorage.getItem('active_user_id') || '2');
+    // Solo permitimos el switch si el usuario actual tiene ID 1 (Admin/David Maestro)
+    const storedId = parseInt(localStorage.getItem('active_user_id') || '2');
+    if (storedId !== 1 && !isSovereign) {
+      console.warn("Hero Switch Denied: Solo el Arquitecto (Admin) tiene este poder.");
+      return;
+    }
+    const newId = (parseInt(localStorage.getItem('active_user_id') || '2')) === 1 ? 2 : 1;
+    localStorage.setItem('active_user_id', newId.toString());
     setActiveUserId(newId);
   };
 
@@ -71,6 +87,8 @@ function App() {
     setSearchQuery('');
   };
 
+  const [showMasterLogin, setShowMasterLogin] = useState(false);
+
   if (loading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-black">
@@ -82,16 +100,33 @@ function App() {
     );
   }
 
-  if (!isSovereign) {
-    return <MasterLogin onSuccess={(isSov) => {
-      setIsSovereign(isSov);
-      const currentId = parseInt(localStorage.getItem('active_user_id') || '2');
-      setActiveUserId(currentId);
-    }} />;
+  // CAPA 1: Blindaje de Dispositivo (Shield)
+  if (isUnauthorized) {
+    if (showMasterLogin) {
+      return (
+        <MasterLogin
+          onSuccess={(isSov) => {
+            setIsSovereign(isSov);
+            setIsLoggedIn(true); // El bypass soberano también loguea
+            setShowMasterLogin(false);
+            const currentId = parseInt(localStorage.getItem('active_user_id') || '2');
+            setActiveUserId(currentId);
+          }}
+          onCancel={() => setShowMasterLogin(false)}
+        />
+      );
+    }
+    return (
+      <ShieldBypass
+        onRetry={() => fetchUser(activeUserId)}
+        onSovereignClick={() => setShowMasterLogin(true)}
+      />
+    );
   }
 
-  if (isUnauthorized) {
-    return <ShieldBypass onRetry={() => fetchUser(activeUserId)} />;
+  // CAPA 2: Autenticación de Usuario (Login)
+  if (!isLoggedIn) {
+    return <LoginPage onLoginSuccess={handleLoginSuccess} />;
   }
 
   return (

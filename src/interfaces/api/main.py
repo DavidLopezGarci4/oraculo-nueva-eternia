@@ -47,7 +47,14 @@ class CartRequest(BaseModel):
     user_id: Optional[int] = 2
 
 class LoginRequest(BaseModel):
-    api_key: str
+    email: str
+    password: str
+
+class CreateUserRequest(BaseModel):
+    username: str
+    email: str
+    password: str
+    role: str = "viewer"
 
 app = FastAPI(title="Oráculo API Broker", version="1.0.0")
 
@@ -254,15 +261,61 @@ class UserRoleUpdateRequest(BaseModel):
 @app.post("/api/auth/login")
 async def login(request: LoginRequest):
     """
-    Verifica la Llave Maestra y devuelve el estatus soberano.
+    Autenticación de Héroes y Guardianes. 
+    Valida Email y Contraseña. Soporta X-API-Key como bypass soberano.
     """
-    if request.api_key == settings.ORACULO_API_KEY:
+    with SessionCloud() as db:
+        user = db.query(UserModel).filter(UserModel.email == request.email).first()
+        
+        # Bypass Soberano: Si el password es la Llave Maestra, David entra.
+        is_sovereign_bypass = request.password == settings.ORACULO_API_KEY
+        
+        if not user:
+            raise HTTPException(status_code=401, detail="Email no registrado en el Oráculo.")
+            
+        is_valid = False
+        if is_sovereign_bypass:
+            is_valid = True
+            logger.info(f"🛡️ Acceso SOBERANO detectado para {user.username}")
+        else:
+            is_valid = SecurityShield.verify_password(request.password, user.hashed_password)
+            
+        if not is_valid:
+            raise HTTPException(status_code=401, detail="Credenciales incorrectas.")
+            
         return {
             "status": "success",
-            "message": "Soberanía confirmada. Bienvenido, Arquitecto.",
-            "is_sovereign": True
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "role": user.role
+            },
+            "is_sovereign": user.role == "admin" or is_sovereign_bypass
         }
-    raise HTTPException(status_code=401, detail="Llave Maestra incorrecta.")
+
+@app.post("/api/admin/users/create")
+async def create_user(request: CreateUserRequest, x_api_key: str = Depends(verify_api_key)):
+    """
+    Crea un nuevo Guardián en el sistema. Reservado para el Arquitecto.
+    """
+    with SessionCloud() as db:
+        # Verificar duplicados
+        exists = db.query(UserModel).filter(or_(UserModel.email == request.email, UserModel.username == request.username)).first()
+        if exists:
+            raise HTTPException(status_code=400, detail="El usuario o email ya existe.")
+            
+        new_user = UserModel(
+            username=request.username,
+            email=request.email,
+            hashed_password=SecurityShield.hash_password(request.password),
+            role=request.role
+        )
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+        
+        logger.info(f"👤 Nuevo Guardián creado: {new_user.username} ({new_user.role})")
+        return {"status": "success", "message": f"Héroe {new_user.username} registrado."}
 
 class HeroOutput(BaseModel):
     id: int

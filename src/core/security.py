@@ -1,3 +1,6 @@
+import hashlib
+import hmac
+import os
 import httpx
 from datetime import datetime
 from sqlalchemy.orm import Session
@@ -8,8 +11,28 @@ from src.domain.models import AuthorizedDeviceModel
 class SecurityShield:
     """
     Servicio de Seguridad 3OX (Escudo de Eternia).
-    Gestiona la autorización de dispositivos y alertas de acceso.
+    Gestiona la autorización de dispositivos, hashing de contraseñas y alertas.
     """
+
+    @staticmethod
+    def hash_password(password: str) -> str:
+        """Crea un hash seguro de la contraseña usando PBKDF2."""
+        salt = os.urandom(16)
+        pw_hash = hashlib.pbkdf2_hmac('sha256', password.encode(), salt, 100000)
+        return (salt + pw_hash).hex()
+
+    @staticmethod
+    def verify_password(password: str, hashed_password: str) -> bool:
+        """Verifica una contraseña contra su hash."""
+        try:
+            stored_data = bytes.fromhex(hashed_password)
+            salt = stored_data[:16]
+            stored_hash = stored_data[16:]
+            new_hash = hashlib.pbkdf2_hmac('sha256', password.encode(), salt, 100000)
+            return hmac.compare_digest(stored_hash, new_hash)
+        except Exception as e:
+            logger.error(f"Error verificando password: {e}")
+            return False
     
     @staticmethod
     async def send_telegram_alert(message: str):
