@@ -2217,6 +2217,17 @@ async def system_audit():
             # 4. Connection Details (Safe)
             conn_info = str(engine_cloud.url).split("@")[-1] if "@" in str(engine_cloud.url) else "local_sqlite"
             
+            # 5. Schema Audit (New Security Columns)
+            security_cols = []
+            try:
+                col_check = db.execute(sqlalchemy.text("""
+                    SELECT column_name FROM information_schema.columns 
+                    WHERE table_name = 'users' AND column_name IN ('reset_token', 'reset_token_expiry')
+                """)).fetchall()
+                security_cols = [c[0] for c in col_check]
+            except:
+                pass
+
             return {
                 "status": "ONLINE",
                 "database_engine": db_type,
@@ -2227,6 +2238,10 @@ async def system_audit():
                     "collection_items": c_count,
                     "offers": o_count,
                     "authorized_devices": ad_count
+                },
+                "schema_audit": {
+                    "reset_token_found": "reset_token" in security_cols,
+                    "reset_token_expiry_found": "reset_token_expiry" in security_cols
                 },
                 "david_diagnostic": {
                     "exists": david is not None,
