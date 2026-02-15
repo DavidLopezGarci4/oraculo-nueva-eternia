@@ -121,6 +121,11 @@ export const resetHeroPassword = async (userId: number): Promise<{ status: strin
     return response.data;
 };
 
+export const deleteHero = async (userId: number): Promise<{ status: string; message: string }> => {
+    const response = await adminAxios.delete(`/admin/users/${userId}`);
+    return response.data;
+};
+
 // --- SHIELD ARCHITECTURE: VAULT & EXCEL BRIDGE ---
 
 export const downloadVault = async (userId: number = 2): Promise<void> => {

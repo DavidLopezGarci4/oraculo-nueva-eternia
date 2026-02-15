@@ -16,6 +16,7 @@ import {
     getHeroes,
     updateHeroRole,
     resetHeroPassword,
+    deleteHero,
     downloadVault,
     syncExcel,
     exportCollectionExcel,
@@ -182,13 +183,27 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
         }
     };
 
-    const handlePasswordReset = async (userId: number) => {
-        if (!confirm('¿Seguro que deseas iniciar el Protocolo de Reseteo para este héroe?')) return;
+    const handlePasswordReset = async (heroId: number) => {
+        if (!confirm('¿Deseas enviar un protocolo de reseteo a este héroe?')) return;
         try {
-            await resetHeroPassword(userId);
-            alert('🛡️ Protocolo de reseteo iniciado satisfactoriamente en los registros del Oráculo.');
+            await resetHeroPassword(heroId);
+            alert('Protocolo de reseteo iniciado con éxito.');
         } catch (error) {
-            console.error('Error resetting password:', error);
+            console.error('Error in password reset:', error);
+            alert('Fallo al iniciar protocolo de reseteo.');
+        }
+    };
+
+    const handleDeleteHero = async (heroId: number, username: string) => {
+        if (!confirm(`🚨 ACCIÓN CRÍTICA: ¿Estás seguro de que deseas eliminar permanentemente a ${username} del Oráculo? Esta acción es irreversible y borrará toda su colección.`)) return;
+
+        try {
+            await deleteHero(heroId);
+            fetchData(); // Recargar lista
+            alert(`Justicia del Arquitecto: ${username} ha sido purgado.`);
+        } catch (error) {
+            console.error('Error deleting hero:', error);
+            alert('El escudo del héroe resistió el borrado o hubo un fallo de red.');
         }
     };
 
@@ -979,6 +994,13 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                                         className="h-8 w-8 rounded-lg bg-orange-500/10 text-orange-400 hover:bg-orange-500 hover:text-white border border-orange-500/20 flex items-center justify-center transition-all shadow-lg shadow-orange-500/0 hover:shadow-orange-500/20"
                                                     >
                                                         <ShieldAlert className="h-4 w-4" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteHero(hero.id, hero.username)}
+                                                        title="Eliminar Héroe Definitivamente"
+                                                        className="h-8 w-8 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white border border-red-500/20 flex items-center justify-center transition-all shadow-lg shadow-red-500/0 hover:shadow-red-500/20"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
                                                     </button>
                                                 </div>
                                             </td>

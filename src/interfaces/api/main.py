@@ -475,6 +475,31 @@ async def reset_hero_password(user_id: int):
         logger.warning(f"🛡️ PROTOCOLO DE RESETEO: Solicitud de cambio de contraseña para {user.username} ({user.email})")
         return {"status": "success", "message": f"Protocolo de reseteo iniciado para {user.email}"}
 
+@app.delete("/api/admin/users/{user_id}", dependencies=[Depends(verify_api_key)])
+async def delete_hero(user_id: int):
+    """
+    ELIMINACIÓN DEFINITIVA: Borra a un usuario y sus pertenencias del Oráculo.
+    (Admin Only - ACCIÓN IRREVERSIBLE)
+    """
+    with SessionCloud() as db:
+        user = db.query(UserModel).filter(UserModel.id == user_id).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="Héroe no encontrado")
+        
+        if user.role == "admin":
+            raise HTTPException(status_code=403, detail="No se puede eliminar a un Arquitecto del sistema.")
+
+        # 1. Borrar items de su colección asociados
+        db.query(CollectionItemModel).filter(CollectionItemModel.owner_id == user.id).delete()
+        
+        # 2. Borrar registro de usuario
+        username = user.username
+        db.delete(user)
+        db.commit()
+        
+        logger.warning(f"🗑️ Héroe Eliminado: '{username}' (ID: {user_id}) ha sido borrado por el Arquitecto.")
+        return {"status": "success", "message": f"Justicia del Arquitecto: El héroe '{username}' ha sido purgado de los registros."}
+
 @app.get("/api/auth/users")
 async def get_users_minimal():
     """Retorna la lista de usuarios para el selector rápido (Modo Legacy/Test)"""
@@ -2254,7 +2279,14 @@ async def system_audit():
                 "environment": {
                     "SUPABASE_DATABASE_URL_SET": settings.SUPABASE_DATABASE_URL is not None and len(settings.SUPABASE_DATABASE_URL) > 10,
                     "DATABASE_URL": settings.DATABASE_URL,
-                    "PYTHON_VERSION": sys.version
+                    "PYTHON_VERSION": sys.version,
+                    "SMTP_CONFIG": {
+                        "HOST": settings.SMTP_HOST,
+                        "PORT": settings.SMTP_PORT,
+                        "USER_LOADED": settings.SMTP_USER is not None,
+                        "PASS_LOADED": settings.SMTP_PASS is not None and len(settings.SMTP_PASS) > 5,
+                        "SENDER": settings.SMTP_FROM
+                    }
                 }
             }
         except Exception as e:

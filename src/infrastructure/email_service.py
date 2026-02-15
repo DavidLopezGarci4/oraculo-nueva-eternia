@@ -57,12 +57,20 @@ class EmailService:
         msg.attach(MIMEText(html_body, 'html'))
 
         try:
+            logger.info(f"📧 Intentando enviar email a {to_email} vía {settings.SMTP_HOST}:{settings.SMTP_PORT}...")
             with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT) as server:
+                server.set_debuglevel(1) if settings.DEBUG else None
                 server.starttls()
                 server.login(settings.SMTP_USER, settings.SMTP_PASS)
                 server.send_message(msg)
-            logger.info(f"📧 Email de reseteo enviado a {to_email}")
+            logger.info(f"✅ Email de reseteo enviado satisfactoriamente a {to_email}")
             return True
+        except smtplib.SMTPAuthenticationError:
+            logger.error(f"❌ Error de Autenticación SMTP: Verifica el SMTP_PASS (Contraseña de Aplicación).")
+            return False
+        except smtplib.SMTPConnectError:
+            logger.error(f"❌ Error de Conexión SMTP: No se pudo alcanzar {settings.SMTP_HOST}.")
+            return False
         except Exception as e:
-            logger.error(f"❌ Error al enviar email: {e}")
+            logger.error(f"❌ Error inesperado al enviar email: {type(e).__name__}: {e}")
             return False
