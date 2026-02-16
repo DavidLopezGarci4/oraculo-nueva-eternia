@@ -34,4 +34,7 @@ logs/
 !README.md
 
 # Infrastructure
+certbot
 certbot/
+**/certbot/**
+**/certbot/

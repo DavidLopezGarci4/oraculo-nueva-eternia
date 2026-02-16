@@ -14,7 +14,6 @@ import ShieldBypass from './components/ShieldBypass';
 import MasterLogin from './components/auth/MasterLogin';
 import LoginPage from './pages/LoginPage';
 import { getUserSettings, type Hero } from './api/admin';
-import { Sparkles } from 'lucide-react';
 import PowerSwordLoader from './components/ui/PowerSwordLoader';
 
 function App() {
