@@ -276,7 +276,11 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
 
 
     if (loading && statuses.length === 0) {
-        return <PowerSwordLoader variant="fullScreen" text="Invocando archivos del Oráculo..." />;
+        return (
+            <div className="flex flex-col items-center justify-center p-20 gap-8">
+                <PowerSwordLoader size={120} text="Invocando archivos del Oráculo..." />
+            </div>
+        );
     }
 
     return (
@@ -359,27 +363,26 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                         <h2 className="text-3xl font-black tracking-tighter text-white md:text-4xl"> CENTRO DE <span className="text-brand-primary">MANDO</span></h2>
                                     </div>
 
-                                    <div className="flex items-center gap-3">
+                                    <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
                                         <button
                                             onClick={() => {
                                                 if (confirm('¿DETENER TODAS LAS INCURSIONES? Esta acción forzará el cierre de todos los procesos de extracción y limpiará la cola.')) {
                                                     stopScrapersMutation.mutate();
                                                 }
                                             }}
-                                            className={`group flex items - center gap - 3 rounded - 2xl border px - 6 py - 4 font - black transition - all shadow - xl hover: scale - 105 active: scale - 95 ${statuses.some(s => s.status === 'running')
+                                            className={`group flex items-center justify-center gap-3 rounded-2xl border px-6 py-4 font-black transition-all shadow-xl hover:scale-105 active:scale-95 w-full sm:w-auto ${statuses.some(s => s.status === 'running')
                                                 ? 'bg-red-500 text-white border-red-400 shadow-red-500/20 animate-pulse'
                                                 : 'bg-red-500/20 text-red-300 border-red-500/30 hover:bg-red-500/40 hover:text-red-200 shadow-red-500/10'
-                                                } `}
+                                                }`}
                                         >
-                                            <ShieldAlert className={`h - 5 w - 5 ${statuses.some(s => s.status === 'running') ? 'animate-bounce' : ''} `} />
+                                            <ShieldAlert className={`h-5 w-5 ${statuses.some(s => s.status === 'running') ? 'animate-bounce' : ''}`} />
                                             <span className="text-sm uppercase tracking-widest">🛑 Detener Todo</span>
                                         </button>
-
 
                                         <button
                                             onClick={() => runScrapersMutation.mutate('all')}
                                             disabled={statuses.some(s => s.status === 'running')}
-                                            className="group relative flex items-center gap-3 overflow-hidden rounded-2xl bg-brand-primary px-8 py-4 font-black text-white transition-all hover:scale-105 hover:bg-brand-primary/80 active:scale-95 shadow-xl shadow-brand-primary/20 disabled:opacity-50 disabled:hover:scale-100"
+                                            className="group relative flex items-center justify-center gap-3 overflow-hidden rounded-2xl bg-brand-primary px-8 py-4 font-black text-white transition-all hover:scale-105 hover:bg-brand-primary/80 active:scale-95 shadow-xl shadow-brand-primary/20 disabled:opacity-50 disabled:hover:scale-100 w-full sm:w-auto"
                                         >
                                             <Zap className="h-5 w-5 fill-current" />
                                             <span className="text-sm uppercase tracking-widest">Incursión Total</span>
@@ -389,31 +392,44 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                         <button
                                             onClick={handleSyncNexus}
                                             disabled={syncingNexus || statuses.some(s => s.status === 'running')}
-                                            className="bg-white/10 hover:bg-white/20 border border-white/20 text-white px-6 py-4 rounded-2xl font-black text-sm transition-all flex items-center gap-3 disabled:opacity-30 disabled:scale-100 hover:scale-105 active:scale-95"
+                                            className="bg-white/10 hover:bg-white/20 border border-white/20 text-white px-6 py-4 rounded-2xl font-black text-sm transition-all flex items-center justify-center gap-3 disabled:opacity-30 disabled:scale-100 hover:scale-105 active:scale-95 w-full sm:w-auto"
                                         >
-                                            {syncingNexus ? <PowerSwordLoader className="h-5 w-5" /> : <Activity className="h-5 w-5 text-brand-primary" />}
+                                            {syncingNexus ? (
+                                                <div className="h-5 w-5 flex items-center justify-center scale-50">
+                                                    <PowerSwordLoader />
+                                                </div>
+                                            ) : (
+                                                <Activity className="h-5 w-5 text-brand-primary" />
+                                            )}
                                             <span className="uppercase tracking-widest">Sincro Nexus</span>
                                         </button>
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4 lg:grid-cols-6">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
                                     {statuses.filter(s => !['all', 'nexus', 'harvester'].includes(s.spider_name.toLowerCase())).map((s) => (
                                         <div
                                             key={s.spider_name}
-                                            className={`group relative flex flex - col gap - 3 rounded - 2xl border p - 4 transition - all hover: bg - white / 5 ${s.status === 'running' ? 'bg-brand-primary/10 border-brand-primary/40 shadow-[0_0_20px_rgba(14,165,233,0.1)]' : 'bg-white/[0.02] border-white/5'} `}
+                                            className={`group relative flex items-center justify-between gap-3 rounded-2xl border px-5 py-4 transition-all ${s.status === 'running'
+                                                ? 'bg-brand-primary/30 border-brand-primary/50 shadow-[0_0_20px_rgba(14,165,233,0.15)]'
+                                                : 'bg-white/[0.02] border-white/5 hover:bg-white/5'
+                                                }`}
                                         >
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-white/40">{s.spider_name}</span>
-                                                <div className={`h - 2 w - 2 rounded - full ${s.status === 'running' ? 'bg-brand-primary animate-pulse shadow-[0_0_8px_rgba(14,165,233,0.8)]' : 'bg-white/10'} `}></div>
-                                            </div>
-                                            <div className="flex items-center justify-between mt-1">
-                                                <span className={`text - [9px] font - bold px - 2 py - 0.5 rounded - full uppercase ${s.status === 'running' ? 'bg-blue-500/20 text-blue-400' : 'bg-white/5 text-white/30'} `}>
-                                                    {s.status === 'running' ? 'En Ejecución' : 'Standby'}
+                                            <div className="flex flex-col gap-0.5">
+                                                <span className={`text-[11px] font-black uppercase tracking-wider ${s.status === 'running' ? 'text-white' : 'text-white/40'}`}>
+                                                    {s.spider_name}
                                                 </span>
+                                                <span className={`text-[8px] font-bold uppercase tracking-tighter ${s.status === 'running' ? 'text-brand-primary animate-pulse' : 'text-white/20'}`}>
+                                                    {s.status === 'running' ? 'Activo' : 'Standby'}
+                                                </span>
+                                            </div>
+
+                                            <div className="flex items-center">
                                                 {s.status === 'running' ? (
                                                     <div className="h-8 w-8 rounded-xl flex items-center justify-center border border-brand-primary/40 bg-brand-primary/10">
-                                                        <PowerSwordLoader className="h-3.5 w-3.5 text-brand-primary" />
+                                                        <div className="scale-75">
+                                                            <PowerSwordLoader size={24} />
+                                                        </div>
                                                     </div>
                                                 ) : (
                                                     <button
