@@ -276,11 +276,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
 
 
     if (loading && statuses.length === 0) {
-        return (
-            <div className="flex flex-col items-center justify-center p-20 gap-8">
-                <PowerSwordLoader size={120} text="Invocando archivos del Oráculo..." />
-            </div>
-        );
+        return <PowerSwordLoader variant="fullScreen" text="Invocando archivos del Oráculo..." />;
     }
 
     return (
@@ -295,24 +291,24 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                     <p className="text-white/50">{user?.role === 'admin' ? 'Control absoluto sobre las reliquias y sus fuentes.' : 'Gestiona tu legado personal y sincroniza tu bóveda sagrada.'}</p>
                 </div>
 
-                <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10 backdrop-blur-xl">
+                <div className="flex flex-wrap bg-white/5 p-1 rounded-xl border border-white/10 backdrop-blur-xl">
                     {user?.role === 'admin' && (
                         <>
                             <button
                                 onClick={() => setActiveTab('scrapers')}
-                                className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'scrapers' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'text-white/40 hover:text-white'}`}
+                                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${activeTab === 'scrapers' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'text-white/40 hover:text-white'}`}
                             >
-                                <Activity className="h-4 w-4" />
+                                <Activity className="h-3.5 w-3.5" />
                                 Scrapers
                             </button>
                             <button
                                 onClick={() => setActiveTab('radar')}
-                                className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'radar' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'text-white/40 hover:text-white'}`}
+                                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${activeTab === 'radar' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'text-white/40 hover:text-white'}`}
                             >
-                                <Target className="h-4 w-4" />
-                                Radar Duplicados
+                                <Target className="h-3.5 w-3.5" />
+                                Radar
                                 {duplicates.length > 0 && (
-                                    <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full ml-1 animate-pulse">
+                                    <span className="bg-red-500 text-white text-[9px] px-1 py-0.5 rounded-full ml-1 animate-pulse">
                                         {duplicates.length}
                                     </span>
                                 )}
@@ -321,18 +317,18 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                     )}
                     <button
                         onClick={() => setActiveTab('system')}
-                        className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'system' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'text-white/40 hover:text-white'}`}
+                        className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${activeTab === 'system' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'text-white/40 hover:text-white'}`}
                     >
-                        <Settings className="h-4 w-4" />
-                        {user?.role === 'admin' ? 'Ajustes de Sistema' : 'Mi Bóveda Personal'}
+                        <Settings className="h-3.5 w-3.5" />
+                        Ajustes
                     </button>
                     {user?.role === 'admin' && (
                         <button
                             onClick={() => setActiveTab('users')}
-                            className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'users' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'text-white/40 hover:text-white'}`}
+                            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${activeTab === 'users' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'text-white/40 hover:text-white'}`}
                         >
                             <Users className="h-4 w-4" />
-                            Gestión de Héroes
+                            Héroes
                         </button>
                     )}
                 </div>
@@ -363,81 +359,67 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                         <h2 className="text-3xl font-black tracking-tighter text-white md:text-4xl"> CENTRO DE <span className="text-brand-primary">MANDO</span></h2>
                                     </div>
 
-                                    <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+                                    <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
                                         <button
                                             onClick={() => {
-                                                if (confirm('¿DETENER TODAS LAS INCURSIONES? Esta acción forzará el cierre de todos los procesos de extracción y limpiará la cola.')) {
+                                                if (confirm('¿DETENER TODAS LAS INCURSIONES?')) {
                                                     stopScrapersMutation.mutate();
                                                 }
                                             }}
-                                            className={`group flex items-center justify-center gap-3 rounded-2xl border px-6 py-4 font-black transition-all shadow-xl hover:scale-105 active:scale-95 w-full sm:w-auto ${statuses.some(s => s.status === 'running')
+                                            className={`group flex items-center justify-center gap-2 rounded-xl border px-4 py-2 font-bold transition-all shadow-lg hover:scale-105 active:scale-95 w-full sm:w-auto ${statuses.some(s => s.status === 'running')
                                                 ? 'bg-red-500 text-white border-red-400 shadow-red-500/20 animate-pulse'
-                                                : 'bg-red-500/20 text-red-300 border-red-500/30 hover:bg-red-500/40 hover:text-red-200 shadow-red-500/10'
+                                                : 'bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/20 shadow-red-500/5'
                                                 }`}
                                         >
-                                            <ShieldAlert className={`h-5 w-5 ${statuses.some(s => s.status === 'running') ? 'animate-bounce' : ''}`} />
-                                            <span className="text-sm uppercase tracking-widest">🛑 Detener Todo</span>
+                                            <ShieldAlert className="h-4 w-4" />
+                                            <span className="text-[11px] uppercase tracking-wider">Detener</span>
                                         </button>
 
                                         <button
                                             onClick={() => runScrapersMutation.mutate('all')}
                                             disabled={statuses.some(s => s.status === 'running')}
-                                            className="group relative flex items-center justify-center gap-3 overflow-hidden rounded-2xl bg-brand-primary px-8 py-4 font-black text-white transition-all hover:scale-105 hover:bg-brand-primary/80 active:scale-95 shadow-xl shadow-brand-primary/20 disabled:opacity-50 disabled:hover:scale-100 w-full sm:w-auto"
+                                            className="group relative flex items-center justify-center gap-2 overflow-hidden rounded-xl bg-brand-primary px-4 py-2 font-bold text-white transition-all hover:scale-105 hover:bg-brand-primary/80 active:scale-95 shadow-lg shadow-brand-primary/20 disabled:opacity-50 w-full sm:w-auto"
                                         >
-                                            <Zap className="h-5 w-5 fill-current" />
-                                            <span className="text-sm uppercase tracking-widest">Incursión Total</span>
-                                            <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-1000 group-hover:translate-x-full"></div>
+                                            <Zap className="h-4 w-4 fill-current" />
+                                            <span className="text-[11px] uppercase tracking-wider">Incursión Total</span>
                                         </button>
 
                                         <button
                                             onClick={handleSyncNexus}
                                             disabled={syncingNexus || statuses.some(s => s.status === 'running')}
-                                            className="bg-white/10 hover:bg-white/20 border border-white/20 text-white px-6 py-4 rounded-2xl font-black text-sm transition-all flex items-center justify-center gap-3 disabled:opacity-30 disabled:scale-100 hover:scale-105 active:scale-95 w-full sm:w-auto"
+                                            className="bg-white/5 hover:bg-white/10 border border-white/10 text-white px-4 py-2 rounded-xl font-bold text-[11px] transition-all flex items-center justify-center gap-2 disabled:opacity-30 hover:scale-105 active:scale-95 w-full sm:w-auto"
                                         >
-                                            {syncingNexus ? (
-                                                <div className="h-5 w-5 flex items-center justify-center scale-50">
-                                                    <PowerSwordLoader />
-                                                </div>
-                                            ) : (
-                                                <Activity className="h-5 w-5 text-brand-primary" />
-                                            )}
-                                            <span className="uppercase tracking-widest">Sincro Nexus</span>
+                                            <Activity className="h-4 w-4 text-brand-primary" />
+                                            <span className="uppercase tracking-wider">Nexus</span>
                                         </button>
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
+                                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
                                     {statuses.filter(s => !['all', 'nexus', 'harvester'].includes(s.spider_name.toLowerCase())).map((s) => (
                                         <div
                                             key={s.spider_name}
-                                            className={`group relative flex items-center justify-between gap-3 rounded-2xl border px-5 py-4 transition-all ${s.status === 'running'
-                                                ? 'bg-brand-primary/30 border-brand-primary/50 shadow-[0_0_20px_rgba(14,165,233,0.15)]'
-                                                : 'bg-white/[0.02] border-white/5 hover:bg-white/5'
+                                            className={`group relative flex items-center justify-between rounded-xl border px-3 py-2 transition-all ${s.status === 'running'
+                                                ? 'bg-brand-primary/50 border-brand-primary shadow-[0_0_15px_rgba(14,165,233,0.3)]'
+                                                : 'bg-white/[0.03] border-white/5 hover:bg-white/10'
                                                 }`}
                                         >
-                                            <div className="flex flex-col gap-0.5">
-                                                <span className={`text-[11px] font-black uppercase tracking-wider ${s.status === 'running' ? 'text-white' : 'text-white/40'}`}>
-                                                    {s.spider_name}
-                                                </span>
-                                                <span className={`text-[8px] font-bold uppercase tracking-tighter ${s.status === 'running' ? 'text-brand-primary animate-pulse' : 'text-white/20'}`}>
-                                                    {s.status === 'running' ? 'Activo' : 'Standby'}
-                                                </span>
-                                            </div>
+                                            <span className={`text-[10px] font-black uppercase tracking-tight truncate ${s.status === 'running' ? 'text-white' : 'text-white/40'}`}>
+                                                {s.spider_name}
+                                            </span>
 
                                             <div className="flex items-center">
                                                 {s.status === 'running' ? (
-                                                    <div className="h-8 w-8 rounded-xl flex items-center justify-center border border-brand-primary/40 bg-brand-primary/10">
-                                                        <div className="scale-75">
-                                                            <PowerSwordLoader size={24} />
-                                                        </div>
-                                                    </div>
+                                                    <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: "linear" }}>
+                                                        <Activity className="h-3 w-3 text-white" />
+                                                    </motion.div>
                                                 ) : (
                                                     <button
                                                         onClick={() => runScrapersMutation.mutate(s.spider_name)}
                                                         disabled={statuses.some(stat => stat.status === 'running')}
-                                                        className="h-8 w-8 rounded-xl flex items-center justify-center border bg-white/5 border-white/10 hover:bg-brand-primary/20 hover:border-brand-primary/40 text-white/40 hover:text-brand-primary active:scale-90 hover:scale-110 transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:scale-100"
+                                                        className="h-6 w-6 rounded-lg flex items-center justify-center hover:bg-brand-primary/20 text-white/20 hover:text-brand-primary transition-all disabled:opacity-0"
                                                     >
-                                                        <Play className="h-3 w-3 fill-current" />
+                                                        <Play className="h-2.5 w-2.5 fill-current" />
                                                     </button>
                                                 )}
                                             </div>
@@ -935,104 +917,106 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                         </div>
 
                         <div className="glass border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
-                            <table className="w-full text-left text-sm">
-                                <thead className="bg-white/5 text-white/30 uppercase text-[10px] font-bold">
-                                    <tr>
-                                        <th className="px-6 py-4">Héroe</th>
-                                        <th className="px-3 py-4 text-center w-12">ID</th>
-                                        <th className="px-6 py-4">Rango (Rol)</th>
-                                        <th className="px-6 py-4">Fortaleza (Items)</th>
-                                        <th className="px-6 py-4">Ubicación</th>
-                                        <th className="px-6 py-4 text-right">Acciones de Poder</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-white/5 text-white/70">
-                                    {heroes.map((hero: Hero) => (
-                                        <tr key={hero.id} className="hover:bg-white/5 transition-colors group">
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="h-10 w-10 rounded-full bg-brand-primary/10 flex items-center justify-center text-brand-primary font-bold text-sm border border-brand-primary/30 shadow-inner group-hover:scale-110 transition-transform">
-                                                        {hero.username.charAt(0).toUpperCase()}
-                                                    </div>
-                                                    <div>
-                                                        <p className="font-bold text-white group-hover:text-brand-primary transition-colors">{hero.username}</p>
-                                                        <p className="text-[10px] text-white/30 font-mono">{hero.email}</p>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-3 py-4 text-center">
-                                                <span className="text-xs font-mono text-brand-primary/70 bg-brand-primary/10 px-2 py-0.5 rounded-md border border-brand-primary/20">{hero.id}</span>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <select
-                                                    value={hero.role}
-                                                    onChange={(e) => handleUpdateRole(hero.id, e.target.value)}
-                                                    className="bg-brand-primary/10 text-brand-primary text-[10px] uppercase font-black border border-brand-primary/20 rounded px-2 py-0.5 outline-none cursor-pointer hover:bg-brand-primary/20"
-                                                >
-                                                    <option value="viewer" className="bg-black text-white">🛡️ Guardián</option>
-                                                    <option value="admin" className="bg-black text-white">⚔️ Maestro</option>
-                                                </select>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center gap-2">
-                                                    <Target className="h-3 w-3 text-brand-primary" />
-                                                    <span className="font-black text-lg text-white">{hero.collection_size}</span>
-                                                    <span className="text-[10px] text-brand-primary/50 font-black uppercase tracking-tighter">unidades</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest bg-white/5 px-2 py-1 rounded-md">{hero.location}</span>
-                                            </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <button
-                                                        onClick={() => onIdentityChange?.(hero.id)}
-                                                        title={`Asumir Identidad de ${hero.username} `}
-                                                        className="h-8 w-8 rounded-lg bg-brand-primary/10 text-brand-primary hover:bg-brand-primary hover:text-white border border-brand-primary/20 flex items-center justify-center transition-all shadow-lg shadow-brand-primary/0 hover:shadow-brand-primary/20"
-                                                    >
-                                                        <Repeat className="h-4 w-4" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleExportExcelAdmin(hero.id)}
-                                                        title="Bajar Excel Personal"
-                                                        className="h-8 w-8 rounded-lg bg-green-500/10 text-green-400 hover:bg-green-500 hover:text-white border border-green-500/20 flex items-center justify-center transition-all shadow-lg shadow-green-500/0 hover:shadow-green-500/20"
-                                                    >
-                                                        <FileSpreadsheet className="h-4 w-4" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleExportSqliteAdmin(hero.id)}
-                                                        title="Bajar Bóveda SQLite"
-                                                        className="h-8 w-8 rounded-lg bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500 hover:text-white border border-indigo-500/20 flex items-center justify-center transition-all shadow-lg shadow-indigo-500/0 hover:shadow-indigo-500/20"
-                                                    >
-                                                        <Database className="h-4 w-4" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handlePasswordReset(hero.id)}
-                                                        title="Protocolo de Reseteo"
-                                                        className="h-8 w-8 rounded-lg bg-orange-500/10 text-orange-400 hover:bg-orange-500 hover:text-white border border-orange-500/20 flex items-center justify-center transition-all shadow-lg shadow-orange-500/0 hover:shadow-orange-500/20"
-                                                    >
-                                                        <ShieldAlert className="h-4 w-4" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDeleteHero(hero.id, hero.username)}
-                                                        title="Eliminar Héroe Definitivamente"
-                                                        className="h-8 w-8 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white border border-red-500/20 flex items-center justify-center transition-all shadow-lg shadow-red-500/0 hover:shadow-red-500/20"
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                    {heroes.length === 0 && (
+                            <div className="overflow-x-auto scrollbar-none custom-scrollbar">
+                                <table className="w-full text-left text-sm min-w-[700px]">
+                                    <thead className="bg-white/5 text-white/30 uppercase text-[9px] font-bold">
                                         <tr>
-                                            <td colSpan={6} className="px-6 py-8 text-center text-white/20 italic">
-                                                No hay héroes reclutados en este momento...
-                                            </td>
+                                            <th className="px-4 py-3">Héroe</th>
+                                            <th className="px-2 py-3 text-center w-10">ID</th>
+                                            <th className="px-4 py-3">Rango</th>
+                                            <th className="px-4 py-3">Fortaleza</th>
+                                            <th className="px-4 py-3">Ubicación</th>
+                                            <th className="px-4 py-3 text-right">Acciones</th>
                                         </tr>
-                                    )}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody className="divide-y divide-white/5 text-white/70">
+                                        {heroes.map((hero: Hero) => (
+                                            <tr key={hero.id} className="hover:bg-white/5 transition-colors group">
+                                                <td className="px-4 py-3">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="h-8 w-8 rounded-full bg-brand-primary/10 flex items-center justify-center text-brand-primary font-bold text-xs border border-brand-primary/30 shadow-inner group-hover:scale-110 transition-transform flex-shrink-0">
+                                                            {hero.username.charAt(0).toUpperCase()}
+                                                        </div>
+                                                        <div className="truncate max-w-[120px]">
+                                                            <p className="font-bold text-white text-xs group-hover:text-brand-primary transition-colors truncate">{hero.username}</p>
+                                                            <p className="text-[9px] text-white/30 font-mono truncate">{hero.email}</p>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-2 py-3 text-center">
+                                                    <span className="text-[10px] font-mono text-brand-primary/70 bg-brand-primary/10 px-1.5 py-0.5 rounded-md border border-brand-primary/20">{hero.id}</span>
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <select
+                                                        value={hero.role}
+                                                        onChange={(e) => handleUpdateRole(hero.id, e.target.value)}
+                                                        className="bg-brand-primary/10 text-brand-primary text-[9px] uppercase font-black border border-brand-primary/20 rounded px-1.5 py-0.5 outline-none cursor-pointer hover:bg-brand-primary/30"
+                                                    >
+                                                        <option value="viewer" className="bg-black text-white">🛡️ Guardián</option>
+                                                        <option value="admin" className="bg-black text-white">⚔️ Maestro</option>
+                                                    </select>
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <Target className="h-3 w-3 text-brand-primary" />
+                                                        <span className="font-black text-sm text-white">{hero.collection_size}</span>
+                                                        <span className="text-[9px] text-brand-primary/50 font-black uppercase tracking-tighter">unidades</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest bg-white/5 px-2 py-0.5 rounded-md truncate block max-w-[80px]">{hero.location}</span>
+                                                </td>
+                                                <td className="px-4 py-3 text-right">
+                                                    <div className="flex items-center justify-end gap-1 transition-opacity">
+                                                        <button
+                                                            onClick={() => onIdentityChange?.(hero.id)}
+                                                            title={`Asumir Identidad`}
+                                                            className="h-7 w-7 rounded-lg bg-brand-primary/10 text-brand-primary hover:bg-brand-primary hover:text-white border border-brand-primary/20 flex items-center justify-center transition-all"
+                                                        >
+                                                            <Repeat className="h-3.5 w-3.5" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleExportExcelAdmin(hero.id)}
+                                                            title="Bajar Excel"
+                                                            className="h-7 w-7 rounded-lg bg-green-500/10 text-green-400 hover:bg-green-500 hover:text-white border border-green-500/20 flex items-center justify-center transition-all"
+                                                        >
+                                                            <FileSpreadsheet className="h-3.5 w-3.5" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleExportSqliteAdmin(hero.id)}
+                                                            title="Bajar SQLite"
+                                                            className="h-7 w-7 rounded-lg bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500 hover:text-white border border-indigo-500/20 flex items-center justify-center transition-all"
+                                                        >
+                                                            <Database className="h-3.5 w-3.5" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handlePasswordReset(hero.id)}
+                                                            title="Reset Password"
+                                                            className="h-7 w-7 rounded-lg bg-orange-500/10 text-orange-400 hover:bg-orange-500 hover:text-white border border-orange-500/20 flex items-center justify-center transition-all"
+                                                        >
+                                                            <ShieldAlert className="h-3.5 w-3.5" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeleteHero(hero.id, hero.username)}
+                                                            title="Purgar"
+                                                            className="h-7 w-7 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white border border-red-500/20 flex items-center justify-center transition-all"
+                                                        >
+                                                            <Trash2 className="h-3.5 w-3.5" />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                        {heroes.length === 0 && (
+                                            <tr>
+                                                <td colSpan={6} className="px-6 py-8 text-center text-white/20 italic">
+                                                    No hay héroes reclutados en este momento...
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
