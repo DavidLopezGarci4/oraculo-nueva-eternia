@@ -14,8 +14,7 @@ import {
     Copy,
     ChevronLeft,
     ChevronRight,
-    X,
-    LineChart as ChartIcon
+    X
 } from 'lucide-react';
 import { getPurgatory, matchItem, discardItem, discardItemsBulk } from '../api/purgatory';
 import MarketIntelligenceModal from '../components/MarketIntelligenceModal';
@@ -432,9 +431,9 @@ const Purgatory: React.FC = React.memo(() => {
                     </div>
                 ) : (
                     <>
-                        <div className="flex items-center justify-between mb-4 px-4 py-3 rounded-2xl bg-white/[0.03] border border-white/5">
-                            <div className="flex items-center gap-4">
-                                <label className="flex items-center gap-2 cursor-pointer group">
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4 px-4 py-3 rounded-2xl bg-white/[0.03] border border-white/5">
+                            <div className="flex items-center gap-3 md:gap-4 overflow-hidden">
+                                <label className="flex items-center gap-2 cursor-pointer group shrink-0">
                                     <input
                                         type="checkbox"
                                         checked={paginatedItems.length > 0 && paginatedItems.every(item => selectedIds.includes(item.id))}
@@ -448,14 +447,16 @@ const Purgatory: React.FC = React.memo(() => {
                                         }}
                                         className="h-4 w-4 rounded border-white/10 bg-white/5 text-brand-primary focus:ring-brand-primary/50"
                                     />
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-white/40 group-hover:text-white/60 transition-colors">Seleccionar Página</span>
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-white/40 group-hover:text-white/60 transition-colors">
+                                        <span className="hidden xs:inline">Seleccionar </span>Página
+                                    </span>
                                 </label>
-                                <div className="h-4 w-px bg-white/10"></div>
-                                <div className="text-[10px] font-black uppercase tracking-widest text-white/30 italic">
-                                    Fragmento {startIndex + 1} - {Math.min(startIndex + itemsPerPage, totalItems)} <span className="text-white/10 mx-1">/</span> Total: {totalItems}
+                                <div className="h-4 w-px bg-white/10 shrink-0"></div>
+                                <div className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-white/30 italic truncate">
+                                    Fragmento {startIndex + 1}-{Math.min(startIndex + itemsPerPage, totalItems)} <span className="text-white/10 mx-0.5">/</span> Total: {totalItems}
                                 </div>
                             </div>
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-3 shrink-0">
                                 <button
                                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                                     disabled={currentPage === 1}
@@ -463,7 +464,7 @@ const Purgatory: React.FC = React.memo(() => {
                                 >
                                     <ChevronLeft className="h-4 w-4" />
                                 </button>
-                                <div className="text-xs font-black text-white/60">Página {currentPage} de {totalPages}</div>
+                                <div className="text-[10px] md:text-xs font-black text-white/60 whitespace-nowrap">Pág {currentPage} / {totalPages}</div>
                                 <button
                                     onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                                     disabled={currentPage === totalPages}
@@ -552,8 +553,8 @@ const Purgatory: React.FC = React.memo(() => {
                                                         {copiedUrl === item.url ? 'Copiado!' : 'Copiar URL'} <Copy className="h-3 w-3" />
                                                     </button>
                                                 ) : (
-                                                    <a href={item.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/5 text-xs font-black text-white/40 hover:bg-white/10 hover:text-white transition-all uppercase tracking-wider">
-                                                        Fuente Original <ExternalLink className="h-3 w-3" />
+                                                    <a href={item.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/5 text-[10px] font-black text-white/40 hover:bg-white/10 hover:text-white transition-all uppercase tracking-wider whitespace-nowrap">
+                                                        Original <ExternalLink className="h-3 w-3" />
                                                     </a>
                                                 )}
 
@@ -608,12 +609,12 @@ const Purgatory: React.FC = React.memo(() => {
                                                 setSelectedPendingId(selectedPendingId === item.id ? null : item.id);
                                                 setManualSearchTerm('');
                                             }}
-                                            className={`h-12 md:h-10 flex-1 md:flex-initial md:px-8 flex items-center justify-center rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg ${selectedPendingId === item.id
-                                                ? 'bg-white text-black shadow-white/10'
+                                            className={`h-10 md:h-10 flex-1 md:flex-initial px-3 md:px-6 flex items-center justify-center rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all shadow-lg ${selectedPendingId === item.id
+                                                ? 'bg-white text-black shadow-white/10 border-2 border-brand-primary'
                                                 : 'bg-brand-primary text-white shadow-brand-primary/20 hover:brightness-110'}`}
                                         >
-                                            {selectedPendingId === item.id ? 'Cerrar Vinculación' : 'Vincular Item'}
-                                            <Link className="ml-2 h-4 w-4" />
+                                            {selectedPendingId === item.id ? 'Cerrar' : 'Vincular'}
+                                            {selectedPendingId === item.id ? <X className="ml-1.5 h-3 w-3" /> : <Link className="ml-1.5 h-3.5 w-3.5" />}
                                         </button>
                                     </div>
                                 </div>
@@ -636,37 +637,26 @@ const Purgatory: React.FC = React.memo(() => {
                                                         </div>
                                                     </div>
 
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                    <div className="grid grid-cols-1 gap-3">
                                                         {item.suggestions.map((sug: any) => (
-                                                            <div key={sug.product_id} className="group/btn relative flex items-center gap-4 overflow-hidden rounded-2xl border border-brand-primary/20 bg-brand-primary/5 p-4 text-left transition-all hover:border-brand-primary hover:bg-brand-primary/10 hover:shadow-[0_0_30px_rgba(var(--brand-primary-rgb),0.15)]">
-                                                                {/* Score Ring */}
-                                                                <div className="relative h-14 w-14 shrink-0 flex items-center justify-center rounded-full bg-black border-2 border-brand-primary/30 group-hover/btn:border-brand-primary transition-colors">
-                                                                    <span className="text-xs font-black text-brand-primary">{sug.match_score}%</span>
-                                                                </div>
+                                                            <div key={sug.product_id} className="group/btn relative flex items-center gap-4 overflow-hidden rounded-2xl border border-brand-primary/20 bg-brand-primary/5 p-4 text-left transition-all hover:border-brand-primary hover:bg-brand-primary/10">
 
                                                                 <div className="flex-1 min-w-0">
                                                                     <div className="flex items-center gap-2 mb-1">
                                                                         <span className="px-1.5 py-0.5 rounded bg-brand-primary/20 text-[9px] font-black text-brand-primary uppercase tracking-tighter">
                                                                             {sug.reason?.toUpperCase() || 'MATCH'}
                                                                         </span>
-                                                                        <span className="text-[9px] font-bold text-white/30 uppercase tracking-widest truncate">{sug.sub_category}</span>
+                                                                        <span className="text-[9px] font-bold text-white/30 uppercase tracking-widest">{sug.sub_category}</span>
                                                                     </div>
-                                                                    <h5 className="text-sm font-bold text-white leading-tight truncate">{sug.name}</h5>
-                                                                    <p className="text-[10px] text-white/40 font-mono mt-0.5">{sug.figure_id}</p>
+                                                                    <h5 className="text-base font-black text-white leading-tight">{sug.name}</h5>
+                                                                    <p className="text-[10px] text-white/40 font-mono mt-0.5 uppercase tracking-tighter">Vincular con: <span className="text-brand-primary">{item.scraped_name}</span></p>
                                                                 </div>
 
                                                                 <div className="flex items-center gap-2">
                                                                     <button
-                                                                        onClick={() => setIntelProductId(sug.product_id)}
-                                                                        className="h-8 w-8 flex items-center justify-center rounded-lg bg-brand-primary/10 text-brand-primary border border-brand-primary/20 hover:bg-brand-primary hover:text-white transition-all shadow-sm"
-                                                                        title="Análisis de Mercado 3OX"
-                                                                    >
-                                                                        <ChartIcon className="h-4 w-4" />
-                                                                    </button>
-                                                                    <button
                                                                         onClick={() => matchMutation.mutate({ pendingId: item.id, productId: sug.product_id })}
                                                                         disabled={matchMutation.isPending}
-                                                                        className="flex items-center gap-2 rounded-xl bg-brand-primary/10 px-4 py-2 text-[10px] font-black uppercase text-brand-primary border border-brand-primary/20 hover:bg-brand-primary hover:text-white transition-all shadow-lg shadow-brand-primary/10 group/match"
+                                                                        className="flex items-center gap-2 rounded-xl bg-brand-primary/20 px-3 py-1.5 text-[9px] font-black uppercase text-brand-primary border border-brand-primary/30 hover:bg-brand-primary hover:text-white transition-all shadow-lg group/match"
                                                                     >
                                                                         <Link className="h-3 w-3" />
                                                                         Vincular
