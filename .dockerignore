@@ -32,3 +32,6 @@ logs/
 !docs/*.png
 !docs/*.jpg
 !README.md
+
+# Infrastructure
+certbot/
