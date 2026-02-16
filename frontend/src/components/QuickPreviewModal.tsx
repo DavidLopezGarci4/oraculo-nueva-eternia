@@ -8,13 +8,13 @@ import {
     User,
     Star,
     Calendar,
-    Loader2,
-    AlertCircle,
-    ChevronLeft,
     ChevronRight,
-    Camera
+    Camera,
+    AlertCircle, // Added AlertCircle as it's used in the error state
+    ChevronLeft // Added ChevronLeft as it's used in the navigation buttons
 } from 'lucide-react';
 import axios from 'axios';
+import PowerSwordLoader from './ui/PowerSwordLoader';
 
 interface QuickPreviewModalProps {
     url: number | string; // Accept object id or just url
@@ -33,14 +33,7 @@ const QuickPreviewModal: React.FC<QuickPreviewModalProps> = ({ url, onClose }) =
     });
 
     if (isLoading) {
-        return (
-            <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 backdrop-blur-md">
-                <div className="text-center space-y-4">
-                    <Loader2 className="h-10 w-10 animate-spin text-brand-primary mx-auto" />
-                    <p className="text-xs font-black uppercase tracking-widest text-white/40">Invocando el espíritu de Wallapop...</p>
-                </div>
-            </div>
-        );
+        return <PowerSwordLoader variant="fullScreen" text="Invocando el espíritu de Wallapop..." />;
     }
 
     if (error || !item) {

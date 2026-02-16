@@ -1,6 +1,20 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Box, AlertCircle, Loader2, Info, Check, Trophy, TrendingUp, Euro, Star, ShoppingCart, Sparkles, Download, Database } from 'lucide-react';
+import {
+    Box,
+    AlertCircle,
+    Info,
+    Check,
+    Trophy,
+    TrendingUp,
+    Euro,
+    Star,
+    ShoppingCart,
+    Sparkles,
+    Download,
+    Database
+} from 'lucide-react';
+import PowerSwordLoader from '../components/ui/PowerSwordLoader';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getCollection, toggleCollection } from '../api/collection';
 import type { Product } from '../api/collection';
@@ -51,12 +65,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "" }) => {
     const totalWish = collection?.filter(p => p.is_wish).length || 0;
 
     if (isLoading) {
-        return (
-            <div className="flex h-[60vh] flex-col items-center justify-center gap-4 text-white/50">
-                <Loader2 className="h-10 w-10 animate-spin text-brand-primary" />
-                <p className="text-sm font-medium animate-pulse text-brand-primary/80 uppercase tracking-widest">Sincronizando con la Fortaleza...</p>
-            </div>
-        );
+        return <PowerSwordLoader variant="fullScreen" text="Sincronizando con la Fortaleza..." />;
     }
 
     if (isError) {
@@ -89,7 +98,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "" }) => {
                         </p>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row gap-4">
+                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
                         {/* Bóveda Digital Buttons (Prominent) */}
                         <div className="flex flex-col gap-2 justify-center">
                             <button
@@ -103,7 +112,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "" }) => {
                                         alert('❌ Error al exportar Excel.');
                                     }
                                 }}
-                                className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-green-500/10 text-green-400 border border-green-500/20 text-[10px] font-black uppercase tracking-widest hover:bg-green-500 hover:text-white transition-all shadow-lg shadow-green-500/0 hover:shadow-green-500/20 group/vault"
+                                className="flex items-center gap-2 px-4 py-2 sm:px-6 sm:py-3 rounded-2xl bg-green-500/10 text-green-400 border border-green-500/20 text-[10px] font-black uppercase tracking-widest hover:bg-green-500 hover:text-white transition-all shadow-lg shadow-green-500/0 hover:shadow-green-500/20 group/vault"
                             >
                                 <Download className="h-4 w-4 group-hover/vault:scale-125 transition-transform" />
                                 Bóveda Excel
@@ -119,14 +128,14 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "" }) => {
                                         alert('❌ Error al exportar SQLite.');
                                     }
                                 }}
-                                className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-500 hover:text-white transition-all shadow-lg shadow-indigo-500/0 hover:shadow-indigo-500/20 group/vault"
+                                className="flex items-center gap-2 px-4 py-2 sm:px-6 sm:py-3 rounded-2xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-500 hover:text-white transition-all shadow-lg shadow-indigo-500/0 hover:shadow-indigo-500/20 group/vault"
                             >
                                 <Database className="h-4 w-4 group-hover/vault:scale-125 transition-transform" />
                                 Bóveda SQLite
                             </button>
                         </div>
 
-                        <div className="flex flex-col gap-1 rounded-[2rem] bg-white/5 p-6 border border-white/10 backdrop-blur-xl min-w-[160px] group hover:bg-white/10 transition-all">
+                        <div className="flex flex-col gap-1 rounded-2xl sm:rounded-[2rem] bg-white/5 p-4 sm:p-6 border border-white/10 backdrop-blur-xl min-w-[120px] sm:min-w-[160px] group hover:bg-white/10 transition-all">
                             <div className="flex items-center justify-between text-white/40 group-hover:text-brand-primary">
                                 <span className="text-[10px] font-black uppercase tracking-widest">Fortaleza</span>
                                 <Box className="h-4 w-4" />
@@ -135,7 +144,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "" }) => {
                             <span className="text-[9px] font-bold text-white/20 uppercase">Items Poseídos</span>
                         </div>
 
-                        <div className="flex flex-col gap-1 rounded-[2rem] bg-brand-primary/5 p-6 border border-brand-primary/20 backdrop-blur-xl min-w-[160px] group hover:bg-brand-primary/10 transition-all">
+                        <div className="flex flex-col gap-1 rounded-2xl sm:rounded-[2rem] bg-brand-primary/5 p-4 sm:p-6 border border-brand-primary/20 backdrop-blur-xl min-w-[120px] sm:min-w-[160px] group hover:bg-brand-primary/10 transition-all">
                             <div className="flex items-center justify-between text-brand-primary/40 group-hover:text-brand-primary">
                                 <span className="text-[10px] font-black uppercase tracking-widest">Deseos</span>
                                 <Star className="h-4 w-4" />
@@ -203,7 +212,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "" }) => {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -20 }}
-                        className="grid grid-cols-2 gap-4 sm:gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+                        className="grid grid-cols-2 gap-2 sm:gap-8 lg:grid-cols-3 xl:grid-cols-4 landscape:grid-cols-3"
                     >
                         {(activeTab === 'owned' ? ownedItems : wishItems).map((product) => {
                             const isGrail = product.is_grail;
@@ -212,7 +221,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "" }) => {
                             return (
                                 <div
                                     key={product.id}
-                                    className={`group flex flex-col gap-4 relative overflow-hidden transition-all duration-500 hover:translate-y-[-8px] rounded-[2rem] sm:rounded-[2.5rem] p-4 sm:p-6 border ${isGrail ? 'border-yellow-500/30 bg-yellow-500/[0.03] shadow-[0_30px_60px_-15px_rgba(234,179,8,0.2)]' : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.04]'}`}
+                                    className={`group flex flex-col gap-2 sm:gap-4 relative overflow-hidden transition-all duration-500 hover:translate-y-[-8px] rounded-2xl sm:rounded-[2.5rem] p-3 sm:p-6 border ${isGrail ? 'border-yellow-500/30 bg-yellow-500/[0.03] shadow-[0_30px_60px_-15px_rgba(234,179,8,0.2)]' : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.04]'}`}
                                 >
                                     {/* Image Container */}
                                     <div className="relative aspect-square w-full overflow-hidden rounded-[1.5rem] sm:rounded-[2rem] bg-black/40 border border-white/10 shadow-inner">
@@ -223,7 +232,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "" }) => {
                                         )}
 
                                         {/* Corner Badges */}
-                                        <div className="absolute top-3 right-3 sm:top-4 sm:right-4 z-10 flex flex-col gap-2">
+                                        <div className="absolute top-2 left-2 sm:top-4 sm:left-4 z-40 flex items-center gap-1 sm:gap-1.5">
                                             <div className="rounded-lg sm:rounded-xl bg-black/70 px-2 py-1 sm:px-3 sm:py-1.5 text-[8px] sm:text-[10px] font-black text-white/90 backdrop-blur-md border border-white/20 shadow-2xl uppercase tracking-widest">
                                                 #{product.figure_id}
                                             </div>
@@ -255,16 +264,16 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "" }) => {
                                             </h3>
                                         </div>
 
-                                        <div className="flex flex-wrap gap-2 pt-1">
+                                        <div className="flex items-center gap-1 sm:gap-1.5 pt-1 flex-nowrap overflow-hidden">
                                             {product.market_value && product.market_value > 0 && (
-                                                <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border font-black text-[10px] ${isGrail ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' : 'bg-brand-primary/10 text-brand-primary border-brand-primary/20'}`}>
-                                                    <Euro className="h-3 w-3" />
-                                                    {product.market_value}
+                                                <div className={`flex items-center gap-1 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl border font-black text-[8px] sm:text-[10px] whitespace-nowrap ${isGrail ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' : 'bg-brand-primary/10 text-brand-primary border-brand-primary/20'}`}>
+                                                    <Euro className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                                                    {product.market_value}€
                                                 </div>
                                             )}
                                             {roi > 0 && activeTab === 'owned' && (
-                                                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-green-500/10 text-green-400 border border-green-500/20 font-black text-[10px]">
-                                                    <TrendingUp className="h-3 w-3" />
+                                                <div className="flex items-center gap-1 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl bg-green-500/10 text-green-400 border border-green-500/20 font-black text-[8px] sm:text-[10px] whitespace-nowrap">
+                                                    <TrendingUp className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                                                     +{roi}%
                                                 </div>
                                             )}
@@ -272,13 +281,13 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "" }) => {
                                     </div>
 
                                     {/* Multi-Actions Bar */}
-                                    <div className="mt-auto flex items-center gap-2">
+                                    <div className="mt-auto flex items-center gap-1 sm:gap-2">
                                         <button
                                             onClick={() => {
                                                 setSelectedProduct(product);
                                                 setIsDetailOpen(true);
                                             }}
-                                            className="h-12 flex-1 flex items-center justify-center rounded-2xl bg-white/5 border border-white/5 text-white/30 hover:bg-white/10 hover:text-white transition-all group/info"
+                                            className="h-10 sm:h-12 flex-1 flex items-center justify-center rounded-xl sm:rounded-2xl bg-white/5 border border-white/5 text-white/30 hover:bg-white/10 hover:text-white transition-all group/info"
                                         >
                                             <Info className="h-5 w-5 group-hover:scale-110 transition-transform" />
                                         </button>
@@ -287,25 +296,25 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "" }) => {
                                             <button
                                                 onClick={() => toggleMutation.mutate({ productId: product.id, wish: false })}
                                                 disabled={toggleMutation.isPending}
-                                                className="h-12 px-6 flex items-center gap-3 rounded-2xl bg-brand-primary text-white font-black text-xs uppercase tracking-widest shadow-lg shadow-brand-primary/20 hover:brightness-110 transition-all border border-brand-primary/50"
+                                                className="h-10 sm:h-12 px-3 sm:px-6 flex items-center gap-1.5 sm:gap-3 rounded-xl sm:rounded-2xl bg-brand-primary text-white font-black text-[10px] sm:text-xs uppercase tracking-widest shadow-lg shadow-brand-primary/20 hover:brightness-110 transition-all border border-brand-primary/50"
                                             >
-                                                {toggleMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShoppingCart className="h-4 w-4" />}
-                                                Reclamar
+                                                {toggleMutation.isPending ? <PowerSwordLoader size={30} /> : <ShoppingCart className="h-4 w-4" />}
+                                                <span className="hidden sm:inline">Reclamar</span>
                                             </button>
                                         ) : (
                                             <button
                                                 onClick={() => toggleMutation.mutate({ productId: product.id, wish: false })}
                                                 disabled={toggleMutation.isPending}
-                                                className="h-12 px-6 flex items-center gap-3 rounded-2xl bg-green-500/10 text-green-400 font-black text-xs uppercase tracking-widest border border-green-500/20 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/30 transition-all group/action"
+                                                className="h-10 sm:h-12 px-3 sm:px-6 flex items-center gap-1.5 sm:gap-3 rounded-xl sm:rounded-2xl bg-green-500/10 text-green-400 font-black text-[10px] sm:text-xs uppercase tracking-widest border border-green-500/20 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/30 transition-all group/action"
                                             >
-                                                {toggleMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : (
+                                                {toggleMutation.isPending ? <PowerSwordLoader size={30} /> : (
                                                     <>
                                                         <Check className="h-4 w-4 group-hover/action:hidden" />
                                                         <Box className="h-4 w-4 hidden group-hover/action:block" />
                                                     </>
                                                 )}
-                                                <span className="group-hover/action:hidden">En Sanctum</span>
-                                                <span className="hidden group-hover/action:block">Liberar</span>
+                                                <span className="hidden sm:inline group-hover/action:hidden">En Sanctum</span>
+                                                <span className="hidden sm:group-hover/action:block">Liberar</span>
                                             </button>
                                         )}
 
@@ -313,7 +322,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "" }) => {
                                             <button
                                                 onClick={() => toggleMutation.mutate({ productId: product.id, wish: true })}
                                                 disabled={toggleMutation.isPending}
-                                                className="h-12 px-4 flex items-center justify-center rounded-2xl bg-red-500/5 text-red-500/30 border border-red-500/10 hover:bg-red-500 hover:text-white transition-all"
+                                                className="h-10 sm:h-12 px-3 sm:px-4 flex items-center justify-center rounded-xl sm:rounded-2xl bg-red-500/5 text-red-500/30 border border-red-500/10 hover:bg-red-500 hover:text-white transition-all"
                                                 title="Eliminar de Deseos"
                                             >
                                                 <Star className="h-4 w-4 fill-current" />

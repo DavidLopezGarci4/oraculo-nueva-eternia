@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Activity, Clock, AlertCircle, CheckCircle2, RefreshCw, Terminal, GitMerge, Target, Settings, Users, ShieldAlert, Trash2, Zap, History, Database, Loader2, Download, Upload, FileSpreadsheet, Repeat } from 'lucide-react';
+import { Play, Activity, Clock, AlertCircle, CheckCircle2, RefreshCw, Terminal, GitMerge, Target, Settings, Users, ShieldAlert, Trash2, Zap, History, Database, Download, Upload, FileSpreadsheet, Repeat } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { resetSmartMatches, runScrapers, stopScrapers, getScraperLogs, type ScraperExecutionLog } from '../api/purgatory';
+import PowerSwordLoader from '../components/ui/PowerSwordLoader';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import WallapopImporter from '../components/admin/WallapopImporter';
@@ -150,7 +151,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
         } catch (error: any) {
             console.error('Error syncing Nexus:', error);
             const detail = error.response?.data?.detail || error.message || "Error de red o servidor";
-            alert(`❌ Nexus: Error al iniciar la sincronización. Detalle: ${detail}`);
+            alert(`❌ Nexus: Error al iniciar la sincronización.Detalle: ${detail} `);
         } finally {
             setSyncingNexus(false);
         }
@@ -198,7 +199,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
     };
 
     const handleDeleteHero = async (heroId: number, username: string) => {
-        if (!confirm(`🚨 ACCIÓN CRÍTICA: ¿Estás seguro de que deseas eliminar permanentemente a ${username} del Oráculo? Esta acción es irreversible y borrará toda su colección.`)) return;
+        if (!confirm(`🚨 ACCIÓN CRÍTICA: ¿Estás seguro de que deseas eliminar permanentemente a ${username} del Oráculo ? Esta acción es irreversible y borrará toda su colección.`)) return;
 
         try {
             await deleteHero(heroId);
@@ -223,11 +224,11 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
     const handleSyncExcel = async () => {
         try {
             const res = await syncExcel(activeUserId);
-            alert(`📊 Excel Bridge: ${res.message}`);
+            alert(`📊 Excel Bridge: ${res.message} `);
         } catch (error: any) {
             console.error('Error syncing excel:', error);
             const detail = error.response?.data?.detail || "Fallo en la conexión local.";
-            alert(`❌ Error en Excel Bridge: ${detail}`);
+            alert(`❌ Error en Excel Bridge: ${detail} `);
         }
     };
 
@@ -275,14 +276,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
 
 
     if (loading && statuses.length === 0) {
-        return (
-            <div className="flex h-[60vh] items-center justify-center">
-                <div className="flex flex-col items-center gap-4">
-                    <RefreshCw className="h-8 w-8 animate-spin text-brand-primary" />
-                    <p className="text-white/50 text-sm">Cargando Mando de Scrapers...</p>
-                </div>
-            </div>
-        );
+        return <PowerSwordLoader variant="fullScreen" text="Invocando archivos del Oráculo..." />;
     }
 
     return (
@@ -337,7 +331,6 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                             Gestión de Héroes
                         </button>
                     )}
-                    {/* Wallapop tab disabled */}
                 </div>
             </div>
 
@@ -373,11 +366,12 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                                     stopScrapersMutation.mutate();
                                                 }
                                             }}
-                                            className={`group flex items-center gap-3 rounded-2xl border px-6 py-4 font-black transition-all shadow-xl hover:scale-105 active:scale-95 ${statuses.some(s => s.status === 'running')
+                                            className={`group flex items - center gap - 3 rounded - 2xl border px - 6 py - 4 font - black transition - all shadow - xl hover: scale - 105 active: scale - 95 ${statuses.some(s => s.status === 'running')
                                                 ? 'bg-red-500 text-white border-red-400 shadow-red-500/20 animate-pulse'
-                                                : 'bg-red-500/20 text-red-300 border-red-500/30 hover:bg-red-500/40 hover:text-red-200 shadow-red-500/10'}`}
+                                                : 'bg-red-500/20 text-red-300 border-red-500/30 hover:bg-red-500/40 hover:text-red-200 shadow-red-500/10'
+                                                } `}
                                         >
-                                            <ShieldAlert className={`h-5 w-5 ${statuses.some(s => s.status === 'running') ? 'animate-bounce' : ''}`} />
+                                            <ShieldAlert className={`h - 5 w - 5 ${statuses.some(s => s.status === 'running') ? 'animate-bounce' : ''} `} />
                                             <span className="text-sm uppercase tracking-widest">🛑 Detener Todo</span>
                                         </button>
 
@@ -397,7 +391,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                             disabled={syncingNexus || statuses.some(s => s.status === 'running')}
                                             className="bg-white/10 hover:bg-white/20 border border-white/20 text-white px-6 py-4 rounded-2xl font-black text-sm transition-all flex items-center gap-3 disabled:opacity-30 disabled:scale-100 hover:scale-105 active:scale-95"
                                         >
-                                            {syncingNexus ? <Loader2 className="h-5 w-5 animate-spin" /> : <Activity className="h-5 w-5 text-brand-primary" />}
+                                            {syncingNexus ? <PowerSwordLoader className="h-5 w-5" /> : <Activity className="h-5 w-5 text-brand-primary" />}
                                             <span className="uppercase tracking-widest">Sincro Nexus</span>
                                         </button>
                                     </div>
@@ -407,19 +401,19 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                     {statuses.filter(s => !['all', 'nexus', 'harvester'].includes(s.spider_name.toLowerCase())).map((s) => (
                                         <div
                                             key={s.spider_name}
-                                            className={`group relative flex flex-col gap-3 rounded-2xl border p-4 transition-all hover:bg-white/5 ${s.status === 'running' ? 'bg-brand-primary/10 border-brand-primary/40 shadow-[0_0_20px_rgba(14,165,233,0.1)]' : 'bg-white/[0.02] border-white/5'}`}
+                                            className={`group relative flex flex - col gap - 3 rounded - 2xl border p - 4 transition - all hover: bg - white / 5 ${s.status === 'running' ? 'bg-brand-primary/10 border-brand-primary/40 shadow-[0_0_20px_rgba(14,165,233,0.1)]' : 'bg-white/[0.02] border-white/5'} `}
                                         >
                                             <div className="flex items-center justify-between">
                                                 <span className="text-[10px] font-black uppercase tracking-widest text-white/40">{s.spider_name}</span>
-                                                <div className={`h-2 w-2 rounded-full ${s.status === 'running' ? 'bg-brand-primary animate-pulse shadow-[0_0_8px_rgba(14,165,233,0.8)]' : 'bg-white/10'}`}></div>
+                                                <div className={`h - 2 w - 2 rounded - full ${s.status === 'running' ? 'bg-brand-primary animate-pulse shadow-[0_0_8px_rgba(14,165,233,0.8)]' : 'bg-white/10'} `}></div>
                                             </div>
                                             <div className="flex items-center justify-between mt-1">
-                                                <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase ${s.status === 'running' ? 'bg-blue-500/20 text-blue-400' : 'bg-white/5 text-white/30'}`}>
+                                                <span className={`text - [9px] font - bold px - 2 py - 0.5 rounded - full uppercase ${s.status === 'running' ? 'bg-blue-500/20 text-blue-400' : 'bg-white/5 text-white/30'} `}>
                                                     {s.status === 'running' ? 'En Ejecución' : 'Standby'}
                                                 </span>
                                                 {s.status === 'running' ? (
                                                     <div className="h-8 w-8 rounded-xl flex items-center justify-center border border-brand-primary/40 bg-brand-primary/10">
-                                                        <Loader2 className="h-3.5 w-3.5 animate-spin text-brand-primary" />
+                                                        <PowerSwordLoader className="h-3.5 w-3.5 text-brand-primary" />
                                                     </div>
                                                 ) : (
                                                     <button
@@ -449,16 +443,17 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                             <button
                                                 key={log.id}
                                                 onClick={() => setSelectedLog(log)}
-                                                className={`group w-full flex flex-col gap-2 rounded-2xl border p-4 text-left transition-all relative overflow-hidden ${selectedLog?.id === log.id
+                                                className={`group w - full flex flex - col gap - 2 rounded - 2xl border p - 4 text - left transition - all relative overflow - hidden ${selectedLog?.id === log.id
                                                     ? 'bg-brand-primary/10 border-brand-primary/30 shadow-lg'
-                                                    : 'bg-white/[0.03] border-white/5 hover:bg-white/5'}`}
+                                                    : 'bg-white/[0.03] border-white/5 hover:bg-white/5'
+                                                    } `}
                                             >
                                                 {selectedLog?.id === log.id && (
                                                     <motion.div layoutId="log-active" className="absolute left-0 top-0 bottom-0 w-1 bg-brand-primary" />
                                                 )}
                                                 <div className="flex items-center justify-between">
                                                     <span className="text-[10px] font-black uppercase tracking-widest text-white group-hover:text-brand-primary transition-colors">{log.spider_name}</span>
-                                                    <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-tighter ${log.status === 'success' ? 'bg-green-500/20 text-green-400' : log.status === 'running' ? 'bg-blue-500/20 text-blue-400' : 'bg-red-500/20 text-red-400'}`}>
+                                                    <span className={`text - [8px] font - bold px - 1.5 py - 0.5 rounded - md uppercase tracking - tighter ${log.status === 'success' ? 'bg-green-500/20 text-green-400' : log.status === 'running' ? 'bg-blue-500/20 text-blue-400' : 'bg-red-500/20 text-red-400'} `}>
                                                         {log.status === 'success' ? 'Éxito' : log.status === 'running' ? 'En Ejecución' : 'Fallo'}
                                                     </span>
                                                 </div>
@@ -487,7 +482,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                                     {selectedLog.spider_name} #0x{selectedLog.id.toString(16)}
                                                 </span>
                                                 {selectedLog.status === 'running' && (
-                                                    <Loader2 className="h-3 w-3 text-brand-primary animate-spin" />
+                                                    <PowerSwordLoader className="h-3 w-3 text-brand-primary" />
                                                 )}
                                             </div>
                                         )}
@@ -517,7 +512,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                                         const isWarning = line.toLowerCase().includes('warning') || line.toLowerCase().includes('alert');
 
                                                         return (
-                                                            <div key={i} className={`flex gap-4 group/line ${isError ? 'text-red-400' : isSuccess ? 'text-green-400' : isWarning ? 'text-yellow-400' : 'text-white/60'}`}>
+                                                            <div key={i} className={`flex gap - 4 group / line ${isError ? 'text-red-400' : isSuccess ? 'text-green-400' : isWarning ? 'text-yellow-400' : 'text-white/60'} `}>
                                                                 <span className="text-white/10 select-none w-8 text-right group-hover/line:text-white/30 transition-colors">{String(i + 1).padStart(3, '0')}</span>
                                                                 <p className="break-all whitespace-pre-wrap flex-1">{line}</p>
                                                             </div>
@@ -719,10 +714,10 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                                 key={country.code}
                                                 onClick={() => handleUpdateLocation(country.code)}
                                                 disabled={savingSettings}
-                                                className={`flex items-center justify-between px-4 py-3 rounded-2xl border transition-all ${userSettings?.location === country.code
+                                                className={`flex items - center justify - between px - 4 py - 3 rounded - 2xl border transition - all ${userSettings?.location === country.code
                                                     ? 'bg-brand-primary border-brand-primary text-white shadow-lg shadow-brand-primary/20'
                                                     : 'bg-white/5 border-white/10 text-white/50 hover:bg-white/10 hover:text-white'
-                                                    }`}
+                                                    } `}
                                             >
                                                 <span className="text-xs font-bold">{country.label}</span>
                                                 {userSettings?.location === country.code && (
@@ -976,7 +971,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                                 <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <button
                                                         onClick={() => onIdentityChange?.(hero.id)}
-                                                        title={`Asumir Identidad de ${hero.username}`}
+                                                        title={`Asumir Identidad de ${hero.username} `}
                                                         className="h-8 w-8 rounded-lg bg-brand-primary/10 text-brand-primary hover:bg-brand-primary hover:text-white border border-brand-primary/20 flex items-center justify-center transition-all shadow-lg shadow-brand-primary/0 hover:shadow-brand-primary/20"
                                                     >
                                                         <Repeat className="h-4 w-4" />
@@ -1149,11 +1144,11 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                             initial={{ scale: 0.9, opacity: 0, y: 20 }}
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                            className={`relative w-full max-w-md overflow-hidden rounded-[2.5rem] border p-8 shadow-2xl ${resetStep === 1 ? 'border-orange-500/30 bg-orange-950/20' : 'border-red-500/50 bg-red-950/30'}`}
+                            className={`relative w - full max - w - md overflow - hidden rounded - [2.5rem] border p - 8 shadow - 2xl ${resetStep === 1 ? 'border-orange-500/30 bg-orange-950/20' : 'border-red-500/50 bg-red-950/30'} `}
                         >
                             <div className="flex flex-col items-center gap-6 text-center">
-                                <div className={`h-20 w-20 rounded-full flex items-center justify-center border animate-pulse ${resetStep === 1 ? 'bg-orange-500/20 border-orange-500/50' : 'bg-red-500/20 border-red-500/80'}`}>
-                                    <ShieldAlert className={`h-10 w-10 ${resetStep === 1 ? 'text-orange-500' : 'text-red-500'}`} />
+                                <div className={`h - 20 w - 20 rounded - full flex items - center justify - center border animate - pulse ${resetStep === 1 ? 'bg-orange-500/20 border-orange-500/50' : 'bg-red-500/20 border-red-500/80'} `}>
+                                    <ShieldAlert className={`h - 10 w - 10 ${resetStep === 1 ? 'text-orange-500' : 'text-red-500'} `} />
                                 </div>
 
                                 <div className="space-y-2">
@@ -1178,7 +1173,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                     <button
                                         disabled={isResetting}
                                         onClick={() => resetStep === 1 ? setResetStep(2) : handleResetSmartMatches()}
-                                        className={`rounded-2xl py-4 text-xs font-black text-white transition-all uppercase tracking-widest shadow-lg ${resetStep === 1 ? 'bg-orange-500 hover:bg-orange-600 shadow-orange-500/20' : 'bg-red-600 hover:bg-red-700 shadow-red-500/40'}`}
+                                        className={`rounded - 2xl py - 4 text - xs font - black text - white transition - all uppercase tracking - widest shadow - lg ${resetStep === 1 ? 'bg-orange-500 hover:bg-orange-600 shadow-orange-500/20' : 'bg-red-600 hover:bg-red-700 shadow-red-500/40'} `}
                                     >
                                         {isResetting ? 'PURIFICANDO...' : resetStep === 1 ? 'COMPRENDO' : 'PURIFICAR TODO'}
                                     </button>

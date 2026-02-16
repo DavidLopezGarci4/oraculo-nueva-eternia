@@ -1,7 +1,28 @@
 import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { Package, AlertCircle, Loader2, Info, Plus, Check, ShoppingCart, ShoppingBasket, Settings, Save, X, RefreshCw, Star, ExternalLink } from 'lucide-react';
+import {
+    Package,
+    AlertCircle,
+    Info,
+    Plus,
+    Check,
+    ShoppingCart,
+    ShoppingBasket,
+    Settings,
+    Save,
+    X,
+    RefreshCw,
+    Star,
+    ExternalLink,
+    TrendingUp,
+    History,
+    LineChart as ChartIcon,
+    Flame,
+    ArrowUpRight,
+    Gem,
+    Search
+} from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { motion } from 'framer-motion';
 import { getCollection, toggleCollection } from '../api/collection';
@@ -11,8 +32,8 @@ import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { getProductPriceHistory } from '../api/products';
 import PriceHistoryChart from '../components/products/PriceHistoryChart';
-import { TrendingUp, History, LineChart as ChartIcon, Flame, ArrowUpRight, Gem, Search } from 'lucide-react';
 import MarketIntelligenceModal from '../components/MarketIntelligenceModal';
+import PowerSwordLoader from '../components/ui/PowerSwordLoader';
 
 // Para desarrollo, usamos el ID de David
 interface CatalogProps {
@@ -124,24 +145,24 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
         return map;
     }, [collection]);
 
-    const getCollectionItem = (productId: number) => {
+    const getCollectionItem = React.useCallback((productId: number) => {
         return collectionMap.get(productId);
-    };
+    }, [collectionMap]);
 
-    const isOwned = (productId: number): boolean => {
+    const isOwned = React.useCallback((productId: number): boolean => {
         const item = getCollectionItem(productId);
         return !!(item && !item.is_wish);
-    };
+    }, [getCollectionItem]);
 
-    const isWished = (productId: number): boolean => {
+    const isWished = React.useCallback((productId: number): boolean => {
         const item = getCollectionItem(productId);
         return !!(item && item.is_wish);
-    };
+    }, [getCollectionItem]);
 
-    const isGrail = (productId: number): boolean => {
+    const isGrail = React.useCallback((productId: number): boolean => {
         const item = getCollectionItem(productId);
         return !!(item && item.is_grail);
-    };
+    }, [getCollectionItem]);
 
     const updateMutation = useMutation({
         mutationFn: ({ id, data }: { id: number, data: any }) => updateProduct(id, data),
@@ -186,6 +207,10 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
         });
         return stats;
     }, [products, collectionMap]);
+
+    if (isLoadingProducts || isLoadingCollection) {
+        return <PowerSwordLoader variant="fullScreen" text="Invocando el Catálogo Maestro..." />;
+    }
 
     // 8. Lógica de Ordenación Híbrida (VEC3/Hunting List)
     const sortedProducts = React.useMemo(() => {
@@ -261,7 +286,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
                 const idB = parseInt(b.figure_id?.replace(/[^0-9]/g, '') || '99999');
                 return idA - idB;
             });
-    }, [products, collectionMap, searchQuery, subCatStats]);
+    }, [products, searchQuery, subCatStats, isOwned, isWished, isGrail]);
 
     const getSentimentBadge = (product: Product) => {
         const momentum = product.market_momentum || 1.0;
@@ -297,20 +322,23 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
         return badges;
     };
 
-    if (isLoadingProducts || isLoadingCollection) {
-        return (
-            <div className="flex h-64 flex-col items-center justify-center gap-4 text-white/50">
-                <Loader2 className="h-10 w-10 animate-spin text-brand-primary" />
-                <p className="text-sm font-medium animate-pulse">Sincronizando con Nueva Eternia...</p>
-            </div>
-        );
-    }
+
 
     if (isErrorProducts) {
         return (
             <div className="flex h-64 flex-col items-center justify-center gap-4 text-red-400">
                 <AlertCircle className="h-10 w-10" />
                 <p className="text-sm font-medium">Error al conectar con la API Broker</p>
+            </div>
+        );
+    }
+
+    if (!products || products.length === 0) {
+        return (
+            <div className="flex flex-col items-center justify-center p-20 text-white/20 space-y-4">
+                <Package className="h-16 w-16 opacity-20" />
+                <p className="text-xl font-black uppercase tracking-widest">El Oráculo está vacío...</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest opacity-40">No hay reliquias registradas en Nueva Eternia todavía.</p>
             </div>
         );
     }
@@ -331,7 +359,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
             </div>
 
             {/* Grid */}
-            <div className="grid grid-cols-2 gap-3 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid grid-cols-2 gap-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4 landscape:grid-cols-3">
                 {sortedProducts?.map((product) => {
                     const owned = isOwned(product.id);
                     const wished = isWished(product.id);
@@ -339,7 +367,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
                     return (
                         <div
                             key={product.id}
-                            className={`group relative flex flex-col gap-2 sm:gap-5 rounded-3xl sm:rounded-[2.5rem] border p-2.5 sm:p-5 transition-all duration-500 hover:translate-y-[-8px] ${hasIntel
+                            className={`group relative flex flex-col gap-1 sm:gap-2 md:gap-5 rounded-2xl sm:rounded-[1.5rem] md:rounded-[2.5rem] border p-1.5 sm:p-2 md:p-5 transition-all duration-500 hover:translate-y-[-8px] ${hasIntel
                                 ? 'border-brand-primary/30 bg-brand-primary/[0.03] shadow-[0_0_20px_-5px_rgba(14,165,233,0.15)] hover:shadow-[0_40px_80px_-20px_rgba(14,165,233,0.2)]'
                                 : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.05] hover:shadow-[0_40px_80px_-20px_rgba(0,0,0,0.5)]'
                                 }`}
@@ -393,7 +421,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
 
                                 {/* Right Strip Action (Collection Toggle) */}
                                 <div
-                                    className={`absolute top-0 right-0 h-full w-8 sm:w-12 flex flex-col items-center justify-center transition-all duration-300 z-30 border-l border-white/10 backdrop-blur-md hover:w-10 sm:hover:w-14 ${owned
+                                    className={`absolute top-0 right-0 h-full w-6 sm:w-12 flex flex-col items-center justify-center transition-all duration-300 z-30 border-l border-white/10 backdrop-blur-md hover:w-8 sm:hover:w-14 ${owned
                                         ? 'bg-green-500/20 text-green-400 hover:bg-red-500/40 hover:text-white'
                                         : wished
                                             ? 'bg-brand-primary/20 text-brand-primary hover:brightness-150'
@@ -406,7 +434,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
                                     title={owned ? 'Liberar del Catálogo (Presionar Lateral)' : wished ? 'Reclamar Reliquia (Presionar Lateral)' : 'Asegurar en la Fortaleza (Presionar Lateral)'}
                                 >
                                     {toggleMutation.isPending ? (
-                                        <Loader2 className="h-4 w-4 sm:h-6 sm:w-6 animate-spin" />
+                                        <PowerSwordLoader size={30} />
                                     ) : owned ? (
                                         <div className="flex flex-col items-center gap-1 group/btn">
                                             <Check className="h-4 w-4 sm:h-6 sm:w-6 group-hover/btn:hidden" />
@@ -437,7 +465,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
                                     const isMaster = !product.best_p2p_price && product.avg_market_price;
 
                                     return (
-                                        <div className="absolute top-2 left-2 sm:top-4 sm:left-4 z-40 flex flex-col gap-1.5">
+                                        <div className="absolute top-2 left-2 sm:top-4 sm:left-4 z-40 flex items-center gap-1 sm:gap-1.5">
                                             <div className={`rounded-lg sm:rounded-xl px-2 py-1 sm:px-3 sm:py-1.5 text-[8px] sm:text-[10px] font-black backdrop-blur-md border shadow-2xl transition-all transform uppercase tracking-widest ${colorClass}`}>
                                                 #{product.figure_id}
                                             </div>
@@ -457,7 +485,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
                             </div>
 
                             {/* Content */}
-                            <div className="flex flex-1 flex-col gap-2 sm:gap-4 px-1 pb-2">
+                            <div className="flex flex-1 flex-col gap-1 sm:gap-4 px-0.5 pb-1">
                                 <div className="space-y-0.5 sm:space-y-1">
                                     <div className="flex flex-wrap gap-1 mb-1">
                                         <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-white/20 group-hover:text-brand-primary/50 transition-colors line-clamp-1">
@@ -465,7 +493,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
                                         </span>
                                         {getSentimentBadge(product)}
                                     </div>
-                                    <h3 className="line-clamp-2 min-h-[2rem] sm:min-h-[2.5rem] text-xs sm:text-lg font-black leading-tight text-white group-hover:text-brand-primary transition-colors">
+                                    <h3 className="line-clamp-2 min-h-[1.2rem] sm:min-h-[1.5rem] md:min-h-[2.5rem] text-[10px] sm:text-xs md:text-lg font-black leading-tight text-white group-hover:text-brand-primary transition-colors">
                                         {product.name}
                                     </h3>
 
@@ -493,11 +521,11 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
 
                                 <div className="mt-auto flex flex-col gap-2">
                                     {/* Action Buttons Row - Symmetrical Center Dock */}
-                                    <div className="flex items-center justify-center gap-1 sm:gap-1.5 rounded-2xl sm:rounded-3xl bg-white/[0.04] p-1 sm:p-1.5 border border-white/[0.05] group-hover:border-brand-primary/20 transition-all backdrop-blur-sm w-full">
+                                    <div className="flex items-center justify-center gap-px sm:gap-1 md:gap-1.5 rounded-xl md:rounded-3xl bg-white/[0.04] p-0.5 md:p-1.5 border border-white/[0.05] group-hover:border-brand-primary/20 transition-all backdrop-blur-sm w-full">
                                         {/* Action: Toggle Price History */}
                                         <button
                                             onClick={() => setHistoryProductId(historyProductId === product.id ? null : product.id)}
-                                            className={`flex h-7 w-7 sm:h-9 sm:w-9 items-center justify-center rounded-xl transition-all border ${historyProductId === product.id ? 'bg-purple-500/20 text-purple-400 border-purple-500/50' : 'bg-white/5 text-white/30 border-white/5 hover:bg-white/10 hover:text-white'}`}
+                                            className={`flex h-5 sm:h-6 md:h-9 flex-1 min-w-0 md:w-9 md:flex-none items-center justify-center rounded-lg md:rounded-xl transition-all border ${historyProductId === product.id ? 'bg-purple-500/20 text-purple-400 border-purple-500/50' : 'bg-white/5 text-white/30 border-white/5 hover:bg-white/10 hover:text-white'}`}
                                             title="Ver Evolución de Precios"
                                         >
                                             <History className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -506,7 +534,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
                                         {/* Action Button: Detail View */}
                                         <button
                                             onClick={() => setSelectedProduct(product)}
-                                            className="flex h-7 w-7 sm:h-9 sm:w-9 items-center justify-center rounded-xl bg-white/5 text-white/40 border border-white/5 transition-all hover:bg-brand-primary/20 hover:text-brand-primary hover:border-brand-primary/40"
+                                            className="flex h-5 sm:h-6 md:h-9 flex-1 min-w-0 md:w-9 md:flex-none items-center justify-center rounded-lg md:rounded-xl bg-white/5 text-white/40 border border-white/5 transition-all hover:bg-brand-primary/20 hover:text-brand-primary hover:border-brand-primary/40"
                                             title="Ver Mercado Live"
                                         >
                                             <Info className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -515,7 +543,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
                                         {hasIntel && (
                                             <button
                                                 onClick={() => setIntelProductId(product.id)}
-                                                className="flex h-7 w-7 sm:h-9 sm:w-9 items-center justify-center rounded-xl bg-brand-primary/20 text-brand-primary border border-brand-primary/40 transition-all hover:bg-white/10 hover:text-white"
+                                                className="flex h-5 sm:h-6 md:h-9 flex-1 min-w-0 md:w-9 md:flex-none items-center justify-center rounded-lg md:rounded-xl bg-brand-primary/20 text-brand-primary border border-brand-primary/40 transition-all hover:bg-white/10 hover:text-white"
                                                 title="Análisis de Mercado 3OX"
                                             >
                                                 <ChartIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -526,7 +554,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
                                         <button
                                             onClick={() => toggleMutation.mutate({ productId: product.id, wish: true })}
                                             disabled={toggleMutation.isPending || owned}
-                                            className={`flex h-7 w-7 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-xl transition-all border shadow-lg ${wished
+                                            className={`flex h-5 sm:h-6 md:h-9 flex-1 min-w-0 md:w-9 md:flex-none items-center justify-center rounded-lg md:rounded-xl transition-all border shadow-lg ${wished
                                                 ? 'bg-brand-primary/20 text-brand-primary border-brand-primary/30 hover:bg-red-500/20 hover:text-red-400'
                                                 : 'bg-white/5 text-white/20 border-white/10 hover:bg-brand-primary/10 hover:text-brand-primary'
                                                 } ${owned ? 'opacity-20 cursor-not-allowed' : ''} ${toggleMutation.isPending ? 'opacity-50 cursor-wait' : ''}`}
@@ -540,7 +568,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
                                             href={product.asin ? `https://www.amazon.es/s?k=${product.asin}` : `https://www.google.com/search?q=${encodeURIComponent(product.name + ' masters of the universe origins')}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="flex h-7 w-7 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-xl bg-white/5 text-white/20 border border-white/10 hover:bg-brand-secondary/20 hover:text-brand-secondary transition-all shadow-lg"
+                                            className="flex h-5 sm:h-6 md:h-9 flex-1 min-w-0 md:w-9 md:flex-none items-center justify-center rounded-lg md:rounded-xl bg-white/5 text-white/20 border border-white/10 hover:bg-brand-secondary/20 hover:text-brand-secondary transition-all shadow-lg"
                                             title={product.asin ? "Buscar en Amazon.es por ASIN" : "Buscar en Google"}
                                         >
                                             <Search className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -550,7 +578,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
                                         {isAdmin && (
                                             <button
                                                 onClick={() => setEditingProduct(product)}
-                                                className="flex h-7 w-7 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-xl bg-white/5 text-white/40 border border-white/5 hover:bg-brand-primary/20 hover:text-brand-primary transition-all shadow-lg"
+                                                className="flex h-5 sm:h-6 md:h-9 flex-1 min-w-0 md:w-9 md:flex-none items-center justify-center rounded-lg md:rounded-xl bg-white/5 text-white/40 border border-white/5 hover:bg-brand-primary/20 hover:text-brand-primary transition-all shadow-lg"
                                                 title="Editar Metadatos (Arquitecto)"
                                             >
                                                 <Settings className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -577,7 +605,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
                                         </div>
                                         {isLoadingHistory ? (
                                             <div className="h-20 flex items-center justify-center">
-                                                <RefreshCw className="h-4 w-4 animate-spin text-purple-500/50" />
+                                                <PowerSwordLoader size={40} />
                                             </div>
                                         ) : priceHistory && priceHistory.length > 0 ? (
                                             <PriceHistoryChart data={priceHistory} />
@@ -636,8 +664,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
 
                                 {isLoadingOffers ? (
                                     <div className="flex h-40 items-center justify-center gap-3">
-                                        <Loader2 className="h-6 w-6 animate-spin text-brand-primary" />
-                                        <span className="text-xs font-bold uppercase tracking-widest text-white/20">Consultando Mercaderes...</span>
+                                        <PowerSwordLoader size={60} text="Escudriñando el Abismo..." />
                                     </div>
                                 ) : (
                                     <div className="space-y-3">

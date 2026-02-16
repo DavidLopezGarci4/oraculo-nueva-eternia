@@ -1,8 +1,9 @@
 import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { Gavel, AlertCircle, Loader2, Info, Plus, Check, ShoppingCart, ShoppingBasket, RefreshCw, Star, TrendingUp, History, Package, X, ExternalLink } from 'lucide-react';
+import { Gavel, AlertCircle, Info, Plus, Check, ShoppingCart, ShoppingBasket, RefreshCw, Star, TrendingUp, History, Package, X, ExternalLink } from 'lucide-react';
 import { useCart } from '../context/CartContext';
+import PowerSwordLoader from '../components/ui/PowerSwordLoader';
 import { motion } from 'framer-motion';
 import { getCollection, toggleCollection } from '../api/collection';
 import type { Product } from '../api/collection';
@@ -138,12 +139,7 @@ const Auctions: React.FC = () => {
     }, [products, sortBy]);
 
     if (isLoadingProducts || isLoadingCollection) {
-        return (
-            <div className="flex h-64 flex-col items-center justify-center gap-4 text-white/50">
-                <Loader2 className="h-10 w-10 animate-spin text-brand-primary" />
-                <p className="text-sm font-medium animate-pulse">Infiltrándonos en Wallapop & eBay...</p>
-            </div>
-        );
+        return <PowerSwordLoader variant="fullScreen" text="Infiltrándonos en Wallapop & eBay..." />;
     }
 
     if (isErrorProducts) {
@@ -256,7 +252,7 @@ const Auctions: React.FC = () => {
                                     title={owned ? 'Liberar del Catálogo (Presionar Lateral)' : wished ? 'Reclamar Reliquia (Presionar Lateral)' : 'Asegurar en la Fortaleza (Presionar Lateral)'}
                                 >
                                     {toggleMutation.isPending ? (
-                                        <Loader2 className="h-4 w-4 sm:h-6 sm:w-6 animate-spin text-brand-primary" />
+                                        <PowerSwordLoader size={30} />
                                     ) : owned ? (
                                         <div className="flex flex-col items-center gap-1 group/btn">
                                             <Check className="h-4 w-4 sm:h-6 sm:w-6 group-hover/btn:hidden" />
@@ -342,7 +338,9 @@ const Auctions: React.FC = () => {
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between px-4"><h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20">Mercado Secundario (Wallapop/eBay)</h5></div>
                                 {isLoadingOffers ? (
-                                    <div className="flex h-40 items-center justify-center gap-3"><Loader2 className="h-6 w-6 animate-spin text-brand-primary" /><span className="text-xs font-bold uppercase tracking-widest text-white/20">Escudriñando el Abismo...</span></div>
+                                    <div className="flex h-40 items-center justify-center gap-3">
+                                        <PowerSwordLoader size={60} text="Escudriñando el Abismo..." />
+                                    </div>
                                 ) : (
                                     <div className="space-y-6">
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pb-4">

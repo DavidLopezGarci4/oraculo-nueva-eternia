@@ -12,7 +12,6 @@ playwright
 psycopg2-binary
 httpx
 loguru
-uvloop
 rapidfuzz
 
 tenacity

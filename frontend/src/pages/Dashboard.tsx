@@ -5,7 +5,6 @@ import {
     Euro,
     RotateCcw,
     ShoppingBag,
-    Loader2,
     Trash2,
     Link,
     ShoppingCart
@@ -14,6 +13,7 @@ import { useCart } from '../context/CartContext';
 import OracleCart from '../components/cart/OracleCart';
 import { getDashboardStats, getTopDeals, getDashboardHistory, getDashboardMatchStats, revertDashboardAction, getHallOfFame } from '../api/dashboard';
 import { unlinkOffer, relinkOffer, type Hero } from '../api/admin';
+import PowerSwordLoader from '../components/ui/PowerSwordLoader';
 import axios from 'axios';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
@@ -115,15 +115,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
     }, [manualSearchTerm]);
 
     if (isLoadingStats) {
-        return (
-            <div className="flex h-[60vh] flex-col items-center justify-center gap-4 text-white/30">
-                <Loader2 className="h-10 w-10 animate-spin text-brand-primary" />
-                <div className="space-y-1 text-center">
-                    <p className="text-sm font-bold uppercase tracking-widest animate-pulse">Sincronizando Oráculo...</p>
-                    <p className="text-[10px] text-white/10 uppercase font-black">Conjugando fuerzas del mercado</p>
-                </div>
-            </div>
-        );
+        return <PowerSwordLoader variant="fullScreen" text="Sincronizando Oráculo..." />;
     }
 
     return (

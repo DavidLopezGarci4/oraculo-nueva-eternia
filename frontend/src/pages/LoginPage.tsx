@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { User, Lock, ArrowRight, Loader2, Sparkles, UserPlus } from 'lucide-react';
+import { User, Lock, ArrowRight } from 'lucide-react';
+import entranceBg from '../assets/Entrance_prod.png';
+import PowerSwordLoader from '../components/ui/PowerSwordLoader';
 import axios from 'axios';
 
 interface LoginPageProps {
@@ -7,6 +9,7 @@ interface LoginPageProps {
 }
 
 const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
+    // ... rest of state and handleSubmit logic remains same ...
     const [mode, setMode] = useState<'login' | 'register' | 'forgot' | 'reset'>('login');
     const [email, setEmail] = useState('');
     const [username, setUsername] = useState('');
@@ -17,7 +20,6 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     const [successMessage, setSuccessMessage] = useState('');
     const [token, setToken] = useState<string | null>(null);
 
-    // Capturar token de la URL si existe (para el modo reset)
     React.useEffect(() => {
         const urlParams = new URLSearchParams(window.location.hash.split('?')[1]);
         const resetToken = urlParams.get('token');
@@ -72,7 +74,6 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                 if (response.data.status === 'success') {
                     setSuccessMessage(response.data.message);
                     setMode('login');
-                    // Limpiar URL
                     window.location.hash = '/';
                 }
             }
@@ -87,38 +88,31 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     };
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black p-4">
-            {/* Ambient Background */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-[-20%] right-[-10%] h-[60%] w-[60%] rounded-full bg-brand-primary/5 blur-[150px]" />
-                <div className="absolute bottom-[-20%] left-[-10%] h-[60%] w-[60%] rounded-full bg-blue-500/5 blur-[150px]" />
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#050608]">
+            {/* Cinematic Background */}
+            <div className="absolute inset-0 overflow-hidden">
+                <img
+                    src={entranceBg}
+                    className="w-full h-full object-cover opacity-90 scale-100 animate-in fade-in duration-1000"
+                    alt="Entrance Backdrop"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#050608]/80 via-transparent to-[#050608]/20" />
+                <div className="absolute top-[-10%] right-[-5%] h-[50%] w-[50%] rounded-full bg-red-500/5 blur-[120px]" />
+                <div className="absolute bottom-[0%] left-[-5%] h-[40%] w-[40%] rounded-full bg-purple-500/5 blur-[120px]" />
             </div>
 
-            <div className="relative w-full max-w-md animate-in fade-in slide-in-from-bottom-8 duration-1000">
-                <div className="relative overflow-hidden rounded-[2.5rem] border border-white/10 bg-white/[0.02] p-8 md:p-12 backdrop-blur-3xl shadow-2xl">
-                    {/* Oracle Logo/Header */}
-                    <div className="mb-10 flex flex-col items-center text-center">
-                        <div className="mb-6 relative">
-                            <div className="absolute inset-0 bg-brand-primary/20 blur-2xl rounded-full" />
-                            <div className="relative flex h-20 w-20 items-center justify-center rounded-3xl bg-black border border-white/10 shadow-2xl">
-                                {mode === 'login' && <Sparkles className="h-10 w-10 text-brand-primary animate-pulse" />}
-                                {mode === 'register' && <UserPlus className="h-10 w-10 text-brand-primary animate-pulse" />}
-                                {(mode === 'forgot' || mode === 'reset') && <Lock className="h-10 w-10 text-brand-primary animate-pulse" />}
-                            </div>
-                        </div>
-                        <h1 className="text-3xl font-black uppercase tracking-[0.2em] text-white">
-                            Nueva <span className="text-brand-primary">Eternia</span>
-                        </h1>
-                        <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.4em] text-white/30">
-                            {mode === 'login' && 'Identificación de Héroe'}
-                            {mode === 'register' && 'Reclutamiento de Héroe'}
-                            {mode === 'forgot' && 'Recuperación de Eternia'}
-                            {mode === 'reset' && 'Renovación de Llave'}
-                        </p>
-                    </div>
+            <div className="relative w-full max-w-md mt-[22vh] animate-in fade-in slide-in-from-bottom-12 duration-1000">
+                {/* The Glass Card Container */}
+                <div className="relative overflow-hidden rounded-[2.5rem] border border-white/10 bg-white/[0.03] pt-6 pb-8 px-8 md:pt-10 md:pb-12 md:px-12 backdrop-blur-3xl shadow-2xl">
+                    {/* Glass highlight overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-transparent pointer-events-none" />
+
+                    {/* Oracle Logo Removed as per user request (Letters are in the background image) */}
 
                     {/* Form */}
                     <form onSubmit={handleSubmit} className="space-y-6">
+                        {/* ... fields ... */}
+                        {/* [Existing fields logic is already correct, just keeping the structure] */}
                         {mode === 'register' && (
                             <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-500">
                                 <label className="text-[9px] font-black uppercase tracking-widest text-white/40 ml-1">
@@ -223,7 +217,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                         >
                             <div className="relative z-10 flex items-center justify-center gap-2">
                                 {loading ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    <PowerSwordLoader size={30} />
                                 ) : (
                                     <>
                                         {mode === 'login' && 'Entrar al Oráculo'}
@@ -238,40 +232,35 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                         </button>
                     </form>
 
-                    <div className="mt-8 flex flex-col items-center gap-4">
-                        {mode === 'login' && (
+                    {/* Mode Switching Links */}
+                    <div className="mt-8 flex flex-col items-center gap-4 text-[9px] font-black uppercase tracking-widest">
+                        {mode === 'login' ? (
                             <>
                                 <button
                                     onClick={() => setMode('register')}
-                                    className="text-[9px] font-black text-brand-primary hover:text-white transition-colors uppercase tracking-[0.2em]"
+                                    className="text-white/40 hover:text-brand-primary transition-colors"
                                 >
-                                    ¿Eres un nuevo Héroe? Regístrate aquí
+                                    ¿Nuevo en la resistencia? <span className="text-white">Regístrate</span>
                                 </button>
                                 <button
                                     onClick={() => setMode('forgot')}
-                                    className="text-[9px] font-bold text-white/20 hover:text-white/60 transition-colors uppercase tracking-widest"
+                                    className="text-white/20 hover:text-white transition-colors"
                                 >
-                                    ¿Olvidaste tu llave? Solicita una nueva
+                                    He olvidado mi llave de acceso
                                 </button>
                             </>
-                        )}
-                        {(mode === 'register' || mode === 'forgot' || mode === 'reset') && (
+                        ) : (
                             <button
-                                onClick={() => {
-                                    setMode('login');
-                                    window.location.hash = '/';
-                                }}
-                                className="text-[9px] font-black text-brand-primary hover:text-white transition-colors uppercase tracking-[0.2em]"
+                                onClick={() => setMode('login')}
+                                className="flex items-center gap-2 text-white/40 hover:text-brand-primary transition-colors"
                             >
-                                Volver a Identificación
+                                <ArrowRight className="h-3 w-3 rotate-180" />
+                                Volver al Acceso Principal
                             </button>
                         )}
                     </div>
-                </div>
 
-                <p className="mt-8 text-center text-[8px] font-black uppercase tracking-[0.3em] text-white/10">
-                    Propiedad Privada del Gran Arquitecto 🏛️
-                </p>
+                </div>
             </div>
         </div>
     );

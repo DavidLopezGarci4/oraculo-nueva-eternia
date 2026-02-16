@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Upload, CheckCircle, AlertCircle, Loader2, ExternalLink } from 'lucide-react';
+import { Upload, CheckCircle, AlertCircle, ExternalLink } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { importWallapopProducts, parseWallapopText } from '../../api/wallapop';
+import PowerSwordLoader from '../ui/PowerSwordLoader';
 import type { WallapopProduct } from '../../api/wallapop';
 
 const WallapopImporter: React.FC = () => {
@@ -134,7 +135,7 @@ const WallapopImporter: React.FC = () => {
             >
                 {isImporting ? (
                     <>
-                        <Loader2 className="w-5 h-5 animate-spin" />
+                        <PowerSwordLoader size={24} />
                         Importando...
                     </>
                 ) : (

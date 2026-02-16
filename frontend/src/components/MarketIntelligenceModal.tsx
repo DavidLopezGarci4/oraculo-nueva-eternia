@@ -6,7 +6,6 @@ import {
     Target,
     Info,
     Calendar,
-    Loader2,
     AlertCircle,
     Zap,
     CheckCircle2,
@@ -25,6 +24,7 @@ import {
     ResponsiveContainer
 } from 'recharts';
 import axios from 'axios';
+import PowerSwordLoader from './ui/PowerSwordLoader';
 
 interface MarketIntelligenceModalProps {
     productId: number;
@@ -41,14 +41,7 @@ const MarketIntelligenceModal: React.FC<MarketIntelligenceModalProps> = ({ produ
     });
 
     if (isLoading) {
-        return (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md">
-                <div className="text-center space-y-4">
-                    <Loader2 className="h-10 w-10 animate-spin text-brand-primary mx-auto" />
-                    <p className="text-xs font-black uppercase tracking-widest text-white/40">Infiltrando base de datos del mercado...</p>
-                </div>
-            </div>
-        );
+        return <PowerSwordLoader variant="fullScreen" text="Infiltrando base de datos del mercado..." />;
     }
 
     // Distinguir entre error real y datos vacíos
@@ -126,14 +119,14 @@ const MarketIntelligenceModal: React.FC<MarketIntelligenceModalProps> = ({ produ
                                 <Calendar className="h-3 w-3" />
                                 <span>Mercado Actual</span>
                             </div>
-                            <div className="flex justify-between items-end">
-                                <div>
-                                    <p className="text-[10px] font-bold text-white/20 uppercase">Mínimo Retail</p>
-                                    <h4 className="text-2xl font-black text-brand-primary">{marketData.current_retail_low || '---'} €</h4>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="bg-white/5 border border-white/10 p-4 rounded-2xl flex items-center justify-between gap-3">
+                                    <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Mínimo Retail</span>
+                                    <h4 className="text-xl font-black text-brand-primary">{marketData.current_retail_low || '---'}€</h4>
                                 </div>
-                                <div className="text-right">
-                                    <p className="text-[10px] font-bold text-white/20 uppercase">Mínimo P2P</p>
-                                    <h4 className="text-2xl font-black text-purple-500">{marketData.current_p2p_low || '---'} €</h4>
+                                <div className="bg-white/5 border border-white/10 p-4 rounded-2xl flex items-center justify-between gap-3">
+                                    <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Mínimo P2P</span>
+                                    <h4 className="text-xl font-black text-purple-500">{marketData.current_p2p_low || '---'}€</h4>
                                 </div>
                             </div>
                         </div>

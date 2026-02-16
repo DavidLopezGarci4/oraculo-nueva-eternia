@@ -6,7 +6,6 @@ import {
     Trash2,
     Link,
     ExternalLink,
-    Loader2,
     RefreshCcw,
     Search,
     CheckCircle2,
@@ -21,6 +20,7 @@ import {
 import { getPurgatory, matchItem, discardItem, discardItemsBulk } from '../api/purgatory';
 import MarketIntelligenceModal from '../components/MarketIntelligenceModal';
 import QuickPreviewModal from '../components/QuickPreviewModal';
+import PowerSwordLoader from '../components/ui/PowerSwordLoader';
 import axios from 'axios';
 import { useEffect, useRef } from 'react';
 
@@ -341,7 +341,7 @@ const Purgatory: React.FC = React.memo(() => {
                     {pendingActions.length > 0 && (
                         <div className="flex items-center gap-6 px-6 py-4 rounded-3xl bg-brand-primary/10 border border-brand-primary/20 animate-in slide-in-from-right-4 duration-500 backdrop-blur-md">
                             <div className="relative">
-                                <Loader2 className={`h-6 w-6 ${isSyncing.current ? 'animate-spin text-brand-primary' : 'text-white/20'}`} />
+                                <PowerSwordLoader size={30} className={isSyncing.current ? '' : 'opacity-20'} />
                                 {failedActions.length > 0 && (
                                     <div className="absolute -right-1.5 -top-1.5 h-4 w-4 rounded-full bg-red-500 border-2 border-black flex items-center justify-center">
                                         <span className="text-[10px] font-black text-white leading-none">!</span>
@@ -429,10 +429,7 @@ const Purgatory: React.FC = React.memo(() => {
             {/* Purgatory List */}
             <div className="grid grid-cols-1 gap-6">
                 {isLoadingPending ? (
-                    <div className="flex h-64 flex-col items-center justify-center gap-4 text-white/30">
-                        <Loader2 className="h-10 w-10 animate-spin" />
-                        <p className="text-sm">Escaneando el abismo...</p>
-                    </div>
+                    <PowerSwordLoader variant="fullScreen" text="Escaneando el abismo..." />
                 ) : pendingItems?.length === 0 ? (
                     <div className="flex min-h-[300px] flex-col items-center justify-center gap-6 rounded-3xl border-2 border-dashed border-white/5 bg-white/[0.02] text-center">
                         <CheckCircle2 className="h-12 w-12 text-green-500/40" />
