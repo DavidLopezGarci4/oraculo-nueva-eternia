@@ -17,16 +17,18 @@ interface NavbarProps {
 
 const Navbar = ({ onMenuClick, showSearch = true, searchValue = "", onSearchChange, user, notifications = 3, isSovereign = false, onIdentityChange }: NavbarProps) => {
     return (
-        <nav className="sticky top-0 z-10 flex h-16 items-center border-b border-glass-border glass px-4 md:px-6 backdrop-blur-md gap-4">
+        <nav className="sticky top-0 z-10 flex flex-wrap md:flex-nowrap items-center justify-between border-b border-glass-border glass px-4 py-3 md:h-16 md:py-0 md:px-6 backdrop-blur-md gap-x-4 gap-y-3">
             {/* Mobile Menu Button */}
-            <button
-                onClick={onMenuClick}
-                className="p-2 -ml-2 text-white/60 hover:text-white md:hidden"
-            >
-                <Menu className="h-6 w-6" />
-            </button>
+            <div className="flex items-center order-1">
+                <button
+                    onClick={onMenuClick}
+                    className="p-2 -ml-2 text-white/60 hover:text-white md:hidden"
+                >
+                    <Menu className="h-6 w-6" />
+                </button>
+            </div>
 
-            <div className="flex items-center gap-4 flex-1">
+            <div className="flex items-center w-full md:flex-1 order-3 md:order-2">
                 {showSearch && (
                     <div className="relative w-full max-w-md animate-in fade-in slide-in-from-left-4 duration-500">
                         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
@@ -41,7 +43,7 @@ const Navbar = ({ onMenuClick, showSearch = true, searchValue = "", onSearchChan
                 )}
             </div>
 
-            <div className="flex items-center gap-2 md:gap-6 shrink-0">
+            <div className="flex items-center gap-2 md:gap-6 shrink-0 order-2 md:order-3 ml-auto">
                 <button className="relative p-2 text-white/60 hover:text-white group">
                     <Bell className="h-5 w-5" />
                     {notifications > 0 && (
