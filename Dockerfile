@@ -17,12 +17,15 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
+# Copy the uv binary from the official image
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
 # Copy requirements first to leverage Docker cache
 COPY requirements.txt .
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
-RUN pip install --no-cache-dir playwright uvicorn
+# Install Python dependencies using uv for maximum speed
+RUN uv pip install --system --no-cache -r requirements.txt
+RUN uv pip install --system --no-cache playwright uvicorn
 
 # Install Playwright Browsers (Chromium only to save space)
 RUN playwright install --with-deps chromium
