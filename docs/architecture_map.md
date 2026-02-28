@@ -3,6 +3,7 @@
 Este mapa detalla la estructura actual del proyecto bajo el estándar **3OX Tier 3**.
 
 ## 1. 🧠 Núcleo de Control (Core 3OX)
+
 Archivos fundamentales que rigen el comportamiento del agente y el sistema.
 
 | Archivo | Estado | Propósito |
@@ -15,6 +16,7 @@ Archivos fundamentales que rigen el comportamiento del agente y el sistema.
 | `sparkfile.md` | ✅ Activo | Especificación maestra y directivas core. |
 
 ## 2. 🛡️ Superficies Protegidas (vec3/)
+
 Estructura de aislamiento para reglas, librerías y estado.
 
 - **vec3/rc/**: Reglas inmutables y definiciones de sistema.
@@ -23,6 +25,7 @@ Estructura de aislamiento para reglas, librerías y estado.
 - **vec3/var/**: Estado dinámico, recibos de operaciones y persistencia temporal.
 
 ## 3. 🏗️ Capas de Aplicación (src/)
+
 Implementación de lógica de negocio siguiendo **Clean Architecture**.
 
 - **domain/**: Entidades MOTU (`ProductModel`, `OfferModel`), reglas de negocio puras.
@@ -34,6 +37,7 @@ Implementación de lógica de negocio siguiendo **Clean Architecture**.
 - **core/**: Utilidades transversales (Logger, Config, Audit).
 
 ## 4. 🌐 Interfaz de Usuario (frontend/)
+
 Ecosistema moderno en React.
 
 - **src/pages/**: Vistas principales (`Dashboard`, `Catalog`, `Fortress`, `Purgatory`).
@@ -44,11 +48,13 @@ Ecosistema moderno en React.
 ---
 
 ## 🔎 Notas de Auditoría
+
 - El proyecto ha sido consolidado eliminando el legado de Streamlit.
 - Los scripts de la raíz están en proceso de migración hacia `scripts/` o `src/application/jobs/` para mantener la pureza de la raíz.
 - **Phase 55**: Restauración del Legado y Motor de Graduación Avanzada (ASTM/C).
 - **Phase 56**: Blindaje de conexión BD (`pool_pre_ping`, `pool_recycle`), cancelación cooperativa de scrapers (`threading.Event`), eliminación de usuarios, diagnóstico SMTP y optimización de intervalos de refresco frontend.
+- **Phase 57**: Refactorización Visual UX & Búsqueda Flexible (Reserva Táctica de loader inmersivo a transiciones primarias e inputs de texto multilinea mobile-first).
 
 ---
 
-*Última actualización: 15/02/2026 - Fase 56: Blindaje Operativo & Cancelación Cooperativa.*
+*Última actualización: 28/02/2026 - Fase 57: Refactorización Visual UX.*

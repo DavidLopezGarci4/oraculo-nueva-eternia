@@ -11,10 +11,10 @@ import {
     ChevronRight,
     Camera,
     AlertCircle, // Added AlertCircle as it's used in the error state
-    ChevronLeft // Added ChevronLeft as it's used in the navigation buttons
+    ChevronLeft, // Added ChevronLeft as it's used in the navigation buttons
+    RefreshCw
 } from 'lucide-react';
 import axios from 'axios';
-import PowerSwordLoader from './ui/PowerSwordLoader';
 
 interface QuickPreviewModalProps {
     url: number | string; // Accept object id or just url
@@ -33,7 +33,11 @@ const QuickPreviewModal: React.FC<QuickPreviewModalProps> = ({ url, onClose }) =
     });
 
     if (isLoading) {
-        return <PowerSwordLoader variant="fullScreen" text="Invocando el espíritu de Wallapop..." />;
+        return (
+            <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 backdrop-blur-md">
+                <RefreshCw className="h-8 w-8 animate-spin text-brand-primary" />
+            </div>
+        );
     }
 
     if (error || !item) {

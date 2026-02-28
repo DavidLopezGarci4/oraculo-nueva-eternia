@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { User, Lock, ArrowRight } from 'lucide-react';
+import { User, Lock, ArrowRight, RefreshCw } from 'lucide-react';
 import entranceBg from '../assets/Entrance_prod.png';
-import PowerSwordLoader from '../components/ui/PowerSwordLoader';
 import axios from 'axios';
 
 interface LoginPageProps {
@@ -217,7 +216,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                         >
                             <div className="relative z-10 flex items-center justify-center gap-2">
                                 {loading ? (
-                                    <PowerSwordLoader size={30} />
+                                    <RefreshCw className="h-5 w-5 animate-spin mx-auto opacity-70" />
                                 ) : (
                                     <>
                                         {mode === 'login' && 'Entrar al Oráculo'}

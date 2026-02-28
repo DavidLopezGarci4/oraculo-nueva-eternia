@@ -10,9 +10,9 @@ import {
     TrendingUp,
     TrendingDown,
     Shield,
-    Target
+    Target,
+    RefreshCw
 } from 'lucide-react';
-import PowerSwordLoader from './ui/PowerSwordLoader';
 import { updateCollectionItem } from '../api/collection';
 import type { Product } from '../api/collection';
 import MarketIntelligenceModal from './MarketIntelligenceModal';
@@ -223,7 +223,7 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
                             disabled={updateMutation.isPending}
                             className="flex-1 flex items-center justify-center gap-3 py-4 rounded-2xl bg-brand-primary text-white font-black text-[10px] uppercase tracking-widest shadow-xl shadow-brand-primary/20 hover:brightness-110 transition-all"
                         >
-                            {updateMutation.isPending ? <PowerSwordLoader size={30} /> : <Save className="h-4 w-4" />}
+                            {updateMutation.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                             {updateMutation.isPending ? 'Sincronizando...' : 'Guardar en Legado'}
                         </button>
                     </div>

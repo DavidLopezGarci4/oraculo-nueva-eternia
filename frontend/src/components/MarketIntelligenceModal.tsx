@@ -12,7 +12,8 @@ import {
     Users,
     TrendingUp,
     Hash,
-    ShoppingBag
+    ShoppingBag,
+    RefreshCw
 } from 'lucide-react';
 import {
     LineChart,
@@ -24,7 +25,6 @@ import {
     ResponsiveContainer
 } from 'recharts';
 import axios from 'axios';
-import PowerSwordLoader from './ui/PowerSwordLoader';
 
 interface MarketIntelligenceModalProps {
     productId: number;
@@ -41,7 +41,14 @@ const MarketIntelligenceModal: React.FC<MarketIntelligenceModalProps> = ({ produ
     });
 
     if (isLoading) {
-        return <PowerSwordLoader variant="fullScreen" text="Infiltrando base de datos del mercado..." />;
+        return (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md">
+                <div className="flex flex-col items-center gap-4">
+                    <RefreshCw className="h-12 w-12 animate-spin text-brand-primary" />
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-primary animate-pulse">Infiltrando base de datos...</p>
+                </div>
+            </div>
+        );
     }
 
     // Distinguir entre error real y datos vacíos

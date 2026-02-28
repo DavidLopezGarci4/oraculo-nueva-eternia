@@ -434,7 +434,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
                                     title={owned ? 'Liberar del Catálogo (Presionar Lateral)' : wished ? 'Reclamar Reliquia (Presionar Lateral)' : 'Asegurar en la Fortaleza (Presionar Lateral)'}
                                 >
                                     {toggleMutation.isPending ? (
-                                        <PowerSwordLoader size={30} />
+                                        <RefreshCw className="h-6 w-6 animate-spin text-white/50" />
                                     ) : owned ? (
                                         <div className="flex flex-col items-center gap-1 group/btn">
                                             <Check className="h-4 w-4 sm:h-6 sm:w-6 group-hover/btn:hidden" />
@@ -605,7 +605,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
                                         </div>
                                         {isLoadingHistory ? (
                                             <div className="h-20 flex items-center justify-center">
-                                                <PowerSwordLoader size={40} />
+                                                <RefreshCw className="h-8 w-8 animate-spin text-purple-400/50" />
                                             </div>
                                         ) : priceHistory && priceHistory.length > 0 ? (
                                             <PriceHistoryChart data={priceHistory} />
@@ -663,8 +663,9 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
                                 </div>
 
                                 {isLoadingOffers ? (
-                                    <div className="flex h-40 items-center justify-center gap-3">
-                                        <PowerSwordLoader size={60} text="Escudriñando el Abismo..." />
+                                    <div className="flex h-40 flex-col items-center justify-center gap-3">
+                                        <RefreshCw className="h-10 w-10 animate-spin text-brand-primary/50" />
+                                        <span className="text-xs font-black uppercase tracking-widest text-brand-primary/50">Escudriñando el Abismo...</span>
                                     </div>
                                 ) : (
                                     <div className="space-y-3">

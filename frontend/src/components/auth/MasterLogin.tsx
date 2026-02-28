@@ -1,7 +1,5 @@
-import React, { useState } from 'react';
-import { Shield, Lock, ArrowRight, Zap } from 'lucide-react';
+import { Shield, Lock, ArrowRight, Zap, RefreshCw } from 'lucide-react';
 import axios from 'axios';
-import PowerSwordLoader from '../ui/PowerSwordLoader';
 
 interface MasterLoginProps {
     onSuccess: (isSovereign: boolean) => void;
@@ -90,7 +88,7 @@ const MasterLogin: React.FC<MasterLoginProps> = ({ onSuccess, onCancel }) => {
                         >
                             <div className="relative z-10 flex items-center justify-center gap-2">
                                 {loading ? (
-                                    <PowerSwordLoader size={30} />
+                                    <RefreshCw className="h-5 w-5 animate-spin mx-auto opacity-70" />
                                 ) : (
                                     <>
                                         Abrir Oráculo

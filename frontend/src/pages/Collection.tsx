@@ -12,7 +12,8 @@ import {
     ShoppingCart,
     Sparkles,
     Download,
-    Database
+    Database,
+    RefreshCw
 } from 'lucide-react';
 import PowerSwordLoader from '../components/ui/PowerSwordLoader';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -298,7 +299,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "" }) => {
                                                 disabled={toggleMutation.isPending}
                                                 className="h-10 sm:h-12 px-3 sm:px-6 flex items-center gap-1.5 sm:gap-3 rounded-xl sm:rounded-2xl bg-brand-primary text-white font-black text-[10px] sm:text-xs uppercase tracking-widest shadow-lg shadow-brand-primary/20 hover:brightness-110 transition-all border border-brand-primary/50"
                                             >
-                                                {toggleMutation.isPending ? <PowerSwordLoader size={30} /> : <ShoppingCart className="h-4 w-4" />}
+                                                {toggleMutation.isPending ? <RefreshCw className="h-4 w-4 animate-spin text-white/50" /> : <ShoppingCart className="h-4 w-4" />}
                                                 <span className="hidden sm:inline">Reclamar</span>
                                             </button>
                                         ) : (
@@ -307,7 +308,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "" }) => {
                                                 disabled={toggleMutation.isPending}
                                                 className="h-10 sm:h-12 px-3 sm:px-6 flex items-center gap-1.5 sm:gap-3 rounded-xl sm:rounded-2xl bg-green-500/10 text-green-400 font-black text-[10px] sm:text-xs uppercase tracking-widest border border-green-500/20 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/30 transition-all group/action"
                                             >
-                                                {toggleMutation.isPending ? <PowerSwordLoader size={30} /> : (
+                                                {toggleMutation.isPending ? <RefreshCw className="h-4 w-4 animate-spin text-white/50" /> : (
                                                     <>
                                                         <Check className="h-4 w-4 group-hover/action:hidden" />
                                                         <Box className="h-4 w-4 hidden group-hover/action:block" />
