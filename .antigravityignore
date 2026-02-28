@@ -1,0 +1,7 @@
+# Archivos de configuración sensibles
+.env
+.env.*
+*.pem
+*.key
+credentials/
+secrets/
