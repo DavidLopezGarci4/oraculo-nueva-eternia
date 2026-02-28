@@ -266,6 +266,24 @@ async def run_daily_scan(progress_callback=None):
                 try:
                     offers = await asyncio.wait_for(scraper.search("auto"), timeout=600)
                     update_task_log(f"📡 Found {len(offers)} potential relics.")
+
+                    # PHASE 51: Post-Scraping Filter for Tradeinn (Techinn/Kidinn only)
+                    if scraper.spider_name.lower() == "tradeinn" and offers:
+                        original_count = len(offers)
+                        filtered_offers = []
+                        for item in offers:
+                            url = getattr(item, 'url', '').lower()
+                            title = getattr(item, 'product_name', '').lower()
+                            if "techinn" in url or "kidinn" in url or "techinn" in title or "kidinn" in title:
+                                filtered_offers.append(item)
+                        
+                        discarded = original_count - len(filtered_offers)
+                        offers = filtered_offers
+                        
+                        if discarded > 0:
+                            logger.info(f"🧹 [{scraper.spider_name}] Post-filter: Discarded {discarded} non-Techinn/Kidinn items. Keeping {len(offers)}.")
+                            update_task_log(f"🧹 Discarded {discarded} items outside Techinn/Kidinn.")
+
                 except asyncio.TimeoutError:
                     logger.error(f"⌛ [TIMEOUT] {scraper.spider_name} exceeded 10-minute limit.")
                     update_task_log("⌛ [TIMEOUT] Exceeded 10-minute limit.")
