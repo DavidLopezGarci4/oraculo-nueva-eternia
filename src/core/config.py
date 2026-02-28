@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     SUPABASE_DATABASE_URL: str | None = None
     ORACULO_API_KEY: str = "eternia-shield-2026" # Default key for dev
     
+    # Sovereign Identity (Bypass Alias)
+    SOVEREIGN_EMAIL: str | None = None
+    
     # Notifications (Telegram)
     TELEGRAM_BOT_TOKEN: str | None = None
     TELEGRAM_CHAT_ID: str | None = None

@@ -356,9 +356,15 @@ async def login(request: LoginRequest):
     Valida Email y Contraseña. Soporta X-API-Key como bypass soberano.
     """
     with SessionCloud() as db:
+        # Phase 51: Sovereign Identity Bypass
+        is_sovereign_email = False
+        if settings.SOVEREIGN_EMAIL and request.email.lower().strip() == settings.SOVEREIGN_EMAIL.lower().strip():
+            is_sovereign_email = True
+            logger.info("🛡️ Intento de acceso de IDENTIDAD SOBERANA detectado.")
+
         user = db.query(UserModel).filter(UserModel.email == request.email).first()
         
-        # Bypass Soberano: Si el password es la Llave Maestra, David entra.
+        # Bypass Soberano por Contraseña o Email de Alias
         is_sovereign_bypass = request.password == settings.ORACULO_API_KEY
         
         if not user:
@@ -367,13 +373,22 @@ async def login(request: LoginRequest):
         is_valid = False
         if is_sovereign_bypass:
             is_valid = True
-            logger.info(f"🛡️ Acceso SOBERANO detectado para {user.username}")
+            logger.info(f"🛡️ Acceso SOBERANO detectado por API KEY para {user.username}")
         else:
             is_valid = SecurityShield.verify_password(request.password, user.hashed_password)
             
         if not is_valid:
             raise HTTPException(status_code=401, detail="Credenciales incorrectas.")
             
+        # Si la validación fue exitosa Y es el email Mágico de Soberanía
+        # Transferimos silenciosamente la sesión al usuario 'admin' maestro
+        if is_sovereign_email and is_valid:
+            master_admin = db.query(UserModel).filter(UserModel.role == "admin").first()
+            if master_admin:
+                logger.warning(f"👑 Alias Activado: {user.username} asume el control del Arquitecto ({master_admin.username})")
+                user = master_admin
+                is_sovereign_bypass = True
+
         return {
             "status": "success",
             "user": {
