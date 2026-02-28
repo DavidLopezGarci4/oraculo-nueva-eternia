@@ -10,6 +10,8 @@ export default defineConfig({
   ],
   server: {
     host: true, // Expose to network
+    port: 3001,
+    strictPort: true, // Fail if port is in use rather than picking another one
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:8000',

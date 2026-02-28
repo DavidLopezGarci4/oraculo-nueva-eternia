@@ -31,7 +31,7 @@ services:
     image: oraculo-frontend
     container_name: oraculo_frontend
     ports:
-      - "3000:80" # Access at localhost:3000
+      - "3001:80" # Access at localhost:3001
     depends_on:
       - backend
     networks:
