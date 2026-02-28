@@ -60,74 +60,12 @@ class BackupManager:
 
     def create_database_backup(self, db_session):
         """
-        Exports critical tables to a single JSON 'Vault' file.
-        Tables: products, offers, pending_matches, offer_history.
+        [DEPRECATED/OPTIMIZED] Exports critical tables to JSON.
+        Disabled to prevent excessive Egress bandwidth in Supabase.
+        Supabase provides native daily backups for free.
         """
-        from src.domain.models import ProductModel, OfferModel, PendingMatchModel, OfferHistoryModel
-        
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"eternia_vault_{timestamp}.json"
-        
-        vault = {
-            "metadata": {
-                "timestamp": datetime.now().isoformat(),
-                "version": "1.1-TOTAL"
-            },
-            "data": {
-                "users": [],
-                "products": [],
-                "offers": [],
-                "pending_matches": [],
-                "offer_history": [],
-                "price_alerts": [],
-                "collection_items": [],
-                "blackcluded_items": [],
-                "kaizen_insights": [],
-                "scraper_execution_logs": []
-            }
-        }
-
-        try:
-            # Helper to convert model to dict
-            def to_dict(row):
-                d = {}
-                for column in row.__table__.columns:
-                    val = getattr(row, column.name)
-                    if isinstance(val, datetime):
-                        val = val.isoformat()
-                    d[column.name] = val
-                return d
-
-            from src.domain.models import (
-                UserModel, ProductModel, OfferModel, PendingMatchModel, 
-                OfferHistoryModel, PriceAlertModel, CollectionItemModel,
-                BlackcludedItemModel, KaizenInsightModel, ScraperExecutionLogModel
-            )
-
-            # Extract data
-            vault["data"]["users"] = [to_dict(u) for u in db_session.query(UserModel).all()]
-            vault["data"]["products"] = [to_dict(p) for p in db_session.query(ProductModel).all()]
-            vault["data"]["offers"] = [to_dict(o) for o in db_session.query(OfferModel).all()]
-            vault["data"]["pending_matches"] = [to_dict(pm) for pm in db_session.query(PendingMatchModel).all()]
-            vault["data"]["offer_history"] = [to_dict(h) for h in db_session.query(OfferHistoryModel).all()]
-            vault["data"]["price_alerts"] = [to_dict(a) for a in db_session.query(PriceAlertModel).all()]
-            vault["data"]["collection_items"] = [to_dict(ci) for ci in db_session.query(CollectionItemModel).all()]
-            vault["data"]["blackcluded_items"] = [to_dict(bi) for bi in db_session.query(BlackcludedItemModel).all()]
-            vault["data"]["kaizen_insights"] = [to_dict(ki) for ki in db_session.query(KaizenInsightModel).all()]
-            vault["data"]["scraper_execution_logs"] = [to_dict(el) for el in db_session.query(ScraperExecutionLogModel).all()]
-
-            file_path = self.db_backups_path / filename
-            with open(file_path, "w", encoding="utf-8") as f:
-                json.dump(vault, f, ensure_ascii=False, indent=2, cls=DateTimeEncoder)
-            
-            logger.info(f"🏰 Database Vault created: {filename}")
-            self._rotate_backups(self.db_backups_path, 7) # Keep 7 days of DB backups
-            
-            return str(file_path)
-            
-        except Exception as e:
-            logger.error(f"❌ Failed to create DB backup: {e}")
-            return None
+        logger.info("🏰 Database Vault generation bypassed (Delegated to Supabase Native Backups).")
+        return None
 
     def _rotate_backups(self, folder: Path, limit: int):
         """Removes oldest files if limit exceeded."""
