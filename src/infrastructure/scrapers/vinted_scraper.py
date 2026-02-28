@@ -95,7 +95,7 @@ class VintedScraper(BaseScraper):
                         if isinstance(price_data, dict):
                             price = float(price_data.get("amount", 0))
                         else:
-                            price = float(str(price_val).replace("€", "").replace(",", ".").replace(" ", "").strip())
+                            price = float(str(price_data).replace("€", "").replace(",", ".").replace(" ", "").strip())
                         
                         if price <= 0: continue
                         

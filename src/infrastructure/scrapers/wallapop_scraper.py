@@ -30,7 +30,14 @@ class WallapopScraper(BaseScraper):
         
         async with async_playwright() as p:
             # 1. Lanzar navegador con suite de sigilo básica
-            browser = await p.chromium.launch(headless=True)
+            browser = await p.chromium.launch(
+                headless=True,
+                args=[
+                    '--disable-blink-features=AutomationControlled',
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox'
+                ]
+            )
             context = await browser.new_context(
                 viewport={'width': 1280, 'height': 800},
                 user_agent=self._get_random_header()["User-Agent"],
