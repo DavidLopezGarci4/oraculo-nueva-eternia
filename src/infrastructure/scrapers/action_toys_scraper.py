@@ -131,11 +131,12 @@ class ActionToysScraper(BaseScraper):
                 classes = btn.get('class', [])
                 
                 # [3OX] ActionToys Specific: Pre-order detection
+                # Modified based on user request to treat Pre-Pedidos as available.
                 if 'porto-pre-order' in classes or 'pre-pedido' in btn_text:
-                    is_avl = False
+                    is_avl = True
                 
                 # Detect "Read More" (usually means out of stock in Woo)
-                if 'leer más' in btn_text or 'sin existencias' in btn_text or 'agotado' in btn_text:
+                elif 'leer más' in btn_text or 'sin existencias' in btn_text or 'agotado' in btn_text:
                     is_avl = False
             else:
                 # If no button at all, might be a complex product or out of stock
@@ -144,7 +145,7 @@ class ActionToysScraper(BaseScraper):
                 
             # Final text-based safety check (Robustness Kaizen)
             item_text = item.get_text(strip=True).lower()
-            if any(term in item_text for term in ["sin existencias", "agotado", "próximamente"]):
+            if any(term in item_text for term in ["sin existencias", "agotado"]):
                 is_avl = False
             
             return ScrapedOffer(
