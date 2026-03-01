@@ -344,19 +344,23 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                         className="space-y-8"
                     >
                         {/* CENTRO DE MANDO OPERATIVO */}
-                        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                        <div className="space-y-2 md:space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-700">
 
                             {/* Banner de Control Global */}
-                            <div className="relative overflow-hidden rounded-[2.5rem] border border-white/5 bg-gradient-to-br from-white/[0.05] to-black p-6 md:p-8 backdrop-blur-xl">
-                                <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-brand-primary/10 blur-[100px]"></div>
+                            <div className="relative overflow-hidden rounded-2xl md:rounded-3xl border border-white/5 bg-black/25 p-4 md:p-6 backdrop-blur-2xl shadow-2xl">
+                                <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-brand-primary/10 blur-[100px] pointer-events-none"></div>
 
-                                <div className="relative mb-8 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
-                                    <div>
-                                        <div className="flex items-center gap-2 mb-1">
+                                <div className="relative flex flex-col items-start justify-between gap-4 md:flex-row md:items-center mb-0 md:mb-0 pb-4 md:pb-0">
+                                    <div className="relative z-10 flex flex-col gap-1">
+                                        <div className="flex items-center gap-2 text-brand-primary">
                                             <div className="h-2 w-2 rounded-full bg-brand-primary animate-pulse" />
-                                            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-brand-primary/70">Orquestador de Incursiones</span>
+                                            <h2 className="text-sm md:text-base font-black uppercase tracking-[0.2em] text-white">
+                                                Centro de <span className="text-brand-primary">Mando</span>
+                                            </h2>
                                         </div>
-                                        <h2 className="text-3xl font-black tracking-tighter text-white md:text-4xl"> CENTRO DE <span className="text-brand-primary">MANDO</span></h2>
+                                        <p className="max-w-xl text-[11px] md:text-sm text-white/40 font-medium uppercase tracking-[0.1em]">
+                                            Orquestador de Incursiones
+                                        </p>
                                     </div>
 
                                     <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">

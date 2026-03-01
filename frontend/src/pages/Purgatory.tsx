@@ -309,30 +309,29 @@ const Purgatory: React.FC = React.memo(() => {
     }
 
     return (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 animate-in fade-in duration-700">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-2 md:space-y-3 animate-in fade-in duration-700">
             {/* Header / Purgatory Status */}
-            <div className="relative overflow-hidden rounded-[2.5rem] border border-white/5 bg-gradient-to-br from-white/[0.05] to-black p-8 md:p-12 backdrop-blur-xl">
-                <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-brand-primary/10 blur-[100px]"></div>
+            <div className="relative overflow-hidden rounded-2xl md:rounded-3xl border border-white/5 bg-black/25 p-4 md:p-6 backdrop-blur-2xl shadow-2xl">
+                <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-brand-primary/10 blur-[100px] pointer-events-none"></div>
 
-                <div className="relative flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-                    <div className="space-y-4">
+                <div className="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                    <div className="relative z-10 flex flex-col gap-1">
                         <div className="flex items-center gap-2 text-brand-primary">
-                            <Flame className="h-5 w-5" />
-                            <span className="text-xs font-black uppercase tracking-[0.3em] opacity-70">El Espejo de Eternia</span>
-                        </div>
-                        <h2 className="text-4xl md:text-6xl font-black tracking-tighter text-white flex items-center gap-4">
-                            Purgatorio
+                            <Flame className="h-3 w-3 md:h-4 md:w-4 fill-brand-primary" />
+                            <h2 className="text-sm md:text-base font-black uppercase tracking-[0.2em] text-white">
+                                <span className="text-brand-primary">Purgatorio</span>
+                            </h2>
                             {!isLoadingPending && pendingItems && pendingItems.length > 0 && (
-                                <div className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-brand-primary/10 border border-brand-primary/20 animate-in zoom-in-95 duration-500">
-                                    <div className="h-2 w-2 rounded-full bg-brand-primary animate-pulse"></div>
-                                    <span className="text-xs font-black uppercase tracking-widest text-brand-primary/80">
-                                        {pendingItems.length} <span className="hidden sm:inline">Reliquias en el Abismo</span>
+                                <div className="ml-2 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-brand-primary/10 border border-brand-primary/20 animate-in zoom-in-95 duration-500">
+                                    <div className="h-1.5 w-1.5 rounded-full bg-brand-primary animate-pulse"></div>
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-brand-primary">
+                                        {pendingItems.length}
                                     </span>
                                 </div>
                             )}
-                        </h2>
-                        <p className="max-w-xl text-sm md:text-lg leading-relaxed text-white/40">
-                            Filtra, vincula y purifica las reliquias detectadas en las incursiones para que puedan ser manifestadas en el catálogo de Nueva Eternia.
+                        </div>
+                        <p className="max-w-xl text-[11px] md:text-sm text-white/40 font-medium uppercase tracking-[0.1em]">
+                            Purifica las reliquias para manifestarlas en el catálogo
                         </p>
                     </div>
 

@@ -26,33 +26,28 @@ const RadarP2P: React.FC = () => {
     }
 
     return (
-        <div className="space-y-8 pb-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="space-y-2 md:space-y-3 pb-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
             {/* Header / Hero Section */}
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-primary/20 via-black/40 to-transparent border border-glass-border p-8 md:p-12">
-                <div className="absolute top-0 right-0 -mt-20 -mr-20 w-96 h-96 bg-brand-primary/10 rounded-full blur-[100px]" />
+            <div className="relative overflow-hidden rounded-2xl md:rounded-3xl border border-white/5 bg-black/25 p-4 md:p-6 backdrop-blur-2xl shadow-2xl">
+                <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-brand-primary/10 blur-[100px] pointer-events-none" />
 
-                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
-                    <div className="max-w-2xl">
-                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-primary/10 border border-brand-primary/30 text-brand-primary text-[10px] font-black uppercase tracking-widest mb-4">
-                            <span className="relative flex h-2 w-2">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-primary opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-primary"></span>
-                            </span>
-                            Radar de Inteligencia Activo
+                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="relative z-10 flex flex-col gap-1">
+                        <div className="flex items-center gap-2 text-brand-primary">
+                            <Radar className="h-3 w-3 md:h-4 md:w-4 fill-brand-primary" />
+                            <h2 className="text-sm md:text-base font-black uppercase tracking-[0.2em] text-white">
+                                Radar de <span className="text-brand-primary">Oportunidades</span>
+                            </h2>
                         </div>
-                        <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight mb-4">
-                            Radar de <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-primary to-cyan-400">Oportunidades</span>
-                        </h1>
-                        <p className="text-white/60 text-lg leading-relaxed">
-                            Buscando entre particulares (Wallapop/eBay) ítems que cotizan por debajo del <span className="text-white font-bold">Percentil 25</span> del mercado real.
-                            Precios analizados bajo la <span className="text-brand-primary font-bold">Teoría de Cuarentena</span>.
+                        <p className="max-w-xl text-[11px] md:text-sm text-white/40 font-medium uppercase tracking-[0.1em]">
+                            Buscando gangas bajo Teoría de Cuarentena (P25)
                         </p>
                     </div>
 
-                    <div className="flex gap-4">
-                        <div className="glass p-6 rounded-2xl border-white/5 flex flex-col items-center justify-center min-w-[140px]">
-                            <span className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-1">Detectados</span>
-                            <span className="text-3xl font-black text-white">{opportunities?.length || 0}</span>
+                    <div className="flex gap-2">
+                        <div className="flex items-center gap-2 md:gap-3 rounded-xl md:rounded-2xl bg-white/5 px-4 py-2 border border-white/10 backdrop-blur-xl w-fit xl:w-auto">
+                            <Radar className="h-4 w-4 md:h-5 md:w-5 text-brand-primary" />
+                            <span className="text-xl md:text-2xl font-black text-white">{opportunities?.length || 0}</span>
                         </div>
                     </div>
                 </div>
