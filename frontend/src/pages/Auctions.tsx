@@ -290,9 +290,6 @@ const Auctions: React.FC = () => {
                                     <div className="flex flex-col gap-0.5 flex-1 min-w-0">
                                         <div className="flex items-center gap-1 sm:gap-1.5 overflow-hidden w-full">
                                             <span className="text-[6px] sm:text-[8px] font-black text-white/30 uppercase tracking-widest leading-none shrink-0">Precio</span>
-                                            {product.best_p2p_source && (
-                                                <span className="text-[5px] sm:text-[8px] font-black text-brand-primary uppercase px-1 py-0.5 bg-brand-primary/10 rounded sm:rounded-md border border-brand-primary/20 leading-none truncate">{product.best_p2p_source}</span>
-                                            )}
                                         </div>
                                         <div className="text-[13px] sm:text-2xl font-black text-white leading-none tracking-tighter truncate">{product.best_p2p_price || 0} <span className="text-[8px] sm:text-xs text-white/40">€</span></div>
                                     </div>
