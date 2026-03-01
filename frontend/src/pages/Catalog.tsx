@@ -369,7 +369,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
                             key={product.id}
                             className={`group relative flex flex-col gap-1 sm:gap-2 md:gap-5 rounded-2xl sm:rounded-[1.5rem] md:rounded-[2.5rem] border p-1.5 sm:p-2 md:p-5 transition-all duration-500 hover:translate-y-[-8px] ${hasIntel
                                 ? 'border-brand-primary/30 bg-brand-primary/[0.03] shadow-[0_0_20px_-5px_rgba(14,165,233,0.15)] hover:shadow-[0_40px_80px_-20px_rgba(14,165,233,0.2)]'
-                                : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.05] hover:shadow-[0_40px_80px_-20px_rgba(0,0,0,0.5)]'
+                                : 'border-white/5 bg-black/25 backdrop-blur-md hover:bg-black/20 hover:shadow-[0_40px_80px_-20px_rgba(0,0,0,0.5)]'
                                 }`}
                         >
                             {/* Market Intel Badge */}
@@ -488,7 +488,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
                             <div className="flex flex-1 flex-col gap-1 sm:gap-4 px-0.5 pb-1">
                                 <div className="space-y-0.5 sm:space-y-1">
                                     <div className="flex flex-wrap gap-1 mb-1">
-                                        <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-white/20 group-hover:text-brand-primary/50 transition-colors line-clamp-1">
+                                        <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-brand-primary group-hover:text-brand-primary/80 transition-colors line-clamp-1">
                                             {product.sub_category}
                                         </span>
                                         {getSentimentBadge(product)}
@@ -525,28 +525,28 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
                                         {/* Action: Toggle Price History */}
                                         <button
                                             onClick={() => setHistoryProductId(historyProductId === product.id ? null : product.id)}
-                                            className={`flex h-5 sm:h-6 md:h-9 flex-1 min-w-0 md:w-9 md:flex-none items-center justify-center rounded-lg md:rounded-xl transition-all border ${historyProductId === product.id ? 'bg-purple-500/20 text-purple-400 border-purple-500/50' : 'bg-white/5 text-white/30 border-white/5 hover:bg-white/10 hover:text-white'}`}
+                                            className={`flex h-4 sm:h-5 md:h-6 flex-1 min-w-0 md:w-6 md:flex-none items-center justify-center rounded-lg transition-all border ${historyProductId === product.id ? 'bg-purple-500/20 text-purple-400 border-purple-500/50' : 'bg-white/5 text-white/30 border-white/5 hover:bg-white/10 hover:text-white'}`}
                                             title="Ver Evolución de Precios"
                                         >
-                                            <History className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                            <History className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                                         </button>
 
                                         {/* Action Button: Detail View */}
                                         <button
                                             onClick={() => setSelectedProduct(product)}
-                                            className="flex h-5 sm:h-6 md:h-9 flex-1 min-w-0 md:w-9 md:flex-none items-center justify-center rounded-lg md:rounded-xl bg-white/5 text-white/40 border border-white/5 transition-all hover:bg-brand-primary/20 hover:text-brand-primary hover:border-brand-primary/40"
+                                            className="flex h-4 sm:h-5 md:h-6 flex-1 min-w-0 md:w-6 md:flex-none items-center justify-center rounded-lg bg-white/5 text-white/40 border border-white/5 transition-all hover:bg-brand-primary/20 hover:text-brand-primary hover:border-brand-primary/40"
                                             title="Ver Mercado Live"
                                         >
-                                            <Info className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                            <Info className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                                         </button>
 
                                         {hasIntel && (
                                             <button
                                                 onClick={() => setIntelProductId(product.id)}
-                                                className="flex h-5 sm:h-6 md:h-9 flex-1 min-w-0 md:w-9 md:flex-none items-center justify-center rounded-lg md:rounded-xl bg-brand-primary/20 text-brand-primary border border-brand-primary/40 transition-all hover:bg-white/10 hover:text-white"
+                                                className="flex h-4 sm:h-5 md:h-6 flex-1 min-w-0 md:w-6 md:flex-none items-center justify-center rounded-lg bg-brand-primary/20 text-brand-primary border border-brand-primary/40 transition-all hover:bg-white/10 hover:text-white"
                                                 title="Análisis de Mercado 3OX"
                                             >
-                                                <ChartIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                                <ChartIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                                             </button>
                                         )}
 
@@ -554,13 +554,13 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
                                         <button
                                             onClick={() => toggleMutation.mutate({ productId: product.id, wish: true })}
                                             disabled={toggleMutation.isPending || owned}
-                                            className={`flex h-5 sm:h-6 md:h-9 flex-1 min-w-0 md:w-9 md:flex-none items-center justify-center rounded-lg md:rounded-xl transition-all border shadow-lg ${wished
+                                            className={`flex h-4 sm:h-5 md:h-6 flex-1 min-w-0 md:w-6 md:flex-none items-center justify-center rounded-lg transition-all border shadow-lg ${wished
                                                 ? 'bg-brand-primary/20 text-brand-primary border-brand-primary/30 hover:bg-red-500/20 hover:text-red-400'
                                                 : 'bg-white/5 text-white/20 border-white/10 hover:bg-brand-primary/10 hover:text-brand-primary'
                                                 } ${owned ? 'opacity-20 cursor-not-allowed' : ''} ${toggleMutation.isPending ? 'opacity-50 cursor-wait' : ''}`}
                                             title={wished ? 'Quitar de Deseos' : 'Añadir a Deseos'}
                                         >
-                                            <Star className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${wished ? 'fill-current' : ''}`} />
+                                            <Star className={`h-3 w-3 sm:h-3.5 sm:w-3.5 ${wished ? 'fill-current' : ''}`} />
                                         </button>
 
                                         {/* Action: Universal Search (EAN/ASIN) */}
@@ -568,20 +568,20 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
                                             href={product.asin ? `https://www.amazon.es/s?k=${product.asin}` : `https://www.google.com/search?q=${encodeURIComponent(product.name + ' masters of the universe origins')}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="flex h-5 sm:h-6 md:h-9 flex-1 min-w-0 md:w-9 md:flex-none items-center justify-center rounded-lg md:rounded-xl bg-white/5 text-white/20 border border-white/10 hover:bg-brand-secondary/20 hover:text-brand-secondary transition-all shadow-lg"
+                                            className="flex h-4 sm:h-5 md:h-6 flex-1 min-w-0 md:w-6 md:flex-none items-center justify-center rounded-lg bg-white/5 text-white/20 border border-white/10 hover:bg-brand-secondary/20 hover:text-brand-secondary transition-all shadow-lg"
                                             title={product.asin ? "Buscar en Amazon.es por ASIN" : "Buscar en Google"}
                                         >
-                                            <Search className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                            <Search className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                                         </a>
 
                                         {/* Admin Action: Edit */}
                                         {isAdmin && (
                                             <button
                                                 onClick={() => setEditingProduct(product)}
-                                                className="flex h-5 sm:h-6 md:h-9 flex-1 min-w-0 md:w-9 md:flex-none items-center justify-center rounded-lg md:rounded-xl bg-white/5 text-white/40 border border-white/5 hover:bg-brand-primary/20 hover:text-brand-primary transition-all shadow-lg"
+                                                className="flex h-4 sm:h-5 md:h-6 flex-1 min-w-0 md:w-6 md:flex-none items-center justify-center rounded-lg bg-white/5 text-white/40 border border-white/5 hover:bg-brand-primary/20 hover:text-brand-primary transition-all shadow-lg"
                                                 title="Editar Metadatos (Arquitecto)"
                                             >
-                                                <Settings className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                                <Settings className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                                             </button>
                                         )}
                                     </div>

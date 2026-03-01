@@ -224,7 +224,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "" }) => {
                             return (
                                 <div
                                     key={product.id}
-                                    className={`group flex flex-col gap-2 sm:gap-4 relative overflow-hidden transition-all duration-500 hover:translate-y-[-8px] rounded-2xl sm:rounded-[2.5rem] p-3 sm:p-6 border ${isGrail ? 'border-yellow-500/30 bg-yellow-500/10 backdrop-blur-md shadow-[0_30px_60px_-15px_rgba(234,179,8,0.2)]' : 'border-white/5 bg-black/50 backdrop-blur-md hover:bg-black/40'}`}
+                                    className={`group flex flex-col gap-2 sm:gap-4 relative overflow-hidden transition-all duration-500 hover:translate-y-[-8px] rounded-2xl sm:rounded-[2.5rem] p-3 sm:p-6 border ${isGrail ? 'border-yellow-500/30 bg-yellow-500/10 backdrop-blur-md shadow-[0_30px_60px_-15px_rgba(234,179,8,0.2)]' : 'border-white/5 bg-black/25 backdrop-blur-md hover:bg-black/20'}`}
                                 >
                                     {/* Image Container */}
                                     <div className="relative aspect-square w-full overflow-hidden rounded-[1.5rem] sm:rounded-[2rem] bg-black/40 border border-white/10 shadow-inner">
