@@ -204,7 +204,7 @@ const Auctions: React.FC = () => {
                     return (
                         <div
                             key={product.id}
-                            className="group relative flex flex-col gap-2 sm:gap-4 rounded-3xl sm:rounded-[2.5rem] border border-white/5 bg-black/25 backdrop-blur-md p-2.5 sm:p-5 hover:bg-white/[0.05] transition-all duration-500 hover:translate-y-[-4px] hover:shadow-2xl"
+                            className="group relative flex flex-col gap-1.5 sm:gap-4 rounded-2xl sm:rounded-[2.5rem] border border-white/5 bg-black/25 backdrop-blur-md p-2 sm:p-5 hover:bg-white/[0.05] transition-all duration-500 hover:translate-y-[-4px] hover:shadow-2xl"
                         >
                             <div
                                 className="relative aspect-square w-full overflow-hidden rounded-2xl sm:rounded-[2rem] bg-black/40 border border-white/10 shadow-inner group/img cursor-pointer"
@@ -280,26 +280,26 @@ const Auctions: React.FC = () => {
                                 <div className="absolute top-2 left-2 sm:top-4 sm:left-4 z-40 rounded-lg sm:rounded-xl bg-black/70 px-2 py-1 sm:px-3 sm:py-1.5 text-[8px] sm:text-[10px] font-black text-brand-primary backdrop-blur-md border border-brand-primary/20 opacity-0 group-hover:opacity-100 transition-all uppercase tracking-widest">#{product.figure_id}</div>
                             </div>
 
-                            <div className="flex flex-1 flex-col gap-2 sm:gap-3 px-1">
+                            <div className="flex flex-1 flex-col gap-1 sm:gap-3 px-1">
                                 <div className="space-y-0.5 sm:space-y-1">
-                                    <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-brand-primary opacity-80 group-hover:opacity-100 transition-colors line-clamp-1">{product.sub_category}</span>
-                                    <h3 className="line-clamp-2 min-h-[2rem] text-xs sm:text-lg font-black leading-tight text-white group-hover:text-brand-primary transition-colors">{product.name}</h3>
+                                    <span className="text-[7px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-brand-primary opacity-80 group-hover:opacity-100 transition-colors line-clamp-1">{product.sub_category}</span>
+                                    <h3 className="line-clamp-2 md:min-h-[2rem] text-[11px] sm:text-lg font-black leading-tight text-white group-hover:text-brand-primary transition-colors">{product.name}</h3>
                                 </div>
 
-                                <div className="mt-auto flex items-end justify-between pt-2 sm:pt-4 gap-1 sm:gap-3">
+                                <div className="mt-auto flex items-end justify-between pt-1 sm:pt-4 gap-1 sm:gap-3">
                                     <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-                                        <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
-                                            <span className="text-[7px] sm:text-[8px] font-black text-white/30 uppercase tracking-widest leading-none">Precio</span>
+                                        <div className="flex items-center gap-1 sm:gap-1.5 overflow-hidden w-full">
+                                            <span className="text-[6px] sm:text-[8px] font-black text-white/30 uppercase tracking-widest leading-none shrink-0">Precio</span>
                                             {product.best_p2p_source && (
-                                                <span className="text-[6px] sm:text-[8px] font-black text-brand-primary uppercase px-1 py-0.5 bg-brand-primary/10 rounded border border-brand-primary/20 leading-none truncate">{product.best_p2p_source}</span>
+                                                <span className="text-[5px] sm:text-[8px] font-black text-brand-primary uppercase px-1 py-0.5 bg-brand-primary/10 rounded sm:rounded-md border border-brand-primary/20 leading-none truncate">{product.best_p2p_source}</span>
                                             )}
                                         </div>
-                                        <div className="text-lg sm:text-2xl font-black text-white leading-none">{product.best_p2p_price || 0} <span className="text-[10px] sm:text-xs text-white/40">€</span></div>
+                                        <div className="text-[13px] sm:text-2xl font-black text-white leading-none tracking-tighter truncate">{product.best_p2p_price || 0} <span className="text-[8px] sm:text-xs text-white/40">€</span></div>
                                     </div>
-                                    <div className="flex items-center gap-1.5 shrink-0">
-                                        <button onClick={() => setHistoryProductId(historyProductId === product.id ? null : product.id)} className={`flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg transition-all border ${historyProductId === product.id ? 'bg-purple-500/20 text-purple-400 border-purple-500/50' : 'bg-white/5 text-white/30 border-white/5 hover:bg-white/10 hover:text-white'}`}><History className="h-3 w-3 sm:h-3.5 sm:w-3.5" /></button>
-                                        <button onClick={() => setSelectedProduct(product)} className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-white/5 text-white/40 border border-white/5 hover:bg-brand-primary/20 hover:text-brand-primary transition-all"><Info className="h-3 w-3 sm:h-3.5 sm:w-3.5" /></button>
-                                        <button onClick={() => toggleMutation.mutate({ productId: product.id, wish: true })} disabled={toggleMutation.isPending || owned} className={`flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg transition-all border ${wished ? 'bg-brand-primary/20 text-brand-primary border-brand-primary/30' : 'bg-white/5 text-white/20 border-white/10 hover:bg-brand-primary/10 hover:text-brand-primary'} ${owned ? 'opacity-20' : ''}`}><Star className={`h-3 w-3 sm:h-3.5 sm:w-3.5 ${wished ? 'fill-current' : ''}`} /></button>
+                                    <div className="flex items-center gap-1 sm:gap-1.5 shrink-0 pb-0.5 sm:pb-0">
+                                        <button onClick={() => setHistoryProductId(historyProductId === product.id ? null : product.id)} className={`flex h-6 w-6 sm:h-8 sm:w-8 items-center justify-center rounded-lg transition-all border ${historyProductId === product.id ? 'bg-purple-500/20 text-purple-400 border-purple-500/50' : 'bg-white/5 text-white/30 border-white/5 hover:bg-white/10 hover:text-white'}`}><History className="h-2.5 w-2.5 sm:h-3.5 sm:w-3.5" /></button>
+                                        <button onClick={() => setSelectedProduct(product)} className="flex h-6 w-6 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-white/5 text-white/40 border border-white/5 hover:bg-brand-primary/20 hover:text-brand-primary transition-all"><Info className="h-2.5 w-2.5 sm:h-3.5 sm:w-3.5" /></button>
+                                        <button onClick={() => toggleMutation.mutate({ productId: product.id, wish: true })} disabled={toggleMutation.isPending || owned} className={`flex h-6 w-6 sm:h-8 sm:w-8 items-center justify-center rounded-lg transition-all border ${wished ? 'bg-brand-primary/20 text-brand-primary border-brand-primary/30' : 'bg-white/5 text-white/20 border-white/10 hover:bg-brand-primary/10 hover:text-brand-primary'} ${owned ? 'opacity-20' : ''}`}><Star className={`h-2.5 w-2.5 sm:h-3.5 sm:w-3.5 ${wished ? 'fill-current' : ''}`} /></button>
                                     </div>
                                 </div>
 
