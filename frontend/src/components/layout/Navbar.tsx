@@ -78,13 +78,13 @@ const Navbar = ({ onMenuClick, showSearch = true, searchValue = "", onSearchChan
             {showSearch && (
                 <div className="flex w-full items-center justify-center md:flex-1 md:max-w-xl md:mx-auto">
                     <div className="relative w-full animate-in fade-in slide-in-from-left-4 duration-500">
-                        <Search className="absolute left-3 top-3.5 h-4 w-4 text-white/40" />
-                        <textarea
-                            rows={2}
+                        <Search className="absolute left-3 top-3 h-4 w-4 text-white/40" />
+                        <input
+                            type="text"
                             placeholder="Buscar figuras (nombre, EAN, ID)..."
                             value={searchValue}
                             onChange={(e) => onSearchChange?.(e.target.value)}
-                            className="w-full rounded-2xl bg-white/5 py-3 pl-9 pr-4 text-sm font-bold text-white border border-white/10 focus:border-brand-primary outline-none transition-all placeholder:text-white/20 resize-none custom-scrollbar"
+                            className="w-full rounded-2xl bg-white/5 py-2.5 pl-9 pr-4 text-sm font-bold text-white border border-white/10 focus:border-brand-primary outline-none transition-all placeholder:text-white/20"
                         />
                     </div>
                 </div>
