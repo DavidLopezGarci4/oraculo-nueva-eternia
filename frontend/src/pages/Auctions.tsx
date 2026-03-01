@@ -164,31 +164,35 @@ const Auctions: React.FC = () => {
                     </div>
                     <p className="max-w-xl text-[11px] md:text-sm text-white/40 font-medium uppercase tracking-[0.1em]">Subastas & Mercado de Segunda Mano</p>
                 </div>
-                <div className="flex flex-wrap items-center gap-3">
-                    <div className="flex items-center gap-2 p-1.5 rounded-xl bg-white/[0.03] border border-white/5">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 w-full md:w-auto">
+                    <div className="flex items-center gap-1 sm:gap-2 p-1 sm:p-1.5 rounded-xl bg-white/[0.03] border border-white/5 w-full sm:w-auto">
                         <button
                             onClick={() => setSortBy('name')}
-                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${sortBy === 'name' ? 'bg-brand-primary text-white shadow-[0_0_15px_rgba(34,211,238,0.3)]' : 'text-white/20 hover:text-white/40'}`}
+                            className={`flex-1 sm:flex-none px-2 sm:px-3 py-1.5 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all ${sortBy === 'name' ? 'bg-brand-primary text-white shadow-[0_0_15px_rgba(34,211,238,0.3)]' : 'text-white/20 hover:text-white/40'}`}
                         >
                             Nombre
                         </button>
                         <button
                             onClick={() => setSortBy('price')}
-                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${sortBy === 'price' ? 'bg-brand-primary text-white shadow-[0_0_15px_rgba(34,211,238,0.3)]' : 'text-white/20 hover:text-white/40'}`}
+                            className={`flex-1 sm:flex-none px-2 sm:px-3 py-1.5 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all ${sortBy === 'price' ? 'bg-brand-primary text-white shadow-[0_0_15px_rgba(34,211,238,0.3)]' : 'text-white/20 hover:text-white/40'}`}
                         >
                             Precio
                         </button>
                         <button
                             onClick={() => setSortBy('figure_id')}
-                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${sortBy === 'figure_id' ? 'bg-brand-primary text-white shadow-[0_0_15px_rgba(34,211,238,0.3)]' : 'text-white/20 hover:text-white/40'}`}
+                            className={`flex-1 sm:flex-none px-2 sm:px-3 py-1.5 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all ${sortBy === 'figure_id' ? 'bg-brand-primary text-white shadow-[0_0_15px_rgba(34,211,238,0.3)]' : 'text-white/20 hover:text-white/40'}`}
                         >
                             ID
                         </button>
                     </div>
-                    <div className="flex items-center gap-3 rounded-2xl bg-white/[0.03] px-6 py-3 border border-white/5 backdrop-blur-3xl">
-                        <Gavel className="h-5 w-5 text-brand-primary" />
-                        <span className="text-2xl font-black text-white">{products?.length}</span>
-                        <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em] pt-1">Otras Reliquias Libres</span>
+                    <div className="flex items-center justify-between sm:justify-start gap-3 rounded-xl sm:rounded-2xl bg-white/[0.03] px-4 sm:px-6 py-2 sm:py-3 border border-white/5 backdrop-blur-3xl w-full sm:w-auto">
+                        <div className="flex items-center gap-2">
+                            <Gavel className="h-4 w-4 sm:h-5 sm:w-5 text-brand-primary" />
+                            <span className="text-xl sm:text-2xl font-black text-white leading-none">{products?.length}</span>
+                        </div>
+                        <span className="text-[8px] sm:text-[10px] font-black text-white/20 uppercase tracking-[0.15em] sm:tracking-[0.2em] pt-0.5 leading-tight text-right sm:text-left">
+                            Otras Reliquias<br className="sm:hidden" /> Libres
+                        </span>
                     </div>
                 </div>
             </div>
@@ -200,7 +204,7 @@ const Auctions: React.FC = () => {
                     return (
                         <div
                             key={product.id}
-                            className="group relative flex flex-col gap-2 sm:gap-5 rounded-3xl sm:rounded-[2.5rem] border border-white/5 bg-white/[0.02] p-2.5 sm:p-5 hover:bg-white/[0.05] transition-all duration-500 hover:translate-y-[-8px] hover:shadow-[0_40px_80px_-20px_rgba(0,0,0,0.5)]"
+                            className="group relative flex flex-col gap-2 sm:gap-4 rounded-3xl sm:rounded-[2.5rem] border border-white/5 bg-black/25 backdrop-blur-md p-2.5 sm:p-5 hover:bg-white/[0.05] transition-all duration-500 hover:translate-y-[-4px] hover:shadow-2xl"
                         >
                             <div
                                 className="relative aspect-square w-full overflow-hidden rounded-2xl sm:rounded-[2rem] bg-black/40 border border-white/10 shadow-inner group/img cursor-pointer"
@@ -278,24 +282,24 @@ const Auctions: React.FC = () => {
 
                             <div className="flex flex-1 flex-col gap-2 sm:gap-3 px-1">
                                 <div className="space-y-0.5 sm:space-y-1">
-                                    <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-white/20 group-hover:text-brand-primary/50 transition-colors line-clamp-1">{product.sub_category}</span>
+                                    <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-brand-primary opacity-80 group-hover:opacity-100 transition-colors line-clamp-1">{product.sub_category}</span>
                                     <h3 className="line-clamp-2 min-h-[2rem] text-xs sm:text-lg font-black leading-tight text-white group-hover:text-brand-primary transition-colors">{product.name}</h3>
                                 </div>
 
-                                <div className="mt-auto flex items-center justify-between pt-2 sm:pt-4 gap-2 sm:gap-3">
-                                    <div className="flex flex-col">
-                                        <div className="flex items-center gap-1.5">
-                                            <span className="text-[8px] font-black text-white/20 uppercase tracking-widest">Mejor Precio</span>
+                                <div className="mt-auto flex items-end justify-between pt-2 sm:pt-4 gap-1 sm:gap-3">
+                                    <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+                                        <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
+                                            <span className="text-[7px] sm:text-[8px] font-black text-white/30 uppercase tracking-widest leading-none">Precio</span>
                                             {product.best_p2p_source && (
-                                                <span className="text-[8px] font-black text-brand-primary uppercase px-1.5 py-0.5 bg-brand-primary/10 rounded-md border border-brand-primary/20">{product.best_p2p_source}</span>
+                                                <span className="text-[6px] sm:text-[8px] font-black text-brand-primary uppercase px-1 py-0.5 bg-brand-primary/10 rounded border border-brand-primary/20 leading-none truncate">{product.best_p2p_source}</span>
                                             )}
                                         </div>
-                                        <div className="text-xl sm:text-2xl font-black text-white">{product.best_p2p_price || 0} <span className="text-xs sm:text-sm text-white/40">€</span></div>
+                                        <div className="text-lg sm:text-2xl font-black text-white leading-none">{product.best_p2p_price || 0} <span className="text-[10px] sm:text-xs text-white/40">€</span></div>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <button onClick={() => setHistoryProductId(historyProductId === product.id ? null : product.id)} className={`flex h-8 w-8 sm:h-11 sm:w-11 items-center justify-center rounded-xl sm:rounded-2xl transition-all border ${historyProductId === product.id ? 'bg-purple-500/20 text-purple-400 border-purple-500/50' : 'bg-white/5 text-white/30 border-white/5 hover:bg-white/10 hover:text-white'}`}><History className="h-3 w-3 sm:h-5 sm:w-5" /></button>
-                                        <button onClick={() => setSelectedProduct(product)} className="flex h-8 w-8 sm:h-11 sm:w-11 items-center justify-center rounded-xl sm:rounded-2xl bg-white/5 text-white/40 border border-white/5 hover:bg-brand-primary/20 hover:text-brand-primary transition-all"><Info className="h-3 w-3 sm:h-5 sm:w-5" /></button>
-                                        <button onClick={() => toggleMutation.mutate({ productId: product.id, wish: true })} disabled={toggleMutation.isPending || owned} className={`flex h-8 w-8 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl transition-all border ${wished ? 'bg-brand-primary/20 text-brand-primary border-brand-primary/30' : 'bg-white/5 text-white/20 border-white/10 hover:bg-brand-primary/10 hover:text-brand-primary'} ${owned ? 'opacity-20' : ''}`}><Star className={`h-3 w-3 sm:h-5 sm:w-5 ${wished ? 'fill-current' : ''}`} /></button>
+                                    <div className="flex items-center gap-1.5 shrink-0">
+                                        <button onClick={() => setHistoryProductId(historyProductId === product.id ? null : product.id)} className={`flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg transition-all border ${historyProductId === product.id ? 'bg-purple-500/20 text-purple-400 border-purple-500/50' : 'bg-white/5 text-white/30 border-white/5 hover:bg-white/10 hover:text-white'}`}><History className="h-3 w-3 sm:h-3.5 sm:w-3.5" /></button>
+                                        <button onClick={() => setSelectedProduct(product)} className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-white/5 text-white/40 border border-white/5 hover:bg-brand-primary/20 hover:text-brand-primary transition-all"><Info className="h-3 w-3 sm:h-3.5 sm:w-3.5" /></button>
+                                        <button onClick={() => toggleMutation.mutate({ productId: product.id, wish: true })} disabled={toggleMutation.isPending || owned} className={`flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg transition-all border ${wished ? 'bg-brand-primary/20 text-brand-primary border-brand-primary/30' : 'bg-white/5 text-white/20 border-white/10 hover:bg-brand-primary/10 hover:text-brand-primary'} ${owned ? 'opacity-20' : ''}`}><Star className={`h-3 w-3 sm:h-3.5 sm:w-3.5 ${wished ? 'fill-current' : ''}`} /></button>
                                     </div>
                                 </div>
 

@@ -119,9 +119,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
     }
 
     return (
-        <div className="space-y-2 md:space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+        <div className="space-y-2 md:space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-1000">
             {/* Hero Section */}
-            <div className="relative overflow-hidden rounded-2xl md:rounded-3xl border border-white/5 bg-gradient-to-br from-white/[0.08] to-transparent py-2 px-3 md:p-6 backdrop-blur-3xl">
+            <div className="relative overflow-hidden rounded-2xl md:rounded-3xl border border-white/5 bg-black/25 p-4 md:p-6 backdrop-blur-2xl shadow-2xl">
                 <div className="absolute inset-0 z-0 opacity-20 pointer-events-none">
                     <img
                         src={!isAdmin ? guardianRoleImg : masterRoleImg}
@@ -144,7 +144,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
 
             {/* Metrics Ribbon */}
             <div className="grid grid-cols-2 gap-3 md:gap-6 md:grid-cols-3">
-                <div className="group relative overflow-hidden rounded-xl md:rounded-2xl border border-white/5 bg-white/[0.03] p-4 md:p-5">
+                <div className="group relative overflow-hidden rounded-xl md:rounded-2xl border border-white/5 bg-black/25 backdrop-blur-md p-4 md:p-5">
                     <div className="relative flex flex-col items-center md:items-start gap-1 md:gap-3">
                         <div className="flex h-8 w-8 md:h-10 md:w-10 items-center justify-center rounded-lg md:rounded-xl bg-brand-primary/10 border border-brand-primary/20 shrink-0">
                             <Zap className="h-4 w-4 md:h-5 md:w-5 text-brand-primary" />
@@ -155,7 +155,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                         </div>
                     </div>
                 </div>
-                <div className="group relative overflow-hidden rounded-xl md:rounded-2xl border border-white/5 bg-white/[0.03] p-4 md:p-5">
+                <div className="group relative overflow-hidden rounded-xl md:rounded-2xl border border-white/5 bg-black/25 backdrop-blur-md p-4 md:p-5">
                     <div className="relative flex flex-col items-center md:items-start gap-1 md:gap-3">
                         <div className="flex h-8 w-8 md:h-10 md:w-10 items-center justify-center rounded-lg md:rounded-xl bg-green-500/10 border border-green-500/20 shrink-0">
                             <ShoppingBag className="h-4 w-4 md:h-5 md:w-5 text-green-500" />
@@ -166,7 +166,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                         </div>
                     </div>
                 </div>
-                <div className="group relative overflow-hidden rounded-xl md:rounded-2xl border border-white/5 bg-white/[0.03] p-4 md:p-5">
+                <div className="group relative overflow-hidden rounded-xl md:rounded-2xl border border-white/5 bg-black/25 backdrop-blur-md p-4 md:p-5">
                     <div className="relative flex flex-col items-center md:items-start gap-1 md:gap-3">
                         <div className="flex h-8 w-8 md:h-10 md:w-10 items-center justify-center rounded-lg md:rounded-xl bg-orange-500/10 border border-orange-500/20 shrink-0">
                             <Euro className="h-4 w-4 md:h-5 md:w-5 text-orange-500" />
@@ -182,7 +182,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
             {/* Conditional Content Based on Role */}
             {!isAdmin ? (
                 // GUARDIAN VIEW: Custom Order (Oportunidades -> Hall of Fame)
-                <div className="space-y-10">
+                <div className="space-y-4 md:space-y-6">
                     <OracleCart />
 
                     {/* Top Deals Section (Oportunidades de Captura) */}
@@ -198,7 +198,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                             <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">Top 20 Reliquias</span>
                         </div>
 
-                        <div className="rounded-[2.5rem] border border-white/5 bg-white/[0.01] overflow-hidden">
+                        <div className="rounded-2xl md:rounded-[2.5rem] border border-white/5 bg-black/25 backdrop-blur-md overflow-hidden">
                             <div className="max-h-[600px] overflow-y-auto custom-scrollbar-thin">
                                 <div className="grid grid-cols-1 md:grid-cols-2 text-white">
                                     {topDeals?.map((deal) => (
@@ -257,7 +257,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
 
                     <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                         {/* Kingdom's Grails */}
-                        <div className="relative overflow-hidden rounded-[2.5rem] border border-yellow-500/20 bg-gradient-to-br from-yellow-900/10 to-transparent p-6">
+                        <div className="relative overflow-hidden rounded-2xl md:rounded-[2.5rem] border border-yellow-500/20 bg-black/25 backdrop-blur-md p-6">
                             <h4 className="text-white font-black text-lg mb-4">Griales del Reino</h4>
                             <div className="space-y-3">
                                 {hallOfFame?.top_value?.map((item) => (
@@ -275,7 +275,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                         </div>
 
                         {/* Potencial Oculto */}
-                        <div className="relative overflow-hidden rounded-[2.5rem] border border-green-500/20 bg-gradient-to-br from-green-900/10 to-transparent p-6">
+                        <div className="relative overflow-hidden rounded-2xl md:rounded-[2.5rem] border border-green-500/20 bg-black/25 backdrop-blur-md p-6">
                             <h4 className="text-white font-black text-lg mb-4">Potencial Oculto</h4>
                             <div className="space-y-3">
                                 {hallOfFame?.top_roi?.map((item) => (
@@ -295,12 +295,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                 </div>
             ) : (
                 // ADMIN VIEW: Exclusive Operational Sections (Top Deals & Activity)
-                <div className="space-y-10">
+                <div className="space-y-4 md:space-y-6">
                     <OracleCart />
                     {/* Admin Horizontal Sections: Conquistas & Actividad */}
                     <div className="space-y-4">
                         <h4 className="text-xs font-black uppercase tracking-widest text-white/40">Conquistas de Mercado</h4>
-                        <div className="rounded-[2.5rem] border border-white/5 bg-white/[0.02] p-4 md:p-8">
+                        <div className="rounded-2xl md:rounded-[2.5rem] border border-white/5 bg-black/25 backdrop-blur-md p-4 md:p-8">
                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3 md:gap-4">
                                 {matchStats?.map((item) => (
                                     <div key={item.shop} className="flex flex-col gap-1 rounded-2xl bg-white/[0.03] p-3 md:p-4 border border-white/5">
@@ -314,7 +314,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
 
                     <div className="space-y-4">
                         <h4 className="text-xs font-black uppercase tracking-widest text-white/40">Actividad Logística</h4>
-                        <div className="rounded-[2.5rem] border border-white/5 bg-white/[0.02] p-4 md:p-6 h-[300px] overflow-y-auto custom-scrollbar">
+                        <div className="rounded-2xl md:rounded-[2.5rem] border border-white/5 bg-black/25 backdrop-blur-md p-4 md:p-6 h-[300px] overflow-y-auto custom-scrollbar">
                             <div className="space-y-2">
                                 {history?.map((entry) => (
                                     <div key={entry.id} className="flex flex-col gap-1.5 rounded-xl border border-white/5 bg-white/[0.01] p-3 text-xs">
@@ -343,7 +343,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                             <h4 className="text-xs font-black uppercase tracking-widest text-white/40">Oportunidades Bajo Seguimiento</h4>
                             <span className="text-[10px] font-bold text-brand-primary">MÓDULO DE ACCIÓN</span>
                         </div>
-                        <div className="rounded-[2.5rem] border border-white/5 bg-white/[0.01] overflow-hidden">
+                        <div className="rounded-2xl md:rounded-[2.5rem] border border-white/5 bg-black/25 backdrop-blur-md overflow-hidden">
                             <div className="grid grid-cols-1 md:grid-cols-2">
                                 {topDeals?.map((deal, idx) => (
                                     <div key={deal.id} className={`p-4 border-white/[0.03] ${(idx < topDeals.length - 1) ? 'border-b' : ''} ${(idx % 2 === 0 && idx < topDeals.length - 1) ? 'md:border-r' : ''} hover:bg-white/[0.02] transition-all`}>
