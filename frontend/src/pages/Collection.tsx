@@ -81,20 +81,19 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "" }) => {
     return (
         <div className="space-y-10 animate-in fade-in duration-700 pb-20">
             {/* Header & Stats Banner */}
-            <div className="relative overflow-hidden rounded-[2.5rem] border border-white/5 bg-gradient-to-br from-white/[0.04] to-black p-6 md:p-10 backdrop-blur-2xl shadow-2xl">
-                <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-brand-primary/10 blur-3xl"></div>
-                <div className="absolute -left-20 -bottom-20 h-48 w-48 rounded-full bg-purple-500/10 blur-3xl"></div>
+            <div className="relative overflow-hidden rounded-2xl md:rounded-3xl border border-white/5 bg-gradient-to-br from-white/[0.04] to-black p-4 md:p-6 backdrop-blur-2xl shadow-2xl">
+                <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-brand-primary/10 blur-3xl pointer-events-none"></div>
+                <div className="absolute -left-20 -bottom-20 h-48 w-48 rounded-full bg-purple-500/10 blur-3xl pointer-events-none"></div>
 
-                <div className="relative flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
-                    <div className="space-y-2 md:space-y-4">
+                <div className="relative flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                    <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-2 text-brand-primary">
-                            <Box className="h-4 w-4 md:h-5 md:w-5" />
-                            <span className="text-[10px] md:text-xs font-black uppercase tracking-[0.2em] md:tracking-[0.3em] opacity-80">Mi Legado</span>
+                            <Box className="h-3 w-3 md:h-4 md:w-4 fill-brand-primary" />
+                            <h2 className="text-sm md:text-base font-black uppercase tracking-[0.2em] text-white">
+                                Mi <span className="text-brand-primary">Legado</span>
+                            </h2>
                         </div>
-                        <h2 className="text-4xl md:text-5xl font-black tracking-tighter text-white lg:text-7xl">
-                            Mi <span className="text-brand-primary">Legado</span>
-                        </h2>
-                        <p className="max-w-md text-[10px] md:text-xs leading-relaxed text-white/40 font-medium">
+                        <p className="max-w-xl text-[11px] md:text-sm text-white/40 font-medium">
                             Coleccionando no solo figuras, sino fragmentos de historia y valor en el tiempo.
                         </p>
                     </div>
@@ -138,7 +137,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "" }) => {
 
                         {/* Fortaleza and Deseos stats */}
                         <div className="flex flex-row gap-2 md:gap-4">
-                            <div className="flex-1 flex flex-col gap-1 rounded-xl md:rounded-[2rem] bg-white/5 p-3 md:p-6 border border-white/10 backdrop-blur-xl group hover:bg-white/10 transition-all">
+                            <div className="flex-1 flex flex-col gap-0.5 rounded-xl md:rounded-2xl bg-white/5 p-2 md:p-4 border border-white/10 backdrop-blur-xl group hover:bg-white/10 transition-all">
                                 <div className="flex items-center justify-between text-white/40 group-hover:text-brand-primary">
                                     <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest">Fortaleza</span>
                                     <Box className="h-3 w-3 md:h-4 md:w-4" />
@@ -147,7 +146,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "" }) => {
                                 <span className="text-[7px] md:text-[9px] font-bold text-white/20 uppercase">Items Poseídos</span>
                             </div>
 
-                            <div className="flex-1 flex flex-col gap-1 rounded-xl md:rounded-[2rem] bg-brand-primary/5 p-3 md:p-6 border border-brand-primary/20 backdrop-blur-xl group hover:bg-brand-primary/10 transition-all">
+                            <div className="flex-1 flex flex-col gap-0.5 rounded-xl md:rounded-2xl bg-brand-primary/5 p-2 md:p-4 border border-brand-primary/20 backdrop-blur-xl group hover:bg-brand-primary/10 transition-all">
                                 <div className="flex items-center justify-between text-brand-primary/40 group-hover:text-brand-primary">
                                     <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest">Deseos</span>
                                     <Star className="h-3 w-3 md:h-4 md:w-4" />
@@ -161,22 +160,22 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "" }) => {
             </div>
 
             {/* Navigation Tabs */}
-            <div className="flex bg-white/5 p-1.5 rounded-[2rem] border border-white/10 backdrop-blur-3xl w-fit">
+            <div className="flex bg-white/5 p-1 rounded-2xl md:rounded-3xl border border-white/10 backdrop-blur-3xl w-fit">
                 <button
                     onClick={() => setActiveTab('owned')}
-                    className={`flex items-center gap-3 px-8 py-3.5 rounded-full text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'owned' ? 'bg-brand-primary text-white shadow-xl shadow-brand-primary/20 scale-105' : 'text-white/30 hover:text-white'}`}
+                    className={`flex items-center justify-center gap-1.5 px-4 md:px-6 py-1.5 md:py-2 rounded-xl md:rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'owned' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20 scale-105' : 'text-white/30 hover:text-white'}`}
                 >
-                    <Box className="h-4 w-4" />
+                    <Box className="h-3 w-3 md:h-4 md:w-4" />
                     La Fortaleza
                 </button>
                 <button
                     onClick={() => setActiveTab('wish')}
-                    className={`flex items-center gap-3 px-8 py-3.5 rounded-full text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'wish' ? 'bg-brand-primary text-white shadow-xl shadow-brand-primary/20 scale-105' : 'text-white/30 hover:text-white'}`}
+                    className={`flex items-center justify-center gap-1.5 px-4 md:px-6 py-1.5 md:py-2 rounded-xl md:rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'wish' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20 scale-105' : 'text-white/30 hover:text-white'}`}
                 >
-                    <Star className="h-4 w-4" />
+                    <Star className="h-3 w-3 md:h-4 md:w-4" />
                     Lista de Deseos
                     {totalWish > 0 && (
-                        <span className="bg-white/10 text-brand-primary text-[10px] px-2 py-0.5 rounded-full ml-1">
+                        <span className="bg-white/10 text-brand-primary text-[9px] px-1.5 py-0.5 rounded-md ml-1">
                             {totalWish}
                         </span>
                     )}
