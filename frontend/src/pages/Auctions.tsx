@@ -165,22 +165,22 @@ const Auctions: React.FC = () => {
                     <p className="max-w-xl text-[11px] md:text-sm text-white/40 font-medium uppercase tracking-[0.1em]">Subastas & Mercado de Segunda Mano</p>
                 </div>
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 w-full md:w-auto">
-                    <div className="flex items-center gap-1 sm:gap-2 p-1 sm:p-1.5 rounded-xl bg-white/[0.03] border border-white/5 w-full sm:w-auto">
+                    <div className="grid grid-cols-3 gap-1 sm:gap-2 p-1 sm:p-1.5 rounded-xl bg-white/[0.03] border border-white/5 w-full sm:w-auto">
                         <button
                             onClick={() => setSortBy('name')}
-                            className={`flex-1 sm:flex-none px-2 sm:px-3 py-1.5 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all ${sortBy === 'name' ? 'bg-brand-primary text-white shadow-[0_0_15px_rgba(34,211,238,0.3)]' : 'text-white/20 hover:text-white/40'}`}
+                            className={`w-full py-1.5 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-[0.05em] sm:tracking-widest transition-all ${sortBy === 'name' ? 'bg-brand-primary text-white shadow-[0_0_15px_rgba(34,211,238,0.3)]' : 'text-white/20 hover:text-white/40'}`}
                         >
                             Nombre
                         </button>
                         <button
                             onClick={() => setSortBy('price')}
-                            className={`flex-1 sm:flex-none px-2 sm:px-3 py-1.5 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all ${sortBy === 'price' ? 'bg-brand-primary text-white shadow-[0_0_15px_rgba(34,211,238,0.3)]' : 'text-white/20 hover:text-white/40'}`}
+                            className={`w-full py-1.5 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-[0.05em] sm:tracking-widest transition-all ${sortBy === 'price' ? 'bg-brand-primary text-white shadow-[0_0_15px_rgba(34,211,238,0.3)]' : 'text-white/20 hover:text-white/40'}`}
                         >
                             Precio
                         </button>
                         <button
                             onClick={() => setSortBy('figure_id')}
-                            className={`flex-1 sm:flex-none px-2 sm:px-3 py-1.5 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all ${sortBy === 'figure_id' ? 'bg-brand-primary text-white shadow-[0_0_15px_rgba(34,211,238,0.3)]' : 'text-white/20 hover:text-white/40'}`}
+                            className={`w-full py-1.5 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-[0.05em] sm:tracking-widest transition-all ${sortBy === 'figure_id' ? 'bg-brand-primary text-white shadow-[0_0_15px_rgba(34,211,238,0.3)]' : 'text-white/20 hover:text-white/40'}`}
                         >
                             ID
                         </button>
@@ -218,7 +218,7 @@ const Auctions: React.FC = () => {
 
                                 {/* Auction Badges */}
                                 <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-40 flex flex-col items-end gap-1 sm:gap-2">
-                                    <div className="flex items-center gap-1 rounded-lg sm:rounded-xl bg-orange-500/10 px-1.5 py-0.5 sm:px-2.5 sm:py-1 border border-orange-500/20 backdrop-blur-md">
+                                    <div className="flex items-center gap-1 rounded-md sm:rounded-xl bg-orange-500/10 px-1.5 py-0.5 sm:px-2.5 sm:py-1 border border-orange-500/20 backdrop-blur-md">
                                         <span className="h-1 w-1 sm:h-1.5 sm:w-1.5 rounded-full bg-orange-500 animate-pulse"></span>
                                         <span className="text-[6px] sm:text-[8px] font-black uppercase tracking-widest text-orange-500">Subasta</span>
                                     </div>
