@@ -666,7 +666,8 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
   - **Daily Scan Fix**: Corregido el workflow `scrapers.yml` para apuntar a `SUPABASE_DATABASE_URL`, eliminando el modo de pruebas local en la nube.
   - **Fase 22 (Unlink Control)**: ✅ Botón de desvinculación administrativa y limpieza de alias para una "sanación" total del catálogo (Completado).
 
-* **Fase 23 (Security Hardening)**: ✅ Doble confirmación y relocalización de acciones críticas de reset para protección del Reino (Completado).
+- **Fase 23 (Security Hardening)**: ✅ Doble confirmación y relocalización de acciones críticas de reset para protección del Reino (Completado).
+
 - **Fase 24 (Dashboard Mastery)**: ✅ Control absoluto desde el Tablero: desvincular y re-vincular ofertas sin salir de la vista principal (Completado).
 
 - [x] **11.10 Optimización de Rendimiento & UX Core (20/01/2026)**:
@@ -692,19 +693,22 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
 
 #### 40.1 Estandarización de Identidad
 
-* **BaseScraper**: Renombramiento de la clase maestra `BaseSpider` a `BaseScraper`.
+- **BaseScraper**: Renombramiento de la clase maestra `BaseSpider` a `BaseScraper`.
+
 - **Atributo scraper_name**: Sustitución global de `spider_name` por `scraper_name` en todos los scrapers, modelos de base de datos (`ScraperStatusModel`, `ScraperExecutionLogModel`, `KaizenInsightModel`) y endpoints de la API.
 - **Nomenclatura Uniforme**: Actualización de todas las clases individuales a la convención `*Scraper` (ej. `EbayScraper`, `AmazonScraper`).
 
 #### 40.2 Refuerzo de la Ingestión
 
-* **Daily Scan CLI**: Actualización del flujo de escaneo diario para manejar los nuevos nombres de scrapers y asegurar la trazabilidad en Supabase.
+- **Daily Scan CLI**: Actualización del flujo de escaneo diario para manejar los nuevos nombres de scrapers y asegurar la trazabilidad en Supabase.
+
 - **Pipeline de Scraping**: Refactorización del `ScrapingPipeline` para usar `scrapers` en lugar de `spiders`, mejorando la semántica del código.
 - **Simulador de Latidos**: Actualización del sistema de monitoreo de salud para usar el nuevo motor.
 
 #### 40.3 Limpieza de Legado (Tech Debt)
 
-* **Eliminación de Alias**: Remoción definitiva del alias `BaseSpider` una vez verificada la integridad de todas las referencias.
+- **Eliminación de Alias**: Remoción definitiva del alias `BaseSpider` una vez verificada la integridad de todas las referencias.
+
 - **Saneamiento de Imports**: Corrección de importaciones en scripts de prueba, utilidades y jobs de fondo.
 
 ### 🛡️ Fase 41: Resiliencia del Nexo y Sigilo en Amazon (24/01/2026)
@@ -714,29 +718,34 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
 
 #### 41.1 Sanación del Nexo Maestro
 
-* **Fix AssertionError: 10**: Implementación de un sistema de deduplicación de columnas en `personal_collection.py`. El sistema ahora detecta y renombra cabeceras duplicadas provenientes de ActionFigure411, permitiendo una reindexación segura en pandas.
+- **Fix AssertionError: 10**: Implementación de un sistema de deduplicación de columnas en `personal_collection.py`. El sistema ahora detecta y renombra cabeceras duplicadas provenientes de ActionFigure411, permitiendo una reindexación segura en pandas.
+
 - **Suministro Incremental**: Refuerzo de la lógica de mezcla (merge) para preservar metadatos de imágenes y IDs de figuras existentes.
 
 #### 41.2 Infiltración Fantasma (Amazon Stealth)
 
-* **Bypass Anti-Bot**: Implementación de "Stealth Mode" en el `AmazonScraper` mediante flags de Playwright para ocultar la automatización (`AutomationControlled`).
+- **Bypass Anti-Bot**: Implementación de "Stealth Mode" en el `AmazonScraper` mediante flags de Playwright para ocultar la automatización (`AutomationControlled`).
+
 - **Contexto Realista**: Configuración de huella digital humana (Locale `es-ES`, Timezone `Europe/Madrid`, Viewport real).
 - **Interacción Humanizada**: Inyección de scripts de evasión de `webdriver` y patrones de navegación con scroll aleatorio para evitar bloqueos por timeout en `amazon.es`.
 
 #### 41.3 Alineación de Esquema (Hotfix)
 
-* **Database Migration**: Creación de script SQL para renombrar `spider_name` a `scraper_name` en las tablas `scraper_status`, `scraper_execution_logs` y `kaizen_insights`.
+- **Database Migration**: Creación de script SQL para renombrar `spider_name` a `scraper_name` en las tablas `scraper_status`, `scraper_execution_logs` y `kaizen_insights`.
+
 - **Frontend Consistency**: Actualización de interfaces y componentes en React para consumir la nueva nomenclatura, resolviendo errores 500 en el panel de control.
   - **P2P Tagging**: Corregido endpoint de importación para que los ítems de Wallapop se marquen como `Peer-to-Peer` automáticamente.
 
 ### Fase 23: Blindaje de Poderes Administrativos ✅
 
-* **Confidencialidad de Acciones**: Desplazamiento de herramientas críticas a la zona de Configuración. ✅
+- **Confidencialidad de Acciones**: Desplazamiento de herramientas críticas a la zona de Configuración. ✅
+
 - **Doble Autorización**: Sistema de confirmación en dos etapas para evitar el reset accidental del ecosistema. ✅
 
 ### Fase 24: Dashboard Mastery (Control Ubicuo) ✅
 
-* **Gestión en Tiempo Real**: Capacidad de corregir vinculaciones directamente desde las oportunidades del Tablero. ✅
+- **Gestión en Tiempo Real**: Capacidad de corregir vinculaciones directamente desde las oportunidades del Tablero. ✅
+
 - **Buscador Integrado**: Drawer de re-vinculación con búsqueda atómica para una corrección fluida. ✅
 
 - **Estado**: ✅ COMPLETADO
@@ -873,7 +882,8 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
 
 #### 43.1 Gobierno de Identidad en Dashboard
 
-* **Detección Dinámica**: El componente `Dashboard.tsx` ahora detecta el rol del usuario consultando el `active_user_id` en `localStorage`, alineándose con la seguridad del Sidebar.
+- **Detección Dinámica**: El componente `Dashboard.tsx` ahora detecta el rol del usuario consultando el `active_user_id` en `localStorage`, alineándose con la seguridad del Sidebar.
+
 - **Filtro de Contenidos**:
   - **Áreas Protegidas**: Las secciones "Actividad del Oráculo" (log de operaciones) y "Conquistas por Mercado" (métricas de éxito de scrapers) ahora solo son visibles para el **Maestro (Admin ID 1)**.
   - **Gestión de Ofertas**: Los botones de acción crítica (Reasignar y Desvincular) en la lista de oportunidades están blindados y ocultos para usuarios sin privilegios.
@@ -913,32 +923,37 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
 
 #### 56.1 Pool de Conexiones (Database Armor)
 
-* **Pool Pre-Ping**: Añadido `pool_pre_ping=True` al engine de SQLAlchemy para verificar conexiones antes de usarlas.
+- **Pool Pre-Ping**: Añadido `pool_pre_ping=True` al engine de SQLAlchemy para verificar conexiones antes de usarlas.
+
 - **Pool Recycle**: Configurado `pool_recycle=1800` (30 min) para reciclar conexiones automáticamente durante incursiones largas.
 - **Timeout de Incursión**: Aumentado de 600s (10 min) a 1800s (30 min) para acomodar escaneos comprehensivos.
 
 #### 56.2 Cancelación Cooperativa de Scrapers
 
-* **Flag de Cancelación**: Implementado `threading.Event` global (`scraper_cancel_event`) como mecanismo de parada cooperativa.
+- **Flag de Cancelación**: Implementado `threading.Event` global (`scraper_cancel_event`) como mecanismo de parada cooperativa.
+
 - **Ejecución Secuencial**: Los scrapers ahora corren secuencialmente (en lugar de en paralelo) con timeout individual de 5 min por scraper.
 - **Parada Limpia**: El endpoint `POST /api/scrapers/stop` activa la señal antes de matar procesos hijos, permitiendo que el pipeline aborte entre scrapers.
 - **Persistencia Parcial**: Las ofertas recolectadas antes de la cancelación se persisten correctamente en la base de datos.
 
 #### 56.3 Gestión de Héroes (User Deletion)
 
-* **Endpoint de Eliminación**: Nuevo `DELETE /api/admin/users/{user_id}` para borrado definitivo de usuarios y sus items de colección asociados.
+- **Endpoint de Eliminación**: Nuevo `DELETE /api/admin/users/{user_id}` para borrado definitivo de usuarios y sus items de colección asociados.
+
 - **Blindaje Admin**: Protección contra la eliminación accidental de cuentas de administrador.
 - **UI de Borrado**: Botón con icono Trash2 y diálogo de confirmación en el panel de Configuración.
 
 #### 56.4 Diagnóstico SMTP & Email
 
-* **Mapeo Docker**: Añadidas las 5 variables SMTP (`HOST`, `PORT`, `USER`, `PASS`, `FROM`) al `docker-compose.prod.yml`.
+- **Mapeo Docker**: Añadidas las 5 variables SMTP (`HOST`, `PORT`, `USER`, `PASS`, `FROM`) al `docker-compose.prod.yml`.
+
 - **Audit Endpoint**: El endpoint `/api/system/audit` ahora reporta el estado de configuración SMTP.
 - **Logging Mejorado**: `EmailService` con logs detallados de errores de conexión, autenticación y envío.
 
 #### 56.5 Optimización UX de Refrescos
 
-* **Dashboard**: Intervals de 60s → 5 min (stats, history, matchStats, hallOfFame) y 5 min → 10 min (topDeals).
+- **Dashboard**: Intervals de 60s → 5 min (stats, history, matchStats, hallOfFame) y 5 min → 10 min (topDeals).
+
 - **Purgatorio**: De 30s → 5 min (refetch + sync retry).
 - **Config**: De 10s → 60s (polling admin).
 - **RadarP2P**: De 60s → 5 min.
@@ -950,10 +965,29 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
 
 #### 57.1 Optimización de Transiciones y Rendimiento Visual
 
-* **Limpieza de DOM**: Sustituido el componente intensivo `PowerSwordLoader` (Skeletor) por spinners nativos `RefreshCw` de lucide-react en todas las interacciones secundarias y de red (botones de acción, carga de grids secundarios, modales de detalle).
+- **Limpieza de DOM**: Sustituido el componente intensivo `PowerSwordLoader` (Skeletor) por spinners nativos `RefreshCw` de lucide-react en todas las interacciones secundarias y de red (botones de acción, carga de grids secundarios, modales de detalle).
+
 - **Reserva Táctica**: El loader inmersivo a pantalla completa ahora queda restringido de forma exclusiva a cambios de sección principales (Navegación de Router) y sincronización de identidad de los Héroes, eliminando parpadeos innecesarios y acelerando el renderizado de la UI de forma dramática.
 
 #### 57.2 Escalabilidad del Buscador Global
 
-* **Expansión Multilínea**: Migrado el componente `<input type="text">` estático de la barra de navegación superior (`Navbar.tsx`) a un `<textarea rows={2}>` con custom scrollbar.
+- **Expansión Multilínea**: Migrado el componente `<input type="text">` estático de la barra de navegación superior (`Navbar.tsx`) a un `<textarea rows={2}>` con custom scrollbar.
+
 - **Mobile-First Reading**: Esta evolución resuelve una fricción crítica en móviles donde queries largas (como combinaciones de EAN y nombre o cadenas desde Wallapop) resultaban ilegibles. El input ahora acoge cadenas complejas manteniendo su layout gracias a una configuración inteligente de Flexbox.
+
+### 🛡️ Fase 58: Homogeneización Estética y Optimización Espacial de Vistas (01/03/2026)
+
+- **Hitos**: Unificación del lenguaje visual de las cabeceras de todas las secciones y optimización del uso del espacio en las cards de ítems.
+- **Estado**: ✅ COMPLETADO Y VERIFICADO
+
+#### 58.1 Estandarización de Cabeceras (Headers)
+
+- **Patrón Oro**: Se establece el diseño de la cabecera del `Tablero de Poder` (caja semi-transparente `bg-black/25`, `backdrop-blur-2xl`, bordes redondeados y padding compacto) como estándar global para la aplicación.
+- **Implementación Universal**: Aplicado este de patrón estructural a las vistas de `Mi Legado` (`Collection.tsx`), el `Pabellón` (`Auctions.tsx`), el `Centro de Mando` (`Config.tsx`), el `Radar de Oportunidades` (`RadarP2P.tsx`) y el `Purgatorio` (`Purgatory.tsx`).
+- **Ahorro Vertical**: Se reduce drásticamente el espaciado vertical global de los contenedores (`space-y-10` a `space-y-2 md:space-y-3`) para priorizar la visualización de los datos inmediatamente debajo del título.
+
+#### 58.2 Optimización de Cards y Visibilidad del Fondo
+
+- **Cristal Ahumado**: Reducida la opacidad base de las cards de productos en Catálogo y Mi Legado del 50% al 25% (`bg-black/25`) manteniendo el desenfoque (`backdrop-blur-md`). Esto permite una mayor injerencia visual del fondo inmersivo de la aplicación.
+- **Lectura Táctica**: Modificado el color de las subcategorías en las cards a `text-brand-primary` (Cian) para evitar que se difumine con la imagen trasera.
+- **Botonera Compacta**: Reducción general de la altura y padding de todos los botones de acción e iconos informativos (check verde) dentro de las cards (`h-10` a `h-6 / h-8`). Esta compresión vertical recupera un importante porcentaje de espacio útil de pantalla (especialmente crítico en mobile), solucionando los problemas de desbordamiento reportados.
