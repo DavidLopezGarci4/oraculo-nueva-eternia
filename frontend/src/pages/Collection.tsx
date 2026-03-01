@@ -79,9 +79,9 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "" }) => {
     }
 
     return (
-        <div className="space-y-10 animate-in fade-in duration-700 pb-20">
+        <div className="space-y-2 md:space-y-3 animate-in fade-in duration-700 pb-20">
             {/* Header & Stats Banner */}
-            <div className="relative overflow-hidden rounded-2xl md:rounded-3xl border border-white/5 bg-gradient-to-br from-white/[0.04] to-black p-4 md:p-6 backdrop-blur-2xl shadow-2xl">
+            <div className="relative overflow-hidden rounded-2xl md:rounded-3xl border border-white/5 bg-black/50 p-4 md:p-6 backdrop-blur-2xl shadow-2xl">
                 <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-brand-primary/10 blur-3xl pointer-events-none"></div>
                 <div className="absolute -left-20 -bottom-20 h-48 w-48 rounded-full bg-purple-500/10 blur-3xl pointer-events-none"></div>
 
@@ -160,7 +160,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "" }) => {
             </div>
 
             {/* Navigation Tabs */}
-            <div className="flex bg-white/5 p-1 rounded-2xl md:rounded-3xl border border-white/10 backdrop-blur-3xl w-fit">
+            <div className="flex bg-black/50 p-1 rounded-2xl md:rounded-3xl border border-white/10 backdrop-blur-3xl w-fit">
                 <button
                     onClick={() => setActiveTab('owned')}
                     className={`flex items-center justify-center gap-1.5 px-4 md:px-6 py-1.5 md:py-2 rounded-xl md:rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'owned' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20 scale-105' : 'text-white/30 hover:text-white'}`}
