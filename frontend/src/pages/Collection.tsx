@@ -224,7 +224,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "" }) => {
                             return (
                                 <div
                                     key={product.id}
-                                    className={`group flex flex-col gap-2 sm:gap-4 relative overflow-hidden transition-all duration-500 hover:translate-y-[-8px] rounded-2xl sm:rounded-[2.5rem] p-3 sm:p-6 border ${isGrail ? 'border-yellow-500/30 bg-yellow-500/[0.03] shadow-[0_30px_60px_-15px_rgba(234,179,8,0.2)]' : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.04]'}`}
+                                    className={`group flex flex-col gap-2 sm:gap-4 relative overflow-hidden transition-all duration-500 hover:translate-y-[-8px] rounded-2xl sm:rounded-[2.5rem] p-3 sm:p-6 border ${isGrail ? 'border-yellow-500/30 bg-yellow-500/10 backdrop-blur-md shadow-[0_30px_60px_-15px_rgba(234,179,8,0.2)]' : 'border-white/5 bg-black/50 backdrop-blur-md hover:bg-black/40'}`}
                                 >
                                     {/* Image Container */}
                                     <div className="relative aspect-square w-full overflow-hidden rounded-[1.5rem] sm:rounded-[2rem] bg-black/40 border border-white/10 shadow-inner">
@@ -259,7 +259,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "" }) => {
                                     {/* Info */}
                                     <div className="space-y-3 flex-1">
                                         <div className="space-y-1">
-                                            <span className="text-[9px] font-black text-white/20 uppercase tracking-widest group-hover:text-brand-primary/60 transition-colors">
+                                            <span className="text-[9px] font-black text-brand-primary uppercase tracking-widest group-hover:text-brand-primary/80 transition-colors">
                                                 {product.sub_category}
                                             </span>
                                             <h3 className="line-clamp-2 text-sm sm:text-lg font-black text-white leading-tight group-hover:text-white group-hover:translate-x-1 transition-all">
@@ -290,7 +290,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "" }) => {
                                                 setSelectedProduct(product);
                                                 setIsDetailOpen(true);
                                             }}
-                                            className="h-10 sm:h-12 flex-1 flex items-center justify-center rounded-xl sm:rounded-2xl bg-white/5 border border-white/5 text-white/30 hover:bg-white/10 hover:text-white transition-all group/info"
+                                            className="h-6 sm:h-8 flex-1 flex items-center justify-center rounded-lg sm:rounded-xl bg-white/5 border border-white/5 text-white/30 hover:bg-white/10 hover:text-white transition-all group/info"
                                         >
                                             <Info className="h-5 w-5 group-hover:scale-110 transition-transform" />
                                         </button>
@@ -299,7 +299,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "" }) => {
                                             <button
                                                 onClick={() => toggleMutation.mutate({ productId: product.id, wish: false })}
                                                 disabled={toggleMutation.isPending}
-                                                className="h-10 sm:h-12 px-3 sm:px-6 flex items-center gap-1.5 sm:gap-3 rounded-xl sm:rounded-2xl bg-brand-primary text-white font-black text-[10px] sm:text-xs uppercase tracking-widest shadow-lg shadow-brand-primary/20 hover:brightness-110 transition-all border border-brand-primary/50"
+                                                className="h-6 sm:h-8 px-3 sm:px-6 flex items-center justify-center gap-1.5 sm:gap-3 rounded-lg sm:rounded-xl bg-brand-primary text-white font-black text-[10px] sm:text-xs uppercase tracking-widest shadow-lg shadow-brand-primary/20 hover:brightness-110 transition-all border border-brand-primary/50"
                                             >
                                                 {toggleMutation.isPending ? <RefreshCw className="h-4 w-4 animate-spin text-white/50" /> : <ShoppingCart className="h-4 w-4" />}
                                                 <span className="hidden sm:inline">Reclamar</span>
@@ -308,7 +308,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "" }) => {
                                             <button
                                                 onClick={() => toggleMutation.mutate({ productId: product.id, wish: false })}
                                                 disabled={toggleMutation.isPending}
-                                                className="h-10 sm:h-12 px-3 sm:px-6 flex items-center gap-1.5 sm:gap-3 rounded-xl sm:rounded-2xl bg-green-500/10 text-green-400 font-black text-[10px] sm:text-xs uppercase tracking-widest border border-green-500/20 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/30 transition-all group/action"
+                                                className="h-6 sm:h-8 px-3 sm:px-6 flex items-center justify-center gap-1.5 sm:gap-3 rounded-lg sm:rounded-xl bg-green-500/10 text-green-400 font-black text-[10px] sm:text-xs uppercase tracking-widest border border-green-500/20 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/30 transition-all group/action flex-1"
                                             >
                                                 {toggleMutation.isPending ? <RefreshCw className="h-4 w-4 animate-spin text-white/50" /> : (
                                                     <>
@@ -325,7 +325,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "" }) => {
                                             <button
                                                 onClick={() => toggleMutation.mutate({ productId: product.id, wish: true })}
                                                 disabled={toggleMutation.isPending}
-                                                className="h-10 sm:h-12 px-3 sm:px-4 flex items-center justify-center rounded-xl sm:rounded-2xl bg-red-500/5 text-red-500/30 border border-red-500/10 hover:bg-red-500 hover:text-white transition-all"
+                                                className="h-6 sm:h-8 px-3 flex items-center justify-center rounded-lg sm:rounded-xl bg-red-500/5 text-red-500/30 border border-red-500/10 hover:bg-red-500 hover:text-white transition-all"
                                                 title="Eliminar de Deseos"
                                             >
                                                 <Star className="h-4 w-4 fill-current" />
