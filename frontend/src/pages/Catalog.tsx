@@ -21,7 +21,8 @@ import {
     Flame,
     ArrowUpRight,
     Gem,
-    Search
+    Search,
+    Box
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { motion } from 'framer-motion';
@@ -344,17 +345,29 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
     }
 
     return (
-        <div className="space-y-10 animate-in fade-in duration-1000">
+        <div className="space-y-2 md:space-y-3 animate-in fade-in duration-1000">
             {/* Header / Search Area */}
-            <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-                <div className="space-y-1">
-                    <h2 className="text-4xl font-black tracking-tighter text-white">Nueva Eternia</h2>
-                    <p className="text-sm font-bold text-white/30 uppercase tracking-widest">Almacén Sagrado de Reliquias</p>
-                </div>
-                <div className="flex items-center gap-3 rounded-2xl bg-white/[0.03] px-6 py-3 border border-white/5 backdrop-blur-3xl">
-                    <Package className="h-5 w-5 text-brand-primary" />
-                    <span className="text-2xl font-black text-white">{products?.length}</span>
-                    <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em] pt-1">Modelos Purificados</span>
+            <div className="relative overflow-hidden rounded-2xl md:rounded-3xl border border-white/5 bg-black/25 p-4 md:p-6 backdrop-blur-2xl shadow-2xl">
+                <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-brand-primary/10 blur-3xl pointer-events-none"></div>
+
+                <div className="relative flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                    <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2 text-brand-primary">
+                            <Box className="h-3 w-3 md:h-4 md:w-4 fill-brand-primary" />
+                            <h2 className="text-sm md:text-base font-black uppercase tracking-[0.2em] text-white">
+                                Nueva <span className="text-brand-primary">Eternia</span>
+                            </h2>
+                        </div>
+                        <p className="max-w-xl text-[11px] md:text-sm text-white/40 font-medium uppercase tracking-[0.1em]">
+                            Almacén Sagrado de Reliquias
+                        </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 md:gap-3 rounded-xl md:rounded-2xl bg-white/5 px-4 py-2 border border-white/10 backdrop-blur-xl w-fit xl:w-auto">
+                        <Package className="h-4 w-4 md:h-5 md:w-5 text-brand-primary" />
+                        <span className="text-xl md:text-2xl font-black text-white">{products?.length}</span>
+                        <span className="text-[8px] md:text-[10px] font-black text-white/20 uppercase tracking-[0.2em] pt-1">Modelos Purificados</span>
+                    </div>
                 </div>
             </div>
 
