@@ -672,11 +672,11 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
                                         {productOffers?.map((offer) => (
                                             <div
                                                 key={offer.id}
-                                                className={`group flex items-center justify-between gap-4 rounded-3xl p-5 transition-all border ${offer.is_best ? 'bg-brand-primary/5 border-brand-primary/30 shadow-[0_0_30px_rgba(14,165,233,0.1)]' : 'bg-white/[0.03] border-white/5 hover:bg-white/[0.05]'}`}
+                                                className={`group flex flex-col md:flex-row md:items-center justify-between gap-4 rounded-3xl p-5 transition-all border ${offer.is_best ? 'bg-brand-primary/5 border-brand-primary/30 shadow-[0_0_30px_rgba(14,165,233,0.1)]' : 'bg-white/[0.03] border-white/5 hover:bg-white/[0.05]'}`}
                                             >
-                                                <div className="flex items-center gap-6 flex-1">
+                                                <div className="flex items-center gap-4 flex-1">
                                                     <div className="space-y-1">
-                                                        <div className="flex items-center gap-3">
+                                                        <div className="flex items-center flex-wrap gap-2">
                                                             <span className="text-xs font-black uppercase tracking-widest text-white/80">{offer.shop_name}</span>
                                                             {offer.is_best && (
                                                                 <span className="rounded-full bg-brand-primary/20 px-2 py-0.5 text-[8px] font-black uppercase text-brand-primary border border-brand-primary/20">
@@ -684,10 +684,10 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
                                                                 </span>
                                                             )}
                                                         </div>
-                                                        <div className="flex items-center gap-4 text-[9px] font-bold uppercase text-white/20">
-                                                            <span>Visto por última vez: {formatDistanceToNow(new Date(offer.last_seen), { addSuffix: true, locale: es })}</span>
+                                                        <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-[9px] font-bold uppercase text-white/20">
+                                                            <span>Última vez: {formatDistanceToNow(new Date(offer.last_seen), { locale: es })}</span>
                                                             <span className="flex items-center gap-1">
-                                                                <span className={`h-1 w-1 rounded-full ${offer.is_available ? 'bg-green-500' : 'bg-red-500 shadow-[0_0_5px_rgba(239,68,68,0.5)]'}`}></span>
+                                                                <span className={`h-1.5 w-1.5 rounded-full ${offer.is_available ? 'bg-green-500' : 'bg-red-500 shadow-[0_0_5px_rgba(239,68,68,0.5)]'}`}></span>
                                                                 <span className={offer.is_available ? '' : 'text-red-400 font-black'}>
                                                                     {offer.is_available ? 'STOCK OK' : 'SIN STOCK'}
                                                                 </span>
@@ -696,22 +696,21 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
                                                     </div>
                                                 </div>
 
-                                                <div className="flex items-center gap-8">
-                                                    <div className="text-right space-y-0.5">
-                                                        <div className={`text-2xl font-black ${offer.is_best ? 'text-brand-primary' : 'text-white'}`}>{offer.price} €</div>
+                                                <div className="flex flex-row items-center justify-between w-full md:w-auto md:justify-end gap-5">
+                                                    <div className="text-left md:text-right space-y-0.5">
+                                                        <div className={`text-xl font-black ${offer.is_best ? 'text-brand-primary' : 'text-white'}`}>{offer.price} €</div>
                                                         {offer.landing_price && offer.landing_price !== offer.price && (
-                                                            <div className="text-[10px] font-black text-brand-secondary/80 flex flex-col items-end">
+                                                            <div className="text-[10px] font-black text-brand-secondary/80 flex flex-col items-start md:items-end">
                                                                 <span className="flex items-center gap-1">
                                                                     <Package className="h-2.5 w-2.5" />
-                                                                    {offer.landing_price} € (Landed)
+                                                                    {offer.landing_price} €
                                                                 </span>
-                                                                <span className="text-[8px] text-white/20">Incl. Envío/Tasas</span>
                                                             </div>
                                                         )}
-                                                        <div className="text-[9px] font-black uppercase tracking-tighter text-white/10">Mín. Histórico: {offer.min_historical}€</div>
+                                                        <div className="text-[9px] font-black uppercase tracking-tighter text-white/10">Mín: {offer.min_historical}€</div>
                                                     </div>
 
-                                                    <div className="flex items-center gap-3">
+                                                    <div className="flex items-center gap-2 shrinks-0">
                                                         {isAdmin && (
                                                             <button
                                                                 onClick={() => {
@@ -720,10 +719,10 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
                                                                     }
                                                                 }}
                                                                 disabled={unlinkMutation.isPending}
-                                                                className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-all shadow-lg"
+                                                                className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-all shadow-lg"
                                                                 title="Desvincular y enviar al Purgatorio"
                                                             >
-                                                                {unlinkMutation.isPending ? <RefreshCw className="h-5 w-5 animate-spin" /> : <RefreshCw className="h-5 w-5" />}
+                                                                {unlinkMutation.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                                                             </button>
                                                         )}
 
@@ -736,19 +735,19 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
                                                                     price: offer.price,
                                                                     image_url: selectedProduct?.image_url || undefined
                                                                 })}
-                                                                className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 text-white/40 border border-white/10 hover:bg-brand-primary/20 hover:text-brand-primary transition-all shadow-lg"
+                                                                className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 text-white/40 border border-white/10 hover:bg-brand-primary/20 hover:text-brand-primary transition-all shadow-lg"
                                                                 title="Simular en Oracle Cart"
                                                             >
-                                                                <ShoppingBasket className="h-5 w-5" />
+                                                                <ShoppingBasket className="h-4 w-4" />
                                                             </button>
                                                             <a
                                                                 href={offer.url}
                                                                 target="_blank"
                                                                 rel="noopener noreferrer"
-                                                                className={`flex h-12 w-12 items-center justify-center rounded-2xl transition-all border shadow-lg ${offer.is_best ? 'bg-orange-500 text-white border-orange-500 shadow-orange-500/20' : 'bg-white/5 text-white/40 border-white/10 hover:bg-white/10 hover:text-white'}`}
+                                                                className={`flex h-10 w-10 items-center justify-center rounded-xl transition-all border shadow-lg ${offer.is_best ? 'bg-orange-500 text-white border-orange-500 shadow-orange-500/20' : 'bg-white/5 text-white/40 border-white/10 hover:bg-white/10 hover:text-white'}`}
                                                                 title="Ver en Tienda"
                                                             >
-                                                                <ExternalLink className="h-5 w-5" />
+                                                                <ExternalLink className="h-4 w-4" />
                                                             </a>
                                                         </div>
                                                     </div>
@@ -805,7 +804,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
                             <div className="p-8 space-y-6 overflow-y-auto max-h-[60vh] custom-scrollbar">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     {/* Name */}
-                                    <div className="col-span-2 space-y-2">
+                                    <div className="col-span-1 md:col-span-2 space-y-2">
                                         <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Nombre de la Reliquia</label>
                                         <input
                                             value={editingProduct.name}
@@ -837,7 +836,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
                                     </div>
 
                                     {/* Subcategory */}
-                                    <div className="col-span-2 space-y-2">
+                                    <div className="col-span-1 md:col-span-2 space-y-2">
                                         <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Línea temporal (Subcategoría)</label>
                                         <input
                                             value={editingProduct.sub_category || ''}
@@ -847,7 +846,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
                                     </div>
 
                                     {/* Image URL */}
-                                    <div className="col-span-2 space-y-2">
+                                    <div className="col-span-1 md:col-span-2 space-y-2">
                                         <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Pocion Visual (URL Imagen)</label>
                                         <input
                                             value={editingProduct.image_url || ''}
