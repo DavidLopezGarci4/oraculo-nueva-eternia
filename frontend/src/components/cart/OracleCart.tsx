@@ -16,7 +16,7 @@ const OracleCart: React.FC = () => {
 
     if (items.length === 0) {
         return (
-            <div className="rounded-[2.5rem] border border-white/5 bg-white/[0.01] p-10 flex flex-col items-center justify-center text-center gap-4">
+            <div className="rounded-[2.5rem] border border-white/5 bg-black/25 backdrop-blur-md p-10 flex flex-col items-center justify-center text-center gap-4">
                 <div className="h-16 w-16 rounded-full bg-white/5 flex items-center justify-center text-white/10">
                     <ShoppingBasket className="h-8 w-8" />
                 </div>
@@ -44,7 +44,7 @@ const OracleCart: React.FC = () => {
                 {/* Items List */}
                 <div className="lg:col-span-2 space-y-3">
                     {items.map((item) => (
-                        <div key={item.id} className="group flex items-center justify-between gap-4 p-4 rounded-[1.5rem] border border-white/5 bg-white/[0.02] hover:bg-white/[0.04] transition-all">
+                        <div key={item.id} className="group flex items-center justify-between gap-4 p-4 rounded-[1.5rem] border border-white/5 bg-black/25 backdrop-blur-md hover:bg-white/[0.05] transition-all">
                             <div className="flex items-center gap-4 min-w-0">
                                 <div className="h-12 w-12 shrink-0 rounded-xl bg-black/40 overflow-hidden border border-white/5">
                                     <img src={item.image_url || undefined} alt="" className="h-full w-full object-cover" />
@@ -68,7 +68,7 @@ const OracleCart: React.FC = () => {
 
                 {/* Summary / Invoice */}
                 <div className="space-y-4">
-                    <div className="rounded-[2rem] border border-brand-primary/20 bg-brand-primary/[0.02] p-6 lg:p-8 space-y-6 relative overflow-hidden backdrop-blur-xl">
+                    <div className="rounded-[2rem] border border-brand-primary/20 bg-black/25 p-6 lg:p-8 space-y-6 relative overflow-hidden backdrop-blur-2xl">
                         <div className="absolute top-0 right-0 p-8 opacity-[0.02] select-none pointer-events-none">
                             <ReceiptText className="h-32 w-32" />
                         </div>
