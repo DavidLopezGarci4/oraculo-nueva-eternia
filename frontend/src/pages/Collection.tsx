@@ -81,27 +81,27 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "" }) => {
     return (
         <div className="space-y-10 animate-in fade-in duration-700 pb-20">
             {/* Header & Stats Banner */}
-            <div className="relative overflow-hidden rounded-[2.5rem] border border-white/5 bg-gradient-to-br from-white/[0.04] to-black p-8 md:p-10 backdrop-blur-2xl shadow-2xl">
+            <div className="relative overflow-hidden rounded-[2.5rem] border border-white/5 bg-gradient-to-br from-white/[0.04] to-black p-6 md:p-10 backdrop-blur-2xl shadow-2xl">
                 <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-brand-primary/10 blur-3xl"></div>
                 <div className="absolute -left-20 -bottom-20 h-48 w-48 rounded-full bg-purple-500/10 blur-3xl"></div>
 
-                <div className="relative flex flex-col gap-10 lg:flex-row lg:items-center lg:justify-between">
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-3 text-brand-primary">
-                            <Box className="h-6 w-6" />
-                            <span className="text-xs font-black uppercase tracking-[0.3em] opacity-80">Archivos de Nueva Eternia</span>
+                <div className="relative flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="space-y-2 md:space-y-4">
+                        <div className="flex items-center gap-2 text-brand-primary">
+                            <Box className="h-4 w-4 md:h-5 md:w-5" />
+                            <span className="text-[10px] md:text-xs font-black uppercase tracking-[0.2em] md:tracking-[0.3em] opacity-80">Mi Legado</span>
                         </div>
-                        <h2 className="text-5xl font-black tracking-tighter text-white lg:text-7xl">
+                        <h2 className="text-4xl md:text-5xl font-black tracking-tighter text-white lg:text-7xl">
                             Mi <span className="text-brand-primary">Legado</span>
                         </h2>
-                        <p className="max-w-md text-sm leading-relaxed text-white/40 font-medium">
+                        <p className="max-w-md text-[10px] md:text-xs leading-relaxed text-white/40 font-medium">
                             Coleccionando no solo figuras, sino fragmentos de historia y valor en el tiempo.
                         </p>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
+                    <div className="flex flex-col gap-4">
                         {/* Bóveda Digital Buttons (Prominent) */}
-                        <div className="flex flex-col gap-2 justify-center">
+                        <div className="flex flex-row gap-2 md:gap-4 justify-start lg:justify-end">
                             <button
                                 onClick={async () => {
                                     try {
@@ -113,9 +113,9 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "" }) => {
                                         alert('❌ Error al exportar Excel.');
                                     }
                                 }}
-                                className="flex items-center gap-2 px-4 py-2 sm:px-6 sm:py-3 rounded-2xl bg-green-500/10 text-green-400 border border-green-500/20 text-[10px] font-black uppercase tracking-widest hover:bg-green-500 hover:text-white transition-all shadow-lg shadow-green-500/0 hover:shadow-green-500/20 group/vault"
+                                className="flex-1 lg:flex-none flex items-center justify-center gap-1 md:gap-2 px-3 py-2 md:px-6 md:py-3 rounded-xl md:rounded-2xl bg-green-500/10 text-green-400 border border-green-500/20 text-[8px] md:text-[10px] font-black uppercase tracking-widest hover:bg-green-500 hover:text-white transition-all shadow-lg shadow-green-500/0 hover:shadow-green-500/20 group/vault"
                             >
-                                <Download className="h-4 w-4 group-hover/vault:scale-125 transition-transform" />
+                                <Download className="h-3 w-3 md:h-4 md:w-4 group-hover/vault:scale-125 transition-transform" />
                                 Bóveda Excel
                             </button>
                             <button
@@ -129,29 +129,32 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "" }) => {
                                         alert('❌ Error al exportar SQLite.');
                                     }
                                 }}
-                                className="flex items-center gap-2 px-4 py-2 sm:px-6 sm:py-3 rounded-2xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-500 hover:text-white transition-all shadow-lg shadow-indigo-500/0 hover:shadow-indigo-500/20 group/vault"
+                                className="flex-1 lg:flex-none flex items-center justify-center gap-1 md:gap-2 px-3 py-2 md:px-6 md:py-3 rounded-xl md:rounded-2xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-[8px] md:text-[10px] font-black uppercase tracking-widest hover:bg-indigo-500 hover:text-white transition-all shadow-lg shadow-indigo-500/0 hover:shadow-indigo-500/20 group/vault"
                             >
-                                <Database className="h-4 w-4 group-hover/vault:scale-125 transition-transform" />
+                                <Database className="h-3 w-3 md:h-4 md:w-4 group-hover/vault:scale-125 transition-transform" />
                                 Bóveda SQLite
                             </button>
                         </div>
 
-                        <div className="flex flex-col gap-1 rounded-2xl sm:rounded-[2rem] bg-white/5 p-4 sm:p-6 border border-white/10 backdrop-blur-xl min-w-[120px] sm:min-w-[160px] group hover:bg-white/10 transition-all">
-                            <div className="flex items-center justify-between text-white/40 group-hover:text-brand-primary">
-                                <span className="text-[10px] font-black uppercase tracking-widest">Fortaleza</span>
-                                <Box className="h-4 w-4" />
+                        {/* Fortaleza and Deseos stats */}
+                        <div className="flex flex-row gap-2 md:gap-4">
+                            <div className="flex-1 flex flex-col gap-1 rounded-xl md:rounded-[2rem] bg-white/5 p-3 md:p-6 border border-white/10 backdrop-blur-xl group hover:bg-white/10 transition-all">
+                                <div className="flex items-center justify-between text-white/40 group-hover:text-brand-primary">
+                                    <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest">Fortaleza</span>
+                                    <Box className="h-3 w-3 md:h-4 md:w-4" />
+                                </div>
+                                <span className="text-2xl md:text-4xl font-black text-white">{totalOwned}</span>
+                                <span className="text-[7px] md:text-[9px] font-bold text-white/20 uppercase">Items Poseídos</span>
                             </div>
-                            <span className="text-4xl font-black text-white">{totalOwned}</span>
-                            <span className="text-[9px] font-bold text-white/20 uppercase">Items Poseídos</span>
-                        </div>
 
-                        <div className="flex flex-col gap-1 rounded-2xl sm:rounded-[2rem] bg-brand-primary/5 p-4 sm:p-6 border border-brand-primary/20 backdrop-blur-xl min-w-[120px] sm:min-w-[160px] group hover:bg-brand-primary/10 transition-all">
-                            <div className="flex items-center justify-between text-brand-primary/40 group-hover:text-brand-primary">
-                                <span className="text-[10px] font-black uppercase tracking-widest">Deseos</span>
-                                <Star className="h-4 w-4" />
+                            <div className="flex-1 flex flex-col gap-1 rounded-xl md:rounded-[2rem] bg-brand-primary/5 p-3 md:p-6 border border-brand-primary/20 backdrop-blur-xl group hover:bg-brand-primary/10 transition-all">
+                                <div className="flex items-center justify-between text-brand-primary/40 group-hover:text-brand-primary">
+                                    <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest">Deseos</span>
+                                    <Star className="h-3 w-3 md:h-4 md:w-4" />
+                                </div>
+                                <span className="text-2xl md:text-4xl font-black text-brand-primary">{totalWish}</span>
+                                <span className="text-[7px] md:text-[9px] font-bold text-brand-primary/30 uppercase">En el Radar</span>
                             </div>
-                            <span className="text-4xl font-black text-brand-primary">{totalWish}</span>
-                            <span className="text-[9px] font-bold text-brand-primary/30 uppercase">En el Radar</span>
                         </div>
                     </div>
                 </div>
