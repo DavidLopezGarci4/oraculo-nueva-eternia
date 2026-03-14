@@ -1777,8 +1777,11 @@ async def get_top_deals(user_id: int = 2):
     from sqlalchemy import func, and_
     
     with SessionCloud() as db:
-        # 1. Obtenemos IDs de productos ya capturados por el usuario
-        owned_ids = [p[0] for p in db.query(CollectionItemModel.product_id).filter(CollectionItemModel.owner_id == user_id).all()]
+        # 1. Obtenemos IDs de productos ya capturados (adquiridos) por el usuario
+        owned_ids = [p[0] for p in db.query(CollectionItemModel.product_id).filter(
+            CollectionItemModel.owner_id == user_id,
+            CollectionItemModel.acquired == True
+        ).all()]
 
         # 2. Subquery: Encontrar el precio mínimo para cada producto disponible (RETAIL)
         from datetime import datetime, timedelta
