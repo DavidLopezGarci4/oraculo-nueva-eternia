@@ -9,10 +9,13 @@ from src.interfaces.api.routers import (
     collection as collection_router,
     dashboard as dashboard_router,
     health as health_router,
-    misc as misc_router,
+    logistics as logistics_router,
     products as products_router,
     purgatory as purgatory_router,
     scrapers as scrapers_router,
+    system as system_router,
+    users as users_router,
+    vault as vault_router,
 )
 
 app = FastAPI(title="Oráculo API Broker", version="1.0.0")
@@ -40,7 +43,10 @@ app.include_router(products_router.router)
 app.include_router(collection_router.router)
 app.include_router(purgatory_router.router)
 app.include_router(dashboard_router.router)
-app.include_router(misc_router.router)
+app.include_router(users_router.router)
+app.include_router(system_router.router)
+app.include_router(vault_router.router)
+app.include_router(logistics_router.router)
 
 
 if __name__ == "__main__":

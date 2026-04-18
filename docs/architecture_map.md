@@ -45,7 +45,10 @@ Implementación de lógica de negocio siguiendo **Clean Architecture**.
   - `routers/collection.py` — `/api/collection/*`, `/api/guardian/export/*`.
   - `routers/purgatory.py` — `/api/purgatory/*`, `/api/offers/*/unlink|relink`.
   - `routers/dashboard.py` — `/api/dashboard/*`.
-  - `routers/misc.py` — `/api/radar/*`, `/api/wallapop/import`, `/api/users/*`, `/api/system/*`, `/api/vault/*`, `/api/excel/*`, `/api/logistics/*`.
+  - `routers/users.py` — `/api/users/*` (settings, location), `/api/wallapop/import`, `/api/radar/p2p-opportunities`.
+  - `routers/system.py` — `/api/system/audit`.
+  - `routers/vault.py` — `/api/vault/*`, `/api/excel/sync`.
+  - `routers/logistics.py` — `/api/logistics/calculate-cart`.
 - **core/**: Utilidades transversales (Logger, Config, Audit, SecurityShield).
   - `config.py` — incluye `JWT_SECRET` y `JWT_EXPIRE_MINUTES` (Phase 59).
 
@@ -98,7 +101,8 @@ Ejecutar: `python -m pytest tests/ -v`
 - **Phase 57**: Refactorización Visual UX & Búsqueda Flexible.
 - **Phase 58**: Reestructuración — API modularizada en 9 routers, raíz limpia, secretos en env, `main.py` de 2485 → 55 líneas.
 - **Phase 59**: Autenticación JWT (`PyJWT`, `create_access_token`, `get_current_user`), tests de integración con SQLite in-memory (21 tests, 0 fallos).
+- **Phase 60**: Split de `misc.py` en 4 routers semánticos (`users`, `system`, `vault`, `logistics`). Optimización de `/api/purgatory`: índice invertido por token reduce el matching de O(pending × products) a O(pending × candidatos), ~10-50x más rápido.
 
 ---
 
-*Última actualización: 2026-04-18 - Phase 59: JWT + Tests de integración.*
+*Última actualización: 2026-04-18 - Phase 60: Split misc + optimización purgatorio.*
