@@ -1,10 +1,14 @@
-import requests
 import json
+import os
+import requests
 
-url = "http://127.0.0.1:8000/api/purgatory"
+API_KEY = os.environ.get("ORACULO_API_KEY", "eternia-shield-2026")
+BASE_URL = os.environ.get("ORACULO_BASE_URL", "http://127.0.0.1:8000")
+
+url = f"{BASE_URL}/api/purgatory"
 headers = {
-    "X-API-Key": "eternia-shield-2026",
-    "Accept": "application/json"
+    "X-API-Key": API_KEY,
+    "Accept": "application/json",
 }
 params = {"limit": 1}
 

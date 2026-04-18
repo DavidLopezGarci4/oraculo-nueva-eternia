@@ -5,112 +5,54 @@ from pydantic import BaseModel, ConfigDict
 from typing import List, Optional, Dict, Any
 from loguru import logger
 import json
-import psutil
 import os
-import signal
-import threading
 import re
+import sys
 from datetime import datetime
 from sqlalchemy import func, select, and_, desc, text, or_
 from src.core.config import settings
-import sys
 from src.infrastructure.database_cloud import SessionCloud, engine_cloud
-from src.infrastructure.universal_migrator import migrate
 from src.domain.models import (
-    ProductModel, OfferModel, PendingMatchModel, CollectionItemModel, 
+    ProductModel, OfferModel, PendingMatchModel, CollectionItemModel,
     UserModel, ScraperStatusModel, BlackcludedItemModel, ScraperExecutionLogModel,
-    OfferHistoryModel, LogisticRuleModel, ProductAliasModel
+    OfferHistoryModel, LogisticRuleModel, ProductAliasModel,
+    AuthorizedDeviceModel,
 )
 from src.application.services.logistics_service import LogisticsService
 from src.application.services.deal_scorer import DealScorer
-from src.infrastructure.scrapers.action_toys_scraper import ActionToysScraper
-from src.infrastructure.scrapers.amazon_scraper import AmazonScraper
-from src.infrastructure.scrapers.fantasia_scraper import FantasiaScraper
-from src.infrastructure.scrapers.frikiverso_scraper import FrikiversoScraper
-from src.infrastructure.scrapers.electropolis_scraper import ElectropolisScraper
-from src.infrastructure.scrapers.pixelatoy_scraper import PixelatoyScraper
-from src.infrastructure.scrapers.detoyboys_scraper import DeToyboysNLScraper
-from src.infrastructure.scrapers.toymi_scraper import ToymiEUScraper
-from src.infrastructure.scrapers.time4actiontoys_scraper import Time4ActionToysDEScraper
-from src.infrastructure.scrapers.bbts_scraper import BigBadToyStoreScraper
-from src.infrastructure.scrapers.ebay_scraper import EbayScraper
 from src.core.security import SecurityShield
-from src.domain.models import AuthorizedDeviceModel
-
-# --- Pydantic Schemas for Cart (Phase 1) ---
-class CartItem(BaseModel):
-    product_name: str
-    shop_name: str
-    price: float
-    quantity: int = 1
-
-class CartRequest(BaseModel):
-    items: List[CartItem]
-    user_id: Optional[int] = 2
-
-class LoginRequest(BaseModel):
-    email: str
-    password: str
-
-class RegisterRequest(BaseModel):
-    username: str
-    email: str
-    password: str
-
-class ForgotPasswordRequest(BaseModel):
-    email: str
-
-class ResetPasswordRequest(BaseModel):
-    token: str
-    new_password: str
-
-class CreateUserRequest(BaseModel):
-    username: str
-    email: str
-    password: str
-    role: str = "viewer"
+from src.interfaces.api.deps import (
+    verify_api_key,
+    verify_device,
+    ensure_scrapers_registered,
+)
+from src.interfaces.api.schemas import (
+    CartItem,
+    CartRequest,
+    CreateUserRequest,
+    UserRoleUpdateRequest,
+    HeroOutput,
+    SyncAction,
+    ProductOutput,
+    ProductEditRequest,
+    ProductMergeRequest,
+    CollectionToggleRequest,
+    CollectionItemUpdateRequest,
+    PurgatoryMatchRequest,
+    PurgatoryDiscardRequest,
+    PurgatoryBulkDiscardRequest,
+    AnomalyValidationRequest,
+    RelinkOfferRequest,
+    WallapopProduct,
+    WallapopImportRequest,
+)
+from src.interfaces.api.routers import auth as auth_router
+from src.interfaces.api.routers import health as health_router
+from src.interfaces.api.routers import scrapers as scrapers_router
 
 app = FastAPI(title="Oráculo API Broker", version="1.0.0")
 
 # ----------------------
-
-def ensure_scrapers_registered():
-    """
-    Fase 50: Asegura que todos los scrapers conocidos existan en ScraperStatusModel.
-    Esto garantiza su visibilidad en el Purgatorio desde el primer día.
-    """
-    from src.infrastructure.scrapers.action_toys_scraper import ActionToysScraper
-    from src.infrastructure.scrapers.amazon_scraper import AmazonScraper
-    from src.infrastructure.scrapers.fantasia_scraper import FantasiaScraper
-    from src.infrastructure.scrapers.frikiverso_scraper import FrikiversoScraper
-    from src.infrastructure.scrapers.electropolis_scraper import ElectropolisScraper
-    from src.infrastructure.scrapers.pixelatoy_scraper import PixelatoyScraper
-    from src.infrastructure.scrapers.detoyboys_scraper import DeToyboysNLScraper
-    from src.infrastructure.scrapers.toymi_scraper import ToymiEUScraper
-    from src.infrastructure.scrapers.time4actiontoys_scraper import Time4ActionToysDEScraper
-    from src.infrastructure.scrapers.bbts_scraper import BigBadToyStoreScraper
-    from src.infrastructure.scrapers.ebay_scraper import EbayScraper
-    from src.infrastructure.scrapers.tradeinn_scraper import TradeinnScraper
-    from src.infrastructure.scrapers.dvdstorespain_scraper import DVDStoreSpainScraper
-
-    spiders_to_check = [
-        "ActionToys", "Fantasia Personajes", "Frikiverso", "Electropolis", 
-        "Pixelatoy", "Amazon.es", "DeToyboys", "Ebay.es", 
-        "Vinted", "Wallapop", "ToymiEU", "Time4ActionToysDE", 
-        "BigBadToyStore", "Tradeinn", "DVDStoreSpain"
-    ]
-    
-    with SessionCloud() as db:
-        try:
-            for name in spiders_to_check:
-                exists = db.query(ScraperStatusModel).filter(ScraperStatusModel.spider_name.ilike(name)).first()
-                if not exists:
-                    logger.info(f"🆕 Registrando nuevo scraper en sistema: {name}")
-                    db.add(ScraperStatusModel(spider_name=name, status="stopped"))
-            db.commit()
-        except Exception as e:
-            db.rollback()
-            logger.error(f"Failed to register scrapers: {e}")
 
 # Call at startup
 try:
@@ -123,281 +65,17 @@ except Exception as e:
 # Configurar CORS para permitir peticiones universales (Útil para acceso móvil y Docker)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Permitimos todo para facilitar el acceso desde cualquier IP del hogar
+    allow_origins=["*"],  # Permitimos todo para facilitar el acceso desde cualquier IP del hogar
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-def verify_api_key(x_api_key: str = Header(None, alias="X-API-Key")):
-    """
-    Verifica la llave de la API de Eternia. 
-    Soporta X-API-Key para consistencia con los clientes administrativos.
-    """
-    if not x_api_key:
-        # Fallback para x-api-key (minimal check)
-        pass
-    
-    if x_api_key != settings.ORACULO_API_KEY:
-        raise HTTPException(status_code=403, detail="Invalid API Key. Access Denied.")
-    return x_api_key
+# Routers extraídos por dominio (paso 1 de modularización)
+app.include_router(health_router.router)
+app.include_router(auth_router.router)
+app.include_router(scrapers_router.router)
 
-async def verify_device(
-    request: Request,
-    x_device_id: str = Header(None, alias="X-Device-ID"),
-    x_device_name: str = Header("Desconocido", alias="X-Device-Name"),
-    x_api_key: str = Header(None, alias="X-API-Key")
-):
-    """
-    Middleware protector (Ojo de Sauron).
-    Valida si el dispositivo está autorizado. 
-    --- SOBERANÍA 3OX ---
-    Si se presenta la X-API-Key correcta, el dispositivo se autoriza automáticamente.
-    """
-    if not x_device_id:
-        raise HTTPException(status_code=403, detail="X-Device-ID header missing. Access Denied by 3OX Shield.")
-
-    with SessionCloud() as db:
-        # Lógica de Soberanía: Si tienes la Llave Maestra, eres el Dueño.
-        if x_api_key == settings.ORACULO_API_KEY:
-            # Asegurar que el dispositivo existe y está autorizado (Bypass Soberano)
-            device = db.query(AuthorizedDeviceModel).filter(AuthorizedDeviceModel.device_id == x_device_id).first()
-            if not device:
-                device = AuthorizedDeviceModel(device_id=x_device_id, device_name=x_device_name, is_authorized=True)
-                db.add(device)
-            else:
-                device.is_authorized = True
-            db.commit()
-            return x_device_id
-
-        ip_address = request.client.host if request.client else "Unknown IP"
-        is_authorized = await SecurityShield.check_access(x_device_id, x_device_name, ip_address, db)
-        
-        if not is_authorized:
-            raise HTTPException(
-                status_code=403, 
-                detail="Dispositivo no autorizado. El Gran Arquitecto ha sido notificado."
-            )
-    return x_device_id
-
-class SyncAction(BaseModel):
-    action_type: str
-    payload: dict
-
-class ProductOutput(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: int
-    name: str
-    ean: str | None
-    image_url: str | None
-    category: str
-    sub_category: Optional[str]
-    figure_id: Optional[str]
-    variant_name: Optional[str]
-
-    # Phase 41e Financials
-    retail_price: float = 0.0
-    avg_retail_price: float = 0.0
-    p25_retail_price: float = 0.0
-    avg_p2p_price: float = 0.0
-    p25_p2p_price: float = 0.0
-
-    # Financial & Intelligence (Computed/Legacy)
-    purchase_price: float = 0.0
-    market_value: float = 0.0
-    avg_market_price: float = 0.0 # Phase 16
-    p25_price: float = 0.0        # Phase 16
-    landing_price: float = 0.0 # Phase 15 Logistics
-    is_grail: bool = False
-    grail_score: float = 0.0
-    
-    # Best Offer Tracking (Phase 44 Upgrade)
-    best_p2p_price: float = 0.0
-    best_p2p_source: Optional[str] = None
-    is_wish: bool = False
-    opportunity_score: int = 0
-    acquired_at: Optional[str] = None
-    condition: Optional[str] = "New"
-    grading: Optional[float] = 10.0
-    notes: Optional[str] = None
-
-class CollectionToggleRequest(BaseModel):
-    product_id: int
-    user_id: int
-    wish: bool = False
-
-class CollectionItemUpdateRequest(BaseModel):
-    user_id: int
-    condition: Optional[str] = None
-    grading: Optional[float] = None
-    purchase_price: Optional[float] = None
-    notes: Optional[str] = None
-    acquired_at: Optional[str] = None # ISO format
-
-class PurgatoryMatchRequest(BaseModel):
-    pending_id: int
-    product_id: int
-
-class PurgatoryDiscardRequest(BaseModel):
-    pending_id: int
-    reason: str = "manual_discard"
-
-class PurgatoryBulkDiscardRequest(BaseModel):
-    pending_ids: List[int]
-    reason: str = "manual_bulk_discard"
-
-class ScraperRunRequest(BaseModel):
-    spider_name: str = "all"  # "all" or individual spider name
-    trigger_type: str = "manual"
-    query: str | None = None
-
-class ProductEditRequest(BaseModel):
-    name: str | None = None
-    ean: str | None = None
-    image_url: str | None = None
-    category: str | None = None
-    sub_category: str | None = None
-    retail_price: float | None = None
-
-class ProductMergeRequest(BaseModel):
-    source_id: int
-    target_id: int     # "manual" or "scheduled"
-
-class AnomalyValidationRequest(BaseModel):
-    id: int
-    action: str # "validate" or "block"
-
-class RelinkOfferRequest(BaseModel):
-    target_product_id: int
-
-class UserRoleUpdateRequest(BaseModel):
-    role: str
-
-@app.post("/api/auth/register")
-async def register(request: RegisterRequest):
-    """
-    Fase de Reclutamiento: Permite a nuevos usuarios unirse como Guardianes con nombre propio.
-    """
-    with SessionCloud() as db:
-        # Verificar duplicados
-        exists = db.query(UserModel).filter(or_(UserModel.email == request.email, UserModel.username == request.username)).first()
-        if exists:
-            raise HTTPException(status_code=400, detail="Este nombre de héroe o email ya existe en el Oráculo.")
-            
-        new_user = UserModel(
-            username=request.username,
-            email=request.email,
-            hashed_password=SecurityShield.hash_password(request.password),
-            role="viewer" # Todos los nuevos son Guardianes
-        )
-        db.add(new_user)
-        db.commit()
-        db.refresh(new_user)
-        
-        logger.info(f"👤 Nuevo Héroe Reclutado: {new_user.username} ({new_user.role})")
-        return {"status": "success", "message": "¡Héroe reclutado con éxito! Ahora puedes entrar."}
-
-@app.post("/api/auth/forgot-password")
-async def forgot_password(request: ForgotPasswordRequest, background_tasks: BackgroundTasks):
-    """
-    Fase 15: Genera un token de reseteo y lo envía por correo.
-    """
-    import secrets
-    from datetime import timedelta
-    from src.infrastructure.email_service import EmailService
-    
-    with SessionCloud() as db:
-        user = db.query(UserModel).filter(UserModel.email == request.email).first()
-        if not user:
-            # Por seguridad, no decimos si el email existe o no
-            return {"status": "success", "message": "Si el correo es correcto, recibirás un enlace de recuperación."}
-            
-        token = secrets.token_urlsafe(32)
-        user.reset_token = token
-        user.reset_token_expiry = datetime.utcnow() + timedelta(hours=1)
-        db.commit()
-        
-        # Enviar email asíncronamente para evitar timeouts si el SMTP es lento o está bloqueado
-        background_tasks.add_task(EmailService.send_reset_email, user.email, user.username, token)
-        
-        return {
-            "status": "success", 
-            "message": "Enlace enviado. Revisa tu correo (y el SPAM).",
-            "debug_token": token if settings.DEBUG else None # Solo para pruebas locales
-        }
-
-@app.post("/api/auth/reset-password")
-async def reset_password(request: ResetPasswordRequest):
-    """
-    Fase 15: Valida el token y cambia la contraseña.
-    """
-    with SessionCloud() as db:
-        user = db.query(UserModel).filter(
-            UserModel.reset_token == request.token,
-            UserModel.reset_token_expiry > datetime.utcnow()
-        ).first()
-        
-        if not user:
-            raise HTTPException(status_code=400, detail="El token es inválido o ha caducado.")
-            
-        user.hashed_password = SecurityShield.hash_password(request.new_password)
-        user.reset_token = None
-        user.reset_token_expiry = None
-        db.commit()
-        
-        logger.info(f"🔑 Contraseña reseteada para: {user.username}")
-        return {"status": "success", "message": "Tu llave ha sido renovada. Ya puedes entrar al Oráculo."}
-
-@app.post("/api/auth/login")
-async def login(request: LoginRequest):
-    """
-    Autenticación de Héroes y Guardianes. 
-    Valida Email y Contraseña. Soporta X-API-Key como bypass soberano.
-    """
-    with SessionCloud() as db:
-        # Phase 51: Sovereign Identity Bypass
-        is_sovereign_email = False
-        if settings.SOVEREIGN_EMAIL and request.email.lower().strip() == settings.SOVEREIGN_EMAIL.lower().strip():
-            is_sovereign_email = True
-            logger.info("🛡️ Intento de acceso de IDENTIDAD SOBERANA detectado.")
-
-        user = db.query(UserModel).filter(UserModel.email == request.email).first()
-        
-        # Bypass Soberano por Contraseña o Email de Alias
-        is_sovereign_bypass = request.password == settings.ORACULO_API_KEY
-        
-        if not user:
-            raise HTTPException(status_code=401, detail="Email no registrado en el Oráculo.")
-            
-        is_valid = False
-        if is_sovereign_bypass:
-            is_valid = True
-            logger.info(f"🛡️ Acceso SOBERANO detectado por API KEY para {user.username}")
-        else:
-            is_valid = SecurityShield.verify_password(request.password, user.hashed_password)
-            
-        if not is_valid:
-            raise HTTPException(status_code=401, detail="Credenciales incorrectas.")
-            
-        # Si la validación fue exitosa Y es el email Mágico de Soberanía
-        # Transferimos silenciosamente la sesión al usuario 'admin' maestro
-        if is_sovereign_email and is_valid:
-            master_admin = db.query(UserModel).filter(UserModel.role == "admin").first()
-            if master_admin:
-                logger.warning(f"👑 Alias Activado: {user.username} asume el control del Arquitecto ({master_admin.username})")
-                user = master_admin
-                is_sovereign_bypass = True
-
-        return {
-            "status": "success",
-            "user": {
-                "id": user.id,
-                "username": user.username,
-                "role": user.role
-            },
-            "is_sovereign": user.role == "admin" or is_sovereign_bypass
-        }
 
 @app.post("/api/admin/users/create")
 async def create_user(request: CreateUserRequest, x_api_key: str = Depends(verify_api_key)):
@@ -422,15 +100,6 @@ async def create_user(request: CreateUserRequest, x_api_key: str = Depends(verif
         
         logger.info(f"👤 Nuevo Guardián creado: {new_user.username} ({new_user.role})")
         return {"status": "success", "message": f"Héroe {new_user.username} registrado."}
-
-class HeroOutput(BaseModel):
-    id: int
-    username: str
-    email: str
-    role: str
-    is_active: bool
-    collection_size: int
-    location: str
 
 @app.get("/api/admin/users", response_model=List[HeroOutput], dependencies=[Depends(verify_api_key)])
 async def get_all_heroes(db_session: SessionCloud = Depends(lambda: SessionCloud())):
@@ -516,12 +185,6 @@ async def delete_hero(user_id: int):
         logger.warning(f"🗑️ Héroe Eliminado: '{username}' (ID: {user_id}) ha sido borrado por el Arquitecto.")
         return {"status": "success", "message": f"Justicia del Arquitecto: El héroe '{username}' ha sido purgado de los registros."}
 
-@app.get("/api/auth/users")
-async def get_users_minimal():
-    """Retorna la lista de usuarios para el selector rápido (Modo Legacy/Test)"""
-    with SessionCloud() as db:
-        users = db.query(UserModel).all()
-        return [{"id": u.id, "username": u.username, "role": u.role} for u in users]
 @app.get("/api/products", response_model=List[ProductOutput])
 async def get_products():
     """Retorna el catálogo maestro completo para búsquedas en el Purgatorio."""
@@ -1285,208 +948,10 @@ async def discard_purgatory_bulk(request: PurgatoryBulkDiscardRequest):
     
     return {"status": "success", "message": f"{count} items desterrados al abismo."}
 
-# --- SCRAPER CONTROL ENDPOINTS ---
+# --- SCRAPER CONTROL ENDPOINTS movidos a routers/scrapers.py ---
+# (run_scraper_task, scraper_cancel_event, /api/scrapers/status, /api/scrapers/logs,
+#  /api/scrapers/run, /api/scrapers/stop)
 
-# 🛡️ Flag global de cancelación cooperativa
-scraper_cancel_event = threading.Event()
-
-def run_scraper_task(spider_name: str = "all", trigger_type: str = "manual", query: str | None = None):
-    """Wrapper para ejecutar recolectores y actualizar el estado en BD"""
-    global scraper_cancel_event
-    scraper_cancel_event.clear()  # Reset flag al iniciar nueva incursión
-    from datetime import datetime
-    import os
-    
-    # PHASE 42: PURGE OLD LOGS (7 DAYS)
-    try:
-        from datetime import timedelta
-        cutoff = datetime.now() - timedelta(days=7)
-        with SessionCloud() as db_purge:
-            db_purge.query(ScraperExecutionLogModel).filter(
-                ScraperExecutionLogModel.start_time < cutoff
-            ).delete()
-            db_purge.commit()
-    except Exception as e:
-        logger.warning(f"⚠️ Log purge failed: {e}")
-
-    # 1. Marcar inicio en la base de datos
-    # 1. Marcar inicio en la base de datos y crear Log
-    with SessionCloud() as db:
-        status = db.query(ScraperStatusModel).filter(ScraperStatusModel.spider_name == spider_name).first()
-        if not status:
-            status = ScraperStatusModel(spider_name=spider_name)
-            db.add(status)
-        status.status = "running"
-        status.start_time = datetime.utcnow()
-        
-        # Crear entrada en la bitácora
-        execution_log = ScraperExecutionLogModel(
-            spider_name=spider_name,
-            status="running",
-            start_time=status.start_time,
-            trigger_type=trigger_type,
-            logs=f"[{datetime.utcnow().strftime('%H:%M:%S')}] 🚀 Desplegando incursión manual: {spider_name}\n"
-        )
-        db.add(execution_log)
-        db.commit()
-        log_id = execution_log.id
-
-    def update_live_log(msg: str):
-        if not log_id: return
-        try:
-            with SessionCloud() as db_l:
-                entry = db_l.query(ScraperExecutionLogModel).get(log_id)
-                if entry:
-                    ts = datetime.utcnow().strftime("%H:%M:%S")
-                    line = f"[{ts}] {msg}"
-                    if entry.logs: entry.logs += "\n" + line
-                    else: entry.logs = line
-                    db_l.commit()
-        except: pass
-
-    update_live_log(f"⚔️ Iniciando secuencia de extracción para {spider_name}...")
-
-    items_found = 0
-    error_msg = None
-
-    try:
-        # Ejecutar spiders de fondo (ScrapingPipeline)
-        from src.infrastructure.scrapers.pipeline import ScrapingPipeline
-        from src.infrastructure.scrapers.action_toys_scraper import ActionToysScraper
-        from src.infrastructure.scrapers.fantasia_scraper import FantasiaScraper
-        from src.infrastructure.scrapers.frikiverso_scraper import FrikiversoScraper
-        from src.infrastructure.scrapers.electropolis_scraper import ElectropolisScraper
-        from src.infrastructure.scrapers.pixelatoy_scraper import PixelatoyScraper
-        from src.infrastructure.scrapers.amazon_scraper import AmazonScraper
-        from src.infrastructure.scrapers.ebay_scraper import EbayScraper
-        
-        # Phase 8. European Expansion
-        from src.infrastructure.scrapers.detoyboys_scraper import DeToyboysNLScraper
-        from src.infrastructure.scrapers.toymi_scraper import ToymiEUScraper
-        from src.infrastructure.scrapers.time4actiontoys_scraper import Time4ActionToysDEScraper
-        from src.infrastructure.scrapers.bbts_scraper import BigBadToyStoreScraper
-        from src.infrastructure.scrapers.tradeinn_scraper import TradeinnScraper
-        from src.infrastructure.scrapers.dvdstorespain_scraper import DVDStoreSpainScraper
-        from src.infrastructure.scrapers.vinted_scraper import VintedScraper
-        from src.infrastructure.scrapers.wallapop_scraper import WallapopScraper
-        
-        import asyncio
-        
-        spiders_map = {
-            "ActionToys": ActionToysScraper(),
-            "Fantasia Personajes": FantasiaScraper(),
-            "Frikiverso": FrikiversoScraper(),
-            "Electropolis": ElectropolisScraper(),
-            "Pixelatoy": PixelatoyScraper(),
-            "Amazon.es": AmazonScraper(), 
-            "DeToyboys": DeToyboysNLScraper(),
-            "Ebay.es": EbayScraper(),
-            "Vinted": VintedScraper(),
-            "Wallapop": WallapopScraper(),
-            "ToymiEU": ToymiEUScraper(),
-            "Time4ActionToysDE": Time4ActionToysDEScraper(),
-            "BigBadToyStore": BigBadToyStoreScraper(),
-            "Tradeinn": TradeinnScraper(),
-            "DVDStoreSpain": DVDStoreSpainScraper()
-        }
-        
-        # Normalize requested name for matching
-        lookup_name = spider_name.lower()
-        matching_key = next((k for k in spiders_map.keys() if k.lower() == lookup_name), None)
-
-        spiders_to_run = []
-        if spider_name == "all":
-            spiders_to_run = list(spiders_map.values())
-        elif matching_key:
-            s = spiders_map[matching_key]
-            s.log_callback = update_live_log # Inject bridge
-            spiders_to_run = [s]
-        
-        if spiders_to_run:
-            # Ensure callback is set for all if 'all' was selected
-            for s in spiders_to_run: s.log_callback = update_live_log
-
-            pipeline = ScrapingPipeline(spiders_to_run, cancel_event=scraper_cancel_event)
-            # Ejecutar búsqueda asíncrona (usamos "auto" o similar)
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            # PHASE 47: Use provided query or fallback to specific store defaults
-            search_term = query
-            if not search_term:
-                search_term = "masters of the universe origins" if spider_name.lower() == "tradeinn" else "auto"
-            
-            update_live_log(f"📡 Buscando reliquias para '{search_term}' en {spider_name}...")
-            
-            try:
-                results = loop.run_until_complete(
-                    asyncio.wait_for(pipeline.run_product_search(search_term), timeout=1800)
-                )
-            except asyncio.TimeoutError:
-                update_live_log("⌛ [TIMEOUT] La incursión ha excedido los 30 minutos. Abortando.")
-                results = []
-            
-            loop.close()
-            
-            # Check if cancelled mid-flight
-            if scraper_cancel_event.is_set():
-                update_live_log(f"🛑 Incursión cancelada manualmente. {len(results)} ofertas parciales recolectadas.")
-            
-            update_live_log(f"💾 Persistiendo {len(results)} ofertas...")
-            # Phase 44: Pasamos los nombres de las tiendas para sincronizar disponibilidad
-            pipeline.update_database(results, shop_names=[s.shop_name for s in spiders_to_run])
-            items_found = len(results)
-            logger.info(f"💾 Persistidas {items_found} ofertas tras incursión de {spider_name}.")
-            update_live_log(f"✅ Incursión completada con éxito. {items_found} reliquias encontradas.")
-
-
-        # 2. Marcar éxito en la base de datos y actualizar Log
-        with SessionCloud() as db:
-            status = db.query(ScraperStatusModel).filter(ScraperStatusModel.spider_name == spider_name).first()
-            if status:
-                status.status = "completed"
-                status.end_time = datetime.utcnow()
-            
-            # Actualizar bitácora
-            log = db.query(ScraperExecutionLogModel).filter(ScraperExecutionLogModel.id == log_id).first()
-            if log:
-                log.status = "success"
-                log.end_time = datetime.utcnow()
-                log.items_found = items_found
-            
-            db.commit()
-
-    except Exception as e:
-        logger.error(f"Scraper Error ({spider_name}): {e}")
-        update_live_log(f"❌ FALLO CRÍTICO: {str(e)}")
-        with SessionCloud() as db:
-            status = db.query(ScraperStatusModel).filter(ScraperStatusModel.spider_name == spider_name).first()
-            if status:
-                status.status = f"error: {str(e)}"
-            
-            # Actualizar bitácora con error
-            log = db.query(ScraperExecutionLogModel).filter(ScraperExecutionLogModel.id == log_id).first()
-            if log:
-                log.status = "error"
-                log.end_time = datetime.utcnow()
-                log.error_message = str(e)
-            
-            db.commit()
-
-@app.get("/api/scrapers/status", dependencies=[Depends(verify_api_key)])
-async def get_scrapers_status():
-    """Retorna el estado actual de los recolectores (Admin Only)"""
-    with SessionCloud() as db:
-        # Backend filtering to hide System Scrapers from Grid Code
-        return db.query(ScraperStatusModel).filter(
-            ScraperStatusModel.spider_name.notin_(['Nexus', 'Harvester', 'harvester', 'all', 'idealo.es', 'Idealo.es'])
-        ).all()
-
-@app.get("/api/scrapers/logs", dependencies=[Depends(verify_api_key)])
-async def get_scrapers_logs():
-    """Retorna el historial de ejecuciones (Admin Only)"""
-    from sqlalchemy import desc
-    with SessionCloud() as db:
-        return db.query(ScraperExecutionLogModel).order_by(desc(ScraperExecutionLogModel.start_time)).limit(75).all()
 
 @app.get("/api/dashboard/stats", dependencies=[Depends(verify_device)])
 async def get_dashboard_stats(user_id: int = 1):
@@ -2103,85 +1568,6 @@ async def relink_offer(offer_id: int, request: RelinkOfferRequest):
 
         db.commit()
         return {"status": "success", "message": f"Decreto del Arquitecto: Oferta reasignada a '{new_product.name}'"}
-
-@app.post("/api/scrapers/run", dependencies=[Depends(verify_api_key)])
-async def run_scrapers(request: ScraperRunRequest, background_tasks: BackgroundTasks):
-    """Inicia la recolección de reliquias en segundo plano (Admin Only)"""
-    background_tasks.add_task(run_scraper_task, request.spider_name, request.trigger_type, request.query)
-    return {"status": "success", "message": f"Incursión '{request.spider_name}' para '{request.query or 'auto'}' desplegada en los páramos de Eternia"}
-
-@app.post("/api/scrapers/stop", dependencies=[Depends(verify_api_key)])
-async def stop_scrapers():
-    """
-    Protocolo de Emergencia: Mata procesos de scrapers activos y resetea estados en BD.
-    (Admin Only - URGENTE)
-    """
-    killed_count = 0
-    try:
-        # 0. Software Stop: Señal cooperativa de cancelación
-        scraper_cancel_event.set()
-        logger.warning("🚨 CANCEL FLAG SET: Señal de parada enviada al pipeline.")
-
-        # 1. Hardware Stop: Matar procesos hijos (Playwright/Browsers)
-        current_process = psutil.Process(os.getpid())
-        children = current_process.children(recursive=True)
-        
-        target_keywords = ['playwright', 'chromium', 'chrome', 'node', 'python']
-        
-        for child in children:
-            try:
-                cmdline = " ".join(child.cmdline()).lower()
-                # Solo matamos procesos que parezcan ser parte del engine de scraping
-                # No queremos matar al propio worker de uvicorn si es un child (depende de la config)
-                if any(kw in cmdline for kw in target_keywords):
-                    logger.warning(f"🚨 KILLING SCRAPER PROCESS: {child.pid} ({cmdline[:50]}...)")
-                    child.kill()
-                    killed_count += 1
-            except (psutil.NoSuchProcess, psutil.AccessDenied):
-                continue
-
-        # 2. Database Reset: Limpiar estados de 'running'
-        with SessionCloud() as db:
-            # Resetear estados globales
-            db.query(ScraperStatusModel).filter(ScraperStatusModel.status == "running").update({
-                "status": "stopped",
-                "end_time": datetime.utcnow()
-            })
-            
-            # Resetear la bitácora (fija el error en el log para visibilidad)
-            db.query(ScraperExecutionLogModel).filter(ScraperExecutionLogModel.status == "running").update({
-                "status": "stopped",
-                "end_time": datetime.utcnow(),
-                "error_message": "PARADA DE EMERGENCIA: Acción forzada por el Arquitecto"
-            })
-            
-            db.commit()
-
-        logger.success(f"🛑 Scrapers detenidos. {killed_count} procesos eliminados. BD purificada.")
-        return {
-            "status": "success", 
-            "message": f"Justicia de Eternia: {killed_count} procesos purgados y sistemas reseteados.",
-            "killed_processes": killed_count
-        }
-
-    except Exception as e:
-        logger.error(f"Error en Protocolo de Emergencia: {e}")
-        raise HTTPException(status_code=500, detail=f"Fallo en el protocolo de parada: {str(e)}")
-
-# === WALLAPOP EXTENSION IMPORT ===
-class WallapopProduct(BaseModel):
-    title: str
-    price: float
-    url: str
-    imageUrl: str | None = None
-
-class WallapopImportRequest(BaseModel):
-    products: List[WallapopProduct]
-
-@app.get("/api/health")
-def api_health():
-    """Health check para la extensión de Chrome"""
-    return {"status": "ok", "service": "oraculo", "version": "1.0.0"}
 
 @app.post("/api/wallapop/import")
 async def import_wallapop_products(request: WallapopImportRequest):
