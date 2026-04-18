@@ -1,5 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from loguru import logger
 
 from src.interfaces.api.deps import ensure_scrapers_registered
@@ -34,6 +36,28 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ─── Global exception handlers ────────────────────────────────────────────────
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    logger.warning(f"Validation error on {request.method} {request.url.path}: {exc.errors()}")
+    return JSONResponse(
+        status_code=422,
+        content={"status": "error", "type": "validation_error", "detail": exc.errors()},
+    )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Unhandled exception on {request.method} {request.url.path}: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"status": "error", "type": "server_error", "detail": "Internal server error"},
+    )
+
+
+# ─── Routers ─────────────────────────────────────────────────────────────────
 
 app.include_router(health_router.router)
 app.include_router(auth_router.router)

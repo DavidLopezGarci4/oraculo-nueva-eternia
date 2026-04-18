@@ -76,7 +76,42 @@ Organización por propósito para mantener la raíz limpia:
 | `scripts/smoke/` | Pruebas de humo contra la API en vivo (`smoke_*.py`). Requieren `ORACULO_API_KEY` en env. |
 | `scripts/` (raíz) | Scripts de uso frecuente consolidados previamente (cleanup, migration, cloud). |
 
-## 6. Tests (tests/)
+## 6. Gestión Global de Errores
+
+`main.py` registra dos handlers centralizados que estandarizan el formato de error en toda la API:
+
+| Handler | Trigger | Response |
+| :--- | :--- | :--- |
+| `RequestValidationError` | Cuerpo/parámetros inválidos (422) | `{status, type: "validation_error", detail: [...]}` |
+| `Exception` | Excepción no capturada (500) | `{status, type: "server_error", detail: "Internal server error"}` |
+
+Las `HTTPException` existentes siguen retornando `{"detail": "..."}` con el handler por defecto de FastAPI (compatibilidad con el frontend).
+
+---
+
+## 7. Endpoints sin consumer en el frontend
+
+Audit realizado sobre `frontend/src/api/`. Los siguientes endpoints tienen implementación backend pero no tienen llamada en el frontend actual:
+
+| Endpoint | Motivo probable |
+| :--- | :--- |
+| `POST /api/admin/users/create` | Panel de admin pendiente |
+| `GET /api/admin/devices` | Panel de gestión de dispositivos pendiente |
+| `POST /api/admin/devices/{id}/authorize` | Ídem |
+| `DELETE /api/admin/devices/{id}` | Ídem |
+| `POST /api/admin/validate-anomaly` | Acción de Purgatorio pendiente |
+| `GET /api/auctions/products` | Página de subastas no implementada |
+| `GET /api/intelligence/market/{id}` | Vista de inteligencia de mercado pendiente |
+| `GET /api/wallapop/preview` | Puente Wallapop (bridge, uso interno) |
+| `POST /api/vault/stage` | Flujo de importación de bóveda pendiente |
+| `GET /api/market/analytics/{id}` | Vista de analítica pendiente |
+| `GET /api/health` | Endpoint de monitorización (no necesita UI) |
+| `GET /api/system/audit` | Herramienta de admin (acceso directo) |
+| `GET /api/auth/users` | Legacy, sólo para debugging |
+
+---
+
+## 8. Tests (tests/)
 
 Suite de integración ejecutada con **pytest**:
 
@@ -86,8 +121,9 @@ Suite de integración ejecutada con **pytest**:
 | `tests/test_api_health.py` | `/api/health`, OpenAPI schema disponible. |
 | `tests/test_api_auth.py` | Register, login, JWT token, `get_current_user` con Bearer. |
 | `tests/test_api_permissions.py` | API key guard, device guard, endpoints públicos, dashboard stats. |
+| `tests/test_api_errors.py` | Validation error handler (422), HTTPException pass-through (403/404). |
 
-Ejecutar: `python -m pytest tests/ -v`
+Ejecutar: `python -m pytest tests/test_api_*.py -v` (25 tests, 0 fallos)
 
 ---
 
@@ -102,7 +138,8 @@ Ejecutar: `python -m pytest tests/ -v`
 - **Phase 58**: Reestructuración — API modularizada en 9 routers, raíz limpia, secretos en env, `main.py` de 2485 → 55 líneas.
 - **Phase 59**: Autenticación JWT (`PyJWT`, `create_access_token`, `get_current_user`), tests de integración con SQLite in-memory (21 tests, 0 fallos).
 - **Phase 60**: Split de `misc.py` en 4 routers semánticos (`users`, `system`, `vault`, `logistics`). Optimización de `/api/purgatory`: índice invertido por token reduce el matching de O(pending × products) a O(pending × candidatos), ~10-50x más rápido.
+- **Phase 61**: Global exception handler centralizado en `main.py` (ValidationError → 422 estructurado, Exception → 500 limpio). Audit de endpoints sin consumer frontend documentado (13 endpoints identificados). 25 tests de integración, 0 fallos.
 
 ---
 
-*Última actualización: 2026-04-18 - Phase 60: Split misc + optimización purgatorio.*
+*Última actualización: 2026-04-18 - Phase 61: Exception handler + audit frontend.*
