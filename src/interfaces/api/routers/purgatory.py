@@ -1,6 +1,6 @@
 import json
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from loguru import logger
@@ -161,7 +161,7 @@ async def match_purgatory(request: PurgatoryMatchRequest):
                 "receipt_id": item.receipt_id,
                 "opportunity_score": fresh_score,
                 "first_seen_at": item.found_at,
-                "last_price_update": datetime.utcnow(),
+                "last_price_update": datetime.now(timezone.utc),
             }
 
             new_offer, _ = repo.add_offer(product, offer_data, commit=False)

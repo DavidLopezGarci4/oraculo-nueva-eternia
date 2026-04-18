@@ -1,6 +1,6 @@
 from sqlalchemy import Integer, String, Float, DateTime, ForeignKey, Boolean
 from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 
 DOMAIN_VERSION = "1.2.1-GUARDIAN"
@@ -50,8 +50,8 @@ class ProductModel(Base):
     image_hash: Mapped[Optional[str]] = mapped_column(String, index=True, nullable=True) # Perceptual Hash for visual dedupe
     master_image_hash: Mapped[Optional[str]] = mapped_column(String, nullable=True) # ActionFigure411 reference hash
     
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     
     # Relationships
     offers: Mapped[List["OfferModel"]] = relationship(
@@ -83,7 +83,7 @@ class OfferModel(Base):
     currency: Mapped[str] = mapped_column(String, default="EUR")
     url: Mapped[str] = mapped_column(String, index=True)
     is_available: Mapped[bool] = mapped_column(Boolean, default=True)
-    last_seen: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    last_seen: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
     
     # 3OX Audit Trail
     receipt_id: Mapped[Optional[str]] = mapped_column(String, nullable=True, index=True)
@@ -106,7 +106,7 @@ class OfferModel(Base):
     time_left_raw: Mapped[Optional[str]] = mapped_column(String, nullable=True)
 
     # Phase 41: Market Intelligence
-    first_seen_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    first_seen_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
     sold_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     is_sold: Mapped[bool] = mapped_column(Boolean, default=False)
     original_listing_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
@@ -132,7 +132,7 @@ class CollectionItemModel(Base):
     grading: Mapped[Optional[float]] = mapped_column(Float, nullable=True, default=10.0) # Condition Grade (1-10)
     purchase_price: Mapped[Optional[float]] = mapped_column(Float, nullable=True, default=0.0) # Financial Investment
     notes: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    acquired_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    acquired_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
     
     # Relationships
     product: Mapped["ProductModel"] = relationship("ProductModel", back_populates="collection_items")
@@ -182,13 +182,13 @@ class PendingMatchModel(Base):
     time_left_raw: Mapped[Optional[str]] = mapped_column(String, nullable=True)
 
     # Phase 41: Market Intelligence
-    first_seen_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    first_seen_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
     sold_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     is_sold: Mapped[bool] = mapped_column(Boolean, default=False)
     original_listing_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     last_price_update: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     
-    found_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    found_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 class ProductAliasModel(Base):
     """
@@ -203,7 +203,7 @@ class ProductAliasModel(Base):
     source_url: Mapped[str] = mapped_column(String, index=True, unique=True)
     confirmed: Mapped[bool] = mapped_column(Boolean, default=True) # Si fue validado por un matching de alta confianza
     
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
     
     # Relationships
     product: Mapped["ProductModel"] = relationship("ProductModel", back_populates="aliases")
@@ -225,7 +225,7 @@ class OfferHistoryModel(Base):
     action_type: Mapped[str] = mapped_column(String) # NEW, LINKED, UNLINKED, PURGED
     details: Mapped[Optional[str]] = mapped_column(String, nullable=True) # JSON or descriptive text
     
-    timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 # PriceAlertModel promoted to top (moved here for coherence)
 class PriceAlertModel(Base):
@@ -240,7 +240,7 @@ class PriceAlertModel(Base):
     
     target_price: Mapped[float] = mapped_column(Float)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
     last_notified_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
     # Relationships
@@ -280,9 +280,9 @@ class ScraperStatusModel(Base):
     items_scraped: Mapped[int] = mapped_column(Integer, default=0)
     progress: Mapped[int] = mapped_column(Integer, default=0) # 0-100
     total_items_estimated: Mapped[int] = mapped_column(Integer, default=0)
-    start_time: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    start_time: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
     end_time: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
-    last_update: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    last_update: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
 class BlackcludedItemModel(Base):
     """Items explicitly discarded by the user to prevent re-scraping."""
@@ -299,7 +299,7 @@ class BlackcludedItemModel(Base):
     anomaly_flags: Mapped[Optional[str]] = mapped_column(String, nullable=True) # JSON containing reasons
     is_blocked: Mapped[bool] = mapped_column(Boolean, default=False)
 
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 class PriceHistoryModel(Base):
     """Tracks price changes over time for analytics."""
@@ -308,7 +308,7 @@ class PriceHistoryModel(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     offer_id: Mapped[int] = mapped_column(ForeignKey("offers.id"))
     price: Mapped[float] = mapped_column(Float)
-    recorded_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    recorded_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
     is_snapshot: Mapped[bool] = mapped_column(Boolean, default=False) # True if price didn't change but we recorded the state
     
     offer: Mapped["OfferModel"] = relationship("OfferModel", back_populates="price_history")
@@ -327,7 +327,7 @@ class ScraperExecutionLogModel(Base):
     new_items: Mapped[int] = mapped_column(Integer, default=0)
     errors: Mapped[int] = mapped_column(Integer, default=0)
     
-    start_time: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    start_time: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
     end_time: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     
     # Context
@@ -350,7 +350,7 @@ class StagedImportModel(Base):
     data_payload: Mapped[str] = mapped_column(String) # JSON con los datos a importar
     impact_summary: Mapped[str] = mapped_column(String) # Resumen legible: "Adds 20 items, updates 5"
     
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
     processed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
 class SyncQueueModel(Base):
@@ -369,7 +369,7 @@ class SyncQueueModel(Base):
     retry_count: Mapped[int] = mapped_column(Integer, default=0)
     error_msg: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
     synced_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
 class LogisticRuleModel(Base):
@@ -388,7 +388,7 @@ class LogisticRuleModel(Base):
     custom_fees: Mapped[float] = mapped_column(Float, default=0.0) # Gastos fijos aduana/gestión
     strategy_key: Mapped[Optional[str]] = mapped_column(String, nullable=True) # Para lógica especial programática
     
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
 class AuthorizedDeviceModel(Base):
     """
@@ -401,8 +401,8 @@ class AuthorizedDeviceModel(Base):
     device_name: Mapped[Optional[str]] = mapped_column(String, nullable=True) # e.g. "iPhone de David"
     is_authorized: Mapped[bool] = mapped_column(Boolean, default=False)
     
-    last_access_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    last_access_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 class KaizenInsightModel(Base):
     """
@@ -413,7 +413,7 @@ class KaizenInsightModel(Base):
     target_type: Mapped[str] = mapped_column(String) # "product", "price", "logistics"
     description: Mapped[str] = mapped_column(String)
     priority: Mapped[int] = mapped_column(Integer, default=1)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 __all__ = [
     "Base", 

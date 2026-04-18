@@ -1,5 +1,5 @@
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from loguru import logger
@@ -78,7 +78,7 @@ async def forgot_password(
 
         token = secrets.token_urlsafe(32)
         user.reset_token = token
-        user.reset_token_expiry = datetime.utcnow() + timedelta(hours=1)
+        user.reset_token_expiry = datetime.now(timezone.utc) + timedelta(hours=1)
         db.commit()
 
         background_tasks.add_task(
@@ -102,7 +102,7 @@ async def reset_password(request: ResetPasswordRequest):
             db.query(UserModel)
             .filter(
                 UserModel.reset_token == request.token,
-                UserModel.reset_token_expiry > datetime.utcnow(),
+                UserModel.reset_token_expiry > datetime.now(timezone.utc),
             )
             .first()
         )

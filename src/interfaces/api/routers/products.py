@@ -38,13 +38,16 @@ async def get_products():
                     OfferModel.is_available == True,
                 ),
             )
-            .distinct(ProductModel.id)
         )
 
         results = db.execute(query).all()
 
+        seen: set = set()
         final_products = []
         for product, best_offer in results:
+            if product.id in seen:
+                continue
+            seen.add(product.id)
             po = ProductOutput.model_validate(product)
             po.avg_market_price = product.avg_market_price or 0.0
             if best_offer:
@@ -102,13 +105,16 @@ async def get_auction_products():
                     OfferModel.is_available == True,
                 ),
             )
-            .distinct(ProductModel.id)
         )
 
         results = db.execute(query).all()
 
+        seen: set = set()
         output = []
         for product, best_offer in results:
+            if product.id in seen:
+                continue
+            seen.add(product.id)
             p_out = ProductOutput.model_validate(product)
             p_out.best_p2p_price = best_offer.price
             p_out.best_p2p_source = best_offer.shop_name

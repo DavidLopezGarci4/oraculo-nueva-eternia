@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from loguru import logger
@@ -54,7 +54,7 @@ async def import_wallapop_products(request: WallapopImportRequest):
                 shop_name="Wallapop",
                 source_type="Peer-to-Peer",
                 image_url=product.imageUrl,
-                found_at=datetime.utcnow(),
+                found_at=datetime.now(timezone.utc),
             )
             db.add(pending)
             imported += 1

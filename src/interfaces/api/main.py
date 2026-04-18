@@ -4,6 +4,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from loguru import logger
 
+from src.core.config import settings
+
+if settings.JWT_SECRET == "oraculo-jwt-secret-CHANGE-IN-PRODUCTION":
+    logger.critical("JWT_SECRET uses the insecure default value. Set JWT_SECRET in .env before deploying to production!")
+
 from src.interfaces.api.deps import ensure_scrapers_registered
 from src.interfaces.api.routers import (
     admin as admin_router,

@@ -1,5 +1,5 @@
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from loguru import logger
@@ -144,7 +144,7 @@ async def get_top_deals(user_id: int = 2):
             ).all()
         ]
 
-        freshness_threshold = datetime.utcnow() - timedelta(hours=72)
+        freshness_threshold = datetime.now(timezone.utc) - timedelta(hours=72)
 
         best_prices_subq = (
             db.query(OfferModel.product_id, func.min(OfferModel.price).label("min_price"))

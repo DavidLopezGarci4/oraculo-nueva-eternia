@@ -139,7 +139,13 @@ Ejecutar: `python -m pytest tests/test_api_*.py -v` (25 tests, 0 fallos)
 - **Phase 59**: Autenticación JWT (`PyJWT`, `create_access_token`, `get_current_user`), tests de integración con SQLite in-memory (21 tests, 0 fallos).
 - **Phase 60**: Split de `misc.py` en 4 routers semánticos (`users`, `system`, `vault`, `logistics`). Optimización de `/api/purgatory`: índice invertido por token reduce el matching de O(pending × products) a O(pending × candidatos), ~10-50x más rápido.
 - **Phase 61**: Global exception handler centralizado en `main.py` (ValidationError → 422 estructurado, Exception → 500 limpio). Audit de endpoints sin consumer frontend documentado (13 endpoints identificados). 25 tests de integración, 0 fallos.
+- **Phase 62**: Hardening de compatibilidad Python 3.12+:
+  - `datetime.utcnow()` reemplazado por `datetime.now(timezone.utc)` en todos los modelos y routers (12 puntos de corrección).
+  - `DISTINCT ON` eliminado de `products.py` (incompatible con SQLite/futuras versiones de SQLAlchemy); deduplicación movida a Python con `seen` set.
+  - pytest configurado en `pyproject.toml` (`testpaths = ["tests"]`, `python_files = ["test_api_*.py"]`) — aísla suite API de scripts heredados.
+  - Alerta de `JWT_SECRET` inseguro en arranque (`logger.critical` si se usa el valor por defecto).
+  - 25 tests de integración, 0 fallos, 0 warnings de deprecación.
 
 ---
 
-*Última actualización: 2026-04-18 - Phase 61: Exception handler + audit frontend.*
+*Última actualización: 2026-04-18 - Phase 62: Hardening Python 3.12+ compatibility.*
