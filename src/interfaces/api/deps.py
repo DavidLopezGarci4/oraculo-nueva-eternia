@@ -1,21 +1,24 @@
-from fastapi import HTTPException, Header, Request
+from datetime import datetime, timedelta
+
+import jwt
+from fastapi import Depends, HTTPException, Header, Request
+from fastapi.security import OAuth2PasswordBearer
 from loguru import logger
 
 from src.core.config import settings
 from src.core.security import SecurityShield
-from src.domain.models import AuthorizedDeviceModel, ScraperStatusModel
+from src.domain.models import AuthorizedDeviceModel, ScraperStatusModel, UserModel
 from src.infrastructure.database_cloud import SessionCloud
 
+# ─── API Key ─────────────────────────────────────────────────────────────────
 
 def verify_api_key(x_api_key: str = Header(None, alias="X-API-Key")):
-    """
-    Verifica la llave de la API de Eternia.
-    Soporta X-API-Key para consistencia con los clientes administrativos.
-    """
     if x_api_key != settings.ORACULO_API_KEY:
         raise HTTPException(status_code=403, detail="Invalid API Key. Access Denied.")
     return x_api_key
 
+
+# ─── Device Auth (Ojo de Sauron) ─────────────────────────────────────────────
 
 async def verify_device(
     request: Request,
@@ -23,12 +26,6 @@ async def verify_device(
     x_device_name: str = Header("Desconocido", alias="X-Device-Name"),
     x_api_key: str = Header(None, alias="X-API-Key"),
 ):
-    """
-    Middleware protector (Ojo de Sauron).
-    Valida si el dispositivo está autorizado.
-    --- SOBERANÍA 3OX ---
-    Si se presenta la X-API-Key correcta, el dispositivo se autoriza automáticamente.
-    """
     if not x_device_id:
         raise HTTPException(
             status_code=403,
@@ -67,11 +64,41 @@ async def verify_device(
     return x_device_id
 
 
+# ─── JWT ─────────────────────────────────────────────────────────────────────
+
+_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
+
+
+def create_access_token(user_id: int, role: str) -> str:
+    payload = {
+        "sub": str(user_id),
+        "role": role,
+        "exp": datetime.utcnow() + timedelta(minutes=settings.JWT_EXPIRE_MINUTES),
+    }
+    return jwt.encode(payload, settings.JWT_SECRET, algorithm="HS256")
+
+
+def get_current_user(token: str = Depends(_oauth2_scheme)) -> UserModel:
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated.")
+    try:
+        payload = jwt.decode(token, settings.JWT_SECRET, algorithms=["HS256"])
+        user_id = int(payload["sub"])
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expirado.")
+    except (jwt.InvalidTokenError, KeyError, ValueError):
+        raise HTTPException(status_code=401, detail="Token inválido.")
+
+    with SessionCloud() as db:
+        user = db.query(UserModel).filter(UserModel.id == user_id, UserModel.is_active == True).first()
+        if not user:
+            raise HTTPException(status_code=401, detail="Usuario no encontrado.")
+        return user
+
+
+# ─── Startup ──────────────────────────────────────────────────────────────────
+
 def ensure_scrapers_registered():
-    """
-    Fase 50: Asegura que todos los scrapers conocidos existan en ScraperStatusModel.
-    Esto garantiza su visibilidad en el Purgatorio desde el primer día.
-    """
     spiders_to_check = [
         "ActionToys", "Fantasia Personajes", "Frikiverso", "Electropolis",
         "Pixelatoy", "Amazon.es", "DeToyboys", "Ebay.es",

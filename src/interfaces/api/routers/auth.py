@@ -10,6 +10,7 @@ from src.core.security import SecurityShield
 from src.domain.models import UserModel
 from src.infrastructure.database_cloud import SessionCloud
 from src.infrastructure.email_service import EmailService
+from src.interfaces.api.deps import create_access_token
 from src.interfaces.api.schemas import (
     ForgotPasswordRequest,
     LoginRequest,
@@ -177,7 +178,9 @@ async def login(request: LoginRequest):
 
         return {
             "status": "success",
-            "user": {"id": user.id, "username": user.username, "role": user.role},
+            "user": {"id": user.id, "username": user.username, "email": user.email, "role": user.role},
+            "access_token": create_access_token(user.id, user.role),
+            "token_type": "bearer",
             "is_sovereign": user.role == "admin" or is_sovereign_bypass,
         }
 

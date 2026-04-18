@@ -184,3 +184,10 @@ class WallapopProduct(BaseModel):
 
 class WallapopImportRequest(BaseModel):
     products: List[WallapopProduct]
+
+
+# --- JWT ---
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str = "bearer"

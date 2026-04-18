@@ -37,6 +37,10 @@ class Settings(BaseSettings):
     SMTP_PASS: str | None = None
     SMTP_FROM: str = "Oráculo de Nueva Eternia <notificaciones@eternia.com>"
 
+    # JWT - Phase 59
+    JWT_SECRET: str = "oraculo-jwt-secret-CHANGE-IN-PRODUCTION"
+    JWT_EXPIRE_MINUTES: int = 1440  # 24 hours
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_ignore_empty=True,

@@ -21,3 +21,10 @@ xlsxwriter
 curl_cffi
 supabase
 psutil
+
+# Auth
+PyJWT>=2.9
+
+# Testing
+pytest>=8.0
+pytest-asyncio>=0.24
