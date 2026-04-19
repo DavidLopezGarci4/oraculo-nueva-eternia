@@ -23,10 +23,10 @@ from src.domain.models import (
 )
 from src.application.services.logistics_service import LogisticsService
 from src.application.services.deal_scorer import DealScorer
-from src.infrastructure.scrapers.action_toys_scraper import ActionToysScraper
 from src.infrastructure.scrapers.amazon_scraper import AmazonScraper
 from src.infrastructure.scrapers.fantasia_scraper import FantasiaScraper
 from src.infrastructure.scrapers.frikiverso_scraper import FrikiversoScraper
+from src.infrastructure.scrapers.frikimaz_scraper import FrikimazScraper
 from src.infrastructure.scrapers.electropolis_scraper import ElectropolisScraper
 from src.infrastructure.scrapers.pixelatoy_scraper import PixelatoyScraper
 from src.infrastructure.scrapers.detoyboys_scraper import DeToyboysNLScraper
@@ -79,10 +79,10 @@ def ensure_scrapers_registered():
     Fase 50: Asegura que todos los scrapers conocidos existan en ScraperStatusModel.
     Esto garantiza su visibilidad en el Purgatorio desde el primer día.
     """
-    from src.infrastructure.scrapers.action_toys_scraper import ActionToysScraper
     from src.infrastructure.scrapers.amazon_scraper import AmazonScraper
     from src.infrastructure.scrapers.fantasia_scraper import FantasiaScraper
     from src.infrastructure.scrapers.frikiverso_scraper import FrikiversoScraper
+    from src.infrastructure.scrapers.frikimaz_scraper import FrikimazScraper
     from src.infrastructure.scrapers.electropolis_scraper import ElectropolisScraper
     from src.infrastructure.scrapers.pixelatoy_scraper import PixelatoyScraper
     from src.infrastructure.scrapers.detoyboys_scraper import DeToyboysNLScraper
@@ -94,7 +94,7 @@ def ensure_scrapers_registered():
     from src.infrastructure.scrapers.dvdstorespain_scraper import DVDStoreSpainScraper
 
     spiders_to_check = [
-        "ActionToys", "Fantasia Personajes", "Frikiverso", "Electropolis", 
+        "Fantasia Personajes", "Frikiverso", "Frikimaz", "Electropolis",
         "Pixelatoy", "Amazon.es", "DeToyboys", "Ebay.es", 
         "Vinted", "Wallapop", "ToymiEU", "Time4ActionToysDE", 
         "BigBadToyStore", "Tradeinn", "DVDStoreSpain"
@@ -1352,7 +1352,6 @@ def run_scraper_task(spider_name: str = "all", trigger_type: str = "manual", que
     try:
         # Ejecutar spiders de fondo (ScrapingPipeline)
         from src.infrastructure.scrapers.pipeline import ScrapingPipeline
-        from src.infrastructure.scrapers.action_toys_scraper import ActionToysScraper
         from src.infrastructure.scrapers.fantasia_scraper import FantasiaScraper
         from src.infrastructure.scrapers.frikiverso_scraper import FrikiversoScraper
         from src.infrastructure.scrapers.electropolis_scraper import ElectropolisScraper
@@ -1367,15 +1366,16 @@ def run_scraper_task(spider_name: str = "all", trigger_type: str = "manual", que
         from src.infrastructure.scrapers.bbts_scraper import BigBadToyStoreScraper
         from src.infrastructure.scrapers.tradeinn_scraper import TradeinnScraper
         from src.infrastructure.scrapers.dvdstorespain_scraper import DVDStoreSpainScraper
+        from src.infrastructure.scrapers.frikimaz_scraper import FrikimazScraper
         from src.infrastructure.scrapers.vinted_scraper import VintedScraper
         from src.infrastructure.scrapers.wallapop_scraper import WallapopScraper
-        
+
         import asyncio
-        
+
         spiders_map = {
-            "ActionToys": ActionToysScraper(),
             "Fantasia Personajes": FantasiaScraper(),
             "Frikiverso": FrikiversoScraper(),
+            "Frikimaz": FrikimazScraper(),
             "Electropolis": ElectropolisScraper(),
             "Pixelatoy": PixelatoyScraper(),
             "Amazon.es": AmazonScraper(), 

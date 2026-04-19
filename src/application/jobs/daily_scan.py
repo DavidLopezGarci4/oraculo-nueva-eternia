@@ -16,9 +16,9 @@ from src.infrastructure.scrapers.pipeline import ScrapingPipeline
 # ... (rest of imports)
 
 # New Refactored Scrapers
-from src.infrastructure.scrapers.action_toys_scraper import ActionToysScraper
 from src.infrastructure.scrapers.fantasia_scraper import FantasiaScraper
 from src.infrastructure.scrapers.frikiverso_scraper import FrikiversoScraper
+from src.infrastructure.scrapers.frikimaz_scraper import FrikimazScraper
 from src.infrastructure.scrapers.pixelatoy_scraper import PixelatoyScraper
 from src.infrastructure.scrapers.electropolis_scraper import ElectropolisScraper
 
@@ -115,9 +115,9 @@ async def run_daily_scan(progress_callback=None):
         # List of Scrapers (Spanish + Phase 8.4 European)
         # REORDER: Spanish first, then International, DeToyboys LAST (User Policy)
         all_scrapers = [
-            ActionToysScraper(),
             FantasiaScraper(),
             FrikiversoScraper(),
+            FrikimazScraper(),
             PixelatoyScraper(),
             ElectropolisScraper(),
             # European Expansion

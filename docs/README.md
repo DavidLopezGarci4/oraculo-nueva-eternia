@@ -32,7 +32,7 @@
 
 **El Oráculo de Nueva Eternia** es una plataforma integral diseñada para coleccionistas de alto nivel (específicamente de la línea *Masters of the Universe: Origins*). Su propósito es doble:
 
-1. **Vigilancia de Mercado**: Escanea automáticamente 15 tiendas en España y Europa para encontrar las mejores ofertas, detectar stock y alertar sobre bajadas de precio.
+1. **Vigilancia de Mercado**: Escanea automáticamente 16 tiendas en España y Europa para encontrar las mejores ofertas, detectar stock y alertar sobre bajadas de precio.
 2. **Gestión Patrimonial**: Permite llevar un control exhaustivo de la colección personal, calculando el valor real de mercado frente a la inversión realizada (ROI).
 
 ---
@@ -219,6 +219,7 @@ TELEGRAM_BOT_TOKEN=tu_token
 - **Fase 55 (Restauración del Legado & Grading)**: ✅ Reconexión del botón (i) con motor de multiplicadores automáticos por estado y ajuste fino de ROI mediante grados de conservación (Completado).
 - **Fase 56 (Blindaje Operativo)**: ✅ Estabilización de bd cloud larga, diagnóstico SMTP, limpieza de usuarios y ajuste global de retrys Frontend (Completado).
 - **Fase 57 (Refactorización UX)**: ✅ Reserva táctica del loader intensivo para transiciones maestras, spinners ligeros para data-fetching y sistema de búsqueda multilínea optimizado para móvil (Completado).
+- **Fase 58 (Expansión Frikimaz)**: ✅ Integración de `FrikimazScraper` (frikimaz.es, PrestaShop SSR). Eliminación de ActionToys. Paginación automática, extracción de EAN desde ficha de producto y fallback Playwright. Fuentes activas: 16 (Completado).
 
 ---
 
