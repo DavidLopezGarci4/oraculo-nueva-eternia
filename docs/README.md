@@ -223,7 +223,15 @@ TELEGRAM_BOT_TOKEN=tu_token
 
 ---
 
-## 8. Arquitectura y Conocimiento (El Códice)
+## 8. Guía de Despliegue
+
+Para actualizar la aplicación en local o en producción (OCI/DuckDNS), consulta la guía paso a paso:
+
+- [🚀 Guía de Despliegue (GUIA_DESPLIEGUE.md)](GUIA_DESPLIEGUE.md)
+
+---
+
+## 9. Arquitectura y Conocimiento (El Códice)
 
 Para entender la sinergia entre todas las tecnologías y procesos, consulta el documento incremental:
 
