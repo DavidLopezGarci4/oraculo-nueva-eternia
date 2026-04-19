@@ -21,6 +21,10 @@ dependencies = [
 where = ["."]
 include = ["src*", "vec3*"]
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_api_*.py"]
+
 [tool.pyright]
 include = ["src", "vec3", "scripts"]
 venvPath = "."
