@@ -84,7 +84,6 @@ def run_scraper_task(
     items_found = 0
 
     try:
-        from src.infrastructure.scrapers.action_toys_scraper import ActionToysScraper
         from src.infrastructure.scrapers.amazon_scraper import AmazonScraper
         from src.infrastructure.scrapers.bbts_scraper import BigBadToyStoreScraper
         from src.infrastructure.scrapers.detoyboys_scraper import DeToyboysNLScraper
@@ -93,6 +92,7 @@ def run_scraper_task(
         from src.infrastructure.scrapers.electropolis_scraper import ElectropolisScraper
         from src.infrastructure.scrapers.fantasia_scraper import FantasiaScraper
         from src.infrastructure.scrapers.frikiverso_scraper import FrikiversoScraper
+        from src.infrastructure.scrapers.frikimaz_scraper import FrikimazScraper
         from src.infrastructure.scrapers.pipeline import ScrapingPipeline
         from src.infrastructure.scrapers.pixelatoy_scraper import PixelatoyScraper
         from src.infrastructure.scrapers.time4actiontoys_scraper import Time4ActionToysDEScraper
@@ -102,9 +102,9 @@ def run_scraper_task(
         from src.infrastructure.scrapers.wallapop_scraper import WallapopScraper
 
         spiders_map = {
-            "ActionToys": ActionToysScraper(),
             "Fantasia Personajes": FantasiaScraper(),
             "Frikiverso": FrikiversoScraper(),
+            "Frikimaz": FrikimazScraper(),
             "Electropolis": ElectropolisScraper(),
             "Pixelatoy": PixelatoyScraper(),
             "Amazon.es": AmazonScraper(),

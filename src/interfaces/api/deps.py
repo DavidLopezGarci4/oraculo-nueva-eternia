@@ -100,7 +100,7 @@ def get_current_user(token: str = Depends(_oauth2_scheme)) -> UserModel:
 
 def ensure_scrapers_registered():
     spiders_to_check = [
-        "ActionToys", "Fantasia Personajes", "Frikiverso", "Electropolis",
+        "Fantasia Personajes", "Frikiverso", "Frikimaz", "Electropolis",
         "Pixelatoy", "Amazon.es", "DeToyboys", "Ebay.es",
         "Vinted", "Wallapop", "ToymiEU", "Time4ActionToysDE",
         "BigBadToyStore", "Tradeinn", "DVDStoreSpain",
