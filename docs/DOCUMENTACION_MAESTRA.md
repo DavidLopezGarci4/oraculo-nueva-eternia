@@ -156,6 +156,7 @@ Para añadir un nuevo motor de búsqueda (por ejemplo, Triguetech):
 - **Escalabilidad de Búsqueda**: Las búsquedas de FastAPI actualmente tiran contra SQLite y Postgres indistintamente gracias al ORM SQLAlchemy.
 - **Sincronización de Imágenes**: Existe un proceso secundario en GitHub Actions que sincroniza las fotos locales y genera URLs públicas (`src/application/services/storage_service.py`), evitando colapsar la base de datos con BLOBs pesados.
 - **Cancelación Cooperativa**: En `main.py` hay un `scraper_cancel_event` de tipo `threading.Event()`. Cuando un usuario hace un `POST /api/scrapers/stop`, esta bandera se levanta. El pipeline lee esta bandera entre cada iteración de tienda y se detiene limpiamente. No se matan procesos bruscamente.
+- **Módulo Radar P2P**: El módulo Radar P2P ha sido desactivado del menú principal del frontend ya que actuaba como un visor independiente de oportunidades P2P (Teoría de Cuarentena P25) y no se le estaba dando uso continuo. El código subyacente (`RadarP2P.tsx` y endpoint `/api/radar/p2p-opportunities`) permanece en el proyecto por si se desea reactivar en el futuro, pero no interfiere con el flujo principal ni el enrutado de React.
 
 ---
 *Este documento invalida cualquier anotación antigua que hable de Streamlit, ejecución en paralelo de arañas (asyncio.gather), o matching automático a Ciegas. La realidad del sistema es la aquí plasmada.*

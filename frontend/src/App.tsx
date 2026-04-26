@@ -9,7 +9,6 @@ import Purgatory from './pages/Purgatory';
 import Dashboard from './pages/Dashboard';
 import Config from './pages/Config';
 import Auctions from './pages/Auctions';
-import RadarP2P from './pages/RadarP2P';
 import ShieldBypass from './components/ShieldBypass';
 import MasterLogin from './components/auth/MasterLogin';
 import LoginPage from './pages/LoginPage';
@@ -161,7 +160,6 @@ function App() {
                 {activeTab === 'dashboard' && <Dashboard user={currentUser} />}
                 {activeTab === 'catalog' && <Catalog searchQuery={searchQuery} />}
                 {activeTab === 'auctions' && <Auctions />}
-                {activeTab === 'radar' && <RadarP2P />}
                 {activeTab === 'collection' && <Collection searchQuery={searchQuery} />}
                 {activeTab === 'purgatory' && <Purgatory />}
                 {activeTab === 'settings' && (

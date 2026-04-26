@@ -1,5 +1,5 @@
 
-import { LayoutDashboard, Database, Box, ShieldAlert, Settings, LogOut, X, Gavel, Radar } from 'lucide-react';
+import { LayoutDashboard, Database, Box, ShieldAlert, Settings, LogOut, X, Gavel } from 'lucide-react';
 import masterRoleImg from '../../assets/role-master.png';
 import guardianRoleImg from '../../assets/role-guardian.png';
 
@@ -22,7 +22,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen
         { id: 'collection', label: 'Mi Fortaleza', icon: Box },
         { id: 'catalog', label: 'Nueva Eternia', icon: Database },
         { id: 'auctions', label: 'El Pabellón', icon: Gavel },
-        { id: 'radar', label: 'Radar P2P', icon: Radar },
         ...(isAdmin ? [{ id: 'purgatory', label: 'Purgatorio', icon: ShieldAlert }] : []),
     ];
 
