@@ -1,5 +1,8 @@
 # Architecture Map: Nueva Eternia (3OX vec3 Audit)
 
+> [!NOTE]
+> Este archivo es un mapa físico de directorios. Para explicaciones detalladas del stack tecnológico, conexiones entre capas y flujos de datos, dirígete a la **[DOCUMENTACION MAESTRA](DOCUMENTACION_MAESTRA.md)**.
+
 Este mapa detalla la estructura actual del proyecto bajo el estándar **3OX Tier 3**.
 
 ## 1. Núcleo de Control (Core 3OX)

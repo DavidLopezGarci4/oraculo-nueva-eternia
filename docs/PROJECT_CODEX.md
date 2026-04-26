@@ -1,5 +1,8 @@
 # 📜 EL CÓDICE DE ETERNIA: Sinergia Técnica
 
+> [!IMPORTANT]
+> **Esta es una guía de manifiesto y principios arquitectónicos.** Para entender el funcionamiento exacto de la aplicación, variables de entorno, y diagramas de flujo de datos actualizados, consulta la **[DOCUMENTACION MAESTRA](DOCUMENTACION_MAESTRA.md)**.
+
 Este documento es una reliquia viva que describe la intersección de tecnologías, herramientas y procesos que dan vida a **Nueva Eternia**. A diferencia del Roadmap (visión) o el Log (historia), el Códice explica el **CÓMO** todo funciona en conjunto de manera incremental.
 
 ---

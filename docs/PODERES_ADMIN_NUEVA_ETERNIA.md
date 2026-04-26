@@ -1,5 +1,7 @@
-
 # 🗝️ El Cetro de Poder: Funciones de Administrador
+
+> [!NOTE]
+> **Documento de Roles y Herramientas**. Este documento resume las capacidades de la interfaz para usuarios Administradores. Para entender la arquitectura técnica que sustenta estos poderes, consulta la **[DOCUMENTACION MAESTRA](DOCUMENTACION_MAESTRA.md)**.
 
 He refinado las herramientas administrativas para que tengas el mando absoluto sobre la infraestructura técnica y la integridad del catálogo.
 

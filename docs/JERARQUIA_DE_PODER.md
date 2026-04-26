@@ -1,5 +1,7 @@
-
 # ⚖️ Jerarquía de Poder: Guardianes vs. Masters
+
+> [!NOTE]
+> **Documento de Roles**. Este documento detalla la lógica de permisos interna de la aplicación. Para ver cómo se implementan técnicamente o cómo el flujo interactúa con la base de datos, consulta la **[DOCUMENTACION MAESTRA](DOCUMENTACION_MAESTRA.md)**.
 
 He mapeado la jerarquía exacta de permisos implementada en la Nueva Eternia para respetar la seguridad de tu colección.
 
