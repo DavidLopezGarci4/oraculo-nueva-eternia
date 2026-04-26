@@ -5,10 +5,10 @@ import sys
 import json
 from datetime import datetime
 from pathlib import Path
-from vec3.dev.adapters import initialize_runtime, create_db_backup, manage_pid, check_stop_signal, save_json_report
+# from vec3.dev.adapters import initialize_runtime, create_db_backup, manage_pid, check_stop_signal, save_json_report
 
 # Initialize 3OX Runtime (Force UTF-8, Path Resolution)
-root_path = initialize_runtime()
+# root_path = initialize_runtime()
 
 from src.core.logger import setup_logging
 from loguru import logger
@@ -51,7 +51,7 @@ async def run_daily_scan(progress_callback=None):
     logger.info("🚀 Starting Daily Oracle Scan (Refactored Loop)...")
     
     # --- 3OX AUTOMATIC BACKUP ---
-    create_db_backup()
+    # create_db_backup()
     # ---------------------------
     
     # --- ARGUMENT PARSING ---
@@ -83,7 +83,7 @@ async def run_daily_scan(progress_callback=None):
         logger.info("⚡ Oracle Awakening: Delay complete, engaging robots.")
     
     # --- 3OX PID MANAGEMENT ---
-    manage_pid(action="create")
+    # manage_pid(action="create")
     # --------------------------
         
     try:
@@ -190,8 +190,8 @@ async def run_daily_scan(progress_callback=None):
     for idx, scraper in enumerate(scrapers):
         try:
             # Check for 3OX Stop Signal
-            if check_stop_signal():
-                break
+            # if check_stop_signal():
+            #     break
                 
             logger.info(f"🕸️ Engaging {scraper.spider_name}...")
             
@@ -393,10 +393,10 @@ async def run_daily_scan(progress_callback=None):
     logger.info(f"🏁 Daily Scan Complete in {duration}. Total: {total_stats}")
     
     # 3OX Reporting
-    save_json_report(results, filename_prefix="daily_scan")
+    # save_json_report(results, filename_prefix="daily_scan")
         
     # 3OX PID Cleanup
-    manage_pid(action="remove")
+    # manage_pid(action="remove")
 
 if __name__ == "__main__":
     try:
