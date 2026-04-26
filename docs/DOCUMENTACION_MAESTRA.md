@@ -134,11 +134,17 @@ El sistema sigue una política **Zero-Leak**. Ninguna credencial se escribe en e
 Si la base de datos se corrompe o pierdes tu cuenta, el sistema incluye un mecanismo de emergencia (*MasterLogin / ShieldBypass* en React). Si introduces el `SOVEREIGN_EMAIL` validado por el backend, obtienes poderes administrativos instantáneos, seteando tu rol localmente.
 
 ### 6.2 Modificar / Añadir un Scraper
-Para añadir un nuevo motor de búsqueda:
+Para añadir un nuevo motor de búsqueda (por ejemplo, Triguetech):
 1. Crea un archivo en `src/infrastructure/scrapers/nuevo_scraper.py`.
-2. Hereda de `BaseScraper` y define `shop_name`.
+2. Hereda de `BaseScraper` y define `shop_name` y la URL.
 3. Sobrescribe el método `search()`.
-4. El backend registrará automáticamente el scraper al iniciar gracias al autodiscovery de FastAPI, sin necesidad de modificar el orquestador principal.
+4. **Registro Manual:** A diferencia de sistemas antiguos, los scrapers NO se autodescubren. Debes registrarlos manualmente en dos lugares clave para que sean reconocidos por el ecosistema:
+   - En `src/application/jobs/daily_scan.py` (dentro de la lista `all_scrapers` para las rondas nocturnas).
+   - En `src/interfaces/api/routers/scrapers.py` (dentro del diccionario `spiders_map` para ejecuciones manuales desde el admin).
+   
+#### Troubleshootings Comunes de Scrapers
+- **Scraper no aparece en el Panel Admin:** Asegúrate de haberlo añadido en `spiders_map` de `routers/scrapers.py`.
+- **Scraper de WooCommerce (ej. Triguetech) no detecta precios/stock:** WooCommerce puede variar las clases de CSS (`ins` vs `del`, `.instock` vs `.outofstock`). Si hay errores en las lecturas, inspecciona la estructura devuelta (`_parse_listing`) con BeautifulSoup y ajusta los selectores.
 
 ### 6.3 Seguridad y Permisos
 - El sistema utiliza `create_access_token` basado en PyJWT para generar tokens que expiran en 24h.

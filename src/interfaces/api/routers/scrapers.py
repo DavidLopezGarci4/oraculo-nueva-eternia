@@ -100,6 +100,7 @@ def run_scraper_task(
         from src.infrastructure.scrapers.tradeinn_scraper import TradeinnScraper
         from src.infrastructure.scrapers.vinted_scraper import VintedScraper
         from src.infrastructure.scrapers.wallapop_scraper import WallapopScraper
+        from src.infrastructure.scrapers.triguetech_scraper import TriguetechScraper
 
         spiders_map = {
             "Fantasia Personajes": FantasiaScraper(),
@@ -117,6 +118,7 @@ def run_scraper_task(
             "BigBadToyStore": BigBadToyStoreScraper(),
             "Tradeinn": TradeinnScraper(),
             "DVDStoreSpain": DVDStoreSpainScraper(),
+            "Triguetech": TriguetechScraper(),
         }
 
         lookup_name = spider_name.lower()
