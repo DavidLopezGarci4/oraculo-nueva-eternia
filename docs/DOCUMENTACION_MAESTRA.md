@@ -244,3 +244,19 @@ Para que el entorno en producción funcione de forma autónoma (mientras tú due
 2. A las 02:00 AM, GitHub ejecuta el código.
 3. Encuentra nuevos precios en Wallapop, y hace `INSERT` directamente a la base de datos de Supabase.
 4. Cuando entras en producción al día siguiente, el Frontend pide los datos a FastAPI, y FastAPI lee Supabase, mostrando los ítems en el Purgatorio. ¡Producción se ha actualizado de forma invisible y autónoma!
+
+### 9.4 Troubleshootings Críticos (Emergencias)
+
+#### A) Pérdida de Acceso SSH a Oracle Cloud (Firewall/Llaves rotas)
+Si pierdes el acceso a tu servidor OCI a través de tu terminal de Windows por problemas con las llaves SSH o el firewall, **no reinstales la máquina**. Usa la consola de emergencia del navegador:
+1. Entra en `cloud.oracle.com` y ve a la página de tu instancia `nueva_eternia_produccion` (o `oraculo-eternia`).
+2. Baja haciendo scroll hasta el apartado **"Recursos"** (en la columna inferior izquierda de la página de la instancia, no en el menú global).
+3. Haz clic en **"Conexiones de consola"**.
+4. Haz clic en **"Iniciar conexión de consola en Cloud Shell"**.
+5. Se abrirá una terminal negra en la parte inferior de tu navegador web conectada directamente al corazón del servidor, saltándose las reglas SSH. Desde ahí podrás arreglar los permisos, hacer `git pull` o relanzar Docker.
+
+#### B) Advertencia Crítica sobre el Despliegue Docker (Prod vs Local-Prod)
+En la raíz del proyecto existen dos archivos de orquestación de producción. Es vital **no confundirlos** al ejecutar comandos en la terminal del servidor:
+- ❌ **`docker-compose.local-prod.yml`**: Esta versión está mutilada a propósito. **NO TIENE SSL (HTTPS)**. Está diseñada únicamente para que puedas probar la compilación de la imagen de producción en tu ordenador local de Windows sin que Nginx se queje por no encontrar los certificados de Let's Encrypt.
+- ✅ **`docker-compose.prod.yml`**: Este es el **ÚNICO** archivo que debe ejecutarse en Oracle Cloud. Incluye los volúmenes de *Certbot* para encriptar la web y garantizar su seguridad pública.
+Si por error levantas el `local-prod.yml` en la nube, la web cargará, pero los navegadores la bloquearán por insegura al carecer de certificados SSL.

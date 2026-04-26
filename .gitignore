@@ -79,3 +79,6 @@ data/MOTU/*_backup_*.xlsx
 .env*
 node_modules/
 dist/
+
+# Cloud Backups
+backups/cloud/*.json

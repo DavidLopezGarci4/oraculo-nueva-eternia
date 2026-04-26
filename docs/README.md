@@ -26,10 +26,10 @@
 Si buscas detalles específicos, puedes consultar los siguientes archivos históricos y técnicos:
 
 - **[La Documentación Maestra (El Santo Grial)](DOCUMENTACION_MAESTRA.md)**: El punto de entrada obligatorio para entender CÓMO funciona la aplicación (React, FastAPI, Supabase, Playwright, Variables de Entorno, etc.).
-- **[PROJECT_CODEX.md](PROJECT_CODEX.md)**: Manifiesto técnico sobre la sinergia de los sistemas, política Zero-Leak y principios de diseño 3OX.
-- **[SISTEMA_DE_INCURSION_TECNICO.md](SISTEMA_DE_INCURSION_TECNICO.md)**: Documento legacy sobre el funcionamiento específico del orquestador y los Scrapers.
+- **[PROJECT_CODEX.md](narrative/PROJECT_CODEX.md)**: Manifiesto técnico sobre la sinergia de los sistemas, política Zero-Leak y principios de diseño 3OX.
+- **[SISTEMA_DE_INCURSION_TECNICO.md](technical/SISTEMA_DE_INCURSION_TECNICO.md)**: Documento legacy sobre el funcionamiento específico del orquestador y los Scrapers.
 - **[MASTER_ROADMAP.md](MASTER_ROADMAP.md)**: El histórico de desarrollo y registro de todas las fases completadas (Fase 0 a Fase 62+).
-- **[architecture_map.md](architecture_map.md)**: Mapa físico exacto de todas las carpetas, routers y responsabilidades del código fuente.
+- **[architecture_map.md](technical/architecture_map.md)**: Mapa físico exacto de todas las carpetas, routers y responsabilidades del código fuente.
 
 ---
 
