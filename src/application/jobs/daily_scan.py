@@ -33,7 +33,7 @@ from src.infrastructure.scrapers.bbts_scraper import BigBadToyStoreScraper
 from src.infrastructure.scrapers.amazon_scraper import AmazonScraper
 from src.infrastructure.scrapers.ebay_scraper import EbayScraper
 from src.infrastructure.scrapers.vinted_scraper import VintedScraper
-from src.infrastructure.scrapers.tradeinn_scraper import TradeinnScraper
+# from src.infrastructure.scrapers.tradeinn_scraper import TradeinnScraper
 from src.infrastructure.scrapers.wallapop_scraper import WallapopScraper
 from src.application.services.nexus_service import NexusService
 
@@ -130,7 +130,7 @@ async def run_daily_scan(progress_callback=None):
             EbayScraper(),
             VintedScraper(),
             WallapopScraper(),
-            TradeinnScraper(),
+            # TradeinnScraper(),
             # DeToyboys at the end (User Request)
             DeToyboysNLScraper(),
         ]

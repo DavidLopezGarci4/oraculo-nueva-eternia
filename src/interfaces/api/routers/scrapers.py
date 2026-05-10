@@ -97,7 +97,7 @@ def run_scraper_task(
         from src.infrastructure.scrapers.pixelatoy_scraper import PixelatoyScraper
         from src.infrastructure.scrapers.time4actiontoys_scraper import Time4ActionToysDEScraper
         from src.infrastructure.scrapers.toymi_scraper import ToymiEUScraper
-        from src.infrastructure.scrapers.tradeinn_scraper import TradeinnScraper
+        # from src.infrastructure.scrapers.tradeinn_scraper import TradeinnScraper
         from src.infrastructure.scrapers.vinted_scraper import VintedScraper
         from src.infrastructure.scrapers.wallapop_scraper import WallapopScraper
         from src.infrastructure.scrapers.triguetech_scraper import TriguetechScraper
@@ -116,7 +116,7 @@ def run_scraper_task(
             "ToymiEU": ToymiEUScraper(),
             "Time4ActionToysDE": Time4ActionToysDEScraper(),
             "BigBadToyStore": BigBadToyStoreScraper(),
-            "Tradeinn": TradeinnScraper(),
+            # "Tradeinn": TradeinnScraper(),
             "DVDStoreSpain": DVDStoreSpainScraper(),
             "Triguetech": TriguetechScraper(),
         }
@@ -146,11 +146,7 @@ def run_scraper_task(
             # PHASE 47: Use provided query or fallback to specific store defaults
             search_term = query
             if not search_term:
-                search_term = (
-                    "masters of the universe origins"
-                    if spider_name.lower() == "tradeinn"
-                    else "auto"
-                )
+                search_term = "auto"
 
             update_live_log(
                 f"📡 Buscando reliquias para '{search_term}' en {spider_name}..."

@@ -27,5 +27,6 @@ python_files = ["test_api_*.py"]
 
 [tool.pyright]
 include = ["src", "vec3", "scripts"]
+extraPaths = ["."]
 venvPath = "."
 venv = ".venv"
