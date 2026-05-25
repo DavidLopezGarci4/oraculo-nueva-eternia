@@ -346,6 +346,14 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
   - **MOTU Search Accuracy**: Implementación de búsquedas profundas ("masters of the universe origins") para Tradeinn, eliminando el ruido de resultados genéricos. ✅
   - **Bridge Logístico**: Sincronización en tiempo real entre el motor de scraping y la Tactical Console. ✅
 
+- [x] **Phase 60: Segregación Vintage y Flujo de Naming en Purgatorio (26/05/2026)**
+  - [x] **Segregación del Legado**: Catálogos y colecciones divididas mediante parámetro `is_vintage` en la API, asegurando aislamiento absoluto con Origins (Nueva Eternia).
+  - [x] **Nueva Pestaña Eternia**: Vista del catálogo vintage independiente con evolución de precios y mejores ofertas.
+  - [x] **Mi Fortaleza Vintage**: Colección y lista de deseos exclusivas para piezas vintage poseídas o deseadas.
+  - [x] **Asignación con Nombre Limpio**: Diálogo interactivo en Purgatorio que permite seleccionar o escribir el nombre del muñeco vintage, autocompletando con los existentes y añadiendo la partícula ` Vintage` automáticamente.
+
+---
+
 ### 🔮 Mejoras Futuras Sugeridas (Ojo de Grayskull)
 
 * **Auto-Keyword Optimizer**: Motor que use la IA para expandir términos de búsqueda cortos a términos de alta fidelidad de coleccionista.
