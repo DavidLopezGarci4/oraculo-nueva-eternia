@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { updateCollectionItem } from '../api/collection';
 import type { Product } from '../api/collection';
-import MarketIntelligenceModal from './MarketIntelligenceModal';
+
 
 interface CollectionItemDetailModalProps {
     product: Product;
@@ -32,7 +32,7 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
     const [acquiredAt, setAcquiredAt] = useState<string>(
         product.acquired_at ? product.acquired_at.split('T')[0] : new Date().toISOString().split('T')[0]
     );
-    const [showMarketIntel, setShowMarketIntel] = useState(false);
+
 
     const updateMutation = useMutation({
         mutationFn: () => updateCollectionItem(product.id, userId, {
@@ -75,15 +75,6 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
                         <div className="absolute top-2 right-2 md:top-4 md:right-4 bg-black/70 backdrop-blur-md px-2 py-0.5 md:px-3 md:py-1 rounded-full text-[8px] md:text-[10px] font-black text-white/90 border border-white/20">
                             #{product.figure_id}
                         </div>
-
-                        {/* Market Intelligence Button - Top Left */}
-                        <button
-                            onClick={() => setShowMarketIntel(true)}
-                            className="absolute top-2 left-2 md:top-4 md:left-4 h-6 w-6 md:h-8 md:w-8 flex items-center justify-center rounded-full bg-brand-primary/80 text-white backdrop-blur-md border border-brand-primary/50 shadow-[0_0_15px_rgba(14,165,233,0.5)] hover:bg-brand-primary hover:scale-110 transition-all z-10"
-                            title="Ver Inteligencia de Mercado del Oráculo"
-                        >
-                            <Target className="h-3 w-3 md:h-4 md:w-4" />
-                        </button>
                     </div>
 
                     <div className="space-y-1 md:space-y-2">
@@ -234,13 +225,7 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
                 </div>
             </div>
 
-            {/* Nested Market Intelligence Modal */}
-            {showMarketIntel && (
-                <MarketIntelligenceModal
-                    productId={product.id}
-                    onClose={() => setShowMarketIntel(false)}
-                />
-            )}
+
         </div>
     );
 };

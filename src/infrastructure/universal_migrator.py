@@ -67,7 +67,8 @@ def _sync_engine(engine, label: str):
             ("master_image_hash", "VARCHAR(100)"),
             ("figure_id", "VARCHAR(100) UNIQUE"),
             ("sub_category", "VARCHAR(100)"),
-            ("release_year", "INTEGER")
+            ("release_year", "INTEGER"),
+            ("is_vintage", "BOOLEAN DEFAULT FALSE")
         ]
 
         for col_name, col_type in new_product_cols:
@@ -132,6 +133,21 @@ def _sync_engine(engine, label: str):
             conn.execute(text("ALTER TABLE offers ADD COLUMN last_price_update TIMESTAMP NULL"))
             conn.commit()
 
+        if "is_vintage" not in columns_offers:
+            logger.info("Adding 'is_vintage' to offers table...")
+            conn.execute(text("ALTER TABLE offers ADD COLUMN is_vintage BOOLEAN DEFAULT FALSE"))
+            conn.commit()
+
+        if "condition" not in columns_offers:
+            logger.info("Adding 'condition' to offers table...")
+            conn.execute(text("ALTER TABLE offers ADD COLUMN condition VARCHAR(50) NULL"))
+            conn.commit()
+
+        if "grading" not in columns_offers:
+            logger.info("Adding 'grading' to offers table...")
+            conn.execute(text("ALTER TABLE offers ADD COLUMN grading FLOAT NULL"))
+            conn.commit()
+
         # --- Table: pending_matches ---
         columns_pending = [c['name'] for c in inspector.get_columns("pending_matches")]
         if "ean" not in columns_pending:
@@ -168,6 +184,21 @@ def _sync_engine(engine, label: str):
         if "last_price_update" not in columns_pending:
             logger.info("Adding 'last_price_update' to pending_matches table...")
             conn.execute(text("ALTER TABLE pending_matches ADD COLUMN last_price_update TIMESTAMP NULL"))
+            conn.commit()
+
+        if "is_vintage" not in columns_pending:
+            logger.info("Adding 'is_vintage' to pending_matches table...")
+            conn.execute(text("ALTER TABLE pending_matches ADD COLUMN is_vintage BOOLEAN DEFAULT FALSE"))
+            conn.commit()
+
+        if "condition" not in columns_pending:
+            logger.info("Adding 'condition' to pending_matches table...")
+            conn.execute(text("ALTER TABLE pending_matches ADD COLUMN condition VARCHAR(50) NULL"))
+            conn.commit()
+
+        if "grading" not in columns_pending:
+            logger.info("Adding 'grading' to pending_matches table...")
+            conn.execute(text("ALTER TABLE pending_matches ADD COLUMN grading FLOAT NULL"))
             conn.commit()
 
         # --- Table: price_alerts (Created by create_all, but check for created_at if old) ---

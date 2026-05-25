@@ -147,6 +147,38 @@ class ScrapingPipeline:
                     standardized_offers.append(o)
         offers = standardized_offers
 
+        # --- SQLITE DATE TIME COMPATIBILITY KAIZEN ---
+        from dateutil.parser import parse as parse_date
+        
+        def secure_date(val):
+            if not val:
+                return None
+            if isinstance(val, datetime):
+                return val
+            from datetime import date
+            if isinstance(val, date):
+                return datetime(val.year, val.month, val.day)
+            if isinstance(val, str):
+                try:
+                    return parse_date(val)
+                except Exception:
+                    return None
+            return None
+
+        for o in offers:
+            if 'first_seen_at' in o:
+                o['first_seen_at'] = secure_date(o['first_seen_at'])
+            if 'expiry_at' in o:
+                o['expiry_at'] = secure_date(o['expiry_at'])
+            if 'sold_at' in o:
+                o['sold_at'] = secure_date(o['sold_at'])
+            if 'original_listing_date' in o:
+                o['original_listing_date'] = secure_date(o['original_listing_date'])
+            if 'found_at' in o:
+                o['found_at'] = secure_date(o['found_at'])
+            if 'last_price_update' in o:
+                o['last_price_update'] = secure_date(o['last_price_update'])
+
         # 1. Save Raw Snapshot (Black Box)
         try:
             from src.core.backup_manager import BackupManager

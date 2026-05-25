@@ -151,6 +151,17 @@ async def match_purgatory(request: PurgatoryMatchRequest):
             is_wish = any(ci.owner_id == 1 and not ci.acquired for ci in product.collection_items)
             fresh_score = DealScorer.calculate_score(product, landed_p, is_wish)
 
+            # Check if this item is vintage automatically or manually
+            from src.core.vintage_utils import check_is_vintage
+            is_v = check_is_vintage(item.scraped_name) or check_is_vintage(product.name) or bool(item.is_vintage)
+            if is_v:
+                product.is_vintage = True
+                from src.domain.models import VintageProductModel
+                exists_v = db.query(VintageProductModel).filter(VintageProductModel.product_id == product.id).first()
+                if not exists_v:
+                    v_prod = VintageProductModel(product_id=product.id, notes="Auto-detectado vintage al vincular en Purgatorio")
+                    db.add(v_prod)
+
             offer_data = {
                 "shop_name": item.shop_name,
                 "price": item.price,
@@ -162,6 +173,9 @@ async def match_purgatory(request: PurgatoryMatchRequest):
                 "opportunity_score": fresh_score,
                 "first_seen_at": item.found_at,
                 "last_price_update": datetime.now(timezone.utc),
+                "is_vintage": is_v,
+                "condition": item.condition or "Loose",
+                "grading": item.grading or 7.5,
             }
 
             new_offer, _ = repo.add_offer(product, offer_data, commit=False)
@@ -172,7 +186,7 @@ async def match_purgatory(request: PurgatoryMatchRequest):
                 shop_name=item.shop_name,
                 price=item.price,
                 action_type="LINKED_MANUAL",
-                details=json.dumps({"product_id": product.id, "receipt_id": item.receipt_id}),
+                details=json.dumps({"product_id": product.id, "receipt_id": item.receipt_id, "is_vintage": is_v}),
             )
             db.add(history)
 
@@ -363,3 +377,166 @@ async def relink_offer(offer_id: int, request: RelinkOfferRequest):
 
         db.commit()
         return {"status": "success", "message": f"Decreto del Arquitecto: Oferta reasignada a '{new_product.name}'"}
+
+
+@router.post("/api/purgatory/{pending_id}/vintage", dependencies=[Depends(verify_api_key)])
+async def match_purgatory_vintage(pending_id: int):
+    with SessionCloud() as db:
+        item = db.query(PendingMatchModel).filter(PendingMatchModel.id == pending_id).first()
+        if not item:
+            raise HTTPException(status_code=404, detail="Reliquia no encontrada en el Purgatorio")
+
+        try:
+            # Look for an existing product with the same name or create a new generic one
+            product = db.query(ProductModel).filter(ProductModel.name == item.scraped_name).first()
+            if not product:
+                # Generate a clean figure ID
+                import random
+                rand_id = f"VINT-{random.randint(1000, 9999)}"
+                product = ProductModel(
+                    name=item.scraped_name,
+                    ean=item.ean,
+                    image_url=item.image_url,
+                    category="Masters of the Universe",
+                    sub_category="Vintage",
+                    is_vintage=True,
+                    figure_id=rand_id
+                )
+                db.add(product)
+                db.flush() # Populate product.id
+            else:
+                product.is_vintage = True
+
+            # Register in the vintage_products table
+            from src.domain.models import VintageProductModel
+            exists_v = db.query(VintageProductModel).filter(VintageProductModel.product_id == product.id).first()
+            if not exists_v:
+                v_prod = VintageProductModel(
+                    product_id=product.id,
+                    notes=f"Clasificado manualmente como Vintage desde Purgatorio para {item.shop_name}"
+                )
+                db.add(v_prod)
+
+            # Create individual offer marked as vintage
+            from src.infrastructure.repositories.product import ProductRepository
+            repo = ProductRepository(db)
+
+            user_location = "ES"
+            user = db.query(UserModel).filter(UserModel.id == 1).first()
+            if user:
+                user_location = user.location
+
+            landed_p = LogisticsService.get_landing_price(item.price, item.shop_name, user_location)
+            is_wish = any(ci.owner_id == 1 and not ci.acquired for ci in product.collection_items)
+            fresh_score = DealScorer.calculate_score(product, landed_p, is_wish)
+
+            # Detect condition and grading from scraped name if not present
+            cond = item.condition or ("MOC" if "moc" in item.scraped_name.lower() or "caja" in item.scraped_name.lower() or "nuevo" in item.scraped_name.lower() else "Loose")
+            grad = item.grading or (9.0 if cond == "MOC" else 7.5)
+
+            offer_data = {
+                "shop_name": item.shop_name,
+                "price": item.price,
+                "currency": item.currency,
+                "url": item.url,
+                "is_available": True,
+                "source_type": item.source_type,
+                "receipt_id": item.receipt_id,
+                "opportunity_score": fresh_score,
+                "first_seen_at": item.found_at,
+                "last_price_update": datetime.now(timezone.utc),
+                "is_vintage": True,
+                "condition": cond,
+                "grading": grad,
+            }
+
+            new_offer, _ = repo.add_offer(product, offer_data, commit=False)
+
+            # Audit Trail
+            from src.domain.models import OfferHistoryModel
+            history = OfferHistoryModel(
+                offer_url=item.url,
+                product_name=product.name,
+                shop_name=item.shop_name,
+                price=item.price,
+                action_type="LINKED_VINTAGE",
+                details=json.dumps({"product_id": product.id, "receipt_id": item.receipt_id, "condition": cond, "grading": grad}),
+            )
+            db.add(history)
+
+            # Create alias
+            db.query(ProductAliasModel).filter(ProductAliasModel.source_url == item.url).delete()
+            new_alias = ProductAliasModel(product_id=product.id, source_url=item.url, confirmed=True)
+            db.add(new_alias)
+
+            db.delete(item)
+            db.commit()
+            return {"status": "success", "message": "Reliquia clasificada como Vintage individualmente."}
+
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Error en match_purgatory_vintage: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/api/vintage/revert-offer/{offer_id}", dependencies=[Depends(verify_api_key)])
+async def revert_vintage_offer(offer_id: int):
+    with SessionCloud() as db:
+        offer = db.query(OfferModel).filter(OfferModel.id == offer_id).first()
+        if not offer:
+            raise HTTPException(status_code=404, detail="Oferta Vintage no encontrada")
+
+        product = offer.product
+        try:
+            # Recreate pending match
+            purgatory_item = PendingMatchModel(
+                scraped_name=product.name if product else "Reliquia Vintage Revertida",
+                ean=product.ean if product else None,
+                price=offer.price,
+                currency=offer.currency,
+                url=offer.url,
+                shop_name=offer.shop_name,
+                image_url=product.image_url if product else None,
+                source_type=offer.source_type,
+                condition=offer.condition or "Loose",
+                grading=offer.grading or 7.5,
+                is_vintage=True
+            )
+            db.add(purgatory_item)
+
+            # Add History
+            from src.domain.models import OfferHistoryModel
+            history = OfferHistoryModel(
+                offer_url=offer.url,
+                product_name=product.name if product else "Reliquia Vintage",
+                shop_name=offer.shop_name,
+                price=offer.price,
+                action_type="REVERTED_VINTAGE",
+                details=json.dumps({"reason": "Reversión manual desde Pabellón Vintage", "offer_id": offer.id}),
+            )
+            db.add(history)
+
+            # Unlink alias
+            db.query(ProductAliasModel).filter(ProductAliasModel.source_url == offer.url).delete()
+
+            # Delete the individual offer
+            db.delete(offer)
+            
+            # Check if there are any remaining vintage offers for this product. If not, clear its is_vintage flag.
+            db.flush()
+            remaining_v_offers = db.query(OfferModel).filter(
+                OfferModel.product_id == product.id,
+                OfferModel.is_vintage == True
+            ).count()
+            if remaining_v_offers == 0:
+                product.is_vintage = False
+                from src.domain.models import VintageProductModel
+                db.query(VintageProductModel).filter(VintageProductModel.product_id == product.id).delete()
+
+            db.commit()
+            return {"status": "success", "message": "Oferta desclasificada de Vintage y devuelta al Purgatorio"}
+
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Error al revertir oferta vintage: {e}")
+            raise HTTPException(status_code=500, detail=str(e))

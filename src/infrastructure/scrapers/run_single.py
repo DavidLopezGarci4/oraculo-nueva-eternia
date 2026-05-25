@@ -1,6 +1,14 @@
 import asyncio
 import sys
+import os
 import datetime
+
+# Dynamic Sys Path injection for absolute safety - prioritizing .3ox to avoid local vec3 folder collision
+current_dir = os.path.dirname(os.path.abspath(__file__))
+root_dir = os.path.abspath(os.path.join(current_dir, "..", "..", ".."))
+sys.path.insert(0, os.path.join(root_dir, ".3ox"))
+sys.path.insert(1, root_dir)
+
 from vec3.dev.adapters import initialize_runtime
 from src.infrastructure.scrapers.pipeline import ScrapingPipeline
 from src.infrastructure.scrapers.action_toys_scraper import ActionToysScraper
@@ -15,8 +23,8 @@ from src.core.logger import logger
 # Initialize 3OX Runtime
 initialize_runtime()
 
-async def run_scraper(spider_name: str):
-    logger.info(f"🚀 Launching scraper: {spider_name}")
+async def run_scraper(spider_name: str, search_query: str = "auto"):
+    logger.info(f"🚀 Launching scraper: {spider_name} with query: {search_query}")
     
     spiders = []
     if spider_name.lower() == "actiontoys":
@@ -59,8 +67,7 @@ async def run_scraper(spider_name: str):
     try:
         pipeline = ScrapingPipeline(spiders)
         
-        # We use "auto" to let the spider decide the best scraping strategy
-        results = await pipeline.run_product_search("auto")
+        results = await pipeline.run_product_search(search_query)
         
         logger.info(f"💾 Persisting {len(results)} offers to database...")
         # Phase 44: Pasamos los nombres de las tiendas para sincronizar disponibilidad
@@ -82,8 +89,15 @@ async def run_scraper(spider_name: str):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python src/scrapers/run_single.py <spider_name> [--scraper name]")
+        print("Usage: python src/scrapers/run_single.py <spider_name> [--search 'query']")
     else:
-        # Simple extraction to handle --scraper ebay or just ebay
-        spider = sys.argv[-1] 
-        asyncio.run(run_scraper(spider))
+        spider = sys.argv[1]
+        search = "auto"
+        if "--search" in sys.argv:
+            try:
+                idx = sys.argv.index("--search")
+                if idx + 1 < len(sys.argv):
+                    search = sys.argv[idx + 1]
+            except ValueError:
+                pass
+        asyncio.run(run_scraper(spider, search))

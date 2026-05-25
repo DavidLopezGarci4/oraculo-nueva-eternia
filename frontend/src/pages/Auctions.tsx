@@ -286,17 +286,46 @@ const Auctions: React.FC = () => {
                                     <h3 className="line-clamp-2 md:min-h-[2rem] text-[11px] sm:text-lg font-black leading-tight text-white group-hover:text-brand-primary transition-colors">{product.name}</h3>
                                 </div>
 
-                                <div className="mt-auto flex items-end justify-between pt-1 sm:pt-4 gap-1 sm:gap-3">
-                                    <div className="flex flex-col flex-1 min-w-0 justify-end">
+                                <div className="mt-auto flex flex-col gap-2">
+                                    <div className="flex flex-col flex-1 min-w-0 justify-end pt-2">
                                         <div className="flex items-center gap-1 sm:gap-1.5 overflow-hidden w-full mb-0.5 sm:mb-1">
-                                            <span className="text-[6px] sm:text-[8px] font-black text-white/30 uppercase tracking-widest leading-none shrink-0">Precio</span>
+                                            <span className="text-[6px] sm:text-[8px] font-black text-white/30 uppercase tracking-widest leading-none shrink-0">Mejor Precio Subasta</span>
                                         </div>
-                                        <div className="text-[16px] sm:text-2xl font-black text-white leading-[0.8] sm:leading-none tracking-tighter truncate">{product.best_p2p_price || 0} <span className="text-[8px] sm:text-xs text-white/40">€</span></div>
+                                        <div className="text-[16px] sm:text-2xl font-black text-brand-primary leading-[0.8] sm:leading-none tracking-tighter truncate">{product.best_p2p_price || 0} <span className="text-[8px] sm:text-xs text-white/40">€</span></div>
                                     </div>
-                                    <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
-                                        <button onClick={() => setHistoryProductId(historyProductId === product.id ? null : product.id)} className={`flex h-6 w-6 sm:h-8 sm:w-8 items-center justify-center rounded-lg transition-all border ${historyProductId === product.id ? 'bg-purple-500/20 text-purple-400 border-purple-500/50' : 'bg-white/5 text-white/30 border-white/5 hover:bg-white/10 hover:text-white'}`}><History className="h-2.5 w-2.5 sm:h-3.5 sm:w-3.5" /></button>
-                                        <button onClick={() => setSelectedProduct(product)} className="flex h-6 w-6 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-white/5 text-white/40 border border-white/5 hover:bg-brand-primary/20 hover:text-brand-primary transition-all"><Info className="h-2.5 w-2.5 sm:h-3.5 sm:w-3.5" /></button>
-                                        <button onClick={() => toggleMutation.mutate({ productId: product.id, wish: true })} disabled={toggleMutation.isPending || owned} className={`flex h-6 w-6 sm:h-8 sm:w-8 items-center justify-center rounded-lg transition-all border ${wished ? 'bg-brand-primary/20 text-brand-primary border-brand-primary/30' : 'bg-white/5 text-white/20 border-white/10 hover:bg-brand-primary/10 hover:text-brand-primary'} ${owned ? 'opacity-20' : ''}`}><Star className={`h-2.5 w-2.5 sm:h-3.5 sm:w-3.5 ${wished ? 'fill-current' : ''}`} /></button>
+                                    
+                                    {/* Action Buttons Row - Symmetrical Center Dock */}
+                                    <div className="flex items-center justify-center gap-2 rounded-2xl bg-white/[0.03] p-1.5 border border-white/10 group-hover:border-brand-primary/20 transition-all backdrop-blur-sm w-full">
+                                        {/* Action: Toggle Price History */}
+                                        <button
+                                            onClick={() => setHistoryProductId(historyProductId === product.id ? null : product.id)}
+                                            className={`flex h-8 w-8 items-center justify-center rounded-xl transition-all border hover:scale-110 active:scale-95 duration-300 shadow-md ${historyProductId === product.id ? 'bg-purple-500/20 text-purple-400 border-purple-500/50' : 'bg-white/5 text-white/30 border-white/10 hover:bg-white/10 hover:text-white'}`}
+                                            title="Ver Evolución de Precios"
+                                        >
+                                            <History className="h-4 w-4" />
+                                        </button>
+
+                                        {/* Action Button: Detail View */}
+                                        <button
+                                            onClick={() => setSelectedProduct(product)}
+                                            className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/5 text-white/40 border border-white/10 transition-all hover:bg-brand-primary/20 hover:text-brand-primary hover:border-brand-primary/45 hover:scale-110 active:scale-95 duration-300 shadow-md"
+                                            title="Ver Mercado Live"
+                                        >
+                                            <Info className="h-4 w-4" />
+                                        </button>
+
+                                        {/* Action: Toggle Wishlist */}
+                                        <button
+                                            onClick={() => toggleMutation.mutate({ productId: product.id, wish: true })}
+                                            disabled={toggleMutation.isPending || owned}
+                                            className={`flex h-8 w-8 items-center justify-center rounded-xl transition-all border shadow-md hover:scale-110 active:scale-95 duration-300 ${wished
+                                                ? 'bg-brand-primary/20 text-brand-primary border-brand-primary/30 hover:bg-red-500/20 hover:text-red-400'
+                                                : 'bg-white/5 text-white/20 border-white/10 hover:bg-brand-primary/10 hover:text-brand-primary'
+                                                } ${owned ? 'opacity-20 cursor-not-allowed' : ''} ${toggleMutation.isPending ? 'opacity-50 cursor-wait' : ''}`}
+                                            title={wished ? 'Quitar de Deseos' : 'Añadir a Deseos'}
+                                        >
+                                            <Star className={`h-4 w-4 ${wished ? 'fill-current' : ''}`} />
+                                        </button>
                                     </div>
                                 </div>
 

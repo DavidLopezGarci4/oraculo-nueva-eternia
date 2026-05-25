@@ -66,6 +66,7 @@ const PriceHistoryChart: React.FC<Props> = ({ data }) => {
                         unit="€"
                     />
                     <Tooltip
+                        cursor={{ stroke: 'rgba(255, 255, 255, 0.15)', strokeWidth: 1.5, strokeDasharray: '4 4' }}
                         contentStyle={{
                             backgroundColor: '#000',
                             border: '1px solid rgba(255,255,255,0.1)',
@@ -88,8 +89,8 @@ const PriceHistoryChart: React.FC<Props> = ({ data }) => {
                                 type="monotone"
                                 dataKey={shop.shop_name}
                                 stroke={color}
-                                strokeWidth={4}
-                                dot={{ fill: color, stroke: '#fff', strokeWidth: 2, r: 4 }}
+                                strokeWidth={2.5}
+                                dot={{ fill: color, stroke: color, strokeWidth: 1, r: 4 }}
                                 activeDot={{ r: 7, strokeWidth: 0 }}
                                 animationDuration={1000}
                                 connectNulls

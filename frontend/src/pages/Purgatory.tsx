@@ -14,10 +14,11 @@ import {
     Copy,
     ChevronLeft,
     ChevronRight,
-    X
+    X,
+    History
 } from 'lucide-react';
-import { getPurgatory, matchItem, discardItem, discardItemsBulk } from '../api/purgatory';
-import MarketIntelligenceModal from '../components/MarketIntelligenceModal';
+import { getPurgatory, matchItem, discardItem, discardItemsBulk, matchVintageItem } from '../api/purgatory';
+
 import QuickPreviewModal from '../components/QuickPreviewModal';
 import PowerSwordLoader from '../components/ui/PowerSwordLoader';
 import axios from 'axios';
@@ -41,7 +42,7 @@ const Purgatory: React.FC = React.memo(() => {
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 15;
     const [showForensic, setShowForensic] = useState(false);
-    const [intelProductId, setIntelProductId] = useState<number | null>(null);
+
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
     // Helper: Check if URL is from Wallapop
@@ -189,6 +190,60 @@ const Purgatory: React.FC = React.memo(() => {
         }
     });
 
+    const matchVintageMutation = useMutation({
+        mutationFn: (pendingId: number) => matchVintageItem(pendingId),
+        onMutate: async (pendingId) => {
+            const item = queryClient.getQueryData<any[]>(['purgatory'])?.find(i => i.id === pendingId);
+
+            // Persistence: Add to local buffer
+            setPendingActions(prev => [...prev, {
+                id: Date.now(),
+                type: 'match-vintage',
+                pendingIds: [pendingId],
+                scrapedName: item?.scraped_name,
+                action_url: item?.url,
+                timestamp: new Date().toISOString()
+            }]);
+
+            await queryClient.cancelQueries({ queryKey: ['purgatory'] });
+            const previousItems = queryClient.getQueryData(['purgatory']);
+            queryClient.setQueryData(['purgatory'], (old: any) =>
+                (old || []).filter((item: any) => item.id !== pendingId)
+            );
+            return { previousItems };
+        },
+        onError: (err, _pendingId, context: any) => {
+            queryClient.setQueryData(['purgatory'], context.previousItems);
+            console.error('Vintage match failed:', err);
+        },
+        onSuccess: (_, pendingId) => {
+            // Success: Remove from local buffer
+            setPendingActions(prev => prev.filter(a => !(a.type === 'match-vintage' && a.pendingIds[0] === pendingId)));
+            queryClient.invalidateQueries({ queryKey: ['purgatory'] });
+            queryClient.invalidateQueries({ queryKey: ['vintage-products'] });
+            queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+            setSelectedPendingId(null);
+        }
+    });
+
+    // Atajo de teclado 'V' para vincular como Vintage el item seleccionado
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            const target = e.target as HTMLElement;
+            if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+                return;
+            }
+
+            if (selectedPendingId !== null && (e.key === 'v' || e.key === 'V')) {
+                e.preventDefault();
+                matchVintageMutation.mutate(selectedPendingId);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [selectedPendingId, matchVintageMutation]);
+
 
     // Forensic Failures State
     const [failedActions, setFailedActions] = useState<any[]>(() => {
@@ -228,6 +283,8 @@ const Purgatory: React.FC = React.memo(() => {
                         await discardItemsBulk(action.pendingIds);
                     } else if (action.type === 'match') {
                         await matchItem(action.pendingIds[0], action.productId);
+                    } else if (action.type === 'match-vintage') {
+                        await matchVintageItem(action.pendingIds[0]);
                     }
 
                     // Success: Remove from local state
@@ -623,6 +680,23 @@ const Purgatory: React.FC = React.memo(() => {
                                     <div className="border-t border-white/10 bg-gradient-to-b from-brand-primary/[0.02] to-transparent p-5 md:p-8 animate-in slide-in-from-top-4 duration-500">
                                         <div className="max-w-4xl mx-auto space-y-8">
 
+                                            {/* Vintage Quick Match Button */}
+                                            <div className="rounded-3xl border border-amber-500/20 bg-amber-500/5 p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-[0_0_50px_rgba(245,158,11,0.05)] hover:border-amber-500/40 transition-all duration-300">
+                                                <div className="space-y-1 text-center sm:text-left">
+                                                    <h4 className="text-sm font-black text-amber-500 uppercase tracking-widest flex items-center justify-center sm:justify-start gap-2">
+                                                        <History className="h-4 w-4" /> Clasificación Vintage Individual
+                                                    </h4>
+                                                    <p className="text-[10px] font-bold text-white/40">Guárdalo como artículo Vintage único e independiente (Atajo: tecla V)</p>
+                                                </div>
+                                                <button
+                                                    onClick={() => matchVintageMutation.mutate(item.id)}
+                                                    disabled={matchVintageMutation.isPending}
+                                                    className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-xl bg-amber-500/20 px-6 py-3 text-[10px] font-black uppercase text-amber-400 border border-amber-500/30 hover:bg-amber-500 hover:text-black transition-all shadow-lg shadow-amber-500/5 hover:scale-105 duration-300"
+                                                >
+                                                    Clasificar como Vintage [V]
+                                                </button>
+                                            </div>
+
                                             {/* Section 1: Oracle Suggestions (The Main Banner) */}
                                             {item.suggestions && item.suggestions.length > 0 && !manualSearchTerm && (
                                                 <div className="space-y-4">
@@ -934,15 +1008,7 @@ const Purgatory: React.FC = React.memo(() => {
                 )
             }
 
-            {/* Phase 41: Market Intelligence Modal */}
-            {
-                intelProductId && (
-                    <MarketIntelligenceModal
-                        productId={intelProductId}
-                        onClose={() => setIntelProductId(null)}
-                    />
-                )
-            }
+
 
             {/* Phase 40: Wallapop Oracle Bridge - Quick Preview */}
             {

@@ -107,3 +107,13 @@ export const resetSmartMatches = async () => {
     const response = await axios.post(`${API_BASE}/admin/reset-smartmatches`, {}, adminHeaders);
     return response.data;
 };
+
+export const matchVintageItem = async (pendingId: number) => {
+    const response = await axios.post(`${API_BASE}/purgatory/${pendingId}/vintage`, {}, adminHeaders);
+    return response.data;
+};
+
+export const revertVintageItem = async (offerId: number) => {
+    const response = await axios.post(`${API_BASE}/vintage/revert-offer/${offerId}`, {}, adminHeaders);
+    return response.data;
+};

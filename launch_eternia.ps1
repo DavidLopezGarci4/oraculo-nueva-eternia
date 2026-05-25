@@ -24,7 +24,7 @@ foreach ($port in $ports) {
 
 # 2. Lanzar Backend (API Broker)
 Write-Host "📡 Paso 2: Iniciando API Broker (Backend) en nueva ventana..." -ForegroundColor Yellow
-$BackendCmd = "`$Host.UI.RawUI.WindowTitle = 'ORACULO - BACKEND (API)'; `$env:PYTHONPATH='.'; .venv\Scripts\python src/interfaces/api/main.py"
+$BackendCmd = "`$Host.UI.RawUI.WindowTitle = 'ORACULO - BACKEND (API)'; `$env:PYTHONPATH='.;.3ox'; .venv\Scripts\python src/interfaces/api/main.py"
 Start-Process powershell -ArgumentList "-NoExit", "-Command", $BackendCmd -WorkingDirectory $PSScriptRoot
 
 # 3. Lanzar Frontend (Vite)
