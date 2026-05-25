@@ -16,7 +16,7 @@ router = APIRouter(tags=["products"])
 
 
 @router.get("/api/products", response_model=List[ProductOutput])
-async def get_products():
+async def get_products(is_vintage: bool = False):
     with SessionCloud() as db:
         subq = (
             select(OfferModel.product_id, func.min(OfferModel.price).label("min_price"))
@@ -38,8 +38,11 @@ async def get_products():
                     OfferModel.is_available == True,
                 ),
             )
-            .where(ProductModel.is_vintage.is_not(True))
         )
+        if is_vintage:
+            query = query.where(ProductModel.is_vintage == True)
+        else:
+            query = query.where(ProductModel.is_vintage.is_not(True))
 
         results = db.execute(query).all()
 
@@ -84,7 +87,7 @@ async def search_products(q: str = ""):
 
 
 @router.get("/api/auctions/products", response_model=List[ProductOutput])
-async def get_auction_products():
+async def get_auction_products(is_vintage: bool = False):
     with SessionCloud() as db:
         subq = (
             select(OfferModel.product_id, func.min(OfferModel.price).label("min_price"))
@@ -106,8 +109,11 @@ async def get_auction_products():
                     OfferModel.is_available == True,
                 ),
             )
-            .where(ProductModel.is_vintage.is_not(True))
         )
+        if is_vintage:
+            query = query.where(ProductModel.is_vintage == True)
+        else:
+            query = query.where(ProductModel.is_vintage.is_not(True))
 
         results = db.execute(query).all()
 

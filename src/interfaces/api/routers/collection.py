@@ -19,7 +19,7 @@ router = APIRouter(tags=["collection"])
 
 
 @router.get("/api/collection", response_model=List[ProductOutput])
-async def get_collection(user_id: int):
+async def get_collection(user_id: int, is_vintage: bool = False):
     from src.application.services.valuation_service import ValuationService
 
     with SessionCloud() as db:
@@ -35,6 +35,11 @@ async def get_collection(user_id: int):
             .join(CollectionItemModel, ProductModel.id == CollectionItemModel.product_id)
             .where(CollectionItemModel.owner_id == user_id)
         )
+        if is_vintage:
+            query = query.where(ProductModel.is_vintage == True)
+        else:
+            query = query.where(ProductModel.is_vintage.is_not(True))
+
         results = db.execute(query).all()
 
         if not results:

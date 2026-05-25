@@ -23,9 +23,10 @@ import CollectionItemDetailModal from '../components/CollectionItemDetailModal';
 
 interface CollectionProps {
     searchQuery?: string;
+    isVintageOnly?: boolean;
 }
 
-const Collection: React.FC<CollectionProps> = ({ searchQuery = "" }) => {
+const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly = false }) => {
     const queryClient = useQueryClient();
     const [activeTab, setActiveTab] = useState<'owned' | 'wish'>('owned');
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -36,15 +37,15 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "" }) => {
 
     // 1. Fetch de la colección (basada en el ID activo)
     const { data: collection, isLoading, isError } = useQuery<Product[]>({
-        queryKey: ['collection', activeUserId],
-        queryFn: () => getCollection(activeUserId)
+        queryKey: ['collection', activeUserId, isVintageOnly],
+        queryFn: () => getCollection(activeUserId, isVintageOnly)
     });
 
     // 2. Mutación para alternar estado
     const toggleMutation = useMutation({
         mutationFn: ({ productId, wish }: { productId: number, wish: boolean }) => toggleCollection(productId, activeUserId, wish),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['collection', activeUserId] });
+            queryClient.invalidateQueries({ queryKey: ['collection', activeUserId, isVintageOnly] });
             queryClient.invalidateQueries({ queryKey: ['dashboard-stats', activeUserId] });
         }
     });
@@ -82,19 +83,30 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "" }) => {
         <div className="space-y-2 md:space-y-3 animate-in fade-in duration-700 pb-20">
             {/* Header & Stats Banner */}
             <div className="relative overflow-hidden rounded-2xl md:rounded-3xl border border-white/5 bg-black/50 p-4 md:p-6 backdrop-blur-2xl shadow-2xl">
-                <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-brand-primary/10 blur-3xl pointer-events-none"></div>
+                <div className={`absolute -right-20 -top-20 h-64 w-64 rounded-full blur-3xl pointer-events-none ${isVintageOnly ? 'bg-amber-500/10' : 'bg-brand-primary/10'}`}></div>
                 <div className="absolute -left-20 -bottom-20 h-48 w-48 rounded-full bg-purple-500/10 blur-3xl pointer-events-none"></div>
 
                 <div className="relative flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                     <div className="flex flex-col gap-1">
-                        <div className="flex items-center gap-2 text-brand-primary">
-                            <Box className="h-3 w-3 md:h-4 md:w-4 fill-brand-primary" />
+                        <div className={`flex items-center gap-2 ${isVintageOnly ? 'text-amber-500' : 'text-brand-primary'}`}>
+                            <Box className={`h-3 w-3 md:h-4 md:w-4 ${isVintageOnly ? 'fill-amber-500' : 'fill-brand-primary'}`} />
                             <h2 className="text-sm md:text-base font-black uppercase tracking-[0.2em] text-white">
-                                Mi <span className="text-brand-primary">Legado</span>
+                                {isVintageOnly ? (
+                                    <>
+                                        Mi Fortaleza <span className="text-amber-500">Vintage</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        Mi <span className="text-brand-primary">Legado</span>
+                                    </>
+                                )}
                             </h2>
                         </div>
                         <p className="max-w-xl text-[11px] md:text-sm text-white/40 font-medium">
-                            Coleccionando no solo figuras, sino fragmentos de historia y valor en el tiempo.
+                            {isVintageOnly 
+                                ? 'Coleccionando no solo figuras retro, sino reliquias históricas y valor del pasado.'
+                                : 'Coleccionando no solo figuras, sino fragmentos de historia y valor en el tiempo.'
+                            }
                         </p>
                     </div>
 

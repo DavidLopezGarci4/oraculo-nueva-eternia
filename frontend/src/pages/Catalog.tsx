@@ -37,9 +37,10 @@ import PowerSwordLoader from '../components/ui/PowerSwordLoader';
 // Para desarrollo, usamos el ID de David
 interface CatalogProps {
     searchQuery?: string;
+    isVintageOnly?: boolean;
 }
 
-const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
+const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintageOnly = false }) => {
     const queryClient = useQueryClient();
     const { addToCart } = useCart();
     const [selectedProduct, setSelectedProduct] = React.useState<Product | null>(null);
@@ -53,17 +54,17 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
 
     // 1. Fetch de todos los productos
     const { data: products, isLoading: isLoadingProducts, isError: isErrorProducts } = useQuery<Product[]>({
-        queryKey: ['products'],
+        queryKey: ['products', isVintageOnly],
         queryFn: async () => {
-            const response = await axios.get('/api/products');
+            const response = await axios.get(`/api/products${isVintageOnly ? '?is_vintage=true' : ''}`);
             return response.data;
         }
     });
 
     // 2. Fetch de la colección (basada en el ID activo)
     const { data: collection, isLoading: isLoadingCollection } = useQuery<Product[]>({
-        queryKey: ['collection', activeUserId],
-        queryFn: () => getCollection(activeUserId)
+        queryKey: ['collection', activeUserId, isVintageOnly],
+        queryFn: () => getCollection(activeUserId, isVintageOnly)
     });
 
     // 2.5 Fetch de productos con ofertas activas (para el badge Live)
@@ -99,10 +100,10 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
     const toggleMutation = useMutation({
         mutationFn: ({ productId, wish }: { productId: number, wish: boolean }) => toggleCollection(productId, activeUserId, wish),
         onMutate: async ({ productId, wish }) => {
-            await queryClient.cancelQueries({ queryKey: ['collection', activeUserId] });
-            const previousCollection = queryClient.getQueryData<Product[]>(['collection', activeUserId]);
+            await queryClient.cancelQueries({ queryKey: ['collection', activeUserId, isVintageOnly] });
+            const previousCollection = queryClient.getQueryData<Product[]>(['collection', activeUserId, isVintageOnly]);
 
-            queryClient.setQueryData<Product[]>(['collection', activeUserId], (old) => {
+            queryClient.setQueryData<Product[]>(['collection', activeUserId, isVintageOnly], (old) => {
                 const item = old?.find(p => p.id === productId);
 
                 if (item) {
@@ -128,11 +129,11 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
         },
         onError: (_, __, context) => {
             if (context?.previousCollection) {
-                queryClient.setQueryData(['collection', activeUserId], context.previousCollection);
+                queryClient.setQueryData(['collection', activeUserId, isVintageOnly], context.previousCollection);
             }
         },
         onSettled: () => {
-            queryClient.invalidateQueries({ queryKey: ['collection', activeUserId] });
+            queryClient.invalidateQueries({ queryKey: ['collection', activeUserId, isVintageOnly] });
         }
     });
 
@@ -336,7 +337,12 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
             <div className="flex flex-col items-center justify-center p-20 text-white/20 space-y-4">
                 <Package className="h-16 w-16 opacity-20" />
                 <p className="text-xl font-black uppercase tracking-widest">El Oráculo está vacío...</p>
-                <p className="text-[10px] font-bold uppercase tracking-widest opacity-40">No hay reliquias registradas en Nueva Eternia todavía.</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest opacity-40">
+                    {isVintageOnly 
+                        ? "No hay reliquias registradas en Eternia todavía." 
+                        : "No hay reliquias registradas en Nueva Eternia todavía."
+                    }
+                </p>
             </div>
         );
     }
@@ -345,23 +351,31 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
         <div className="space-y-2 md:space-y-3 animate-in fade-in duration-1000">
             {/* Header / Search Area */}
             <div className="relative overflow-hidden rounded-2xl md:rounded-3xl border border-white/5 bg-black/25 p-4 md:p-6 backdrop-blur-2xl shadow-2xl">
-                <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-brand-primary/10 blur-3xl pointer-events-none"></div>
+                <div className={`absolute -right-20 -top-20 h-64 w-64 rounded-full blur-3xl pointer-events-none ${isVintageOnly ? 'bg-amber-500/10' : 'bg-brand-primary/10'}`}></div>
 
                 <div className="relative flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                     <div className="flex flex-col gap-1">
-                        <div className="flex items-center gap-2 text-brand-primary">
-                            <Box className="h-3 w-3 md:h-4 md:w-4 fill-brand-primary" />
+                        <div className={`flex items-center gap-2 ${isVintageOnly ? 'text-amber-500' : 'text-brand-primary'}`}>
+                            <Box className={`h-3 w-3 md:h-4 md:w-4 ${isVintageOnly ? 'fill-amber-500' : 'fill-brand-primary'}`} />
                             <h2 className="text-sm md:text-base font-black uppercase tracking-[0.2em] text-white">
-                                Nueva <span className="text-brand-primary">Eternia</span>
+                                {isVintageOnly ? (
+                                    <>
+                                        Eternia <span className="text-amber-500">Vintage</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        Nueva <span className="text-brand-primary">Eternia</span>
+                                    </>
+                                )}
                             </h2>
                         </div>
                         <p className="max-w-xl text-[11px] md:text-sm text-white/40 font-medium uppercase tracking-[0.1em]">
-                            Almacén Sagrado de Reliquias
+                            {isVintageOnly ? 'Almacén Sagrado de Reliquias Vintage' : 'Almacén Sagrado de Reliquias'}
                         </p>
                     </div>
 
                     <div className="flex items-center gap-2 md:gap-3 rounded-xl md:rounded-2xl bg-white/5 px-4 py-2 border border-white/10 backdrop-blur-xl w-fit xl:w-auto">
-                        <Package className="h-4 w-4 md:h-5 md:w-5 text-brand-primary" />
+                        <Package className={`h-4 w-4 md:h-5 md:w-5 ${isVintageOnly ? 'text-amber-500' : 'text-brand-primary'}`} />
                         <span className="text-xl md:text-2xl font-black text-white">{products?.length}</span>
                         <span className="text-[8px] md:text-[10px] font-black text-white/20 uppercase tracking-[0.2em] pt-1">Modelos Purificados</span>
                     </div>

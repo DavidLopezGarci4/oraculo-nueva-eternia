@@ -108,8 +108,11 @@ export const resetSmartMatches = async () => {
     return response.data;
 };
 
-export const matchVintageItem = async (pendingId: number) => {
-    const response = await axios.post(`${API_BASE}/purgatory/${pendingId}/vintage`, {}, adminHeaders);
+export const matchVintageItem = async (pendingId: number, customName?: string, productId?: number) => {
+    const response = await axios.post(`${API_BASE}/purgatory/${pendingId}/vintage`, {
+        custom_name: customName,
+        product_id: productId
+    }, adminHeaders);
     return response.data;
 };
 

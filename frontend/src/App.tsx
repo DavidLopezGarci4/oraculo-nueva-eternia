@@ -147,7 +147,7 @@ function App() {
         <div className="flex flex-1 flex-col overflow-hidden relative">
           <Navbar
             onMenuClick={() => setIsMobileMenuOpen(prev => !prev)}
-            showSearch={activeTab === 'catalog' || activeTab === 'collection'}
+            showSearch={activeTab === 'catalog' || activeTab === 'collection' || activeTab === 'eternia' || activeTab === 'fortaleza_vintage'}
             searchValue={searchQuery}
             onSearchChange={setSearchQuery}
             user={currentUser}
@@ -160,9 +160,11 @@ function App() {
               <ErrorBoundary>
                 {activeTab === 'dashboard' && <Dashboard user={currentUser} />}
                 {activeTab === 'catalog' && <Catalog searchQuery={searchQuery} />}
+                {activeTab === 'eternia' && <Catalog isVintageOnly={true} searchQuery={searchQuery} />}
                 {activeTab === 'auctions' && <Auctions />}
                 {activeTab === 'vintage' && <Vintage />}
                 {activeTab === 'collection' && <Collection searchQuery={searchQuery} />}
+                {activeTab === 'fortaleza_vintage' && <Collection isVintageOnly={true} searchQuery={searchQuery} />}
                 {activeTab === 'purgatory' && <Purgatory />}
                 {activeTab === 'settings' && (
                   <Config

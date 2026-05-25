@@ -4,8 +4,15 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from loguru import logger
-from sqlalchemy import desc
+from sqlalchemy import desc, func
 from sqlalchemy.exc import IntegrityError
+from pydantic import BaseModel
+from typing import Optional
+
+class VintageMatchRequest(BaseModel):
+    custom_name: Optional[str] = None
+    product_id: Optional[int] = None
+
 
 from src.application.services.deal_scorer import DealScorer
 from src.application.services.logistics_service import LogisticsService
@@ -380,30 +387,70 @@ async def relink_offer(offer_id: int, request: RelinkOfferRequest):
 
 
 @router.post("/api/purgatory/{pending_id}/vintage", dependencies=[Depends(verify_api_key)])
-async def match_purgatory_vintage(pending_id: int):
+async def match_purgatory_vintage(pending_id: int, request: Optional[VintageMatchRequest] = None):
     with SessionCloud() as db:
         item = db.query(PendingMatchModel).filter(PendingMatchModel.id == pending_id).first()
         if not item:
             raise HTTPException(status_code=404, detail="Reliquia no encontrada en el Purgatorio")
 
+        custom_name = request.custom_name if request else None
+        product_id = request.product_id if request else None
+
         try:
-            # Look for an existing product with the same name or create a new generic one
-            product = db.query(ProductModel).filter(ProductModel.name == item.scraped_name).first()
+            product = None
+            if product_id:
+                product = db.query(ProductModel).filter(ProductModel.id == product_id).first()
+
+            if not product and custom_name:
+                clean_name = custom_name.strip()
+                if not clean_name.lower().endswith(" vintage"):
+                    clean_name = f"{clean_name} Vintage"
+
+                product = db.query(ProductModel).filter(
+                    func.lower(ProductModel.name) == func.lower(clean_name),
+                    ProductModel.is_vintage == True
+                ).first()
+
+                if not product:
+                    import random
+                    rand_id = f"VINT-{random.randint(1000, 9999)}"
+                    product = ProductModel(
+                        name=clean_name,
+                        ean=item.ean,
+                        image_url=item.image_url,
+                        category="Masters of the Universe",
+                        sub_category="Vintage",
+                        is_vintage=True,
+                        figure_id=rand_id
+                    )
+                    db.add(product)
+                    db.flush()
+
+            # Fallback
             if not product:
-                # Generate a clean figure ID
-                import random
-                rand_id = f"VINT-{random.randint(1000, 9999)}"
-                product = ProductModel(
-                    name=item.scraped_name,
-                    ean=item.ean,
-                    image_url=item.image_url,
-                    category="Masters of the Universe",
-                    sub_category="Vintage",
-                    is_vintage=True,
-                    figure_id=rand_id
-                )
-                db.add(product)
-                db.flush() # Populate product.id
+                clean_scraped = item.scraped_name.strip()
+                if not clean_scraped.lower().endswith(" vintage"):
+                    clean_scraped = f"{clean_scraped} Vintage"
+
+                product = db.query(ProductModel).filter(
+                    func.lower(ProductModel.name) == func.lower(clean_scraped),
+                    ProductModel.is_vintage == True
+                ).first()
+
+                if not product:
+                    import random
+                    rand_id = f"VINT-{random.randint(1000, 9999)}"
+                    product = ProductModel(
+                        name=clean_scraped,
+                        ean=item.ean,
+                        image_url=item.image_url,
+                        category="Masters of the Universe",
+                        sub_category="Vintage",
+                        is_vintage=True,
+                        figure_id=rand_id
+                    )
+                    db.add(product)
+                    db.flush()
             else:
                 product.is_vintage = True
 

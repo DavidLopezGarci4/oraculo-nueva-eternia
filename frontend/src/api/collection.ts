@@ -41,9 +41,9 @@ export interface Product {
     best_p2p_source?: string | null;
 }
 
-export const getCollection = async (userId: number): Promise<Product[]> => {
+export const getCollection = async (userId: number, isVintage?: boolean): Promise<Product[]> => {
     const response = await axios.get(`${API_BASE_URL}/collection`, {
-        params: { user_id: userId }
+        params: { user_id: userId, is_vintage: isVintage }
     });
     return response.data;
 };

@@ -31,6 +31,11 @@ const Purgatory: React.FC = React.memo(() => {
     const [searchTerm, setSearchTerm] = useState('');
     const [manualSearchTerm, setManualSearchTerm] = useState('');
     const [selectedPendingId, setSelectedPendingId] = useState<number | null>(null);
+    const [isVintageModalOpen, setIsVintageModalOpen] = useState(false);
+    const [vintageModalItemId, setVintageModalItemId] = useState<number | null>(null);
+    const [vintageModalItemName, setVintageModalItemName] = useState('');
+    const [vintageCustomName, setVintageCustomName] = useState('');
+    const [selectedVintageProductId, setSelectedVintageProductId] = useState<number | null>(null);
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
     const [pendingActions, setPendingActions] = useState<any[]>(() => {
@@ -118,6 +123,14 @@ const Purgatory: React.FC = React.memo(() => {
         }
     });
 
+    const { data: vintageProducts } = useQuery({
+        queryKey: ['vintage-unique-products'],
+        queryFn: async () => {
+            const response = await axios.get('/api/products?is_vintage=true');
+            return response.data;
+        }
+    });
+
 
     const discardMutation = useMutation({
         mutationFn: (id: number) => discardItem(id),
@@ -191,8 +204,9 @@ const Purgatory: React.FC = React.memo(() => {
     });
 
     const matchVintageMutation = useMutation({
-        mutationFn: (pendingId: number) => matchVintageItem(pendingId),
-        onMutate: async (pendingId) => {
+        mutationFn: ({ pendingId, customName, productId }: { pendingId: number, customName?: string, productId?: number }) =>
+            matchVintageItem(pendingId, customName, productId),
+        onMutate: async ({ pendingId }) => {
             const item = queryClient.getQueryData<any[]>(['purgatory'])?.find(i => i.id === pendingId);
 
             // Persistence: Add to local buffer
@@ -212,21 +226,24 @@ const Purgatory: React.FC = React.memo(() => {
             );
             return { previousItems };
         },
-        onError: (err, _pendingId, context: any) => {
+        onError: (err, _variables, context: any) => {
             queryClient.setQueryData(['purgatory'], context.previousItems);
             console.error('Vintage match failed:', err);
         },
-        onSuccess: (_, pendingId) => {
+        onSuccess: (_, variables) => {
             // Success: Remove from local buffer
-            setPendingActions(prev => prev.filter(a => !(a.type === 'match-vintage' && a.pendingIds[0] === pendingId)));
+            setPendingActions(prev => prev.filter(a => !(a.type === 'match-vintage' && a.pendingIds[0] === variables.pendingId)));
             queryClient.invalidateQueries({ queryKey: ['purgatory'] });
             queryClient.invalidateQueries({ queryKey: ['vintage-products'] });
+            queryClient.invalidateQueries({ queryKey: ['vintage-unique-products'] });
+            queryClient.invalidateQueries({ queryKey: ['products'] });
             queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
             setSelectedPendingId(null);
+            setIsVintageModalOpen(false);
         }
     });
 
-    // Atajo de teclado 'V' para vincular como Vintage el item seleccionado
+    // Atajo de teclado 'V' para abrir la modal de vinculación Vintage del item seleccionado
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             const target = e.target as HTMLElement;
@@ -236,13 +253,20 @@ const Purgatory: React.FC = React.memo(() => {
 
             if (selectedPendingId !== null && (e.key === 'v' || e.key === 'V')) {
                 e.preventDefault();
-                matchVintageMutation.mutate(selectedPendingId);
+                const item = (pendingItems || []).find((i: any) => i.id === selectedPendingId);
+                if (item) {
+                    setVintageModalItemId(item.id);
+                    setVintageModalItemName(item.scraped_name);
+                    setVintageCustomName('');
+                    setSelectedVintageProductId(null);
+                    setIsVintageModalOpen(true);
+                }
             }
         };
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [selectedPendingId, matchVintageMutation]);
+    }, [selectedPendingId, pendingItems]);
 
 
     // Forensic Failures State
@@ -332,6 +356,23 @@ const Purgatory: React.FC = React.memo(() => {
         (p.name || "").toLowerCase().includes((manualSearchTerm || "").toLowerCase()) ||
         (p.figure_id || "").toLowerCase().includes((manualSearchTerm || "").toLowerCase())
     ).slice(0, 20);
+
+    const handleInputChange = (val: string) => {
+        setVintageCustomName(val);
+        const match = (vintageProducts || []).find((p: any) => p.name.toLowerCase() === val.trim().toLowerCase());
+        if (match) {
+            setSelectedVintageProductId(match.id);
+        } else {
+            setSelectedVintageProductId(null);
+        }
+    };
+
+    const filteredSuggestions = (vintageProducts || []).filter((p: any) => {
+        if (!vintageCustomName.trim()) {
+            return true;
+        }
+        return p.name.toLowerCase().includes(vintageCustomName.toLowerCase());
+    }).slice(0, 5);
 
     // Dynamic Filter for Pending Items (Main List)
     const pendingIdsToHide = new Set(pendingActions.flatMap(a => a.pendingIds));
@@ -689,7 +730,13 @@ const Purgatory: React.FC = React.memo(() => {
                                                     <p className="text-[10px] font-bold text-white/40">Guárdalo como artículo Vintage único e independiente (Atajo: tecla V)</p>
                                                 </div>
                                                 <button
-                                                    onClick={() => matchVintageMutation.mutate(item.id)}
+                                                    onClick={() => {
+                                                        setVintageModalItemId(item.id);
+                                                        setVintageModalItemName(item.scraped_name);
+                                                        setVintageCustomName('');
+                                                        setSelectedVintageProductId(null);
+                                                        setIsVintageModalOpen(true);
+                                                    }}
                                                     disabled={matchVintageMutation.isPending}
                                                     className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-xl bg-amber-500/20 px-6 py-3 text-[10px] font-black uppercase text-amber-400 border border-amber-500/30 hover:bg-amber-500 hover:text-black transition-all shadow-lg shadow-amber-500/5 hover:scale-105 duration-300"
                                                 >
@@ -1009,6 +1056,98 @@ const Purgatory: React.FC = React.memo(() => {
             }
 
 
+
+            {/* Modal de Clasificación Vintage con Nombre Personalizado */}
+            {isVintageModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-xl" onClick={() => setIsVintageModalOpen(false)}>
+                    <div className="relative w-full max-w-lg overflow-hidden rounded-[2.5rem] border border-white/10 bg-[#0A0A0B] shadow-[0_50px_100px_-20px_rgba(0,0,0,1)] flex flex-col" onClick={(e) => e.stopPropagation()}>
+                        <div className="p-6 pb-4 flex items-start justify-between border-b border-white/5">
+                            <div className="space-y-1">
+                                <h4 className="text-xl font-black tracking-tighter text-white uppercase">
+                                    Vincular a <span className="text-amber-500">Muñeco Vintage</span>
+                                </h4>
+                                <p className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Asigna el nombre limpio del muñeco para agrupar precios</p>
+                            </div>
+                            <button onClick={() => setIsVintageModalOpen(false)} className="h-8 w-8 flex items-center justify-center rounded-lg bg-white/5 text-white/40 hover:bg-red-500/20 hover:text-red-400">&times;</button>
+                        </div>
+                        
+                        <div className="p-6 space-y-4">
+                            <div className="space-y-1">
+                                <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">Artículo Detectado:</p>
+                                <p className="text-xs font-bold text-white/70 italic">{vintageModalItemName}</p>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-amber-500 uppercase tracking-widest block">Nombre del Muñeco:</label>
+                                <input
+                                    type="text"
+                                    value={vintageCustomName}
+                                    onChange={(e) => handleInputChange(e.target.value)}
+                                    placeholder="Ej. He-Man, Skeletor, Beast Man..."
+                                    className="w-full bg-white/[0.03] border border-white/10 hover:border-white/20 focus:border-amber-500 focus:bg-white/[0.05] rounded-xl py-3 px-4 text-sm font-bold text-white outline-none transition-all placeholder:text-white/20"
+                                    autoFocus
+                                />
+                            </div>
+
+                            {/* Suggestions box */}
+                            <div className="space-y-2">
+                                <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">
+                                    {vintageCustomName.trim() ? 'Coincidencias en base de datos:' : 'Existentes en Eternia (Acceso Rápido):'}
+                                </p>
+                                {filteredSuggestions.length > 0 ? (
+                                    <div className="flex flex-wrap gap-2">
+                                        {filteredSuggestions.map((p: any) => (
+                                            <button
+                                                key={p.id}
+                                                type="button"
+                                                onClick={() => {
+                                                    setVintageCustomName(p.name);
+                                                    setSelectedVintageProductId(p.id);
+                                                }}
+                                                className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all border ${
+                                                    selectedVintageProductId === p.id 
+                                                        ? 'bg-amber-500 text-black border-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.4)]'
+                                                        : 'bg-white/5 border-white/5 text-white/50 hover:bg-white/10 hover:text-white'
+                                                }`}
+                                            >
+                                                {p.name}
+                                            </button>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p className="text-[10px] font-bold text-white/25 uppercase italic">Se creará un nuevo muñeco único con este nombre</p>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="p-6 border-t border-white/5 bg-black/40 flex items-center justify-end gap-3">
+                            <button
+                                onClick={() => setIsVintageModalOpen(false)}
+                                className="px-5 py-2.5 rounded-xl bg-white/5 text-white/50 hover:bg-white/10 hover:text-white text-[10px] font-black uppercase tracking-widest transition-all"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={() => {
+                                    if (!vintageCustomName.trim()) {
+                                        alert('Por favor, ingresa o selecciona un nombre para el muñeco.');
+                                        return;
+                                    }
+                                    matchVintageMutation.mutate({
+                                        pendingId: vintageModalItemId!,
+                                        customName: vintageCustomName,
+                                        productId: selectedVintageProductId || undefined
+                                    });
+                                }}
+                                disabled={matchVintageMutation.isPending}
+                                className="px-5 py-2.5 rounded-xl bg-amber-500 text-black text-[10px] font-black uppercase tracking-widest hover:brightness-110 disabled:opacity-50 transition-all shadow-lg shadow-amber-500/10"
+                            >
+                                {matchVintageMutation.isPending ? 'Vinculando...' : 'Vincular a Eternia'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Phase 40: Wallapop Oracle Bridge - Quick Preview */}
             {
