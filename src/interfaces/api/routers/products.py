@@ -354,7 +354,7 @@ async def get_vintage_products():
                 "id": product.id,
                 "name": product.name,
                 "ean": product.ean,
-                "image_url": product.image_url,
+                "image_url": offer.image_url or product.image_url,
                 "category": product.category,
                 "sub_category": product.sub_category,
                 "figure_id": product.figure_id,

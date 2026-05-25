@@ -448,6 +448,7 @@ async def match_purgatory_vintage(pending_id: int):
                 "is_vintage": True,
                 "condition": cond,
                 "grading": grad,
+                "image_url": item.image_url,
             }
 
             new_offer, _ = repo.add_offer(product, offer_data, commit=False)
@@ -496,7 +497,7 @@ async def revert_vintage_offer(offer_id: int):
                 currency=offer.currency,
                 url=offer.url,
                 shop_name=offer.shop_name,
-                image_url=product.image_url if product else None,
+                image_url=offer.image_url or (product.image_url if product else None),
                 source_type=offer.source_type,
                 condition=offer.condition or "Loose",
                 grading=offer.grading or 7.5,

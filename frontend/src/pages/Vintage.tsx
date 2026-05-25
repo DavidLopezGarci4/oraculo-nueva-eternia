@@ -1,7 +1,7 @@
 import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { History, AlertCircle, Info, RefreshCw, Star, TrendingUp, Package, X, ExternalLink, RotateCcw } from 'lucide-react';
+import { History, AlertCircle, Info, RefreshCw, TrendingUp, X, ExternalLink, RotateCcw } from 'lucide-react';
 import PowerSwordLoader from '../components/ui/PowerSwordLoader';
 import { motion } from 'framer-motion';
 import { getProductPriceHistory } from '../api/products';
@@ -269,7 +269,7 @@ const Vintage: React.FC = () => {
                             <div className="flex gap-6 items-center">
                                 <div
                                     className="h-24 w-24 shrink-0 overflow-hidden rounded-3xl border border-white/10 bg-black/40 cursor-zoom-in hover:scale-105 transition-transform"
-                                    onClick={() => setExpandedImage(selectedProduct.image_url)}
+                                    onClick={() => setExpandedImage(selectedProduct.image_url ?? null)}
                                     title="Expandir Reliquia"
                                 >
                                     <img src={selectedProduct.image_url || ''} className="h-full w-full object-cover" />

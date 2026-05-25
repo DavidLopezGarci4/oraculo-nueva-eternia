@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Activity, Clock, AlertCircle, CheckCircle2, RefreshCw, Terminal, GitMerge, Target, Settings, Users, ShieldAlert, Trash2, Zap, History, Database, Download, Upload, FileSpreadsheet, Repeat } from 'lucide-react';
+import { Play, Activity, Clock, AlertCircle, CheckCircle2, RefreshCw, Terminal, Target, Settings, Users, ShieldAlert, Trash2, Zap, History, Database, Download, Upload, FileSpreadsheet, Repeat } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { resetSmartMatches, runScrapers, stopScrapers, getScraperLogs, type ScraperExecutionLog } from '../api/purgatory';
@@ -10,8 +10,6 @@ import WallapopImporter from '../components/admin/WallapopImporter';
 
 import {
     getScrapersStatus,
-    getDuplicates,
-    mergeProducts,
     syncNexus,
     getUserSettings,
     getHeroes,
@@ -38,9 +36,9 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
     const [activeTab, setActiveTab] = useState<'scrapers' | 'system' | 'users' | 'wallapop'>('scrapers');
     const [statuses, setStatuses] = useState<ScraperStatus[]>([]);
     const [heroes, setHeroes] = useState<any[]>([]);
-    const [duplicates, setDuplicates] = useState<any[]>([]);
+    // const [duplicates, setDuplicates] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [mergingId, setMergingId] = useState<number | null>(null);
+    // const [mergingId, setMergingId] = useState<number | null>(null);
     const [syncingNexus, setSyncingNexus] = useState(false);
     const [showAddUserModal, setShowAddUserModal] = useState(false);
     const [userSettings, setUserSettings] = useState<any>(null);
@@ -63,16 +61,14 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
     const fetchData = async () => {
         try {
             // Fetch everything, but handle individual failures gracefully
-            const [s, d, u, al, h] = await Promise.all([
-                getScrapersStatus().catch(e => { console.error("Scrapers error:", e); return []; }),
-                getDuplicates().catch(e => { console.error("Duplicates error:", e); return []; }),
-                getUserSettings(activeUserId).catch(e => { console.error("User settings error:", e); return null; }),
-                getScraperLogs().catch(e => { console.error("Logs error:", e); return []; }),
-                getHeroes().catch(e => { console.error("Heroes list error:", e); return []; })
+            const [s, u, al, h] = await Promise.all([
+                getScrapersStatus().catch((e: any) => { console.error("Scrapers error:", e); return []; }),
+                getUserSettings(activeUserId).catch((e: any) => { console.error("User settings error:", e); return null; }),
+                getScraperLogs().catch((e: any) => { console.error("Logs error:", e); return []; }),
+                getHeroes().catch((e: any) => { console.error("Heroes list error:", e); return []; })
             ]);
 
             setStatuses(s || []);
-            setDuplicates(d || []);
             if (u) setUserSettings(u);
             setAdvancedLogs(al || []);
             setHeroes(h || []);
@@ -80,7 +76,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
             // update selected log if necessary
             if (al && al.length > 0) {
                 if (selectedLog) {
-                    const current = al.find(l => l.id === selectedLog.id);
+                    const current = al.find((l: any) => l.id === selectedLog.id);
                     if (current) setSelectedLog(current);
                 } else {
                     setSelectedLog(al[0]);
@@ -131,6 +127,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
     };
 
 
+    /*
     const handleMerge = async (sourceId: number, targetId: number) => {
         setMergingId(sourceId);
         try {
@@ -142,6 +139,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
             setMergingId(null);
         }
     };
+    */
 
     const handleSyncNexus = async () => {
         setSyncingNexus(true);

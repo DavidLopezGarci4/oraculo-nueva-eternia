@@ -90,6 +90,7 @@ class OfferModel(Base):
     is_vintage: Mapped[Optional[bool]] = mapped_column(Boolean, default=False, nullable=True)
     condition: Mapped[Optional[str]] = mapped_column(String, nullable=True) # e.g. "MOC", "Loose", "New"
     grading: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    image_url: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     
     # 3OX Audit Trail
     receipt_id: Mapped[Optional[str]] = mapped_column(String, nullable=True, index=True)

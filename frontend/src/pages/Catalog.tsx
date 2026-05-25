@@ -17,7 +17,6 @@ import {
     ExternalLink,
     TrendingUp,
     History,
-    LineChart as ChartIcon,
     Flame,
     ArrowUpRight,
     Gem,

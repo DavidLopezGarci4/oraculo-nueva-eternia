@@ -148,6 +148,11 @@ def _sync_engine(engine, label: str):
             conn.execute(text("ALTER TABLE offers ADD COLUMN grading FLOAT NULL"))
             conn.commit()
 
+        if "image_url" not in columns_offers:
+            logger.info("Adding 'image_url' to offers table...")
+            conn.execute(text("ALTER TABLE offers ADD COLUMN image_url VARCHAR(1024) NULL"))
+            conn.commit()
+
         # --- Table: pending_matches ---
         columns_pending = [c['name'] for c in inspector.get_columns("pending_matches")]
         if "ean" not in columns_pending:
