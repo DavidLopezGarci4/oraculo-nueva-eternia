@@ -991,3 +991,15 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
 - **Cristal Ahumado**: Reducida la opacidad base de las cards de productos en Catálogo y Mi Legado del 50% al 25% (`bg-black/25`) manteniendo el desenfoque (`backdrop-blur-md`). Esto permite una mayor injerencia visual del fondo inmersivo de la aplicación.
 - **Lectura Táctica**: Modificado el color de las subcategorías en las cards a `text-brand-primary` (Cian) para evitar que se difumine con la imagen trasera.
 - **Botonera Compacta**: Reducción general de la altura y padding de todos los botones de acción e iconos informativos (check verde) dentro de las cards (`h-10` a `h-6 / h-8`). Esta compresión vertical recupera un importante porcentaje de espacio útil de pantalla (especialmente crítico en mobile), solucionando los problemas de desbordamiento reportados.
+
+### 🛡️ Fase 59: Entorno Aislado y Desarrollo Local Resiliente (25/05/2026)
+
+- **Hitos**: Preparación del entorno de desarrollo local protegido en rama paralela, aprovisionamiento de dependencias y lanzamiento del servidor Python unificado.
+- **Estado**: ✅ COMPLETADO Y EN EJECUCIÓN LOCAL
+- **Logros Técnicos**:
+  - **Aislamiento en Rama**: Creación y paso a la rama paralela `feature/desarrollo-local` para garantizar un desarrollo libre de riesgos de regresión en producción o ramas principales.
+  - **Entorno Virtual (.venv)**: Creación del entorno virtual aislado de Python y carga exitosa de las dependencias desde `requirements.txt`.
+  - **Playwright Armor**: Ejecución de `playwright install` para descargar y configurar localmente los binarios de los navegadores (Firefox, Webkit) necesarios para el motor de scrapers.
+  - **Lanzador unificado robusto**: Modificación de `launch_eternia.ps1` para forzar el uso del entorno virtual local (`.venv\Scripts\python`) en lugar del Python global de la máquina, previniendo errores de `ModuleNotFoundError`.
+  - **Lanzamiento exitoso del Broker**: Servidor FastAPI (Python/Uvicorn) levantado en segundo plano en el puerto `8000`. Verificado mediante consulta directa a su API de salud (`/api/health`), respondiendo correctamente con estado `"ok"`.
+
