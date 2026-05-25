@@ -1002,4 +1002,7 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
   - **Playwright Armor**: Ejecución de `playwright install` para descargar y configurar localmente los binarios de los navegadores (Firefox, Webkit) necesarios para el motor de scrapers.
   - **Lanzador unificado robusto**: Modificación de `launch_eternia.ps1` para forzar el uso del entorno virtual local (`.venv\Scripts\python`) en lugar del Python global de la máquina, previniendo errores de `ModuleNotFoundError`.
   - **Lanzamiento exitoso del Broker**: Servidor FastAPI (Python/Uvicorn) levantado en segundo plano en el puerto `8000`. Verificado mediante consulta directa a su API de salud (`/api/health`), respondiendo correctamente con estado `"ok"`.
+  - **Node.js de Vanguardia**: Actualización local de Node.js a la versión `v26.2.0`, eliminando incompatibilidades con Vite 7 y habilitando funciones de `crypto.hash`.
+  - **Aprovisionamiento Frontend**: Instalación exitosa de los módulos de React (`npm install`) inyectando dinámicamente la ruta del nuevo ejecutable en el path del proceso.
+  - **Despliegue Local Unificado Activo**: Levantamiento concurrente del frontend en el puerto `3001` (Vite) con proxy automático `/api` mapeado al backend (puerto `8000`), logrando una paridad funcional del 100% en local y despejando el camino para producción.
 
