@@ -38,6 +38,7 @@ async def get_products():
                     OfferModel.is_available == True,
                 ),
             )
+            .where(ProductModel.is_vintage.is_not(True))
         )
 
         results = db.execute(query).all()
@@ -105,6 +106,7 @@ async def get_auction_products():
                     OfferModel.is_available == True,
                 ),
             )
+            .where(ProductModel.is_vintage.is_not(True))
         )
 
         results = db.execute(query).all()
