@@ -10,7 +10,7 @@ Write-Host ""
 
 # 1. Limpieza de Puertos (Evita errores de 'Port in use')
 Write-Host "🧹 Paso 1: Limpiando puertos 8000 y 5173/5174..." -ForegroundColor Gray
-$ports = @(8000, 5173, 5174)
+$ports = @(8000, 3001, 5173, 5174)
 foreach ($port in $ports) {
     try {
         $procId = (Get-NetTCPConnection -LocalPort $port -ErrorAction SilentlyContinue).OwningProcess
@@ -24,7 +24,7 @@ foreach ($port in $ports) {
 
 # 2. Lanzar Backend (API Broker)
 Write-Host "📡 Paso 2: Iniciando API Broker (Backend) en nueva ventana..." -ForegroundColor Yellow
-$BackendCmd = "`$Host.UI.RawUI.WindowTitle = 'ORACULO - BACKEND (API)'; `$env:PYTHONPATH='.'; python src/interfaces/api/main.py"
+$BackendCmd = "`$Host.UI.RawUI.WindowTitle = 'ORACULO - BACKEND (API)'; `$env:PYTHONPATH='.;.3ox'; .venv\Scripts\python src/interfaces/api/main.py"
 Start-Process powershell -ArgumentList "-NoExit", "-Command", $BackendCmd -WorkingDirectory $PSScriptRoot
 
 # 3. Lanzar Frontend (Vite)
@@ -35,6 +35,6 @@ Start-Process powershell -ArgumentList "-NoExit", "-Command", $FrontendCmd -Work
 Write-Host ""
 Write-Host "🚀 ¡TODO EN MARCHA!" -ForegroundColor Cyan
 Write-Host "El backend está en http://localhost:8000" -ForegroundColor Gray
-Write-Host "El frontend estará disponible en http://localhost:5173" -ForegroundColor Green
+Write-Host "El frontend estará disponible en http://localhost:3001" -ForegroundColor Green
 Write-Host ""
 Write-Host "Puedes cerrar esta ventana, las otras dos seguirán corriendo." -ForegroundColor White

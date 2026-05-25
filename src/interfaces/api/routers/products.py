@@ -332,3 +332,45 @@ async def get_product_price_history(product_id: int):
 
         results.sort(key=lambda x: x["shop_name"])
         return results
+
+
+@router.get("/api/vintage/products")
+async def get_vintage_products():
+    with SessionCloud() as db:
+        # Fetch all offers marked as is_vintage to list them individually
+        query = (
+            select(OfferModel, ProductModel)
+            .join(ProductModel, OfferModel.product_id == ProductModel.id)
+            .where(OfferModel.is_vintage == True)
+            .where(OfferModel.is_available == True)
+            .order_by(OfferModel.price.asc())
+        )
+
+        results = db.execute(query).all()
+
+        output = []
+        for offer, product in results:
+            output.append({
+                "id": product.id,
+                "name": product.name,
+                "ean": product.ean,
+                "image_url": offer.image_url or product.image_url,
+                "category": product.category,
+                "sub_category": product.sub_category,
+                "figure_id": product.figure_id,
+                "release_year": product.release_year,
+                
+                # Offer specific individual fields
+                "offer_id": offer.id,
+                "best_p2p_price": offer.price,
+                "best_p2p_source": offer.shop_name,
+                "url": offer.url,
+                "condition": offer.condition or "Loose",
+                "grading": offer.grading or 7.5,
+                "bids_count": offer.bids_count,
+                "time_left_raw": offer.time_left_raw,
+                "sale_type": offer.sale_type
+            })
+
+        return output
+

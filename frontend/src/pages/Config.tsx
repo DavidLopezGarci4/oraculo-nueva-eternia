@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Activity, Clock, AlertCircle, CheckCircle2, RefreshCw, Terminal, GitMerge, Target, Settings, Users, ShieldAlert, Trash2, Zap, History, Database, Download, Upload, FileSpreadsheet, Repeat } from 'lucide-react';
+import { Play, Activity, Clock, AlertCircle, CheckCircle2, RefreshCw, Terminal, Target, Settings, Users, ShieldAlert, Trash2, Zap, History, Database, Download, Upload, FileSpreadsheet, Repeat } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { resetSmartMatches, runScrapers, stopScrapers, getScraperLogs, type ScraperExecutionLog } from '../api/purgatory';
@@ -10,8 +10,6 @@ import WallapopImporter from '../components/admin/WallapopImporter';
 
 import {
     getScrapersStatus,
-    getDuplicates,
-    mergeProducts,
     syncNexus,
     getUserSettings,
     getHeroes,
@@ -35,12 +33,12 @@ interface ConfigProps {
 
 const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange }) => {
     const consoleRef = React.useRef<HTMLDivElement>(null);
-    const [activeTab, setActiveTab] = useState<'scrapers' | 'radar' | 'system' | 'users' | 'wallapop'>('scrapers');
+    const [activeTab, setActiveTab] = useState<'scrapers' | 'system' | 'users' | 'wallapop'>('scrapers');
     const [statuses, setStatuses] = useState<ScraperStatus[]>([]);
     const [heroes, setHeroes] = useState<any[]>([]);
-    const [duplicates, setDuplicates] = useState<any[]>([]);
+    // const [duplicates, setDuplicates] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [mergingId, setMergingId] = useState<number | null>(null);
+    // const [mergingId, setMergingId] = useState<number | null>(null);
     const [syncingNexus, setSyncingNexus] = useState(false);
     const [showAddUserModal, setShowAddUserModal] = useState(false);
     const [userSettings, setUserSettings] = useState<any>(null);
@@ -55,7 +53,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
     const activeUserId = parseInt(localStorage.getItem('active_user_id') || '2');
 
     useEffect(() => {
-        if (user && user.role !== 'admin' && (activeTab === 'scrapers' || activeTab === 'radar')) {
+        if (user && user.role !== 'admin' && activeTab === 'scrapers') {
             setActiveTab('system');
         }
     }, [user, activeTab]);
@@ -63,16 +61,14 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
     const fetchData = async () => {
         try {
             // Fetch everything, but handle individual failures gracefully
-            const [s, d, u, al, h] = await Promise.all([
-                getScrapersStatus().catch(e => { console.error("Scrapers error:", e); return []; }),
-                getDuplicates().catch(e => { console.error("Duplicates error:", e); return []; }),
-                getUserSettings(activeUserId).catch(e => { console.error("User settings error:", e); return null; }),
-                getScraperLogs().catch(e => { console.error("Logs error:", e); return []; }),
-                getHeroes().catch(e => { console.error("Heroes list error:", e); return []; })
+            const [s, u, al, h] = await Promise.all([
+                getScrapersStatus().catch((e: any) => { console.error("Scrapers error:", e); return []; }),
+                getUserSettings(activeUserId).catch((e: any) => { console.error("User settings error:", e); return null; }),
+                getScraperLogs().catch((e: any) => { console.error("Logs error:", e); return []; }),
+                getHeroes().catch((e: any) => { console.error("Heroes list error:", e); return []; })
             ]);
 
             setStatuses(s || []);
-            setDuplicates(d || []);
             if (u) setUserSettings(u);
             setAdvancedLogs(al || []);
             setHeroes(h || []);
@@ -80,7 +76,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
             // update selected log if necessary
             if (al && al.length > 0) {
                 if (selectedLog) {
-                    const current = al.find(l => l.id === selectedLog.id);
+                    const current = al.find((l: any) => l.id === selectedLog.id);
                     if (current) setSelectedLog(current);
                 } else {
                     setSelectedLog(al[0]);
@@ -131,6 +127,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
     };
 
 
+    /*
     const handleMerge = async (sourceId: number, targetId: number) => {
         setMergingId(sourceId);
         try {
@@ -142,6 +139,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
             setMergingId(null);
         }
     };
+    */
 
     const handleSyncNexus = async () => {
         setSyncingNexus(true);
@@ -300,18 +298,6 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                             >
                                 <Activity className="h-3.5 w-3.5" />
                                 Scrapers
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('radar')}
-                                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${activeTab === 'radar' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'text-white/40 hover:text-white'}`}
-                            >
-                                <Target className="h-3.5 w-3.5" />
-                                Radar
-                                {duplicates.length > 0 && (
-                                    <span className="bg-red-500 text-white text-[9px] px-1 py-0.5 rounded-full ml-1 animate-pulse">
-                                        {duplicates.length}
-                                    </span>
-                                )}
                             </button>
                         </>
                     )}
@@ -535,69 +521,6 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                             </div>
                         </div>
                     </motion.div>
-                ) : activeTab === 'radar' ? (
-                    <motion.div
-                        key="radar"
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className="space-y-6"
-                    >
-                        <div className="flex flex-col gap-2 mb-4">
-                            <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                                <Target className="h-6 w-6 text-brand-primary" />
-                                Radar de Similitud por EAN
-                            </h3>
-                            <p className="text-white/40 text-sm">Detección de reliquias duplicadas que deben ser fusionadas para preservar la coherencia del Oráculo.</p>
-                        </div>
-
-                        {duplicates.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center p-20 glass border border-dashed border-white/10 rounded-[3rem]">
-                                <CheckCircle2 className="h-16 w-16 text-green-500/20 mb-4" />
-                                <p className="text-white/30 font-bold uppercase tracking-[0.2em]">No hay anomalías detectadas en el catálogo</p>
-                            </div>
-                        ) : (
-                            <div className="space-y-4">
-                                {duplicates.map((dup, idx) => (
-                                    <div key={idx} className="glass border border-brand-primary/20 rounded-3xl p-6 space-y-4 bg-gradient-to-r from-brand-primary/5 to-transparent">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2 text-brand-primary font-bold uppercase tracking-widest text-xs">
-                                                <AlertCircle className="h-4 w-4" />
-                                                {dup.reason}
-                                            </div>
-                                        </div>
-
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            {dup.products.map((p: any) => (
-                                                <div key={p.id} className="flex items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/5 relative group">
-                                                    <div className="h-16 w-16 rounded-xl overflow-hidden border border-white/10">
-                                                        <img src={p.image_url} className="h-full w-full object-cover" />
-                                                    </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <h4 className="text-white font-bold truncate">{p.name}</h4>
-                                                        <p className="text-[10px] text-white/30 uppercase font-black">ID: #{p.id} • {p.sub_category}</p>
-                                                    </div>
-                                                    <div className="flex flex-col gap-2">
-                                                        <button
-                                                            onClick={() => {
-                                                                const target = dup.products.find((prod: any) => prod.id !== p.id);
-                                                                if (target) handleMerge(p.id, target.id);
-                                                            }}
-                                                            disabled={mergingId === p.id}
-                                                            className="bg-brand-primary/20 text-brand-primary hover:bg-brand-primary hover:text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2"
-                                                        >
-                                                            {mergingId === p.id ? <RefreshCw className="h-3 w-3 animate-spin" /> : <GitMerge className="h-3 w-3" />}
-                                                            Absorber
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </motion.div>
                 ) : activeTab === 'system' ? (
                     <motion.div
                         key="system"
@@ -775,32 +698,34 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                     </div>
                                 </div>
 
-                                <div className="glass border border-white/10 p-6 rounded-3xl group hover:bg-white/5 transition-all">
-                                    <div className="flex items-start justify-between mb-4">
-                                        <div className="flex items-center gap-4">
-                                            <div className="bg-green-500/10 p-3 rounded-lg group-hover:bg-green-500/20 transition-all">
-                                                <FileSpreadsheet className="h-5 w-5 text-green-400" />
+                                {(user?.role === 'admin' || user?.username === 'David') && (
+                                    <div className="glass border border-white/10 p-6 rounded-3xl group hover:bg-white/5 transition-all">
+                                        <div className="flex items-start justify-between mb-4">
+                                            <div className="flex items-center gap-4">
+                                                <div className="bg-green-500/10 p-3 rounded-lg group-hover:bg-green-500/20 transition-all">
+                                                    <FileSpreadsheet className="h-5 w-5 text-green-400" />
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-white font-bold text-sm">Excel Bridge</h4>
+                                                    <p className="text-[10px] text-white/30 font-mono">Sincronización David MOTU</p>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <h4 className="text-white font-bold text-sm">Excel Bridge</h4>
-                                                <p className="text-[10px] text-white/30 font-mono">Sincronización David MOTU</p>
+                                            <div className="flex flex-col items-end">
+                                                <span className="text-[8px] font-black text-green-400 uppercase tracking-widest bg-green-500/10 px-2 py-0.5 rounded">Shield Layer 2</span>
                                             </div>
                                         </div>
-                                        <div className="flex flex-col items-end">
-                                            <span className="text-[8px] font-black text-green-400 uppercase tracking-widest bg-green-500/10 px-2 py-0.5 rounded">Shield Layer 2</span>
-                                        </div>
+                                        <p className="text-[11px] text-white/50 mb-6 leading-relaxed">
+                                            Actualiza automáticamente la columna de adquisiciones en tu archivo Excel local de MOTU para control humano.
+                                        </p>
+                                        <button
+                                            onClick={handleSyncExcel}
+                                            className="w-full bg-green-500/10 hover:bg-green-500 text-green-400 hover:text-white border border-green-500/20 px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg shadow-green-500/0 hover:shadow-green-500/20"
+                                        >
+                                            <RefreshCw className="h-3 w-3" />
+                                            📊 Sincronizar Excel
+                                        </button>
                                     </div>
-                                    <p className="text-[11px] text-white/50 mb-6 leading-relaxed">
-                                        Actualiza automáticamente la columna de adquisiciones en tu archivo Excel local de MOTU para control humano.
-                                    </p>
-                                    <button
-                                        onClick={handleSyncExcel}
-                                        className="w-full bg-green-500/10 hover:bg-green-500 text-green-400 hover:text-white border border-green-500/20 px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg shadow-green-500/0 hover:shadow-green-500/20"
-                                    >
-                                        <RefreshCw className="h-3 w-3" />
-                                        📊 Sincronizar Excel
-                                    </button>
-                                </div>
+                                )}
                             </div>
 
                             {/* --- MI BÓVEDA DIGITAL: UNIVERSAL ACCESS --- */}

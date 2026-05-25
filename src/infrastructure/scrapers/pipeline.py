@@ -110,6 +110,22 @@ class ScrapingPipeline:
                 # Regla General (Vinted/Otros): Si desaparece de la búsqueda, ya no está disponible
                 offer.is_available = False
                 logger.info(f"🌑 Sync: Oferta marcada como no disponible: {offer.url} ({offer.shop_name})")
+                
+                # Regla de Historial: Registrar que el ítem se vendió o no está disponible
+                from src.domain.models import OfferHistoryModel
+                action = "SOLD_OR_UNAVAILABLE_VINTAGE" if offer.is_vintage else "SOLD_OR_UNAVAILABLE"
+                history = OfferHistoryModel(
+                    offer_url=offer.url,
+                    product_name=offer.product.name if offer.product else "Desconocido",
+                    shop_name=offer.shop_name,
+                    price=offer.price,
+                    action_type=action,
+                    details=json.dumps({
+                        "last_seen": offer.last_seen.isoformat() if offer.last_seen else None,
+                        "is_vintage": offer.is_vintage
+                    }),
+                )
+                db.add(history)
             
             db.commit()
             logger.success(f"✔️ Sync: Finalizada sincronización de disponibilidad para {shop_names}.")
@@ -146,6 +162,38 @@ class ScrapingPipeline:
                 except:
                     standardized_offers.append(o)
         offers = standardized_offers
+
+        # --- SQLITE DATE TIME COMPATIBILITY KAIZEN ---
+        from dateutil.parser import parse as parse_date
+        
+        def secure_date(val):
+            if not val:
+                return None
+            if isinstance(val, datetime):
+                return val
+            from datetime import date
+            if isinstance(val, date):
+                return datetime(val.year, val.month, val.day)
+            if isinstance(val, str):
+                try:
+                    return parse_date(val)
+                except Exception:
+                    return None
+            return None
+
+        for o in offers:
+            if 'first_seen_at' in o:
+                o['first_seen_at'] = secure_date(o['first_seen_at'])
+            if 'expiry_at' in o:
+                o['expiry_at'] = secure_date(o['expiry_at'])
+            if 'sold_at' in o:
+                o['sold_at'] = secure_date(o['sold_at'])
+            if 'original_listing_date' in o:
+                o['original_listing_date'] = secure_date(o['original_listing_date'])
+            if 'found_at' in o:
+                o['found_at'] = secure_date(o['found_at'])
+            if 'last_price_update' in o:
+                o['last_price_update'] = secure_date(o['last_price_update'])
 
         # 1. Save Raw Snapshot (Black Box)
         try:
@@ -425,6 +473,92 @@ class ScrapingPipeline:
                             url=url_str
                         ))
                 else:
+                    # Regla Vintage: Si es vintage (muñeco de los 80 o contiene 'vintage'), va directo a Vintage
+                    from src.core.vintage_utils import check_is_vintage
+                    product_name = offer.get('product_name')
+                    is_v = check_is_vintage(product_name) or bool(offer.get('is_vintage'))
+                    
+                    if is_v:
+                        from src.domain.models import ProductModel, VintageProductModel, ProductAliasModel
+                        # Auto-promote to Vintage Product
+                        product = db.query(ProductModel).filter(ProductModel.name == product_name).first()
+                        if not product:
+                            import random
+                            rand_id = f"VINT-{random.randint(1000, 9999)}"
+                            product = ProductModel(
+                                name=product_name,
+                                ean=offer.get('ean'),
+                                image_url=offer.get('image_url'),
+                                category="Masters of the Universe",
+                                sub_category="Vintage",
+                                is_vintage=True,
+                                figure_id=rand_id
+                            )
+                            db.add(product)
+                            db.flush()
+                        else:
+                            product.is_vintage = True
+                            
+                        # Register in vintage_products
+                        exists_v = db.query(VintageProductModel).filter(VintageProductModel.product_id == product.id).first()
+                        if not exists_v:
+                            v_prod = VintageProductModel(
+                                product_id=product.id,
+                                notes=f"Clasificado automáticamente como Vintage por Pipeline para {offer.get('shop_name')}"
+                            )
+                            db.add(v_prod)
+                            
+                        # Calculate opportunity score
+                        landed_price = LogisticsService.optimized_get_landing_price(offer.get('price'), offer.get('shop_name'), user_location, rules_map)
+                        is_wish = any(ci.owner_id == 2 and not ci.acquired for ci in product.collection_items)
+                        opp_score = DealScorer.calculate_score(product, landed_price, is_wish)
+                        
+                        cond = offer.get('condition') or ("MOC" if "moc" in product_name.lower() or "caja" in product_name.lower() or "nuevo" in product_name.lower() else "Loose")
+                        grad = offer.get('grading') or (9.0 if cond == "MOC" else 7.5)
+                        
+                        offer_data = {
+                            "shop_name": offer.get('shop_name'),
+                            "price": offer.get('price'),
+                            "currency": offer.get('currency', 'EUR'),
+                            "url": url_str,
+                            "is_available": offer.get('is_available') if offer.get('is_available') is not None else True,
+                            "source_type": offer.get('source_type', 'Peer-to-Peer'),
+                            "receipt_id": offer.get('receipt_id'),
+                            "opportunity_score": opp_score,
+                            "first_seen_at": offer.get('first_seen_at') or datetime.utcnow(),
+                            "last_price_update": datetime.utcnow(),
+                            "is_vintage": True,
+                            "condition": cond,
+                            "grading": grad,
+                            "image_url": offer.get('image_url'),
+                            "sale_type": offer.get('sale_type', 'Retail'),
+                            "expiry_at": offer.get('expiry_at'),
+                            "bids_count": offer.get('bids_count', 0),
+                            "time_left_raw": offer.get('time_left_raw'),
+                        }
+                        
+                        repo.add_offer(product, offer_data, commit=False)
+                        
+                        # Audit Trail
+                        from src.domain.models import OfferHistoryModel
+                        history = OfferHistoryModel(
+                            offer_url=url_str,
+                            product_name=product.name,
+                            shop_name=offer.get('shop_name'),
+                            price=offer.get('price'),
+                            action_type="PIPELINE_AUTO_VINTAGE",
+                            details=json.dumps({"product_id": product.id, "receipt_id": offer.get('receipt_id'), "condition": cond, "grading": grad}),
+                        )
+                        db.add(history)
+                        
+                        # Alias
+                        db.query(ProductAliasModel).filter(ProductAliasModel.source_url == url_str).delete()
+                        new_alias = ProductAliasModel(product_id=product.id, source_url=url_str, confirmed=True)
+                        db.add(new_alias)
+                        
+                        new_items_count += 1
+                        continue
+
                     # To Purgatory
                     # logger.info(f"🆕 To Purgatory: '{offer.get('product_name')}'")
                     

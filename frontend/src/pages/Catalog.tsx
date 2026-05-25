@@ -17,7 +17,6 @@ import {
     ExternalLink,
     TrendingUp,
     History,
-    LineChart as ChartIcon,
     Flame,
     ArrowUpRight,
     Gem,
@@ -33,7 +32,6 @@ import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { getProductPriceHistory } from '../api/products';
 import PriceHistoryChart from '../components/products/PriceHistoryChart';
-import MarketIntelligenceModal from '../components/MarketIntelligenceModal';
 import PowerSwordLoader from '../components/ui/PowerSwordLoader';
 
 // Para desarrollo, usamos el ID de David
@@ -47,7 +45,6 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
     const [selectedProduct, setSelectedProduct] = React.useState<Product | null>(null);
     const [editingProduct, setEditingProduct] = React.useState<Product | null>(null);
     const [historyProductId, setHistoryProductId] = React.useState<number | null>(null);
-    const [intelProductId, setIntelProductId] = React.useState<number | null>(null);
     const [expandedImage, setExpandedImage] = React.useState<string | null>(null);
 
     // Contexto de Autenticación (Fase 8.2)
@@ -385,19 +382,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
                                 : 'border-white/5 bg-black/25 backdrop-blur-md hover:bg-black/20 hover:shadow-[0_40px_80px_-20px_rgba(0,0,0,0.5)]'
                                 }`}
                         >
-                            {/* Market Intel Badge */}
-                            {hasIntel && (
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setIntelProductId(product.id);
-                                    }}
-                                    className="absolute top-2 right-2 sm:top-4 sm:right-4 z-40 flex items-center gap-1 rounded-lg sm:rounded-xl bg-brand-primary/10 px-1.5 py-0.5 sm:px-2.5 sm:py-1 border border-brand-primary/20 backdrop-blur-md hover:bg-brand-primary/30 transition-all cursor-pointer shadow-lg shadow-brand-primary/20"
-                                >
-                                    <span className="h-1 w-1 sm:h-1.5 sm:w-1.5 rounded-full bg-brand-primary animate-pulse"></span>
-                                    <span className="text-[6px] sm:text-[8px] font-black uppercase tracking-widest text-brand-primary">Estudio de Mercado</span>
-                                </button>
-                            )}
+
 
                             {/* Owned/Wish Badge */}
                             {owned && (
@@ -534,46 +519,36 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
 
                                 <div className="mt-auto flex flex-col gap-2">
                                     {/* Action Buttons Row - Symmetrical Center Dock */}
-                                    <div className="flex items-center justify-center gap-px sm:gap-1 md:gap-1.5 rounded-xl md:rounded-3xl bg-white/[0.04] p-0.5 md:p-1.5 border border-white/[0.05] group-hover:border-brand-primary/20 transition-all backdrop-blur-sm w-full">
+                                    <div className="flex items-center justify-center gap-2 rounded-2xl bg-white/[0.03] p-1.5 border border-white/10 group-hover:border-brand-primary/20 transition-all backdrop-blur-sm w-full">
                                         {/* Action: Toggle Price History */}
                                         <button
                                             onClick={() => setHistoryProductId(historyProductId === product.id ? null : product.id)}
-                                            className={`flex h-4 sm:h-5 md:h-6 flex-1 min-w-0 md:w-6 md:flex-none items-center justify-center rounded-lg transition-all border ${historyProductId === product.id ? 'bg-purple-500/20 text-purple-400 border-purple-500/50' : 'bg-white/5 text-white/30 border-white/5 hover:bg-white/10 hover:text-white'}`}
+                                            className={`flex h-8 w-8 items-center justify-center rounded-xl transition-all border hover:scale-110 active:scale-95 duration-300 shadow-md ${historyProductId === product.id ? 'bg-purple-500/20 text-purple-400 border-purple-500/50' : 'bg-white/5 text-white/30 border-white/10 hover:bg-white/10 hover:text-white'}`}
                                             title="Ver Evolución de Precios"
                                         >
-                                            <History className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                                            <History className="h-4 w-4" />
                                         </button>
 
                                         {/* Action Button: Detail View */}
                                         <button
                                             onClick={() => setSelectedProduct(product)}
-                                            className="flex h-4 sm:h-5 md:h-6 flex-1 min-w-0 md:w-6 md:flex-none items-center justify-center rounded-lg bg-white/5 text-white/40 border border-white/5 transition-all hover:bg-brand-primary/20 hover:text-brand-primary hover:border-brand-primary/40"
+                                            className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/5 text-white/40 border border-white/10 transition-all hover:bg-brand-primary/20 hover:text-brand-primary hover:border-brand-primary/45 hover:scale-110 active:scale-95 duration-300 shadow-md"
                                             title="Ver Mercado Live"
                                         >
-                                            <Info className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                                            <Info className="h-4 w-4" />
                                         </button>
-
-                                        {hasIntel && (
-                                            <button
-                                                onClick={() => setIntelProductId(product.id)}
-                                                className="flex h-4 sm:h-5 md:h-6 flex-1 min-w-0 md:w-6 md:flex-none items-center justify-center rounded-lg bg-brand-primary/20 text-brand-primary border border-brand-primary/40 transition-all hover:bg-white/10 hover:text-white"
-                                                title="Análisis de Mercado 3OX"
-                                            >
-                                                <ChartIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                                            </button>
-                                        )}
 
                                         {/* Action: Toggle Wishlist */}
                                         <button
                                             onClick={() => toggleMutation.mutate({ productId: product.id, wish: true })}
                                             disabled={toggleMutation.isPending || owned}
-                                            className={`flex h-4 sm:h-5 md:h-6 flex-1 min-w-0 md:w-6 md:flex-none items-center justify-center rounded-lg transition-all border shadow-lg ${wished
+                                            className={`flex h-8 w-8 items-center justify-center rounded-xl transition-all border shadow-md hover:scale-110 active:scale-95 duration-300 ${wished
                                                 ? 'bg-brand-primary/20 text-brand-primary border-brand-primary/30 hover:bg-red-500/20 hover:text-red-400'
                                                 : 'bg-white/5 text-white/20 border-white/10 hover:bg-brand-primary/10 hover:text-brand-primary'
                                                 } ${owned ? 'opacity-20 cursor-not-allowed' : ''} ${toggleMutation.isPending ? 'opacity-50 cursor-wait' : ''}`}
                                             title={wished ? 'Quitar de Deseos' : 'Añadir a Deseos'}
                                         >
-                                            <Star className={`h-3 w-3 sm:h-3.5 sm:w-3.5 ${wished ? 'fill-current' : ''}`} />
+                                            <Star className={`h-4 w-4 ${wished ? 'fill-current' : ''}`} />
                                         </button>
 
                                         {/* Action: Universal Search (EAN/ASIN) */}
@@ -581,20 +556,20 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
                                             href={product.asin ? `https://www.amazon.es/s?k=${product.asin}` : `https://www.google.com/search?q=${encodeURIComponent(product.name + ' masters of the universe origins')}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="flex h-4 sm:h-5 md:h-6 flex-1 min-w-0 md:w-6 md:flex-none items-center justify-center rounded-lg bg-white/5 text-white/20 border border-white/10 hover:bg-brand-secondary/20 hover:text-brand-secondary transition-all shadow-lg"
+                                            className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/5 text-white/20 border border-white/10 hover:bg-brand-secondary/20 hover:text-brand-secondary transition-all hover:scale-110 active:scale-95 duration-300 shadow-md"
                                             title={product.asin ? "Buscar en Amazon.es por ASIN" : "Buscar en Google"}
                                         >
-                                            <Search className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                                            <Search className="h-4 w-4" />
                                         </a>
 
                                         {/* Admin Action: Edit */}
                                         {isAdmin && (
                                             <button
                                                 onClick={() => setEditingProduct(product)}
-                                                className="flex h-4 sm:h-5 md:h-6 flex-1 min-w-0 md:w-6 md:flex-none items-center justify-center rounded-lg bg-white/5 text-white/40 border border-white/5 hover:bg-brand-primary/20 hover:text-brand-primary transition-all shadow-lg"
+                                                className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/5 text-white/40 border border-white/10 transition-all hover:bg-brand-primary/20 hover:text-brand-primary hover:scale-110 active:scale-95 duration-300 shadow-md"
                                                 title="Editar Metadatos (Arquitecto)"
                                             >
-                                                <Settings className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                                                <Settings className="h-4 w-4" />
                                             </button>
                                         )}
                                     </div>
@@ -892,13 +867,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "" }) => {
                 </div>
             )}
 
-            {/* MARKET INTELLIGENCE MODAL */}
-            {intelProductId && (
-                <MarketIntelligenceModal
-                    productId={intelProductId}
-                    onClose={() => setIntelProductId(null)}
-                />
-            )}
+
             {/* FULLSCREEN IMAGE EXPANSION */}
             {expandedImage && (
                 <div

@@ -91,6 +91,15 @@ class ProductRepository(BaseRepository[ProductModel]):
             
             if "opportunity_score" in offer_data:
                 existing_offer.opportunity_score = offer_data["opportunity_score"]
+
+            if "is_vintage" in offer_data:
+                existing_offer.is_vintage = offer_data["is_vintage"]
+            if "condition" in offer_data:
+                existing_offer.condition = offer_data["condition"]
+            if "grading" in offer_data:
+                existing_offer.grading = offer_data["grading"]
+            if "image_url" in offer_data:
+                existing_offer.image_url = offer_data["image_url"]
             
             self.db.add(existing_offer)
             if commit:
@@ -113,6 +122,10 @@ class ProductRepository(BaseRepository[ProductModel]):
                 source_type=offer_data.get("source_type", "Retail"),
                 receipt_id=offer_data.get("receipt_id"), # --- 3OX Audit ---
                 opportunity_score=offer_data.get("opportunity_score", 0),
+                is_vintage=offer_data.get("is_vintage", False),
+                condition=offer_data.get("condition"),
+                grading=offer_data.get("grading"),
+                image_url=offer_data.get("image_url"),
                 # Phase 39 Fields
                 time_left_raw=offer_data.get("time_left_raw"),
                 # Phase 41: Market Intelligence

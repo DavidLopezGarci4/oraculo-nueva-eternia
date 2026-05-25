@@ -50,6 +50,8 @@ class ProductModel(Base):
     image_hash: Mapped[Optional[str]] = mapped_column(String, index=True, nullable=True) # Perceptual Hash for visual dedupe
     master_image_hash: Mapped[Optional[str]] = mapped_column(String, nullable=True) # ActionFigure411 reference hash
     
+    is_vintage: Mapped[Optional[bool]] = mapped_column(Boolean, default=False, nullable=True)
+    
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     
@@ -84,6 +86,11 @@ class OfferModel(Base):
     url: Mapped[str] = mapped_column(String, index=True)
     is_available: Mapped[bool] = mapped_column(Boolean, default=True)
     last_seen: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    
+    is_vintage: Mapped[Optional[bool]] = mapped_column(Boolean, default=False, nullable=True)
+    condition: Mapped[Optional[str]] = mapped_column(String, nullable=True) # e.g. "MOC", "Loose", "New"
+    grading: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    image_url: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     
     # 3OX Audit Trail
     receipt_id: Mapped[Optional[str]] = mapped_column(String, nullable=True, index=True)
@@ -166,6 +173,10 @@ class PendingMatchModel(Base):
     image_url: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     source_type: Mapped[str] = mapped_column(String, default="Retail") # Retail, Peer-to-Peer
     
+    is_vintage: Mapped[Optional[bool]] = mapped_column(Boolean, default=False, nullable=True)
+    condition: Mapped[Optional[str]] = mapped_column(String, nullable=True) # e.g. "MOC", "Loose", "New"
+    grading: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    
     # 3OX Audit Trail
     receipt_id: Mapped[Optional[str]] = mapped_column(String, nullable=True, index=True)
     
@@ -189,6 +200,21 @@ class PendingMatchModel(Base):
     last_price_update: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     
     found_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+class VintageProductModel(Base):
+    """
+    Tabla de Reliquias Vintage (Fase 59): Organiza y estructura las reliquias vintage
+    asociadas a los muñecos genéricos para auditorías y control de inventario.
+    """
+    __tablename__ = "vintage_products"
+    
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), unique=True, index=True)
+    notes: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    added_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    
+    # Relationships
+    product: Mapped["ProductModel"] = relationship("ProductModel")
 
 class ProductAliasModel(Base):
     """
