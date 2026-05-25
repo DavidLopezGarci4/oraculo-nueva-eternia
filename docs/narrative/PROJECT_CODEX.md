@@ -110,6 +110,16 @@ El sistema ahora emplea una **Reserva Táctica de Loaders**:
 - **PowerSwordLoader**: Reservado estrictamente para Navegación de Router y Sincronización de Identidad, maximizando la sensación premium sin penalizar la velocidad de TTI (Time To Interactive).
 - **Search Escalable**: Input dinámico multilínea (`<textarea rows={2}>`) para evitar el truncado de strings complejas (ej. capturas de Wallapop o series numéricas combinadas) en dispositivos móviles.
 
+### 10. Segregación Vintage y Flujo de Naming (Phase 60)
+
+El sistema ahora garantiza el aislamiento absoluto entre las colecciones **Eternia (Vintage)** y **Origins (Nueva Eternia)**:
+
+- **Aislamiento Base de Datos**: Las consultas a los catálogos y colecciones filtran mediante el parámetro `is_vintage` para mantener segregadas ambas líneas.
+- **Pabellón Vintage**: Las ofertas recolectadas de scrapers vintage (Ebay, Vinted, Wallapop vintage) se gestionan por separado en el Pabellón.
+- **Flujo de Naming Interactivo**: Al clasificar ofertas en el Purgatorio como vintage, un modal interactivo obliga a asociar el muñeco a un nombre vintage (existente o nuevo).
+- **Sufijado Auto-Vintage**: Para evitar colisiones de nombres con la serie Origins, cualquier nuevo nombre ingresado se sufija automáticamente con " Vintage" de forma insensible a mayúsculas/minúsculas.
+
 ---
 
-*Última actualización: 28/02/2026 - Fase 57: Refactorización Visual UX & Sistema de Búsqueda Flexible.*
+*Última actualización: 26/05/2026 - Fase 60: Segregación Vintage y Flujo de Naming en Purgatorio.*
+
