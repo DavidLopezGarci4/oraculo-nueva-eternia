@@ -55,6 +55,11 @@ export const updateProduct = async (productId: number, data: any): Promise<{ sta
     return response.data;
 };
 
+export const deleteProduct = async (productId: number): Promise<{ status: string; message: string }> => {
+    const response = await adminAxios.delete(`/products/${productId}`);
+    return response.data;
+};
+
 export const getDuplicates = async (): Promise<any[]> => {
     const response = await adminAxios.get('/admin/duplicates');
     return response.data;

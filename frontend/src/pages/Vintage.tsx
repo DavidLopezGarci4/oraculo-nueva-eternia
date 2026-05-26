@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { getProductPriceHistory } from '../api/products';
 import { revertVintageItem } from '../api/purgatory';
 import PriceHistoryChart from '../components/products/PriceHistoryChart';
+import type { Hero } from '../api/admin';
 
 interface VintageProduct {
     id: number;
@@ -28,12 +29,19 @@ interface VintageProduct {
     sale_type: string;
 }
 
-const Vintage: React.FC = () => {
+interface VintageProps {
+    user?: Hero | null;
+}
+
+const Vintage: React.FC<VintageProps> = ({ user }) => {
     const queryClient = useQueryClient();
     const [selectedProduct, setSelectedProduct] = React.useState<VintageProduct | null>(null);
     const [historyProductId, setHistoryProductId] = React.useState<number | null>(null);
     const [expandedImage, setExpandedImage] = React.useState<string | null>(null);
     const [sortBy, setSortBy] = React.useState<'name' | 'price' | 'condition'>('name');
+
+    const isAdmin = user?.role === 'admin' || user?.username === 'David';
+
 
     // 1. Fetch de productos vintage individuales
     const { data: vintageItems, isLoading: isLoadingVintage, isError: isErrorVintage } = useQuery<VintageProduct[]>({
@@ -233,19 +241,21 @@ const Vintage: React.FC = () => {
                                             </button>
 
                                             {/* Action: Revert back to Purgatory */}
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    if (confirm(`¿Devolver '${item.name}' al Purgatorio?`)) {
-                                                        revertMutation.mutate(item.offer_id);
-                                                    }
-                                                }}
-                                                disabled={revertMutation.isPending}
-                                                className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/5 text-red-500/60 border border-white/10 transition-all hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/50 hover:scale-110 active:scale-95 duration-300 shadow-md"
-                                                title="Devolver al Purgatorio (Reversión)"
-                                            >
-                                                <RotateCcw className="h-4 w-4" />
-                                            </button>
+                                            {isAdmin && (
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if (confirm(`¿Devolver '${item.name}' al Purgatorio?`)) {
+                                                            revertMutation.mutate(item.offer_id);
+                                                        }
+                                                    }}
+                                                    disabled={revertMutation.isPending}
+                                                    className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/5 text-red-500/60 border border-white/10 transition-all hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/50 hover:scale-110 active:scale-95 duration-300 shadow-md"
+                                                    title="Devolver al Purgatorio (Reversión)"
+                                                >
+                                                    <RotateCcw className="h-4 w-4" />
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
 
@@ -316,16 +326,18 @@ const Vintage: React.FC = () => {
                                             >
                                                 <ExternalLink className="h-5 w-5" />
                                             </a>
-                                            <button
-                                                onClick={() => {
-                                                    if (confirm(`¿Desclasificar y devolver '${selectedProduct.name}' al Purgatorio?`)) {
-                                                        revertMutation.mutate(selectedProduct.offer_id);
-                                                    }
-                                                }}
-                                                className="flex h-12 px-5 items-center justify-center gap-2 rounded-2xl bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white transition-all text-xs font-black uppercase tracking-widest"
-                                            >
-                                                <RotateCcw className="h-4 w-4" /> Devolver al Purgatorio
-                                            </button>
+                                            {isAdmin && (
+                                                <button
+                                                    onClick={() => {
+                                                        if (confirm(`¿Desclasificar y devolver '${selectedProduct.name}' al Purgatorio?`)) {
+                                                            revertMutation.mutate(selectedProduct.offer_id);
+                                                        }
+                                                    }}
+                                                    className="flex h-12 px-5 items-center justify-center gap-2 rounded-2xl bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white transition-all text-xs font-black uppercase tracking-widest"
+                                                >
+                                                    <RotateCcw className="h-4 w-4" /> Devolver al Purgatorio
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

@@ -382,3 +382,52 @@ async def get_vintage_products():
 
         return output
 
+
+@router.delete("/api/products/{product_id}", dependencies=[Depends(verify_api_key)])
+async def delete_product(product_id: int):
+    from src.domain.models import OfferModel, PendingMatchModel, ProductAliasModel, ProductModel, VintageProductModel
+    
+    with SessionCloud() as db:
+        product = db.query(ProductModel).filter(ProductModel.id == product_id).first()
+        if not product:
+            raise HTTPException(status_code=404, detail="Producto no encontrado")
+            
+        product_name = product.name
+        
+        # 1. Obtener todas las ofertas vinculadas a este producto para devolverlas al Purgatorio
+        offers = db.query(OfferModel).filter(OfferModel.product_id == product.id).all()
+        for offer in offers:
+            purgatory_item = PendingMatchModel(
+                scraped_name=offer.product.name if offer.product else product_name,
+                ean=product.ean,
+                price=offer.price,
+                currency=offer.currency,
+                url=offer.url,
+                shop_name=offer.shop_name,
+                image_url=offer.image_url,
+                source_type=offer.source_type,
+                is_vintage=offer.is_vintage,
+                condition=offer.condition or "Loose",
+                grading=offer.grading or 7.5
+            )
+            db.add(purgatory_item)
+            
+            # Borrar alias de este item
+            db.query(ProductAliasModel).filter(ProductAliasModel.source_url == offer.url).delete()
+            
+        # 2. Borrar las ofertas del producto
+        db.query(OfferModel).filter(OfferModel.product_id == product.id).delete()
+        
+        # 3. Borrar de VintageProductModel si existía
+        db.query(VintageProductModel).filter(VintageProductModel.product_id == product.id).delete()
+        
+        # 4. Eliminar el producto genérico por completo de la base de datos
+        db.delete(product)
+        
+        db.commit()
+        return {
+            "status": "success", 
+            "message": f"Producto '{product_name}' eliminado de Eternia con éxito. {len(offers)} ofertas devueltas al Purgatorio."
+        }
+
+

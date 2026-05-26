@@ -11,6 +11,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { getProductPriceHistory } from '../api/products';
 import PriceHistoryChart from '../components/products/PriceHistoryChart';
+import { unlinkOffer, type Hero } from '../api/admin';
 
 const MarketStatCard: React.FC<{ title: string, value: number, type: 'retail' | 'p2p' }> = ({ title, value, type }) => {
     const { data: analytics, isLoading } = useQuery({
@@ -46,7 +47,11 @@ const MarketStatCard: React.FC<{ title: string, value: number, type: 'retail' | 
     );
 };
 
-const Auctions: React.FC = () => {
+interface AuctionsProps {
+    user?: Hero | null;
+}
+
+const Auctions: React.FC<AuctionsProps> = ({ user }) => {
     const queryClient = useQueryClient();
     const { addToCart } = useCart();
     const [selectedProduct, setSelectedProduct] = React.useState<Product | null>(null);
@@ -56,6 +61,8 @@ const Auctions: React.FC = () => {
     const [copiedId, setCopiedId] = React.useState<number | null>(null);
 
     const activeUserId = parseInt(localStorage.getItem('active_user_id') || '2');
+    const isAdmin = user?.role === 'admin' || user?.username === 'David';
+
 
     // 1. Fetch de productos con subastas activas
     const { data: products, isLoading: isLoadingProducts, isError: isErrorProducts } = useQuery<Product[]>({
@@ -71,6 +78,15 @@ const Auctions: React.FC = () => {
         queryKey: ['collection', activeUserId],
         queryFn: () => getCollection(activeUserId)
     });
+
+    const unlinkMutation = useMutation({
+        mutationFn: (offerId: number) => unlinkOffer(offerId),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['product-auction-offers', selectedProduct?.id] });
+            queryClient.invalidateQueries({ queryKey: ['auction-products'] });
+        }
+    });
+
 
     // 3. Fetch de ofertas de subasta del producto seleccionado
     const { data: productOffers, isLoading: isLoadingOffers } = useQuery<any[]>({
@@ -448,6 +464,20 @@ const Auctions: React.FC = () => {
                                                             )}
                                                         </div>
                                                         <div className="flex items-center gap-2">
+                                                            {isAdmin && (
+                                                                <button
+                                                                    onClick={() => {
+                                                                        if (confirm(`¿Arquitecto, está seguro de desterrar esta oferta de '${selectedProduct?.name}' al Purgatorio?`)) {
+                                                                            unlinkMutation.mutate(offer.id);
+                                                                        }
+                                                                    }}
+                                                                    disabled={unlinkMutation.isPending}
+                                                                    className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-all shadow-lg"
+                                                                    title="Desvincular y enviar al Purgatorio"
+                                                                >
+                                                                    {unlinkMutation.isPending ? <RefreshCw className="h-5 w-5 animate-spin" /> : <RefreshCw className="h-5 w-5" />}
+                                                                </button>
+                                                            )}
                                                             <button
                                                                 onClick={() => {
                                                                     navigator.clipboard.writeText(offer.url);

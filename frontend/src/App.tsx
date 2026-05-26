@@ -159,10 +159,10 @@ function App() {
             <div className="max-w-7xl mx-auto w-full">
               <ErrorBoundary>
                 {activeTab === 'dashboard' && <Dashboard user={currentUser} />}
-                {activeTab === 'catalog' && <Catalog searchQuery={searchQuery} />}
-                {activeTab === 'eternia' && <Catalog isVintageOnly={true} searchQuery={searchQuery} />}
-                {activeTab === 'auctions' && <Auctions />}
-                {activeTab === 'vintage' && <Vintage />}
+                {activeTab === 'catalog' && <Catalog user={currentUser} searchQuery={searchQuery} />}
+                {activeTab === 'eternia' && <Catalog user={currentUser} isVintageOnly={true} searchQuery={searchQuery} />}
+                {activeTab === 'auctions' && <Auctions user={currentUser} />}
+                {activeTab === 'vintage' && <Vintage user={currentUser} />}
                 {activeTab === 'collection' && <Collection searchQuery={searchQuery} />}
                 {activeTab === 'fortaleza_vintage' && <Collection isVintageOnly={true} searchQuery={searchQuery} />}
                 {activeTab === 'purgatory' && <Purgatory />}

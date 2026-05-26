@@ -21,26 +21,28 @@ import {
     ArrowUpRight,
     Gem,
     Search,
-    Box
+    Box,
+    Trash2
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { motion } from 'framer-motion';
 import { getCollection, toggleCollection } from '../api/collection';
 import type { Product } from '../api/collection';
-import { updateProduct, unlinkOffer } from '../api/admin';
+import { updateProduct, unlinkOffer, deleteProduct } from '../api/admin';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { getProductPriceHistory } from '../api/products';
 import PriceHistoryChart from '../components/products/PriceHistoryChart';
-import PowerSwordLoader from '../components/ui/PowerSwordLoader';
+import type { Hero } from '../api/admin';
 
 // Para desarrollo, usamos el ID de David
 interface CatalogProps {
     searchQuery?: string;
     isVintageOnly?: boolean;
+    user?: Hero | null;
 }
 
-const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintageOnly = false }) => {
+const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintageOnly = false, user }) => {
     const queryClient = useQueryClient();
     const { addToCart } = useCart();
     const [selectedProduct, setSelectedProduct] = React.useState<Product | null>(null);
@@ -50,7 +52,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
 
     // Contexto de Autenticación (Fase 8.2)
     const activeUserId = parseInt(localStorage.getItem('active_user_id') || '2');
-    const isAdmin = activeUserId === 1;
+    const isAdmin = user?.role === 'admin' || user?.username === 'David';
 
     // 1. Fetch de todos los productos
     const { data: products, isLoading: isLoadingProducts, isError: isErrorProducts } = useQuery<Product[]>({
@@ -176,6 +178,21 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['product-offers', selectedProduct?.id] });
             queryClient.invalidateQueries({ queryKey: ['products-with-offers'] });
+        }
+    });
+
+    const deleteProductMutation = useMutation({
+        mutationFn: (productId: number) => deleteProduct(productId),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['products', isVintageOnly] });
+            queryClient.invalidateQueries({ queryKey: ['vintage-products'] });
+            queryClient.invalidateQueries({ queryKey: ['purgatory'] });
+            queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+            setSelectedProduct(null);
+        },
+        onError: (err) => {
+            console.error('Error al eliminar de Eternia:', err);
+            alert('No se pudo eliminar el producto. Inténtelo de nuevo.');
         }
     });
 
@@ -648,12 +665,29 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                                     <p className="text-sm font-bold text-white/30 uppercase tracking-widest">{selectedProduct.name}</p>
                                 </div>
                             </div>
-                            <button
-                                onClick={() => setSelectedProduct(null)}
-                                className="h-10 w-10 flex items-center justify-center rounded-xl bg-white/5 text-white/40 hover:bg-red-500/20 hover:text-red-400 transition-all"
-                            >
-                                <span className="text-2xl">&times;</span>
-                            </button>
+                            <div className="flex items-center gap-2">
+                                {isAdmin && (
+                                    <button
+                                        onClick={() => {
+                                            if (confirm(`¿Arquitecto, está seguro de ELIMINAR por completo el producto genérico '${selectedProduct.name}' de Eternia? Todas las ofertas vinculadas serán devueltas de inmediato al Purgatorio.`)) {
+                                                deleteProductMutation.mutate(selectedProduct.id);
+                                            }
+                                        }}
+                                        disabled={deleteProductMutation.isPending}
+                                        className="h-10 px-4 flex items-center justify-center gap-2 rounded-xl bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500 hover:text-white transition-all text-xs font-black uppercase tracking-widest shadow-lg"
+                                        title="Eliminar producto de Eternia (Devolver ofertas al Purgatorio)"
+                                    >
+                                        {deleteProductMutation.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                                        <span className="hidden sm:inline">Eliminar de Eternia</span>
+                                    </button>
+                                )}
+                                <button
+                                    onClick={() => setSelectedProduct(null)}
+                                    className="h-10 w-10 flex items-center justify-center rounded-xl bg-white/5 text-white/40 hover:bg-red-500/20 hover:text-red-400 transition-all"
+                                >
+                                    <span className="text-2xl">&times;</span>
+                                </button>
+                            </div>
                         </div>
 
                         {/* Modal Body: Price List */}
