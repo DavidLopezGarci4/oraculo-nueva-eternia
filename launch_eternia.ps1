@@ -9,17 +9,45 @@ Write-Host "==========================================" -ForegroundColor Cyan
 Write-Host ""
 
 # 1. Limpieza de Puertos (Evita errores de 'Port in use')
-Write-Host "🧹 Paso 1: Limpiando puertos 8000 y 5173/5174..." -ForegroundColor Gray
+Write-Host "🧹 Paso 1: Limpiando puertos (8000, 3001, 5173, 5174)..." -ForegroundColor Gray
 $ports = @(8000, 3001, 5173, 5174)
 foreach ($port in $ports) {
+    $portReleased = $false
+    # Intento A: Get-NetTCPConnection (rápido, nativo de PowerShell)
     try {
         $procId = (Get-NetTCPConnection -LocalPort $port -ErrorAction SilentlyContinue).OwningProcess
         if ($procId) {
-            Stop-Process -Id $procId -Force
-            Write-Host "   - Puerto $port liberado." -ForegroundColor DarkGray
+            Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
+            Write-Host "   - Puerto $port liberado (Get-NetTCPConnection, PID: $procId)." -ForegroundColor DarkGray
+            $portReleased = $true
         }
     }
     catch {}
+
+    # Intento B: netstat -ano (fallback infalible ante falta de privilegios de Administrador)
+    if (-not $portReleased) {
+        try {
+            $netstat = netstat -ano
+            $pidsToKill = @()
+            foreach ($line in $netstat) {
+                # Buscamos líneas que indiquen LISTENING y que tengan el puerto (ej: :3001 o [::]:3001)
+                if ($line -match "LISTENING" -and $line -match ":$port\s+") {
+                    if ($line -match '\s+(\d+)\s*$') {
+                        $pidVal = [int]$Matches[1]
+                        if ($pidVal -and $pidVal -ne 0 -and $pidVal -notin $pidsToKill) {
+                            $pidsToKill += $pidVal
+                        }
+                    }
+                }
+            }
+            foreach ($pidVal in $pidsToKill) {
+                Stop-Process -Id $pidVal -Force -ErrorAction SilentlyContinue
+                Write-Host "   - Puerto $port liberado (netstat, PID: $pidVal)." -ForegroundColor DarkGray
+                $portReleased = $true
+            }
+        }
+        catch {}
+    }
 }
 
 # 2. Lanzar Backend (API Broker)
