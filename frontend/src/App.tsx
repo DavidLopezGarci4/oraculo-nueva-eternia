@@ -12,7 +12,6 @@ import Auctions from './pages/Auctions';
 import ShieldBypass from './components/ShieldBypass';
 import MasterLogin from './components/auth/MasterLogin';
 import LoginPage from './pages/LoginPage';
-import Vintage from './pages/Vintage';
 import { getUserSettings, type Hero } from './api/admin';
 import PowerSwordLoader from './components/ui/PowerSwordLoader';
 
@@ -162,7 +161,6 @@ function App() {
                 {activeTab === 'catalog' && <Catalog user={currentUser} searchQuery={searchQuery} />}
                 {activeTab === 'eternia' && <Catalog user={currentUser} isVintageOnly={true} searchQuery={searchQuery} />}
                 {activeTab === 'auctions' && <Auctions user={currentUser} />}
-                {activeTab === 'vintage' && <Vintage user={currentUser} />}
                 {activeTab === 'collection' && <Collection user={currentUser} searchQuery={searchQuery} />}
                 {activeTab === 'fortaleza_vintage' && <Collection user={currentUser} isVintageOnly={true} searchQuery={searchQuery} />}
                 {activeTab === 'purgatory' && <Purgatory />}

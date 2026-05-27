@@ -1,5 +1,5 @@
 
-import { LayoutDashboard, Database, Box, ShieldAlert, Settings, LogOut, X, Gavel, History } from 'lucide-react';
+import { LayoutDashboard, Database, Box, ShieldAlert, Settings, LogOut, X, Gavel } from 'lucide-react';
 import masterRoleImg from '../../assets/role-master.png';
 import guardianRoleImg from '../../assets/role-guardian.png';
 
@@ -15,17 +15,22 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen, onCloseMobile, user, onLogout }) => {
-    const isAdmin = user?.role === 'admin';
+    const isAdmin = user?.role === 'admin' || user?.username === 'David';
 
-    const menuItems = [
+    const globalItems = [
         { id: 'dashboard', label: 'Tablero', icon: LayoutDashboard },
         { id: 'collection', label: 'Mi Fortaleza', icon: Box },
+    ];
+
+    const originsItems = [
         { id: 'catalog', label: 'Nueva Eternia', icon: Database },
+        { id: 'auctions', label: 'El Pabellón', icon: Gavel },
+        ...(isAdmin ? [{ id: 'purgatory', label: 'Purgatorio', icon: ShieldAlert }] : []),
+    ];
+
+    const vintageItems = [
         { id: 'fortaleza_vintage', label: 'Mi Fortaleza Vintage', icon: Box },
         { id: 'eternia', label: 'Eternia', icon: Database },
-        { id: 'auctions', label: 'El Pabellón', icon: Gavel },
-        { id: 'vintage', label: 'Pabellón Vintage', icon: History },
-        ...(isAdmin ? [{ id: 'purgatory', label: 'Purgatorio', icon: ShieldAlert }] : []),
     ];
 
     // Clases base para el sidebar
@@ -50,16 +55,16 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen
                 {/* Logo & Close Button */}
                 <div className="flex h-16 items-center justify-between border-b border-glass-border px-6">
                     <div className="flex items-center gap-3">
-                        <div className={`h-9 w-9 rounded-xl overflow-hidden border bg-black/40 transition-all ${['eternia', 'fortaleza_vintage', 'vintage'].includes(activeTab) ? 'border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.3)]' : 'border-white/20 shadow-[0_0_15px_rgba(14,165,233,0.3)]'}`}>
+                        <div className={`h-9 w-9 rounded-xl overflow-hidden border bg-black/40 transition-all ${['eternia', 'fortaleza_vintage'].includes(activeTab) ? 'border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.3)]' : 'border-white/20 shadow-[0_0_15px_rgba(14,165,233,0.3)]'}`}>
                             <img
-                                src={user?.role === 'admin' ? masterRoleImg : guardianRoleImg}
+                                src={(user?.role === 'admin' || user?.username === 'David') ? masterRoleImg : guardianRoleImg}
                                 alt="Role Logo"
                                 className="h-full w-full object-cover"
                             />
                         </div>
                         <div className="flex flex-col">
                             <h1 className="text-sm font-black tracking-tighter text-white leading-none">ORÁCULO</h1>
-                            {['eternia', 'fortaleza_vintage', 'vintage'].includes(activeTab) ? (
+                            {['eternia', 'fortaleza_vintage'].includes(activeTab) ? (
                                 <span className="text-[8px] font-black text-amber-500 uppercase tracking-[0.2em] mt-1 drop-shadow-[0_0_8px_rgba(245,158,11,0.4)]">ETERNIA VINTAGE</span>
                             ) : (
                                 <span className="text-[8px] font-black text-brand-primary uppercase tracking-[0.2em] mt-1">NUEVA ETERNIA</span>
@@ -76,29 +81,87 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen
                 </div>
 
                 {/* Navigation */}
-                <nav className="flex-1 space-y-2 p-4 pt-8 overflow-y-auto">
-                    {menuItems.map((item) => {
-                        const isVintageItem = ['eternia', 'fortaleza_vintage', 'vintage'].includes(item.id);
-                        const isActive = activeTab === item.id;
-                        return (
-                            <button
-                                key={item.id}
-                                onClick={() => {
-                                    setActiveTab(item.id);
-                                    onCloseMobile(); // Cerrar drawer al navegar en móvil
-                                }}
-                                className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all ${isActive
-                                    ? (isVintageItem
-                                        ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.15)]'
-                                        : 'bg-brand-primary/20 text-brand-primary border border-brand-primary/30 shadow-[0_0_15px_rgba(14,165,233,0.1)]')
-                                    : 'text-white/50 hover:bg-white/5 hover:text-white'
-                                    }`}
-                            >
-                                <item.icon className={`h-5 w-5 ${isActive ? 'animate-pulse' : ''}`} />
-                                {item.label}
-                            </button>
-                        );
-                    })}
+                <nav className="flex-1 space-y-5 p-4 pt-6 overflow-y-auto custom-scrollbar">
+                    {/* Sección Global */}
+                    <div className="space-y-1">
+                        {globalItems.map((item) => {
+                            const isActive = activeTab === item.id;
+                            return (
+                                <button
+                                    key={item.id}
+                                    onClick={() => {
+                                        setActiveTab(item.id);
+                                        onCloseMobile();
+                                    }}
+                                    className={`flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition-all ${isActive
+                                        ? 'bg-white/10 text-white border border-white/20 shadow-[0_0_15px_rgba(255,255,255,0.05)]'
+                                        : 'text-white/50 hover:bg-white/5 hover:text-white'
+                                        }`}
+                                >
+                                    <item.icon className={`h-4.5 w-4.5 ${isActive ? 'animate-pulse' : ''}`} />
+                                    {item.label}
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    {/* Sección Nueva Eternia (Origins - Halo Azul) */}
+                    <div className="space-y-2">
+                        <div className="text-[9px] font-black uppercase tracking-[0.2em] text-brand-primary/50 px-2 flex items-center gap-1.5">
+                            <div className="h-1.5 w-1.5 rounded-full bg-brand-primary animate-pulse"></div>
+                            NUEVA ETERNIA
+                        </div>
+                        <div className="rounded-2xl border border-brand-primary/10 bg-brand-primary/[0.02] p-1.5 space-y-1 shadow-[0_0_15px_rgba(14,165,233,0.01)]">
+                            {originsItems.map((item) => {
+                                const isActive = activeTab === item.id;
+                                return (
+                                    <button
+                                        key={item.id}
+                                        onClick={() => {
+                                            setActiveTab(item.id);
+                                            onCloseMobile();
+                                        }}
+                                        className={`flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition-all ${isActive
+                                            ? 'bg-brand-primary/20 text-brand-primary border border-brand-primary/35 shadow-[0_0_15px_rgba(14,165,233,0.1)]'
+                                            : 'text-white/50 hover:bg-white/5 hover:text-white'
+                                            }`}
+                                    >
+                                        <item.icon className={`h-4.5 w-4.5 ${isActive ? 'animate-pulse' : ''}`} />
+                                        {item.label}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Sección Eternia Vintage (Vintage - Halo de Oro) */}
+                    <div className="space-y-2">
+                        <div className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-500/50 px-2 flex items-center gap-1.5">
+                            <div className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></div>
+                            ETERNIA VINTAGE
+                        </div>
+                        <div className="rounded-2xl border border-amber-500/10 bg-amber-500/[0.02] p-1.5 space-y-1 shadow-[0_0_15px_rgba(245,158,11,0.01)]">
+                            {vintageItems.map((item) => {
+                                const isActive = activeTab === item.id;
+                                return (
+                                    <button
+                                        key={item.id}
+                                        onClick={() => {
+                                            setActiveTab(item.id);
+                                            onCloseMobile();
+                                        }}
+                                        className={`flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition-all ${isActive
+                                            ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.15)]'
+                                            : 'text-white/50 hover:bg-white/5 hover:text-white'
+                                            }`}
+                                    >
+                                        <item.icon className={`h-4.5 w-4.5 ${isActive ? 'animate-pulse' : ''}`} />
+                                        {item.label}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
                 </nav>
 
                 {/* Footer */}
