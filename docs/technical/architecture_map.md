@@ -153,7 +153,7 @@ Ejecutar: `python -m pytest tests/test_api_*.py -v` (25 tests, 0 fallos)
   - Corregido el bug de auto-promoción a vintage en match_purgatory respetando estrictamente product.is_vintage.
   - Segregación estricta de Drawer y Modal en Purgatorio.tsx con sugerencias vintage inteligentes (vintageOracleSuggestions).
   - Implementación de conteo en memoria optimizado con token index (get_purgatory_counts) para inyectar purgatory_match_count en API de productos.
-  - Ordenación diferencial en Eternia Vintage: de mayor a menor ofertas pendientes en Purgatorio, con fallback ascendente por ID de base de datos.
+  - Ordenación jerárquica en Eternia Vintage: 1º prioridad de ofertas activas, 2º cantidad de ofertas pendientes en Purgatorio (descendente), y 3º fallback por ID de base de datos (ascendente).
 
 ---
 

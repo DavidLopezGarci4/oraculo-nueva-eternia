@@ -293,6 +293,12 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
             })
             .sort((a, b) => {
                 if (isVintageOnly) {
+                    const hasOfferA = (a.best_p2p_price && a.best_p2p_price > 0) || hasMarketIntel(a.id) ? 1 : 0;
+                    const hasOfferB = (b.best_p2p_price && b.best_p2p_price > 0) || hasMarketIntel(b.id) ? 1 : 0;
+                    if (hasOfferA !== hasOfferB) {
+                        return hasOfferB - hasOfferA; // Los que tienen ofertas activas en el catálogo van primero
+                    }
+
                     const countA = a.purgatory_match_count || 0;
                     const countB = b.purgatory_match_count || 0;
                     if (countA !== countB) {
@@ -356,7 +362,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                 const idB = parseInt(b.figure_id?.replace(/[^0-9]/g, '') || '99999');
                 return idA - idB;
             });
-    }, [products, searchQuery, subCatStats, isOwned, isWished, isGrail, isVintageOnly]);
+    }, [products, searchQuery, subCatStats, isOwned, isWished, isGrail, isVintageOnly, productsWithOffers]);
 
     if (isLoadingProducts || isLoadingCollection) {
         return <PowerSwordLoader variant="fullScreen" text="Invocando el Catálogo Maestro..." />;
