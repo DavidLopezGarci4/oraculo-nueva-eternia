@@ -59,7 +59,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
 
     // Contexto de Autenticación (Fase 8.2)
     const activeUserId = parseInt(localStorage.getItem('active_user_id') || '2');
-    const isAdmin = user?.role === 'admin' || user?.username === 'David';
+    const isAdmin = user?.role?.toLowerCase() === 'admin' || user?.username?.toLowerCase() === 'david';
 
     const handleTriggerVintageSync = async () => {
         setShowVintageSyncModal(true);
@@ -80,8 +80,8 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
 
         let intervalId = setInterval(async () => {
             try {
-                const response = await axios.get('/api/scrapers/logs');
-                const logs = response.data as any[];
+                const { getScrapersLogs } = await import('../api/admin');
+                const logs = await getScrapersLogs() as any[];
                 const vintageLog = logs.find(log => log.spider_name === "NexusVintage");
                 if (vintageLog) {
                     setVintageSyncLogs(vintageLog.logs || "Procesando...");
