@@ -353,8 +353,10 @@ const Purgatory: React.FC = React.memo(() => {
 
 
     const filteredProducts = (products || [])?.filter((p: any) =>
-        (p.name || "").toLowerCase().includes((manualSearchTerm || "").toLowerCase()) ||
-        (p.figure_id || "").toLowerCase().includes((manualSearchTerm || "").toLowerCase())
+        !p.is_vintage && (
+            (p.name || "").toLowerCase().includes((manualSearchTerm || "").toLowerCase()) ||
+            (p.figure_id || "").toLowerCase().includes((manualSearchTerm || "").toLowerCase())
+        )
     ).slice(0, 20);
 
     const handleInputChange = (val: string) => {
@@ -367,12 +369,22 @@ const Purgatory: React.FC = React.memo(() => {
         }
     };
 
-    const filteredSuggestions = (vintageProducts || []).filter((p: any) => {
-        if (!vintageCustomName.trim()) {
-            return true;
-        }
-        return p.name.toLowerCase().includes(vintageCustomName.toLowerCase());
-    }).slice(0, 5);
+    const selectedVintagePendingItem = (pendingItems || []).find((i: any) => i.id === vintageModalItemId);
+    const vintageOracleSuggestions = selectedVintagePendingItem?.suggestions?.filter((sug: any) => sug.is_vintage === true) || [];
+
+    const vintageModalSuggestionsToDisplay = vintageCustomName.trim()
+        ? (vintageProducts || []).filter((p: any) => p.name.toLowerCase().includes(vintageCustomName.toLowerCase())).slice(0, 5)
+        : (vintageOracleSuggestions.length > 0
+            ? vintageOracleSuggestions.map((sug: any) => ({
+                id: sug.product_id,
+                name: sug.name,
+                figure_id: sug.figure_id,
+                sub_category: sug.sub_category,
+                reason: sug.reason,
+                match_score: sug.match_score
+            }))
+            : (vintageProducts || []).slice(0, 5)
+        );
 
     // Dynamic Filter for Pending Items (Main List)
     const pendingIdsToHide = new Set(pendingActions.flatMap(a => a.pendingIds));
@@ -722,7 +734,7 @@ const Purgatory: React.FC = React.memo(() => {
                                         <div className="max-w-4xl mx-auto space-y-8">
 
                                             {/* Section 1: Oracle Suggestions (The Main Banner) */}
-                                            {item.suggestions && item.suggestions.length > 0 && !manualSearchTerm && (
+                                            {item.suggestions && item.suggestions.filter((sug: any) => !sug.is_vintage).length > 0 && !manualSearchTerm && (
                                                 <div className="space-y-4">
                                                     <div className="flex items-center gap-3">
                                                         <div className="h-8 w-8 rounded-full bg-brand-primary/20 flex items-center justify-center animate-pulse">
@@ -735,7 +747,7 @@ const Purgatory: React.FC = React.memo(() => {
                                                     </div>
 
                                                     <div className="grid grid-cols-1 gap-3">
-                                                        {item.suggestions.map((sug: any) => (
+                                                        {item.suggestions.filter((sug: any) => !sug.is_vintage).map((sug: any) => (
                                                             <div key={sug.product_id} className="group/btn relative flex items-center gap-4 overflow-hidden rounded-2xl border border-brand-primary/20 bg-brand-primary/5 p-4 text-left transition-all hover:border-brand-primary hover:bg-brand-primary/10">
 
                                                                 <div className="flex-1 min-w-0">
@@ -1119,8 +1131,8 @@ const Purgatory: React.FC = React.memo(() => {
                                 </span>
 
                                 <div className="space-y-2">
-                                    {filteredSuggestions.length > 0 ? (
-                                        filteredSuggestions.map((p: any) => (
+                                    {vintageModalSuggestionsToDisplay.length > 0 ? (
+                                        vintageModalSuggestionsToDisplay.map((p: any) => (
                                             <div
                                                 key={p.id}
                                                 className={`flex items-center justify-between gap-3 p-3 rounded-xl border transition-all text-left ${
@@ -1132,6 +1144,11 @@ const Purgatory: React.FC = React.memo(() => {
                                                 <div className="min-w-0 flex-1">
                                                     <span className="text-[8px] font-bold text-amber-500/50 uppercase tracking-widest">{p.sub_category || 'Vintage 80s'}</span>
                                                     <h5 className="text-xs font-black text-white truncate leading-tight mt-0.5">{p.name}</h5>
+                                                    {p.reason && (
+                                                        <span className="px-1 py-0.5 rounded bg-amber-500/20 text-[7px] font-black text-amber-400 uppercase tracking-tighter mr-1">
+                                                            {p.reason.toUpperCase()}
+                                                        </span>
+                                                    )}
                                                     <span className="text-[8px] font-mono text-white/30 uppercase">ID: #{p.figure_id}</span>
                                                 </div>
                                                 <div className="flex items-center gap-1.5 shrink-0">
@@ -1144,7 +1161,7 @@ const Purgatory: React.FC = React.memo(() => {
                                                         className={`px-2.5 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-wider transition-all border ${
                                                             selectedVintageProductId === p.id 
                                                                 ? 'bg-amber-500 text-black border-amber-400'
-                                                                : 'bg-white/5 border-white/5 text-white/50 hover:bg-white/10'
+                                                                 : 'bg-white/5 border-white/5 text-white/50 hover:bg-white/10'
                                                         }`}
                                                     >
                                                         {selectedVintageProductId === p.id ? 'Seleccionado' : 'Seleccionar'}
@@ -1176,7 +1193,7 @@ const Purgatory: React.FC = React.memo(() => {
                             </div>
 
                             {/* Create custom item button option */}
-                            {vintageCustomName.trim() && !filteredSuggestions.some((p: any) => p.name.toLowerCase() === vintageCustomName.trim().toLowerCase()) && (
+                            {vintageCustomName.trim() && !vintageModalSuggestionsToDisplay.some((p: any) => p.name.toLowerCase() === vintageCustomName.trim().toLowerCase()) && (
                                 <div className="rounded-2xl border border-dashed border-amber-500/20 bg-amber-500/[0.02] p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
                                     <div className="min-w-0 flex-1">
                                         <span className="text-[8px] font-black text-amber-500 uppercase tracking-widest">Nueva Reliquia Vintage</span>

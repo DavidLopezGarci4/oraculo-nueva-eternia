@@ -99,6 +99,7 @@ async def get_purgatory(page: int = 1, limit: int = 500):
                             "name": p.name,
                             "figure_id": p.figure_id,
                             "sub_category": p.sub_category,
+                            "is_vintage": p.is_vintage,
                             "match_score": round(score * 100, 1),
                             "reason": reason,
                         })
@@ -159,10 +160,8 @@ async def match_purgatory(request: PurgatoryMatchRequest):
             fresh_score = DealScorer.calculate_score(product, landed_p, is_wish)
 
             # Check if this item is vintage automatically or manually
-            from src.core.vintage_utils import check_is_vintage
-            is_v = check_is_vintage(item.scraped_name) or check_is_vintage(product.name) or bool(item.is_vintage)
+            is_v = bool(product.is_vintage)
             if is_v:
-                product.is_vintage = True
                 from src.domain.models import VintageProductModel
                 exists_v = db.query(VintageProductModel).filter(VintageProductModel.product_id == product.id).first()
                 if not exists_v:
