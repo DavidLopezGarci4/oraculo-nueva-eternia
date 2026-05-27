@@ -273,11 +273,6 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
         });
         return stats;
     }, [products, collectionMap]);
-
-    if (isLoadingProducts || isLoadingCollection) {
-        return <PowerSwordLoader variant="fullScreen" text="Invocando el Catálogo Maestro..." />;
-    }
-
     // 8. Lógica de Ordenación Híbrida (VEC3/Hunting List)
     const sortedProducts = React.useMemo(() => {
         if (!products) return [];
@@ -353,6 +348,10 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                 return idA - idB;
             });
     }, [products, searchQuery, subCatStats, isOwned, isWished, isGrail]);
+
+    if (isLoadingProducts || isLoadingCollection) {
+        return <PowerSwordLoader variant="fullScreen" text="Invocando el Catálogo Maestro..." />;
+    }
 
     const getSentimentBadge = (product: Product) => {
         const momentum = product.market_momentum || 1.0;

@@ -52,7 +52,7 @@ foreach ($port in $ports) {
 
 # 2. Lanzar Backend (API Broker)
 Write-Host "📡 Paso 2: Iniciando API Broker (Backend) en nueva ventana..." -ForegroundColor Yellow
-$BackendCmd = "`$Host.UI.RawUI.WindowTitle = 'ORACULO - BACKEND (API)'; Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass; `$env:PYTHONPATH='.;.3ox'; .venv\Scripts\python src/interfaces/api/main.py"
+$BackendCmd = "`$Host.UI.RawUI.WindowTitle = 'ORACULO - BACKEND (API)'; Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass; .venv\Scripts\python -m src.interfaces.api.main"
 Start-Process powershell -ArgumentList "-ExecutionPolicy", "Bypass", "-NoExit", "-Command", $BackendCmd -WorkingDirectory $PSScriptRoot
 
 # 3. Lanzar Frontend (Vite)
