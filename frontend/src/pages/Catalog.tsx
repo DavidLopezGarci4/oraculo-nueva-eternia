@@ -34,6 +34,8 @@ import { es } from 'date-fns/locale';
 import { getProductPriceHistory } from '../api/products';
 import PriceHistoryChart from '../components/products/PriceHistoryChart';
 import type { Hero } from '../api/admin';
+import PowerSwordLoader from '../components/ui/PowerSwordLoader';
+
 
 // Para desarrollo, usamos el ID de David
 interface CatalogProps {
