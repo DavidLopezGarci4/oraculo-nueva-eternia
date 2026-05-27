@@ -392,6 +392,16 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
 
 ---
 
+- [x] **Phase 61: Segregación Estricta y Ordenación Inteligente del Purgatorio (27/05/2026)**
+  - [x] **Clasificación Segregada Limpia**: Reclasificadas las figuras modernas duplicadas como `Skeletor (Vintage Sculpt)` y `Skeletor (200x)` a `is_vintage = False`, reubicando de forma atómica e instantánea las existencias de los usuarios a **Mi Fortaleza** (Moderno).
+  - [x] **Blindaje del Motor de Purgatorio (Backend)**: Eliminado el bug de auto-promoción recursiva en la vinculación estándar moderna (`match_purgatory`). El backend ahora preserva de forma inmutable el estado `is_vintage` definido originalmente para el producto.
+  - [x] **Aislamiento de Vincular en Nueva Eternia y Eternia Vintage**:
+    * *Drawer Moderno:* Filtrado de búsquedas manuales y sugerencias del Oráculo para mostrar estrictamente productos con `!is_vintage`.
+    * *Modal Vintage:* Implementación del algoritmo inteligente `vintageOracleSuggestions` que filtra por `is_vintage === true`, y fallback a listado puro de `/api/products?is_vintage=true`.
+  - [x] **Ordenación Dinámica e Inteligente**: Modificado el catálogo de **Eternia Vintage** para ordenar los muñecos de forma descendente según el volumen de ofertas acumuladas en el Purgatorio esperando vinculación, con fallback ascendente por ID interno de base de datos para los empates.
+
+---
+
 ## ✅ Plan de Verificación
 
 1. **Integridad de Datos**: Scripts de validación de catálogo post-migración.

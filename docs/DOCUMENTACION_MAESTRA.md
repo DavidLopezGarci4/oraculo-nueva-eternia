@@ -316,3 +316,24 @@ cd ~/oraculo-nueva-eternia && git pull origin main && sudo docker compose -f doc
 Usa este comando si el git pull falla o quieres limpiar el servidor y forzar la versión de GitHub:
 
 cd ~/oraculo-nueva-eternia && git reset --hard origin/main && git pull origin main && sudo docker compose -f docker-compose.prod.yml up -d --build
+
+---
+
+## 10. Segregación de Catálogos e Inteligencia Retro (Eternia Vintage)
+
+El Oráculo ahora cuenta con una arquitectura de catálogos e inventario estrictamente segregados mediante la bandera lógica `is_vintage` a nivel de base de datos y API:
+
+### 10.1 Estructura Relacional y Aislamiento de Datos
+* **Segregación Física/Lógica:** Las figuras y ofertas de **Eternia Vintage (Clásicos de los 80)** se diferencian estrictamente de **Nueva Eternia (Origins/Moderna)** mediante la bandera `is_vintage` en la tabla `products` y `offers`.
+* **Aislamiento en Posesiones:** Las posesiones de colección del usuario se dividen entre "Mi Fortaleza" (Nueva Eternia) y "Mi Fortaleza Vintage" (Eternia). Cualquier cambio en la catalogación de una figura (por ejemplo, correcciones de catalogaciones erróneas) migra de forma atómica e instantánea las posesiones de los usuarios al santuario correcto.
+
+### 10.2 Flujos del Purgatorio Blindados (Anti-Regresión)
+* **Match Estándar (Moderna):** Se eliminó la auto-promoción a vintage basada en análisis de texto sobre productos existentes. Al vincular ofertas en el drawer moderno de Nueva Eternia, el backend respeta de forma inmutable el estado `is_vintage` pre-definido en el catálogo por el Arquitecto, erradicando falsos positivos en figuras con palabras descriptivas como `"Skeletor (Vintage Sculpt)"`.
+* **Segregación de Buscadores en Caliente:**
+  * *Vincular de Nueva Eternia:* Tanto el buscador manual como el motor de coincidencia del Oráculo filtran estrictamente por `!is_vintage`.
+  * *Vincular de Eternia:* Se implementó un algoritmo inteligente de sugerencias vintage (`vintageOracleSuggestions`) que filtra sugerencias por `is_vintage === true`, con un fallback reactivo al catálogo general vintage consultado desde `/api/products?is_vintage=true`.
+
+### 10.3 Algoritmo de Ordenación Híbrida Retro (Eternia)
+El catálogo de **Eternia Vintage** utiliza un ordenamiento diferencial enfocado en la priorización de compras y purificación:
+1. **Prioridad por Purgatorio (Match Conteo):** Las figuras se ordenan de forma descendente en base a la cantidad de ofertas pendientes acumuladas en el Purgatorio que sugieren dicho muñeco. Esto permite visualizar inmediatamente qué figuras tienen más oportunidades activas en el mercado secundario.
+2. **Fallback por ID de Base de Datos:** En caso de empate en el número de ofertas (por ejemplo, figuras con 0 coincidencias), se ordenan de menor a mayor por su ID numérico en base de datos (`a.id - b.id`), priorizando las piezas fundacionales del catálogo original.
