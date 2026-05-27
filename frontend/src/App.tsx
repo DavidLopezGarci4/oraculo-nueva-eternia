@@ -82,10 +82,13 @@ function App() {
   };
 
   useEffect(() => {
-    if (currentUser && currentUser.role !== 'admin') {
-      const restrictedTabs = ['purgatory'];
-      if (restrictedTabs.includes(activeTab)) {
-        setActiveTab('dashboard');
+    if (currentUser) {
+      const isAdmin = currentUser.role === 'admin' || currentUser.username === 'David';
+      if (!isAdmin) {
+        const restrictedTabs = ['purgatory'];
+        if (restrictedTabs.includes(activeTab)) {
+          setActiveTab('dashboard');
+        }
       }
     }
   }, [currentUser, activeTab]);
