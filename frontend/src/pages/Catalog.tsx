@@ -398,21 +398,6 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
         );
     }
 
-    if (!products || products.length === 0) {
-        return (
-            <div className="flex flex-col items-center justify-center p-20 text-white/20 space-y-4">
-                <Package className="h-16 w-16 opacity-20" />
-                <p className="text-xl font-black uppercase tracking-widest">El Oráculo está vacío...</p>
-                <p className="text-[10px] font-bold uppercase tracking-widest opacity-40">
-                    {isVintageOnly 
-                        ? "No hay reliquias registradas en Eternia todavía." 
-                        : "No hay reliquias registradas en Nueva Eternia todavía."
-                    }
-                </p>
-            </div>
-        );
-    }
-
     return (
         <div className="space-y-2 md:space-y-3 animate-in fade-in duration-1000">
             {/* Header / Search Area */}
@@ -461,8 +446,20 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                 </div>
             </div>
 
-            {/* Grid */}
-            <div className="grid grid-cols-2 gap-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4 landscape:grid-cols-3">
+            {/* Grid / Empty State */}
+            {!products || products.length === 0 ? (
+                <div className="flex flex-col items-center justify-center p-20 text-white/20 space-y-4 rounded-[2.5rem] border border-white/5 bg-black/20 backdrop-blur-md">
+                    <Package className="h-16 w-16 opacity-20" />
+                    <p className="text-xl font-black uppercase tracking-widest text-white/60">El Oráculo está vacío...</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest opacity-40">
+                        {isVintageOnly 
+                            ? "No hay reliquias registradas en Eternia todavía." 
+                            : "No hay reliquias registradas en Nueva Eternia todavía."
+                        }
+                    </p>
+                </div>
+            ) : (
+                <div className="grid grid-cols-2 gap-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4 landscape:grid-cols-3">
                 {sortedProducts?.map((product) => {
                     const owned = isOwned(product.id);
                     const wished = isWished(product.id);
@@ -702,6 +699,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                     );
                 })}
             </div>
+            )}
 
             {/* PRODUCT DETAIL MODAL (OFFERS) */}
             {selectedProduct && (
