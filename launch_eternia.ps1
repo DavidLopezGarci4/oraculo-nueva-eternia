@@ -24,13 +24,13 @@ foreach ($port in $ports) {
 
 # 2. Lanzar Backend (API Broker)
 Write-Host "📡 Paso 2: Iniciando API Broker (Backend) en nueva ventana..." -ForegroundColor Yellow
-$BackendCmd = "`$Host.UI.RawUI.WindowTitle = 'ORACULO - BACKEND (API)'; `$env:PYTHONPATH='.;.3ox'; .venv\Scripts\python src/interfaces/api/main.py"
-Start-Process powershell -ArgumentList "-NoExit", "-Command", $BackendCmd -WorkingDirectory $PSScriptRoot
+$BackendCmd = "`$Host.UI.RawUI.WindowTitle = 'ORACULO - BACKEND (API)'; Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass; `$env:PYTHONPATH='.;.3ox'; .venv\Scripts\python src/interfaces/api/main.py"
+Start-Process powershell -ArgumentList "-ExecutionPolicy", "Bypass", "-NoExit", "-Command", $BackendCmd -WorkingDirectory $PSScriptRoot
 
 # 3. Lanzar Frontend (Vite)
 Write-Host "🎨 Paso 3: Iniciando Tablero React (Frontend) en nueva ventana..." -ForegroundColor Green
 $FrontendCmd = "`$Host.UI.RawUI.WindowTitle = 'ORACULO - FRONTEND (UX)'; Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass; cd frontend; npm run dev"
-Start-Process powershell -ArgumentList "-NoExit", "-Command", $FrontendCmd -WorkingDirectory $PSScriptRoot
+Start-Process powershell -ArgumentList "-ExecutionPolicy", "Bypass", "-NoExit", "-Command", $FrontendCmd -WorkingDirectory $PSScriptRoot
 
 Write-Host ""
 Write-Host "🚀 ¡TODO EN MARCHA!" -ForegroundColor Cyan
