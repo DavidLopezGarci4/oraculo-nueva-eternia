@@ -52,9 +52,56 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
     const [historyProductId, setHistoryProductId] = React.useState<number | null>(null);
     const [expandedImage, setExpandedImage] = React.useState<string | null>(null);
 
+    // Vintage Sync Telemetry states
+    const [showVintageSyncModal, setShowVintageSyncModal] = React.useState(false);
+    const [vintageSyncLogs, setVintageSyncLogs] = React.useState<string>("");
+    const [vintageSyncStatus, setVintageSyncStatus] = React.useState<string>("idle");
+
     // Contexto de Autenticación (Fase 8.2)
     const activeUserId = parseInt(localStorage.getItem('active_user_id') || '2');
     const isAdmin = user?.role === 'admin' || user?.username === 'David';
+
+    const handleTriggerVintageSync = async () => {
+        setShowVintageSyncModal(true);
+        setVintageSyncStatus("running");
+        setVintageSyncLogs("🚀 Iniciando conexión con el Oráculo Vintage...\n⌛ Esperando respuesta del servidor...");
+        try {
+            const { syncNexusVintage } = await import('../api/admin');
+            await syncNexusVintage();
+        } catch (err: any) {
+            console.error(err);
+            setVintageSyncLogs(prev => prev + `\n❌ Error al iniciar sincronización: ${err.message || err}`);
+            setVintageSyncStatus("error");
+        }
+    };
+
+    React.useEffect(() => {
+        if (!showVintageSyncModal || vintageSyncStatus !== "running") return;
+
+        let intervalId = setInterval(async () => {
+            try {
+                const response = await axios.get('/api/scrapers/logs');
+                const logs = response.data as any[];
+                const vintageLog = logs.find(log => log.spider_name === "NexusVintage");
+                if (vintageLog) {
+                    setVintageSyncLogs(vintageLog.logs || "Procesando...");
+                    if (vintageLog.status === "success") {
+                        setVintageSyncStatus("completed");
+                        clearInterval(intervalId);
+                        queryClient.invalidateQueries({ queryKey: ['products', isVintageOnly] });
+                    } else if (vintageLog.status === "error") {
+                        setVintageSyncStatus("error");
+                        clearInterval(intervalId);
+                    }
+                }
+            } catch (err) {
+                console.error("Error fetching live vintage logs:", err);
+            }
+        }, 2000);
+
+        return () => clearInterval(intervalId);
+    }, [showVintageSyncModal, vintageSyncStatus, queryClient, isVintageOnly]);
+
 
     // 1. Fetch de todos los productos
     const { data: products, isLoading: isLoadingProducts, isError: isErrorProducts } = useQuery<Product[]>({
@@ -394,11 +441,24 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                         </p>
                     </div>
 
-                    <div className="flex items-center gap-2 md:gap-3 rounded-xl md:rounded-2xl bg-white/5 px-4 py-2 border border-white/10 backdrop-blur-xl w-fit xl:w-auto">
-                        <Package className={`h-4 w-4 md:h-5 md:w-5 ${isVintageOnly ? 'text-amber-500' : 'text-brand-primary'}`} />
-                        <span className="text-xl md:text-2xl font-black text-white">{products?.length}</span>
-                        <span className="text-[8px] md:text-[10px] font-black text-white/20 uppercase tracking-[0.2em] pt-1">Modelos Purificados</span>
+                    <div className="flex items-center gap-3">
+                        {isVintageOnly && isAdmin && (
+                            <button
+                                onClick={handleTriggerVintageSync}
+                                className="flex items-center gap-2 rounded-xl md:rounded-2xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 font-bold uppercase tracking-wider text-[10px] md:text-xs px-4 py-2.5 border border-amber-500/30 transition-all duration-300 shadow-[0_0_15px_-5px_rgba(245,158,11,0.3)] hover:shadow-[0_0_20px_-2px_rgba(245,158,11,0.5)] cursor-pointer"
+                            >
+                                <RefreshCw className={`h-3.5 w-3.5 ${vintageSyncStatus === 'running' ? 'animate-spin' : ''}`} />
+                                <span>Sincronizar Catálogo Vintage</span>
+                            </button>
+                        )}
+                        
+                        <div className="flex items-center gap-2 md:gap-3 rounded-xl md:rounded-2xl bg-white/5 px-4 py-2 border border-white/10 backdrop-blur-xl w-fit xl:w-auto">
+                            <Package className={`h-4 w-4 md:h-5 md:w-5 ${isVintageOnly ? 'text-amber-500' : 'text-brand-primary'}`} />
+                            <span className="text-xl md:text-2xl font-black text-white">{products?.length}</span>
+                            <span className="text-[8px] md:text-[10px] font-black text-white/20 uppercase tracking-[0.2em] pt-1">Modelos Purificados</span>
+                        </div>
                     </div>
+
                 </div>
             </div>
 
@@ -648,14 +708,19 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
             {selectedProduct && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl animate-in fade-in duration-300">
                     <div
-                        className="relative w-full max-w-4xl max-h-[90vh] overflow-hidden rounded-[3rem] border border-white/10 bg-[#0A0A0B] shadow-[0_50px_100px_-20px_rgba(0,0,0,1)] flex flex-col"
+                        className={`relative w-full max-w-4xl max-h-[90vh] overflow-hidden rounded-[3rem] border bg-[#0A0A0B] shadow-[0_50px_100px_-20px_rgba(0,0,0,1)] flex flex-col ${isVintageOnly ? 'border-amber-500/20' : 'border-white/10'}`}
                         onClick={(e) => e.stopPropagation()}
                     >
+                        {/* Glow background for vintage */}
+                        {isVintageOnly && (
+                            <div className="absolute -right-20 -top-20 h-80 w-80 rounded-full bg-amber-500/5 blur-[100px] pointer-events-none"></div>
+                        )}
+
                         {/* Modal Header */}
-                        <div className="p-8 pb-4 flex items-start justify-between">
+                        <div className="p-8 pb-4 flex items-start justify-between relative z-10">
                             <div className="flex gap-6 items-center">
                                 <div
-                                    className="h-24 w-24 shrink-0 overflow-hidden rounded-3xl border border-white/10 bg-black/40 cursor-zoom-in hover:scale-105 transition-transform"
+                                    className={`h-24 w-24 shrink-0 overflow-hidden rounded-3xl bg-black/40 cursor-zoom-in hover:scale-105 transition-transform border ${isVintageOnly ? 'border-amber-500/25' : 'border-white/10'}`}
                                     onClick={() => setExpandedImage(selectedProduct.image_url)}
                                     title="Expandir Reliquia"
                                 >
@@ -663,7 +728,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                                 </div>
                                 <div className="space-y-1">
                                     <h4 className="text-3xl font-black tracking-tighter text-white leading-none">
-                                        Analítica de <span className="text-brand-primary">Precios</span>
+                                        Analítica de <span className={isVintageOnly ? 'text-amber-500' : 'text-brand-primary'}>Precios</span>
                                     </h4>
                                     <p className="text-sm font-bold text-white/30 uppercase tracking-widest">{selectedProduct.name}</p>
                                 </div>
@@ -677,7 +742,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                                             }
                                         }}
                                         disabled={deleteProductMutation.isPending}
-                                        className="h-10 px-4 flex items-center justify-center gap-2 rounded-xl bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500 hover:text-white transition-all text-xs font-black uppercase tracking-widest shadow-lg"
+                                        className={`h-10 px-4 flex items-center justify-center gap-2 rounded-xl bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500 hover:text-white transition-all text-xs font-black uppercase tracking-widest shadow-lg`}
                                         title="Eliminar producto de Eternia (Devolver ofertas al Purgatorio)"
                                     >
                                         {deleteProductMutation.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
@@ -686,7 +751,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                                 )}
                                 <button
                                     onClick={() => setSelectedProduct(null)}
-                                    className="h-10 w-10 flex items-center justify-center rounded-xl bg-white/5 text-white/40 hover:bg-red-500/20 hover:text-red-400 transition-all"
+                                    className={`h-10 w-10 flex items-center justify-center rounded-xl bg-white/5 text-white/40 hover:text-white transition-all ${isVintageOnly ? 'hover:bg-amber-500/20 hover:text-amber-400' : 'hover:bg-red-500/20 hover:text-red-400'}`}
                                 >
                                     <span className="text-2xl">&times;</span>
                                 </button>
@@ -694,31 +759,37 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                         </div>
 
                         {/* Modal Body: Price List */}
-                        <div className="flex-1 overflow-y-auto p-8 pt-4 custom-scrollbar">
+                        <div className="flex-1 overflow-y-auto p-8 pt-4 custom-scrollbar relative z-10">
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between px-4">
                                     <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20">La Verdad del Mercado</h5>
-                                    <span className="text-[10px] font-black text-brand-primary uppercase">Mejor Oferta Disponible</span>
+                                    <span className={`text-[10px] font-black uppercase ${isVintageOnly ? 'text-amber-500' : 'text-brand-primary'}`}>Mejor Oferta Disponible</span>
                                 </div>
 
                                 {isLoadingOffers ? (
                                     <div className="flex h-40 flex-col items-center justify-center gap-3">
-                                        <RefreshCw className="h-10 w-10 animate-spin text-brand-primary/50" />
-                                        <span className="text-xs font-black uppercase tracking-widest text-brand-primary/50">Escudriñando el Abismo...</span>
+                                        <RefreshCw className={`h-10 w-10 animate-spin ${isVintageOnly ? 'text-amber-500/50' : 'text-brand-primary/50'}`} />
+                                        <span className={`text-xs font-black uppercase tracking-widest ${isVintageOnly ? 'text-amber-500/50' : 'text-brand-primary/50'}`}>Escudriñando el Abismo...</span>
                                     </div>
                                 ) : (
                                     <div className="space-y-3">
                                         {productOffers?.map((offer) => (
                                             <div
                                                 key={offer.id}
-                                                className={`group flex flex-col md:flex-row md:items-center justify-between gap-4 rounded-3xl p-5 transition-all border ${offer.is_best ? 'bg-brand-primary/5 border-brand-primary/30 shadow-[0_0_30px_rgba(14,165,233,0.1)]' : 'bg-white/[0.03] border-white/5 hover:bg-white/[0.05]'}`}
+                                                className={`group flex flex-col md:flex-row md:items-center justify-between gap-4 rounded-3xl p-5 transition-all border ${
+                                                    offer.is_best 
+                                                        ? (isVintageOnly 
+                                                            ? 'bg-amber-500/5 border-amber-500/35 shadow-[0_0_30px_rgba(245,158,11,0.15)]'
+                                                            : 'bg-brand-primary/5 border-brand-primary/30 shadow-[0_0_30px_rgba(14,165,233,0.1)]')
+                                                        : 'bg-white/[0.03] border-white/5 hover:bg-white/[0.05]'
+                                                }`}
                                             >
                                                 <div className="flex items-center gap-4 flex-1">
                                                     <div className="space-y-1">
                                                         <div className="flex items-center flex-wrap gap-2">
                                                             <span className="text-xs font-black uppercase tracking-widest text-white/80">{offer.shop_name}</span>
                                                             {offer.is_best && (
-                                                                <span className="rounded-full bg-brand-primary/20 px-2 py-0.5 text-[8px] font-black uppercase text-brand-primary border border-brand-primary/20">
+                                                                <span className={`rounded-full px-2 py-0.5 text-[8px] font-black uppercase border ${isVintageOnly ? 'bg-amber-500/20 text-amber-400 border-amber-500/20' : 'bg-brand-primary/20 text-brand-primary border-brand-primary/20'}`}>
                                                                     Mejor Precio
                                                                 </span>
                                                             )}
@@ -737,7 +808,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
 
                                                 <div className="flex flex-row items-center justify-between w-full md:w-auto md:justify-end gap-5">
                                                     <div className="text-left md:text-right space-y-0.5">
-                                                        <div className={`text-xl font-black ${offer.is_best ? 'text-brand-primary' : 'text-white'}`}>{offer.price} €</div>
+                                                        <div className={`text-xl font-black ${offer.is_best ? (isVintageOnly ? 'text-amber-500' : 'text-brand-primary') : 'text-white'}`}>{offer.price} €</div>
                                                         {offer.landing_price && offer.landing_price !== offer.price && (
                                                             <div className="text-[10px] font-black text-brand-secondary/80 flex flex-col items-start md:items-end">
                                                                 <span className="flex items-center gap-1">
@@ -774,7 +845,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                                                                     price: offer.price,
                                                                     image_url: selectedProduct?.image_url || undefined
                                                                 })}
-                                                                className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 text-white/40 border border-white/10 hover:bg-brand-primary/20 hover:text-brand-primary transition-all shadow-lg"
+                                                                className={`flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 text-white/40 border border-white/10 transition-all shadow-lg ${isVintageOnly ? 'hover:bg-amber-500/20 hover:text-amber-400' : 'hover:bg-brand-primary/20 hover:text-brand-primary'}`}
                                                                 title="Simular en Oracle Cart"
                                                             >
                                                                 <ShoppingBasket className="h-4 w-4" />
@@ -958,7 +1029,77 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                     </div>
                 </div>
             )}
+
+            {/* VINTAGE SYNC TELEMETRY MODAL */}
+            {showVintageSyncModal && (
+                <div className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        className="w-full max-w-2xl overflow-hidden rounded-3xl border border-amber-500/25 bg-[#0f0e0c]/95 backdrop-blur-2xl shadow-[0_0_50px_rgba(245,158,11,0.2)]"
+                    >
+                        <div className="p-6 border-b border-white/5 bg-gradient-to-r from-amber-500/10 to-transparent flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-amber-500">
+                                <RefreshCw className={`h-5 w-5 ${vintageSyncStatus === 'running' ? 'animate-spin' : ''}`} />
+                                <h3 className="font-black uppercase tracking-widest text-white text-sm md:text-base">
+                                    Nexo Maestro Vintage: Telemetría
+                                </h3>
+                            </div>
+                            {vintageSyncStatus !== 'running' && (
+                                <button
+                                    onClick={() => setShowVintageSyncModal(false)}
+                                    className="rounded-xl bg-white/5 p-2 text-white/50 hover:bg-white/10 hover:text-white transition-all border border-white/5 cursor-pointer"
+                                >
+                                    <X className="h-4 w-4" />
+                                </button>
+                            )}
+                        </div>
+
+                        <div className="p-6 space-y-4">
+                            <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-white/40">
+                                <span>Estado de la Incursión</span>
+                                <span className={`px-2.5 py-0.5 rounded-full border text-[8px] font-black uppercase tracking-widest ${
+                                    vintageSyncStatus === 'running' ? 'bg-amber-500/10 border-amber-500/20 text-amber-400 animate-pulse' :
+                                    vintageSyncStatus === 'completed' ? 'bg-green-500/10 border-green-500/20 text-green-400' :
+                                    vintageSyncStatus === 'error' ? 'bg-red-500/10 border-red-500/20 text-red-400' :
+                                    'bg-white/5 border-white/10 text-white/50'
+                                }`}>
+                                    {vintageSyncStatus === 'running' ? 'Sincronizando...' :
+                                     vintageSyncStatus === 'completed' ? 'Completado' :
+                                     vintageSyncStatus === 'error' ? 'Fallo Crítico' :
+                                     'Inactivo'}
+                                </span>
+                            </div>
+
+                            {/* Terminal window */}
+                            <div className="h-64 overflow-y-auto rounded-2xl bg-black/80 p-5 border border-white/5 font-mono text-[10px] md:text-xs text-amber-400/90 space-y-1.5 shadow-inner scrollbar-thin">
+                                {vintageSyncLogs.split('\n').map((line, i) => (
+                                    <div key={i} className={line.startsWith('❌') ? 'text-red-400' : line.startsWith('✅') ? 'text-green-400' : ''}>
+                                        {line}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="p-6 border-t border-white/5 bg-white/[0.01] flex items-center justify-end gap-3">
+                            {vintageSyncStatus !== 'running' ? (
+                                <button
+                                    onClick={() => setShowVintageSyncModal(false)}
+                                    className="bg-amber-500 hover:bg-amber-600 text-black px-6 py-2.5 rounded-xl font-black uppercase tracking-widest text-xs transition-all shadow-[0_0_20px_rgba(245,158,11,0.2)] cursor-pointer"
+                                >
+                                    Cerrar Telemetría
+                                </button>
+                            ) : (
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-white/30 animate-pulse">
+                                    Ejecutando Secuencia en Segundo Plano...
+                                </span>
+                            )}
+                        </div>
+                    </motion.div>
+                </div>
+            )}
         </div>
+
     );
 });
 

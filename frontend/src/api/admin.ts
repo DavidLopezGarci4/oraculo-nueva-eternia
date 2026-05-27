@@ -78,6 +78,12 @@ export const syncNexus = async (): Promise<{ status: string; message: string }> 
     return response.data;
 };
 
+export const syncNexusVintage = async (): Promise<{ status: string; message: string }> => {
+    const response = await adminAxios.post('/admin/nexus/sync/vintage');
+    return response.data;
+};
+
+
 export const updateUserLocation = async (userId: number, location: string): Promise<{ status: string; location: string }> => {
     const response = await adminAxios.post(`/users/${userId}/location`, null, {
         params: { location }
@@ -165,6 +171,20 @@ export const exportCollectionExcel = async (userId: number = 2): Promise<void> =
     link.click();
     document.body.removeChild(link);
 };
+
+export const exportCollectionExcelVintage = async (userId: number = 2): Promise<void> => {
+    const response = await adminAxios.get(`/guardian/export/excel/vintage?user_id=${userId}`, {
+        responseType: 'blob'
+    });
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `Coleccion_Vintage_Export_${new Date().getTime()}.xlsx`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+};
+
 
 export const exportCollectionSqlite = async (userId: number = 2): Promise<void> => {
     const response = await adminAxios.get(`/guardian/export/sqlite?user_id=${userId}`, {

@@ -32,7 +32,7 @@ class StorageService:
             logger.error(f"❌ Error ensuring bucket: {e}")
             return False
 
-    def upload_image(self, local_path: str) -> str:
+    def upload_image(self, local_path: str, folder: str = "") -> str:
         """
         Uploads a local image to Supabase Storage.
         Returns the public URL of the uploaded image.
@@ -47,35 +47,38 @@ class StorageService:
             return None
 
         file_name = path.name
+        path_in_bucket = f"{folder}/{file_name}" if folder else file_name
         
         try:
             # Upload file
             with open(local_path, "rb") as f:
                 # We overwrite if exists to ensure latest version
                 self.client.storage.from_(self.bucket_name).upload(
-                    file_name, 
+                    path_in_bucket, 
                     f, 
                     file_options={"upsert": "true", "content-type": "image/jpeg"}
                 )
             
             # Get Public URL
-            public_url = self.client.storage.from_(self.bucket_name).get_public_url(file_name)
-            logger.info(f"✅ Image uploaded: {file_name} -> {public_url}")
+            public_url = self.client.storage.from_(self.bucket_name).get_public_url(path_in_bucket)
+            logger.info(f"✅ Image uploaded: {path_in_bucket} -> {public_url}")
             return public_url
             
         except Exception as e:
-            logger.error(f"❌ Error uploading {file_name}: {e}")
+            logger.error(f"❌ Error uploading {path_in_bucket}: {e}")
             return None
 
-    def upload_all_local_images(self, images_dir: str):
+    def upload_all_local_images(self, images_dir: str, folder: str = ""):
          """Syncs all images in the local folder to the cloud."""
-         logger.info(f"🔄 Syncing all images from {images_dir} to Cloud...")
+         logger.info(f"🔄 Syncing all images from {images_dir} to Cloud folder '{folder}'...")
          p = Path(images_dir)
          if not p.exists(): return
          
          count = 0
-         for img_file in p.glob("*.jpg"):
-             url = self.upload_image(str(img_file))
-             if url: count += 1
+         # Match both jpg and png for extra robustness
+         for ext in ("*.jpg", "*.png", "*.jpeg"):
+             for img_file in p.glob(ext):
+                 url = self.upload_image(str(img_file), folder=folder)
+                 if url: count += 1
          
          logger.info(f"✅ Sync complete: {count} images pushed to Supabase.")

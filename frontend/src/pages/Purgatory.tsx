@@ -721,29 +721,6 @@ const Purgatory: React.FC = React.memo(() => {
                                     <div className="border-t border-white/10 bg-gradient-to-b from-brand-primary/[0.02] to-transparent p-5 md:p-8 animate-in slide-in-from-top-4 duration-500">
                                         <div className="max-w-4xl mx-auto space-y-8">
 
-                                            {/* Vintage Quick Match Button */}
-                                            <div className="rounded-3xl border border-amber-500/20 bg-amber-500/5 p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-[0_0_50px_rgba(245,158,11,0.05)] hover:border-amber-500/40 transition-all duration-300">
-                                                <div className="space-y-1 text-center sm:text-left">
-                                                    <h4 className="text-sm font-black text-amber-500 uppercase tracking-widest flex items-center justify-center sm:justify-start gap-2">
-                                                        <History className="h-4 w-4" /> Clasificación Vintage Individual
-                                                    </h4>
-                                                    <p className="text-[10px] font-bold text-white/40">Guárdalo como artículo Vintage único e independiente (Atajo: tecla V)</p>
-                                                </div>
-                                                <button
-                                                    onClick={() => {
-                                                        setVintageModalItemId(item.id);
-                                                        setVintageModalItemName(item.scraped_name);
-                                                        setVintageCustomName('');
-                                                        setSelectedVintageProductId(null);
-                                                        setIsVintageModalOpen(true);
-                                                    }}
-                                                    disabled={matchVintageMutation.isPending}
-                                                    className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-xl bg-amber-500/20 px-6 py-3 text-[10px] font-black uppercase text-amber-400 border border-amber-500/30 hover:bg-amber-500 hover:text-black transition-all shadow-lg shadow-amber-500/5 hover:scale-105 duration-300"
-                                                >
-                                                    Clasificar como Vintage [V]
-                                                </button>
-                                            </div>
-
                                             {/* Section 1: Oracle Suggestions (The Main Banner) */}
                                             {item.suggestions && item.suggestions.length > 0 && !manualSearchTerm && (
                                                 <div className="space-y-4">
@@ -835,6 +812,33 @@ const Purgatory: React.FC = React.memo(() => {
                                                         </div>
                                                     )}
                                                 </div>
+
+                                                {/* Compact Vintage Pairing Box ("Fina") */}
+                                                <div className="rounded-2xl border border-amber-500/10 bg-amber-500/[0.02] p-3 flex flex-row items-center justify-between gap-4 hover:border-amber-500/20 hover:bg-amber-500/[0.04] transition-all duration-300">
+                                                    <div className="flex items-center gap-2.5 min-w-0">
+                                                        <div className="h-7 w-7 rounded-lg bg-amber-500/10 flex items-center justify-center border border-amber-500/20 shrink-0">
+                                                            <History className="h-3.5 w-3.5 text-amber-500" />
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <h5 className="text-[11px] font-black text-amber-500 uppercase tracking-widest leading-none mb-0.5">Clasificación Vintage</h5>
+                                                            <p className="text-[9px] font-bold text-white/30 truncate max-w-[200px] sm:max-w-md uppercase tracking-tighter">Guardar como reliquia vintage independiente (Atajo: V)</p>
+                                                        </div>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => {
+                                                            setVintageModalItemId(item.id);
+                                                            setVintageModalItemName(item.scraped_name);
+                                                            setVintageCustomName('');
+                                                            setSelectedVintageProductId(null);
+                                                            setIsVintageModalOpen(true);
+                                                        }}
+                                                        disabled={matchVintageMutation.isPending}
+                                                        className="shrink-0 rounded-lg bg-amber-500/10 hover:bg-amber-500 hover:text-black border border-amber-500/30 px-3 py-1.5 text-[9px] font-black uppercase text-amber-400 transition-all hover:scale-105 duration-200"
+                                                    >
+                                                        Clasificar [V]
+                                                    </button>
+                                                </div>
+
                                             </div>
                                         </div>
                                     </div>
@@ -1059,68 +1063,145 @@ const Purgatory: React.FC = React.memo(() => {
 
             {/* Modal de Clasificación Vintage con Nombre Personalizado */}
             {isVintageModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-xl" onClick={() => setIsVintageModalOpen(false)}>
-                    <div className="relative w-full max-w-lg overflow-hidden rounded-[2.5rem] border border-white/10 bg-[#0A0A0B] shadow-[0_50px_100px_-20px_rgba(0,0,0,1)] flex flex-col" onClick={(e) => e.stopPropagation()}>
-                        <div className="p-6 pb-4 flex items-start justify-between border-b border-white/5">
-                            <div className="space-y-1">
-                                <h4 className="text-xl font-black tracking-tighter text-white uppercase">
-                                    Vincular a <span className="text-amber-500">Muñeco Vintage</span>
-                                </h4>
-                                <p className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Asigna el nombre limpio del muñeco para agrupar precios</p>
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl animate-in fade-in duration-300" onClick={() => setIsVintageModalOpen(false)}>
+                    <div className="relative w-full max-w-lg overflow-hidden rounded-[2.5rem] border border-amber-500/30 bg-gradient-to-b from-[#1C1405] via-[#0C0903] to-[#050301] shadow-[0_0_80px_rgba(245,158,11,0.15)] flex flex-col animate-in zoom-in-95 duration-300" onClick={(e) => e.stopPropagation()}>
+                        
+                        {/* Glow halo */}
+                        <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-amber-500/5 blur-[80px] pointer-events-none"></div>
+
+                        {/* Modal Header */}
+                        <div className="p-6 pb-4 flex items-start justify-between border-b border-amber-500/10 relative z-10">
+                            <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20 shrink-0">
+                                    <History className="h-5 w-5 text-amber-500" />
+                                </div>
+                                <div className="space-y-0.5">
+                                    <h4 className="text-lg font-black tracking-tighter text-white uppercase">
+                                        Oráculo <span className="text-amber-500">Vintage</span>
+                                    </h4>
+                                    <p className="text-[9px] font-bold text-white/40 uppercase tracking-widest">Canalización y Vinculación Retro</p>
+                                </div>
                             </div>
-                            <button onClick={() => setIsVintageModalOpen(false)} className="h-8 w-8 flex items-center justify-center rounded-lg bg-white/5 text-white/40 hover:bg-red-500/20 hover:text-red-400">&times;</button>
+                            <button onClick={() => setIsVintageModalOpen(false)} className="h-8 w-8 flex items-center justify-center rounded-xl bg-white/5 text-white/40 hover:bg-amber-500/20 hover:text-amber-400 transition-all font-black">&times;</button>
                         </div>
                         
-                        <div className="p-6 space-y-4">
-                            <div className="space-y-1">
-                                <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">Artículo Detectado:</p>
-                                <p className="text-xs font-bold text-white/70 italic">{vintageModalItemName}</p>
+                        {/* Modal Body */}
+                        <div className="p-6 space-y-5 overflow-y-auto max-h-[60vh] custom-scrollbar relative z-10">
+                            
+                            {/* Scraped Info Card */}
+                            <div className="rounded-2xl border border-amber-500/10 bg-amber-500/[0.03] p-4 space-y-1">
+                                <span className="text-[8px] font-black text-amber-500/50 uppercase tracking-widest block">Artículo del Purgatorio</span>
+                                <p className="text-xs font-black text-white/90 italic leading-tight">{vintageModalItemName}</p>
                             </div>
 
+                            {/* Search / input field */}
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-amber-500 uppercase tracking-widest block">Nombre del Muñeco:</label>
-                                <input
-                                    type="text"
-                                    value={vintageCustomName}
-                                    onChange={(e) => handleInputChange(e.target.value)}
-                                    placeholder="Ej. He-Man, Skeletor, Beast Man..."
-                                    className="w-full bg-white/[0.03] border border-white/10 hover:border-white/20 focus:border-amber-500 focus:bg-white/[0.05] rounded-xl py-3 px-4 text-sm font-bold text-white outline-none transition-all placeholder:text-white/20"
-                                    autoFocus
-                                />
+                                <label className="text-[10px] font-black text-amber-500 uppercase tracking-widest block">Buscar Figura o Crear Custom:</label>
+                                <div className="relative">
+                                    <Search className="absolute left-4 top-3.5 h-4 w-4 text-amber-500/40" />
+                                    <input
+                                        type="text"
+                                        value={vintageCustomName}
+                                        onChange={(e) => handleInputChange(e.target.value)}
+                                        placeholder="Ej. He-Man, Skeletor, Beast Man..."
+                                        className="w-full bg-[#141004]/50 border border-amber-500/20 hover:border-amber-500/40 focus:border-amber-500 focus:bg-[#1C1605]/30 focus:ring-1 focus:ring-amber-500/10 rounded-2xl py-3.5 pl-11 pr-4 text-sm font-bold text-white outline-none transition-all placeholder:text-white/20"
+                                        autoFocus
+                                    />
+                                </div>
                             </div>
 
-                            {/* Suggestions box */}
-                            <div className="space-y-2">
-                                <p className="text-[9px] font-black text-white/30 uppercase tracking-widest">
-                                    {vintageCustomName.trim() ? 'Coincidencias en base de datos:' : 'Existentes en Eternia (Acceso Rápido):'}
-                                </p>
-                                {filteredSuggestions.length > 0 ? (
-                                    <div className="flex flex-wrap gap-2">
-                                        {filteredSuggestions.map((p: any) => (
-                                            <button
+                            {/* Suggestions and catalog matching */}
+                            <div className="space-y-3">
+                                <span className="text-[9px] font-black text-amber-500/60 uppercase tracking-widest block border-b border-amber-500/10 pb-1">
+                                    {vintageCustomName.trim() 
+                                        ? 'Resultados en Eternia Vintage:' 
+                                        : 'Sugerencias de Emparejamiento (Oráculo):'}
+                                </span>
+
+                                <div className="space-y-2">
+                                    {filteredSuggestions.length > 0 ? (
+                                        filteredSuggestions.map((p: any) => (
+                                            <div
                                                 key={p.id}
-                                                type="button"
-                                                onClick={() => {
-                                                    setVintageCustomName(p.name);
-                                                    setSelectedVintageProductId(p.id);
-                                                }}
-                                                className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all border ${
+                                                className={`flex items-center justify-between gap-3 p-3 rounded-xl border transition-all text-left ${
                                                     selectedVintageProductId === p.id 
-                                                        ? 'bg-amber-500 text-black border-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.4)]'
-                                                        : 'bg-white/5 border-white/5 text-white/50 hover:bg-white/10 hover:text-white'
+                                                        ? 'bg-amber-500/10 border-amber-500/45 shadow-[0_0_15px_rgba(245,158,11,0.1)]'
+                                                        : 'bg-white/[0.02] border-white/5 hover:bg-white/[0.04] hover:border-white/10'
                                                 }`}
                                             >
-                                                {p.name}
-                                            </button>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <p className="text-[10px] font-bold text-white/25 uppercase italic">Se creará un nuevo muñeco único con este nombre</p>
-                                )}
+                                                <div className="min-w-0 flex-1">
+                                                    <span className="text-[8px] font-bold text-amber-500/50 uppercase tracking-widest">{p.sub_category || 'Vintage 80s'}</span>
+                                                    <h5 className="text-xs font-black text-white truncate leading-tight mt-0.5">{p.name}</h5>
+                                                    <span className="text-[8px] font-mono text-white/30 uppercase">ID: #{p.figure_id}</span>
+                                                </div>
+                                                <div className="flex items-center gap-1.5 shrink-0">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setVintageCustomName(p.name);
+                                                            setSelectedVintageProductId(p.id);
+                                                        }}
+                                                        className={`px-2.5 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-wider transition-all border ${
+                                                            selectedVintageProductId === p.id 
+                                                                ? 'bg-amber-500 text-black border-amber-400'
+                                                                : 'bg-white/5 border-white/5 text-white/50 hover:bg-white/10'
+                                                        }`}
+                                                    >
+                                                        {selectedVintageProductId === p.id ? 'Seleccionado' : 'Seleccionar'}
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            matchVintageMutation.mutate({
+                                                                pendingId: vintageModalItemId!,
+                                                                customName: p.name,
+                                                                productId: p.id
+                                                            });
+                                                        }}
+                                                        className="px-2.5 py-1.5 rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/30 hover:bg-amber-500 hover:text-black transition-all text-[8px] font-black uppercase flex items-center gap-1"
+                                                    >
+                                                        <Link className="h-2 w-2" />
+                                                        Vincular
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="rounded-xl border border-dashed border-amber-500/20 bg-amber-500/[0.01] p-6 text-center space-y-1">
+                                            <p className="text-[10px] font-bold text-amber-500/50 uppercase">Sin coincidencia exacta</p>
+                                            <p className="text-[9px] font-medium text-white/20 uppercase tracking-tighter">Se creará un nuevo artículo vintage independiente en el catálogo.</p>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
+
+                            {/* Create custom item button option */}
+                            {vintageCustomName.trim() && !filteredSuggestions.some((p: any) => p.name.toLowerCase() === vintageCustomName.trim().toLowerCase()) && (
+                                <div className="rounded-2xl border border-dashed border-amber-500/20 bg-amber-500/[0.02] p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+                                    <div className="min-w-0 flex-1">
+                                        <span className="text-[8px] font-black text-amber-500 uppercase tracking-widest">Nueva Reliquia Vintage</span>
+                                        <h5 className="text-xs font-black text-white truncate leading-none mt-1">"{vintageCustomName}"</h5>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            matchVintageMutation.mutate({
+                                                pendingId: vintageModalItemId!,
+                                                customName: vintageCustomName.trim(),
+                                                productId: undefined
+                                            });
+                                        }}
+                                        className="w-full sm:w-auto px-4 py-2 rounded-xl bg-amber-500 text-black text-[9px] font-black uppercase tracking-widest hover:brightness-110 transition-all flex items-center justify-center gap-1"
+                                    >
+                                        <span>Crear y Vincular</span>
+                                    </button>
+                                </div>
+                            )}
+
                         </div>
 
-                        <div className="p-6 border-t border-white/5 bg-black/40 flex items-center justify-end gap-3">
+                        {/* Modal Footer */}
+                        <div className="p-6 border-t border-amber-500/10 bg-black/45 flex items-center justify-end gap-3 relative z-10">
                             <button
                                 onClick={() => setIsVintageModalOpen(false)}
                                 className="px-5 py-2.5 rounded-xl bg-white/5 text-white/50 hover:bg-white/10 hover:text-white text-[10px] font-black uppercase tracking-widest transition-all"

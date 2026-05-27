@@ -50,7 +50,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen
                 {/* Logo & Close Button */}
                 <div className="flex h-16 items-center justify-between border-b border-glass-border px-6">
                     <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-xl overflow-hidden border border-white/20 shadow-[0_0_15px_rgba(14,165,233,0.3)] bg-black/40">
+                        <div className={`h-9 w-9 rounded-xl overflow-hidden border bg-black/40 transition-all ${['eternia', 'fortaleza_vintage', 'vintage'].includes(activeTab) ? 'border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.3)]' : 'border-white/20 shadow-[0_0_15px_rgba(14,165,233,0.3)]'}`}>
                             <img
                                 src={user?.role === 'admin' ? masterRoleImg : guardianRoleImg}
                                 alt="Role Logo"
@@ -59,7 +59,11 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen
                         </div>
                         <div className="flex flex-col">
                             <h1 className="text-sm font-black tracking-tighter text-white leading-none">ORÁCULO</h1>
-                            <span className="text-[8px] font-black text-brand-primary uppercase tracking-[0.2em] mt-1">NUEVA ETERNIA</span>
+                            {['eternia', 'fortaleza_vintage', 'vintage'].includes(activeTab) ? (
+                                <span className="text-[8px] font-black text-amber-500 uppercase tracking-[0.2em] mt-1 drop-shadow-[0_0_8px_rgba(245,158,11,0.4)]">ETERNIA VINTAGE</span>
+                            ) : (
+                                <span className="text-[8px] font-black text-brand-primary uppercase tracking-[0.2em] mt-1">NUEVA ETERNIA</span>
+                            )}
                         </div>
                     </div>
                     {/* Botón de cierre solo en móvil */}
@@ -73,22 +77,28 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen
 
                 {/* Navigation */}
                 <nav className="flex-1 space-y-2 p-4 pt-8 overflow-y-auto">
-                    {menuItems.map((item) => (
-                        <button
-                            key={item.id}
-                            onClick={() => {
-                                setActiveTab(item.id);
-                                onCloseMobile(); // Cerrar drawer al navegar en móvil
-                            }}
-                            className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all ${activeTab === item.id
-                                ? 'bg-brand-primary/20 text-brand-primary border border-brand-primary/30 shadow-[0_0_15px_rgba(14,165,233,0.1)]'
-                                : 'text-white/50 hover:bg-white/5 hover:text-white'
-                                }`}
-                        >
-                            <item.icon className={`h-5 w-5 ${activeTab === item.id ? 'animate-pulse' : ''}`} />
-                            {item.label}
-                        </button>
-                    ))}
+                    {menuItems.map((item) => {
+                        const isVintageItem = ['eternia', 'fortaleza_vintage', 'vintage'].includes(item.id);
+                        const isActive = activeTab === item.id;
+                        return (
+                            <button
+                                key={item.id}
+                                onClick={() => {
+                                    setActiveTab(item.id);
+                                    onCloseMobile(); // Cerrar drawer al navegar en móvil
+                                }}
+                                className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all ${isActive
+                                    ? (isVintageItem
+                                        ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.15)]'
+                                        : 'bg-brand-primary/20 text-brand-primary border border-brand-primary/30 shadow-[0_0_15px_rgba(14,165,233,0.1)]')
+                                    : 'text-white/50 hover:bg-white/5 hover:text-white'
+                                    }`}
+                            >
+                                <item.icon className={`h-5 w-5 ${isActive ? 'animate-pulse' : ''}`} />
+                                {item.label}
+                            </button>
+                        );
+                    })}
                 </nav>
 
                 {/* Footer */}

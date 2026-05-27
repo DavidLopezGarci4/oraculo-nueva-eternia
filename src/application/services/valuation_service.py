@@ -88,14 +88,22 @@ class ValuationService:
         
         return base_mult * grade_factor
 
-    def get_collection_valuation(self, user_id: int, user_location: str = "ES") -> dict:
+    def get_collection_valuation(self, user_id: int, user_location: str = "ES", is_vintage: bool = None) -> dict:
         """Calculates total value of a user's collection using the waterfall and legacy context."""
         from src.domain.models import CollectionItemModel
         
-        items = self.db.query(CollectionItemModel).filter(
+        query = self.db.query(CollectionItemModel).join(ProductModel).filter(
             CollectionItemModel.owner_id == user_id,
             CollectionItemModel.acquired == True
-        ).all()
+        )
+        if is_vintage is not None:
+            if is_vintage:
+                query = query.filter(ProductModel.is_vintage == True)
+            else:
+                query = query.filter(ProductModel.is_vintage.is_not(True))
+                
+        items = query.all()
+
         
         total_value = 0.0
         total_invested = 0.0

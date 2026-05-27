@@ -171,8 +171,12 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                             <button
                                 onClick={async () => {
                                     try {
-                                        const { exportCollectionExcel } = await import('../api/admin');
-                                        await exportCollectionExcel(activeUserId);
+                                        const { exportCollectionExcel, exportCollectionExcelVintage } = await import('../api/admin');
+                                        if (isVintageOnly) {
+                                            await exportCollectionExcelVintage(activeUserId);
+                                        } else {
+                                            await exportCollectionExcel(activeUserId);
+                                        }
                                         alert('📊 Excel: Tu colección ha sido exportada con éxito.');
                                     } catch (error) {
                                         console.error('Export error:', error);
@@ -204,8 +208,8 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
 
                         {/* Fortaleza and Deseos stats */}
                         <div className="flex flex-row gap-2 md:gap-4">
-                            <div className="flex-1 flex flex-col gap-0.5 rounded-xl md:rounded-2xl bg-white/5 p-2 md:p-4 border border-white/10 backdrop-blur-xl group hover:bg-white/10 transition-all">
-                                <div className="flex items-center justify-between text-white/40 group-hover:text-brand-primary">
+                            <div className={`flex-1 flex flex-col gap-0.5 rounded-xl md:rounded-2xl bg-white/5 p-2 md:p-4 border border-white/10 backdrop-blur-xl group transition-all ${isVintageOnly ? 'hover:bg-amber-500/5 hover:border-amber-500/20' : 'hover:bg-white/10'}`}>
+                                <div className={`flex items-center justify-between text-white/40 ${isVintageOnly ? 'group-hover:text-amber-500' : 'group-hover:text-brand-primary'}`}>
                                     <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest">Fortaleza</span>
                                     <Box className="h-3 w-3 md:h-4 md:w-4" />
                                 </div>
@@ -213,13 +217,13 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                                 <span className="text-[7px] md:text-[9px] font-bold text-white/20 uppercase">Items Poseídos</span>
                             </div>
 
-                            <div className="flex-1 flex flex-col gap-0.5 rounded-xl md:rounded-2xl bg-brand-primary/5 p-2 md:p-4 border border-brand-primary/20 backdrop-blur-xl group hover:bg-brand-primary/10 transition-all">
-                                <div className="flex items-center justify-between text-brand-primary/40 group-hover:text-brand-primary">
+                            <div className={`flex-1 flex flex-col gap-0.5 rounded-xl md:rounded-2xl p-2 md:p-4 border backdrop-blur-xl group transition-all ${isVintageOnly ? 'bg-amber-500/5 border-amber-500/20 hover:bg-amber-500/10' : 'bg-brand-primary/5 border-brand-primary/20 hover:bg-brand-primary/10'}`}>
+                                <div className={`flex items-center justify-between ${isVintageOnly ? 'text-amber-500/40 group-hover:text-amber-500' : 'text-brand-primary/40 group-hover:text-brand-primary'}`}>
                                     <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest">Deseos</span>
                                     <Star className="h-3 w-3 md:h-4 md:w-4" />
                                 </div>
-                                <span className="text-2xl md:text-4xl font-black text-brand-primary">{totalWish}</span>
-                                <span className="text-[7px] md:text-[9px] font-bold text-brand-primary/30 uppercase">En el Radar</span>
+                                <span className={`text-2xl md:text-4xl font-black ${isVintageOnly ? 'text-amber-500' : 'text-brand-primary'}`}>{totalWish}</span>
+                                <span className={`text-[7px] md:text-[9px] font-bold uppercase ${isVintageOnly ? 'text-amber-500/30' : 'text-brand-primary/30'}`}>En el Radar</span>
                             </div>
                         </div>
                     </div>
@@ -230,19 +234,19 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
             <div className="flex bg-black/50 p-1 rounded-2xl md:rounded-3xl border border-white/10 backdrop-blur-3xl w-fit">
                 <button
                     onClick={() => setActiveTab('owned')}
-                    className={`flex items-center justify-center gap-1.5 px-4 md:px-6 py-1.5 md:py-2 rounded-xl md:rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'owned' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20 scale-105' : 'text-white/30 hover:text-white'}`}
+                    className={`flex items-center justify-center gap-1.5 px-4 md:px-6 py-1.5 md:py-2 rounded-xl md:rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'owned' ? (isVintageOnly ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20 scale-105' : 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20 scale-105') : 'text-white/30 hover:text-white'}`}
                 >
                     <Box className="h-3 w-3 md:h-4 md:w-4" />
                     La Fortaleza
                 </button>
                 <button
                     onClick={() => setActiveTab('wish')}
-                    className={`flex items-center justify-center gap-1.5 px-4 md:px-6 py-1.5 md:py-2 rounded-xl md:rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'wish' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20 scale-105' : 'text-white/30 hover:text-white'}`}
+                    className={`flex items-center justify-center gap-1.5 px-4 md:px-6 py-1.5 md:py-2 rounded-xl md:rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'wish' ? (isVintageOnly ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20 scale-105' : 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20 scale-105') : 'text-white/30 hover:text-white'}`}
                 >
                     <Star className="h-3 w-3 md:h-4 md:w-4" />
                     Lista de Deseos
                     {totalWish > 0 && (
-                        <span className="bg-white/10 text-brand-primary text-[9px] px-1.5 py-0.5 rounded-md ml-1">
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded-md ml-1 ${isVintageOnly ? 'bg-black/20 text-amber-600 font-extrabold' : 'bg-white/10 text-brand-primary'}`}>
                             {totalWish}
                         </span>
                     )}
@@ -261,7 +265,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                     >
                         <div className="h-24 w-24 rounded-full bg-white/5 flex items-center justify-center border border-white/10 relative">
                             {activeTab === 'owned' ? <Box className="h-10 w-10 text-white/20" /> : <Star className="h-10 w-10 text-white/20" />}
-                            <Sparkles className="absolute -top-2 -right-2 h-6 w-6 text-brand-primary opacity-30 animate-pulse" />
+                            <Sparkles className={`absolute -top-2 -right-2 h-6 w-6 opacity-30 animate-pulse ${isVintageOnly ? 'text-amber-500' : 'text-brand-primary'}`} />
                         </div>
                         <div className="max-w-xs space-y-3">
                             <p className="text-2xl font-black text-white/80 uppercase tracking-tighter">
@@ -316,7 +320,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
 
                                         {/* Status indicator */}
                                         <div className="absolute bottom-4 left-4 flex items-center gap-2">
-                                            <div className={`h-2 w-2 rounded-full ${activeTab === 'owned' ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.8)]' : 'bg-brand-primary shadow-[0_0_10px_rgba(14,165,233,0.8)] animate-pulse'}`}></div>
+                                            <div className={`h-2 w-2 rounded-full ${activeTab === 'owned' ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.8)]' : (isVintageOnly ? 'bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.8)] animate-pulse' : 'bg-brand-primary shadow-[0_0_10px_rgba(14,165,233,0.8)] animate-pulse')}`}></div>
                                             <span className="text-[9px] font-black text-white uppercase tracking-widest opacity-80 backdrop-blur-sm bg-black/20 px-2 py-0.5 rounded-full">
                                                 {activeTab === 'owned' ? 'Poseída' : 'Prioridad'}
                                             </span>
@@ -326,7 +330,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                                     {/* Info */}
                                     <div className="space-y-3 flex-1">
                                         <div className="space-y-1">
-                                            <span className="text-[9px] font-black text-brand-primary uppercase tracking-widest group-hover:text-brand-primary/80 transition-colors">
+                                            <span className={`text-[9px] font-black uppercase tracking-widest transition-colors ${isVintageOnly ? 'text-amber-500 group-hover:text-amber-500/80' : 'text-brand-primary group-hover:text-brand-primary/80'}`}>
                                                 {product.sub_category}
                                             </span>
                                             <h3 className="line-clamp-2 text-sm sm:text-lg font-black text-white leading-tight group-hover:text-white group-hover:translate-x-1 transition-all">
@@ -336,7 +340,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
 
                                         <div className="flex items-center gap-1 sm:gap-1.5 pt-1 flex-nowrap overflow-hidden">
                                             {product.market_value && product.market_value > 0 && (
-                                                <div className={`flex items-center gap-1 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl border font-black text-[8px] sm:text-[10px] whitespace-nowrap ${isGrail ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' : 'bg-brand-primary/10 text-brand-primary border-brand-primary/20'}`}>
+                                                <div className={`flex items-center gap-1 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl border font-black text-[8px] sm:text-[10px] whitespace-nowrap ${isGrail ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' : (isVintageOnly ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'bg-brand-primary/10 text-brand-primary border-brand-primary/20')}`}>
                                                     <Euro className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                                                     {product.market_value}€
                                                 </div>
@@ -385,9 +389,9 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                                             <button
                                                 onClick={() => toggleMutation.mutate({ productId: product.id, wish: false })}
                                                 disabled={toggleMutation.isPending}
-                                                className="h-6 sm:h-8 px-3 sm:px-6 flex items-center justify-center gap-1.5 sm:gap-3 rounded-lg sm:rounded-xl bg-brand-primary text-white font-black text-[10px] sm:text-xs uppercase tracking-widest shadow-lg shadow-brand-primary/20 hover:brightness-110 transition-all border border-brand-primary/50"
+                                                className={`h-6 sm:h-8 px-3 sm:px-6 flex items-center justify-center gap-1.5 sm:gap-3 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-xs uppercase tracking-widest shadow-lg transition-all ${isVintageOnly ? 'bg-amber-500 text-black border border-amber-500/50 shadow-amber-500/20 hover:brightness-110' : 'bg-brand-primary text-white border border-brand-primary/50 shadow-brand-primary/20 hover:brightness-110'}`}
                                             >
-                                                {toggleMutation.isPending ? <RefreshCw className="h-4 w-4 animate-spin text-white/50" /> : <ShoppingCart className="h-4 w-4" />}
+                                                {toggleMutation.isPending ? <RefreshCw className="h-4 w-4 animate-spin text-white/50" /> : <ShoppingCart className={`h-4 w-4 ${isVintageOnly ? 'text-black' : 'text-white'}`} />}
                                                 <span className="hidden sm:inline">Reclamar</span>
                                             </button>
                                         ) : (
@@ -441,19 +445,19 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
             {isAdmin && editingProduct && (
                 <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-black/90 backdrop-blur-2xl animate-in fade-in duration-300">
                     <motion.div
-                        initial={{ scale: 0.9, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        className="relative w-full max-w-2xl overflow-hidden rounded-[2.5rem] border border-brand-primary/30 bg-[#0A0A0B] shadow-[0_0_50px_rgba(14,165,233,0.2)] flex flex-col"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <form onSubmit={handleSaveEdit}>
-                            <div className="p-8 pb-4 flex items-center justify-between border-b border-white/5">
-                                <div className="flex items-center gap-4">
-                                    <div className="p-3 bg-brand-primary/10 rounded-xl">
-                                        <Settings className="h-6 w-6 text-brand-primary" />
-                                    </div>
-                                    <h4 className="text-2xl font-black text-white">Editor de <span className="text-brand-primary">La Verdad</span></h4>
-                                </div>
+                                                        initial={{ scale: 0.9, opacity: 0 }}
+                                                        animate={{ scale: 1, opacity: 1 }}
+                                                        className={`relative w-full max-w-2xl overflow-hidden rounded-[2.5rem] border bg-[#0A0A0B] flex flex-col transition-all ${editingProduct.is_vintage ? 'border-amber-500/30 shadow-[0_0_50px_rgba(245,158,11,0.2)]' : 'border-brand-primary/30 shadow-[0_0_50px_rgba(14,165,233,0.2)]'}`}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                        <form onSubmit={handleSaveEdit}>
+                                                            <div className="p-8 pb-4 flex items-center justify-between border-b border-white/5">
+                                                                <div className="flex items-center gap-4">
+                                                                    <div className={`p-3 rounded-xl ${editingProduct.is_vintage ? 'bg-amber-500/10' : 'bg-brand-primary/10'}`}>
+                                                                        <Settings className={`h-6 w-6 ${editingProduct.is_vintage ? 'text-amber-500' : 'text-brand-primary'}`} />
+                                                                    </div>
+                                                                    <h4 className="text-2xl font-black text-white">Editor de <span className={editingProduct.is_vintage ? 'text-amber-500' : 'text-brand-primary'}>La Verdad</span></h4>
+                                                                </div>
                                 <button
                                     type="button"
                                     onClick={() => setEditingProduct(null)}
@@ -471,7 +475,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                                         <input
                                             value={editingProduct.name}
                                             onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
-                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-white focus:outline-none focus:border-brand-primary/50 transition-all"
+                                            className={`w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-white focus:outline-none transition-all ${editingProduct.is_vintage ? 'focus:border-amber-500/50' : 'focus:border-brand-primary/50'}`}
                                         />
                                     </div>
 
@@ -481,7 +485,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                                         <input
                                             value={editingProduct.ean || ''}
                                             onChange={(e) => setEditingProduct({ ...editingProduct, ean: e.target.value })}
-                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-white focus:outline-none focus:border-brand-primary/50 transition-all"
+                                            className={`w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-white focus:outline-none transition-all ${editingProduct.is_vintage ? 'focus:border-amber-500/50' : 'focus:border-brand-primary/50'}`}
                                             placeholder="Desconocido"
                                         />
                                     </div>
@@ -493,7 +497,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                                             type="number"
                                             value={editingProduct.retail_price || 0}
                                             onChange={(e) => setEditingProduct({ ...editingProduct, retail_price: parseFloat(e.target.value) })}
-                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-white focus:outline-none focus:border-brand-primary/50 transition-all"
+                                            className={`w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-white focus:outline-none transition-all ${editingProduct.is_vintage ? 'focus:border-amber-500/50' : 'focus:border-brand-primary/50'}`}
                                         />
                                     </div>
 
@@ -503,7 +507,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                                         <input
                                             value={editingProduct.sub_category || ''}
                                             onChange={(e) => setEditingProduct({ ...editingProduct, sub_category: e.target.value })}
-                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-white focus:outline-none focus:border-brand-primary/50 transition-all"
+                                            className={`w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-white focus:outline-none transition-all ${editingProduct.is_vintage ? 'focus:border-amber-500/50' : 'focus:border-brand-primary/50'}`}
                                         />
                                     </div>
 
@@ -513,7 +517,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                                         <input
                                             value={editingProduct.image_url || ''}
                                             onChange={(e) => setEditingProduct({ ...editingProduct, image_url: e.target.value })}
-                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-white/50 text-xs focus:outline-none focus:border-brand-primary/50 transition-all"
+                                            className={`w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-white/50 text-xs focus:outline-none transition-all ${editingProduct.is_vintage ? 'focus:border-amber-500/50' : 'focus:border-brand-primary/50'}`}
                                         />
                                     </div>
 
@@ -547,7 +551,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                                 <button
                                     type="submit"
                                     disabled={updateMutation.isPending}
-                                    className="bg-brand-primary hover:bg-brand-secondary text-white px-8 py-3 rounded-2xl font-black uppercase tracking-widest transition-all shadow-[0_0_30px_rgba(14,165,233,0.3)] flex items-center gap-2 disabled:opacity-50"
+                                    className={`px-8 py-3 rounded-2xl font-black uppercase tracking-widest transition-all flex items-center gap-2 disabled:opacity-50 text-white ${editingProduct.is_vintage ? 'bg-amber-500 hover:bg-amber-600 text-black shadow-[0_0_30px_rgba(245,158,11,0.3)]' : 'bg-brand-primary hover:bg-brand-secondary shadow-[0_0_30px_rgba(14,165,233,0.3)]'}`}
                                 >
                                     {updateMutation.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                                     Preservar Cambios

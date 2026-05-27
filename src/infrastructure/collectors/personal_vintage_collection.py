@@ -1,0 +1,789 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+Scraper MOTU Vintage -> Excel multi-hoja con hipervínculos a imágenes locales.
+Ejecución directa en PyCharm o terminal.
+
+- Rutas relativas al directorio del script:
+    ./MOTU/              (Excel y datos)
+    ./MOTU/vintage_images/       (descarga de imágenes)
+- HTTP robusto: User-Agent realista (override por env MOTU_UA), reintentos, timeouts, pausas.
+- Scraping tolerante a cambios menores.
+- Mantiene el estado "Adquirido" desde un Excel previo si existe.
+- Valida y colorea "Sí"/"No" en Excel, e inserta hipervínculos a imágenes locales.
+- Nombres de hoja únicos (case-insensitive) con sufijos si hay colisiones.
+
+Dependencias:
+    pip install requests beautifulsoup4 pandas openpyxl xlsxwriter
+"""
+
+import os
+import re
+import time
+import hashlib
+import logging
+import urllib.parse
+from pathlib import Path
+from typing import List, Tuple, Optional, Set
+
+import requests
+from requests.adapters import HTTPAdapter, Retry
+from bs4 import BeautifulSoup
+import pandas as pd
+import xlsxwriter
+from openpyxl import load_workbook
+
+# =========================
+# Configuración y constantes
+# =========================
+
+CHECKLIST_URL = "https://www.actionfigure411.com/masters-of-the-universe/original-checklist.php"
+SITE_BASE = "https://www.actionfigure411.com/"
+DESIRED_ORDER = [
+    "Adquirido", "Name", "Wave", "Year", "Retail",
+    "Popularity", "Momentum", "ASIN", "UPC", "US MSRP",
+    "Imagen", "Image Path", "Image URL", "Detail Link"
+]
+
+REQUEST_TIMEOUT = 60.0     # segundos por petición (Aumentado para GitHub Actions)
+POLITE_SLEEP = 1.0         # pausa entre peticiones (cortesía)
+MAX_RETRIES = 5            # reintentos para 429/5xx (Aumentado para entornos inestables)
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s"
+)
+
+# =========================
+# Utilidades de ruta
+# =========================
+
+def get_project_paths() -> Tuple[Path, Path, Path]:
+    """
+    Devuelve (project_root, excel_path, images_dir).
+    project_root = carpeta de datos en data/MOTU
+    """
+    script_dir = Path(__file__).resolve().parent
+    project_base = script_dir.parent.parent.parent
+    
+    project_root = project_base / "data" / "MOTU"
+    images_dir = project_root / "vintage_images"
+    excel_path = project_root / "lista_vintage.xlsx"
+    
+    project_root.mkdir(parents=True, exist_ok=True)
+    images_dir.mkdir(parents=True, exist_ok=True)
+    return project_root, excel_path, images_dir
+
+# =========================
+# Sesión HTTP robusta
+# =========================
+
+def build_session() -> requests.Session:
+    """
+    Sesión HTTP robusta:
+    - User-Agent realista tipo Chrome por defecto.
+    - Permite override vía variable de entorno MOTU_UA.
+    - Cabeceras de navegador comunes.
+    - Reintentos con backoff para 429/5xx y respeto de Retry-After.
+    """
+    default_ua = (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/124.0.0.0 Safari/537.36"
+    )
+    user_agent = os.getenv("MOTU_UA", default_ua)
+
+    s = requests.Session()
+    s.headers.update({
+        "User-Agent": user_agent,
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
+        "Connection": "keep-alive",
+        "Referer": SITE_BASE,
+    })
+
+    retries = Retry(
+        total=MAX_RETRIES,
+        connect=3,
+        read=3,
+        backoff_factor=0.8,  # 0.8, 1.6, 3.2, 6.4 ...
+        status_forcelist=[429, 500, 502, 503, 504],
+        allowed_methods=["GET", "HEAD", "OPTIONS"],
+        raise_on_status=False,
+        respect_retry_after_header=True,
+    )
+    adapter = HTTPAdapter(max_retries=retries, pool_connections=20, pool_maxsize=20)
+    s.mount("https://", adapter)
+    s.mount("http://", adapter)
+
+    return s
+
+def polite_pause():
+    """Pausa entre peticiones para no saturar el servidor."""
+    time.sleep(POLITE_SLEEP)
+
+def safe_get(session: requests.Session, url: str, **kwargs) -> Optional[requests.Response]:
+    """GET con timeout y captura de errores; devuelve Response o None."""
+    try:
+        resp = session.get(url, timeout=REQUEST_TIMEOUT, **kwargs)
+        if not resp.ok:
+            logging.warning("GET no OK %s -> %s", url, resp.status_code)
+            return None
+        return resp
+    except requests.RequestException as exc:
+        logging.warning("Error de red en GET %s: %s", url, exc)
+        return None
+
+# =========================
+# Scraping helpers
+# =========================
+
+def urljoin(base: str, href: str) -> str:
+    return urllib.parse.urljoin(base, href)
+
+def clean_numeric(text: str) -> Tuple[float, str]:
+    """
+    Sanitiza strings de precios ($14.99, 14.99€, etc.) a (float, currency).
+    Maneja comas americanas y puntuación final.
+    """
+    if not text: return 0.0, "EUR"
+    
+    currency = "EUR"
+    if "$" in text:
+        currency = "USD"
+    elif "€" in text or "EUR" in text.upper():
+        currency = "EUR"
+    
+    # Buscamos el grupo de dígitos, comas y puntos
+    match = re.search(r"([\d,\.]+)", text)
+    if not match: return 0.0, currency
+    
+    val = match.group(1)
+    # 1. Quitar comas (separador de miles US)
+    val = val.replace(",", "")
+    # 2. Quitar puntos finales (puntuación de frase)
+    val = val.rstrip(".")
+    
+    try:
+        return float(val), currency
+    except ValueError:
+        return 0.0, currency
+
+def find_sections(soup: BeautifulSoup) -> List[Tuple[str, BeautifulSoup]]:
+    """
+    Encuentra secciones: (título, tabla) en la página índice.
+    Selector robusto: busca h2, con o sin strong, y valida keywords.
+    Soporta MÚLTIPLES tablas por sección (si están divididas).
+    Retorna una lista plana de (titulo, tabla) donde el título se repite si hay varias tablas.
+    """
+    sections: List[Tuple[str, BeautifulSoup]] = []
+    
+    # Palabras clave para validar si un H2 es una sección válida de muñecos
+    VALID_KEYWORDS = ["checklist", "original", "masters", "masterverse", "wwe", "turtles", "crossover"]
+    
+    all_h2s = list(soup.find_all("h2"))
+    
+    def _is_valid_header(tag) -> Tuple[bool, str]:
+        """Devuelve (True, Titulo) si es un header principal, o (False, None)."""
+        txt = tag.get_text(strip=True)
+        # 1. Strong tag
+        s_tag = tag.find("strong")
+        if s_tag:
+            return True, s_tag.get_text(strip=True)
+        # 2. Keywords
+        if any(k in txt.lower() for k in VALID_KEYWORDS):
+            return True, txt
+        return False, None
+    
+    # Identificar indices de headers válidos
+    valid_indices = []
+    for i, h2 in enumerate(all_h2s):
+        is_valid, title = _is_valid_header(h2)
+        if is_valid:
+            valid_indices.append((i, h2, title))
+            
+    # Procesar intervalos
+    for idx_in_valid, (h2_idx, h2_node, title) in enumerate(valid_indices):
+        limit_node = None
+        if idx_in_valid + 1 < len(valid_indices):
+            limit_node = valid_indices[idx_in_valid + 1][1]
+            
+        # Estrategia de iteración manual (más segura que find_all_next masivo)
+        curr = h2_node.next_element
+        while curr:
+            if curr == limit_node:
+                break
+            
+            if curr.name == "table":
+                sections.append((title, curr))
+                
+            curr = curr.next_element
+            
+    return sections
+
+def clean_headers(table: BeautifulSoup) -> List[str]:
+    """Lee <th> y rellena vacíos como Unnamed_i."""
+    headers = []
+    for i, th in enumerate(table.find_all("th")):
+        text = (th.get_text() or "").strip()
+        headers.append(text if text else f"Unnamed_{i}")
+    return headers
+
+def extract_detail_link(name_cell: BeautifulSoup) -> Optional[str]:
+    """
+    Intenta obtener un enlace de detalle asociado a la fila.
+    1) <a> dentro del primer <td>
+    2) Enlace en un sibling cercano (<h3> o similar)
+    """
+    if not name_cell:
+        return None
+    a0 = name_cell.find("a", href=True)
+    if a0:
+        return a0["href"]
+    sib = name_cell.next_sibling
+    if sib and getattr(sib, "find", None):
+        a1 = sib.find("a", href=True)
+        if a1:
+            return a1["href"]
+    return None
+
+def extract_image_url(detail_html: str, base: str) -> Optional[str]:
+    """Localiza un <a data-fancybox ... href='...'> y devuelve URL absoluta."""
+    dsoup = BeautifulSoup(detail_html, "html.parser")
+    a_img = dsoup.select_one("a[data-fancybox][href]")
+    if not a_img:
+        return None
+    href = a_img.get("href")
+    if not href:
+        return None
+    return urljoin(base, href)
+
+def extract_deep_intelligence(detail_html: str) -> dict:
+    """
+    Extracts high-value identifiers and market sentiment from a product detail page.
+    Returns {upc, asin, collectors, msrp, momentum}
+    """
+    dsoup = BeautifulSoup(detail_html, "html.parser")
+    intelligence = {
+        "upc": "",
+        "asin": "",
+        "collectors": 0,
+        "msrp": 0.0,
+        "momentum": 1.0,
+        "avg": 0.0,
+        "currency": "USD"
+    }
+    
+    # 1. Physical Identifiers (UPC, ASIN)
+    desc_text = dsoup.get_text()
+    upc_match = re.search(r"UPC:\s*(\d+)", desc_text)
+    if upc_match: intelligence["upc"] = upc_match.group(1)
+    
+    asin_match = re.search(r"ASIN:\s*([A-Z0-9]+)", desc_text)
+    if asin_match: intelligence["asin"] = asin_match.group(1)
+    
+    # 2. Collector Count (Popularity)
+    coll_match = re.search(r"(\d+)\s+collectors\s+having\s+it", desc_text)
+    if coll_match: 
+        try:
+            intelligence["collectors"] = int(coll_match.group(1))
+        except (ValueError, IndexError):
+            pass
+    
+    # 3. MSRP & Trends
+    msrp_match = re.search(r"retail\s+price\s+of\s+([\$€\d,\.]+)", desc_text, re.I)
+    if msrp_match: 
+        val, curr = clean_numeric(msrp_match.group(1))
+        intelligence["msrp"] = val
+        intelligence["currency"] = curr
+    
+    avg_match = re.search(r"average\s+selling\s+price\s+of\s+([\$€\d,\.]+)", desc_text, re.I)
+    if avg_match:
+        val, curr = clean_numeric(avg_match.group(1))
+        intelligence["avg"] = val
+        intelligence["currency"] = curr # Overwrites if AVG has currency, usually same
+
+        # Calculate Momentum (Sentiment trend)
+        if intelligence["msrp"] > 0:
+            intelligence["momentum"] = round(intelligence["avg"] / intelligence["msrp"], 2)
+
+    return intelligence
+
+def download_image(session: requests.Session, url: str, dest_path: Path) -> bool:
+    """Descarga binaria con streaming si no existe. Devuelve True si queda en disco."""
+    try:
+        if dest_path.exists():
+            return True
+        resp = session.get(url, stream=True, timeout=REQUEST_TIMEOUT)
+        if not resp.ok:
+            logging.warning("No se pudo descargar imagen %s -> %s", url, resp.status_code)
+            return False
+        with dest_path.open("wb") as f:
+            for chunk in resp.iter_content(chunk_size=8192):
+                if chunk:
+                    f.write(chunk)
+        return True
+    except requests.RequestException as exc:
+        logging.warning("Error descargando imagen %s: %s", url, exc)
+        return False
+
+def process_table(
+    table: BeautifulSoup,
+    session: requests.Session,
+    images_dir: Path,
+    fast_mode: bool = False,
+    existing_keys: Set[str] = None
+) -> pd.DataFrame:
+    """
+    Procesa una tabla HTML y retorna un DataFrame.
+    fast_mode: Si es True, salta la descarga de detalles e imágenes.
+    existing_keys: Conjunto de claves (Name|Year) que ya existen. Si está, se salta el detalle.
+    """
+    if existing_keys is None:
+        existing_keys = set()
+        
+    headers = clean_headers(table)
+    out_cols = [
+        "Adquirido"
+    ] + headers + [
+        "Popularity", "Momentum", "ASIN", "UPC", "Avg", "US MSRP", "Currency",
+        "Detail Link", "Image URL", "Image Path", "Imagen", "Figure ID"
+    ]
+    rows = []
+
+    for tr in table.find_all("tr"):
+        tds = tr.find_all("td")
+        if not tds:
+            continue
+
+        cells = []
+        for td in tds:
+            txt = (td.get_text() or "").strip()
+            txt = txt.replace("’", "'").replace("‘", "'").replace("“", '"').replace("”", '"')
+            cells.append(txt)
+            
+        if len(cells) < len(headers):
+            cells += [""] * (len(headers) - len(cells))
+        else:
+            cells = cells[:len(headers)]
+
+        figure_id = ""
+        input_box = tr.find("input", {"type": "checkbox"})
+        if input_box and input_box.has_attr("figureid"):
+            figure_id = input_box["figureid"]
+
+        name_val = cells[0] if len(cells) > 0 else ""
+        year_val = ""
+        if len(cells) > 2:
+            year_val = cells[2]
+        
+        current_key = f"{name_val}|{year_val}"
+        is_existing = current_key in existing_keys
+
+        row_data = ["No"] + cells
+
+        is_checkbox_col = tds[0].find("input", {"type": "checkbox"}) is not None
+        name_cell = tds[1] if is_checkbox_col and len(tds) > 1 else tds[0]
+        
+        detail_link = extract_detail_link(name_cell)
+
+        image_url = None
+        image_path_str = None
+        
+        popularity = 0
+        momentum = 1.0
+        asin = ""
+        upc = ""
+        avg_market = 0.0
+        us_msrp = 0.0
+        currency = "USD"
+
+        is_audit_sample = fast_mode and len(rows) == 0 and not is_existing
+
+        if detail_link and (not fast_mode or is_audit_sample) and not is_existing:
+            detail_url = urljoin(CHECKLIST_URL, detail_link)
+            dresp = safe_get(session, detail_url)
+            if dresp is not None:
+                html_text = dresp.text
+                
+                img_url = extract_image_url(html_text, SITE_BASE)
+                if img_url:
+                    image_url = img_url
+                    image_name = Path(urllib.parse.urlparse(img_url).path).name
+                    image_path = images_dir / image_name
+                    if download_image(session, img_url, image_path):
+                        image_path_str = str(image_path)
+                
+                intel = extract_deep_intelligence(html_text)
+                popularity = intel["collectors"]
+                momentum = intel["momentum"]
+                asin = intel["asin"]
+                upc = intel["upc"]
+                avg_market = intel["avg"]
+                us_msrp = intel["msrp"]
+                currency = intel["currency"]
+                
+                polite_pause()
+
+        row_data += [popularity, momentum, asin, upc, avg_market, us_msrp, currency, detail_link, image_url, image_path_str, "", figure_id]
+        rows.append(row_data)
+
+    def _dedupe_cols(cols):
+        res = []
+        counts = {}
+        for c in cols:
+            if not c: c = "Unnamed"
+            n = counts.get(c, 0)
+            res.append(c if n == 0 else f"{c}_{n}")
+            counts[c] = n + 1
+        return res
+    
+    unique_cols = _dedupe_cols(out_cols)
+    df = pd.DataFrame(rows, columns=unique_cols)
+
+    unnamed = [c for c in df.columns if c.startswith("Unnamed_")]
+    if unnamed:
+        df = df.drop(columns=unnamed)
+
+    return df
+
+# =========================
+# Excel: lectura y fusión
+# =========================
+
+def sanitize_sheet_base(title: str) -> str:
+    t = title.replace("/", "-").replace("\\", "-").replace(":", "-")
+    t = t.replace("?", "").replace("*", "").replace("[", "(").replace("]", ")")
+    t = re.sub(r"[^A-Za-z0-9 \-_]", "", t)
+    t = re.sub(r"\s+", "_", t.strip())
+    if not t:
+        t = "Sheet"
+    return t[:31]
+
+def unique_sheet_name(title: str, used: Set[str]) -> str:
+    base = sanitize_sheet_base(title)
+    name = base
+    norm = name.lower()
+    if norm not in used:
+        used.add(norm)
+        return name
+
+    counter = 2
+    while True:
+        suffix = f"_{counter}"
+        maxlen = 31 - len(suffix)
+        candidate = (base[:maxlen] if maxlen > 0 else base[:31]) + suffix
+        norm_c = candidate.lower()
+        if norm_c not in used:
+            used.add(norm_c)
+            return candidate
+        counter += 1
+        if counter > 99:
+            h = hashlib.sha1(title.encode("utf-8")).hexdigest()[:4]
+            base2 = (base[:31 - 5]) + "_" + h
+            base = base2
+            counter = 2
+
+def read_existing_excel(file_path: Path) -> List[Tuple[str, pd.DataFrame]]:
+    if not file_path.exists():
+        logging.info("No existe Excel previo, se creará uno nuevo.")
+        return []
+
+    wb = load_workbook(file_path)
+    sections_data_old: List[Tuple[str, pd.DataFrame]] = []
+
+    for ws in wb.worksheets:
+        title = ws.cell(row=1, column=1).value
+        if not title:
+            continue
+
+        headers = []
+        col = 1
+        while True:
+            val = ws.cell(row=2, column=col).value
+            if val is None:
+                break
+            headers.append(val)
+            col += 1
+
+        data_rows = []
+        r = 3
+        max_row = ws.max_row
+        while r <= max_row:
+            row_values = [ws.cell(row=r, column=c).value for c in range(1, len(headers) + 1)]
+            if all(x is None for x in row_values):
+                break
+            data_rows.append(row_values)
+            r += 1
+
+        df_section = pd.DataFrame(data_rows, columns=headers)
+        sections_data_old.append((title, df_section))
+
+    logging.info("Excel previo leído con éxito.")
+    return sections_data_old
+
+def make_key(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.copy()
+    candidates = [c for c in ["Name", "Wave", "Year"] if c in df.columns]
+    if not candidates:
+        df["__key__"] = df.index.astype(str)
+        return df
+
+    def _join_row(row):
+        return "|".join([str(row[c]).strip() if pd.notna(row[c]) else "" for c in candidates])
+
+    df["__key__"] = df.apply(_join_row, axis=1)
+    return df
+
+def combine_sections(
+    sections_new: List[Tuple[str, pd.DataFrame]],
+    sections_old: List[Tuple[str, pd.DataFrame]]
+) -> List[Tuple[str, pd.DataFrame]]:
+    old_map = {t: df for t, df in sections_old}
+    result: List[Tuple[str, pd.DataFrame]] = []
+
+    def _dedupe_index(dfk: pd.DataFrame) -> pd.DataFrame:
+        if not dfk.index.has_duplicates:
+            return dfk
+        counts = {}
+        new_index = []
+        for k in dfk.index:
+            n = counts.get(k, 0)
+            new_index.append(k if n == 0 else f"{k}#{n}")
+            counts[k] = n + 1
+        dfk = dfk.copy()
+        dfk.index = new_index
+        return dfk
+
+    for title, df_new in sections_new:
+        df_old = old_map.get(title, pd.DataFrame())
+
+        new_cols = df_new.columns.tolist()
+        old_cols = df_old.columns.tolist()
+        
+        all_unique_cols = list(dict.fromkeys(new_cols + old_cols))
+        
+        final_cols = [c for c in DESIRED_ORDER if c in all_unique_cols]
+        final_cols += [c for c in all_unique_cols if c not in final_cols]
+
+        def _safe_align(df, target_cols):
+            if df.empty:
+                return pd.DataFrame(columns=target_cols)
+            for c in target_cols:
+                if c not in df.columns:
+                    df[c] = ""
+            return df[target_cols]
+
+        df_new = _safe_align(df_new.copy(), final_cols)
+        df_old = _safe_align(df_old.copy(), final_cols)
+
+        df_new_k = make_key(df_new).set_index("__key__", drop=False)
+        df_old_k = make_key(df_old).set_index("__key__", drop=False)
+
+        df_new_k = _dedupe_index(df_new_k)
+        df_old_k = _dedupe_index(df_old_k)
+
+        final_rows = []
+
+        for k in df_new_k.index:
+            if k in df_old_k.index:
+                old_row = df_old_k.loc[k].copy()
+                if "Figure ID" in df_new_k.columns:
+                     new_id = df_new_k.loc[k].get("Figure ID", "")
+                     if new_id:
+                          old_row["Figure ID"] = new_id
+                final_rows.append(old_row)
+            else:
+                new_row = df_new_k.loc[k].copy()
+                new_row["Adquirido"] = "No"
+                final_rows.append(new_row)
+
+        for k in df_old_k.index:
+            if k not in df_new_k.index:
+                final_rows.append(df_old_k.loc[k].copy())
+
+        df_final = pd.DataFrame(final_rows, columns=final_cols)
+
+        existing_in_desired = [c for c in DESIRED_ORDER if c in df_final.columns]
+        remaining_cols = [c for c in df_final.columns if c not in existing_in_desired]
+        df_final = df_final.reindex(columns=existing_in_desired + remaining_cols)
+
+        result.append((title, df_final))
+
+    return result
+
+# =========================
+# Excel: escritura
+# =========================
+
+def write_excel_with_links(
+    excel_path: Path,
+    sections: List[Tuple[str, pd.DataFrame]]
+) -> None:
+    with pd.ExcelWriter(excel_path, engine="xlsxwriter") as writer:
+        wb = writer.book
+        title_fmt = wb.add_format({"bg_color": "#FFD700", "bold": True}) # Gold color for Vintage
+        fmt_green = wb.add_format({"bg_color": "#C6EFCE", "font_color": "#006100"})
+        fmt_red = wb.add_format({"bg_color": "#FFC7CE", "font_color": "#9C0006"})
+
+        used_names: Set[str] = set()
+
+        for title, df in sections:
+            sheet_name = unique_sheet_name(title, used_names)
+            ws = wb.add_worksheet(sheet_name)
+            writer.sheets[sheet_name] = ws
+
+            num_cols = max(1, df.shape[1])
+            ws.merge_range(0, 0, 0, num_cols - 1, title, title_fmt)
+
+            df.to_excel(writer, sheet_name=sheet_name, startrow=1, startcol=0, index=False)
+
+            df_rows = df.shape[0]
+            if df_rows == 0:
+                continue
+
+            if "Adquirido" in df.columns:
+                col_idx = df.columns.get_loc("Adquirido")
+                data_start = 2
+                data_end = 1 + df_rows
+
+                ws.data_validation(
+                    data_start, col_idx, data_end, col_idx,
+                    {"validate": "list", "source": ["Sí", "No"]}
+                )
+
+                col_letter = xlsxwriter.utility.xl_col_to_name(col_idx)
+                data_range = f"{col_letter}{data_start+1}:{col_letter}{data_end+1}"
+
+                ws.conditional_format(data_range, {
+                    "type": "cell", "criteria": "==", "value": '"Sí"', "format": fmt_green
+                })
+                ws.conditional_format(data_range, {
+                    "type": "cell", "criteria": "==", "value": '"No"', "format": fmt_red
+                })
+
+            if "Imagen" in df.columns and "Image Path" in df.columns:
+                imagen_col = df.columns.get_loc("Imagen")
+                path_col = df.columns.get_loc("Image Path")
+                data_start = 2
+                for i in range(df_rows):
+                    img_path = df.iat[i, path_col]
+                    if img_path:
+                        p = Path(img_path)
+                        if p.exists():
+                            link = "file:///" + p.as_posix()
+                            ws.write_url(data_start + i, imagen_col, link, string="Ver Imagen")
+
+# =========================
+# Reporting
+# =========================
+
+def generate_text_report(sections: List[Tuple[str, pd.DataFrame]], path: Path):
+    total_items = 0
+    with path.open("w", encoding="utf-8") as f:
+        f.write("=== ACTIONFIGURE411 VINTAGE SCRAPING AUDIT REPORT ===\n")
+        f.write(f"Generated at: {time.strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+        
+        for title, df in sections:
+            count = len(df)
+            total_items += count
+            f.write(f"SECTION: {title}\n")
+            f.write(f"  Rows Found: {count}\n")
+            if count > 0 and "Name" in df.columns:
+                names = df["Name"].tolist()
+                ids = df["Figure ID"].tolist() if "Figure ID" in df.columns else ["?"] * len(names)
+                
+                has_intel = "Popularity" in df.columns
+                
+                for i, (n, fid) in enumerate(zip(names, ids)):
+                    line = f"    - [{fid}] {n}"
+                    if has_intel:
+                        pop = df.iloc[i].get("Popularity", 0)
+                        mom = df.iloc[i].get("Momentum", 1.0)
+                        asin = df.iloc[i].get("ASIN", "")
+                        upc = df.iloc[i].get("UPC", "")
+                        if pop or mom != 1.0 or asin or upc:
+                            line += f" | Pop: {pop} | Mom: {mom}x | ASIN: {asin} | UPC: {upc}"
+                    f.write(line + "\n")
+            f.write("-" * 40 + "\n")
+            
+        f.write(f"\nTOTAL ITEMS FOUND: {total_items}\n")
+        
+    logging.info(f"Audit report written to {path}")
+
+# =========================
+# Pipeline principal
+# =========================
+
+def main(audit_mode: bool = False) -> None:
+    start_time = time.time()
+    project_root, excel_path, images_dir = get_project_paths()
+    
+    session = build_session()
+    
+    existing_keys = set()
+    if not audit_mode:
+        logging.info("Leyendo Excel Vintage existente para modo incremental...")
+        sections_old_preload = read_existing_excel(excel_path)
+        for _, df_old in sections_old_preload:
+            if "Name" in df_old.columns:
+                 has_year = "Year" in df_old.columns
+                 for _, row in df_old.iterrows():
+                     n = str(row["Name"]).strip()
+                     y = str(row["Year"]).strip() if has_year else ""
+                     k = f"{n}|{y}"
+                     existing_keys.add(k)
+        if len(existing_keys) > 0:
+            logging.info("Se encontraron %d figuras existentes en el Excel Vintage. Se omitirá su descarga (Modo Incremental).", len(existing_keys))
+        else:
+            logging.info("No se encontraron figuras Vintage previas. Se realizará una descarga completa del catálogo.")
+
+    logging.info("Descargando página índice de Vintage...")
+    resp = safe_get(session, CHECKLIST_URL)
+    if resp is None:
+        logging.error("No se pudo acceder a la página índice de Vintage.")
+        return
+    soup = BeautifulSoup(resp.text, "html.parser")
+
+    logging.info("Buscando secciones Vintage...")
+    sections_html = find_sections(soup)
+    logging.info("Secciones Vintage encontradas: %d", len(sections_html))
+
+    sections_new: List[Tuple[str, pd.DataFrame]] = []
+    for i, (title, tbl) in enumerate(sections_html):
+        is_smoke_test = audit_mode and i == 0
+        logging.info("Procesando sección Vintage: %s (AuditMode=%s, SmokeTest=%s)", title, audit_mode, is_smoke_test)
+        
+        df = process_table(tbl, session, images_dir, fast_mode=(audit_mode and not is_smoke_test), existing_keys=existing_keys)
+        sections_new.append((title, df))
+        if not audit_mode or is_smoke_test:
+            polite_pause()
+
+    if audit_mode:
+        report_path = project_root.parent / "logs" / "scraping_vintage_report.txt"
+        report_path.parent.mkdir(exist_ok=True)
+        generate_text_report(sections_new, report_path)
+        print(f"Report generated at: {report_path.absolute()}")
+        return
+
+    try:
+        sections_old = read_existing_excel(excel_path)
+        sections_final = combine_sections(sections_new, sections_old)
+        write_excel_with_links(excel_path, sections_final)
+    except Exception as e:
+        import traceback
+        logging.error(f"❌ Error durante la fusión/escritura del Excel Vintage: {e}\n{traceback.format_exc()}")
+        raise
+
+    elapsed = time.time() - start_time
+    logging.info("Extracción Vintage completada en %s", time.strftime("%H:%M:%S", time.gmtime(elapsed)))
+    logging.info("Resultado guardado en: %s", excel_path)
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="ActionFigures411 Vintage Scraper & Updater")
+    parser.add_argument("--report", action="store_true", help="Run in audit mode (no downloads, generates report)")
+    args, unknown = parser.parse_known_args()
+    
+    main(audit_mode=args.report)

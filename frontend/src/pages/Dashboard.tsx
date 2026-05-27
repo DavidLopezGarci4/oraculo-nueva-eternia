@@ -179,6 +179,56 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                 </div>
             </div>
 
+            {/* Vintage Metrics Ribbon (Gold/Amber Theme) */}
+            {stats && (stats.total_products_vintage > 0 || stats.owned_count_vintage > 0) && (
+                <div className="grid grid-cols-2 gap-3 md:gap-6 md:grid-cols-3 mt-4">
+                    {/* Vínculos Activos Vintage */}
+                    <div className="group relative overflow-hidden rounded-xl md:rounded-2xl border border-amber-500/15 bg-amber-950/10 backdrop-blur-md p-4 md:p-5 shadow-[0_0_15px_-5px_rgba(245,158,11,0.1)]">
+                        <div className={`absolute -right-10 -top-10 h-24 w-24 rounded-full bg-amber-500/5 blur-2xl pointer-events-none`}></div>
+                        <div className="relative flex flex-col items-center md:items-start gap-1 md:gap-3">
+                            <div className="flex h-8 w-8 md:h-10 md:w-10 items-center justify-center rounded-lg md:rounded-xl bg-amber-500/10 border border-amber-500/20 shrink-0">
+                                <Zap className="h-4 w-4 md:h-5 md:w-5 text-amber-500 fill-amber-500" />
+                            </div>
+                            <div className="text-center md:text-left">
+                                <p className="text-[7px] md:text-[10px] font-black uppercase tracking-widest text-amber-500/40 mb-1">Vínculos Vintage</p>
+                                <h3 className="text-sm md:text-3xl font-black text-amber-500">{stats?.total_products_vintage || 0}</h3>
+                            </div>
+                        </div>
+                    </div>
+                    {/* Fortaleza Vintage */}
+                    {stats.owned_count_vintage > 0 && (
+                        <div className="group relative overflow-hidden rounded-xl md:rounded-2xl border border-amber-500/15 bg-amber-950/10 backdrop-blur-md p-4 md:p-5 shadow-[0_0_15px_-5px_rgba(245,158,11,0.1)]">
+                            <div className={`absolute -right-10 -top-10 h-24 w-24 rounded-full bg-amber-500/5 blur-2xl pointer-events-none`}></div>
+                            <div className="relative flex flex-col items-center md:items-start gap-1 md:gap-3">
+                                <div className="flex h-8 w-8 md:h-10 md:w-10 items-center justify-center rounded-lg md:rounded-xl bg-amber-500/10 border border-amber-500/20 shrink-0">
+                                    <ShoppingBag className="h-4 w-4 md:h-5 md:w-5 text-amber-500" />
+                                </div>
+                                <div className="text-center md:text-left">
+                                    <p className="text-[7px] md:text-[10px] font-black uppercase tracking-widest text-amber-500/40 mb-1">Fortaleza Vintage</p>
+                                    <h3 className="text-sm md:text-3xl font-black text-amber-500">{stats?.owned_count_vintage || 0}</h3>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    {/* Valor Venta Vintage */}
+                    {stats.owned_count_vintage > 0 && (
+                        <div className="group relative overflow-hidden rounded-xl md:rounded-2xl border border-amber-500/15 bg-amber-950/10 backdrop-blur-md p-4 md:p-5 shadow-[0_0_15px_-5px_rgba(245,158,11,0.1)]">
+                            <div className={`absolute -right-10 -top-10 h-24 w-24 rounded-full bg-amber-500/5 blur-2xl pointer-events-none`}></div>
+                            <div className="relative flex flex-col items-center md:items-start gap-1 md:gap-3">
+                                <div className="flex h-8 w-8 md:h-10 md:w-10 items-center justify-center rounded-lg md:rounded-xl bg-amber-500/10 border border-amber-500/20 shrink-0">
+                                    <Euro className="h-4 w-4 md:h-5 md:w-5 text-amber-500" />
+                                </div>
+                                <div className="text-center md:text-left">
+                                    <p className="text-[7px] md:text-[10px] font-black uppercase tracking-widest text-amber-500/40 mb-1">Valor Venta Vintage</p>
+                                    <h3 className="text-sm md:text-3xl font-black text-amber-500">{(stats?.financial_vintage?.market_value || 0).toLocaleString('es-ES')}€</h3>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
+
             {/* Conditional Content Based on Role */}
             {!isAdmin ? (
                 // GUARDIAN VIEW: Custom Order (Oportunidades -> Hall of Fame)

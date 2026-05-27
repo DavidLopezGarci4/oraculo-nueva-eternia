@@ -163,6 +163,21 @@ async def sync_nexus(background_tasks: BackgroundTasks):
         raise HTTPException(status_code=500, detail=f"No se pudo iniciar Nexus: {str(e)}")
 
 
+@router.post("/nexus/sync/vintage", dependencies=[Depends(verify_api_key)])
+async def sync_nexus_vintage(background_tasks: BackgroundTasks):
+    try:
+        from src.application.services.nexus_vintage_service import NexusVintageService
+
+        background_tasks.add_task(NexusVintageService.sync_catalog)
+        return {"status": "success", "message": "Iniciando sincronización del Nexo Maestro Vintage en segundo plano..."}
+    except Exception as e:
+        logger.error(f"Failed to start Vintage Nexus sync: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"No se pudo iniciar Nexus Vintage: {str(e)}")
+
+
+
 @router.post("/validate-anomaly", dependencies=[Depends(verify_api_key)])
 async def validate_anomaly(request: AnomalyValidationRequest):
     with SessionCloud() as db:

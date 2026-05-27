@@ -106,6 +106,28 @@ async def export_excel(user_id: int = 1):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/api/guardian/export/excel/vintage")
+async def export_excel_vintage(user_id: int = 1):
+    try:
+        from src.application.services.guardian_service import GuardianService
+
+        with SessionCloud() as db:
+            file_path = GuardianService.export_vintage_collection_to_excel(db, user_id)
+
+        if not os.path.exists(file_path):
+            raise HTTPException(status_code=500, detail="Error al generar el archivo Excel Vintage")
+
+        return FileResponse(
+            path=file_path,
+            filename=os.path.basename(file_path),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+    except Exception as e:
+        logger.error(f"Excel Vintage Export failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
 @router.get("/api/guardian/export/sqlite")
 async def export_sqlite(user_id: int = 1):
     try:

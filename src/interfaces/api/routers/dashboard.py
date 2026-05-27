@@ -26,15 +26,31 @@ router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 async def get_dashboard_stats(user_id: int = 1):
     try:
         with SessionCloud() as db:
-            total_products = db.query(ProductModel).count()
-            owned_count = db.query(CollectionItemModel).filter(
+            total_products = db.query(ProductModel).filter(ProductModel.is_vintage.is_not(True)).count()
+            total_products_vintage = db.query(ProductModel).filter(ProductModel.is_vintage == True).count()
+            
+            owned_count = db.query(CollectionItemModel).join(ProductModel).filter(
                 CollectionItemModel.owner_id == user_id,
                 CollectionItemModel.acquired == True,
+                ProductModel.is_vintage.is_not(True)
+            ).count()
+            
+            owned_count_vintage = db.query(CollectionItemModel).join(ProductModel).filter(
+                CollectionItemModel.owner_id == user_id,
+                CollectionItemModel.acquired == True,
+                ProductModel.is_vintage == True
             ).count()
 
-            wish_count = db.query(CollectionItemModel).filter(
+            wish_count = db.query(CollectionItemModel).join(ProductModel).filter(
                 CollectionItemModel.owner_id == user_id,
                 CollectionItemModel.acquired == False,
+                ProductModel.is_vintage.is_not(True)
+            ).count()
+            
+            wish_count_vintage = db.query(CollectionItemModel).join(ProductModel).filter(
+                CollectionItemModel.owner_id == user_id,
+                CollectionItemModel.acquired == False,
+                ProductModel.is_vintage == True
             ).count()
 
             from src.application.services.valuation_service import ValuationService
@@ -45,12 +61,18 @@ async def get_dashboard_stats(user_id: int = 1):
             if user:
                 user_location = user.location
 
-            financials = valuation_service.get_collection_valuation(user_id, user_location)
+            financials = valuation_service.get_collection_valuation(user_id, user_location, is_vintage=False)
+            financials_vintage = valuation_service.get_collection_valuation(user_id, user_location, is_vintage=True)
 
             total_invested = financials["total_invested"]
             market_value = financials["total_value"]
             profit_loss = financials["profit_loss"]
             roi = financials["roi"]
+
+            total_invested_v = financials_vintage["total_invested"]
+            market_value_v = financials_vintage["total_value"]
+            profit_loss_v = financials_vintage["profit_loss"]
+            roi_v = financials_vintage["roi"]
 
             shop_dist = (
                 db.query(OfferModel.shop_name, func.count(OfferModel.id))
@@ -67,17 +89,27 @@ async def get_dashboard_stats(user_id: int = 1):
 
             return {
                 "total_products": total_products,
+                "total_products_vintage": total_products_vintage,
                 "owned_count": owned_count,
+                "owned_count_vintage": owned_count_vintage,
                 "wish_count": wish_count,
+                "wish_count_vintage": wish_count_vintage,
                 "financial": {
                     "total_invested": round(total_invested, 2),
                     "market_value": round(market_value, 2),
                     "profit_loss": round(profit_loss, 2),
                     "roi": round(roi, 1),
                 },
+                "financial_vintage": {
+                    "total_invested": round(total_invested_v, 2),
+                    "market_value": round(market_value_v, 2),
+                    "profit_loss": round(profit_loss_v, 2),
+                    "roi": round(roi_v, 1),
+                },
                 "match_count": match_count,
                 "shop_distribution": [{"shop": s, "count": c} for s, c in shop_dist],
             }
+
     except Exception as e:
         logger.error(f"CRITICAL DASHBOARD ERROR for user {user_id}: {e}")
         raise HTTPException(status_code=500, detail=f"Error al recuperar datos del tablero: {str(e)}")

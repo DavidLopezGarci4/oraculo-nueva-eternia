@@ -20,6 +20,9 @@ export interface DashboardStats {
         shop: string;
         count: number;
     }[];
+    total_products_vintage: number;
+    owned_count_vintage: number;
+    financial_vintage: FinancialHealth;
 }
 
 export interface TopDeal {
