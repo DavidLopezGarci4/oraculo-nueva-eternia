@@ -40,6 +40,7 @@ export interface Product {
     // Best Offer Tracking (Phase 44)
     best_p2p_price?: number;
     best_p2p_source?: string | null;
+    purgatory_match_count?: number;
 }
 
 export const getCollection = async (userId: number, isVintage?: boolean): Promise<Product[]> => {

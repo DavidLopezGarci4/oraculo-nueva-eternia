@@ -106,6 +106,7 @@ class ProductOutput(BaseModel):
     condition: Optional[str] = "New"
     grading: Optional[float] = 10.0
     notes: Optional[str] = None
+    purgatory_match_count: int = 0
 
 
 class ProductEditRequest(BaseModel):

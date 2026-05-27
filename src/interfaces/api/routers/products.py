@@ -15,6 +15,44 @@ from src.interfaces.api.schemas import ProductEditRequest, ProductMergeRequest, 
 router = APIRouter(tags=["products"])
 
 
+def get_purgatory_counts(db) -> dict[int, int]:
+    from src.domain.models import PendingMatchModel, ProductModel
+    from src.core.brain_engine import engine
+    import re
+
+    pending = db.query(PendingMatchModel).all()
+    products = db.query(ProductModel).all()
+
+    _STOP_WORDS = {"masters", "of", "the", "universe", "origins", "motu"}
+
+    # Build token index
+    token_index = {}
+    ean_index = {}
+    for p in products:
+        for token in set(re.findall(r"\w+", (p.name or "").lower())) - _STOP_WORDS:
+            token_index.setdefault(token, []).append(p)
+        if p.ean:
+            ean_index.setdefault(p.ean, []).append(p)
+
+    counts = {}
+    for item in pending:
+        scraped_name_safe = (item.scraped_name or "").lower()
+        search_tokens = set(re.findall(r"\w+", scraped_name_safe)) - _STOP_WORDS
+
+        candidates = set()
+        for token in search_tokens:
+            candidates.update(token_index.get(token, []))
+        if item.ean:
+            candidates.update(ean_index.get(item.ean, []))
+
+        for p in candidates:
+            _, score, _ = engine.calculate_match(p.name, item.scraped_name, p.ean, item.ean)
+            if score > 0.30:
+                counts[p.id] = counts.get(p.id, 0) + 1
+
+    return counts
+
+
 @router.get("/api/products", response_model=List[ProductOutput])
 async def get_products(is_vintage: bool = False):
     with SessionCloud() as db:
@@ -45,6 +83,7 @@ async def get_products(is_vintage: bool = False):
             query = query.where(ProductModel.is_vintage.is_not(True))
 
         results = db.execute(query).all()
+        counts = get_purgatory_counts(db)
 
         seen: set = set()
         final_products = []
@@ -54,6 +93,7 @@ async def get_products(is_vintage: bool = False):
             seen.add(product.id)
             po = ProductOutput.model_validate(product)
             po.avg_market_price = product.avg_market_price or 0.0
+            po.purgatory_match_count = counts.get(product.id, 0)
             if best_offer:
                 po.best_p2p_price = best_offer.price
                 po.best_p2p_source = best_offer.shop_name

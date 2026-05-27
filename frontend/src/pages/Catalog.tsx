@@ -292,6 +292,15 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                 );
             })
             .sort((a, b) => {
+                if (isVintageOnly) {
+                    const countA = a.purgatory_match_count || 0;
+                    const countB = b.purgatory_match_count || 0;
+                    if (countA !== countB) {
+                        return countB - countA;
+                    }
+                    return a.id - b.id;
+                }
+
                 const aWished = isWished(a.id);
                 const bWished = isWished(b.id);
                 const aGrail = isGrail(a.id);
@@ -347,7 +356,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                 const idB = parseInt(b.figure_id?.replace(/[^0-9]/g, '') || '99999');
                 return idA - idB;
             });
-    }, [products, searchQuery, subCatStats, isOwned, isWished, isGrail]);
+    }, [products, searchQuery, subCatStats, isOwned, isWished, isGrail, isVintageOnly]);
 
     if (isLoadingProducts || isLoadingCollection) {
         return <PowerSwordLoader variant="fullScreen" text="Invocando el Catálogo Maestro..." />;
