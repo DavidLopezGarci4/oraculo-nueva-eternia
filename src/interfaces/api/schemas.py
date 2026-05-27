@@ -115,6 +115,7 @@ class ProductEditRequest(BaseModel):
     category: str | None = None
     sub_category: str | None = None
     retail_price: float | None = None
+    is_vintage: Optional[bool] = None
 
 
 class ProductMergeRequest(BaseModel):

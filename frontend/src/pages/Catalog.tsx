@@ -208,7 +208,8 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                 ean: editingProduct.ean,
                 image_url: editingProduct.image_url,
                 sub_category: editingProduct.sub_category,
-                retail_price: editingProduct.retail_price
+                retail_price: editingProduct.retail_price,
+                is_vintage: editingProduct.is_vintage
             }
         });
     };
@@ -891,6 +892,23 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                                             onChange={(e) => setEditingProduct({ ...editingProduct, image_url: e.target.value })}
                                             className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-white/50 text-xs focus:outline-none focus:border-brand-primary/50 transition-all"
                                         />
+                                    </div>
+
+                                    {/* Linea Vintage (is_vintage) toggle */}
+                                    <div className="col-span-1 md:col-span-2 flex items-center justify-between p-4 rounded-2xl bg-white/[0.02] border border-white/5 mt-2">
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-white/80 block">Línea Vintage (Eternia)</label>
+                                            <span className="text-[8px] text-white/30 font-bold uppercase tracking-wider block">Activar para transferir este producto a la línea retro vintage</span>
+                                        </div>
+                                        <label className="relative inline-flex items-center cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={!!editingProduct.is_vintage}
+                                                onChange={(e) => setEditingProduct({ ...editingProduct, is_vintage: e.target.checked })}
+                                                className="sr-only peer"
+                                            />
+                                            <div className="w-11 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white/40 peer-checked:after:bg-amber-500 after:border-none after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500/20 border border-white/10 peer-checked:border-amber-500/30"></div>
+                                        </label>
                                     </div>
                                 </div>
                             </div>

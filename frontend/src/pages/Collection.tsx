@@ -13,27 +13,82 @@ import {
     Sparkles,
     Download,
     Database,
-    RefreshCw
+    RefreshCw,
+    Settings,
+    Trash2,
+    X,
+    Save
 } from 'lucide-react';
 import PowerSwordLoader from '../components/ui/PowerSwordLoader';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getCollection, toggleCollection } from '../api/collection';
 import type { Product } from '../api/collection';
 import CollectionItemDetailModal from '../components/CollectionItemDetailModal';
+import { updateProduct, deleteProduct } from '../api/admin';
+import type { Hero } from '../api/admin';
 
 interface CollectionProps {
     searchQuery?: string;
     isVintageOnly?: boolean;
+    user?: Hero | null;
 }
 
-const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly = false }) => {
+const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly = false, user }) => {
     const queryClient = useQueryClient();
     const [activeTab, setActiveTab] = useState<'owned' | 'wish'>('owned');
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
+    const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
     // Contexto de Autenticación (Fase 8.2)
     const activeUserId = parseInt(localStorage.getItem('active_user_id') || '2');
+    const isAdmin = user?.role === 'admin' || user?.username === 'David';
+
+    const updateMutation = useMutation({
+        mutationFn: ({ id, data }: { id: number, data: any }) => updateProduct(id, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['collection'] });
+            setEditingProduct(null);
+        }
+    });
+
+    const deleteProductMutation = useMutation({
+        mutationFn: (productId: number) => deleteProduct(productId),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['collection'] });
+            queryClient.invalidateQueries({ queryKey: ['vintage-products'] });
+            queryClient.invalidateQueries({ queryKey: ['purgatory'] });
+            queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+            setSelectedProduct(null);
+            alert('Reliquia eliminada y devuelta al Purgatorio con éxito.');
+        },
+        onError: (err) => {
+            console.error('Error al eliminar producto:', err);
+            alert('No se pudo eliminar el producto. Inténtelo de nuevo.');
+        }
+    });
+
+    const handleSaveEdit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingProduct) return;
+        updateMutation.mutate({
+            id: editingProduct.id,
+            data: {
+                name: editingProduct.name,
+                ean: editingProduct.ean,
+                image_url: editingProduct.image_url,
+                sub_category: editingProduct.sub_category,
+                retail_price: editingProduct.retail_price,
+                is_vintage: editingProduct.is_vintage
+            }
+        });
+    };
+
+    const handleDeleteProduct = (product: Product) => {
+        if (confirm(`¿Estás completamente seguro de que deseas eliminar permanentemente '${product.name}' de los catálogos y colecciones? Todas sus ofertas vinculadas volverán al Purgatorio.`)) {
+            deleteProductMutation.mutate(product.id);
+        }
+    };
 
     // 1. Fetch de la colección (basada en el ID activo)
     const { data: collection, isLoading, isError } = useQuery<Product[]>({
@@ -288,7 +343,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                                             )}
                                             {roi > 0 && activeTab === 'owned' && (
                                                 <div className="flex items-center gap-1 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl bg-green-500/10 text-green-400 border border-green-500/20 font-black text-[8px] sm:text-[10px] whitespace-nowrap">
-                                                    <TrendingUp className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                                        <TrendingUp className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                                                     +{roi}%
                                                 </div>
                                             )}
@@ -306,6 +361,25 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                                         >
                                             <Info className="h-5 w-5 group-hover:scale-110 transition-transform" />
                                         </button>
+
+                                        {isAdmin && (
+                                            <>
+                                                <button
+                                                    onClick={() => setEditingProduct(product)}
+                                                    className="h-6 sm:h-8 px-2 flex items-center justify-center rounded-lg sm:rounded-xl bg-white/5 border border-white/5 text-white/30 hover:bg-white/10 hover:text-white transition-all"
+                                                    title="Editar metadatos"
+                                                >
+                                                    <Settings className="h-4 w-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeleteProduct(product)}
+                                                    className="h-6 sm:h-8 px-2 flex items-center justify-center rounded-lg sm:rounded-xl bg-white/5 border border-white/5 text-white/30 hover:bg-red-500/20 hover:text-red-400 transition-all"
+                                                    title="Eliminar y devolver al Purgatorio"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </button>
+                                            </>
+                                        )}
 
                                         {activeTab === 'wish' ? (
                                             <button
@@ -361,6 +435,127 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                         setSelectedProduct(null);
                     }}
                 />
+            )}
+
+            {/* EDIT PRODUCT MODAL (ADMIN ONLY) */}
+            {isAdmin && editingProduct && (
+                <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-black/90 backdrop-blur-2xl animate-in fade-in duration-300">
+                    <motion.div
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className="relative w-full max-w-2xl overflow-hidden rounded-[2.5rem] border border-brand-primary/30 bg-[#0A0A0B] shadow-[0_0_50px_rgba(14,165,233,0.2)] flex flex-col"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <form onSubmit={handleSaveEdit}>
+                            <div className="p-8 pb-4 flex items-center justify-between border-b border-white/5">
+                                <div className="flex items-center gap-4">
+                                    <div className="p-3 bg-brand-primary/10 rounded-xl">
+                                        <Settings className="h-6 w-6 text-brand-primary" />
+                                    </div>
+                                    <h4 className="text-2xl font-black text-white">Editor de <span className="text-brand-primary">La Verdad</span></h4>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setEditingProduct(null)}
+                                    className="h-10 w-10 flex items-center justify-center rounded-xl bg-white/5 text-white/40 hover:bg-red-500/20 hover:text-red-400 transition-all"
+                                >
+                                    <X className="h-5 w-5" />
+                                </button>
+                            </div>
+
+                            <div className="p-8 space-y-6 overflow-y-auto max-h-[60vh] custom-scrollbar">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {/* Name */}
+                                    <div className="col-span-1 md:col-span-2 space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Nombre de la Reliquia</label>
+                                        <input
+                                            value={editingProduct.name}
+                                            onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
+                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-white focus:outline-none focus:border-brand-primary/50 transition-all"
+                                        />
+                                    </div>
+
+                                    {/* EAN */}
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">EAN (Código Sagrado)</label>
+                                        <input
+                                            value={editingProduct.ean || ''}
+                                            onChange={(e) => setEditingProduct({ ...editingProduct, ean: e.target.value })}
+                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-white focus:outline-none focus:border-brand-primary/50 transition-all"
+                                            placeholder="Desconocido"
+                                        />
+                                    </div>
+
+                                    {/* Retail Price */}
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Precio de Lanzamiento (€)</label>
+                                        <input
+                                            type="number"
+                                            value={editingProduct.retail_price || 0}
+                                            onChange={(e) => setEditingProduct({ ...editingProduct, retail_price: parseFloat(e.target.value) })}
+                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-white focus:outline-none focus:border-brand-primary/50 transition-all"
+                                        />
+                                    </div>
+
+                                    {/* Subcategory */}
+                                    <div className="col-span-1 md:col-span-2 space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Línea temporal (Subcategoría)</label>
+                                        <input
+                                            value={editingProduct.sub_category || ''}
+                                            onChange={(e) => setEditingProduct({ ...editingProduct, sub_category: e.target.value })}
+                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-white focus:outline-none focus:border-brand-primary/50 transition-all"
+                                        />
+                                    </div>
+
+                                    {/* Image URL */}
+                                    <div className="col-span-1 md:col-span-2 space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Pocion Visual (URL Imagen)</label>
+                                        <input
+                                            value={editingProduct.image_url || ''}
+                                            onChange={(e) => setEditingProduct({ ...editingProduct, image_url: e.target.value })}
+                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-white/50 text-xs focus:outline-none focus:border-brand-primary/50 transition-all"
+                                        />
+                                    </div>
+
+                                    {/* Linea Vintage (is_vintage) toggle */}
+                                    <div className="col-span-1 md:col-span-2 flex items-center justify-between p-4 rounded-2xl bg-white/[0.02] border border-white/5 mt-2">
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-white/80 block">Línea Vintage (Eternia)</label>
+                                            <span className="text-[8px] text-white/30 font-bold uppercase tracking-wider block">Activar para transferir este producto a la línea retro vintage</span>
+                                        </div>
+                                        <label className="relative inline-flex items-center cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={!!editingProduct.is_vintage}
+                                                onChange={(e) => setEditingProduct({ ...editingProduct, is_vintage: e.target.checked })}
+                                                className="sr-only peer"
+                                            />
+                                            <div className="w-11 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white/40 peer-checked:after:bg-amber-500 after:border-none after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500/20 border border-white/10 peer-checked:border-amber-500/30"></div>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="p-8 border-t border-white/5 bg-white/[0.02] flex items-center justify-end gap-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setEditingProduct(null)}
+                                    className="px-6 py-3 rounded-2xl text-sm font-black uppercase tracking-widest text-white/30 hover:text-white transition-all"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={updateMutation.isPending}
+                                    className="bg-brand-primary hover:bg-brand-secondary text-white px-8 py-3 rounded-2xl font-black uppercase tracking-widest transition-all shadow-[0_0_30px_rgba(14,165,233,0.3)] flex items-center gap-2 disabled:opacity-50"
+                                >
+                                    {updateMutation.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                                    Preservar Cambios
+                                </button>
+                            </div>
+                        </form>
+                    </motion.div>
+                </div>
             )}
         </div>
     );

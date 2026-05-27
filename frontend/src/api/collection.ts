@@ -16,6 +16,7 @@ export interface Product {
     p25_price?: number; // Alias or direct p25 metric
     avg_p2p_price?: number;
     p25_p2p_price?: number;
+    is_vintage?: boolean;
 
     // Financial Intelligence
     purchase_price?: number;

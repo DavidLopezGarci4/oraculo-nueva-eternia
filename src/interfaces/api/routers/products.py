@@ -168,6 +168,7 @@ async def get_wallapop_preview(url: str):
 
 @router.put("/api/products/{product_id}", dependencies=[Depends(verify_api_key)])
 async def edit_product(product_id: int, request: ProductEditRequest):
+    from src.domain.models import VintageProductModel
     with SessionCloud() as db:
         product = db.query(ProductModel).filter(ProductModel.id == product_id).first()
         if not product:
@@ -185,6 +186,23 @@ async def edit_product(product_id: int, request: ProductEditRequest):
             product.sub_category = request.sub_category
         if request.retail_price is not None:
             product.retail_price = request.retail_price
+            
+        if request.is_vintage is not None:
+            product.is_vintage = request.is_vintage
+            
+            # Sync is_vintage to all linked offers!
+            db.query(OfferModel).filter(OfferModel.product_id == product.id).update({"is_vintage": request.is_vintage})
+            
+            # Sync to VintageProductModel
+            if request.is_vintage:
+                # Ensure a VintageProductModel entry exists
+                exists = db.query(VintageProductModel).filter(VintageProductModel.product_id == product.id).first()
+                if not exists:
+                    vintage_entry = VintageProductModel(product_id=product.id, notes="Promoted via metadata update")
+                    db.add(vintage_entry)
+            else:
+                # Remove from VintageProductModel if it exists
+                db.query(VintageProductModel).filter(VintageProductModel.product_id == product.id).delete()
 
         db.commit()
         return {"status": "success", "message": f"Reliquia '{product.name}' actualizada con éxito"}
@@ -385,7 +403,7 @@ async def get_vintage_products():
 
 @router.delete("/api/products/{product_id}", dependencies=[Depends(verify_api_key)])
 async def delete_product(product_id: int):
-    from src.domain.models import OfferModel, PendingMatchModel, ProductAliasModel, ProductModel, VintageProductModel
+    from src.domain.models import OfferModel, PendingMatchModel, ProductAliasModel, ProductModel, VintageProductModel, PriceAlertModel
     
     with SessionCloud() as db:
         product = db.query(ProductModel).filter(ProductModel.id == product_id).first()
@@ -421,7 +439,16 @@ async def delete_product(product_id: int):
         # 3. Borrar de VintageProductModel si existía
         db.query(VintageProductModel).filter(VintageProductModel.product_id == product.id).delete()
         
-        # 4. Eliminar el producto genérico por completo de la base de datos
+        # 4. Borrar todos los alias restantes vinculados a este product_id
+        db.query(ProductAliasModel).filter(ProductAliasModel.product_id == product.id).delete()
+        
+        # 5. Borrar alertas de precios vinculadas a este product_id
+        db.query(PriceAlertModel).filter(PriceAlertModel.product_id == product.id).delete()
+        
+        # 6. Borrar colecciones/lista de deseos vinculadas a este product_id
+        db.query(CollectionItemModel).filter(CollectionItemModel.product_id == product.id).delete()
+        
+        # 7. Eliminar el producto genérico por completo de la base de datos
         db.delete(product)
         
         db.commit()

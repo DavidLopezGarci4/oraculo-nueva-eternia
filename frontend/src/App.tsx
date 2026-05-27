@@ -163,8 +163,8 @@ function App() {
                 {activeTab === 'eternia' && <Catalog user={currentUser} isVintageOnly={true} searchQuery={searchQuery} />}
                 {activeTab === 'auctions' && <Auctions user={currentUser} />}
                 {activeTab === 'vintage' && <Vintage user={currentUser} />}
-                {activeTab === 'collection' && <Collection searchQuery={searchQuery} />}
-                {activeTab === 'fortaleza_vintage' && <Collection isVintageOnly={true} searchQuery={searchQuery} />}
+                {activeTab === 'collection' && <Collection user={currentUser} searchQuery={searchQuery} />}
+                {activeTab === 'fortaleza_vintage' && <Collection user={currentUser} isVintageOnly={true} searchQuery={searchQuery} />}
                 {activeTab === 'purgatory' && <Purgatory />}
                 {activeTab === 'settings' && (
                   <Config
