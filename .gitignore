@@ -82,3 +82,5 @@ dist/
 
 # Cloud Backups
 backups/cloud/*.json
+# Local Pi runtime state
+.atl/

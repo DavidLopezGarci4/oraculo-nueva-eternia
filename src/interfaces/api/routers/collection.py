@@ -79,6 +79,7 @@ async def get_collection(user_id: int, is_vintage: bool = False):
                     condition=collection_item.condition or "New",
                     grading=collection_item.grading or 10.0,
                     notes=collection_item.notes,
+                    is_vintage=product.is_vintage or False,
                 )
             )
 

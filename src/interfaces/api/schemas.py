@@ -107,6 +107,7 @@ class ProductOutput(BaseModel):
     grading: Optional[float] = 10.0
     notes: Optional[str] = None
     purgatory_match_count: int = 0
+    is_vintage: bool = False
 
 
 class ProductEditRequest(BaseModel):

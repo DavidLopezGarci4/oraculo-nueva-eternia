@@ -13,7 +13,7 @@ import {
     Target,
     RefreshCw
 } from 'lucide-react';
-import { updateCollectionItem } from '../api/collection';
+import { updateCollectionItem, toggleCollection } from '../api/collection';
 import type { Product } from '../api/collection';
 
 
@@ -44,6 +44,15 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
         }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['collection', userId] });
+            onClose();
+        }
+    });
+
+    const toggleMutation = useMutation({
+        mutationFn: () => toggleCollection(product.id, userId, false),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['collection', userId] });
+            queryClient.invalidateQueries({ queryKey: ['dashboard-stats', userId] });
             onClose();
         }
     });
@@ -206,17 +215,40 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
                     </div>
 
                     {/* Footer Actions */}
-                    <div className="mt-auto p-4 md:p-8 bg-black/40 border-t border-white/5 flex gap-3 md:gap-4">
+                    <div className="mt-auto p-4 md:p-8 bg-black/40 border-t border-white/5 flex gap-3 md:gap-4 items-center">
                         <button
+                            type="button"
+                            onClick={() => {
+                                const isVintage = !!product.is_vintage;
+                                const message = isVintage
+                                    ? `¿Seguro de desvincular '${product.name}' de tu colección? Volverá a aparecer en Eternia (las estadísticas y ofertas del producto permanecerán intactas).`
+                                    : `¿Seguro de liberar '${product.name}' de tu colección?`;
+                                if (confirm(message)) {
+                                    toggleMutation.mutate();
+                                }
+                            }}
+                            disabled={toggleMutation.isPending}
+                            className={`px-4 py-3 md:px-6 md:py-4 rounded-xl md:rounded-2xl bg-red-500/10 text-red-400 border border-red-500/20 font-black text-[9px] md:text-[10px] uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all shadow-lg hover:shadow-red-500/20 flex items-center gap-2`}
+                            title={product.is_vintage ? "Desvincular de la Colección" : "Liberar de la Colección"}
+                        >
+                            {toggleMutation.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
+                            {product.is_vintage ? 'Desvincular' : 'Liberar'}
+                        </button>
+
+                        <div className="flex-1"></div>
+
+                        <button
+                            type="button"
                             onClick={onClose}
                             className="px-6 md:px-8 py-3 md:py-4 rounded-xl md:rounded-2xl bg-white/5 text-white/40 font-black text-[9px] md:text-[10px] uppercase tracking-widest hover:bg-white/10 transition-all border border-white/5"
                         >
                             Cancelar
                         </button>
                         <button
+                            type="button"
                             onClick={() => updateMutation.mutate()}
                             disabled={updateMutation.isPending}
-                            className="flex-1 flex items-center justify-center gap-2 md:gap-3 py-3 md:py-4 rounded-xl md:rounded-2xl bg-brand-primary text-white font-black text-[9px] md:text-[10px] uppercase tracking-widest shadow-xl shadow-brand-primary/20 hover:brightness-110 transition-all"
+                            className="px-6 md:px-8 py-3 md:py-4 rounded-xl md:rounded-2xl bg-brand-primary text-white font-black text-[9px] md:text-[10px] uppercase tracking-widest shadow-xl shadow-brand-primary/20 hover:brightness-110 transition-all flex items-center gap-2"
                         >
                             {updateMutation.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                             {updateMutation.isPending ? 'Sincronizando...' : 'Guardar Legado'}

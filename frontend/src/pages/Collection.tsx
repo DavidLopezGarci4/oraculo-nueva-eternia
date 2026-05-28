@@ -396,9 +396,20 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                                             </button>
                                         ) : (
                                             <button
-                                                onClick={() => toggleMutation.mutate({ productId: product.id, wish: false })}
+                                                onClick={() => {
+                                                    const message = isVintageOnly
+                                                        ? `¿Seguro de desvincular '${product.name}' de tu colección? Volverá a aparecer en Eternia (el producto, sus ofertas y estadísticas se conservarán intactos).`
+                                                        : `¿Seguro de liberar '${product.name}' de tu colección? Volverá a aparecer en Nueva Eternia.`;
+                                                    if (confirm(message)) {
+                                                        toggleMutation.mutate({ productId: product.id, wish: false });
+                                                    }
+                                                }}
                                                 disabled={toggleMutation.isPending}
-                                                className="h-6 sm:h-8 px-3 sm:px-6 flex items-center justify-center gap-1.5 sm:gap-3 rounded-lg sm:rounded-xl bg-green-500/10 text-green-400 font-black text-[10px] sm:text-xs uppercase tracking-widest border border-green-500/20 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/30 transition-all group/action flex-1"
+                                                className={`h-6 sm:h-8 px-3 sm:px-6 flex items-center justify-center gap-1.5 sm:gap-3 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-xs uppercase tracking-widest border transition-all group/action flex-1 ${
+                                                    isVintageOnly 
+                                                        ? 'bg-amber-500/10 text-amber-500 border-amber-500/20 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/30' 
+                                                        : 'bg-green-500/10 text-green-400 border-green-500/20 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/30'
+                                                }`}
                                             >
                                                 {toggleMutation.isPending ? <RefreshCw className="h-4 w-4 animate-spin text-white/50" /> : (
                                                     <>
@@ -406,8 +417,12 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                                                         <Box className="h-4 w-4 hidden group-hover/action:block" />
                                                     </>
                                                 )}
-                                                <span className="hidden sm:inline group-hover/action:hidden">En Sanctum</span>
-                                                <span className="hidden sm:group-hover/action:block">Liberar</span>
+                                                <span className="hidden sm:inline group-hover/action:hidden">
+                                                    {isVintageOnly ? 'En Fortaleza' : 'En Sanctum'}
+                                                </span>
+                                                <span className="hidden sm:group-hover/action:block">
+                                                    {isVintageOnly ? 'Desvincular' : 'Liberar'}
+                                                </span>
                                             </button>
                                         )}
 
