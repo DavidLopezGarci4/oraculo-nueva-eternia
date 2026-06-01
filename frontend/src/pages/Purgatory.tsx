@@ -654,18 +654,17 @@ const Purgatory: React.FC = React.memo(() => {
                                             )}
                                             <div className="flex-1"></div>
                                             <div className="flex flex-wrap gap-2">
-                                                {isWallapopUrl(item.url) ? (
+                                                {isWallapopUrl(item.url) && (
                                                     <button
                                                         onClick={() => copyToClipboard(item.url)}
                                                         className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-xs font-black uppercase tracking-wider transition-all ${copiedUrl === item.url ? 'bg-green-500/20 border-green-500/50 text-green-400' : 'bg-white/5 border-white/5 text-white/40 hover:bg-white/10 hover:text-white'}`}
                                                     >
                                                         {copiedUrl === item.url ? 'Copiado!' : 'Copiar URL'} <Copy className="h-3 w-3" />
                                                     </button>
-                                                ) : (
-                                                    <a href={item.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/5 text-[10px] font-black text-white/40 hover:bg-white/10 hover:text-white transition-all uppercase tracking-wider whitespace-nowrap">
-                                                        Original <ExternalLink className="h-3 w-3" />
-                                                    </a>
                                                 )}
+                                                <a href={item.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/5 text-[10px] font-black text-white/40 hover:bg-white/10 hover:text-white transition-all uppercase tracking-wider whitespace-nowrap">
+                                                    Original <ExternalLink className="h-3 w-3" />
+                                                </a>
 
                                                 {/* Phase 40: Visión Rápida Trigger */}
                                                 <button
@@ -686,25 +685,24 @@ const Purgatory: React.FC = React.memo(() => {
                                         <Database className="h-3 w-3" /> ID: #{item.id}
                                     </div>
                                     <div className="flex items-center gap-3 w-full md:w-auto">
-                                        {isWallapopUrl(item.url) ? (
+                                        {isWallapopUrl(item.url) && (
                                             <button
                                                 onClick={() => copyToClipboard(item.url)}
                                                 className={`h-12 md:h-10 w-12 md:w-10 flex items-center justify-center rounded-xl border transition-all ${copiedUrl === item.url ? 'bg-green-500/20 border-green-500/50 text-green-400' : 'bg-white/5 border-white/10 text-white/40 hover:text-white hover:bg-white/10'}`}
-                                                title="Copiar URL (Wallapop bloquea links directos)"
+                                                title="Copiar URL"
                                             >
                                                 <Copy className="h-5 w-5 md:h-4 md:w-4" />
                                             </button>
-                                        ) : (
-                                            <a
-                                                href={item.url}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                                className="h-12 md:h-10 w-12 md:w-10 flex items-center justify-center rounded-xl bg-white/5 border border-white/10 text-white/40 hover:text-white hover:bg-white/10 transition-all"
-                                                title="Ver en Tienda"
-                                            >
-                                                <ExternalLink className="h-5 w-5 md:h-4 md:w-4" />
-                                            </a>
                                         )}
+                                        <a
+                                            href={item.url}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="h-12 md:h-10 w-12 md:w-10 flex items-center justify-center rounded-xl bg-white/5 border border-white/10 text-white/40 hover:text-white hover:bg-white/10 transition-all"
+                                            title="Ver en Tienda"
+                                        >
+                                            <ExternalLink className="h-5 w-5 md:h-4 md:w-4" />
+                                        </a>
                                         <button
                                             onClick={() => discardMutation.mutate(item.id)}
                                             className="h-12 md:h-10 w-12 md:w-auto md:px-5 flex items-center justify-center rounded-xl bg-red-500/5 text-red-500/60 border border-red-500/10 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all"
