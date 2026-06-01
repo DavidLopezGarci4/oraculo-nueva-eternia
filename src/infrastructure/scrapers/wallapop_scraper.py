@@ -70,6 +70,14 @@ class WallapopScraper(BaseScraper):
             self._log("🏠 Navegando a la portada de Wallapop para inicializar cookies y sesión humana...")
             try:
                 await page.goto(self.base_url, wait_until="networkidle", timeout=30000)
+                
+                # Validar de forma inmediata si la IP local está greylisted por CloudFront
+                cover_content = await page.content()
+                if "request could not be satisfied" in cover_content.lower() or "403 error" in cover_content.lower() or "request blocked" in cover_content.lower():
+                    self._log("🛡️ Bloqueo de IP detectado (Rate Limit / Greylist de CloudFront) al cargar la portada. Tu IP local está marcada temporalmente por Wallapop. Por favor, espera 10 minutos antes de iniciar otra incursión.", level="warning")
+                    self.blocked = True
+                    return offers
+                    
                 accept_btn = page.locator("#onetrust-accept-btn-handler").or_(
                     page.get_by_role("button", name="Aceptar todo")
                 ).or_(
@@ -82,6 +90,15 @@ class WallapopScraper(BaseScraper):
                     cookies_accepted = True
                 await asyncio.sleep(2)
             except Exception as e:
+                # Si falló por timeout de bloqueo, verificar si fue bloqueo
+                try:
+                    cover_content = await page.content()
+                    if "request could not be satisfied" in cover_content.lower() or "403 error" in cover_content.lower() or "request blocked" in cover_content.lower():
+                        self._log("🛡️ Bloqueo de IP detectado (Rate Limit / Greylist de CloudFront) al cargar la portada.", level="warning")
+                        self.blocked = True
+                        return offers
+                except:
+                    pass
                 self._log(f"⚠️ Nota: Error menor precargando portada: {e}", level="warning")
             
             try:
@@ -96,6 +113,13 @@ class WallapopScraper(BaseScraper):
                         # 1. Navegar a la home de Wallapop para establecer contexto seguro y limpio
                         await page.goto(self.base_url, wait_until="networkidle", timeout=40000)
                         await asyncio.sleep(1.5)
+                        
+                        # Validar si la home devolvió un bloqueo de IP WAF de CloudFront
+                        content = await page.content()
+                        if "request could not be satisfied" in content.lower() or "403 error" in content.lower() or "request blocked" in content.lower():
+                            self._log("🛡️ Bloqueo de IP detectado (Rate Limit / Greylist de CloudFront) en el WAF. Tu IP local está marcada temporalmente. Por favor, espera 10 minutos para que se enfríe.", level="warning")
+                            self.blocked = True
+                            break
                         
                         # 2. Aceptar Cookies (Consentimiento)
                         try:
