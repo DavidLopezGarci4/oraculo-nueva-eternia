@@ -330,11 +330,17 @@ async def run_daily_scan(progress_callback=None):
                     log_entry.new_items = new_items_found
                     log_entry.status = "success"
                 else:
-                    log_entry.status = "success_empty"
+                    if getattr(scraper, 'blocked', False):
+                        log_entry.status = "blocked"
+                    else:
+                        log_entry.status = "success_empty"
                 
                 # DB Status Update (Completed)
                 try:
-                    status_row.status = "completed"
+                    if getattr(scraper, 'blocked', False):
+                        status_row.status = "blocked"
+                    else:
+                        status_row.status = "completed"
                     status_row.items_scraped = len(offers) if offers else 0
                     status_row.last_update = datetime.now()
                     

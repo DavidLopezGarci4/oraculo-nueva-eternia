@@ -72,12 +72,29 @@ async def run_scraper(spider_name: str, search_query: str = "auto"):
         # Phase 44: Pasamos los nombres de las tiendas para sincronizar disponibilidad
         pipeline.update_database(results, shop_names=[s.shop_name for s in spiders])
         
-        status_row.status = "completed"
-        status_row.items_scraped = len(results)
-        status_row.end_time = datetime.datetime.utcnow()
-        db.commit()
-        
-        logger.success("✅ Cycle complete.")
+        is_blocked = any(getattr(s, 'blocked', False) for s in spiders)
+        if is_blocked:
+            status_row.status = "blocked"
+            status_row.items_scraped = 0
+            status_row.end_time = datetime.datetime.utcnow()
+            db.commit()
+            
+            logger.error(f"🛡️ [BLOCKED] Scraper was blocked by anti-bot measures!")
+            
+            # Send Telegram alert for manual block visibility
+            try:
+                from src.core.notifier import NotifierService
+                notifier = NotifierService()
+                msg = f"⚠️ **INCURSIÓN MANUAL BLOQUEADA**\n\nEl scraper manual para **{spider_name}** ha sido detectado y bloqueado por cortafuegos (WAF/CloudFront)."
+                await notifier.send_message(msg)
+            except Exception as ne:
+                logger.warning(f"Failed to send Telegram alert: {ne}")
+        else:
+            status_row.status = "completed"
+            status_row.items_scraped = len(results)
+            status_row.end_time = datetime.datetime.utcnow()
+            db.commit()
+            logger.success("✅ Cycle complete.")
     except Exception as e:
         status_row.status = "error"
         status_row.end_time = datetime.datetime.utcnow()
