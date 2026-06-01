@@ -38,7 +38,7 @@ class WallapopScraper(BaseScraper):
         self._log(f"🌩️ Wallapop Playwright Nexus: Iniciando búsqueda integrada para {len(queries_config)} términos.")
         
         async with async_playwright() as p:
-            # 2. Lanzar navegador con evasión de automatización estándar
+            # 2. Lanzar navegador con evasión de automatización estándar y argumentos de seguridad
             browser = await p.chromium.launch(
                 headless=True,
                 args=[
@@ -48,36 +48,41 @@ class WallapopScraper(BaseScraper):
                 ]
             )
             
-            # Contexto con User-Agent realista
+            # Contexto con User-Agent realista (Chrome 120 para evitar discrepancias TLS)
             context = await browser.new_context(
                 viewport={'width': 1280, 'height': 800},
-                user_agent=self._get_random_header()["User-Agent"],
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                 locale="es-ES"
             )
             
             page = await context.new_page()
             
-            # STEALTH: Inyección de scripts anti-webdriver y spoofing de firmas
+            # STEALTH: Inyección de scripts anti-webdriver ligeros (sin romper React/SPA)
             await page.add_init_script("""
-                // Ocultar webdriver flag
                 Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-                
-                // Falsear plugins instalados
-                Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
-                
-                // Ocultar variables de automatización de Chrome
-                window.chrome = { runtime: {} };
-                
-                // Spoof de respuesta de permisos
-                const originalQuery = window.navigator.permissions.query;
-                window.navigator.permissions.query = (parameters) => (
-                    parameters.name === 'notifications' ?
-                    Promise.resolve({ state: Notification.permission }) :
-                    originalQuery(parameters)
-                );
+                Object.defineProperty(navigator, 'languages', { get: () => ['es-ES', 'es', 'en'] });
             """)
             
             cookies_accepted = False
+            
+            # --- HUMANIZED HOMEPAGE PRE-VISIT ---
+            # Navegar primero a la portada para cargar cookies, inicializar retos JS de CloudFront y aceptar consentimiento de forma natural
+            self._log("🏠 Navegando a la portada de Wallapop para inicializar cookies y sesión humana...")
+            try:
+                await page.goto(self.base_url, wait_until="networkidle", timeout=30000)
+                accept_btn = page.locator("#onetrust-accept-btn-handler").or_(
+                    page.get_by_role("button", name="Aceptar todo")
+                ).or_(
+                    page.locator("button:has-text('Aceptar')")
+                ).first
+                
+                if await accept_btn.is_visible(timeout=5000):
+                    await accept_btn.click()
+                    self._log("🍪 Cookies de portada aceptadas (Consentimiento completado).")
+                    cookies_accepted = True
+                await asyncio.sleep(2)
+            except Exception as e:
+                self._log(f"⚠️ Nota: Error menor precargando portada: {e}", level="warning")
             
             try:
                 for search_query, scroll_cycles, click_load_more in queries_config:
@@ -85,58 +90,111 @@ class WallapopScraper(BaseScraper):
                         self._log("🛡️ Bloqueo detectado. Saltando consultas restantes de Wallapop.", level="warning")
                         break
                         
-                    url = f"{self.base_url}/search?keywords={search_query.replace(' ', '%20')}&order_by=newest"
-                    self._log(f"🕵️ Wallapop: Buscando '{search_query}' (Scroll: {scroll_cycles}, Carga: {click_load_more})...")
+                    self._log(f"🕵️ Wallapop: Iniciando búsqueda humana para '{search_query}'...")
                     
                     try:
-                        # Navegar a la página de resultados
-                        await page.goto(url, wait_until="networkidle", timeout=60000)
+                        # 1. Navegar a la home de Wallapop para establecer contexto seguro y limpio
+                        await page.goto(self.base_url, wait_until="networkidle", timeout=40000)
+                        await asyncio.sleep(1.5)
                         
-                        # 3. Aceptar Cookies (Una única vez al iniciar sesión o re-chequeo rápido)
-                        if not cookies_accepted:
-                            try:
-                                accept_btn = page.locator("#onetrust-accept-btn-handler").or_(
-                                    page.get_by_role("button", name="Aceptar todo")
-                                ).or_(
-                                    page.locator("button:has-text('Aceptar')")
-                                ).first
-                                
-                                if await accept_btn.is_visible(timeout=4000):
-                                    await accept_btn.click()
-                                    self._log("🍪 Cookies aceptadas (Banner de Wallapop despejado).")
-                                    cookies_accepted = True
-                                    await asyncio.sleep(1)
-                            except Exception:
-                                pass
+                        # 2. Aceptar Cookies (Consentimiento)
+                        try:
+                            accept_btn = page.locator("#onetrust-accept-btn-handler").or_(
+                                page.get_by_role("button", name="Aceptar todo")
+                            ).or_(
+                                page.locator("button:has-text('Aceptar')")
+                            ).first
+                            
+                            if await accept_btn.is_visible(timeout=5000):
+                                await accept_btn.click()
+                                self._log("🍪 Cookies de sesión humana aceptadas.")
+                                cookies_accepted = True
+                                await asyncio.sleep(1.5)
+                        except Exception:
+                            pass
+                            
+                        # 3. Localizar e interactuar con el campo de búsqueda de Wallapop de forma ultra-robusta
+                        search_input = page.locator("input[placeholder*='Buscar'], input[name='keywords'], input[type='search']").first
+                        try:
+                            await search_input.wait_for(state="visible", timeout=15000)
+                        except Exception as err:
+                            # Diagnóstico visual de error
+                            screenshot_path = "C:\\Users\\dace8\\.gemini\\antigravity\\brain\\bb7556b1-2949-4a09-94bc-1223b5dde66f\\scratch\\wallapop_visible_error.png"
+                            await page.screenshot(path=screenshot_path)
+                            self._log(f"⚠️ No se pudo localizar el campo de búsqueda (visible) de Wallapop: {err}. Captura guardada.", level="warning")
+                            continue
+                            
+                        # Asegurar interacción despejada
+                        await search_input.scroll_into_view_if_needed()
+                        await search_input.click()
+                        await asyncio.sleep(0.5)
                         
-                        # 4. Secuencia de Expansión
+                        # Escribir término carácter por carácter con retardos dinámicos realistas
+                        for char in search_query:
+                            await search_input.type(char, delay=random.randint(40, 110))
+                            
+                        await asyncio.sleep(0.8)
+                        
+                        # 4. Pulsar ENTER para detonar la transición SPA de CloudFront
+                        await search_input.press("Enter")
+                        
+                        # 5. Esperar la carga de la página de resultados SPA de forma reactiva
+                        try:
+                            await page.wait_for_url("**/search*", timeout=15000)
+                            self._log(f"🔗 SPA Redirección: Navegado a resultados: {page.url}")
+                        except Exception as e:
+                            self._log(f"⏳ Nota: Timeout menor esperando URL de búsqueda: {e}", level="warning")
+                            
+                        await page.wait_for_load_state("networkidle")
+                        await asyncio.sleep(2)
+                        
+                        # 6. Secuencia de Expansión ("Cargar más")
                         if click_load_more:
                             try:
                                 await page.keyboard.press("End")
-                                await asyncio.sleep(1)
+                                await asyncio.sleep(1.2)
                                 load_more_btn = page.get_by_role("button", name="Cargar más").or_(page.locator("button:has-text('Cargar más')")).first
-                                if await load_more_btn.is_visible(timeout=3000):
+                                if await load_more_btn.is_visible(timeout=4000):
                                     await load_more_btn.click()
                                     await page.wait_for_load_state("networkidle")
                                     await asyncio.sleep(1.5)
                             except Exception:
                                 pass
                                 
-                        # 5. Descenso de Scroll
+                        # 7. Descenso de Scroll dinámico para recolección
                         for i in range(scroll_cycles):
                             await page.mouse.wheel(0, 1500)
-                            await asyncio.sleep(0.8)
+                            await asyncio.sleep(0.9)
                             
-                        # 6. Extraer y procesar HTML
+                        # 8. Extraer y procesar HTML
                         content = await page.content()
+                        soup = BeautifulSoup(content, 'html.parser')
+                        cards = soup.select("a[href*='/item/']")
                         
-                        # 3OX Shield: Detección proactiva de bloqueos por Cloudflare / CloudFront / CAPTCHA
-                        if self._detect_block(content) or "cloudflare" in content.lower() or "cloudfront" in content.lower() or "captcha" in content.lower() or "attention required" in content.lower() or "just a moment..." in content.lower() or "security code" in content.lower() or "acceso denegado" in content.lower() or "request could not be satisfied" in content.lower() or "request blocked" in content.lower():
+                        # 3OX Shield: Detección proactiva y robusta de bloqueos por Cloudflare/CloudFront/CAPTCHA (sin falsos positivos)
+                        is_blocked = False
+                        if len(cards) == 0:
+                            content_lower = content.lower()
+                            title_match = re.search(r"<title>(.*?)</title>", content_lower)
+                            title_text = title_match.group(1) if title_match else ""
+                            
+                            if (
+                                "attention required" in title_text or
+                                "just a moment" in title_text or
+                                "request could not be satisfied" in title_text or
+                                "cloudflare" in title_text or
+                                "forbidden" in title_text or
+                                "access denied" in title_text or
+                                "security code" in content_lower or
+                                "request blocked" in content_lower or
+                                len(content) < 45000
+                            ):
+                                is_blocked = True
+                                
+                        if is_blocked:
                             self._log("🛡️ Bloqueo detectado (Cloudflare/CloudFront/WAF) al navegar en Wallapop.", level="warning")
                             self.blocked = True
                             break
-                            
-                        soup = BeautifulSoup(content, 'html.parser')
                         cards = soup.select("a[href*='/item/']")
                         
                         query_offers_count = 0
