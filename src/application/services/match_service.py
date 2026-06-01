@@ -14,17 +14,19 @@ class MatchService:
         self.sentinel = SentinelService(self.repo)
 
     def match_item(self, pending_id: int, product_id: int):
+        from src.core.url_utils import normalize_url
         item = self.db.query(PendingMatchModel).filter(PendingMatchModel.id == pending_id).first()
         product = self.repo.get(product_id)
 
         if not item or not product:
             return False, "Item o Producto no encontrado"
 
+        clean_url = normalize_url(item.url)
         offer_data = {
             "shop_name": item.shop_name,
             "price": item.price,
             "currency": item.currency,
-            "url": item.url,
+            "url": clean_url,
             "is_available": True,
             "name": product.name,
             "ean": item.ean
@@ -49,25 +51,27 @@ class MatchService:
         return True, "Item vinculado con éxito"
 
     def discard_item(self, pending_id: int, reason: str = "manual_discard"):
+        from src.core.url_utils import normalize_url
         item = self.db.query(PendingMatchModel).filter(PendingMatchModel.id == pending_id).first()
         if not item:
             return False, "Item no encontrado"
 
+        clean_url = normalize_url(item.url)
         # 1. Queue for Cloud Sync (Phase 3)
         self.sync_queue.push("DISCARD_OFFER", {
-            "url": item.url,
+            "url": clean_url,
             "scraped_name": item.scraped_name,
             "reason": reason
         })
 
         bl = BlackcludedItemModel(
-            url=item.url,
+            url=clean_url,
             scraped_name=item.scraped_name,
             reason=reason
         )
         self.db.add(bl)
         offer_data = {
-            "url": item.url,
+            "url": clean_url,
             "name": item.scraped_name,
             "shop_name": item.shop_name,
             "price": item.price

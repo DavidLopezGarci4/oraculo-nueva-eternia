@@ -160,8 +160,13 @@ class ScrapingPipeline:
                 try:
                     standardized_offers.append(vars(o))
                 except:
-                    standardized_offers.append(o)
         offers = standardized_offers
+
+        # --- UNIVERSAL URL NORMALIZATION LAYER ---
+        from src.core.url_utils import normalize_url
+        for o in offers:
+            if o.get('url'):
+                o['url'] = normalize_url(o['url'])
 
         # --- SQLITE DATE TIME COMPATIBILITY KAIZEN ---
         from dateutil.parser import parse as parse_date

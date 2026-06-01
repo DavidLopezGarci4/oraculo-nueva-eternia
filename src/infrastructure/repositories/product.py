@@ -18,13 +18,15 @@ class ProductRepository(BaseRepository[ProductModel]):
         return self.db.query(ProductModel).filter(ProductModel.sub_category == series).all()
 
     def get_offer_by_url(self, url: str) -> Optional[OfferModel]:
-        return self.db.query(OfferModel).filter(OfferModel.url == url).first()
+        from src.core.url_utils import normalize_url
+        return self.db.query(OfferModel).filter(OfferModel.url == normalize_url(url)).first()
     
     def add_offer(self, product: ProductModel, offer_data: dict, commit: bool = True) -> tuple[OfferModel, Optional[float]]:
         from src.domain.models import PriceHistoryModel
+        from src.core.url_utils import normalize_url
         
-        target_url = offer_data["url"]
-        existing_offer = next((o for o in product.offers if o.url == target_url), None)
+        target_url = normalize_url(offer_data["url"])
+        existing_offer = next((o for o in product.offers if normalize_url(o.url) == target_url), None)
         current_price = float(offer_data["price"])
         alert_discount = None
         
