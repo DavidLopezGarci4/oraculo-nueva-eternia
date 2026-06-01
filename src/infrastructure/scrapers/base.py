@@ -185,8 +185,9 @@ class BaseScraper(ABC):
         patterns = {
             "CAPTCHA": r"captcha|robot|human|verify",
             "Cloudflare": r"cloudflare|ray id|checking your browser",
+            "CloudFront": r"cloudfront|request could not be satisfied|request blocked",
             "DataDome": r"datadome|dd=",
-            "Amazon Block": r"api-services-support|access denied"
+            "Amazon Block": r"api-services-support|access denied|request could not be satisfied"
         }
         
         for name, pattern in patterns.items():

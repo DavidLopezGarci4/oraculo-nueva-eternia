@@ -9,18 +9,22 @@ root_dir = os.path.abspath(os.path.join(current_dir, "..", "..", ".."))
 sys.path.insert(0, os.path.join(root_dir, ".3ox"))
 sys.path.insert(1, root_dir)
 
-from vec3.dev.adapters import initialize_runtime
 from src.infrastructure.scrapers.pipeline import ScrapingPipeline
 from src.infrastructure.scrapers.fantasia_scraper import FantasiaScraper
 from src.infrastructure.scrapers.amazon_scraper import AmazonScraper
 from src.infrastructure.scrapers.ebay_scraper import EbayScraper
-from src.infrastructure.scrapers.ebay_us_scraper import EbayUSScraper
 from src.infrastructure.scrapers.vinted_scraper import VintedScraper
 from src.infrastructure.scrapers.wallapop_scraper import WallapopScraper
 from src.core.logger import logger
 
-# Initialize 3OX Runtime
-initialize_runtime()
+try:
+    from vec3.dev.adapters import initialize_runtime
+    # Initialize 3OX Runtime
+    initialize_runtime()
+except ImportError:
+    logger.warning("⚠️ vec3.dev.adapters not found, continuing without initialize_runtime")
+
+
 
 async def run_scraper(spider_name: str, search_query: str = "auto"):
     logger.info(f"🚀 Launching scraper: {spider_name} with query: {search_query}")
@@ -35,8 +39,6 @@ async def run_scraper(spider_name: str, search_query: str = "auto"):
         spiders.append(AmazonScraper())
     elif spider_name.lower() == "ebay":
         spiders.append(EbayScraper())
-    elif spider_name.lower() == "ebay_us":
-        spiders.append(EbayUSScraper())
     elif spider_name.lower() == "vinted":
         spiders.append(VintedScraper())
     elif spider_name.lower() == "wallapop":

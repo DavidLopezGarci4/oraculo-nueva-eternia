@@ -2,6 +2,7 @@ import asyncio
 import logging
 import random
 import time
+import re
 from typing import List, Optional
 from datetime import datetime
 from playwright.async_api import async_playwright, Page, BrowserContext
@@ -25,21 +26,11 @@ class WallapopScraper(BaseScraper):
         
         # 1. Configuración inteligente de palabras clave y límites de scroll
         if query == "auto":
+            # Estrategia de 2 Consultas de Alta Cobertura (Español + Inglés)
+            # Evita bloqueos por navegación consecutiva reiterada y previene timeouts
             queries_config = [
-                # Foco Origins (Moderno - 3 scrolls + carga)
-                ("masters of the universe origins", 3, True),
-                ("masters del universo origins", 3, True),
-                ("motu origins", 3, True),
-                
-                # Foco Vintage (Clásicos de los 80 - 3 scrolls + carga)
-                ("masters of the universe vintage", 3, True),
-                ("masters del universo vintage", 3, True),
-                ("motu vintage", 3, True),
-                
-                # Foco General (1 scroll - búsqueda rápida para evitar saturación y capturar otras líneas)
-                ("masters of the universe", 1, False),
-                ("masters del universo", 1, False),
-                ("motu", 1, False)
+                ("masters del universo", 6, True),   # (query, scroll_cycles, click_load_more) - ¡Alta prioridad en España!
+                ("masters of the universe", 4, True)  # Cobertura de términos internacionales
             ]
         else:
             queries_config = [(query, 8, True)]
@@ -47,7 +38,7 @@ class WallapopScraper(BaseScraper):
         self._log(f"🌩️ Wallapop Playwright Nexus: Iniciando búsqueda integrada para {len(queries_config)} términos.")
         
         async with async_playwright() as p:
-            # 2. Lanzar navegador una única vez para toda la sesión
+            # 2. Lanzar navegador con evasión de automatización estándar
             browser = await p.chromium.launch(
                 headless=True,
                 args=[
@@ -56,12 +47,35 @@ class WallapopScraper(BaseScraper):
                     '--disable-setuid-sandbox'
                 ]
             )
+            
+            # Contexto con User-Agent realista
             context = await browser.new_context(
                 viewport={'width': 1280, 'height': 800},
                 user_agent=self._get_random_header()["User-Agent"],
                 locale="es-ES"
             )
+            
             page = await context.new_page()
+            
+            # STEALTH: Inyección de scripts anti-webdriver y spoofing de firmas
+            await page.add_init_script("""
+                // Ocultar webdriver flag
+                Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+                
+                // Falsear plugins instalados
+                Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+                
+                // Ocultar variables de automatización de Chrome
+                window.chrome = { runtime: {} };
+                
+                // Spoof de respuesta de permisos
+                const originalQuery = window.navigator.permissions.query;
+                window.navigator.permissions.query = (parameters) => (
+                    parameters.name === 'notifications' ?
+                    Promise.resolve({ state: Notification.permission }) :
+                    originalQuery(parameters)
+                );
+            """)
             
             cookies_accepted = False
             
@@ -115,6 +129,13 @@ class WallapopScraper(BaseScraper):
                             
                         # 6. Extraer y procesar HTML
                         content = await page.content()
+                        
+                        # 3OX Shield: Detección proactiva de bloqueos por Cloudflare / CloudFront / CAPTCHA
+                        if self._detect_block(content) or "cloudflare" in content.lower() or "cloudfront" in content.lower() or "captcha" in content.lower() or "attention required" in content.lower() or "just a moment..." in content.lower() or "security code" in content.lower() or "acceso denegado" in content.lower() or "request could not be satisfied" in content.lower() or "request blocked" in content.lower():
+                            self._log("🛡️ Bloqueo detectado (Cloudflare/CloudFront/WAF) al navegar en Wallapop.", level="warning")
+                            self.blocked = True
+                            break
+                            
                         soup = BeautifulSoup(content, 'html.parser')
                         cards = soup.select("a[href*='/item/']")
                         
@@ -134,6 +155,13 @@ class WallapopScraper(BaseScraper):
                                 if price_val <= 0: continue
                                 
                                 title = title_node.get_text(strip=True)
+                                
+                                # Filtro Inteligente de Basura (Excluir ruidos no-figuras/no-reliquias)
+                                title_lower = title.lower()
+                                junk_keywords = ["camiseta", "t-shirt", "poster", "taza", "mug", "revista", "dvd", "llavero", "keyring", "reproduccion", "repro", "sticker", "pegatina"]
+                                if any(kw in title_lower for kw in junk_keywords):
+                                    # self._log(f"🗑️ Wallapop: Item descartado por filtro de ruido: '{title}'", level="debug")
+                                    continue
                                 href = card.get("href", "")
                                 full_url = href if href.startswith("http") else f"{self.base_url}{href}"
                                 
@@ -176,8 +204,7 @@ class WallapopScraper(BaseScraper):
         self._log(f"✅ Wallapop Complete: Halladas {self.items_scraped} reliquias en total en la superficie.")
         return offers
 
-# Import regexp for price cleaning
-import re
+# Regexp imported at the top
 
 if __name__ == "__main__":
     import sys
