@@ -59,10 +59,11 @@ class WallapopManualImporter:
                     url = parts[2]
                     
                     if 'wallapop.com' in url:
+                        clean_url = url.split('?')[0]
                         offers.append({
                             'product_name': f"[Wallapop] {name}",
                             'price': price,
-                            'url': url
+                            'url': clean_url
                         })
                 except Exception as e:
                     logger.warning(f"Error parseando linea: {line} - {e}")
@@ -72,10 +73,11 @@ class WallapopManualImporter:
     
     def parse_url_list(self, text: str) -> List[str]:
         """
-        Extrae URLs de Wallapop de un texto.
+        Extrae y normaliza URLs de Wallapop de un texto (eliminando parámetros de consulta).
         """
         pattern = r'https?://(?:es\.)?wallapop\.com/item/[^\s\"\'\<\>]+'
-        return list(set(re.findall(pattern, text)))
+        raw_urls = re.findall(pattern, text)
+        return list(set(u.split('?')[0] for u in raw_urls))
     
     async def import_from_file(self, filepath: str) -> int:
         """

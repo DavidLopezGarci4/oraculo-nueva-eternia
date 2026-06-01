@@ -163,7 +163,8 @@ class WallapopScraper(BaseScraper):
                                     # self._log(f"🗑️ Wallapop: Item descartado por filtro de ruido: '{title}'", level="debug")
                                     continue
                                 href = card.get("href", "")
-                                full_url = href if href.startswith("http") else f"{self.base_url}{href}"
+                                clean_href = href.split("?")[0]
+                                full_url = clean_href if clean_href.startswith("http") else f"{self.base_url}{clean_href}"
                                 
                                 image_url = img_node.get("src") if img_node else None
                                 
