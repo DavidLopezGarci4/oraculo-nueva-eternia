@@ -7,7 +7,8 @@ import {
     ShoppingBag,
     Trash2,
     Link,
-    ShoppingCart
+    ShoppingCart,
+    RefreshCw
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import OracleCart from '../components/cart/OracleCart';
@@ -620,6 +621,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                                 ))}
                         </div>
                     </div>
+                </div>
 
                     {/* Salón de la Fama - Griales Segmentados (Admin View) */}
                     <div className="space-y-4 mt-6">
