@@ -126,7 +126,10 @@ async def get_dashboard_hall_of_fame(user_id: int = 1):
         )
 
         if not items:
-            return {"top_value": [], "top_roi": []}
+            return {
+                "origins": {"top_value": [], "top_roi": []},
+                "vintage": {"top_value": [], "top_roi": []}
+            }
 
         from src.application.services.valuation_service import ValuationService
 
@@ -137,31 +140,56 @@ async def get_dashboard_hall_of_fame(user_id: int = 1):
         if user:
             user_location = user.location
 
-        analyzed_items = []
+        origins_items = []
+        vintage_items = []
+
         for item in items:
             market_val = valuation_service.get_consolidated_value(item.product, user_location)
+            
+            # Cálculo de precio original: purchase_price con fallbacks a retail_price u avg_market_price
             invested = item.purchase_price or 0.0
+            if invested == 0.0 and item.product.retail_price:
+                invested = item.product.retail_price
+            if invested == 0.0 and item.product.avg_market_price:
+                invested = item.product.avg_market_price
 
             roi = 0.0
             if invested > 0:
                 roi = ((market_val - invested) / invested) * 100
 
-            analyzed_items.append({
+            data = {
                 "id": item.product.id,
                 "name": item.product.name,
                 "image_url": item.product.image_url,
                 "figure_id": item.product.figure_id,
                 "market_value": round(market_val, 2),
-                "purchase_price": invested,
+                "purchase_price": round(invested, 2),
+                "invested_value": round(invested, 2),  # Compatibilidad frontend
                 "roi": round(roi, 1),
-            })
+                "roi_percentage": round(roi, 1),  # Compatibilidad frontend
+            }
 
-        top_value = sorted(analyzed_items, key=lambda x: x["market_value"], reverse=True)[:5]
-        top_roi = sorted(analyzed_items, key=lambda x: x["roi"], reverse=True)[:5]
+            if item.product.is_vintage:
+                vintage_items.append(data)
+            else:
+                origins_items.append(data)
+
+        # Segmentar y ordenar
+        origins_top_value = sorted(origins_items, key=lambda x: x["market_value"], reverse=True)[:5]
+        origins_top_roi = sorted([i for i in origins_items if i["roi"] > 0], key=lambda x: x["roi"], reverse=True)[:5]
+
+        vintage_top_value = sorted(vintage_items, key=lambda x: x["market_value"], reverse=True)[:5]
+        vintage_top_roi = sorted([i for i in vintage_items if i["roi"] > 0], key=lambda x: x["roi"], reverse=True)[:5]
 
         return {
-            "top_value": top_value,
-            "top_roi": [i for i in top_roi if i["roi"] > 0],
+            "origins": {
+                "top_value": origins_top_value,
+                "top_roi": origins_top_roi,
+            },
+            "vintage": {
+                "top_value": vintage_top_value,
+                "top_roi": vintage_top_roi,
+            }
         }
 
 

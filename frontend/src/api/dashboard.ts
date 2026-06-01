@@ -115,12 +115,20 @@ export interface HallOfFameItem {
     image_url: string | null;
     market_value: number;
     invested_value: number;
+    purchase_price?: number;
     roi_percentage: number;
+    roi?: number;
 }
 
 export interface HallOfFameResponse {
-    top_value: HallOfFameItem[];
-    top_roi: HallOfFameItem[];
+    origins: {
+        top_value: HallOfFameItem[];
+        top_roi: HallOfFameItem[];
+    };
+    vintage: {
+        top_value: HallOfFameItem[];
+        top_roi: HallOfFameItem[];
+    };
 }
 
 export const getHallOfFame = async (userId: number): Promise<HallOfFameResponse> => {
