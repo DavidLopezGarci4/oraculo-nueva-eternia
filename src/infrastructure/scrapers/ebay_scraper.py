@@ -150,7 +150,9 @@ class EbayScraper(BaseScraper):
                 # Selectores inteligentes (Dual)
                 title_el = item.select_one(".s-item__title, .s-card__title")
                 if not title_el: continue
-                title = title_el.get_text(strip=True).replace("Nuevo anuncio", "").strip()
+                title_raw = title_el.get_text(strip=True)
+                title_raw = re.sub(r'(?i)(Nuevo anuncio|Se abre en una nueva ventana o pestaña|Se abre en una nueva ventana|o pestaña)', '', title_raw)
+                title = re.sub(r'\s+', ' ', title_raw).strip()
                 
                 # Ignorar basura de eBay
                 if not title or "anuncio" in title.lower() or "shop on ebay" in title.lower(): continue
@@ -275,8 +277,9 @@ class EbayScraper(BaseScraper):
                     title_el = item.select_one(".s-item__title, .s-card__title, [role='heading']")
                     if not title_el: continue
                     
-                    # Limpieza táctica de títulos
-                    title_raw = re.sub(r'(?i)(Nuevo anuncio|Se abre en una nueva ventana|o pestaña)', '', title_el.get_text(strip=True)).strip()
+                    # Limpieza táctica de títulos (accesibilidad y espacios múltiples)
+                    title_clean = re.sub(r'(?i)(Nuevo anuncio|Se abre en una nueva ventana o pestaña|Se abre en una nueva ventana|o pestaña)', '', title_el.get_text(strip=True))
+                    title_raw = re.sub(r'\s+', ' ', title_clean).strip()
                     title = title_raw.lower()
                     full_text = item.get_text(separator=" ", strip=True).lower()
                     
