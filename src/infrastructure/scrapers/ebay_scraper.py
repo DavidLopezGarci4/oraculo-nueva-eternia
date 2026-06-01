@@ -43,73 +43,110 @@ class EbayScraper(BaseScraper):
                 self._log(f"⚠️ Error en warm-up de eBay: {e}", level="warning")
 
     async def search(self, query: str) -> List[ScrapedOffer]:
-        """
-        Infiltración estratégica 'Sirius-E': 
-        Utiliza curl-cffi (impersonate chrome120) para saltar bloqueos de Playwright.
-        """
-        search_query = "masters of the universe origins" if query == "auto" else query
-        params = [
-            f"_nkw={search_query.replace(' ', '+')}",
-            "_sacat=0",
-            "_from=R40",
-            "LH_BIN=1",
-            "LH_ItemCondition=3",
-            "LH_PrefLoc=1", # España solo (según URL del usuario)
-            "_sop=10", # Recién listados (según URL del usuario)
-            "_ipg=240",
-            "rt=nc"
-        ]
-        target_url = f"{self.search_url}?" + "&".join(params)
-        
-        self._log(f"🌩️ [Sirius-E] Infiltración masiva en ebay.es: {search_query}")
-        
-        # 1. Intentar infiltración rápida vía curl-cffi con sesión caliente
+        if query == "auto":
+            queries_config = [
+                # Foco Origins (Moderno)
+                "masters of the universe origins",
+                "masters del universo origins",
+                "motu origins",
+                
+                # Foco Vintage (Clásicos de los 80 - filtro estricto)
+                "masters of the universe vintage",
+                "masters del universo vintage",
+                "motu vintage",
+                
+                # Foco General (Búsqueda amplia en eBay)
+                "masters of the universe",
+                "masters del universo",
+                "motu"
+            ]
+        else:
+            queries_config = [query]
+
+        offers: List[ScrapedOffer] = []
         await self._init_session()
-        html = None
-        try:
-            headers = self._get_random_header()
-            resp = await self._session.get(target_url, headers=headers, timeout=30)
-            if resp.status_code == 200:
-                html = resp.text
-            else:
-                self._log(f"⚠️ Sirius-E: HTTP {resp.status_code} en búsqueda rápida.", level="warning")
-        except Exception as e:
-            self._log(f"⚠️ Error en búsqueda rápida Sirius-E: {e}", level="warning")
         
-        offers = []
-        if html:
-            offers = self._parse_ebay_html(html)
-            if offers:
-                self._log(f"✅ [Sirius-E] Capturadas {len(offers)} reliquias directas.")
-                return offers
+        playwright_queries = []
         
-        # 2. Si curl-cffi falla o no trae nada, escalamiento táctico a Playwright
-        self._log("⚠️ [Sirius-E] Infiltración rápida fallida o sin resultados. Escalamiento táctico a Playwright...", level="warning")
-        
-        from playwright.async_api import async_playwright
-        async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=True)
-            context = await browser.new_context(
-                viewport={'width': 1920, 'height': 1080},
-                user_agent=self._get_random_header()["User-Agent"],
-                locale="es-ES"
-            )
-            page = await context.new_page()
+        # 1. Escaneo rápido de todas las consultas vía curl-cffi
+        for search_query in queries_config:
+            params = [
+                f"_nkw={search_query.replace(' ', '+')}",
+                "_sacat=0",
+                "_from=R40",
+                "LH_BIN=1",
+                "LH_ItemCondition=3",
+                "LH_PrefLoc=1",  # España solo
+                "_sop=10",       # Recién listados
+                "_ipg=240",
+                "rt=nc"
+            ]
+            target_url = f"{self.search_url}?" + "&".join(params)
+            
+            self._log(f"🌩️ [Sirius-E] Infiltración rápida en ebay.es: '{search_query}'")
+            
+            html = None
             try:
-                self._log(f"🧭 Navegando a resultados via Playwright: {target_url}")
-                await page.goto(target_url, wait_until="domcontentloaded", timeout=60000)
-                await asyncio.sleep(3)
-                await self._stealth_scroll(page)
-                offers = await self._extract_page_items(page)
-                self._log(f"🔭 Playwright extrajo {len(offers)} items.")
+                headers = self._get_random_header()
+                resp = await self._session.get(target_url, headers=headers, timeout=30)
+                if resp.status_code == 200:
+                    html = resp.text
+                else:
+                    self._log(f"⚠️ Sirius-E: HTTP {resp.status_code} para '{search_query}'.", level="warning")
             except Exception as e:
-                self._log(f"❌ Fallo en escalamiento Playwright: {e}", level="error")
-            finally:
-                await browser.close()
+                self._log(f"⚠️ Error en búsqueda rápida Sirius-E para '{search_query}': {e}", level="warning")
+            
+            query_offers = []
+            if html:
+                query_offers = self._parse_ebay_html(html, search_query)
+                
+            if query_offers:
+                self._log(f"✅ [Sirius-E] Capturadas {len(query_offers)} reliquias directas para '{search_query}'.")
+                for o in query_offers:
+                    if o.url not in [existing.url for existing in offers]:
+                        offers.append(o)
+                        self.items_scraped += 1
+            else:
+                self._log(f"⚠️ [Sirius-E] Sin resultados rápidos para '{search_query}'. Programando escalamiento táctico...", level="debug")
+                playwright_queries.append((search_query, target_url))
+                
+            # Retardo educado entre consultas rápidas
+            await asyncio.sleep(random.uniform(1.5, 3.0))
+
+        # 2. Si alguna consulta de alta prioridad falló o dio 0, escalamiento táctico a Playwright (Reutilizando el navegador!)
+        if playwright_queries:
+            self._log(f"⚠️ [Sirius-E] Iniciando escalamiento táctico a Playwright para {len(playwright_queries)} consultas...")
+            from playwright.async_api import async_playwright
+            async with async_playwright() as p:
+                browser = await p.chromium.launch(headless=True)
+                context = await browser.new_context(
+                    viewport={'width': 1920, 'height': 1080},
+                    user_agent=self._get_random_header()["User-Agent"],
+                    locale="es-ES"
+                )
+                page = await context.new_page()
+                try:
+                    for search_query, target_url in playwright_queries:
+                        self._log(f"🧭 Playwright: Navegando a resultados de '{search_query}'...")
+                        try:
+                            await page.goto(target_url, wait_until="domcontentloaded", timeout=60000)
+                            await asyncio.sleep(3)
+                            await self._stealth_scroll(page)
+                            new_offers = await self._extract_page_items(page, search_query)
+                            self._log(f"🔭 Playwright extrajo {len(new_offers)} items para '{search_query}'.")
+                            for o in new_offers:
+                                if o.url not in [existing.url for existing in offers]:
+                                    offers.append(o)
+                                    self.items_scraped += 1
+                        except Exception as e:
+                            self._log(f"❌ Error en Playwright para '{search_query}': {e}", level="error")
+                        await asyncio.sleep(random.uniform(2.5, 4.5))
+                finally:
+                    await browser.close()
         
         return offers
 
-    def _parse_ebay_html(self, html: str) -> List[ScrapedOffer]:
+    def _parse_ebay_html(self, html: str, search_query: str) -> List[ScrapedOffer]:
         """Parseo de HTML puro (BeautifulSoup) para cuando no ejecutamos JS."""
         from bs4 import BeautifulSoup
         soup = BeautifulSoup(html, "html.parser")
@@ -137,8 +174,15 @@ class EbayScraper(BaseScraper):
                 url = url_el.get("href").split("?")[0] if url_el else None
                 if not url or "ebay.es/itm/" not in url: continue
 
-                # Filtro Sirius: Solo Origins (Criba básica)
-                if "origins" not in title.lower(): continue
+                # Filtro Inteligente Contextual (Phase 43)
+                title_lower = title.lower()
+                query_lower = search_query.lower()
+                
+                if "origins" in query_lower and "origins" not in title_lower:
+                    continue
+                if "vintage" in query_lower:
+                    is_v = "vintage" in title_lower or any(yr in title_lower for yr in ["1980", "1981", "1982", "1983", "1984", "1985", "1986", "1987", "1988", "1989"])
+                    if not is_v: continue
 
                 # Imagen
                 img_el = item.select_one(".s-item__image-img, .s-card__image-img, img")
@@ -225,7 +269,7 @@ class EbayScraper(BaseScraper):
             await page.mouse.wheel(0, random.randint(500, 900))
             await asyncio.sleep(random.uniform(0.2, 0.5))
 
-    async def _extract_page_items(self, page: Page) -> List[ScrapedOffer]:
+    async def _extract_page_items(self, page: Page, search_query: str = "auto") -> List[ScrapedOffer]:
         try:
             # Captura Robusta vía BeautifulSoup (Phase 42)
             html = await page.content()
@@ -246,11 +290,18 @@ class EbayScraper(BaseScraper):
                     title = title_raw.lower()
                     full_text = item.get_text(separator=" ", strip=True).lower()
                     
-                    if "origins" not in title: continue
+                    # Filtro Inteligente Contextual (Phase 43)
+                    query_lower = search_query.lower()
+                    if "origins" in query_lower and "origins" not in title:
+                        continue
+                    if "vintage" in query_lower:
+                        is_v = "vintage" in title or any(yr in title for yr in ["1980", "1981", "1982", "1983", "1984", "1985", "1986", "1987", "1988", "1989"])
+                        if not is_v: continue
                     
-                    # Filtro de seguridad para evitar "usados"
-                    is_used = any(kw in full_text for kw in ["usado", "used", "segunda mano"])
-                    if is_used and "nuevo" not in full_text: continue
+                    # Filtro de seguridad para evitar "usados" en búsquedas no vintage
+                    if "vintage" not in query_lower:
+                        is_used = any(kw in full_text for kw in ["usado", "used", "segunda mano"])
+                        if is_used and "nuevo" not in full_text: continue
 
                     price_el = item.select_one(".s-item__price, .s-card__price")
                     price = self._normalize_price(price_el.get_text()) if price_el else 0.0

@@ -11,7 +11,6 @@ sys.path.insert(1, root_dir)
 
 from vec3.dev.adapters import initialize_runtime
 from src.infrastructure.scrapers.pipeline import ScrapingPipeline
-from src.infrastructure.scrapers.action_toys_scraper import ActionToysScraper
 from src.infrastructure.scrapers.fantasia_scraper import FantasiaScraper
 from src.infrastructure.scrapers.amazon_scraper import AmazonScraper
 from src.infrastructure.scrapers.ebay_scraper import EbayScraper
@@ -27,9 +26,7 @@ async def run_scraper(spider_name: str, search_query: str = "auto"):
     logger.info(f"🚀 Launching scraper: {spider_name} with query: {search_query}")
     
     spiders = []
-    if spider_name.lower() == "actiontoys":
-        spiders.append(ActionToysScraper())
-    elif spider_name.lower() == "fantasia":
+    if spider_name.lower() == "fantasia":
         spiders.append(FantasiaScraper())
     elif spider_name.lower() == "electropolis":
         from src.infrastructure.scrapers.electropolis_scraper import ElectropolisScraper
