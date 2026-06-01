@@ -44,21 +44,11 @@ class EbayScraper(BaseScraper):
 
     async def search(self, query: str) -> List[ScrapedOffer]:
         if query == "auto":
+            # Estrategia de 2 Consultas de Alta Cobertura (Inglés + Español)
+            # Evita timeouts de 10 min y minimiza el riesgo de bloqueos por Cloudflare
             queries_config = [
-                # Foco Origins (Moderno)
-                "masters of the universe origins",
-                "masters del universo origins",
-                "motu origins",
-                
-                # Foco Vintage (Clásicos de los 80 - filtro estricto)
-                "masters of the universe vintage",
-                "masters del universo vintage",
-                "motu vintage",
-                
-                # Foco General (Búsqueda amplia en eBay)
                 "masters of the universe",
-                "masters del universo",
-                "motu"
+                "masters del universo"
             ]
         else:
             queries_config = [query]
@@ -68,7 +58,7 @@ class EbayScraper(BaseScraper):
         
         playwright_queries = []
         
-        # 1. Escaneo rápido de todas las consultas vía curl-cffi
+        # 1. Infiltración veloz vía curl-cffi
         for search_query in queries_config:
             params = [
                 f"_nkw={search_query.replace(' ', '+')}",
@@ -110,10 +100,10 @@ class EbayScraper(BaseScraper):
                 self._log(f"⚠️ [Sirius-E] Sin resultados rápidos para '{search_query}'. Programando escalamiento táctico...", level="debug")
                 playwright_queries.append((search_query, target_url))
                 
-            # Retardo educado entre consultas rápidas
-            await asyncio.sleep(random.uniform(1.5, 3.0))
+            # Retardo prudente de cortesía
+            await asyncio.sleep(random.uniform(2.0, 3.5))
 
-        # 2. Si alguna consulta de alta prioridad falló o dio 0, escalamiento táctico a Playwright (Reutilizando el navegador!)
+        # 2. Escalamiento táctico a Playwright solo para búsquedas fallidas o bloqueadas
         if playwright_queries:
             self._log(f"⚠️ [Sirius-E] Iniciando escalamiento táctico a Playwright para {len(playwright_queries)} consultas...")
             from playwright.async_api import async_playwright
@@ -140,7 +130,7 @@ class EbayScraper(BaseScraper):
                                     self.items_scraped += 1
                         except Exception as e:
                             self._log(f"❌ Error en Playwright para '{search_query}': {e}", level="error")
-                        await asyncio.sleep(random.uniform(2.5, 4.5))
+                        await asyncio.sleep(random.uniform(3.0, 5.0))
                 finally:
                     await browser.close()
         
