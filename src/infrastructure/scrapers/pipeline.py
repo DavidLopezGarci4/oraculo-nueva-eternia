@@ -160,6 +160,7 @@ class ScrapingPipeline:
                 try:
                     standardized_offers.append(vars(o))
                 except:
+                    standardized_offers.append(o)
         offers = standardized_offers
 
         # --- UNIVERSAL URL NORMALIZATION LAYER ---

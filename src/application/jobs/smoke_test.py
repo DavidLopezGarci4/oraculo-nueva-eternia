@@ -41,6 +41,12 @@ async def test_atomic_undo():
     logger.info("\n--- 💎 Caso 2: Validando la Gema del Tiempo (Undo Atómico) ---")
     db = SessionLocal()
     try:
+        # Clean up any leftover from previous runs to ensure test repeatability
+        db.query(PendingMatchModel).filter(PendingMatchModel.url == "https://eternal-smoke-test.com/item1").delete()
+        db.query(OfferModel).filter(OfferModel.url == "https://eternal-smoke-test.com/item1").delete()
+        db.query(OfferHistoryModel).filter(OfferHistoryModel.offer_url == "https://eternal-smoke-test.com/item1").delete()
+        db.commit()
+
         # Preparation: Ensure we have a product
         product = db.query(ProductModel).first()
         if not product:
@@ -158,6 +164,12 @@ async def test_atomic_undo():
             return False
 
     finally:
+        try:
+            db.query(PendingMatchModel).filter(PendingMatchModel.url == "https://eternal-smoke-test.com/item1").delete()
+            db.query(OfferHistoryModel).filter(OfferHistoryModel.offer_url == "https://eternal-smoke-test.com/item1").delete()
+            db.commit()
+        except Exception:
+            pass
         db.close()
 
 async def main():
