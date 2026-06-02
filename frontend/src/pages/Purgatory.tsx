@@ -652,29 +652,6 @@ const Purgatory: React.FC = React.memo(() => {
                                                     <span className="text-sm font-mono font-bold text-white/60">{item.ean}</span>
                                                 </div>
                                             )}
-                                            <div className="flex-1"></div>
-                                            <div className="flex flex-wrap gap-2">
-                                                {isWallapopUrl(item.url) && (
-                                                    <button
-                                                        onClick={() => copyToClipboard(item.url)}
-                                                        className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-xs font-black uppercase tracking-wider transition-all ${copiedUrl === item.url ? 'bg-green-500/20 border-green-500/50 text-green-400' : 'bg-white/5 border-white/5 text-white/40 hover:bg-white/10 hover:text-white'}`}
-                                                    >
-                                                        {copiedUrl === item.url ? 'Copiado!' : 'Copiar URL'} <Copy className="h-3 w-3" />
-                                                    </button>
-                                                )}
-                                                <a href={item.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/5 text-[10px] font-black text-white/40 hover:bg-white/10 hover:text-white transition-all uppercase tracking-wider whitespace-nowrap">
-                                                    Original <ExternalLink className="h-3 w-3" />
-                                                </a>
-
-                                                {/* Phase 40: Visión Rápida Trigger */}
-                                                <button
-                                                    onClick={() => setPreviewUrl(item.url)}
-                                                    className="inline-flex items-center gap-2 rounded-xl bg-brand-primary/10 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-brand-primary transition-all hover:bg-brand-primary/20 border border-brand-primary/20 shadow-lg shadow-brand-primary/10"
-                                                >
-                                                    <CheckCircle2 className="h-3 w-3" />
-                                                    Visión Rápida
-                                                </button>
-                                            </div>
                                         </div>
                                     </div>
                                 </div>
