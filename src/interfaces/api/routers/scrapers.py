@@ -112,7 +112,7 @@ def run_scraper_task(
             "DeToyboys": DeToyboysNLScraper(),
             "Ebay.es": EbayScraper(),
             "Vinted": VintedScraper(),
-            "Wallapop": WallapopScraper(),
+            # "Wallapop": WallapopScraper(), # DESACTIVADO TEMPORALMENTE POR BLOQUEOS WAF DE IP LOCAL
             "ToymiEU": ToymiEUScraper(),
             "Time4ActionToysDE": Time4ActionToysDEScraper(),
             "BigBadToyStore": BigBadToyStoreScraper(),

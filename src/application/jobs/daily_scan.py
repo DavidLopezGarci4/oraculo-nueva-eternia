@@ -129,7 +129,7 @@ async def run_daily_scan(progress_callback=None):
             AmazonScraper(),
             EbayScraper(),
             VintedScraper(),
-            WallapopScraper(),
+            # WallapopScraper(), # DESACTIVADO TEMPORALMENTE POR BLOQUEOS WAF DE IP LOCAL
             # TradeinnScraper(),
             # DeToyboys at the end (User Request)
             DeToyboysNLScraper(),
