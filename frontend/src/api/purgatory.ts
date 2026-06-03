@@ -150,6 +150,11 @@ export const getMiscellaneousItems = async (): Promise<VintageMiscellaneousItem[
     return response.data;
 };
 
+export const deleteMiscellaneousItem = async (itemId: number) => {
+    const response = await axios.delete(`${API_BASE}/vintage/miscellaneous/${itemId}`, adminHeaders);
+    return response.data;
+};
+
 
 export interface WallapopIpLog {
     id: number;

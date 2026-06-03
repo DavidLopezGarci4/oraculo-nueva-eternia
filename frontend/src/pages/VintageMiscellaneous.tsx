@@ -1,8 +1,8 @@
 import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Bookmark, AlertCircle, Info, X, ExternalLink, RotateCcw, Box } from 'lucide-react';
+import { Bookmark, AlertCircle, Info, X, ExternalLink, RotateCcw, Box, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
 import PowerSwordLoader from '../components/ui/PowerSwordLoader';
-import { getMiscellaneousItems, revertMiscellaneousItem, type VintageMiscellaneousItem } from '../api/purgatory';
+import { getMiscellaneousItems, revertMiscellaneousItem, deleteMiscellaneousItem, type VintageMiscellaneousItem } from '../api/purgatory';
 import type { Hero } from '../api/admin';
 
 interface VintageMiscellaneousProps {
@@ -14,6 +14,7 @@ const VintageMiscellaneous: React.FC<VintageMiscellaneousProps> = ({ user }) => 
     const [selectedItem, setSelectedItem] = React.useState<VintageMiscellaneousItem | null>(null);
     const [expandedImage, setExpandedImage] = React.useState<string | null>(null);
     const [sortBy, setSortBy] = React.useState<'title' | 'price' | 'date'>('date');
+    const [sortOrder, setSortOrder] = React.useState<'asc' | 'desc'>('desc');
 
     const isAdmin = user?.role === 'admin' || user?.username === 'David';
 
@@ -38,19 +39,46 @@ const VintageMiscellaneous: React.FC<VintageMiscellaneousProps> = ({ user }) => 
         }
     });
 
+    // 3. Delete miscellaneous item permanently
+    const deleteMutation = useMutation({
+        mutationFn: (itemId: number) => deleteMiscellaneousItem(itemId),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['vintage-miscellaneous'] });
+            queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+            setSelectedItem(null);
+        },
+        onError: (err) => {
+            console.error('Error al eliminar el lote permanentemente:', err);
+            alert('No se pudo eliminar el artículo. Inténtelo de nuevo.');
+        }
+    });
+
+    const handleDelete = (itemId: number, title: string) => {
+        const confirm1 = confirm(`¿Está seguro de que desea eliminar permanentemente el lote "${title}" de Miscelánea?`);
+        if (confirm1) {
+            const confirm2 = confirm(`Esta acción es irreversible y eliminará el registro de la base de datos para siempre. ¿Realmente desea continuar y borrarlo?`);
+            if (confirm2) {
+                deleteMutation.mutate(itemId);
+            }
+        }
+    };
+
     const sortedItems = React.useMemo(() => {
         if (!items) return [];
         return [...items].sort((a, b) => {
-            if (sortBy === 'title') return a.title.localeCompare(b.title);
-            if (sortBy === 'price') return a.price - b.price;
-            if (sortBy === 'date') {
+            let comparison = 0;
+            if (sortBy === 'title') {
+                comparison = a.title.localeCompare(b.title);
+            } else if (sortBy === 'price') {
+                comparison = a.price - b.price;
+            } else if (sortBy === 'date') {
                 const dateA = a.added_at ? new Date(a.added_at).getTime() : 0;
                 const dateB = b.added_at ? new Date(b.added_at).getTime() : 0;
-                return dateB - dateA; // Descending
+                comparison = dateA - dateB;
             }
-            return 0;
+            return sortOrder === 'asc' ? comparison : -comparison;
         });
-    }, [items, sortBy]);
+    }, [items, sortBy, sortOrder]);
 
     if (isLoading) {
         return <PowerSwordLoader variant="fullScreen" text="Canalizando Bóvedas de Miscelánea..." />;
@@ -80,24 +108,34 @@ const VintageMiscellaneous: React.FC<VintageMiscellaneousProps> = ({ user }) => 
                     <p className="max-w-xl text-[11px] md:text-sm text-white/40 font-medium uppercase tracking-[0.1em]">Lotes, packs y reliquias varias de MOTU sin catalogar individualmente</p>
                 </div>
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 w-full md:w-auto">
-                    <div className="grid grid-cols-3 gap-1 sm:gap-2 p-1 sm:p-1.5 rounded-xl bg-white/[0.03] border border-white/5 w-full sm:w-auto">
+                    <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
+                        <div className="grid grid-cols-3 gap-1 sm:gap-2 p-1 sm:p-1.5 rounded-xl bg-white/[0.03] border border-white/5 flex-1 sm:flex-initial">
+                            <button
+                                onClick={() => setSortBy('title')}
+                                className={`w-full py-1.5 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-[0.05em] sm:tracking-widest transition-all ${sortBy === 'title' ? 'bg-purple-600 text-white shadow-[0_0_15px_rgba(147,51,234,0.3)]' : 'text-white/20 hover:text-white/40'}`}
+                            >
+                                Título
+                            </button>
+                            <button
+                                onClick={() => setSortBy('price')}
+                                className={`w-full py-1.5 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-[0.05em] sm:tracking-widest transition-all ${sortBy === 'price' ? 'bg-purple-600 text-white shadow-[0_0_15px_rgba(147,51,234,0.3)]' : 'text-white/20 hover:text-white/40'}`}
+                            >
+                                Precio
+                            </button>
+                            <button
+                                onClick={() => setSortBy('date')}
+                                className={`w-full py-1.5 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-[0.05em] sm:tracking-widest transition-all ${sortBy === 'date' ? 'bg-purple-600 text-white shadow-[0_0_15px_rgba(147,51,234,0.3)]' : 'text-white/20 hover:text-white/40'}`}
+                            >
+                                Fecha
+                            </button>
+                        </div>
+                        
                         <button
-                            onClick={() => setSortBy('title')}
-                            className={`w-full py-1.5 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-[0.05em] sm:tracking-widest transition-all ${sortBy === 'title' ? 'bg-purple-600 text-white shadow-[0_0_15px_rgba(147,51,234,0.3)]' : 'text-white/20 hover:text-white/40'}`}
+                            onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+                            className="h-[36px] w-[36px] sm:h-[42px] sm:w-[42px] flex items-center justify-center rounded-xl bg-white/[0.03] border border-white/5 text-purple-400 hover:bg-white/10 hover:text-white transition-all shrink-0 shadow-md"
+                            title={sortOrder === 'asc' ? 'Orden Ascendente (A-Z, Menor Precio, Más Antiguos)' : 'Orden Descendente (Z-A, Mayor Precio, Más Recientes)'}
                         >
-                            Título
-                        </button>
-                        <button
-                            onClick={() => setSortBy('price')}
-                            className={`w-full py-1.5 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-[0.05em] sm:tracking-widest transition-all ${sortBy === 'price' ? 'bg-purple-600 text-white shadow-[0_0_15px_rgba(147,51,234,0.3)]' : 'text-white/20 hover:text-white/40'}`}
-                        >
-                            Precio
-                        </button>
-                        <button
-                            onClick={() => setSortBy('date')}
-                            className={`w-full py-1.5 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-[0.05em] sm:tracking-widest transition-all ${sortBy === 'date' ? 'bg-purple-600 text-white shadow-[0_0_15px_rgba(147,51,234,0.3)]' : 'text-white/20 hover:text-white/40'}`}
-                        >
-                            Fecha
+                            {sortOrder === 'asc' ? <ArrowUp className="h-4 w-4 sm:h-5 sm:w-5" /> : <ArrowDown className="h-4 w-4 sm:h-5 sm:w-5" />}
                         </button>
                     </div>
                     <div className="flex items-center justify-between sm:justify-start gap-3 rounded-xl sm:rounded-2xl bg-white/[0.03] px-4 sm:px-6 py-2 sm:py-3 border border-white/5 backdrop-blur-3xl w-full sm:w-auto">
@@ -179,10 +217,25 @@ const VintageMiscellaneous: React.FC<VintageMiscellaneousProps> = ({ user }) => 
                                                         }
                                                     }}
                                                     disabled={revertMutation.isPending}
-                                                    className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/5 text-red-500/60 border border-white/10 transition-all hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/50 hover:scale-110 active:scale-95 duration-300 shadow-md shrink-0"
+                                                    className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/5 text-amber-500/60 border border-white/10 transition-all hover:bg-amber-500/20 hover:text-amber-400 hover:border-amber-500/50 hover:scale-110 active:scale-95 duration-300 shadow-md shrink-0"
                                                     title="Devolver al Purgatorio (Reversión)"
                                                 >
                                                     <RotateCcw className="h-4 w-4" />
+                                                </button>
+                                            )}
+
+                                            {/* Action: Delete permanently */}
+                                            {isAdmin && (
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleDelete(item.id, item.title);
+                                                    }}
+                                                    disabled={deleteMutation.isPending}
+                                                    className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/5 text-red-500/60 border border-white/10 transition-all hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/50 hover:scale-110 active:scale-95 duration-300 shadow-md shrink-0"
+                                                    title="Eliminar Permanentemente"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
                                                 </button>
                                             )}
                                         </div>
@@ -196,41 +249,41 @@ const VintageMiscellaneous: React.FC<VintageMiscellaneousProps> = ({ user }) => 
 
             {selectedItem && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl" onClick={() => setSelectedItem(null)}>
-                    <div className="relative w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-[3rem] border border-white/10 bg-[#0A0A0B] shadow-[0_50px_100px_-20px_rgba(0,0,0,1)] flex flex-col" onClick={(e) => e.stopPropagation()}>
-                        <div className="p-8 pb-4 flex items-start justify-between">
-                            <div className="flex gap-6 items-center">
+                    <div className="relative w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-[2rem] sm:rounded-[3rem] border border-white/10 bg-[#0A0A0B] shadow-[0_50px_100px_-20px_rgba(0,0,0,1)] flex flex-col" onClick={(e) => e.stopPropagation()}>
+                        <div className="p-6 sm:p-8 pb-4 flex items-start justify-between">
+                            <div className="flex gap-4 sm:gap-6 items-center">
                                 <div
-                                    className="h-20 w-20 shrink-0 overflow-hidden rounded-3xl border border-white/10 bg-black/40 cursor-zoom-in hover:scale-105 transition-transform"
+                                    className="h-16 w-16 sm:h-20 sm:w-20 shrink-0 overflow-hidden rounded-2xl sm:rounded-3xl border border-white/10 bg-black/40 cursor-zoom-in hover:scale-105 transition-transform"
                                     onClick={() => setExpandedImage(selectedItem.image_url ?? null)}
                                     title="Expandir Imagen"
                                 >
                                     <img src={selectedItem.image_url || ''} className="h-full w-full object-cover" />
                                 </div>
-                                <div className="space-y-1">
-                                    <h4 className="text-2xl font-black tracking-tighter text-white">Lote <span className="text-purple-400">Miscelánea</span></h4>
-                                    <p className="text-[10px] sm:text-xs font-bold text-white/30 uppercase tracking-widest">{selectedItem.title}</p>
+                                <div className="space-y-0.5 sm:space-y-1">
+                                    <h4 className="text-xl sm:text-2xl font-black tracking-tighter text-white">Lote <span className="text-purple-400">Miscelánea</span></h4>
+                                    <p className="text-[9px] sm:text-xs font-bold text-white/30 uppercase tracking-widest">{selectedItem.title}</p>
                                 </div>
                             </div>
-                            <button onClick={() => setSelectedItem(null)} className="h-10 w-10 flex items-center justify-center rounded-xl bg-white/5 text-white/40 hover:bg-red-500/20 hover:text-red-400">&times;</button>
+                            <button onClick={() => setSelectedItem(null)} className="h-9 w-9 sm:h-10 sm:w-10 flex items-center justify-center rounded-xl bg-white/5 text-white/40 hover:bg-red-500/20 hover:text-red-400 text-lg sm:text-xl">&times;</button>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto p-8 pt-4 custom-scrollbar">
+                        <div className="flex-1 overflow-y-auto p-6 sm:p-8 pt-4 custom-scrollbar">
                             <div className="space-y-6">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-2">
                                     <div className="glass p-4 rounded-2xl border border-white/5 flex flex-col items-center justify-center">
                                         <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Precio</p>
-                                        <span className="text-2xl font-black text-purple-400">{selectedItem.price} €</span>
+                                        <span className="text-xl sm:text-2xl font-black text-purple-400">{selectedItem.price} €</span>
                                     </div>
                                     <div className="glass p-4 rounded-2xl border border-white/5 flex flex-col items-center justify-center">
                                         <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Procedencia</p>
-                                        <span className="text-lg font-black text-white">{selectedItem.shop_name}</span>
+                                        <span className="text-base sm:text-lg font-black text-white">{selectedItem.shop_name}</span>
                                     </div>
                                 </div>
 
                                 {selectedItem.notes && (
                                     <div className="space-y-2">
                                         <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20 px-2">Notas de Clasificación</h5>
-                                        <div className="rounded-3xl p-5 bg-white/[0.03] border border-white/5 text-xs text-white/70">
+                                        <div className="rounded-2xl sm:rounded-3xl p-4 sm:p-5 bg-white/[0.03] border border-white/5 text-xs text-white/70">
                                             {selectedItem.notes}
                                         </div>
                                     </div>
@@ -238,20 +291,20 @@ const VintageMiscellaneous: React.FC<VintageMiscellaneousProps> = ({ user }) => 
 
                                 <div className="space-y-3">
                                     <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20 px-2">Origen y Enlace</h5>
-                                    <div className="flex items-center justify-between gap-4 rounded-3xl p-5 bg-white/[0.03] border border-white/5 hover:bg-white/[0.05] transition-all">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-3xl p-4 sm:p-5 bg-white/[0.03] border border-white/5 hover:bg-white/[0.05] transition-all">
                                         <div className="space-y-1">
                                             <div className="text-xs font-black uppercase tracking-widest text-white/80">{selectedItem.shop_name}</div>
                                             <div className="text-[9px] font-bold text-white/20 uppercase">Lote Vintage de MOTU</div>
                                         </div>
-                                        <div className="flex items-center gap-3">
+                                        <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
                                             <a
                                                 href={selectedItem.url}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="flex h-12 px-5 items-center justify-center gap-2 rounded-2xl bg-purple-600 text-white hover:brightness-110 transition-all text-xs font-black uppercase tracking-widest shadow-lg shadow-purple-500/20"
+                                                className="flex-1 sm:flex-initial flex h-10 sm:h-12 px-4 sm:px-5 items-center justify-center gap-2 rounded-2xl bg-purple-600 text-white hover:brightness-110 transition-all text-xs font-black uppercase tracking-widest shadow-lg shadow-purple-500/20"
                                                 title="Ver Anuncio Original"
                                             >
-                                                <ExternalLink className="h-5 w-5" />
+                                                <ExternalLink className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
                                                 <span>Ver Anuncio</span>
                                             </a>
                                             {isAdmin && (
@@ -261,9 +314,17 @@ const VintageMiscellaneous: React.FC<VintageMiscellaneousProps> = ({ user }) => 
                                                             revertMutation.mutate(selectedItem.id);
                                                         }
                                                     }}
-                                                    className="flex h-12 px-5 items-center justify-center gap-2 rounded-2xl bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white transition-all text-xs font-black uppercase tracking-widest"
+                                                    className="flex-1 sm:flex-initial flex h-10 sm:h-12 px-4 sm:px-5 items-center justify-center gap-2 rounded-2xl bg-amber-500/10 text-amber-500 border border-amber-500/20 hover:bg-amber-500 hover:text-white transition-all text-xs font-black uppercase tracking-widest"
                                                 >
-                                                    <RotateCcw className="h-4 w-4" /> Revertir
+                                                    <RotateCcw className="h-4 w-4" /> <span>Revertir</span>
+                                                </button>
+                                            )}
+                                            {isAdmin && (
+                                                <button
+                                                    onClick={() => handleDelete(selectedItem.id, selectedItem.title)}
+                                                    className="flex-1 sm:flex-initial flex h-10 sm:h-12 px-4 sm:px-5 items-center justify-center gap-2 rounded-2xl bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white transition-all text-xs font-black uppercase tracking-widest"
+                                                >
+                                                    <Trash2 className="h-4 w-4" /> <span>Eliminar</span>
                                                 </button>
                                             )}
                                         </div>

@@ -30,4 +30,6 @@ Para gestionar esto de forma limpia sin corromper las métricas de las figuras i
 *   **Interfaz Glassmorphic**:
     Muestra los lotes en un listado especial con tarjetas premium que detallan el título del lote, el precio, la plataforma de procedencia (ej. Wallapop, eBay), la foto del lote y un enlace externo.
 *   **Reversión al Purgatorio (Acción de Administrador)**:
-    Si una oferta fue enviada a Miscelánea por error, o si más adelante se decide catalogar por separado sus figuras, los usuarios administradores (Master) disponen de un botón titulado **"Devolver al Purgatorio"**. Al pulsarlo, el backend extrae el lote de Miscelánea y lo recrea en la tabla de emparejamientos pendientes del Purgatorio para que pueda volver a ser evaluado.
+    Si una oferta fue enviada a Miscelánea por error, o si más adelante se decide catalogar por separado sus figuras, los usuarios administradores (Master) disponen de un botón titulado **"Revertir"** (o icono de flecha de retorno color ámbar). Al pulsarlo, el backend extrae el lote de Miscelánea y lo recrea en la tabla de emparejamientos pendientes del Purgatorio para que pueda volver a ser evaluado.
+*   **Eliminación Permanente (Acción de Administrador)**:
+    Si la oferta no es de interés o es errónea, los administradores (Master) disponen de un botón de **"Eliminar"** (o icono de papelera roja). Al pulsarlo, el sistema solicita una doble confirmación de seguridad para evitar borrados accidentales antes de eliminar el registro de la base de datos de manera definitiva e irreversible.

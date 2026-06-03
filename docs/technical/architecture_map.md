@@ -46,7 +46,7 @@ Implementación de lógica de negocio siguiendo **Clean Architecture**.
   - `routers/admin.py` — `/api/admin/*` (users CRUD, devices, nexus sync, anomaly, reset-smartmatches).
   - `routers/products.py` — `/api/products/*`, `/api/auctions/*`, `/api/market/*`, `/api/intelligence/*`, `/api/wallapop/preview`, `/api/vintage/miscellaneous`.
   - `routers/collection.py` — `/api/collection/*`, `/api/guardian/export/*`.
-  - `routers/purgatory.py` — `/api/purgatory/*`, `/api/offers/*/unlink|relink`, `/api/purgatory/{pending_id}/miscellaneous`, `/api/vintage/miscellaneous/revert/{item_id}`.
+  - `routers/purgatory.py` — `/api/purgatory/*`, `/api/offers/*/unlink|relink`, `/api/purgatory/{pending_id}/miscellaneous`, `/api/vintage/miscellaneous/revert/{item_id}`, `DELETE /api/vintage/miscellaneous/{item_id}`.
   - `routers/dashboard.py` — `/api/dashboard/*`.
   - `routers/users.py` — `/api/users/*` (settings, location), `/api/wallapop/import`, `/api/radar/p2p-opportunities`.
   - `routers/system.py` — `/api/system/audit`.

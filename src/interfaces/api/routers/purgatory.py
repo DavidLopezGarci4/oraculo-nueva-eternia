@@ -676,3 +676,33 @@ async def revert_miscellaneous_item(item_id: int):
             db.rollback()
             logger.error(f"Error al revertir miscelánea vintage: {e}")
             raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/api/vintage/miscellaneous/{item_id}", dependencies=[Depends(verify_api_key)])
+async def delete_miscellaneous_item(item_id: int):
+    with SessionCloud() as db:
+        from src.domain.models import VintageMiscellaneousModel
+        misc_item = db.query(VintageMiscellaneousModel).filter(VintageMiscellaneousModel.id == item_id).first()
+        if not misc_item:
+            raise HTTPException(status_code=404, detail="Artículo de Miscelánea no encontrado")
+
+        try:
+            from src.domain.models import OfferHistoryModel
+            history = OfferHistoryModel(
+                offer_url=misc_item.url,
+                product_name=misc_item.title,
+                shop_name=misc_item.shop_name,
+                price=misc_item.price,
+                action_type="DELETED_MISCELLANEOUS",
+                details=json.dumps({"reason": "Eliminación manual desde Miscelánea Vintage", "item_id": misc_item.id}),
+            )
+            db.add(history)
+
+            db.delete(misc_item)
+            db.commit()
+            return {"status": "success", "message": "Artículo de Miscelánea eliminado con éxito."}
+
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Error al eliminar artículo de miscelánea: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
