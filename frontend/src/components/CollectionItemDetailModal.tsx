@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { updateCollectionItem, toggleCollection } from '../api/collection';
 import type { Product } from '../api/collection';
+import { getOptimizedImageUrl } from '../utils/imageUtils';
 
 
 interface CollectionItemDetailModalProps {
@@ -85,7 +86,12 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
                         onClick={() => setExpandedImage(product.image_url || null)}
                         title="Expandir Reliquia"
                     >
-                        <img src={product.image_url || ''} className="h-full w-full object-cover" alt={product.name} />
+                        <img 
+                            src={getOptimizedImageUrl(product.image_url, 600)} 
+                            className="h-full w-full object-cover" 
+                            alt={product.name} 
+                            loading="lazy"
+                        />
 
                         {/* ID Badge - Top Right */}
                         <div className="absolute top-2 right-2 md:top-4 md:right-4 bg-black/70 backdrop-blur-md px-2 py-0.5 md:px-3 md:py-1 rounded-full text-[8px] md:text-[10px] font-black text-white/90 border border-white/20">

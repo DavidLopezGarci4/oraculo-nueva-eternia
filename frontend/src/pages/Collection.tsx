@@ -23,6 +23,7 @@ import PowerSwordLoader from '../components/ui/PowerSwordLoader';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getCollection, toggleCollection } from '../api/collection';
 import type { Product } from '../api/collection';
+import { getOptimizedImageUrl } from '../utils/imageUtils';
 import CollectionItemDetailModal from '../components/CollectionItemDetailModal';
 import { updateProduct, deleteProduct } from '../api/admin';
 import type { Hero } from '../api/admin';
@@ -306,7 +307,12 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                                         }}
                                     >
                                         {product.image_url ? (
-                                            <img src={product.image_url} className="h-full w-full object-cover transition-all duration-700 group-hover:scale-110 group-hover:rotate-1" />
+                                            <img 
+                                                src={getOptimizedImageUrl(product.image_url, 300)} 
+                                                className="h-full w-full object-cover transition-all duration-700 group-hover:scale-110 group-hover:rotate-1" 
+                                                loading="lazy"
+                                                alt={product.name}
+                                            />
                                         ) : (
                                             <div className="flex h-full w-full items-center justify-center text-[10px] text-white/10 font-black uppercase tracking-widest">No Image</div>
                                         )}

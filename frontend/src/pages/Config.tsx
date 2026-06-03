@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Activity, Clock, AlertCircle, CheckCircle2, RefreshCw, Terminal, Target, Settings, Users, ShieldAlert, Trash2, Zap, History, Database, Download, FileSpreadsheet, Repeat, Globe } from 'lucide-react';
+import { Play, Activity, Clock, AlertCircle, CheckCircle2, RefreshCw, Terminal, Target, Settings, Users, ShieldAlert, Trash2, Zap, History, Database, Download, FileSpreadsheet, Repeat, Globe, Package } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { resetSmartMatches, runScrapers, stopScrapers, getScraperLogs, type ScraperExecutionLog, getWallapopIpLogs, downloadWallapopIpLogs, type WallapopIpLog } from '../api/purgatory';
@@ -34,7 +34,7 @@ interface ConfigProps {
 
 const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange }) => {
     const consoleRef = React.useRef<HTMLDivElement>(null);
-    const [activeTab, setActiveTab] = useState<'scrapers' | 'system' | 'users' | 'wallapop'>('scrapers');
+    const [activeTab, setActiveTab] = useState<'scrapers' | 'system' | 'users' | 'wallapop' | 'inventory'>('scrapers');
     const [statuses, setStatuses] = useState<ScraperStatus[]>([]);
     const [matchStats, setMatchStats] = useState<any[]>([]);
     const [syncingSensores, setSyncingSensores] = useState(false);
@@ -320,6 +320,13 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                 <Activity className="h-3.5 w-3.5" />
                                 Scrapers
                             </button>
+                            <button
+                                onClick={() => setActiveTab('inventory')}
+                                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${activeTab === 'inventory' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'text-white/65 hover:text-white'}`}
+                            >
+                                <Package className="h-3.5 w-3.5" />
+                                Inventario
+                            </button>
                         </>
                     )}
                     <button
@@ -550,26 +557,6 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                             </div>
                         </div>
 
-                        {/* Conquistas de Mercado */}
-                        <div className="space-y-4 pt-6 border-t border-white/5">
-                            <h4 className="text-xs font-black uppercase tracking-widest text-white/65">Conquistas de Mercado</h4>
-                            <div className="rounded-2xl md:rounded-[2.5rem] border border-white/5 bg-black/50 backdrop-blur-md p-4 md:p-8 space-y-6">
-                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3 md:gap-4">
-                                    {matchStats?.map((item) => (
-                                        <div key={item.shop} className="flex flex-col gap-1 rounded-2xl bg-white/[0.03] p-3 md:p-4 border border-white/5">
-                                            <span className="text-[8px] md:text-[9px] font-black uppercase text-white/60 tracking-widest truncate">{item.shop}</span>
-                                            <span className="text-xl md:text-2xl font-black text-white">{item.count}</span>
-                                        </div>
-                                    ))}
-                                    {(!matchStats || matchStats.length === 0) && (
-                                        <div className="col-span-full py-6 text-center text-white/60 uppercase font-black text-[9px] tracking-widest">
-                                            Sin estadísticas de mercado
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-
                         {/* Widget de Estado de Scrapers */}
                         <div className="space-y-4 pt-6 border-t border-white/5">
                             <div className="flex items-center justify-between">
@@ -593,48 +580,88 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                             </div>
                             <div className="rounded-2xl md:rounded-[2.5rem] border border-white/5 bg-black/50 backdrop-blur-md p-4 md:p-6">
                                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-                                    {statuses?.map((scraper) => {
-                                        const isRunning = scraper.status === 'running';
-                                        const isCompleted = scraper.status === 'completed';
-                                        const isError = scraper.status.startsWith('error') || scraper.status === 'stopped';
-                                        
-                                        return (
-                                            <div 
-                                                key={scraper.spider_name} 
-                                                className={`relative overflow-hidden flex flex-col gap-1.5 rounded-xl p-3 border transition-all duration-300 ${
-                                                    isRunning ? 'bg-yellow-500/5 border-yellow-500/20 shadow-[0_0_15px_-5px_rgba(234,179,8,0.15)]' :
-                                                    isCompleted ? 'bg-green-500/5 border-green-500/10' :
-                                                    'bg-white/[0.02] border-white/5'
-                                                }`}
-                                            >
-                                                <div className="flex items-center justify-between gap-2">
-                                                    <span className="text-[9px] font-bold text-white/80 truncate max-w-[80%]">{scraper.spider_name}</span>
-                                                    <span className={`h-1.5 w-1.5 rounded-full ${
-                                                        isRunning ? 'bg-yellow-500 animate-pulse' :
-                                                        isCompleted ? 'bg-green-500' :
-                                                        isError ? 'bg-red-500' : 'bg-white/20'
-                                                    }`}></span>
+                                    {(() => {
+                                        const filteredScrapers = statuses?.filter(s => s.status !== 'completed') || [];
+                                        if (filteredScrapers.length === 0) {
+                                            return (
+                                                <div className="col-span-full py-10 flex flex-col items-center justify-center gap-2">
+                                                    <CheckCircle2 className="h-8 w-8 text-green-500 animate-pulse" />
+                                                    <div className="text-[10px] font-black uppercase tracking-widest text-green-400">Todos los sensores están listos (Listo)</div>
                                                 </div>
-                                                
-                                                <div className="flex items-center justify-between text-[7px] font-black uppercase tracking-wider text-white/60">
-                                                    <span>Estado</span>
-                                                    <span className={
-                                                        isRunning ? 'text-yellow-500' :
-                                                        isCompleted ? 'text-green-500' :
-                                                        isError ? 'text-red-500' : 'text-white/60'
-                                                    }>
-                                                        {isRunning ? 'Activo' : isCompleted ? 'Listo' : 'Pausado'}
-                                                    </span>
+                                            );
+                                        }
+                                        return filteredScrapers.map((scraper) => {
+                                            const isRunning = scraper.status === 'running';
+                                            const isCompleted = scraper.status === 'completed';
+                                            const isError = scraper.status.startsWith('error') || scraper.status === 'stopped';
+                                            
+                                            return (
+                                                <div 
+                                                    key={scraper.spider_name} 
+                                                    className={`relative overflow-hidden flex flex-col gap-1.5 rounded-xl p-3 border transition-all duration-300 ${
+                                                        isRunning ? 'bg-yellow-500/5 border-yellow-500/20 shadow-[0_0_15px_-5px_rgba(234,179,8,0.15)]' :
+                                                        isCompleted ? 'bg-green-500/5 border-green-500/10' :
+                                                        'bg-white/[0.02] border-white/5'
+                                                    }`}
+                                                >
+                                                    <div className="flex items-center justify-between gap-2">
+                                                        <span className="text-[9px] font-bold text-white/80 truncate max-w-[80%]">{scraper.spider_name}</span>
+                                                        <span className={`h-1.5 w-1.5 rounded-full ${
+                                                            isRunning ? 'bg-yellow-500 animate-pulse' :
+                                                            isCompleted ? 'bg-green-500' :
+                                                            isError ? 'bg-red-500' : 'bg-white/20'
+                                                        }`}></span>
+                                                    </div>
+                                                    
+                                                    <div className="flex items-center justify-between text-[7px] font-black uppercase tracking-wider text-white/60">
+                                                        <span>Estado</span>
+                                                        <span className={
+                                                            isRunning ? 'text-yellow-500' :
+                                                            isCompleted ? 'text-green-500' :
+                                                            isError ? 'text-red-500' : 'text-white/60'
+                                                        }>
+                                                            {isRunning ? 'Activo' : isCompleted ? 'Listo' : 'Pausado'}
+                                                        </span>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        );
-                                    })}
-                                    {(!statuses || statuses.length === 0) && (
-                                        <div className="col-span-full py-6 text-center text-white/10 uppercase font-black text-[9px] tracking-widest">
-                                            No se han detectado sensores de incursión activos
-                                        </div>
-                                    )}
+                                            );
+                                        });
+                                    })()}
                                 </div>
+                            </div>
+                        </div>
+                    </motion.div>
+                ) : activeTab === 'inventory' ? (
+                    <motion.div
+                        key="inventory"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="space-y-6"
+                    >
+                        <div className="flex justify-between items-center mb-6">
+                            <div>
+                                <h2 className="text-2xl font-bold flex items-center gap-2">
+                                    <Package className="w-6 h-6 text-brand-primary" />
+                                    Conquistas de Mercado (Inventario)
+                                </h2>
+                                <p className="text-white/70 text-sm">Resumen de reliquias indexadas por cada portal del mercado.</p>
+                            </div>
+                        </div>
+
+                        <div className="rounded-2xl md:rounded-[2.5rem] border border-white/5 bg-black/50 backdrop-blur-md p-4 md:p-8 space-y-6">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3 md:gap-4">
+                                {matchStats?.map((item) => (
+                                    <div key={item.shop} className="flex flex-col gap-1 rounded-2xl bg-white/[0.03] p-3 md:p-4 border border-white/5">
+                                        <span className="text-[8px] md:text-[9px] font-black uppercase text-white/60 tracking-widest truncate">{item.shop}</span>
+                                        <span className="text-xl md:text-2xl font-black text-white">{item.count}</span>
+                                    </div>
+                                ))}
+                                {(!matchStats || matchStats.length === 0) && (
+                                    <div className="col-span-full py-6 text-center text-white/60 uppercase font-black text-[9px] tracking-widest">
+                                        Sin estadísticas de mercado
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </motion.div>

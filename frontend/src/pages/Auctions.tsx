@@ -12,6 +12,7 @@ import { es } from 'date-fns/locale';
 import { getProductPriceHistory } from '../api/products';
 import PriceHistoryChart from '../components/products/PriceHistoryChart';
 import { unlinkOffer, type Hero } from '../api/admin';
+import { getOptimizedImageUrl } from '../utils/imageUtils';
 
 const MarketStatCard: React.FC<{ title: string, value: number, type: 'retail' | 'p2p' }> = ({ title, value, type }) => {
     const { data: analytics, isLoading } = useQuery({
@@ -227,7 +228,12 @@ const Auctions: React.FC<AuctionsProps> = ({ user }) => {
                                 onClick={() => setSelectedProduct(product)}
                             >
                                 {product.image_url ? (
-                                    <img src={product.image_url} alt={product.name} className="h-full w-full object-cover transition-all duration-700 group-hover/img:scale-110" />
+                                    <img 
+                                        src={getOptimizedImageUrl(product.image_url, 300)} 
+                                        alt={product.name} 
+                                        loading="lazy"
+                                        className="h-full w-full object-cover transition-all duration-700 group-hover/img:scale-110" 
+                                    />
                                 ) : (
                                     <div className="flex h-full w-full items-center justify-center italic text-white/20 text-[10px] sm:text-xs font-black uppercase tracking-widest">Sin Imagen</div>
                                 )}
@@ -379,7 +385,12 @@ const Auctions: React.FC<AuctionsProps> = ({ user }) => {
                                     onClick={() => setExpandedImage(selectedProduct.image_url)}
                                     title="Expandir Reliquia"
                                 >
-                                    <img src={selectedProduct.image_url || ''} className="h-full w-full object-cover" />
+                                    <img 
+                                        src={getOptimizedImageUrl(selectedProduct.image_url, 600)} 
+                                        className="h-full w-full object-cover" 
+                                        loading="lazy"
+                                        alt={selectedProduct.name}
+                                    />
                                 </div>
                                 <div className="space-y-1"><h4 className="text-3xl font-black tracking-tighter text-white">Lote de <span className="text-orange-500">Subastas</span></h4><p className="text-sm font-bold text-white/30 uppercase tracking-widest">{selectedProduct.name}</p></div>
                             </div>
@@ -463,7 +474,7 @@ const Auctions: React.FC<AuctionsProps> = ({ user }) => {
                                                                 </div>
                                                             )}
                                                         </div>
-                                                        <div className="flex items-center gap-2">
+                                                        <div className="flex items-center gap-1.5 rounded-xl bg-white/[0.03] p-1 border border-white/10 backdrop-blur-sm shadow-md">
                                                             {isAdmin && (
                                                                 <button
                                                                     onClick={() => {
@@ -472,10 +483,10 @@ const Auctions: React.FC<AuctionsProps> = ({ user }) => {
                                                                         }
                                                                     }}
                                                                     disabled={unlinkMutation.isPending}
-                                                                    className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-all shadow-lg"
+                                                                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-all hover:scale-105 active:scale-95 duration-200"
                                                                     title="Desvincular y enviar al Purgatorio"
                                                                 >
-                                                                    {unlinkMutation.isPending ? <RefreshCw className="h-5 w-5 animate-spin" /> : <RefreshCw className="h-5 w-5" />}
+                                                                    {unlinkMutation.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                                                                 </button>
                                                             )}
                                                             <button
@@ -484,10 +495,10 @@ const Auctions: React.FC<AuctionsProps> = ({ user }) => {
                                                                     setCopiedId(offer.id);
                                                                     setTimeout(() => setCopiedId(null), 2000);
                                                                 }}
-                                                                className={`flex h-12 w-12 items-center justify-center rounded-2xl border transition-all ${copiedId === offer.id ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-white/5 text-white/40 border-white/10 hover:bg-white/10 hover:text-white'}`}
+                                                                className={`flex h-8 w-8 items-center justify-center rounded-lg border transition-all hover:scale-105 active:scale-95 duration-200 ${copiedId === offer.id ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-white/5 text-white/40 border-white/10 hover:bg-white/10 hover:text-white'}`}
                                                                 title="Copiar Enlace"
                                                             >
-                                                                {copiedId === offer.id ? <Check className="h-5 w-5" /> : <ExternalLink className="h-5 w-5" />}
+                                                                {copiedId === offer.id ? <Check className="h-4 w-4" /> : <ExternalLink className="h-4 w-4" />}
                                                             </button>
                                                             <button
                                                                 onClick={() => addToCart({
@@ -497,19 +508,19 @@ const Auctions: React.FC<AuctionsProps> = ({ user }) => {
                                                                     price: offer.price,
                                                                     image_url: selectedProduct?.image_url || undefined
                                                                 })}
-                                                                className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 text-white/40 border border-white/10 hover:bg-brand-primary/20 hover:text-brand-primary transition-all"
+                                                                className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/5 text-white/40 border border-white/10 hover:bg-brand-primary/20 hover:text-brand-primary hover:scale-105 active:scale-95 duration-200"
                                                                 title="Simular en Oracle Cart"
                                                             >
-                                                                <ShoppingBasket className="h-5 w-5" />
+                                                                <ShoppingBasket className="h-4 w-4" />
                                                             </button>
                                                             <a
                                                                 href={offer.url}
                                                                 target="_blank"
                                                                 rel="noopener noreferrer"
-                                                                className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 text-white/40 border border-white/10 hover:bg-orange-500 hover:text-white transition-all"
+                                                                className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/5 text-white/40 border border-white/10 hover:bg-orange-500 hover:text-white transition-all hover:scale-105 active:scale-95 duration-200"
                                                                 title="Ver en Tienda"
                                                             >
-                                                                <ExternalLink className="h-5 w-5" />
+                                                                <ExternalLink className="h-4 w-4" />
                                                             </a>
                                                         </div>
                                                     </div>

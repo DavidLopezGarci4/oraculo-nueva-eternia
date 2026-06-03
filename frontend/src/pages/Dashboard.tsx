@@ -278,7 +278,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                         <Target className="h-6 w-6 text-brand-primary" />
                         <div className="text-left">
                             <span className="block text-[10px] font-black uppercase tracking-widest text-brand-primary/70">Radar de Capturas</span>
-                            <span className="text-sm font-bold text-white">🎯 Radar de Oportunidades</span>
+                            <span className="text-sm font-bold text-white">Radar de Oportunidades</span>
                         </div>
                     </button>
                     <button
@@ -288,7 +288,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                         <Award className="h-6 w-6 text-amber-500" />
                         <div className="text-left">
                             <span className="block text-[10px] font-black uppercase tracking-widest text-amber-500/70">Griales de Colección</span>
-                            <span className="text-sm font-bold text-white">🏆 Salón de la Fama</span>
+                            <span className="text-sm font-bold text-white">Salón de la Fama</span>
                         </div>
                     </button>
                 </div>

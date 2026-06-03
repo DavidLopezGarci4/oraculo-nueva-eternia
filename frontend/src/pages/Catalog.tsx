@@ -23,6 +23,7 @@ import {
     Box,
     Trash2
 } from 'lucide-react';
+import { getOptimizedImageUrl } from '../utils/imageUtils';
 import {
     ResponsiveContainer,
     LineChart,
@@ -476,6 +477,41 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
         return [];
     }, [selectedCronosA, selectedCronosB, historyCronosA, historyCronosB, activeCronosShops, availableShops]);
 
+    const cronosStats = React.useMemo(() => {
+        const stats: { 
+            a?: { min: number; max: number; name: string };
+            b?: { min: number; max: number; name: string };
+        } = {};
+
+        const allowedShops = activeCronosShops.length > 0 ? activeCronosShops : (availableShops || []);
+
+        if (selectedCronosA && historyCronosA) {
+            const prices = historyCronosA
+                .filter(s => allowedShops.includes(s.shop_name))
+                .flatMap(s => s.history.map(h => h.price));
+            if (prices.length > 0) {
+                stats.a = {
+                    min: Math.min(...prices),
+                    max: Math.max(...prices),
+                    name: selectedCronosA.name
+                };
+            }
+        }
+        if (selectedCronosB && historyCronosB) {
+            const prices = historyCronosB
+                .filter(s => allowedShops.includes(s.shop_name))
+                .flatMap(s => s.history.map(h => h.price));
+            if (prices.length > 0) {
+                stats.b = {
+                    min: Math.min(...prices),
+                    max: Math.max(...prices),
+                    name: selectedCronosB.name
+                };
+            }
+        }
+        return stats;
+    }, [historyCronosA, historyCronosB, selectedCronosA, selectedCronosB, activeCronosShops, availableShops]);
+
     if (isLoadingProducts || isLoadingCollection) {
         return <PowerSwordLoader variant="fullScreen" text="Invocando el Catálogo Maestro..." />;
     }
@@ -593,7 +629,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                             : 'border-transparent text-white/70 hover:text-white'
                     }`}
                 >
-                    ⚡ Evolución Cronos
+                    Evolución Cronos
                 </button>
             </div>
 
@@ -719,6 +755,48 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                         </div>
                     </div>
 
+                    {/* Cronos Stats Cards */}
+                    {cronosStats && (cronosStats.a || cronosStats.b) && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+                            {cronosStats.a && (
+                                <div className="rounded-2xl border border-sky-500/20 bg-sky-500/5 p-4 flex items-center justify-between backdrop-blur-md">
+                                    <div>
+                                        <span className="block text-[8px] font-black uppercase tracking-wider text-sky-400">Rango de Precios - Reliquia A</span>
+                                        <span className="text-xs font-bold text-white truncate max-w-[200px] block">{cronosStats.a.name}</span>
+                                    </div>
+                                    <div className="flex gap-4">
+                                        <div className="text-right">
+                                            <span className="block text-[8px] font-black uppercase text-white/40">Mínimo</span>
+                                            <span className="text-base font-black text-green-400">{cronosStats.a.min.toFixed(2)} €</span>
+                                        </div>
+                                        <div className="text-right">
+                                            <span className="block text-[8px] font-black uppercase text-white/40">Máximo</span>
+                                            <span className="text-base font-black text-red-400">{cronosStats.a.max.toFixed(2)} €</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                            {cronosStats.b && (
+                                <div className="rounded-2xl border border-pink-500/20 bg-pink-500/5 p-4 flex items-center justify-between backdrop-blur-md">
+                                    <div>
+                                        <span className="block text-[8px] font-black uppercase tracking-wider text-pink-400">Rango de Precios - Reliquia B</span>
+                                        <span className="text-xs font-bold text-white truncate max-w-[200px] block">{cronosStats.b.name}</span>
+                                    </div>
+                                    <div className="flex gap-4">
+                                        <div className="text-right">
+                                            <span className="block text-[8px] font-black uppercase text-white/40">Mínimo</span>
+                                            <span className="text-base font-black text-green-400">{cronosStats.b.min.toFixed(2)} €</span>
+                                        </div>
+                                        <div className="text-right">
+                                            <span className="block text-[8px] font-black uppercase text-white/40">Máximo</span>
+                                            <span className="text-base font-black text-red-400">{cronosStats.b.max.toFixed(2)} €</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     {/* Chart Container */}
                     <div className="min-h-[400px] w-full bg-black/40 rounded-3xl p-6 border border-white/10 relative flex flex-col justify-center items-center">
                         {(loadingCronosA || loadingCronosB) ? (
@@ -768,7 +846,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                                                 stroke={line.color}
                                                 strokeWidth={3}
                                                 dot={{ fill: line.color, stroke: line.color, strokeWidth: 1, r: 4 }}
-                                                activeDot={{ r: 7, strokeWidth: 0 }}
+                                                activeDot={{ r: 8, stroke: '#fff', strokeWidth: 2 }}
                                                 animationDuration={1000}
                                                 connectNulls
                                             />
@@ -833,8 +911,9 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                             >
                                 {product.image_url ? (
                                     <img
-                                        src={product.image_url}
+                                        src={getOptimizedImageUrl(product.image_url, 300)}
                                         alt={product.name}
+                                        loading="lazy"
                                         className="h-full w-full object-cover transition-all duration-700 group-hover/img:scale-110 group-hover/img:rotate-1"
                                     />
                                 ) : (
@@ -1018,7 +1097,12 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                                     onClick={() => setExpandedImage(selectedProduct.image_url)}
                                     title="Expandir Reliquia"
                                 >
-                                    <img src={selectedProduct.image_url || ''} className="h-full w-full object-cover" />
+                                    <img 
+                                        src={getOptimizedImageUrl(selectedProduct.image_url, 600)} 
+                                        className="h-full w-full object-cover" 
+                                        loading="lazy"
+                                        alt={selectedProduct.name}
+                                    />
                                 </div>
                                 <div className="space-y-1">
                                     <h4 className="text-3xl font-black tracking-tighter text-white leading-none">
