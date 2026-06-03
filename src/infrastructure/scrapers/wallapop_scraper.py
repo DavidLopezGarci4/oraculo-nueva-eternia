@@ -65,41 +65,100 @@ class WallapopScraper(BaseScraper):
             
             cookies_accepted = False
             
-            # --- HUMANIZED HOMEPAGE PRE-VISIT ---
-            # Navegar primero a la portada para cargar cookies, inicializar retos JS de CloudFront y aceptar consentimiento de forma natural
-            self._log("🏠 Navegando a la portada de Wallapop para inicializar cookies y sesión humana...")
+            # --- OBTENER IP Y DIAGNÓSTICO DE ACCESO A WALLAPOP ---
+            import os
+            current_ip = "Desconocida"
+            probe_status = "error"
+            environment = "GitHub Actions" if os.environ.get("GITHUB_ACTIONS") == "true" else "Local"
+            resp_code = None
+            details_str = "No details available."
+
             try:
-                await page.goto(self.base_url, wait_until="networkidle", timeout=30000)
-                
-                # Validar de forma inmediata si la IP local está greylisted por CloudFront
-                cover_content = await page.content()
-                if "request could not be satisfied" in cover_content.lower() or "403 error" in cover_content.lower() or "request blocked" in cover_content.lower():
-                    self._log("🛡️ Bloqueo de IP detectado (Rate Limit / Greylist de CloudFront) al cargar la portada. Tu IP local está marcada temporalmente por Wallapop. Por favor, espera 10 minutos antes de iniciar otra incursión.", level="warning")
-                    self.blocked = True
-                    return offers
-                    
-                accept_btn = page.locator("#onetrust-accept-btn-handler").or_(
-                    page.get_by_role("button", name="Aceptar todo")
-                ).or_(
-                    page.locator("button:has-text('Aceptar')")
-                ).first
-                
-                if await accept_btn.is_visible(timeout=5000):
-                    await accept_btn.click()
-                    self._log("🍪 Cookies de portada aceptadas (Consentimiento completado).")
-                    cookies_accepted = True
-                await asyncio.sleep(2)
+                # 1. Obtener la IP actual
+                await page.goto("https://api.ipify.org?format=json", timeout=15000)
+                ip_text = await page.locator("body").text_content()
+                import json
+                ip_data = json.loads(ip_text.strip())
+                current_ip = ip_data.get("ip", "Desconocida")
+                self._log(f"🔎 IP de origen detectada para el runner: {current_ip}")
             except Exception as e:
-                # Si falló por timeout de bloqueo, verificar si fue bloqueo
+                self._log(f"⚠️ No se pudo determinar la IP de origen: {e}", level="warning")
+
+            try:
+                # 2. Probar acceso a la portada
+                self._log("🏠 Navegando a la portada de Wallapop para comprobar WAF/CloudFront e inicializar cookies...")
+                response = await page.goto(self.base_url, wait_until="networkidle", timeout=30000)
+                if response:
+                    resp_code = response.status
+                
+                # Validar de forma inmediata si la IP está greylisted/bloqueada
+                cover_content = await page.content()
+                page_title = await page.title()
+                
+                if "request could not be satisfied" in cover_content.lower() or "403 error" in cover_content.lower() or "request blocked" in cover_content.lower() or ("cloudflare" in cover_content.lower() and ("blocked" in cover_content.lower() or "security" in cover_content.lower())):
+                    probe_status = "blocked"
+                    details_str = f"Blocked page title: {page_title}. Content starts with: {cover_content[:500]}"
+                    self._log(f"🛡️ [PROBE] IP {current_ip} BLOQUEADA por CloudFront (WAF). Saltando Wallapop de forma segura.", level="warning")
+                    self.blocked = True
+                else:
+                    probe_status = "allowed"
+                    details_str = f"Successfully loaded Wallapop. Title: {page_title}. Response status: {resp_code}"
+                    self._log(f"🎉 [PROBE] IP {current_ip} TIENE ACCESO LIBRE. Procediendo con el raspado de Wallapop.")
+                    
+                    # Si tiene acceso, aceptamos las cookies
+                    accept_btn = page.locator("#onetrust-accept-btn-handler").or_(
+                        page.get_by_role("button", name="Aceptar todo")
+                    ).or_(
+                        page.locator("button:has-text('Aceptar')")
+                    ).first
+                    
+                    if await accept_btn.is_visible(timeout=5000):
+                        await accept_btn.click()
+                        self._log("🍪 Cookies de portada aceptadas (Consentimiento completado).")
+                        cookies_accepted = True
+                    await asyncio.sleep(2)
+            except Exception as e:
+                # Comprobar si falló por bloqueo
                 try:
                     cover_content = await page.content()
-                    if "request could not be satisfied" in cover_content.lower() or "403 error" in cover_content.lower() or "request blocked" in cover_content.lower():
-                        self._log("🛡️ Bloqueo de IP detectado (Rate Limit / Greylist de CloudFront) al cargar la portada.", level="warning")
+                    page_title = await page.title()
+                    if "request could not be satisfied" in cover_content.lower() or "403 error" in cover_content.lower() or "request blocked" in cover_content.lower() or "cloudflare" in cover_content.lower():
+                        probe_status = "blocked"
+                        details_str = f"Blocked on exception. Title: {page_title}. Error: {str(e)[:200]}. Content snippet: {cover_content[:300]}"
+                        self._log(f"🛡️ [PROBE] IP {current_ip} BLOQUEADA por CloudFront (WAF). Saltando.", level="warning")
                         self.blocked = True
-                        return offers
-                except:
-                    pass
-                self._log(f"⚠️ Nota: Error menor precargando portada: {e}", level="warning")
+                    else:
+                        probe_status = "error"
+                        details_str = f"Navigation failed: {str(e)[:300]}"
+                        self._log(f"⚠️ [PROBE] Error de red o timeout conectando a Wallapop: {e}", level="warning")
+                        self.blocked = True
+                except Exception as inner_e:
+                    probe_status = "error"
+                    details_str = f"Navigation failed: {str(e)[:200]}. Inner error trying to read page content: {str(inner_e)[:100]}"
+                    self._log(f"⚠️ [PROBE] Error de red o timeout conectando a Wallapop: {e}", level="warning")
+                    self.blocked = True
+
+            # Guardar el registro en la base de datos de producción de forma segura
+            try:
+                from src.infrastructure.database_cloud import SessionCloud
+                from src.domain.models import WallapopIpLogModel
+                with SessionCloud() as db_session:
+                    ip_log = WallapopIpLogModel(
+                        ip_address=current_ip,
+                        status=probe_status,
+                        environment=environment,
+                        response_code=resp_code,
+                        details=details_str
+                    )
+                    db_session.add(ip_log)
+                    db_session.commit()
+                self._log(f"💾 Log de auditoría IP guardado en Supabase (IP: {current_ip} | Status: {probe_status} | Env: {environment} | Code: {resp_code}).")
+            except Exception as db_err:
+                self._log(f"⚠️ No se pudo registrar la auditoría IP en base de datos: {db_err}", level="warning")
+
+            if self.blocked:
+                await browser.close()
+                return offers
             
             try:
                 for search_query, scroll_cycles, click_load_more in queries_config:

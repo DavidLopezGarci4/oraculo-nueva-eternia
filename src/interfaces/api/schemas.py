@@ -140,6 +140,7 @@ class CollectionItemUpdateRequest(BaseModel):
     purchase_price: Optional[float] = None
     notes: Optional[str] = None
     acquired_at: Optional[str] = None  # ISO format
+    acquired: Optional[bool] = None
 
 
 # --- Purgatory ---

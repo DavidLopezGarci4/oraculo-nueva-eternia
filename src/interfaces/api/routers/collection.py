@@ -197,6 +197,8 @@ async def update_collection_item(product_id: int, request: CollectionItemUpdateR
             item.purchase_price = request.purchase_price
         if request.notes is not None:
             item.notes = request.notes
+        if request.acquired is not None:
+            item.acquired = request.acquired
         if request.acquired_at is not None:
             try:
                 clean_date = request.acquired_at.replace("Z", "")

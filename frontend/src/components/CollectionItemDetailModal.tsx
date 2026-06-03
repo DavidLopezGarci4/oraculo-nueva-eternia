@@ -32,6 +32,7 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
     const [acquiredAt, setAcquiredAt] = useState<string>(
         product.acquired_at ? product.acquired_at.split('T')[0] : new Date().toISOString().split('T')[0]
     );
+    const [expandedImage, setExpandedImage] = useState<string | null>(null);
 
 
     const updateMutation = useMutation({
@@ -40,10 +41,12 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
             condition,
             grading,
             notes,
-            acquired_at: acquiredAt
+            acquired_at: acquiredAt,
+            acquired: product.is_wish ? true : undefined
         }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['collection', userId] });
+            queryClient.invalidateQueries({ queryKey: ['dashboard-stats', userId] });
             onClose();
         }
     });
@@ -72,12 +75,16 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
     const roi = price > 0 ? (profitLoss / price) * 100 : 0;
 
     return (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/90 backdrop-blur-xl p-4 md:p-10 animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/90 backdrop-blur-xl p-2 md:p-10 animate-in fade-in duration-300">
             <div className="relative w-full max-w-4xl rounded-[3rem] border border-white/10 bg-gradient-to-br from-white/[0.05] to-transparent overflow-hidden shadow-2xl flex flex-col md:flex-row max-h-[90vh]">
 
                 {/* Left Side: Product Preview */}
-                <div className="w-full md:w-1/3 bg-black/40 border-b md:border-b-0 md:border-r border-white/5 p-4 md:p-8 flex flex-col gap-4 items-center text-center">
-                    <div className="relative w-full max-w-[200px] md:max-w-full aspect-square md:aspect-auto md:h-64 rounded-2xl md:rounded-[2rem] overflow-hidden border border-white/10 shadow-2xl mx-auto">
+                <div className="w-full md:w-1/3 bg-black/40 border-b md:border-b-0 md:border-r border-white/5 p-3 md:p-8 flex flex-col gap-2 md:gap-4 items-center text-center">
+                    <div 
+                        className="relative w-full max-w-[120px] md:max-w-full aspect-square md:aspect-auto md:h-64 rounded-2xl md:rounded-[2rem] overflow-hidden border border-white/10 shadow-2xl mx-auto cursor-zoom-in hover:scale-105 transition-transform"
+                        onClick={() => setExpandedImage(product.image_url || null)}
+                        title="Expandir Reliquia"
+                    >
                         <img src={product.image_url || ''} className="h-full w-full object-cover" alt={product.name} />
 
                         {/* ID Badge - Top Right */}
@@ -88,46 +95,46 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
 
                     <div className="space-y-1 md:space-y-2">
                         <p className="text-[8px] md:text-[10px] font-black text-brand-primary uppercase tracking-[0.2em]">{product.sub_category}</p>
-                        <h2 className="text-lg md:text-xl font-black text-white leading-tight">{product.name}</h2>
+                        <h2 className="text-sm md:text-xl font-black text-white leading-tight">{product.name}</h2>
                     </div>
                 </div>
 
                 {/* Right Side: Legado Form */}
                 <div className="flex-1 flex flex-col overflow-y-auto custom-scrollbar">
                     {/* Header */}
-                    <div className="p-4 md:p-8 border-b border-white/5 flex items-center justify-between">
+                    <div className="p-3 md:p-8 border-b border-white/5 flex items-center justify-between">
                         <div className="flex items-center gap-2 md:gap-3">
                             <Shield className="h-4 w-4 md:h-5 md:w-5 text-brand-primary" />
-                            <h3 className="text-white font-black text-sm md:text-lg uppercase tracking-wider">Tu Legado Personal</h3>
+                            <h3 className="text-white font-black text-xs md:text-lg uppercase tracking-wider">Tu Legado Personal</h3>
                         </div>
                         <button onClick={onClose} className="h-8 w-8 md:h-10 md:w-10 flex items-center justify-center rounded-xl bg-white/5 hover:bg-white/10 transition-colors">
-                            <X className="h-5 w-5 text-white/40" />
+                            <X className="h-5 w-5 text-white/70" />
                         </button>
                     </div>
 
-                    <div className="p-4 md:p-8 space-y-6 md:space-y-8">
+                    <div className="p-3 md:p-8 space-y-3 sm:space-y-4 md:space-y-6">
                         {/* Financial Stats */}
                         <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                            <div className="bg-white/[0.03] border border-white/5 p-3 sm:p-5 rounded-2xl md:rounded-3xl space-y-1 md:space-y-2 flex flex-col justify-center">
-                                <span className="text-[7px] sm:text-[8px] font-black text-white/20 uppercase tracking-widest block">Inversión (Tu Precio)</span>
+                            <div className="bg-white/[0.03] border border-white/5 p-2.5 sm:p-5 rounded-xl md:rounded-3xl space-y-1 md:space-y-2 flex flex-col justify-center">
+                                <span className="text-[7px] sm:text-[8px] font-black text-white/60 uppercase tracking-widest block">Inversión (Tu Precio)</span>
                                 <div className="flex items-baseline gap-1">
                                     <input
                                         type="number"
                                         value={price}
                                         onChange={(e) => setPrice(parseFloat(e.target.value) || 0)}
-                                        className="bg-transparent text-lg sm:text-2xl font-black text-white border-none focus:ring-0 w-12 sm:w-20 p-0"
+                                        className="bg-transparent text-base sm:text-2xl font-black text-white border-none focus:ring-0 w-12 sm:w-20 p-0"
                                     />
-                                    <span className="text-sm sm:text-lg font-bold text-white/40">€</span>
+                                    <span className="text-xs sm:text-lg font-bold text-white/70">€</span>
                                 </div>
                             </div>
-                            <div className={`border p-3 sm:p-5 rounded-2xl md:rounded-3xl space-y-1 md:space-y-2 transition-all flex flex-col justify-center ${profitLoss >= 0 ? 'bg-green-500/5 border-green-500/20' : 'bg-brand-primary/5 border-brand-primary/20'}`}>
-                                <span className="text-[7px] sm:text-[8px] font-black text-white/20 uppercase tracking-widest block">Revalorización (ROI)</span>
+                            <div className={`border p-2.5 sm:p-5 rounded-xl md:rounded-3xl space-y-1 md:space-y-2 transition-all flex flex-col justify-center ${profitLoss >= 0 ? 'bg-green-500/5 border-green-500/20' : 'bg-brand-primary/5 border-brand-primary/20'}`}>
+                                <span className="text-[7px] sm:text-[8px] font-black text-white/60 uppercase tracking-widest block">Revalorización (ROI)</span>
                                 <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-1.5">
                                     <div className="flex items-baseline gap-1">
-                                        <h4 className={`text-lg sm:text-2xl font-black ${profitLoss >= 0 ? 'text-green-400' : 'text-brand-primary'}`}>
+                                        <h4 className={`text-base sm:text-2xl font-black ${profitLoss >= 0 ? 'text-green-400' : 'text-brand-primary'}`}>
                                             {profitLoss >= 0 ? '+' : ''}{profitLoss.toFixed(2)}
                                         </h4>
-                                        <span className={`text-sm sm:text-lg font-bold ${profitLoss >= 0 ? 'text-green-400/40' : 'text-brand-primary/40'}`}>€</span>
+                                        <span className={`text-xs sm:text-lg font-bold ${profitLoss >= 0 ? 'text-green-400/40' : 'text-brand-primary/40'}`}>€</span>
                                     </div>
                                     <div className={`flex w-fit items-center gap-1 sm:gap-1.5 px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-[8px] sm:text-[10px] font-black ${profitLoss >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-brand-primary/20 text-brand-primary'}`}>
                                         {profitLoss >= 0 ? <TrendingUp className="h-2 w-2 sm:h-3 sm:w-3" /> : <TrendingDown className="h-2 w-2 sm:h-3 sm:w-3" />}
@@ -138,9 +145,9 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
                         </div>
 
                         {/* Form Fields */}
-                        <div className="space-y-4 md:space-y-6">
-                            <div className="space-y-2">
-                                <label className="text-[8px] md:text-[10px] font-black text-white/20 uppercase tracking-widest flex items-center gap-2">
+                        <div className="space-y-3 md:space-y-6">
+                            <div className="space-y-1.5">
+                                <label className="text-[8px] md:text-[10px] font-black text-white/60 uppercase tracking-widest flex items-center gap-2">
                                     <Activity className="h-3 w-3" />
                                     Estado de la Reliquia
                                 </label>
@@ -149,7 +156,7 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
                                         <button
                                             key={opt}
                                             onClick={() => setCondition(opt)}
-                                            className={`py-2 md:py-3 rounded-xl md:rounded-2xl border font-black text-[9px] md:text-[10px] uppercase transition-all ${condition === opt ? 'bg-brand-primary text-white border-brand-primary shadow-lg shadow-brand-primary/20' : 'bg-white/5 border-white/5 text-white/30 hover:bg-white/10'}`}
+                                            className={`py-1.5 md:py-3 rounded-lg md:rounded-2xl border font-black text-[9px] md:text-[10px] uppercase transition-all ${condition === opt ? 'bg-brand-primary text-white border-brand-primary shadow-lg shadow-brand-primary/20' : 'bg-white/5 border-white/5 text-white/60 hover:bg-white/10'}`}
                                         >
                                             {opt}
                                         </button>
@@ -157,14 +164,14 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
                                 </div>
                             </div>
 
-                            <div className="space-y-3 md:space-y-4">
+                            <div className="space-y-2 md:space-y-4">
                                 <div className="flex items-center justify-between">
-                                    <label className="text-[8px] md:text-[10px] font-black text-white/20 uppercase tracking-widest flex items-center gap-2">
+                                    <label className="text-[8px] md:text-[10px] font-black text-white/60 uppercase tracking-widest flex items-center gap-2">
                                         <Target className="h-3 w-3" />
                                         Grado de Conservación (ASTM/C)
                                     </label>
                                     <div className="flex items-center gap-2">
-                                        <span className={`text-lg md:text-xl font-black ${grading >= 9 ? 'text-green-400' : 'text-brand-primary'}`}>{grading.toFixed(1)}</span>
+                                        <span className={`text-base md:text-xl font-black ${grading >= 9 ? 'text-green-400' : 'text-brand-primary'}`}>{grading.toFixed(1)}</span>
                                         {grading < 10 && condition === 'MOC' && (
                                             <span className="px-2 py-0.5 rounded-md bg-brand-primary/20 text-brand-primary text-[7px] md:text-[8px] font-black uppercase">Shelf Wear</span>
                                         )}
@@ -179,14 +186,14 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
                                     onChange={(e) => setGrading(parseFloat(e.target.value))}
                                     className="w-full h-1 bg-white/5 rounded-lg appearance-none cursor-pointer accent-brand-primary"
                                 />
-                                <p className="text-[8px] md:text-[10px] text-white/30 italic">
+                                <p className="text-[8px] md:text-[10px] text-white/60 italic">
                                     {grading >= 9.5 ? 'Estado Gema / Mint' : grading >= 8.5 ? 'Excelente con ligero shelf-wear' : 'Estado jugado / con desgaste'}
                                 </p>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                                <div className="space-y-1 md:space-y-2">
-                                    <label className="text-[8px] md:text-[10px] font-black text-white/20 uppercase tracking-widest flex items-center gap-2">
+                                <div className="space-y-1">
+                                    <label className="text-[8px] md:text-[10px] font-black text-white/60 uppercase tracking-widest flex items-center gap-2">
                                         <Calendar className="h-3 w-3" />
                                         Fecha
                                     </label>
@@ -194,13 +201,13 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
                                         type="date"
                                         value={acquiredAt}
                                         onChange={(e) => setAcquiredAt(e.target.value)}
-                                        className="w-full bg-white/5 border border-white/10 rounded-xl md:rounded-2xl p-3 md:p-4 text-white text-xs md:text-sm font-bold focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-all color-white"
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl md:rounded-2xl p-2.5 md:p-4 text-white text-xs md:text-sm font-bold focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-all color-white"
                                     />
                                 </div>
                             </div>
 
-                            <div className="space-y-1 md:space-y-2">
-                                <label className="text-[8px] md:text-[10px] font-black text-white/20 uppercase tracking-widest flex items-center gap-2">
+                            <div className="space-y-1">
+                                <label className="text-[8px] md:text-[10px] font-black text-white/60 uppercase tracking-widest flex items-center gap-2">
                                     <FileText className="h-3 w-3" />
                                     Notas
                                 </label>
@@ -208,14 +215,14 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
                                     value={notes}
                                     onChange={(e) => setNotes(e.target.value)}
                                     placeholder="Detalles sobre el vendedor, caja..."
-                                    className="w-full bg-white/5 border border-white/10 rounded-xl md:rounded-3xl p-4 text-white text-xs md:text-sm font-medium focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-all min-h-[80px] md:min-h-[120px] resize-none"
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl md:rounded-3xl p-3 text-white text-xs md:text-sm font-medium focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-all min-h-[50px] md:min-h-[120px] resize-none"
                                 />
                             </div>
                         </div>
                     </div>
 
                     {/* Footer Actions */}
-                    <div className="mt-auto p-4 md:p-8 bg-black/40 border-t border-white/5 flex gap-3 md:gap-4 items-center">
+                    <div className="mt-auto p-3 md:p-8 bg-black/40 border-t border-white/5 flex gap-2 md:gap-4 items-center">
                         <button
                             type="button"
                             onClick={() => {
@@ -228,10 +235,10 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
                                 }
                             }}
                             disabled={toggleMutation.isPending}
-                            className={`px-4 py-3 md:px-6 md:py-4 rounded-xl md:rounded-2xl bg-red-500/10 text-red-400 border border-red-500/20 font-black text-[9px] md:text-[10px] uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all shadow-lg hover:shadow-red-500/20 flex items-center gap-2`}
+                            className="px-3 py-2 text-[10px] md:px-6 md:py-4 rounded-lg md:rounded-2xl bg-red-500/10 text-red-400 border border-red-500/20 font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all shadow-lg hover:shadow-red-500/20 flex items-center gap-2"
                             title={product.is_vintage ? "Desvincular de la Colección" : "Liberar de la Colección"}
                         >
-                            {toggleMutation.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
+                            {toggleMutation.isPending ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
                             {product.is_vintage ? 'Desvincular' : 'Liberar'}
                         </button>
 
@@ -240,7 +247,7 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
                         <button
                             type="button"
                             onClick={onClose}
-                            className="px-6 md:px-8 py-3 md:py-4 rounded-xl md:rounded-2xl bg-white/5 text-white/40 font-black text-[9px] md:text-[10px] uppercase tracking-widest hover:bg-white/10 transition-all border border-white/5"
+                            className="px-3 py-2 text-[10px] md:px-8 md:py-4 rounded-lg md:rounded-2xl bg-white/5 text-white/70 font-black uppercase tracking-widest hover:bg-white/10 transition-all border border-white/5"
                         >
                             Cancelar
                         </button>
@@ -248,16 +255,37 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
                             type="button"
                             onClick={() => updateMutation.mutate()}
                             disabled={updateMutation.isPending}
-                            className="px-6 md:px-8 py-3 md:py-4 rounded-xl md:rounded-2xl bg-brand-primary text-white font-black text-[9px] md:text-[10px] uppercase tracking-widest shadow-xl shadow-brand-primary/20 hover:brightness-110 transition-all flex items-center gap-2"
+                            className="px-3 py-2 text-[10px] md:px-8 md:py-4 rounded-lg md:rounded-2xl bg-brand-primary text-white font-black uppercase tracking-widest shadow-xl shadow-brand-primary/20 hover:brightness-110 transition-all flex items-center gap-2"
                         >
-                            {updateMutation.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                            {updateMutation.isPending ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
                             {updateMutation.isPending ? 'Sincronizando...' : 'Guardar Legado'}
                         </button>
                     </div>
                 </div>
             </div>
 
-
+            {/* FULLSCREEN IMAGE EXPANSION */}
+            {expandedImage && (
+                <div
+                    className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-20 bg-black/95 backdrop-blur-3xl animate-in zoom-in duration-300 shadow-2xl"
+                    onClick={() => setExpandedImage(null)}
+                >
+                    <div className="relative max-w-full max-h-full group">
+                        <img
+                            src={expandedImage}
+                            alt="Expanded Vintage Relic"
+                            className="max-w-full max-h-[90vh] rounded-[2rem] sm:rounded-[3rem] border border-white/10 shadow-[0_0_100px_rgba(0,0,0,0.8)] object-contain"
+                            onClick={(e) => e.stopPropagation()}
+                        />
+                        <button
+                            onClick={() => setExpandedImage(null)}
+                            className="absolute -top-4 -right-4 sm:-top-8 sm:-right-8 h-10 w-10 sm:h-14 sm:w-14 flex items-center justify-center rounded-2xl bg-white/10 text-white hover:bg-red-500 hover:scale-110 transition-all border border-white/10 backdrop-blur-md shadow-2xl z-[210]"
+                        >
+                            <X className="h-6 w-6 sm:h-8 sm:w-8" />
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

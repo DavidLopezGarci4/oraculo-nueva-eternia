@@ -157,7 +157,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                                 )}
                             </h2>
                         </div>
-                        <p className="max-w-xl text-[11px] md:text-sm text-white/40 font-medium">
+                        <p className="max-w-xl text-[11px] md:text-sm text-white/65 font-medium">
                             {isVintageOnly 
                                 ? 'Coleccionando no solo figuras retro, sino reliquias históricas y valor del pasado.'
                                 : 'Coleccionando no solo figuras, sino fragmentos de historia y valor en el tiempo.'
@@ -209,7 +209,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                         {/* Fortaleza and Deseos stats */}
                         <div className="flex flex-row gap-2 md:gap-4">
                             <div className={`flex-1 flex flex-col gap-0.5 rounded-xl md:rounded-2xl bg-white/5 p-2 md:p-4 border border-white/10 backdrop-blur-xl group transition-all ${isVintageOnly ? 'hover:bg-amber-500/5 hover:border-amber-500/20' : 'hover:bg-white/10'}`}>
-                                <div className={`flex items-center justify-between text-white/40 ${isVintageOnly ? 'group-hover:text-amber-500' : 'group-hover:text-brand-primary'}`}>
+                                <div className={`flex items-center justify-between text-white/65 ${isVintageOnly ? 'group-hover:text-amber-500' : 'group-hover:text-brand-primary'}`}>
                                     <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest">Fortaleza</span>
                                     <Box className="h-3 w-3 md:h-4 md:w-4" />
                                 </div>
@@ -234,14 +234,14 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
             <div className="flex bg-black/50 p-1 rounded-2xl md:rounded-3xl border border-white/10 backdrop-blur-3xl w-fit">
                 <button
                     onClick={() => setActiveTab('owned')}
-                    className={`flex items-center justify-center gap-1.5 px-4 md:px-6 py-1.5 md:py-2 rounded-xl md:rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'owned' ? (isVintageOnly ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20 scale-105' : 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20 scale-105') : 'text-white/30 hover:text-white'}`}
+                    className={`flex items-center justify-center gap-1.5 px-4 md:px-6 py-1.5 md:py-2 rounded-xl md:rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'owned' ? (isVintageOnly ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20 scale-105' : 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20 scale-105') : 'text-white/60 hover:text-white'}`}
                 >
                     <Box className="h-3 w-3 md:h-4 md:w-4" />
                     La Fortaleza
                 </button>
                 <button
                     onClick={() => setActiveTab('wish')}
-                    className={`flex items-center justify-center gap-1.5 px-4 md:px-6 py-1.5 md:py-2 rounded-xl md:rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'wish' ? (isVintageOnly ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20 scale-105' : 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20 scale-105') : 'text-white/30 hover:text-white'}`}
+                    className={`flex items-center justify-center gap-1.5 px-4 md:px-6 py-1.5 md:py-2 rounded-xl md:rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'wish' ? (isVintageOnly ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20 scale-105' : 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20 scale-105') : 'text-white/60 hover:text-white'}`}
                 >
                     <Star className="h-3 w-3 md:h-4 md:w-4" />
                     Lista de Deseos
@@ -271,7 +271,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                             <p className="text-2xl font-black text-white/80 uppercase tracking-tighter">
                                 {searchQuery ? 'Sin Resultados' : 'Sector Vacío'}
                             </p>
-                            <p className="text-sm text-white/40 leading-relaxed font-medium">
+                            <p className="text-sm text-white/65 leading-relaxed font-medium">
                                 {searchQuery
                                     ? `Ninguna reliquia en tu ${activeTab === 'owned' ? 'fortaleza' : 'lista'} coincide con "${searchQuery}".`
                                     : activeTab === 'owned'
@@ -298,7 +298,13 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                                     className={`group flex flex-col gap-2 sm:gap-4 relative overflow-hidden transition-all duration-500 hover:translate-y-[-8px] rounded-2xl sm:rounded-[2.5rem] p-3 sm:p-6 border ${isGrail ? 'border-yellow-500/30 bg-yellow-500/10 backdrop-blur-md shadow-[0_30px_60px_-15px_rgba(234,179,8,0.2)]' : 'border-white/5 bg-black/25 backdrop-blur-md hover:bg-black/20'}`}
                                 >
                                     {/* Image Container */}
-                                    <div className="relative aspect-square w-full overflow-hidden rounded-[1.5rem] sm:rounded-[2rem] bg-black/40 border border-white/10 shadow-inner">
+                                    <div 
+                                        className="relative aspect-square w-full overflow-hidden rounded-[1.5rem] sm:rounded-[2rem] bg-black/40 border border-white/10 shadow-inner cursor-pointer"
+                                        onClick={() => {
+                                            setSelectedProduct(product);
+                                            setIsDetailOpen(true);
+                                        }}
+                                    >
                                         {product.image_url ? (
                                             <img src={product.image_url} className="h-full w-full object-cover transition-all duration-700 group-hover:scale-110 group-hover:rotate-1" />
                                         ) : (
@@ -361,7 +367,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                                                 setSelectedProduct(product);
                                                 setIsDetailOpen(true);
                                             }}
-                                            className="h-6 sm:h-8 flex-1 flex items-center justify-center rounded-lg sm:rounded-xl bg-white/5 border border-white/5 text-white/30 hover:bg-white/10 hover:text-white transition-all group/info"
+                                            className="h-6 sm:h-8 flex-1 flex items-center justify-center rounded-lg sm:rounded-xl bg-white/5 border border-white/5 text-white/60 hover:bg-white/10 hover:text-white transition-all group/info"
                                         >
                                             <Info className="h-5 w-5 group-hover:scale-110 transition-transform" />
                                         </button>
@@ -370,14 +376,14 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                                             <>
                                                 <button
                                                     onClick={() => setEditingProduct(product)}
-                                                    className="h-6 sm:h-8 px-2 flex items-center justify-center rounded-lg sm:rounded-xl bg-white/5 border border-white/5 text-white/30 hover:bg-white/10 hover:text-white transition-all"
+                                                    className="h-6 sm:h-8 px-2 flex items-center justify-center rounded-lg sm:rounded-xl bg-white/5 border border-white/5 text-white/60 hover:bg-white/10 hover:text-white transition-all"
                                                     title="Editar metadatos"
                                                 >
                                                     <Settings className="h-4 w-4" />
                                                 </button>
                                                 <button
                                                     onClick={() => handleDeleteProduct(product)}
-                                                    className="h-6 sm:h-8 px-2 flex items-center justify-center rounded-lg sm:rounded-xl bg-white/5 border border-white/5 text-white/30 hover:bg-red-500/20 hover:text-red-400 transition-all"
+                                                    className="h-6 sm:h-8 px-2 flex items-center justify-center rounded-lg sm:rounded-xl bg-white/5 border border-white/5 text-white/60 hover:bg-red-500/20 hover:text-red-400 transition-all"
                                                     title="Eliminar y devolver al Purgatorio"
                                                 >
                                                     <Trash2 className="h-4 w-4" />
@@ -476,7 +482,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                                 <button
                                     type="button"
                                     onClick={() => setEditingProduct(null)}
-                                    className="h-10 w-10 flex items-center justify-center rounded-xl bg-white/5 text-white/40 hover:bg-red-500/20 hover:text-red-400 transition-all"
+                                    className="h-10 w-10 flex items-center justify-center rounded-xl bg-white/5 text-white/65 hover:bg-red-500/20 hover:text-red-400 transition-all"
                                 >
                                     <X className="h-5 w-5" />
                                 </button>
@@ -486,7 +492,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     {/* Name */}
                                     <div className="col-span-1 md:col-span-2 space-y-2">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Nombre de la Reliquia</label>
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-white/60 ml-1">Nombre de la Reliquia</label>
                                         <input
                                             value={editingProduct.name}
                                             onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
@@ -496,7 +502,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
 
                                     {/* EAN */}
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">EAN (Código Sagrado)</label>
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-white/60 ml-1">EAN (Código Sagrado)</label>
                                         <input
                                             value={editingProduct.ean || ''}
                                             onChange={(e) => setEditingProduct({ ...editingProduct, ean: e.target.value })}
@@ -507,7 +513,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
 
                                     {/* Retail Price */}
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Precio de Lanzamiento (€)</label>
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-white/60 ml-1">Precio de Lanzamiento (€)</label>
                                         <input
                                             type="number"
                                             value={editingProduct.retail_price || 0}
@@ -518,7 +524,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
 
                                     {/* Subcategory */}
                                     <div className="col-span-1 md:col-span-2 space-y-2">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Línea temporal (Subcategoría)</label>
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-white/60 ml-1">Línea temporal (Subcategoría)</label>
                                         <input
                                             value={editingProduct.sub_category || ''}
                                             onChange={(e) => setEditingProduct({ ...editingProduct, sub_category: e.target.value })}
@@ -528,7 +534,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
 
                                     {/* Image URL */}
                                     <div className="col-span-1 md:col-span-2 space-y-2">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Pocion Visual (URL Imagen)</label>
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-white/60 ml-1">Pocion Visual (URL Imagen)</label>
                                         <input
                                             value={editingProduct.image_url || ''}
                                             onChange={(e) => setEditingProduct({ ...editingProduct, image_url: e.target.value })}
@@ -540,7 +546,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                                     <div className="col-span-1 md:col-span-2 flex items-center justify-between p-4 rounded-2xl bg-white/[0.02] border border-white/5 mt-2">
                                         <div className="space-y-1">
                                             <label className="text-[10px] font-black uppercase tracking-widest text-white/80 block">Línea Vintage (Eternia)</label>
-                                            <span className="text-[8px] text-white/30 font-bold uppercase tracking-wider block">Activar para transferir este producto a la línea retro vintage</span>
+                                            <span className="text-[8px] text-white/60 font-bold uppercase tracking-wider block">Activar para transferir este producto a la línea retro vintage</span>
                                         </div>
                                         <label className="relative inline-flex items-center cursor-pointer">
                                             <input
@@ -559,7 +565,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                                 <button
                                     type="button"
                                     onClick={() => setEditingProduct(null)}
-                                    className="px-6 py-3 rounded-2xl text-sm font-black uppercase tracking-widest text-white/30 hover:text-white transition-all"
+                                    className="px-6 py-3 rounded-2xl text-sm font-black uppercase tracking-widest text-white/60 hover:text-white transition-all"
                                 >
                                     Cancelar
                                 </button>

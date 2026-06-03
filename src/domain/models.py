@@ -441,6 +441,19 @@ class KaizenInsightModel(Base):
     priority: Mapped[int] = mapped_column(Integer, default=1)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
 
+class WallapopIpLogModel(Base):
+    """
+    Historial de IPs y WAF checks de Wallapop para auditoría.
+    """
+    __tablename__ = "wallapop_ip_logs"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    ip_address: Mapped[str] = mapped_column(String, index=True)
+    status: Mapped[str] = mapped_column(String) # allowed, blocked, error, etc.
+    environment: Mapped[Optional[str]] = mapped_column(String, nullable=True) # e.g. "GitHub Actions", "Local"
+    response_code: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    details: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    recorded_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+
 __all__ = [
     "Base", 
     "ProductModel", 
@@ -459,6 +472,7 @@ __all__ = [
     "LogisticRuleModel",
     "AuthorizedDeviceModel",
     "StagedImportModel",
+    "WallapopIpLogModel",
     "DOMAIN_VERSION"
 ]
 

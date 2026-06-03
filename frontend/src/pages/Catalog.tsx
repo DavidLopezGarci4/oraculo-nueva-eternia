@@ -15,7 +15,6 @@ import {
     RefreshCw,
     Star,
     ExternalLink,
-    TrendingUp,
     History,
     Flame,
     ArrowUpRight,
@@ -24,15 +23,24 @@ import {
     Box,
     Trash2
 } from 'lucide-react';
+import {
+    ResponsiveContainer,
+    LineChart,
+    Line,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    Legend
+} from 'recharts';
 import { useCart } from '../context/CartContext';
 import { motion } from 'framer-motion';
 import { getCollection, toggleCollection } from '../api/collection';
 import type { Product } from '../api/collection';
 import { updateProduct, unlinkOffer, deleteProduct } from '../api/admin';
-import { formatDistanceToNow } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { getProductPriceHistory } from '../api/products';
-import PriceHistoryChart from '../components/products/PriceHistoryChart';
+import { getProductPriceHistory, getUniqueShops } from '../api/products';
 import type { Hero } from '../api/admin';
 import PowerSwordLoader from '../components/ui/PowerSwordLoader';
 
@@ -49,8 +57,15 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
     const { addToCart } = useCart();
     const [selectedProduct, setSelectedProduct] = React.useState<Product | null>(null);
     const [editingProduct, setEditingProduct] = React.useState<Product | null>(null);
-    const [historyProductId, setHistoryProductId] = React.useState<number | null>(null);
     const [expandedImage, setExpandedImage] = React.useState<string | null>(null);
+
+    // Cronos Standalone states
+    const [viewMode, setViewMode] = React.useState<'grid' | 'cronos'>('grid');
+    const [selectedCronosA, setSelectedCronosA] = React.useState<Product | null>(null);
+    const [selectedCronosB, setSelectedCronosB] = React.useState<Product | null>(null);
+    const [cronosSearchA, setCronosSearchA] = React.useState('');
+    const [cronosSearchB, setCronosSearchB] = React.useState('');
+    const [activeCronosShops, setActiveCronosShops] = React.useState<string[]>([]);
 
     // Vintage Sync Telemetry states
     const [showVintageSyncModal, setShowVintageSyncModal] = React.useState(false);
@@ -138,11 +153,23 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
         enabled: !!selectedProduct
     });
 
-    // 5. Fetch de Histórico de Precios (Fase 8.3 Cronos)
-    const { data: priceHistory, isLoading: isLoadingHistory } = useQuery({
-        queryKey: ['price-history', historyProductId],
-        queryFn: () => historyProductId ? getProductPriceHistory(historyProductId) : null,
-        enabled: !!historyProductId
+    // 5. Fetch de Histórico de Precios para Comparador Cronos
+    const { data: historyCronosA, isLoading: loadingCronosA } = useQuery({
+        queryKey: ['price-history-cronos-a', selectedCronosA?.id],
+        queryFn: () => selectedCronosA ? getProductPriceHistory(selectedCronosA.id) : null,
+        enabled: !!selectedCronosA && viewMode === 'cronos'
+    });
+
+    const { data: historyCronosB, isLoading: loadingCronosB } = useQuery({
+        queryKey: ['price-history-cronos-b', selectedCronosB?.id],
+        queryFn: () => selectedCronosB ? getProductPriceHistory(selectedCronosB.id) : null,
+        enabled: !!selectedCronosB && viewMode === 'cronos'
+    });
+
+    const { data: availableShops } = useQuery<string[]>({
+        queryKey: ['unique-shops'],
+        queryFn: getUniqueShops,
+        enabled: viewMode === 'cronos'
     });
 
     const hasMarketIntel = (productId: number) => productsWithOffers?.includes(productId);
@@ -307,62 +334,147 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                     return a.id - b.id;
                 }
 
-                const aWished = isWished(a.id);
-                const bWished = isWished(b.id);
-                const aGrail = isGrail(a.id);
-                const bGrail = isGrail(b.id);
+                const aWished = isWished(a.id) ? 1 : 0;
+                const bWished = isWished(b.id) ? 1 : 0;
 
-                const getTacticalWeight = (p: Product, wished: boolean, grail: boolean) => {
-                    if (grail) return 10000; // Prioridad Sagrada
+                // 1. Favoritos/Deseos Primero
+                if (aWished !== bWished) {
+                    return bWished - aWished;
+                }
 
-                    const idNum = parseInt(p.figure_id?.replace(/[^0-9]/g, '') || '0');
-                    const isOld = idNum > 0 && idNum < 4500;
-                    const isMid = idNum >= 4500 && idNum <= 9500;
-                    const isNew = idNum > 9500;
+                // 2. Cantidad de ofertas guardadas (>0) ascendente (menos ofertas primero)
+                const countA = a.purgatory_match_count || 0;
+                const countB = b.purgatory_match_count || 0;
+                const hasOffersA = countA > 0 ? 1 : 0;
+                const hasOffersB = countB > 0 ? 1 : 0;
 
-                    // Indicadores de estudio de mercado (Simulados/Derivados)
-                    const marketVal = p.market_value || 0;
-                    const retailPrice = p.retail_price || 0;
-                    const p25 = p.p25_price || p.p25_retail_price || retailPrice;
+                if (hasOffersA !== hasOffersB) {
+                    return hasOffersB - hasOffersA;
+                }
+                if (countA > 0 && countB > 0 && countA !== countB) {
+                    return countA - countB;
+                }
 
-                    const isPriceFloor = marketVal > 0 && marketVal <= p25 * 1.1; // Suelo detectado (dentro del 10%)
-                    const isRising = marketVal > 0 && retailPrice > 0 && marketVal > retailPrice * 1.4;
+                // 3. Colección más cercana a terminarse (tasa de completitud descendente)
+                const statsA = subCatStats[a.sub_category || 'Desconocida'] || { total: 1, owned: 0 };
+                const statsB = subCatStats[b.sub_category || 'Desconocida'] || { total: 1, owned: 0 };
+                const rateA = statsA.total > 0 ? statsA.owned / statsA.total : 0;
+                const rateB = statsB.total > 0 ? statsB.owned / statsB.total : 0;
 
-                    // Boost por completitud de set (Fuerza del Cierre)
-                    const stats = subCatStats[p.sub_category || 'Desconocida'];
-                    const completionBoost = stats ? Math.floor((stats.owned / stats.total) * 500) : 0;
-                    const wishBoost = wished ? 1000 : 0;
+                if (rateA !== rateB) {
+                    return rateB - rateA;
+                }
 
-                    // 1. ZONA DE RIESGO: Antiguo/Descontinuado + Subiendo Precio
-                    if (isOld && isRising) return 8000 + wishBoost + completionBoost;
-
-                    // 2. PUNTO DULCE: Lanzamiento de maduración + Suelo encontrado
-                    if (isMid && isPriceFloor) return 7000 + wishBoost + completionBoost;
-
-                    // 3. EXPLORACIÓN ACTIVA: Nuevo que ha tocado suelo (Alerta de compra)
-                    if (isNew && isPriceFloor) return 6000 + wishBoost + completionBoost;
-
-                    // 4. TRANSICIÓN: Items de edad media
-                    if (isMid) return 5000 + wishBoost + completionBoost;
-
-                    // 5. SEGUIMIENTO PASIVO: Nuevos sin suelo detectado (Enfriamiento)
-                    if (isNew) return 3000 + wishBoost + completionBoost;
-
-                    // 6. FONDO DE CAZA: Antiguos estables
-                    return 2000 + wishBoost + completionBoost;
-                };
-
-                const weightA = getTacticalWeight(a, aWished, aGrail);
-                const weightB = getTacticalWeight(b, bWished, bGrail);
-
-                if (weightA !== weightB) return weightB - weightA;
-
-                // Orden secundario por ID (más antiguos primero dentro del mismo peso)
-                const idA = parseInt(a.figure_id?.replace(/[^0-9]/g, '') || '99999');
-                const idB = parseInt(b.figure_id?.replace(/[^0-9]/g, '') || '99999');
-                return idA - idB;
+                // Desempate por ID
+                return a.id - b.id;
             });
     }, [products, searchQuery, subCatStats, isOwned, isWished, isGrail, isVintageOnly, productsWithOffers]);
+
+    const chartData = React.useMemo(() => {
+        if (!historyCronosA && !historyCronosB) return [];
+
+        const allowedShops = activeCronosShops.length > 0 ? activeCronosShops : (availableShops || []);
+
+        if (selectedCronosA && selectedCronosB) {
+            // Comparing both
+            const filtA = (historyCronosA || []).filter(s => allowedShops.includes(s.shop_name));
+            const filtB = (historyCronosB || []).filter(s => allowedShops.includes(s.shop_name));
+
+            const datesA = filtA.flatMap(s => s.history.map(h => h.date));
+            const datesB = filtB.flatMap(s => s.history.map(h => h.date));
+            const allDates = Array.from(new Set([...datesA, ...datesB])).sort();
+
+            return allDates.map(date => {
+                let bestA: number | null = null;
+                filtA.forEach(shop => {
+                    const pt = shop.history.find(h => h.date === date);
+                    if (pt && (bestA === null || pt.price < bestA)) {
+                        bestA = pt.price;
+                    }
+                });
+
+                let bestB: number | null = null;
+                filtB.forEach(shop => {
+                    const pt = shop.history.find(h => h.date === date);
+                    if (pt && (bestB === null || pt.price < bestB)) {
+                        bestB = pt.price;
+                    }
+                });
+
+                return {
+                    name: format(new Date(date), 'dd MMM', { locale: es }),
+                    fullDate: date,
+                    [selectedCronosA.name]: bestA,
+                    [selectedCronosB.name]: bestB
+                };
+            });
+        } else if (selectedCronosA) {
+            const filtA = (historyCronosA || []).filter(s => allowedShops.includes(s.shop_name));
+            const allDates = Array.from(new Set(filtA.flatMap(s => s.history.map(h => h.date)))).sort();
+
+            return allDates.map(date => {
+                const point: any = {
+                    name: format(new Date(date), 'dd MMM', { locale: es }),
+                    fullDate: date
+                };
+                filtA.forEach(shop => {
+                    const pt = shop.history.find(h => h.date === date);
+                    if (pt) {
+                        point[shop.shop_name] = pt.price;
+                    }
+                });
+                return point;
+            });
+        } else if (selectedCronosB) {
+            const filtB = (historyCronosB || []).filter(s => allowedShops.includes(s.shop_name));
+            const allDates = Array.from(new Set(filtB.flatMap(s => s.history.map(h => h.date)))).sort();
+
+            return allDates.map(date => {
+                const point: any = {
+                    name: format(new Date(date), 'dd MMM', { locale: es }),
+                    fullDate: date
+                };
+                filtB.forEach(shop => {
+                    const pt = shop.history.find(h => h.date === date);
+                    if (pt) {
+                        point[shop.shop_name] = pt.price;
+                    }
+                });
+                return point;
+            });
+        }
+        return [];
+    }, [historyCronosA, historyCronosB, selectedCronosA, selectedCronosB, activeCronosShops, availableShops]);
+
+    const chartLines = React.useMemo(() => {
+        if (selectedCronosA && selectedCronosB) {
+            return [
+                { key: selectedCronosA.name, color: '#0ea5e9' },
+                { key: selectedCronosB.name, color: '#ec4899' }
+            ];
+        } else if (selectedCronosA) {
+            const allowedShops = activeCronosShops.length > 0 ? activeCronosShops : (availableShops || []);
+            const filtA = (historyCronosA || []).filter(s => allowedShops.includes(s.shop_name));
+            return filtA.map((shop, idx) => {
+                const colors = ['#0ea5e9', '#ec4899', '#8b5cf6', '#10b981', '#f59e0b'];
+                return {
+                    key: shop.shop_name,
+                    color: colors[idx % colors.length]
+                };
+            });
+        } else if (selectedCronosB) {
+            const allowedShops = activeCronosShops.length > 0 ? activeCronosShops : (availableShops || []);
+            const filtB = (historyCronosB || []).filter(s => allowedShops.includes(s.shop_name));
+            return filtB.map((shop, idx) => {
+                const colors = ['#0ea5e9', '#ec4899', '#8b5cf6', '#10b981', '#f59e0b'];
+                return {
+                    key: shop.shop_name,
+                    color: colors[idx % colors.length]
+                };
+            });
+        }
+        return [];
+    }, [selectedCronosA, selectedCronosB, historyCronosA, historyCronosB, activeCronosShops, availableShops]);
 
     if (isLoadingProducts || isLoadingCollection) {
         return <PowerSwordLoader variant="fullScreen" text="Invocando el Catálogo Maestro..." />;
@@ -435,7 +547,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                                 )}
                             </h2>
                         </div>
-                        <p className="max-w-xl text-[11px] md:text-sm text-white/40 font-medium uppercase tracking-[0.1em]">
+                        <p className="max-w-xl text-[11px] md:text-sm text-white/70 font-medium uppercase tracking-[0.1em]">
                             {isVintageOnly ? 'Almacén Sagrado de Reliquias Vintage' : 'Almacén Sagrado de Reliquias'}
                         </p>
                     </div>
@@ -461,8 +573,219 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                 </div>
             </div>
 
-            {/* Grid / Empty State */}
-            {!products || products.length === 0 ? (
+            {/* Sub-navigation tabs */}
+            <div className="flex border-b border-white/10 gap-6 mt-2 mb-4">
+                <button
+                    onClick={() => setViewMode('grid')}
+                    className={`pb-3 text-xs font-black uppercase tracking-widest border-b-2 transition-all ${
+                        viewMode === 'grid' 
+                            ? 'border-brand-primary text-white' 
+                            : 'border-transparent text-white/70 hover:text-white'
+                    }`}
+                >
+                    {isVintageOnly ? "Eternia Vintage" : "Nueva Eternia"}
+                </button>
+                <button
+                    onClick={() => setViewMode('cronos')}
+                    className={`pb-3 text-xs font-black uppercase tracking-widest border-b-2 transition-all ${
+                        viewMode === 'cronos' 
+                            ? 'border-brand-primary text-white' 
+                            : 'border-transparent text-white/70 hover:text-white'
+                    }`}
+                >
+                    ⚡ Evolución Cronos
+                </button>
+            </div>
+
+            {viewMode === 'cronos' ? (
+                <div className="relative overflow-hidden rounded-[2rem] border border-white/5 bg-black/25 p-4 md:p-6 backdrop-blur-2xl shadow-2xl space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Autocomplete Reliquia A */}
+                        <div className="relative space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-white/60 ml-1">Reliquia Principal (A)</label>
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    placeholder="Buscar Reliquia A..."
+                                    value={selectedCronosA ? selectedCronosA.name : cronosSearchA}
+                                    onChange={(e) => {
+                                        setCronosSearchA(e.target.value);
+                                        if (selectedCronosA) setSelectedCronosA(null);
+                                    }}
+                                    className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-white text-xs md:text-sm font-bold focus:outline-none focus:border-brand-primary transition-all"
+                                />
+                                {selectedCronosA && (
+                                    <button 
+                                        onClick={() => { setSelectedCronosA(null); setCronosSearchA(''); }} 
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-white/70 hover:text-white font-bold"
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </button>
+                                )}
+                            </div>
+                            {/* Dropdown Suggestions */}
+                            {!selectedCronosA && cronosSearchA.trim().length > 1 && (
+                                <div className="absolute z-50 w-full mt-1 bg-black/90 border border-white/10 rounded-2xl max-h-60 overflow-y-auto shadow-2xl custom-scrollbar">
+                                    {products?.filter(p => p.name.toLowerCase().includes(cronosSearchA.toLowerCase()))
+                                        .map(p => (
+                                            <div
+                                                key={p.id}
+                                                onClick={() => {
+                                                    setSelectedCronosA(p);
+                                                    setCronosSearchA(p.name);
+                                                }}
+                                                className="px-4 py-3 hover:bg-white/5 text-xs text-white/70 hover:text-white cursor-pointer font-bold transition-colors border-b border-white/5 last:border-0"
+                                            >
+                                                {p.name} <span className="opacity-40 ml-2">#{p.figure_id}</span>
+                                            </div>
+                                        ))
+                                    }
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Autocomplete Reliquia B */}
+                        <div className="relative space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-white/60 ml-1">Reliquia a Comparar (B)</label>
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    placeholder="Buscar Reliquia B..."
+                                    value={selectedCronosB ? selectedCronosB.name : cronosSearchB}
+                                    onChange={(e) => {
+                                        setCronosSearchB(e.target.value);
+                                        if (selectedCronosB) setSelectedCronosB(null);
+                                    }}
+                                    className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-white text-xs md:text-sm font-bold focus:outline-none focus:border-brand-primary transition-all"
+                                />
+                                {selectedCronosB && (
+                                    <button 
+                                        onClick={() => { setSelectedCronosB(null); setCronosSearchB(''); }} 
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-white/70 hover:text-white font-bold"
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </button>
+                                )}
+                            </div>
+                            {/* Dropdown Suggestions */}
+                            {!selectedCronosB && cronosSearchB.trim().length > 1 && (
+                                <div className="absolute z-50 w-full mt-1 bg-black/90 border border-white/10 rounded-2xl max-h-60 overflow-y-auto shadow-2xl custom-scrollbar">
+                                    {products?.filter(p => p.name.toLowerCase().includes(cronosSearchB.toLowerCase()))
+                                        .map(p => (
+                                            <div
+                                                key={p.id}
+                                                onClick={() => {
+                                                    setSelectedCronosB(p);
+                                                    setCronosSearchB(p.name);
+                                                }}
+                                                className="px-4 py-3 hover:bg-white/5 text-xs text-white/70 hover:text-white cursor-pointer font-bold transition-colors border-b border-white/5 last:border-0"
+                                            >
+                                                {p.name} <span className="opacity-40 ml-2">#{p.figure_id}</span>
+                                            </div>
+                                        ))
+                                    }
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Shop Selection Checkboxes */}
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-white/60 ml-1">Filtrar por Tienda</label>
+                        <div className="flex flex-wrap gap-3 bg-white/[0.02] border border-white/5 p-4 rounded-3xl">
+                            {availableShops?.map(shop => {
+                                const isChecked = activeCronosShops.includes(shop);
+                                return (
+                                    <label key={shop} className="flex items-center gap-2 cursor-pointer bg-white/5 px-3 py-1.5 rounded-xl border border-white/5 hover:border-white/10 transition-colors">
+                                        <input
+                                            type="checkbox"
+                                            checked={isChecked}
+                                            onChange={() => {
+                                                if (isChecked) {
+                                                    setActiveCronosShops(activeCronosShops.filter(s => s !== shop));
+                                                } else {
+                                                    setActiveCronosShops([...activeCronosShops, shop]);
+                                                }
+                                            }}
+                                            className="h-4 w-4 rounded border-white/10 bg-white/5 text-brand-primary focus:ring-brand-primary/50"
+                                        />
+                                        <span className="text-[10px] font-black uppercase tracking-wider text-white/80">{shop}</span>
+                                    </label>
+                                );
+                            })}
+                            {(!availableShops || availableShops.length === 0) && (
+                                <div className="text-[10px] font-bold text-white/60 uppercase tracking-widest py-1">Cargando tiendas...</div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Chart Container */}
+                    <div className="min-h-[400px] w-full bg-black/40 rounded-3xl p-6 border border-white/10 relative flex flex-col justify-center items-center">
+                        {(loadingCronosA || loadingCronosB) ? (
+                            <div className="flex flex-col items-center justify-center gap-4">
+                                <RefreshCw className="h-10 w-10 text-brand-primary animate-spin" />
+                                <span className="text-xs font-black uppercase tracking-widest text-white/65">Invocando datos del pasado...</span>
+                            </div>
+                        ) : chartData.length > 0 ? (
+                            <div className="h-[380px] w-full">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <LineChart data={chartData} margin={{ top: 20, right: 20, left: 0, bottom: 10 }}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                                        <XAxis
+                                            dataKey="name"
+                                            axisLine={false}
+                                            tickLine={false}
+                                            tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 700 }}
+                                            dy={5}
+                                        />
+                                        <YAxis
+                                            axisLine={false}
+                                            tickLine={false}
+                                            tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 700 }}
+                                            unit="€"
+                                        />
+                                        <Tooltip
+                                            cursor={{ stroke: 'rgba(255, 255, 255, 0.15)', strokeWidth: 1.5, strokeDasharray: '4 4' }}
+                                            contentStyle={{
+                                                backgroundColor: '#000',
+                                                border: '1px solid rgba(255,255,255,0.1)',
+                                                borderRadius: '1.5rem',
+                                                backdropFilter: 'blur(20px)',
+                                                padding: '12px'
+                                            }}
+                                            itemStyle={{ fontSize: '12px', fontWeight: 900 }}
+                                            labelStyle={{ color: 'rgba(255,255,255,0.4)', marginBottom: '6px', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase' }}
+                                        />
+                                        <Legend
+                                            iconType="circle"
+                                            wrapperStyle={{ paddingTop: '10px', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase' }}
+                                        />
+                                        {chartLines.map((line) => (
+                                            <Line
+                                                key={line.key}
+                                                type="monotone"
+                                                dataKey={line.key}
+                                                stroke={line.color}
+                                                strokeWidth={3}
+                                                dot={{ fill: line.color, stroke: line.color, strokeWidth: 1, r: 4 }}
+                                                activeDot={{ r: 7, strokeWidth: 0 }}
+                                                animationDuration={1000}
+                                                connectNulls
+                                            />
+                                        ))}
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
+                        ) : (
+                            <div className="text-center text-white/60 space-y-2 uppercase">
+                                <History className="h-12 w-12 mx-auto text-white/10 animate-pulse" />
+                                <h4 className="text-xs font-black tracking-widest text-white/70">Cronos está inactivo</h4>
+                                <p className="text-[9px] font-bold text-white/65 tracking-wider">Selecciona Reliquias para visualizar su evolución de precios</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            ) : !products || products.length === 0 ? (
                 <div className="flex flex-col items-center justify-center p-20 text-white/20 space-y-4 rounded-[2.5rem] border border-white/5 bg-black/20 backdrop-blur-md">
                     <Package className="h-16 w-16 opacity-20" />
                     <p className="text-xl font-black uppercase tracking-widest text-white/60">El Oráculo está vacío...</p>
@@ -487,8 +810,6 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                                 : 'border-white/5 bg-black/25 backdrop-blur-md hover:bg-black/20 hover:shadow-[0_40px_80px_-20px_rgba(0,0,0,0.5)]'
                                 }`}
                         >
-
-
                             {/* Owned/Wish Badge */}
                             {owned && (
                                 <div className="absolute top-0 left-0 w-12 h-12 sm:w-16 sm:h-16 overflow-hidden z-20">
@@ -608,8 +929,8 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                                         return (
                                             <div className="mt-1 space-y-1">
                                                 <div className="flex items-center justify-between text-[6px] sm:text-[8px] font-black uppercase tracking-tighter">
-                                                    <span className={`${progress > 80 ? 'text-brand-primary' : 'text-white/30'}`}>Set Completion</span>
-                                                    <span className="text-white/40">{Math.round(progress)}%</span>
+                                                    <span className={`${progress > 80 ? 'text-brand-primary' : 'text-white/60'}`}>Set Completion</span>
+                                                    <span className="text-white/65">{Math.round(progress)}%</span>
                                                 </div>
                                                 <div className="h-0.5 w-full bg-white/5 rounded-full overflow-hidden">
                                                     <div
@@ -625,19 +946,10 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                                 <div className="mt-auto flex flex-col gap-2">
                                     {/* Action Buttons Row - Symmetrical Center Dock */}
                                     <div className="flex items-center justify-center gap-2 rounded-2xl bg-white/[0.03] p-1.5 border border-white/10 group-hover:border-brand-primary/20 transition-all backdrop-blur-sm w-full">
-                                        {/* Action: Toggle Price History */}
-                                        <button
-                                            onClick={() => setHistoryProductId(historyProductId === product.id ? null : product.id)}
-                                            className={`flex h-8 w-8 items-center justify-center rounded-xl transition-all border hover:scale-110 active:scale-95 duration-300 shadow-md ${historyProductId === product.id ? 'bg-purple-500/20 text-purple-400 border-purple-500/50' : 'bg-white/5 text-white/30 border-white/10 hover:bg-white/10 hover:text-white'}`}
-                                            title="Ver Evolución de Precios"
-                                        >
-                                            <History className="h-4 w-4" />
-                                        </button>
-
                                         {/* Action Button: Detail View */}
                                         <button
                                             onClick={() => setSelectedProduct(product)}
-                                            className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/5 text-white/40 border border-white/10 transition-all hover:bg-brand-primary/20 hover:text-brand-primary hover:border-brand-primary/45 hover:scale-110 active:scale-95 duration-300 shadow-md"
+                                            className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/5 text-white/65 border border-white/10 transition-all hover:bg-brand-primary/20 hover:text-brand-primary hover:border-brand-primary/45 hover:scale-110 active:scale-95 duration-300 shadow-md"
                                             title="Ver Mercado Live"
                                         >
                                             <Info className="h-4 w-4" />
@@ -671,7 +983,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                                         {isAdmin && (
                                             <button
                                                 onClick={() => setEditingProduct(product)}
-                                                className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/5 text-white/40 border border-white/10 transition-all hover:bg-brand-primary/20 hover:text-brand-primary hover:scale-110 active:scale-95 duration-300 shadow-md"
+                                                className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/5 text-white/65 border border-white/10 transition-all hover:bg-brand-primary/20 hover:text-brand-primary hover:scale-110 active:scale-95 duration-300 shadow-md"
                                                 title="Editar Metadatos (Arquitecto)"
                                             >
                                                 <Settings className="h-4 w-4" />
@@ -679,36 +991,6 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                                         )}
                                     </div>
                                 </div>
-
-                                {/* Inline Price History Chart (Cronos) */}
-                                {historyProductId === product.id && (
-                                    <motion.div
-                                        initial={{ opacity: 0, height: 0 }}
-                                        animate={{ opacity: 1, height: 'auto' }}
-                                        className="overflow-hidden space-y-3"
-                                    >
-                                        <div className="flex items-center justify-between text-[8px] font-black uppercase tracking-widest text-purple-400 pt-2 px-1">
-                                            <span className="flex items-center gap-1">
-                                                <TrendingUp className="h-3 w-3" />
-                                                Evolución Cronos
-                                            </span>
-                                            <button onClick={() => setSelectedProduct(product)} className="hover:text-white transition-colors">
-                                                Ver Detalles
-                                            </button>
-                                        </div>
-                                        {isLoadingHistory ? (
-                                            <div className="h-20 flex items-center justify-center">
-                                                <RefreshCw className="h-8 w-8 animate-spin text-purple-400/50" />
-                                            </div>
-                                        ) : priceHistory && priceHistory.length > 0 ? (
-                                            <PriceHistoryChart data={priceHistory} />
-                                        ) : (
-                                            <div className="p-4 text-[10px] font-bold text-center text-white/10 uppercase italic">
-                                                Sin datos históricos suficientes
-                                            </div>
-                                        )}
-                                    </motion.div>
-                                )}
                             </div>
                         </div>
                     );
@@ -742,10 +1024,16 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                                     <h4 className="text-3xl font-black tracking-tighter text-white leading-none">
                                         Analítica de <span className={isVintageOnly ? 'text-amber-500' : 'text-brand-primary'}>Precios</span>
                                     </h4>
-                                    <p className="text-sm font-bold text-white/30 uppercase tracking-widest">{selectedProduct.name}</p>
+                                    <p className="text-sm font-bold text-white/60 uppercase tracking-widest">{selectedProduct.name}</p>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-col items-center gap-2">
+                                <button
+                                    onClick={() => setSelectedProduct(null)}
+                                    className={`h-10 w-10 flex items-center justify-center rounded-xl bg-white/5 text-white/65 hover:text-white transition-all ${isVintageOnly ? 'hover:bg-amber-500/20 hover:text-amber-400' : 'hover:bg-red-500/20 hover:text-red-400'}`}
+                                >
+                                    <span className="text-2xl">&times;</span>
+                                </button>
                                 {isAdmin && (
                                     <button
                                         onClick={() => {
@@ -754,19 +1042,12 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                                             }
                                         }}
                                         disabled={deleteProductMutation.isPending}
-                                        className={`h-10 px-4 flex items-center justify-center gap-2 rounded-xl bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500 hover:text-white transition-all text-xs font-black uppercase tracking-widest shadow-lg`}
+                                        className="h-10 w-10 flex items-center justify-center rounded-xl bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500 hover:text-white transition-all shadow-lg"
                                         title="Eliminar producto de Eternia (Devolver ofertas al Purgatorio)"
                                     >
                                         {deleteProductMutation.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                                        <span className="hidden sm:inline">Eliminar de Eternia</span>
                                     </button>
                                 )}
-                                <button
-                                    onClick={() => setSelectedProduct(null)}
-                                    className={`h-10 w-10 flex items-center justify-center rounded-xl bg-white/5 text-white/40 hover:text-white transition-all ${isVintageOnly ? 'hover:bg-amber-500/20 hover:text-amber-400' : 'hover:bg-red-500/20 hover:text-red-400'}`}
-                                >
-                                    <span className="text-2xl">&times;</span>
-                                </button>
                             </div>
                         </div>
 
@@ -857,7 +1138,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                                                                     price: offer.price,
                                                                     image_url: selectedProduct?.image_url || undefined
                                                                 })}
-                                                                className={`flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 text-white/40 border border-white/10 transition-all shadow-lg ${isVintageOnly ? 'hover:bg-amber-500/20 hover:text-amber-400' : 'hover:bg-brand-primary/20 hover:text-brand-primary'}`}
+                                                                className={`flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 text-white/65 border border-white/10 transition-all shadow-lg ${isVintageOnly ? 'hover:bg-amber-500/20 hover:text-amber-400' : 'hover:bg-brand-primary/20 hover:text-brand-primary'}`}
                                                                 title="Simular en Oracle Cart"
                                                             >
                                                                 <ShoppingBasket className="h-4 w-4" />
@@ -866,7 +1147,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                                                                 href={offer.url}
                                                                 target="_blank"
                                                                 rel="noopener noreferrer"
-                                                                className={`flex h-10 w-10 items-center justify-center rounded-xl transition-all border shadow-lg ${offer.is_best ? 'bg-orange-500 text-white border-orange-500 shadow-orange-500/20' : 'bg-white/5 text-white/40 border-white/10 hover:bg-white/10 hover:text-white'}`}
+                                                                className={`flex h-10 w-10 items-center justify-center rounded-xl transition-all border shadow-lg ${offer.is_best ? 'bg-orange-500 text-white border-orange-500 shadow-orange-500/20' : 'bg-white/5 text-white/65 border-white/10 hover:bg-white/10 hover:text-white'}`}
                                                                 title="Ver en Tienda"
                                                             >
                                                                 <ExternalLink className="h-4 w-4" />
@@ -917,7 +1198,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                                 <button
                                     type="button"
                                     onClick={() => setEditingProduct(null)}
-                                    className="h-10 w-10 flex items-center justify-center rounded-xl bg-white/5 text-white/40 hover:bg-red-500/20 hover:text-red-400 transition-all"
+                                    className="h-10 w-10 flex items-center justify-center rounded-xl bg-white/5 text-white/65 hover:bg-red-500/20 hover:text-red-400 transition-all"
                                 >
                                     <X className="h-5 w-5" />
                                 </button>
@@ -927,7 +1208,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     {/* Name */}
                                     <div className="col-span-1 md:col-span-2 space-y-2">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Nombre de la Reliquia</label>
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-white/60 ml-1">Nombre de la Reliquia</label>
                                         <input
                                             value={editingProduct.name}
                                             onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
@@ -937,7 +1218,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
 
                                     {/* EAN */}
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">EAN (Código Sagrado)</label>
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-white/60 ml-1">EAN (Código Sagrado)</label>
                                         <input
                                             value={editingProduct.ean || ''}
                                             onChange={(e) => setEditingProduct({ ...editingProduct, ean: e.target.value })}
@@ -948,7 +1229,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
 
                                     {/* Retail Price */}
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Precio de Lanzamiento (€)</label>
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-white/60 ml-1">Precio de Lanzamiento (€)</label>
                                         <input
                                             type="number"
                                             value={editingProduct.retail_price || 0}
@@ -959,7 +1240,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
 
                                     {/* Subcategory */}
                                     <div className="col-span-1 md:col-span-2 space-y-2">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Línea temporal (Subcategoría)</label>
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-white/60 ml-1">Línea temporal (Subcategoría)</label>
                                         <input
                                             value={editingProduct.sub_category || ''}
                                             onChange={(e) => setEditingProduct({ ...editingProduct, sub_category: e.target.value })}
@@ -969,7 +1250,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
 
                                     {/* Image URL */}
                                     <div className="col-span-1 md:col-span-2 space-y-2">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-white/30 ml-1">Pocion Visual (URL Imagen)</label>
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-white/60 ml-1">Pocion Visual (URL Imagen)</label>
                                         <input
                                             value={editingProduct.image_url || ''}
                                             onChange={(e) => setEditingProduct({ ...editingProduct, image_url: e.target.value })}
@@ -981,7 +1262,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                                     <div className="col-span-1 md:col-span-2 flex items-center justify-between p-4 rounded-2xl bg-white/[0.02] border border-white/5 mt-2">
                                         <div className="space-y-1">
                                             <label className="text-[10px] font-black uppercase tracking-widest text-white/80 block">Línea Vintage (Eternia)</label>
-                                            <span className="text-[8px] text-white/30 font-bold uppercase tracking-wider block">Activar para transferir este producto a la línea retro vintage</span>
+                                            <span className="text-[8px] text-white/60 font-bold uppercase tracking-wider block">Activar para transferir este producto a la línea retro vintage</span>
                                         </div>
                                         <label className="relative inline-flex items-center cursor-pointer">
                                             <input
@@ -1000,7 +1281,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                                 <button
                                     type="button"
                                     onClick={() => setEditingProduct(null)}
-                                    className="px-6 py-3 rounded-2xl text-sm font-black uppercase tracking-widest text-white/30 hover:text-white transition-all"
+                                    className="px-6 py-3 rounded-2xl text-sm font-black uppercase tracking-widest text-white/60 hover:text-white transition-all"
                                 >
                                     Cancelar
                                 </button>
@@ -1068,7 +1349,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                         </div>
 
                         <div className="p-6 space-y-4">
-                            <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-white/40">
+                            <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-white/65">
                                 <span>Estado de la Incursión</span>
                                 <span className={`px-2.5 py-0.5 rounded-full border text-[8px] font-black uppercase tracking-widest ${
                                     vintageSyncStatus === 'running' ? 'bg-amber-500/10 border-amber-500/20 text-amber-400 animate-pulse' :
@@ -1102,7 +1383,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                                     Cerrar Telemetría
                                 </button>
                             ) : (
-                                <span className="text-[10px] font-bold uppercase tracking-wider text-white/30 animate-pulse">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-white/60 animate-pulse">
                                     Ejecutando Secuencia en Segundo Plano...
                                 </span>
                             )}

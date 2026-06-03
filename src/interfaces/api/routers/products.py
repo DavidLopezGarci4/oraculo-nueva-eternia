@@ -400,6 +400,15 @@ async def get_product_price_history(product_id: int):
         return results
 
 
+@router.get("/api/products/shops")
+async def get_unique_shops():
+    with SessionCloud() as db:
+        query = select(OfferModel.shop_name).distinct()
+        results = db.execute(query).scalars().all()
+        shops = sorted(list(set([r for r in results if r])))
+        return shops
+
+
 @router.get("/api/vintage/products")
 async def get_vintage_products():
     with SessionCloud() as db:

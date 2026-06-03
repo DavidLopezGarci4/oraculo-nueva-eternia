@@ -16,3 +16,8 @@ export const getProductPriceHistory = async (productId: number): Promise<Product
     const response = await axios.get(`${API_BASE}/products/${productId}/price-history`);
     return response.data;
 };
+
+export const getUniqueShops = async (): Promise<string[]> => {
+    const response = await axios.get(`${API_BASE}/products/shops`);
+    return response.data;
+};

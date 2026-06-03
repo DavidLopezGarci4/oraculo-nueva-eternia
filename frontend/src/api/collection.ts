@@ -65,6 +65,7 @@ export const updateCollectionItem = async (productId: number, userId: number, da
     purchase_price?: number;
     notes?: string;
     acquired_at?: string;
+    acquired?: boolean;
 }) => {
     const response = await axios.patch(`${API_BASE_URL}/collection/${productId}`, {
         user_id: userId,

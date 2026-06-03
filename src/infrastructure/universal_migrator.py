@@ -255,6 +255,36 @@ def _sync_engine(engine, label: str):
                     logger.warning(f"Could not add logs column to scraper_execution_logs: {e}")
                     conn.rollback()
 
+        # --- Table: wallapop_ip_logs ---
+        if "wallapop_ip_logs" in inspector.get_table_names():
+            columns_ip_logs = [c['name'] for c in inspector.get_columns("wallapop_ip_logs")]
+            if "environment" not in columns_ip_logs:
+                logger.info(f"[{label}] Adding 'environment' to wallapop_ip_logs...")
+                try:
+                    conn.execute(text("ALTER TABLE wallapop_ip_logs ADD COLUMN environment VARCHAR(100)"))
+                    conn.commit()
+                except Exception as e:
+                    logger.warning(f"Could not add environment column to wallapop_ip_logs: {e}")
+                    conn.rollback()
+
+            if "response_code" not in columns_ip_logs:
+                logger.info(f"[{label}] Adding 'response_code' to wallapop_ip_logs...")
+                try:
+                    conn.execute(text("ALTER TABLE wallapop_ip_logs ADD COLUMN response_code INTEGER"))
+                    conn.commit()
+                except Exception as e:
+                    logger.warning(f"Could not add response_code column to wallapop_ip_logs: {e}")
+                    conn.rollback()
+
+            if "details" not in columns_ip_logs:
+                logger.info(f"[{label}] Adding 'details' to wallapop_ip_logs...")
+                try:
+                    conn.execute(text("ALTER TABLE wallapop_ip_logs ADD COLUMN details TEXT"))
+                    conn.commit()
+                except Exception as e:
+                    logger.warning(f"Could not add details column to wallapop_ip_logs: {e}")
+                    conn.rollback()
+
         # --- Terminology Audit: Fix regressions and ensure 'spider_name' ---
         # Note: If someone accidentally renamed to scraper_name, we undo it here.
         rename_targets = [

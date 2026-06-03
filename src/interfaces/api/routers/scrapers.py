@@ -4,11 +4,11 @@ import threading
 from datetime import datetime, timedelta
 
 import psutil
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response
 from loguru import logger
 from sqlalchemy import desc
 
-from src.domain.models import ScraperExecutionLogModel, ScraperStatusModel
+from src.domain.models import ScraperExecutionLogModel, ScraperStatusModel, WallapopIpLogModel
 from src.infrastructure.database_cloud import SessionCloud
 from src.interfaces.api.deps import verify_api_key
 from src.interfaces.api.schemas import ScraperRunRequest
@@ -112,7 +112,7 @@ def run_scraper_task(
             "DeToyboys": DeToyboysNLScraper(),
             "Ebay.es": EbayScraper(),
             "Vinted": VintedScraper(),
-            # "Wallapop": WallapopScraper(), # DESACTIVADO TEMPORALMENTE POR BLOQUEOS WAF DE IP LOCAL
+            "Wallapop": WallapopScraper(), # CON PROBE LOG PROTEGIDO
             "ToymiEU": ToymiEUScraper(),
             "Time4ActionToysDE": Time4ActionToysDEScraper(),
             "BigBadToyStore": BigBadToyStoreScraper(),
@@ -330,4 +330,54 @@ async def stop_scrapers():
         logger.error(f"Error en Protocolo de Emergencia: {e}")
         raise HTTPException(
             status_code=500, detail=f"Fallo en el protocolo de parada: {str(e)}"
+        )
+
+
+@router.get("/wallapop/ip-logs", dependencies=[Depends(verify_api_key)])
+async def get_wallapop_ip_logs():
+    """Retorna el historial de logs de IP de Wallapop (Admin Only)"""
+    with SessionCloud() as db:
+        return (
+            db.query(WallapopIpLogModel)
+            .order_by(desc(WallapopIpLogModel.recorded_at))
+            .limit(100)
+            .all()
+        )
+
+
+@router.get("/wallapop/ip-logs/download", dependencies=[Depends(verify_api_key)])
+async def download_wallapop_ip_logs():
+    """Descarga los logs de IP de Wallapop en formato TXT (Admin Only)"""
+    with SessionCloud() as db:
+        logs = (
+            db.query(WallapopIpLogModel)
+            .order_by(desc(WallapopIpLogModel.recorded_at))
+            .limit(500)
+            .all()
+        )
+        
+        lines = []
+        lines.append("=== AUDITORÍA DE ACCESIBILIDAD IP - SCRAPER WALLAPOP ===")
+        lines.append(f"Fecha del Reporte: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        lines.append(f"Total de Intentos Registrados: {len(logs)}")
+        lines.append("Este archivo contiene el historial de WAF checks para depurar bloqueos de Cloudflare.")
+        lines.append("=" * 80 + "\n")
+        
+        for idx, log in enumerate(logs, 1):
+            recorded_str = log.recorded_at.strftime('%Y-%m-%d %H:%M:%S') if log.recorded_at else "N/A"
+            lines.append(f"Registro #{idx} - [{recorded_str}]")
+            lines.append(f"  - Dirección IP:  {log.ip_address}")
+            lines.append(f"  - Estado:        {log.status.upper()}")
+            lines.append(f"  - Entorno:       {log.environment or 'Local'}")
+            lines.append(f"  - Código HTTP:   {log.response_code if log.response_code is not None else 'N/A'}")
+            lines.append(f"  - Detalles WAF:  {log.details or 'N/A'}")
+            lines.append("-" * 80)
+            
+        content = "\n".join(lines)
+        return Response(
+            content=content,
+            media_type="text/plain",
+            headers={
+                "Content-Disposition": 'attachment; filename="wallapop_ip_logs.txt"'
+            }
         )

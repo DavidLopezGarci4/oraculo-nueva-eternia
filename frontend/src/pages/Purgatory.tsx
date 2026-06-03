@@ -11,7 +11,6 @@ import {
     CheckCircle2,
     ShieldAlert,
     Database,
-    Copy,
     ChevronLeft,
     ChevronRight,
     X,
@@ -36,8 +35,6 @@ const Purgatory: React.FC = React.memo(() => {
     const [vintageModalItemName, setVintageModalItemName] = useState('');
     const [vintageCustomName, setVintageCustomName] = useState('');
     const [selectedVintageProductId, setSelectedVintageProductId] = useState<number | null>(null);
-    const [selectedIds, setSelectedIds] = useState<number[]>([]);
-    const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
     const [pendingActions, setPendingActions] = useState<any[]>(() => {
         const saved = localStorage.getItem(PERSISTENCE_KEY);
         return saved ? JSON.parse(saved) : [];
@@ -50,19 +47,7 @@ const Purgatory: React.FC = React.memo(() => {
 
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
-    // Helper: Check if URL is from Wallapop
-    const isWallapopUrl = (url: string) => url?.toLowerCase().includes('wallapop.com');
-
-    // Helper: Copy URL to clipboard
-    const copyToClipboard = async (url: string) => {
-        try {
-            await navigator.clipboard.writeText(url);
-            setCopiedUrl(url);
-            setTimeout(() => setCopiedUrl(null), 2000);
-        } catch (err) {
-            console.error('Failed to copy:', err);
-        }
-    };
+    const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
     // Persistence Persistence
     useEffect(() => {
@@ -440,7 +425,7 @@ const Purgatory: React.FC = React.memo(() => {
                                 </div>
                             )}
                         </div>
-                        <p className="max-w-xl text-[11px] md:text-sm text-white/40 font-medium uppercase tracking-[0.1em]">
+                        <p className="max-w-xl text-[11px] md:text-sm text-white/65 font-medium uppercase tracking-[0.1em]">
                             Purifica las reliquias para manifestarlas en el catálogo
                         </p>
                     </div>
@@ -516,7 +501,7 @@ const Purgatory: React.FC = React.memo(() => {
                                     const allIds = filteredPendingItems.map(i => i.id);
                                     setSelectedIds(prev => Array.from(new Set([...prev, ...allIds])));
                                 }}
-                                className="text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-brand-primary transition-colors flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 border border-white/5 hover:border-brand-primary/20"
+                                className="text-[10px] font-black uppercase tracking-widest text-white/65 hover:text-brand-primary transition-colors flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 border border-white/5 hover:border-brand-primary/20"
                             >
                                 <CheckCircle2 className="h-3 w-3" /> Seleccionar Todos los Resultados
                             </button>
@@ -535,7 +520,7 @@ const Purgatory: React.FC = React.memo(() => {
                         <CheckCircle2 className="h-12 w-12 text-green-500/40" />
                         <div className="max-w-xs space-y-1">
                             <p className="text-lg font-bold text-white/60">Purgatorio Vacío</p>
-                            <p className="text-sm text-white/30">Todas las reliquias han sido purificadas o descartadas.</p>
+                            <p className="text-sm text-white/60">Todas las reliquias han sido purificadas o descartadas.</p>
                         </div>
                     </div>
                 ) : (
@@ -556,12 +541,12 @@ const Purgatory: React.FC = React.memo(() => {
                                         }}
                                         className="h-4 w-4 rounded border-white/10 bg-white/5 text-brand-primary focus:ring-brand-primary/50"
                                     />
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-white/40 group-hover:text-white/60 transition-colors">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-white/65 group-hover:text-white/60 transition-colors">
                                         <span className="hidden xs:inline">Seleccionar </span>Página
                                     </span>
                                 </label>
                                 <div className="h-4 w-px bg-white/10 shrink-0"></div>
-                                <div className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-white/30 italic truncate">
+                                <div className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-white/60 italic truncate">
                                     Fragmento {startIndex + 1}-{Math.min(startIndex + itemsPerPage, totalItems)} <span className="text-white/10 mx-0.5">/</span> Total: {totalItems}
                                 </div>
                             </div>
@@ -622,14 +607,14 @@ const Purgatory: React.FC = React.memo(() => {
                                             <div className="flex items-baseline gap-2">
                                                 <span className="text-xl font-black text-brand-primary tracking-tight">{item.price} {item.currency}</span>
                                             </div>
-                                            <span className="text-[10px] font-bold text-white/30">{new Date(item.found_at).toLocaleDateString()}</span>
+                                            <span className="text-[10px] font-bold text-white/60">{new Date(item.found_at).toLocaleDateString()}</span>
                                         </div>
                                     </div>
 
                                     {/* Desktop Info */}
                                     <div className="hidden md:flex flex-1 flex-col gap-3">
                                         <div className="flex items-center gap-3">
-                                            <span className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest border ${['kidinn', 'tradeinn', 'diveinn', 'bikeinn', 'motardinn', 'dressinn', 'smashinn', 'trekkinn', 'runnerinn', 'snowinn', 'swiminn', 'waveinn', 'traininn', 'goalinn', 'xtremeinn'].includes(item.shop_name?.toLowerCase()) ? 'bg-orange-500/10 border-orange-500/20 text-orange-400' : 'bg-white/5 border-white/10 text-white/40'}`}>
+                                            <span className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest border ${['kidinn', 'tradeinn', 'diveinn', 'bikeinn', 'motardinn', 'dressinn', 'smashinn', 'trekkinn', 'runnerinn', 'snowinn', 'swiminn', 'waveinn', 'traininn', 'goalinn', 'xtremeinn'].includes(item.shop_name?.toLowerCase()) ? 'bg-orange-500/10 border-orange-500/20 text-orange-400' : 'bg-white/5 border-white/10 text-white/65'}`}>
                                                 {item.shop_name}
                                             </span>
                                             <span className="text-[10px] text-white/20 font-bold tracking-wider">
@@ -643,12 +628,12 @@ const Purgatory: React.FC = React.memo(() => {
 
                                         <div className="flex items-center gap-6 pt-1">
                                             <div className="flex flex-col">
-                                                <span className="text-[10px] font-black text-white/30 uppercase tracking-wider">Precio Detectado</span>
-                                                <span className="text-2xl font-black text-white tracking-tight">{item.price} <span className="text-sm text-white/40">{item.currency}</span></span>
+                                                <span className="text-[10px] font-black text-white/60 uppercase tracking-wider">Precio Detectado</span>
+                                                <span className="text-2xl font-black text-white tracking-tight">{item.price} <span className="text-sm text-white/65">{item.currency}</span></span>
                                             </div>
                                             {item.ean && (
                                                 <div className="flex flex-col">
-                                                    <span className="text-[10px] font-black text-white/30 uppercase tracking-wider">EAN / Ref</span>
+                                                    <span className="text-[10px] font-black text-white/60 uppercase tracking-wider">EAN / Ref</span>
                                                     <span className="text-sm font-mono font-bold text-white/60">{item.ean}</span>
                                                 </div>
                                             )}
@@ -662,20 +647,12 @@ const Purgatory: React.FC = React.memo(() => {
                                         <Database className="h-3 w-3" /> ID: #{item.id}
                                     </div>
                                     <div className="flex items-center gap-3 w-full md:w-auto">
-                                        {isWallapopUrl(item.url) && (
-                                            <button
-                                                onClick={() => copyToClipboard(item.url)}
-                                                className={`h-12 md:h-10 w-12 md:w-10 flex items-center justify-center rounded-xl border transition-all ${copiedUrl === item.url ? 'bg-green-500/20 border-green-500/50 text-green-400' : 'bg-white/5 border-white/10 text-white/40 hover:text-white hover:bg-white/10'}`}
-                                                title="Copiar URL"
-                                            >
-                                                <Copy className="h-5 w-5 md:h-4 md:w-4" />
-                                            </button>
-                                        )}
+
                                         <a
                                             href={item.url}
                                             target="_blank"
                                             rel="noreferrer"
-                                            className="h-12 md:h-10 w-12 md:w-10 flex items-center justify-center rounded-xl bg-white/5 border border-white/10 text-white/40 hover:text-white hover:bg-white/10 transition-all"
+                                            className="h-12 md:h-10 w-12 md:w-10 flex items-center justify-center rounded-xl bg-white/5 border border-white/10 text-white/65 hover:text-white hover:bg-white/10 transition-all"
                                             title="Ver en Tienda"
                                         >
                                             <ExternalLink className="h-5 w-5 md:h-4 md:w-4" />
@@ -717,7 +694,7 @@ const Purgatory: React.FC = React.memo(() => {
                                                         </div>
                                                         <div>
                                                             <h4 className="text-sm font-black text-white uppercase tracking-widest">Sugerencias del Oráculo</h4>
-                                                            <p className="text-[10px] font-bold text-white/40">Basado en coincidencia de nombre y metadatos</p>
+                                                            <p className="text-[10px] font-bold text-white/65">Basado en coincidencia de nombre y metadatos</p>
                                                         </div>
                                                     </div>
 
@@ -730,10 +707,10 @@ const Purgatory: React.FC = React.memo(() => {
                                                                         <span className="px-1.5 py-0.5 rounded bg-brand-primary/20 text-[9px] font-black text-brand-primary uppercase tracking-tighter">
                                                                             {sug.reason?.toUpperCase() || 'MATCH'}
                                                                         </span>
-                                                                        <span className="text-[9px] font-bold text-white/30 uppercase tracking-widest">{sug.sub_category}</span>
+                                                                        <span className="text-[9px] font-bold text-white/60 uppercase tracking-widest">{sug.sub_category}</span>
                                                                     </div>
                                                                     <h5 className="text-base font-black text-white leading-tight">{sug.name}</h5>
-                                                                    <p className="text-[10px] text-white/40 font-mono mt-0.5 uppercase tracking-tighter">Vincular con: <span className="text-brand-primary">{item.scraped_name}</span></p>
+                                                                    <p className="text-[10px] text-white/65 font-mono mt-0.5 uppercase tracking-tighter">Vincular con: <span className="text-brand-primary">{item.scraped_name}</span></p>
                                                                 </div>
 
                                                                 <div className="flex items-center gap-2">
@@ -760,12 +737,12 @@ const Purgatory: React.FC = React.memo(() => {
                                                     </div>
                                                     <div>
                                                         <h4 className="text-sm font-black text-white uppercase tracking-widest">Búsqueda Manual</h4>
-                                                        <p className="text-[10px] font-bold text-white/40">Explora el Gran Catálogo de Eternia</p>
+                                                        <p className="text-[10px] font-bold text-white/65">Explora el Gran Catálogo de Eternia</p>
                                                     </div>
                                                 </div>
 
                                                 <div className="relative group/input">
-                                                    <Search className="absolute left-4 top-3.5 h-5 w-5 text-white/30 group-focus-within/input:text-brand-primary transition-colors" />
+                                                    <Search className="absolute left-4 top-3.5 h-5 w-5 text-white/60 group-focus-within/input:text-brand-primary transition-colors" />
                                                     <input
                                                         type="text"
                                                         placeholder="Escribe el nombre de la figura..."
@@ -783,19 +760,19 @@ const Purgatory: React.FC = React.memo(() => {
                                                             onClick={() => matchMutation.mutate({ pendingId: item.id, productId: p.id })}
                                                             className="flex items-center gap-3 rounded-xl bg-white/5 p-3 text-left hover:bg-white/10 border border-transparent hover:border-white/20 transition-all group/res"
                                                         >
-                                                            <div className="h-10 w-10 shrink-0 rounded-lg bg-black/40 border border-white/5 flex items-center justify-center text-[9px] font-black text-white/30">
+                                                            <div className="h-10 w-10 shrink-0 rounded-lg bg-black/40 border border-white/5 flex items-center justify-center text-[9px] font-black text-white/60">
                                                                 IMG
                                                             </div>
                                                             <div className="flex-1 min-w-0">
                                                                 <div className="text-xs font-bold text-white truncate">{p.name}</div>
-                                                                <div className="text-[9px] font-black text-white/30 uppercase tracking-widest">{p.figure_id}</div>
+                                                                <div className="text-[9px] font-black text-white/60 uppercase tracking-widest">{p.figure_id}</div>
                                                             </div>
                                                             <CheckCircle2 className="h-4 w-4 text-brand-primary opacity-0 group-hover/res:opacity-100 transition-opacity" />
                                                         </button>
                                                     ))}
                                                     {manualSearchTerm && filteredProducts?.length === 0 && (
                                                         <div className="col-span-full py-8 text-center">
-                                                            <p className="text-xs font-bold text-white/30">El Oráculo no ve nada...</p>
+                                                            <p className="text-xs font-bold text-white/60">El Oráculo no ve nada...</p>
                                                         </div>
                                                     )}
                                                 </div>
@@ -808,7 +785,7 @@ const Purgatory: React.FC = React.memo(() => {
                                                         </div>
                                                         <div className="min-w-0">
                                                             <h5 className="text-[11px] font-black text-amber-500 uppercase tracking-widest leading-none mb-0.5">Clasificación Vintage</h5>
-                                                            <p className="text-[9px] font-bold text-white/30 truncate max-w-[200px] sm:max-w-md uppercase tracking-tighter">Guardar como reliquia vintage independiente (Atajo: V)</p>
+                                                            <p className="text-[9px] font-bold text-white/60 truncate max-w-[200px] sm:max-w-md uppercase tracking-tighter">Guardar como reliquia vintage independiente (Atajo: V)</p>
                                                         </div>
                                                     </div>
                                                     <button
@@ -864,7 +841,7 @@ const Purgatory: React.FC = React.memo(() => {
                                                     setCurrentPage(pageNum);
                                                     window.scrollTo({ top: 0, behavior: 'smooth' });
                                                 }}
-                                                className={`w-10 h-10 rounded-xl text-[10px] font-black transition-all ${currentPage === pageNum ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}
+                                                className={`w-10 h-10 rounded-xl text-[10px] font-black transition-all ${currentPage === pageNum ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'bg-white/5 text-white/65 hover:bg-white/10'}`}
                                             >
                                                 {pageNum}
                                             </button>
@@ -894,13 +871,13 @@ const Purgatory: React.FC = React.memo(() => {
                         <div className="bg-black/80 backdrop-blur-2xl border border-brand-primary/30 rounded-full px-8 py-4 flex items-center gap-8 shadow-[0_0_50px_rgba(14,165,233,0.3)]">
                             <div className="flex flex-col">
                                 <span className="text-[10px] font-black text-brand-primary uppercase tracking-widest">Seleccionados</span>
-                                <span className="text-xl font-black text-white">{selectedIds.length} <span className="text-sm text-white/40">ITEMS</span></span>
+                                <span className="text-xl font-black text-white">{selectedIds.length} <span className="text-sm text-white/65">ITEMS</span></span>
                             </div>
                             <div className="h-8 w-px bg-white/10"></div>
                             <div className="flex items-center gap-4">
                                 <button
                                     onClick={() => setSelectedIds([])}
-                                    className="text-xs font-black text-white/40 hover:text-white uppercase tracking-widest transition-all"
+                                    className="text-xs font-black text-white/65 hover:text-white uppercase tracking-widest transition-all"
                                 >
                                     Cancelar
                                 </button>
@@ -929,7 +906,7 @@ const Purgatory: React.FC = React.memo(() => {
                                         <ShieldAlert className="h-6 w-6 text-red-400" />
                                         <h3 className="text-2xl font-black text-white uppercase tracking-tight">Sala de Autopsia Forense</h3>
                                     </div>
-                                    <p className="text-xs text-white/40 uppercase tracking-widest font-bold">Inspección de acciones estancadas en el búfer ({failedActions.length} items)</p>
+                                    <p className="text-xs text-white/65 uppercase tracking-widest font-bold">Inspección de acciones estancadas en el búfer ({failedActions.length} items)</p>
                                 </div>
                                 <div className="flex items-center gap-3">
                                     {failedActions.length > 1 && (
@@ -945,7 +922,7 @@ const Purgatory: React.FC = React.memo(() => {
                                     )}
                                     <button
                                         onClick={() => setShowForensic(false)}
-                                        className="h-12 w-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40 hover:text-white transition-all"
+                                        className="h-12 w-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/65 hover:text-white transition-all"
                                     >
                                         <X className="h-6 w-6" />
                                     </button>
@@ -982,7 +959,7 @@ const Purgatory: React.FC = React.memo(() => {
                                                                     </a>
                                                                 )}
                                                                 {f.action.productId && (
-                                                                    <span className="text-[10px] font-bold text-white/30 truncate">
+                                                                    <span className="text-[10px] font-bold text-white/60 truncate">
                                                                         Objetivo: Producto #{f.action.productId}
                                                                     </span>
                                                                 )}
@@ -1066,10 +1043,10 @@ const Purgatory: React.FC = React.memo(() => {
                                     <h4 className="text-lg font-black tracking-tighter text-white uppercase">
                                         Oráculo <span className="text-amber-500">Vintage</span>
                                     </h4>
-                                    <p className="text-[9px] font-bold text-white/40 uppercase tracking-widest">Canalización y Vinculación Retro</p>
+                                    <p className="text-[9px] font-bold text-white/65 uppercase tracking-widest">Canalización y Vinculación Retro</p>
                                 </div>
                             </div>
-                            <button onClick={() => setIsVintageModalOpen(false)} className="h-8 w-8 flex items-center justify-center rounded-xl bg-white/5 text-white/40 hover:bg-amber-500/20 hover:text-amber-400 transition-all font-black">&times;</button>
+                            <button onClick={() => setIsVintageModalOpen(false)} className="h-8 w-8 flex items-center justify-center rounded-xl bg-white/5 text-white/65 hover:bg-amber-500/20 hover:text-amber-400 transition-all font-black">&times;</button>
                         </div>
                         
                         {/* Modal Body */}
@@ -1124,7 +1101,7 @@ const Purgatory: React.FC = React.memo(() => {
                                                             {p.reason.toUpperCase()}
                                                         </span>
                                                     )}
-                                                    <span className="text-[8px] font-mono text-white/30 uppercase">ID: #{p.figure_id}</span>
+                                                    <span className="text-[8px] font-mono text-white/60 uppercase">ID: #{p.figure_id}</span>
                                                 </div>
                                                 <div className="flex items-center gap-1.5 shrink-0">
                                                     <button

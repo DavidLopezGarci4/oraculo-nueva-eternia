@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Activity, Clock, AlertCircle, CheckCircle2, RefreshCw, Terminal, Target, Settings, Users, ShieldAlert, Trash2, Zap, History, Database, Download, Upload, FileSpreadsheet, Repeat } from 'lucide-react';
+import { Play, Activity, Clock, AlertCircle, CheckCircle2, RefreshCw, Terminal, Target, Settings, Users, ShieldAlert, Trash2, Zap, History, Database, Download, FileSpreadsheet, Repeat, Globe } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { resetSmartMatches, runScrapers, stopScrapers, getScraperLogs, type ScraperExecutionLog } from '../api/purgatory';
+import { resetSmartMatches, runScrapers, stopScrapers, getScraperLogs, type ScraperExecutionLog, getWallapopIpLogs, downloadWallapopIpLogs, type WallapopIpLog } from '../api/purgatory';
 import PowerSwordLoader from '../components/ui/PowerSwordLoader';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import WallapopImporter from '../components/admin/WallapopImporter';
+import { getDashboardMatchStats } from '../api/dashboard';
+
 
 import {
     getScrapersStatus,
@@ -16,7 +18,6 @@ import {
     updateHeroRole,
     resetHeroPassword,
     deleteHero,
-    downloadVault,
     syncExcel,
     exportCollectionExcel,
     exportCollectionSqlite,
@@ -35,6 +36,8 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
     const consoleRef = React.useRef<HTMLDivElement>(null);
     const [activeTab, setActiveTab] = useState<'scrapers' | 'system' | 'users' | 'wallapop'>('scrapers');
     const [statuses, setStatuses] = useState<ScraperStatus[]>([]);
+    const [matchStats, setMatchStats] = useState<any[]>([]);
+    const [syncingSensores, setSyncingSensores] = useState(false);
     const [heroes, setHeroes] = useState<any[]>([]);
     // const [duplicates, setDuplicates] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -47,6 +50,32 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
     const [isResetting, setIsResetting] = useState(false);
     const [selectedLog, setSelectedLog] = useState<ScraperExecutionLog | null>(null);
     const [advancedLogs, setAdvancedLogs] = useState<ScraperExecutionLog[]>([]);
+
+    const [showIpLogsModal, setShowIpLogsModal] = useState(false);
+    const [ipLogs, setIpLogs] = useState<WallapopIpLog[]>([]);
+    const [loadingIpLogs, setLoadingIpLogs] = useState(false);
+
+    const handleOpenIpLogs = async () => {
+        setShowIpLogsModal(true);
+        setLoadingIpLogs(true);
+        try {
+            const data = await getWallapopIpLogs();
+            setIpLogs(data);
+        } catch (error) {
+            console.error('Error fetching Wallapop IP logs:', error);
+        } finally {
+            setLoadingIpLogs(false);
+        }
+    };
+
+    const handleDownloadIpLogs = async () => {
+        try {
+            await downloadWallapopIpLogs();
+        } catch (error) {
+            console.error('Error downloading Wallapop IP logs:', error);
+            alert('Error al descargar los logs. Compruebe la conexión.');
+        }
+    };
 
     const queryClient = useQueryClient();
 
@@ -61,17 +90,19 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
     const fetchData = async () => {
         try {
             // Fetch everything, but handle individual failures gracefully
-            const [s, u, al, h] = await Promise.all([
+            const [s, u, al, h, ms] = await Promise.all([
                 getScrapersStatus().catch((e: any) => { console.error("Scrapers error:", e); return []; }),
                 getUserSettings(activeUserId).catch((e: any) => { console.error("User settings error:", e); return null; }),
                 getScraperLogs().catch((e: any) => { console.error("Logs error:", e); return []; }),
-                getHeroes().catch((e: any) => { console.error("Heroes list error:", e); return []; })
+                getHeroes().catch((e: any) => { console.error("Heroes list error:", e); return []; }),
+                getDashboardMatchStats(activeUserId).catch((e: any) => { console.error("Match stats error:", e); return []; })
             ]);
 
             setStatuses(s || []);
             if (u) setUserSettings(u);
             setAdvancedLogs(al || []);
             setHeroes(h || []);
+            setMatchStats(ms || []);
 
             // update selected log if necessary
             if (al && al.length > 0) {
@@ -209,16 +240,6 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
         }
     };
 
-    const handleDownloadVault = async () => {
-        try {
-            await downloadVault(activeUserId);
-            alert('📦 Bóveda Personal generada y descargada. Guárdala en un lugar seguro.');
-        } catch (error) {
-            console.error('Error downloading vault:', error);
-            alert('❌ Error al generar la Bóveda.');
-        }
-    };
-
     const handleSyncExcel = async () => {
         try {
             const res = await syncExcel(activeUserId);
@@ -294,7 +315,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                         <>
                             <button
                                 onClick={() => setActiveTab('scrapers')}
-                                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${activeTab === 'scrapers' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'text-white/40 hover:text-white'}`}
+                                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${activeTab === 'scrapers' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'text-white/65 hover:text-white'}`}
                             >
                                 <Activity className="h-3.5 w-3.5" />
                                 Scrapers
@@ -303,7 +324,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                     )}
                     <button
                         onClick={() => setActiveTab('system')}
-                        className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${activeTab === 'system' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'text-white/40 hover:text-white'}`}
+                        className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${activeTab === 'system' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'text-white/65 hover:text-white'}`}
                     >
                         <Settings className="h-3.5 w-3.5" />
                         Ajustes
@@ -311,7 +332,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                     {user?.role === 'admin' && (
                         <button
                             onClick={() => setActiveTab('users')}
-                            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${activeTab === 'users' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'text-white/40 hover:text-white'}`}
+                            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${activeTab === 'users' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'text-white/65 hover:text-white'}`}
                         >
                             <Users className="h-4 w-4" />
                             Héroes
@@ -344,7 +365,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                                 Centro de <span className="text-brand-primary">Mando</span>
                                             </h2>
                                         </div>
-                                        <p className="max-w-xl text-[11px] md:text-sm text-white/40 font-medium uppercase tracking-[0.1em]">
+                                        <p className="max-w-xl text-[11px] md:text-sm text-white/65 font-medium uppercase tracking-[0.1em]">
                                             Orquestador de Incursiones
                                         </p>
                                     </div>
@@ -382,6 +403,14 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                             <Activity className="h-4 w-4 text-brand-primary" />
                                             <span className="uppercase tracking-wider">Nexus</span>
                                         </button>
+
+                                        <button
+                                            onClick={handleOpenIpLogs}
+                                            className="bg-white/5 hover:bg-white/10 border border-white/10 text-white px-4 py-2 rounded-xl font-bold text-[11px] transition-all flex items-center justify-center gap-2 hover:scale-105 active:scale-95 w-full sm:w-auto"
+                                        >
+                                            <Globe className="h-4 w-4 text-brand-primary" />
+                                            <span className="uppercase tracking-wider">Auditoría IP</span>
+                                        </button>
                                     </div>
                                 </div>
 
@@ -394,7 +423,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                                 : 'bg-white/[0.03] border-white/5 hover:bg-white/10'
                                                 }`}
                                         >
-                                            <span className={`text-[10px] font-black uppercase tracking-tight truncate ${s.status === 'running' ? 'text-white' : 'text-white/40'}`}>
+                                            <span className={`text-[10px] font-black uppercase tracking-tight truncate ${s.status === 'running' ? 'text-white' : 'text-white/65'}`}>
                                                 {s.spider_name}
                                             </span>
 
@@ -445,7 +474,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                                         {log.status === 'success' ? 'Éxito' : log.status === 'running' ? 'En Ejecución' : 'Fallo'}
                                                     </span>
                                                 </div>
-                                                <div className="flex items-center justify-between text-[10px] text-white/30 font-bold">
+                                                <div className="flex items-center justify-between text-[10px] text-white/60 font-bold">
                                                     <div className="flex items-center gap-3">
                                                         <span className="flex items-center gap-1.5"><Database className="h-3 w-3" /> {log.items_found} items</span>
                                                         <span className="flex items-center gap-1 text-brand-primary/60"><Zap className="h-3 w-3" /> {log.new_items || 0} nuevos</span>
@@ -466,7 +495,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                         </div>
                                         {selectedLog && (
                                             <div className="flex items-center gap-4">
-                                                <span className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] font-mono">
+                                                <span className="text-[10px] font-bold text-white/60 uppercase tracking-[0.2em] font-mono">
                                                     {selectedLog.spider_name} #0x{selectedLog.id.toString(16)}
                                                 </span>
                                                 {selectedLog.status === 'running' && (
@@ -501,7 +530,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
 
                                                         return (
                                                             <div key={i} className={`flex gap - 4 group / line ${isError ? 'text-red-400' : isSuccess ? 'text-green-400' : isWarning ? 'text-yellow-400' : 'text-white/60'} `}>
-                                                                <span className="text-white/10 select-none w-8 text-right group-hover/line:text-white/30 transition-colors">{String(i + 1).padStart(3, '0')}</span>
+                                                                <span className="text-white/10 select-none w-8 text-right group-hover/line:text-white/60 transition-colors">{String(i + 1).padStart(3, '0')}</span>
                                                                 <p className="break-all whitespace-pre-wrap flex-1">{line}</p>
                                                             </div>
                                                         );
@@ -520,6 +549,94 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                 </div>
                             </div>
                         </div>
+
+                        {/* Conquistas de Mercado */}
+                        <div className="space-y-4 pt-6 border-t border-white/5">
+                            <h4 className="text-xs font-black uppercase tracking-widest text-white/65">Conquistas de Mercado</h4>
+                            <div className="rounded-2xl md:rounded-[2.5rem] border border-white/5 bg-black/50 backdrop-blur-md p-4 md:p-8 space-y-6">
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3 md:gap-4">
+                                    {matchStats?.map((item) => (
+                                        <div key={item.shop} className="flex flex-col gap-1 rounded-2xl bg-white/[0.03] p-3 md:p-4 border border-white/5">
+                                            <span className="text-[8px] md:text-[9px] font-black uppercase text-white/60 tracking-widest truncate">{item.shop}</span>
+                                            <span className="text-xl md:text-2xl font-black text-white">{item.count}</span>
+                                        </div>
+                                    ))}
+                                    {(!matchStats || matchStats.length === 0) && (
+                                        <div className="col-span-full py-6 text-center text-white/60 uppercase font-black text-[9px] tracking-widest">
+                                            Sin estadísticas de mercado
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Widget de Estado de Scrapers */}
+                        <div className="space-y-4 pt-6 border-t border-white/5">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <h4 className="text-xs font-black uppercase tracking-widest text-white/65">Sensores de Incursión (Scrapers)</h4>
+                                    {syncingSensores && (
+                                        <RefreshCw className="h-3 w-3 text-brand-primary animate-spin" />
+                                    )}
+                                </div>
+                                <button 
+                                    onClick={async () => {
+                                        setSyncingSensores(true);
+                                        await fetchData();
+                                        setSyncingSensores(false);
+                                    }}
+                                    className="flex items-center gap-1 text-[9px] font-black text-brand-primary hover:text-white uppercase tracking-widest bg-brand-primary/10 border border-brand-primary/20 hover:bg-brand-primary/20 px-2.5 py-1 rounded-lg transition-all"
+                                >
+                                    <RefreshCw className={`h-2.5 w-2.5 ${syncingSensores ? 'animate-spin' : ''}`} />
+                                    Sincronizar Sensores
+                                </button>
+                            </div>
+                            <div className="rounded-2xl md:rounded-[2.5rem] border border-white/5 bg-black/50 backdrop-blur-md p-4 md:p-6">
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+                                    {statuses?.map((scraper) => {
+                                        const isRunning = scraper.status === 'running';
+                                        const isCompleted = scraper.status === 'completed';
+                                        const isError = scraper.status.startsWith('error') || scraper.status === 'stopped';
+                                        
+                                        return (
+                                            <div 
+                                                key={scraper.spider_name} 
+                                                className={`relative overflow-hidden flex flex-col gap-1.5 rounded-xl p-3 border transition-all duration-300 ${
+                                                    isRunning ? 'bg-yellow-500/5 border-yellow-500/20 shadow-[0_0_15px_-5px_rgba(234,179,8,0.15)]' :
+                                                    isCompleted ? 'bg-green-500/5 border-green-500/10' :
+                                                    'bg-white/[0.02] border-white/5'
+                                                }`}
+                                            >
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <span className="text-[9px] font-bold text-white/80 truncate max-w-[80%]">{scraper.spider_name}</span>
+                                                    <span className={`h-1.5 w-1.5 rounded-full ${
+                                                        isRunning ? 'bg-yellow-500 animate-pulse' :
+                                                        isCompleted ? 'bg-green-500' :
+                                                        isError ? 'bg-red-500' : 'bg-white/20'
+                                                    }`}></span>
+                                                </div>
+                                                
+                                                <div className="flex items-center justify-between text-[7px] font-black uppercase tracking-wider text-white/60">
+                                                    <span>Estado</span>
+                                                    <span className={
+                                                        isRunning ? 'text-yellow-500' :
+                                                        isCompleted ? 'text-green-500' :
+                                                        isError ? 'text-red-500' : 'text-white/60'
+                                                    }>
+                                                        {isRunning ? 'Activo' : isCompleted ? 'Listo' : 'Pausado'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                    {(!statuses || statuses.length === 0) && (
+                                        <div className="col-span-full py-6 text-center text-white/10 uppercase font-black text-[9px] tracking-widest">
+                                            No se han detectado sensores de incursión activos
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
                     </motion.div>
                 ) : activeTab === 'system' ? (
                     <motion.div
@@ -535,7 +652,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                     <Database className="w-6 h-6 text-blue-400" />
                                     {user?.role === 'admin' ? 'Cámara de Reliquias de Eternia' : 'Mi Bóveda Digital'}
                                 </h2>
-                                <p className="text-gray-400 text-sm">Resguardo y sincronización de tu legado físico.</p>
+                                <p className="text-white/70 text-sm">Resguardo y sincronización de tu legado físico.</p>
                             </div>
                             <div className="px-3 py-1 rounded-full bg-blue-900/30 text-blue-400 text-xs font-mono border border-blue-800/50">
                                 SHIELD LAYER 2
@@ -552,7 +669,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                     <div className="space-y-2">
                                         <label className="text-xs text-white/50 block font-medium">Umbral de Alerta de Precio (%)</label>
                                         <input type="range" disabled className="w-full accent-brand-primary" value="15" />
-                                        <div className="flex justify-between text-[10px] text-white/30 font-bold">
+                                        <div className="flex justify-between text-[10px] text-white/60 font-bold">
                                             <span>5%</span>
                                             <span className="text-brand-primary">15%</span>
                                             <span>50%</span>
@@ -578,14 +695,14 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                         <label className="text-xs text-white/50 block font-medium">ROI Mínimo para Grial (%)</label>
                                         <div className="flex items-center gap-3">
                                             <input type="number" disabled className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white/50 w-full" value="50" />
-                                            <span className="text-white/30 text-xs">%</span>
+                                            <span className="text-white/60 text-xs">%</span>
                                         </div>
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-xs text-white/50 block font-medium">Valor Umbral Grial (€)</label>
                                         <div className="flex items-center gap-3">
                                             <input type="number" disabled className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white/50 w-full" value="150" />
-                                            <span className="text-white/30 text-xs">€</span>
+                                            <span className="text-white/60 text-xs">€</span>
                                         </div>
                                     </div>
                                 </div>
@@ -601,7 +718,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                     <div className="space-y-2">
                                         <label className="text-xs text-white/50 block font-medium">Delay entre Páginas (seg)</label>
                                         <input type="range" disabled className="w-full accent-blue-400" value="10" />
-                                        <div className="flex justify-between text-[10px] text-white/30 font-bold">
+                                        <div className="flex justify-between text-[10px] text-white/60 font-bold">
                                             <span>1s</span>
                                             <span className="text-blue-400">10s (Auto)</span>
                                             <span>30s</span>
@@ -623,7 +740,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                     Ubicación Geográfica (Oráculo)
                                 </div>
                                 <div className="space-y-4">
-                                    <p className="text-[10px] text-white/40 font-bold uppercase leading-tight">
+                                    <p className="text-[10px] text-white/65 font-bold uppercase leading-tight">
                                         Define tu contexto territorial para que el Oráculo calcule envíos, aduanas e IVA de importación automáticamente.
                                     </p>
 
@@ -660,46 +777,14 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                 )}
                             </div>
 
-                            {/* --- SHIELD ARCHITECTURE: VAULT & EXCEL BRIDGE --- */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="glass border border-white/10 p-6 rounded-3xl group hover:bg-white/5 transition-all">
-                                    <div className="flex items-start justify-between mb-4">
-                                        <div className="flex items-center gap-4">
-                                            <div className="bg-brand-primary/10 p-3 rounded-lg group-hover:bg-brand-primary/20 transition-all">
-                                                <Database className="h-5 w-5 text-brand-primary" />
-                                            </div>
-                                            <div>
-                                                <h4 className="text-white font-bold text-sm">Eternia Vault</h4>
-                                                <p className="text-[10px] text-white/30 font-mono">Bóveda SQLite Independiente</p>
-                                            </div>
-                                        </div>
-                                        <div className="flex flex-col items-end">
-                                            <span className="text-[8px] font-black text-brand-primary uppercase tracking-widest bg-brand-primary/10 px-2 py-0.5 rounded">Shield Layer 1</span>
-                                        </div>
+                            {/* --- SHIELD ARCHITECTURE: EXCEL BRIDGE --- */}
+                            {(user?.role === 'admin' || user?.username === 'David') && (
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-3 px-2">
+                                        <ShieldAlert className="h-6 w-6 text-brand-primary" />
+                                        <h3 className="text-xl font-black uppercase tracking-[0.2em] text-white">Excel Bridge</h3>
                                     </div>
-                                    <p className="text-[11px] text-white/50 mb-6 leading-relaxed">
-                                        Genera un archivo de base de datos portátil con tu inventario, precios y configuración personal para resguardo offline.
-                                    </p>
-                                    <div className="flex items-center gap-2">
-                                        <button
-                                            onClick={handleDownloadVault}
-                                            className="flex-1 bg-brand-primary/10 hover:bg-brand-primary text-brand-primary hover:text-white border border-brand-primary/20 px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg shadow-brand-primary/0 hover:shadow-brand-primary/20"
-                                        >
-                                            <Download className="h-3 w-3" />
-                                            📦 Descargar Bóveda
-                                        </button>
-                                        <button
-                                            disabled
-                                            title="Zona de Cuarentena (Próximamente)"
-                                            className="bg-white/5 text-white/20 border border-white/5 p-2.5 rounded-2xl cursor-not-allowed opacity-50"
-                                        >
-                                            <Upload className="h-4 w-4" />
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {(user?.role === 'admin' || user?.username === 'David') && (
-                                    <div className="glass border border-white/10 p-6 rounded-3xl group hover:bg-white/5 transition-all">
+                                    <div className="glass border border-white/10 p-6 rounded-3xl group hover:bg-white/5 transition-all max-w-md">
                                         <div className="flex items-start justify-between mb-4">
                                             <div className="flex items-center gap-4">
                                                 <div className="bg-green-500/10 p-3 rounded-lg group-hover:bg-green-500/20 transition-all">
@@ -707,7 +792,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                                 </div>
                                                 <div>
                                                     <h4 className="text-white font-bold text-sm">Excel Bridge</h4>
-                                                    <p className="text-[10px] text-white/30 font-mono">Sincronización David MOTU</p>
+                                                    <p className="text-[10px] text-white/60 font-mono">Sincronización David MOTU</p>
                                                 </div>
                                             </div>
                                             <div className="flex flex-col items-end">
@@ -725,8 +810,8 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                             📊 Sincronizar Excel
                                         </button>
                                     </div>
-                                )}
-                            </div>
+                                </div>
+                            )}
 
                             {/* --- MI BÓVEDA DIGITAL: UNIVERSAL ACCESS --- */}
                             <div className="lg:col-span-3 space-y-6">
@@ -771,9 +856,9 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                                 <span className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.3em] bg-indigo-500/10 px-3 py-1 rounded-full">Deep Backup</span>
                                             </div>
                                             <div>
-                                                <h4 className="text-2xl font-black text-white mb-2 uppercase tracking-tighter">Bóveda SQLite</h4>
+                                                <h4 className="text-2xl font-black text-white mb-2 uppercase tracking-tighter">Cámaras de Resguardo SQLite</h4>
                                                 <p className="text-sm text-white/50 leading-relaxed font-medium">
-                                                    Tu base de datos íntegra en un solo archivo. Es el respaldo definitivo de todas tus reliquias y su historial.
+                                                    Tu base de datos SQLite íntegra en un solo archivo. Es el respaldo definitivo de todas tus reliquias y su historial.
                                                 </p>
                                             </div>
                                             <button
@@ -781,7 +866,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                                 className="mt-auto w-full group relative flex items-center justify-center gap-3 overflow-hidden rounded-2xl bg-indigo-600 py-5 font-black text-white transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl shadow-indigo-600/20"
                                             >
                                                 <Database className="h-5 w-5" />
-                                                <span className="uppercase tracking-[0.1em]">Bajar Base de Datos</span>
+                                                <span className="uppercase tracking-[0.1em]">Descargar Bóveda SQLite</span>
                                             </button>
                                         </div>
                                     </div>
@@ -796,7 +881,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                         Purificación del Abismo
                                     </div>
                                     <div className="space-y-4">
-                                        <p className="text-[10px] text-white/40 font-bold uppercase leading-tight">
+                                        <p className="text-[10px] text-white/65 font-bold uppercase leading-tight">
                                             Desvincula masivamente todos los items automatizados por SmartMatch. <span className="text-red-400">Acción irreversible que requiere doble autorización.</span>
                                         </p>
 
@@ -816,7 +901,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                             <AlertCircle className="h-8 w-8 text-brand-primary animate-pulse" />
                             <div className="text-center">
                                 <h4 className="text-white font-bold">Panel Protector Activo</h4>
-                                <p className="text-white/40 text-sm max-w-md mx-auto">Estas configuraciones se sincronizarán con los workers de GitHub Actions y el Backend en la Phase 13.</p>
+                                <p className="text-white/65 text-sm max-w-md mx-auto">Estas configuraciones se sincronizarán con los workers de GitHub Actions y el Backend en la Phase 13.</p>
                             </div>
                         </div>
                     </motion.div>
@@ -834,7 +919,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                     <Users className="h-6 w-6 text-brand-primary" />
                                     Gestión de Héroes del Reino
                                 </h3>
-                                <p className="text-white/40 text-sm">Control de acceso, roles y estados de las fortalezas individuales.</p>
+                                <p className="text-white/65 text-sm">Control de acceso, roles y estados de las fortalezas individuales.</p>
                             </div>
                             <button
                                 onClick={() => setShowAddUserModal(true)}
@@ -848,7 +933,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                         <div className="glass border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
                             <div className="overflow-x-auto scrollbar-none custom-scrollbar">
                                 <table className="w-full text-left text-sm min-w-[700px]">
-                                    <thead className="bg-white/5 text-white/30 uppercase text-[9px] font-bold">
+                                    <thead className="bg-white/5 text-white/60 uppercase text-[9px] font-bold">
                                         <tr>
                                             <th className="px-4 py-3">Héroe</th>
                                             <th className="px-2 py-3 text-center w-10">ID</th>
@@ -868,7 +953,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                                         </div>
                                                         <div className="truncate max-w-[120px]">
                                                             <p className="font-bold text-white text-xs group-hover:text-brand-primary transition-colors truncate">{hero.username}</p>
-                                                            <p className="text-[9px] text-white/30 font-mono truncate">{hero.email}</p>
+                                                            <p className="text-[9px] text-white/60 font-mono truncate">{hero.email}</p>
                                                         </div>
                                                     </div>
                                                 </td>
@@ -893,7 +978,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                                     </div>
                                                 </td>
                                                 <td className="px-4 py-3">
-                                                    <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest bg-white/5 px-2 py-0.5 rounded-md truncate block max-w-[80px]">{hero.location}</span>
+                                                    <span className="text-[9px] font-bold text-white/65 uppercase tracking-widest bg-white/5 px-2 py-0.5 rounded-md truncate block max-w-[80px]">{hero.location}</span>
                                                 </td>
                                                 <td className="px-4 py-3 text-right">
                                                     <div className="flex items-center justify-end gap-1 transition-opacity">
@@ -954,7 +1039,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                     <div className="bg-green-500/10 p-3 rounded-lg"><CheckCircle2 className="h-5 w-5 text-green-400" /></div>
                                     <div>
                                         <h4 className="text-sm font-bold text-white">Registro Abierto</h4>
-                                        <p className="text-[10px] text-white/40">Permitir que nuevos usuarios se unan.</p>
+                                        <p className="text-[10px] text-white/65">Permitir que nuevos usuarios se unan.</p>
                                     </div>
                                 </div>
                                 <div className="h-4 w-8 bg-brand-primary/30 rounded-full relative shadow-inner cursor-pointer"><div className="absolute right-1 top-1 h-2 w-2 bg-brand-primary rounded-full shadow-[0_0_8px_rgba(14,165,233,0.5)]"></div></div>
@@ -964,7 +1049,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                     <div className="bg-red-500/10 p-3 rounded-lg"><Activity className="h-5 w-5 text-red-400" /></div>
                                     <div>
                                         <h4 className="text-sm font-bold text-white">Vigilancia de Sesión</h4>
-                                        <p className="text-[10px] text-white/40">Cierre automático por inactividad.</p>
+                                        <p className="text-[10px] text-white/65">Cierre automático por inactividad.</p>
                                     </div>
                                 </div>
                                 <div className="h-4 w-8 bg-white/10 rounded-full relative cursor-not-allowed"><div className="absolute left-1 top-1 h-2 w-2 bg-white/30 rounded-full"></div></div>
@@ -1008,25 +1093,25 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
 
                                 <div className="space-y-4 opacity-50">
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-white/40 uppercase tracking-widest pl-1">Nombre de Usuario</label>
+                                        <label className="text-[10px] font-black text-white/65 uppercase tracking-widest pl-1">Nombre de Usuario</label>
                                         <input type="text" disabled placeholder="Ej: He-Man" className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white focus:outline-none" />
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-white/40 uppercase tracking-widest pl-1">Correo Electrónico</label>
+                                        <label className="text-[10px] font-black text-white/65 uppercase tracking-widest pl-1">Correo Electrónico</label>
                                         <input type="email" disabled placeholder="defensor@eternia.com" className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white focus:outline-none" />
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-black text-white/40 uppercase tracking-widest pl-1">Contraseña</label>
+                                            <label className="text-[10px] font-black text-white/65 uppercase tracking-widest pl-1">Contraseña</label>
                                             <input type="password" disabled value="********" className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white focus:outline-none" />
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-black text-white/40 uppercase tracking-widest pl-1">Confirmar</label>
+                                            <label className="text-[10px] font-black text-white/65 uppercase tracking-widest pl-1">Confirmar</label>
                                             <input type="password" disabled value="********" className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white focus:outline-none" />
                                         </div>
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-white/40 uppercase tracking-widest pl-1">Rango del Héroe (Rol)</label>
+                                        <label className="text-[10px] font-black text-white/65 uppercase tracking-widest pl-1">Rango del Héroe (Rol)</label>
                                         <select disabled className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white/50 focus:outline-none appearance-none font-bold">
                                             <option>🛡️ Guardián de Eternia (Viewer)</option>
                                             <option>⚔️ Master del Universo (Admin)</option>
@@ -1047,7 +1132,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                     </button>
                                     <button
                                         onClick={() => setShowAddUserModal(false)}
-                                        className="w-full py-2 text-white/30 text-xs font-bold hover:text-white transition-colors"
+                                        className="w-full py-2 text-white/60 text-xs font-bold hover:text-white transition-colors"
                                     >
                                         VOLVAR ATRÁS
                                     </button>
@@ -1095,7 +1180,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                     <button
                                         disabled={isResetting}
                                         onClick={() => setResetStep(0)}
-                                        className="rounded-2xl border border-white/10 bg-white/5 py-4 text-xs font-black text-white/40 hover:bg-white/10 transition-all uppercase tracking-widest"
+                                        className="rounded-2xl border border-white/10 bg-white/5 py-4 text-xs font-black text-white/65 hover:bg-white/10 transition-all uppercase tracking-widest"
                                     >
                                         Cancelar
                                     </button>
@@ -1107,6 +1192,120 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                         {isResetting ? 'PURIFICANDO...' : resetStep === 1 ? 'COMPRENDO' : 'PURIFICAR TODO'}
                                     </button>
                                 </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Modal de Auditoría IP Wallapop */}
+            <AnimatePresence>
+                {showIpLogsModal && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setShowIpLogsModal(false)}
+                            className="absolute inset-0 bg-black/80 backdrop-blur-md"
+                        />
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                            className="relative w-full max-w-4xl max-h-[85vh] overflow-hidden rounded-[2.5rem] border border-white/10 bg-black/90 p-6 md:p-8 shadow-2xl backdrop-blur-3xl ring-1 ring-white/5 flex flex-col gap-6 text-white"
+                        >
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-3 bg-brand-primary/10 rounded-2xl border border-brand-primary/20">
+                                        <Globe className="h-6 w-6 text-brand-primary" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-lg font-black uppercase tracking-widest text-white">Auditoría de Conectividad IP</h3>
+                                        <p className="text-xs text-white/65 font-bold uppercase tracking-wider">Historial de WAF checks y bloqueos de Wallapop</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={handleDownloadIpLogs}
+                                    className="flex items-center gap-2 rounded-xl bg-brand-primary px-4 py-2.5 text-xs font-bold text-white transition-all hover:scale-105 hover:bg-brand-primary/80 active:scale-95 shadow-lg shadow-brand-primary/20 w-full sm:w-auto justify-center"
+                                >
+                                    <Download className="h-4 w-4" />
+                                    DESCARGAR LOG (.TXT)
+                                </button>
+                            </div>
+
+                            <div className="flex-1 overflow-auto min-h-[300px] border border-white/5 rounded-2xl bg-white/[0.02] p-2 custom-scrollbar">
+                                {loadingIpLogs ? (
+                                    <div className="flex h-64 flex-col items-center justify-center text-white/20 gap-4">
+                                        <RefreshCw className="h-8 w-8 text-brand-primary animate-spin" />
+                                        <p className="text-[10px] font-black uppercase tracking-[0.2em]">Leyendo Crónicas de Red...</p>
+                                    </div>
+                                ) : ipLogs.length === 0 ? (
+                                    <div className="flex h-64 flex-col items-center justify-center text-white/10 gap-3">
+                                        <Activity className="h-12 w-12 text-white/5 animate-pulse" />
+                                        <p className="text-[10px] font-black uppercase tracking-[0.2em]">Ningún registro en las bitácoras</p>
+                                    </div>
+                                ) : (
+                                    <table className="w-full text-left text-xs text-white/70">
+                                        <thead>
+                                            <tr className="border-b border-white/10 text-[9px] font-black uppercase tracking-widest text-white/65">
+                                                <th className="p-3">Fecha</th>
+                                                <th className="p-3">Dirección IP</th>
+                                                <th className="p-3">Entorno</th>
+                                                <th className="p-3">Estado</th>
+                                                <th className="p-3 text-center">HTTP</th>
+                                                <th className="p-3">Detalles WAF / Logs</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-white/5 font-mono">
+                                            {ipLogs.map((log) => {
+                                                const isBlocked = log.status === 'blocked';
+                                                const isAllowed = log.status === 'allowed';
+                                                
+                                                return (
+                                                    <tr key={log.id} className="hover:bg-white/[0.02] transition-colors">
+                                                        <td className="p-3 whitespace-nowrap text-white/65 font-sans text-[10px]">
+                                                            {new Date(log.recorded_at).toLocaleString('es-ES', {
+                                                                year: 'numeric',
+                                                                month: '2-digit',
+                                                                day: '2-digit',
+                                                                hour: '2-digit',
+                                                                minute: '2-digit',
+                                                                second: '2-digit'
+                                                            })}
+                                                        </td>
+                                                        <td className="p-3 font-bold text-white/80">{log.ip_address}</td>
+                                                        <td className="p-3 text-[10px] uppercase font-sans font-bold text-white/60">{log.environment || 'Local'}</td>
+                                                        <td className="p-3">
+                                                            <span className={`px-2 py-0.5 rounded text-[8px] font-black tracking-wider uppercase ${
+                                                                isAllowed 
+                                                                    ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
+                                                                    : isBlocked 
+                                                                        ? 'bg-red-500/20 text-red-400 border border-red-500/30' 
+                                                                        : 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
+                                                            }`}>
+                                                                {log.status}
+                                                            </span>
+                                                        </td>
+                                                        <td className="p-3 text-center font-bold">{log.response_code !== null && log.response_code !== undefined ? log.response_code : '-'}</td>
+                                                        <td className="p-3 max-w-[250px] truncate text-[10px] text-white/65 font-sans" title={log.details}>
+                                                            {log.details || 'Sin detalles'}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                )}
+                            </div>
+
+                            <div className="flex justify-end pt-2 border-t border-white/5">
+                                <button
+                                    onClick={() => setShowIpLogsModal(false)}
+                                    className="bg-white/5 hover:bg-white/10 border border-white/10 text-white px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all hover:scale-105 active:scale-95"
+                                >
+                                    Cerrar Portal
+                                </button>
                             </div>
                         </motion.div>
                     </div>

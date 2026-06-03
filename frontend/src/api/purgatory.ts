@@ -120,3 +120,32 @@ export const revertVintageItem = async (offerId: number) => {
     const response = await axios.post(`${API_BASE}/vintage/revert-offer/${offerId}`, {}, adminHeaders);
     return response.data;
 };
+
+export interface WallapopIpLog {
+    id: number;
+    ip_address: string;
+    status: string;
+    environment?: string;
+    response_code?: number;
+    details?: string;
+    recorded_at: string;
+}
+
+export const getWallapopIpLogs = async (): Promise<WallapopIpLog[]> => {
+    const response = await axios.get(`${API_BASE}/scrapers/wallapop/ip-logs`, adminHeaders);
+    return response.data;
+};
+
+export const downloadWallapopIpLogs = async (): Promise<void> => {
+    const response = await axios.get(`${API_BASE}/scrapers/wallapop/ip-logs/download`, {
+        ...adminHeaders,
+        responseType: 'blob'
+    });
+    const url = window.URL.createObjectURL(new Blob([response.data], { type: 'text/plain' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'wallapop_ip_logs.txt');
+    document.body.appendChild(link);
+    link.click();
+    link.parentNode?.removeChild(link);
+};
