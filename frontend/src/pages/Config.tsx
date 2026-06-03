@@ -310,19 +310,19 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                     <p className="text-white/50">{user?.role === 'admin' ? 'Control absoluto sobre las reliquias y sus fuentes.' : 'Gestiona tu legado personal y sincroniza tu bóveda sagrada.'}</p>
                 </div>
 
-                <div className="flex flex-wrap bg-white/5 p-1 rounded-xl border border-white/10 backdrop-blur-xl">
+                <div className="flex flex-wrap items-center justify-center gap-1 bg-white/5 p-1 rounded-2xl border border-white/10 backdrop-blur-xl w-full md:w-auto shadow-lg">
                     {user?.role === 'admin' && (
                         <>
                             <button
                                 onClick={() => setActiveTab('scrapers')}
-                                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${activeTab === 'scrapers' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'text-white/65 hover:text-white'}`}
+                                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 flex-1 sm:flex-initial min-w-[100px] sm:min-w-0 ${activeTab === 'scrapers' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'text-white/65 hover:text-white'}`}
                             >
                                 <Activity className="h-3.5 w-3.5" />
                                 Scrapers
                             </button>
                             <button
                                 onClick={() => setActiveTab('inventory')}
-                                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${activeTab === 'inventory' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'text-white/65 hover:text-white'}`}
+                                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 flex-1 sm:flex-initial min-w-[100px] sm:min-w-0 ${activeTab === 'inventory' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'text-white/65 hover:text-white'}`}
                             >
                                 <Package className="h-3.5 w-3.5" />
                                 Inventario
@@ -331,7 +331,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                     )}
                     <button
                         onClick={() => setActiveTab('system')}
-                        className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${activeTab === 'system' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'text-white/65 hover:text-white'}`}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 flex-1 sm:flex-initial min-w-[100px] sm:min-w-0 ${activeTab === 'system' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'text-white/65 hover:text-white'}`}
                     >
                         <Settings className="h-3.5 w-3.5" />
                         Ajustes
@@ -339,7 +339,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                     {user?.role === 'admin' && (
                         <button
                             onClick={() => setActiveTab('users')}
-                            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${activeTab === 'users' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'text-white/65 hover:text-white'}`}
+                            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 flex-1 sm:flex-initial min-w-[100px] sm:min-w-0 ${activeTab === 'users' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'text-white/65 hover:text-white'}`}
                         >
                             <Users className="h-4 w-4" />
                             Héroes
