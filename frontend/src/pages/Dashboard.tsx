@@ -37,7 +37,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
     const [manualSearchTerm, setManualSearchTerm] = React.useState('');
     const [searchResults, setSearchResults] = React.useState<any[]>([]);
     const [showOpportunitiesModal, setShowOpportunitiesModal] = React.useState(false);
-    const [showHallOfFameModal, setShowHallOfFameModal] = React.useState(false);
 
     // Mutations
     const revertMutation = useMutation({
@@ -227,13 +226,156 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                 </div>
             )}
 
-            {/* Dashboard Workspace */}
-            <div className="space-y-4 md:space-y-6">
-                <OracleCart />
+            {/* Salón de la Fama (Griales) - Renderizado Inline */}
+            <div className="space-y-4 pt-2">
+                <div className="flex items-center gap-2">
+                    <Award className="h-5 w-5 text-brand-primary animate-pulse" />
+                    <h4 className="text-xs font-black uppercase tracking-widest text-white/65">Salón de la Fama (Joyas de la Corona)</h4>
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* CATEGORÍA ORIGINS (MODERNO) */}
+                    <div className="relative overflow-hidden rounded-2xl md:rounded-[2.5rem] border border-brand-primary/10 bg-black/60 backdrop-blur-md p-5 md:p-6 shadow-[0_0_20px_-5px_rgba(0,163,255,0.05)] animate-in fade-in duration-500">
+                        <div className="absolute top-0 right-0 h-24 w-24 rounded-full bg-brand-primary/5 blur-2xl pointer-events-none"></div>
+                        
+                        <div className="flex items-center gap-2 mb-4">
+                            <span className="flex h-6 w-6 items-center justify-center rounded bg-brand-primary/10 text-brand-primary">
+                                <Zap className="h-3.5 w-3.5 fill-current" />
+                            </span>
+                            <h4 className="text-white font-black text-xs md:text-sm uppercase tracking-wider">Colección Origins <span className="text-brand-primary text-[10px]">(Moderna)</span></h4>
+                        </div>
 
-                {/* Logistics Console (Only for Admin) */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Top Valor Origins */}
+                            <div className="space-y-2">
+                                <h5 className="text-[9px] font-black uppercase tracking-widest text-white/60">Mayores Reliquias (Valor)</h5>
+                                <div className="space-y-2">
+                                    {hallOfFame?.origins?.top_value?.map((item) => (
+                                        <div key={item.id} className="group flex items-center gap-2.5 rounded-xl bg-white/[0.02] p-2 border border-white/5 hover:border-brand-primary/20 hover:bg-white/[0.04] transition-all duration-300">
+                                            <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-black/40">
+                                                <img src={item.image_url || undefined} alt="" className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <h5 className="truncate text-[11px] font-bold text-white/95 group-hover:text-brand-primary transition-colors">{item.name}</h5>
+                                                <div className="flex items-center justify-between text-[9px] font-black text-white/60">
+                                                    <span>PVP: {item.invested_value || item.purchase_price || 0}€</span>
+                                                    <span className="text-white font-black">{item.market_value}€</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {(!hallOfFame?.origins?.top_value || hallOfFame.origins.top_value.length === 0) && (
+                                        <div className="py-8 text-center text-white/60 uppercase font-black text-[8px] tracking-widest bg-white/[0.01] rounded-xl border border-white/5">Sin griales en colección</div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Top ROI Origins */}
+                            <div className="space-y-2">
+                                <h5 className="text-[9px] font-black uppercase tracking-widest text-white/60">Mayor Retorno (ROI)</h5>
+                                <div className="space-y-2">
+                                    {hallOfFame?.origins?.top_roi?.map((item) => (
+                                        <div key={item.id} className="group flex items-center gap-2.5 rounded-xl bg-white/[0.02] p-2 border border-white/5 hover:border-brand-primary/20 hover:bg-white/[0.04] transition-all duration-300">
+                                            <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-black/40">
+                                                <img src={item.image_url || undefined} alt="" className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <h5 className="truncate text-[11px] font-bold text-white/95 group-hover:text-brand-primary transition-colors">{item.name}</h5>
+                                                <div className="flex items-center justify-between text-[9px] font-black text-white/60">
+                                                    <span>ROI: <span className="text-green-500 font-black">+{item.roi_percentage || item.roi || 0}%</span></span>
+                                                    <span className="text-white font-black">{item.market_value}€</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {(!hallOfFame?.origins?.top_roi || hallOfFame.origins.top_roi.length === 0) && (
+                                        <div className="py-8 text-center text-white/60 uppercase font-black text-[8px] tracking-widest bg-white/[0.01] rounded-xl border border-white/5">Sin revalorizaciones</div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* CATEGORÍA VINTAGE (RETRO) */}
+                    <div className="relative overflow-hidden rounded-2xl md:rounded-[2.5rem] border border-amber-500/10 bg-black/60 backdrop-blur-md p-5 md:p-6 shadow-[0_0_20px_-5px_rgba(245,158,11,0.05)] animate-in fade-in duration-500">
+                        <div className="absolute top-0 right-0 h-24 w-24 rounded-full bg-amber-500/5 blur-2xl pointer-events-none"></div>
+                        
+                        <div className="flex items-center gap-2 mb-4">
+                            <span className="flex h-6 w-6 items-center justify-center rounded bg-amber-500/10 text-amber-500">
+                                <Zap className="h-3.5 w-3.5 fill-amber-500" />
+                            </span>
+                            <h4 className="text-white font-black text-xs md:text-sm uppercase tracking-wider">Colección Vintage <span className="text-amber-500 text-[10px]">(Retro 80s)</span></h4>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Top Valor Vintage */}
+                            <div className="space-y-2">
+                                <h5 className="text-[9px] font-black uppercase tracking-widest text-amber-500/60">Mayores Reliquias (Valor)</h5>
+                                <div className="space-y-2">
+                                    {hallOfFame?.vintage?.top_value?.map((item) => (
+                                        <div key={item.id} className="group flex items-center gap-2.5 rounded-xl bg-white/[0.02] p-2 border border-white/5 hover:border-amber-500/20 hover:bg-white/[0.04] transition-all duration-300">
+                                            <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-black/40">
+                                                <img src={item.image_url || undefined} alt="" className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <h5 className="truncate text-[11px] font-bold text-white/95 group-hover:text-amber-500 transition-colors">{item.name}</h5>
+                                                <div className="flex items-center justify-between text-[9px] font-black text-white/60">
+                                                    <span>Original: {item.invested_value || item.purchase_price || 0}€</span>
+                                                    <span className="text-amber-500 font-extrabold">{item.market_value}€</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {(!hallOfFame?.vintage?.top_value || hallOfFame.vintage.top_value.length === 0) && (
+                                        <div className="py-8 text-center text-white/60 uppercase font-black text-[8px] tracking-widest bg-white/[0.01] rounded-xl border border-white/5">Sin griales en colección</div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Top ROI Vintage */}
+                            <div className="space-y-2">
+                                <h5 className="text-[9px] font-black uppercase tracking-widest text-amber-500/60">Mayor Retorno (ROI)</h5>
+                                <div className="space-y-2">
+                                    {hallOfFame?.vintage?.top_roi?.map((item) => (
+                                        <div key={item.id} className="group flex items-center gap-2.5 rounded-xl bg-white/[0.02] p-2 border border-white/5 hover:border-amber-500/20 hover:bg-white/[0.04] transition-all duration-300">
+                                            <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-black/40">
+                                                <img src={item.image_url || undefined} alt="" className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <h5 className="truncate text-[11px] font-bold text-white/95 group-hover:text-amber-500 transition-colors">{item.name}</h5>
+                                                <div className="flex items-center justify-between text-[9px] font-black text-white/60">
+                                                    <span>ROI: <span className="text-green-500 font-black">+{item.roi_percentage || item.roi || 0}%</span></span>
+                                                    <span className="text-amber-500 font-extrabold">{(item.market_value)}€</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {(!hallOfFame?.vintage?.top_roi || hallOfFame.vintage.top_roi.length === 0) && (
+                                        <div className="py-8 text-center text-white/60 uppercase font-black text-[8px] tracking-widest bg-white/[0.01] rounded-xl border border-white/5">Sin revalorizaciones</div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Dashboard Workspace */}
+            <div className="space-y-4 md:space-y-6 mt-6">
+                {/* Botón Destacado: Radar de Oportunidades */}
+                <button
+                    onClick={() => setShowOpportunitiesModal(true)}
+                    className="w-full flex items-center justify-center gap-3 rounded-2xl border border-brand-primary/20 bg-brand-primary/10 hover:bg-brand-primary/20 p-6 text-brand-primary transition-all duration-300 shadow-lg hover:scale-[1.01] active:scale-[0.99]"
+                >
+                    <Target className="h-7 w-7 text-brand-primary animate-pulse" />
+                    <div className="text-left">
+                        <span className="block text-[10px] font-black uppercase tracking-widest text-brand-primary/70">Radar de Capturas y Simulaciones</span>
+                        <span className="text-sm font-bold text-white">Radar de Oportunidades</span>
+                    </div>
+                </button>
+
+                {/* Logistics Console (Only for Admin) - Rendered at the absolute bottom */}
                 {isAdmin && (
-                    <div className="space-y-4">
+                    <div className="space-y-4 pt-4 border-t border-white/5">
                         <h4 className="text-xs font-black uppercase tracking-widest text-white/65">Actividad Logística</h4>
                         <div className="rounded-2xl md:rounded-[2.5rem] border border-white/5 bg-black/25 backdrop-blur-md p-4 md:p-6 h-[300px] overflow-y-auto custom-scrollbar">
                             <div className="space-y-2">
@@ -268,36 +410,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                         </div>
                     </div>
                 )}
-
-                {/* Dashboard Action Panels */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-                    <button
-                        onClick={() => setShowOpportunitiesModal(true)}
-                        className="flex items-center justify-center gap-3 rounded-2xl border border-brand-primary/20 bg-brand-primary/10 hover:bg-brand-primary/20 p-6 text-brand-primary transition-all duration-300 shadow-lg hover:scale-[1.02] active:scale-[0.98]"
-                    >
-                        <Target className="h-6 w-6 text-brand-primary" />
-                        <div className="text-left">
-                            <span className="block text-[10px] font-black uppercase tracking-widest text-brand-primary/70">Radar de Capturas</span>
-                            <span className="text-sm font-bold text-white">Radar de Oportunidades</span>
-                        </div>
-                    </button>
-                    <button
-                        onClick={() => setShowHallOfFameModal(true)}
-                        className="flex items-center justify-center gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/10 hover:bg-amber-500/20 p-6 text-amber-500 transition-all duration-300 shadow-lg hover:scale-[1.02] active:scale-[0.98]"
-                    >
-                        <Award className="h-6 w-6 text-amber-500" />
-                        <div className="text-left">
-                            <span className="block text-[10px] font-black uppercase tracking-widest text-amber-500/70">Griales de Colección</span>
-                            <span className="text-sm font-bold text-white">Salón de la Fama</span>
-                        </div>
-                    </button>
-                </div>
             </div>
 
             {/* OVERLAY MODAL: Oportunidades */}
             {showOpportunitiesModal && (
                 <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/90 backdrop-blur-xl p-2 md:p-10 animate-in fade-in duration-300">
-                    <div className="relative w-full max-w-5xl rounded-[3rem] border border-white/10 bg-gradient-to-br from-white/[0.05] to-transparent overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+                    <div className="relative w-full max-w-7xl rounded-[3rem] border border-white/10 bg-gradient-to-br from-white/[0.05] to-transparent overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
                         {/* Header */}
                         <div className="p-6 border-b border-white/5 flex items-center justify-between">
                             <div className="flex items-center gap-3">
@@ -318,36 +436,85 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                         </div>
 
                         {/* List content */}
-                        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
-                            {!isAdmin ? (
-                                // Guardian view
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-white">
-                                    {topDeals?.map((deal) => (
-                                        <div key={deal.id} className="border-b border-white/[0.03] last:border-0 hover:bg-white/[0.02] p-4 rounded-2xl transition-all">
-                                            <div className="flex items-center gap-3">
-                                                <a href={deal.url} target="_blank" rel="noopener noreferrer" className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-black/40 border border-white/5">
-                                                    {deal.image_url ? (
-                                                        <img src={deal.image_url || undefined} alt="" className="h-full w-full object-cover" />
-                                                    ) : (
-                                                        <div className="flex h-full w-full items-center justify-center bg-brand-primary/5">
-                                                            <ShoppingBag className="h-5 w-5 text-brand-primary/20" />
-                                                        </div>
-                                                    )}
-                                                </a>
+                        <div className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar space-y-6">
+                            {/* Carrito Ficticio Integrado Verticalmente en la parte superior */}
+                            <div className="border-b border-white/10 pb-6 mb-6">
+                                <OracleCart />
+                            </div>
 
-                                                <div className="flex flex-1 items-center justify-between gap-4 overflow-hidden">
-                                                    <div className="min-w-0 flex-1 space-y-0.5">
-                                                        <a href={deal.url} target="_blank" rel="noopener noreferrer" className="truncate text-sm font-bold text-white/95 hover:text-brand-primary transition-colors block">
-                                                            {deal.product_name}
-                                                        </a>
-                                                        <span className="text-[10px] font-black uppercase tracking-widest text-white/60">{deal.shop_name}</span>
+                            <div className="space-y-4">
+                                <h4 className="text-xs font-black uppercase tracking-widest text-brand-primary flex items-center gap-2">
+                                    <Target className="h-4 w-4" />
+                                    {isAdmin ? 'Oportunidades de Capturas Bajo Seguimiento' : 'Oportunidades de Captura'}
+                                </h4>
+
+                                {!isAdmin ? (
+                                    // Guardian view
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-white">
+                                        {topDeals?.map((deal) => (
+                                            <div key={deal.id} className="border-b border-white/[0.03] last:border-0 hover:bg-white/[0.02] p-4 rounded-2xl transition-all">
+                                                <div className="flex items-center gap-3">
+                                                    <a href={deal.url} target="_blank" rel="noopener noreferrer" className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-black/40 border border-white/5">
+                                                        {deal.image_url ? (
+                                                            <img src={deal.image_url || undefined} alt="" className="h-full w-full object-cover" />
+                                                        ) : (
+                                                            <div className="flex h-full w-full items-center justify-center bg-brand-primary/5">
+                                                                <ShoppingBag className="h-5 w-5 text-brand-primary/20" />
+                                                            </div>
+                                                        )}
+                                                    </a>
+
+                                                    <div className="flex flex-1 items-center justify-between gap-4 overflow-hidden">
+                                                        <div className="min-w-0 flex-1 space-y-0.5">
+                                                            <a href={deal.url} target="_blank" rel="noopener noreferrer" className="truncate text-sm font-bold text-white/95 hover:text-brand-primary transition-colors block">
+                                                                {deal.product_name}
+                                                            </a>
+                                                            <span className="text-[10px] font-black uppercase tracking-widest text-white/60">{deal.shop_name}</span>
+                                                        </div>
+
+                                                        <div className="flex items-center gap-3 shrink-0">
+                                                            <div className="text-right">
+                                                                <div className="text-xs font-black text-brand-primary">{deal.landing_price} € <span className="text-[8px] opacity-40">LANDED</span></div>
+                                                                <div className="text-[10px] font-bold text-white/60">{deal.price} € <span className="text-[8px] opacity-50">LIST</span></div>
+                                                            </div>
+                                                            <button
+                                                                onClick={() => addToCart({
+                                                                    id: deal.id.toString(),
+                                                                    product_name: deal.product_name,
+                                                                    shop_name: deal.shop_name,
+                                                                    price: deal.price,
+                                                                    image_url: deal.image_url
+                                                                })}
+                                                                className="p-2 rounded-xl bg-white/5 hover:bg-brand-primary/20 text-white/70 hover:text-brand-primary transition-all"
+                                                                title="Simular en Oracle Cart"
+                                                            >
+                                                                <ShoppingCart className="h-4 w-4" />
+                                                            </button>
+                                                        </div>
                                                     </div>
-
-                                                    <div className="flex items-center gap-3 shrink-0">
-                                                        <div className="text-right">
-                                                            <div className="text-xs font-black text-brand-primary">{deal.landing_price} € <span className="text-[8px] opacity-40">LANDED</span></div>
-                                                            <div className="text-[10px] font-bold text-white/60">{deal.price} € <span className="text-[8px] opacity-50">LIST</span></div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {(!topDeals || topDeals.length === 0) && (
+                                            <div className="col-span-2 py-20 text-center text-white/60 uppercase font-black text-[10px] tracking-widest">Nada en el radar local</div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    // Admin view
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {topDeals?.map((deal) => (
+                                            <div key={deal.id} className="p-4 border border-white/5 bg-white/[0.01] hover:bg-white/[0.02] rounded-2xl transition-all">
+                                                <div className="flex items-center justify-between gap-4">
+                                                    <div className="flex items-center gap-3 min-w-0">
+                                                        <a href={deal.url} target="_blank" rel="noopener noreferrer" className="h-10 w-10 shrink-0 rounded-lg bg-white/5 overflow-hidden block">
+                                                            <img src={deal.image_url || undefined} alt="" className="h-full w-full object-cover" />
+                                                        </a>
+                                                        <div className="min-w-0">
+                                                            <a href={deal.url} target="_blank" rel="noopener noreferrer" className="truncate text-xs font-bold text-white block hover:text-brand-primary transition-colors">{deal.product_name}</a>
+                                                            <p className="text-[10px] font-black text-white/60 uppercase">{deal.shop_name} - {deal.price}€</p>
                                                         </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
                                                         <button
                                                             onClick={() => addToCart({
                                                                 id: deal.id.toString(),
@@ -356,246 +523,62 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                                                                 price: deal.price,
                                                                 image_url: deal.image_url
                                                             })}
-                                                            className="p-2 rounded-xl bg-white/5 hover:bg-brand-primary/20 text-white/70 hover:text-brand-primary transition-all"
+                                                            className="p-2 rounded-lg bg-white/5 text-white/70 hover:bg-brand-primary/20 hover:text-brand-primary transition-all"
                                                             title="Simular en Oracle Cart"
                                                         >
-                                                            <ShoppingCart className="h-4 w-4" />
+                                                            <ShoppingCart className="h-3.5 w-3.5" />
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => {
+                                                                if (confirm("⚠️ ¿Estás seguro de que deseas desvincular esta oferta del seguimiento? Volverá al estado sin procesar en el Purgatorio.")) {
+                                                                    unlinkMutation.mutate(deal.id);
+                                                                }
+                                                            }} 
+                                                            className="p-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all"
+                                                            title="Desvincular"
+                                                        >
+                                                            <Trash2 className="h-3.5 w-3.5" />
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => setSelectedRelinkId(selectedRelinkId === deal.id ? null : deal.id)} 
+                                                            className="p-2 rounded-lg bg-brand-primary/10 text-brand-primary hover:bg-brand-primary hover:text-white transition-all"
+                                                            title="Re-vincular"
+                                                        >
+                                                            <Link className="h-3.5 w-3.5" />
                                                         </button>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                    {(!topDeals || topDeals.length === 0) && (
-                                        <div className="col-span-2 py-20 text-center text-white/60 uppercase font-black text-[10px] tracking-widest">Nada en el radar local</div>
-                                    )}
-                                </div>
-                            ) : (
-                                // Admin view
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {topDeals?.map((deal) => (
-                                        <div key={deal.id} className="p-4 border border-white/5 bg-white/[0.01] hover:bg-white/[0.02] rounded-2xl transition-all">
-                                            <div className="flex items-center justify-between gap-4">
-                                                <div className="flex items-center gap-3 min-w-0">
-                                                    <a href={deal.url} target="_blank" rel="noopener noreferrer" className="h-10 w-10 shrink-0 rounded-lg bg-white/5 overflow-hidden block">
-                                                        <img src={deal.image_url || undefined} alt="" className="h-full w-full object-cover" />
-                                                    </a>
-                                                    <div className="min-w-0">
-                                                        <a href={deal.url} target="_blank" rel="noopener noreferrer" className="truncate text-xs font-bold text-white block hover:text-brand-primary transition-colors">{deal.product_name}</a>
-                                                        <p className="text-[10px] font-black text-white/60 uppercase">{deal.shop_name} - {deal.price}€</p>
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <button
-                                                        onClick={() => addToCart({
-                                                            id: deal.id.toString(),
-                                                            product_name: deal.product_name,
-                                                            shop_name: deal.shop_name,
-                                                            price: deal.price,
-                                                            image_url: deal.image_url
-                                                        })}
-                                                        className="p-2 rounded-lg bg-white/5 text-white/70 hover:bg-brand-primary/20 hover:text-brand-primary transition-all"
-                                                        title="Simular en Oracle Cart"
-                                                    >
-                                                        <ShoppingCart className="h-3.5 w-3.5" />
-                                                    </button>
-                                                    <button 
-                                                        onClick={() => {
-                                                            if (confirm("⚠️ ¿Estás seguro de que deseas desvincular esta oferta del seguimiento? Volverá al estado sin procesar en el Purgatorio.")) {
-                                                                unlinkMutation.mutate(deal.id);
-                                                            }
-                                                        }} 
-                                                        className="p-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all"
-                                                        title="Desvincular"
-                                                    >
-                                                        <Trash2 className="h-3.5 w-3.5" />
-                                                    </button>
-                                                    <button 
-                                                        onClick={() => setSelectedRelinkId(selectedRelinkId === deal.id ? null : deal.id)} 
-                                                        className="p-2 rounded-lg bg-brand-primary/10 text-brand-primary hover:bg-brand-primary hover:text-white transition-all"
-                                                        title="Re-vincular"
-                                                    >
-                                                        <Link className="h-3.5 w-3.5" />
-                                                    </button>
-                                                </div>
-                                            </div>
 
-                                            {/* Relink Drawer */}
-                                            {selectedRelinkId === deal.id && (
-                                                <div className="mt-4 space-y-3 bg-black/40 p-3 rounded-xl border border-white/5 animate-in slide-in-from-top-2">
-                                                    <input
-                                                        type="text"
-                                                        placeholder="Buscar reliquia para vincular..."
-                                                        className="w-full rounded-lg bg-white/5 border border-white/10 p-2 text-xs text-white"
-                                                        value={manualSearchTerm}
-                                                        onChange={(e) => setManualSearchTerm(e.target.value)}
-                                                    />
-                                                    <div className="max-h-32 overflow-y-auto space-y-1">
-                                                        {searchResults?.map((p) => (
-                                                            <button 
-                                                                key={p.id} 
-                                                                onClick={() => relinkMutation.mutate({ offerId: deal.id, productId: p.id })} 
-                                                                className="w-full text-left p-2 text-[10px] text-white/70 hover:text-white hover:bg-white/5 rounded transition-colors"
-                                                            >
-                                                                {p.name}
-                                                            </button>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))}
-                                    {(!topDeals || topDeals.length === 0) && (
-                                        <div className="col-span-2 py-20 text-center text-white/60 uppercase font-black text-[10px] tracking-widest">Nada en el radar local</div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* OVERLAY MODAL: Salón de la Fama */}
-            {showHallOfFameModal && (
-                <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/90 backdrop-blur-xl p-2 md:p-10 animate-in fade-in duration-300">
-                    <div className="relative w-full max-w-5xl rounded-[3rem] border border-white/10 bg-gradient-to-br from-white/[0.05] to-transparent overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
-                        {/* Header */}
-                        <div className="p-6 border-b border-white/5 flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <Award className="h-6 w-6 text-brand-primary" />
-                                <h3 className="text-white font-black text-lg uppercase tracking-wider">Salón de la Fama (Griales)</h3>
-                            </div>
-                            <button onClick={() => setShowHallOfFameModal(false)} className="h-10 w-10 flex items-center justify-center rounded-xl bg-white/5 hover:bg-white/10 transition-colors">
-                                <X className="h-5 w-5 text-white/70" />
-                            </button>
-                        </div>
-
-                        {/* Content */}
-                        <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                {/* CATEGORÍA ORIGINS (MODERNO) */}
-                                <div className="relative overflow-hidden rounded-2xl md:rounded-[2.5rem] border border-brand-primary/10 bg-black/60 backdrop-blur-md p-5 md:p-6 shadow-[0_0_20px_-5px_rgba(0,163,255,0.05)]">
-                                    <div className="absolute top-0 right-0 h-24 w-24 rounded-full bg-brand-primary/5 blur-2xl pointer-events-none"></div>
-                                    
-                                    <div className="flex items-center gap-2 mb-4">
-                                        <span className="flex h-6 w-6 items-center justify-center rounded bg-brand-primary/10 text-brand-primary">
-                                            <Zap className="h-3.5 w-3.5 fill-current" />
-                                        </span>
-                                        <h4 className="text-white font-black text-xs md:text-sm uppercase tracking-wider">Colección Origins <span className="text-brand-primary text-[10px]">(Moderna)</span></h4>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        {/* Top Valor Origins */}
-                                        <div className="space-y-2">
-                                            <h5 className="text-[9px] font-black uppercase tracking-widest text-white/60">Mayores Reliquias (Valor)</h5>
-                                            <div className="space-y-2">
-                                                {hallOfFame?.origins?.top_value?.map((item) => (
-                                                    <div key={item.id} className="group flex items-center gap-2.5 rounded-xl bg-white/[0.02] p-2 border border-white/5 hover:border-brand-primary/20 hover:bg-white/[0.04] transition-all duration-300">
-                                                        <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-black/40">
-                                                            <img src={item.image_url || undefined} alt="" className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                                                        </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <h5 className="truncate text-[11px] font-bold text-white/95 group-hover:text-brand-primary transition-colors">{item.name}</h5>
-                                                            <div className="flex items-center justify-between text-[9px] font-black text-white/60">
-                                                                <span>PVP: {item.invested_value || item.purchase_price || 0}€</span>
-                                                                <span className="text-white font-black">{item.market_value}€</span>
-                                                            </div>
+                                                {/* Relink Drawer */}
+                                                {selectedRelinkId === deal.id && (
+                                                    <div className="mt-4 space-y-3 bg-black/40 p-3 rounded-xl border border-white/5 animate-in slide-in-from-top-2">
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Buscar reliquia para vincular..."
+                                                            className="w-full rounded-lg bg-white/5 border border-white/10 p-2 text-xs text-white"
+                                                            value={manualSearchTerm}
+                                                            onChange={(e) => setManualSearchTerm(e.target.value)}
+                                                        />
+                                                        <div className="max-h-32 overflow-y-auto space-y-1">
+                                                            {searchResults?.map((p) => (
+                                                                <button 
+                                                                    key={p.id} 
+                                                                    onClick={() => relinkMutation.mutate({ offerId: deal.id, productId: p.id })} 
+                                                                    className="w-full text-left p-2 text-[10px] text-white/70 hover:text-white hover:bg-white/5 rounded transition-colors"
+                                                                >
+                                                                    {p.name}
+                                                                </button>
+                                                            ))}
                                                         </div>
                                                     </div>
-                                                ))}
-                                                {(!hallOfFame?.origins?.top_value || hallOfFame.origins.top_value.length === 0) && (
-                                                    <div className="py-8 text-center text-white/60 uppercase font-black text-[8px] tracking-widest bg-white/[0.01] rounded-xl border border-white/5">Sin griales en colección</div>
                                                 )}
                                             </div>
-                                        </div>
-
-                                        {/* Top ROI Origins */}
-                                        <div className="space-y-2">
-                                            <h5 className="text-[9px] font-black uppercase tracking-widest text-white/60">Mayor Retorno (ROI)</h5>
-                                            <div className="space-y-2">
-                                                {hallOfFame?.origins?.top_roi?.map((item) => (
-                                                    <div key={item.id} className="group flex items-center gap-2.5 rounded-xl bg-white/[0.02] p-2 border border-white/5 hover:border-brand-primary/20 hover:bg-white/[0.04] transition-all duration-300">
-                                                        <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-black/40">
-                                                            <img src={item.image_url || undefined} alt="" className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                                                        </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <h5 className="truncate text-[11px] font-bold text-white/95 group-hover:text-brand-primary transition-colors">{item.name}</h5>
-                                                            <div className="flex items-center justify-between text-[9px] font-black text-white/60">
-                                                                <span>ROI: <span className="text-green-500 font-black">+{item.roi_percentage || item.roi || 0}%</span></span>
-                                                                <span className="text-white font-black">{item.market_value}€</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                                {(!hallOfFame?.origins?.top_roi || hallOfFame.origins.top_roi.length === 0) && (
-                                                    <div className="py-8 text-center text-white/60 uppercase font-black text-[8px] tracking-widest bg-white/[0.01] rounded-xl border border-white/5">Sin revalorizaciones</div>
-                                                )}
-                                            </div>
-                                        </div>
+                                        ))}
+                                        {(!topDeals || topDeals.length === 0) && (
+                                            <div className="col-span-2 py-20 text-center text-white/60 uppercase font-black text-[10px] tracking-widest">Nada en el radar local</div>
+                                        )}
                                     </div>
-                                </div>
-
-                                {/* CATEGORÍA VINTAGE (RETRO) */}
-                                <div className="relative overflow-hidden rounded-2xl md:rounded-[2.5rem] border border-amber-500/10 bg-black/60 backdrop-blur-md p-5 md:p-6 shadow-[0_0_20px_-5px_rgba(245,158,11,0.05)]">
-                                    <div className="absolute top-0 right-0 h-24 w-24 rounded-full bg-amber-500/5 blur-2xl pointer-events-none"></div>
-                                    
-                                    <div className="flex items-center gap-2 mb-4">
-                                        <span className="flex h-6 w-6 items-center justify-center rounded bg-amber-500/10 text-amber-500">
-                                            <Zap className="h-3.5 w-3.5 fill-amber-500" />
-                                        </span>
-                                        <h4 className="text-white font-black text-xs md:text-sm uppercase tracking-wider">Colección Vintage <span className="text-amber-500 text-[10px]">(Retro 80s)</span></h4>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        {/* Top Valor Vintage */}
-                                        <div className="space-y-2">
-                                            <h5 className="text-[9px] font-black uppercase tracking-widest text-amber-500/60">Mayores Reliquias (Valor)</h5>
-                                            <div className="space-y-2">
-                                                {hallOfFame?.vintage?.top_value?.map((item) => (
-                                                    <div key={item.id} className="group flex items-center gap-2.5 rounded-xl bg-white/[0.02] p-2 border border-white/5 hover:border-amber-500/20 hover:bg-white/[0.04] transition-all duration-300">
-                                                        <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-black/40">
-                                                            <img src={item.image_url || undefined} alt="" className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                                                        </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <h5 className="truncate text-[11px] font-bold text-white/95 group-hover:text-amber-500 transition-colors">{item.name}</h5>
-                                                            <div className="flex items-center justify-between text-[9px] font-black text-white/60">
-                                                                <span>Original: {item.invested_value || item.purchase_price || 0}€</span>
-                                                                <span className="text-amber-500 font-extrabold">{item.market_value}€</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                                {(!hallOfFame?.vintage?.top_value || hallOfFame.vintage.top_value.length === 0) && (
-                                                    <div className="py-8 text-center text-white/60 uppercase font-black text-[8px] tracking-widest bg-white/[0.01] rounded-xl border border-white/5">Sin griales en colección</div>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        {/* Top ROI Vintage */}
-                                        <div className="space-y-2">
-                                            <h5 className="text-[9px] font-black uppercase tracking-widest text-amber-500/60">Mayor Retorno (ROI)</h5>
-                                            <div className="space-y-2">
-                                                {hallOfFame?.vintage?.top_roi?.map((item) => (
-                                                    <div key={item.id} className="group flex items-center gap-2.5 rounded-xl bg-white/[0.02] p-2 border border-white/5 hover:border-amber-500/20 hover:bg-white/[0.04] transition-all duration-300">
-                                                        <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-black/40">
-                                                            <img src={item.image_url || undefined} alt="" className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                                                        </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <h5 className="truncate text-[11px] font-bold text-white/95 group-hover:text-amber-500 transition-colors">{item.name}</h5>
-                                                            <div className="flex items-center justify-between text-[9px] font-black text-white/60">
-                                                                <span>ROI: <span className="text-green-500 font-black">+{item.roi_percentage || item.roi || 0}%</span></span>
-                                                                <span className="text-amber-500 font-extrabold">{(item.market_value)}€</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                                {(!hallOfFame?.vintage?.top_roi || hallOfFame.vintage.top_roi.length === 0) && (
-                                                    <div className="py-8 text-center text-white/60 uppercase font-black text-[8px] tracking-widest bg-white/[0.01] rounded-xl border border-white/5">Sin revalorizaciones</div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                                )}
                             </div>
                         </div>
                     </div>
