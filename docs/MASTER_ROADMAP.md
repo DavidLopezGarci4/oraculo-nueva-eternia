@@ -400,6 +400,12 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
     * *Modal Vintage:* Implementación del algoritmo inteligente `vintageOracleSuggestions` que filtra por `is_vintage === true`, y fallback a listado puro de `/api/products?is_vintage=true`.
   - [x] **Ordenación Dinámica e Inteligente**: Modificado el catálogo de **Eternia Vintage** para ordenar los muñecos de forma descendente según el volumen de ofertas acumuladas en el Purgatorio esperando vinculación, con fallback ascendente por ID interno de base de datos para los empates.
 
+- [x] **Phase 63: Miscelánea Vintage, Rediseño de Métricas y Manual de Usuario (03/06/2026)**
+  - [x] **Sección de Miscelánea Vintage (Lotes/Varios)**: Añadido modelo `VintageMiscellaneousModel`, APIs de clasificación, listado y reversión en el backend, y pestaña dedicada en Eternia Vintage.
+  - [x] **Rediseño de Métricas y Modal**: Symmetrizados los botones de acción del modal, removido el icono de báscula/diana del Grado de Conservación e integrada la guía interactiva desplegable de la escala C de conservación.
+  - [x] **Cálculo de ROI Real y Valor Ajustado**: Tarjetas de la colección actualizadas para mostrar el valor ajustado y el ROI real con plusvalías/depreciaciones.
+  - [x] **Manual de Usuario Interactivo**: Creada la carpeta `docs/manual_usuario/` con 8 guías de usuario estructuradas detallando cada apartado de la aplicación.
+
 ---
 
 ## ✅ Plan de Verificación

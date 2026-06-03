@@ -44,9 +44,9 @@ Implementación de lógica de negocio siguiendo **Clean Architecture**.
   - `routers/auth.py` — `/api/auth/*` (login, register, reset-password). Login devuelve `access_token` JWT.
   - `routers/scrapers.py` — `/api/scrapers/*` (status, logs, run, stop) + `run_scraper_task`.
   - `routers/admin.py` — `/api/admin/*` (users CRUD, devices, nexus sync, anomaly, reset-smartmatches).
-  - `routers/products.py` — `/api/products/*`, `/api/auctions/*`, `/api/market/*`, `/api/intelligence/*`, `/api/wallapop/preview`.
+  - `routers/products.py` — `/api/products/*`, `/api/auctions/*`, `/api/market/*`, `/api/intelligence/*`, `/api/wallapop/preview`, `/api/vintage/miscellaneous`.
   - `routers/collection.py` — `/api/collection/*`, `/api/guardian/export/*`.
-  - `routers/purgatory.py` — `/api/purgatory/*`, `/api/offers/*/unlink|relink`.
+  - `routers/purgatory.py` — `/api/purgatory/*`, `/api/offers/*/unlink|relink`, `/api/purgatory/{pending_id}/miscellaneous`, `/api/vintage/miscellaneous/revert/{item_id}`.
   - `routers/dashboard.py` — `/api/dashboard/*`.
   - `routers/users.py` — `/api/users/*` (settings, location), `/api/wallapop/import`, `/api/radar/p2p-opportunities`.
   - `routers/system.py` — `/api/system/audit`.
@@ -59,7 +59,7 @@ Implementación de lógica de negocio siguiendo **Clean Architecture**.
 
 Ecosistema moderno en React.
 
-- **src/pages/**: Vistas principales (`Dashboard`, `Catalog`, `Fortress`, `Purgatory`).
+- **src/pages/**: Vistas principales (`Dashboard`, `Catalog`, `Fortress`, `Purgatory`, `VintageMiscellaneous`).
 - **src/components/**: Componentes atómicos y tácticos (`ItemCard`, `ScraperLogs`).
 - **src/api/**: Clientes para la comunicación con el FastAPI Broker.
 - **App.tsx**: Nodo maestro de estado y gestión reactiva de identidad (User State Lifting).
@@ -154,7 +154,12 @@ Ejecutar: `python -m pytest tests/test_api_*.py -v` (25 tests, 0 fallos)
   - Segregación estricta de Drawer y Modal en Purgatorio.tsx con sugerencias vintage inteligentes (vintageOracleSuggestions).
   - Implementación de conteo en memoria optimizado con token index (get_purgatory_counts) para inyectar purgatory_match_count en API de productos.
   - Ordenación jerárquica en Eternia Vintage: 1º prioridad de ofertas activas, 2º cantidad de ofertas pendientes en Purgatorio (descendente), y 3º fallback por ID de base de datos (ascendente).
+- **Phase 64**: Miscelánea Vintage, Rediseño de Métricas y Manual de Usuario (03/06/2026):
+  - Añadido modelo `VintageMiscellaneousModel` y endpoints de desvío a Miscelánea, listado y reversión en el backend.
+  - Creada página `VintageMiscellaneous.tsx` con listado de lotes e integración de reversión.
+  - Rediseñados botones del modal de colección para ser simétricos e integrada la guía interactiva desplegable de la escala C de conservación.
+  - Creadas 8 guías de usuario estructuradas e independientes en la carpeta `docs/manual_usuario/`.
 
 ---
 
-*Última actualización: 2026-05-27 - Phase 63: Segregación Estricta de Catálogos y Ordenación por Purgatorio.*
+*Última actualización: 2026-06-03 - Phase 64: Miscelánea Vintage, Rediseño de Métricas y Manual de Usuario.*

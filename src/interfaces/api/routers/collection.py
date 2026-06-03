@@ -68,6 +68,7 @@ async def get_collection(user_id: int, is_vintage: bool = False):
                     figure_id=product.figure_id,
                     variant_name=product.variant_name,
                     purchase_price=collection_item.purchase_price or 0.0,
+                    retail_price=product.retail_price or 0.0,
                     market_value=round(market_val, 2),
                     avg_market_price=product.avg_market_price or 0.0,
                     p25_price=product.p25_price or 0.0,

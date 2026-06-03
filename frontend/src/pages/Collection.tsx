@@ -7,6 +7,7 @@ import {
     Check,
     Trophy,
     TrendingUp,
+    TrendingDown,
     Euro,
     Star,
     ShoppingCart,
@@ -27,6 +28,45 @@ import { getOptimizedImageUrl } from '../utils/imageUtils';
 import CollectionItemDetailModal from '../components/CollectionItemDetailModal';
 import { updateProduct, deleteProduct } from '../api/admin';
 import type { Hero } from '../api/admin';
+
+const getAdjustedStats = (product: Product, isOwned: boolean) => {
+    const baseValue = product.market_value || 0;
+    if (!isOwned) {
+        const msrp = product.retail_price || 0;
+        const roi = msrp > 0 ? ((baseValue - msrp) / msrp) * 100 : 0;
+        return {
+            adjustedValue: baseValue,
+            roi: roi,
+            condition: '',
+            grading: 0
+        };
+    }
+
+    const cond = product.condition || 'New';
+    const grad = product.grading !== undefined ? product.grading : 10.0;
+    
+    let condMult = 0.75;
+    if (cond.toUpperCase() === 'MOC') condMult = 1.0;
+    else if (cond.toUpperCase() === 'LOOSE') condMult = 0.5;
+
+    const gradFactor = Math.max(0.10, 1.0 - ((10.0 - grad) * 0.04));
+    const adjustedValue = baseValue * condMult * gradFactor;
+
+    let roi = 0;
+    if (product.purchase_price && product.purchase_price > 0) {
+        roi = ((adjustedValue - product.purchase_price) / product.purchase_price) * 100;
+    } else {
+        const msrp = product.retail_price || 0;
+        roi = msrp > 0 ? ((adjustedValue - msrp) / msrp) * 100 : 0;
+    }
+
+    return {
+        adjustedValue,
+        roi,
+        condition: cond,
+        grading: grad
+    };
+};
 
 interface CollectionProps {
     searchQuery?: string;
@@ -291,7 +331,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                     >
                         {(activeTab === 'owned' ? ownedItems : wishItems).map((product) => {
                             const isGrail = product.is_grail;
-                            const roi = product.grail_score || 0;
+                            const { adjustedValue, roi, condition, grading } = getAdjustedStats(product, activeTab === 'owned');
 
                             return (
                                 <div
@@ -350,17 +390,27 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                                             </h3>
                                         </div>
 
-                                        <div className="flex items-center gap-1 sm:gap-1.5 pt-1 flex-nowrap overflow-hidden">
-                                            {product.market_value && product.market_value > 0 && (
+                                        <div className="flex flex-wrap items-center gap-1 sm:gap-1.5 pt-1">
+                                            {adjustedValue > 0 && (
                                                 <div className={`flex items-center gap-1 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl border font-black text-[8px] sm:text-[10px] whitespace-nowrap ${isGrail ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' : (isVintageOnly ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'bg-brand-primary/10 text-brand-primary border-brand-primary/20')}`}>
                                                     <Euro className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                                                    {product.market_value}€
+                                                    {adjustedValue.toFixed(2)}€
                                                 </div>
                                             )}
-                                            {roi > 0 && activeTab === 'owned' && (
-                                                <div className="flex items-center gap-1 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl bg-green-500/10 text-green-400 border border-green-500/20 font-black text-[8px] sm:text-[10px] whitespace-nowrap">
-                                        <TrendingUp className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                                                    +{roi}%
+                                            {roi !== 0 && (
+                                                <div className={`flex items-center gap-1 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl border font-black text-[8px] sm:text-[10px] whitespace-nowrap ${roi >= 0 ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
+                                                    {roi >= 0 ? <TrendingUp className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> : <TrendingDown className="h-2.5 w-2.5 sm:h-3 sm:w-3" />}
+                                                    {roi >= 0 ? '+' : ''}{roi.toFixed(1)}%
+                                                </div>
+                                            )}
+                                            {activeTab === 'owned' && (
+                                                <div className="flex items-center gap-1">
+                                                    <span className="px-1.5 py-0.5 rounded-md bg-white/5 border border-white/10 text-white/60 text-[7px] font-black uppercase tracking-wider">
+                                                        {condition}
+                                                    </span>
+                                                    <span className={`px-1.5 py-0.5 rounded-md text-[7px] font-black uppercase tracking-wider ${grading >= 9 ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-brand-primary/10 text-brand-primary border-brand-primary/20'}`}>
+                                                        {grading.toFixed(1)}
+                                                    </span>
                                                 </div>
                                             )}
                                         </div>

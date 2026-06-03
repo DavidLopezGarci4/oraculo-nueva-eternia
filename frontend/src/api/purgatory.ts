@@ -121,6 +121,36 @@ export const revertVintageItem = async (offerId: number) => {
     return response.data;
 };
 
+export interface VintageMiscellaneousItem {
+    id: number;
+    title: string;
+    url: string;
+    price: number;
+    currency: string;
+    shop_name: string;
+    image_url?: string | null;
+    condition: string;
+    grading?: number;
+    notes?: string;
+    added_at?: string;
+}
+
+export const matchMiscellaneousItem = async (pendingId: number) => {
+    const response = await axios.post(`${API_BASE}/purgatory/${pendingId}/miscellaneous`, {}, adminHeaders);
+    return response.data;
+};
+
+export const revertMiscellaneousItem = async (itemId: number) => {
+    const response = await axios.post(`${API_BASE}/vintage/miscellaneous/revert/${itemId}`, {}, adminHeaders);
+    return response.data;
+};
+
+export const getMiscellaneousItems = async (): Promise<VintageMiscellaneousItem[]> => {
+    const response = await axios.get(`${API_BASE}/vintage/miscellaneous`, adminHeaders);
+    return response.data;
+};
+
+
 export interface WallapopIpLog {
     id: number;
     ip_address: string;

@@ -16,7 +16,7 @@ import {
     X,
     History
 } from 'lucide-react';
-import { getPurgatory, matchItem, discardItem, discardItemsBulk, matchVintageItem } from '../api/purgatory';
+import { getPurgatory, matchItem, discardItem, discardItemsBulk, matchVintageItem, matchMiscellaneousItem } from '../api/purgatory';
 
 import QuickPreviewModal from '../components/QuickPreviewModal';
 import PowerSwordLoader from '../components/ui/PowerSwordLoader';
@@ -222,6 +222,39 @@ const Purgatory: React.FC = React.memo(() => {
             queryClient.invalidateQueries({ queryKey: ['vintage-products'] });
             queryClient.invalidateQueries({ queryKey: ['vintage-unique-products'] });
             queryClient.invalidateQueries({ queryKey: ['products'] });
+            queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+            setSelectedPendingId(null);
+            setIsVintageModalOpen(false);
+        }
+    });
+
+    const matchMiscMutation = useMutation({
+        mutationFn: (pendingId: number) => matchMiscellaneousItem(pendingId),
+        onMutate: async (pendingId) => {
+            const item = queryClient.getQueryData<any[]>(['purgatory'])?.find(i => i.id === pendingId);
+            setPendingActions(prev => [...prev, {
+                id: Date.now(),
+                type: 'match-misc',
+                pendingIds: [pendingId],
+                scrapedName: item?.scraped_name,
+                action_url: item?.url,
+                timestamp: new Date().toISOString()
+            }]);
+            await queryClient.cancelQueries({ queryKey: ['purgatory'] });
+            const previousItems = queryClient.getQueryData(['purgatory']);
+            queryClient.setQueryData(['purgatory'], (old: any) =>
+                (old || []).filter((item: any) => item.id !== pendingId)
+            );
+            return { previousItems };
+        },
+        onError: (err, _variables, context: any) => {
+            queryClient.setQueryData(['purgatory'], context.previousItems);
+            console.error('Miscellaneous match failed:', err);
+        },
+        onSuccess: (_, pendingId) => {
+            setPendingActions(prev => prev.filter(a => !(a.type === 'match-misc' && a.pendingIds[0] === pendingId)));
+            queryClient.invalidateQueries({ queryKey: ['purgatory'] });
+            queryClient.invalidateQueries({ queryKey: ['vintage-miscellaneous'] });
             queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
             setSelectedPendingId(null);
             setIsVintageModalOpen(false);
@@ -1072,6 +1105,26 @@ const Purgatory: React.FC = React.memo(() => {
                                         autoFocus
                                     />
                                 </div>
+                            </div>
+
+                            {/* Enviar a Miscelánea box */}
+                            <div className="rounded-2xl border border-dashed border-purple-500/20 bg-purple-500/[0.02] p-4 flex flex-col sm:flex-row items-center justify-between gap-3 hover:border-purple-500/30 hover:bg-purple-500/[0.04] transition-all">
+                                <div className="min-w-0 flex-1">
+                                    <span className="text-[8px] font-black text-purple-400 uppercase tracking-widest">Lote o Varios MOTU</span>
+                                    <h5 className="text-xs font-black text-white leading-none mt-1">Clasificar como Miscelánea Vintage</h5>
+                                    <p className="text-[9px] text-white/40 uppercase tracking-tighter mt-0.5">Envía este anuncio/lote directamente al área de Miscelánea.</p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        matchMiscMutation.mutate(vintageModalItemId!);
+                                    }}
+                                    disabled={matchMiscMutation.isPending}
+                                    className="w-full sm:w-auto px-4 py-2 rounded-xl bg-purple-600 text-white text-[9px] font-black uppercase tracking-widest hover:brightness-110 disabled:opacity-50 transition-all flex items-center justify-center gap-1.5 shrink-0 shadow-lg shadow-purple-500/20"
+                                >
+                                    {matchMiscMutation.isPending ? <RefreshCcw className="h-3 w-3 animate-spin" /> : <Link className="h-3 w-3" />}
+                                    <span>Clasificar Miscelánea</span>
+                                </button>
                             </div>
 
                             {/* Suggestions and catalog matching */}

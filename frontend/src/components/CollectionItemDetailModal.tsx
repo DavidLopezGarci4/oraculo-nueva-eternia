@@ -10,8 +10,8 @@ import {
     TrendingUp,
     TrendingDown,
     Shield,
-    Target,
-    RefreshCw
+    RefreshCw,
+    ChevronDown
 } from 'lucide-react';
 import { updateCollectionItem, toggleCollection } from '../api/collection';
 import type { Product } from '../api/collection';
@@ -34,6 +34,7 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
         product.acquired_at ? product.acquired_at.split('T')[0] : new Date().toISOString().split('T')[0]
     );
     const [expandedImage, setExpandedImage] = useState<string | null>(null);
+    const [showGradingGuide, setShowGradingGuide] = useState(false);
 
 
     const updateMutation = useMutation({
@@ -173,7 +174,6 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
                             <div className="space-y-2 md:space-y-4">
                                 <div className="flex items-center justify-between">
                                     <label className="text-[8px] md:text-[10px] font-black text-white/60 uppercase tracking-widest flex items-center gap-2">
-                                        <Target className="h-3 w-3" />
                                         Grado de Conservación (ASTM/C)
                                     </label>
                                     <div className="flex items-center gap-2">
@@ -228,44 +228,97 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
                     </div>
 
                     {/* Footer Actions */}
-                    <div className="mt-auto p-3 md:p-8 bg-black/40 border-t border-white/5 flex gap-2 md:gap-4 items-center">
-                        <button
-                            type="button"
-                            onClick={() => {
-                                const isVintage = !!product.is_vintage;
-                                const message = isVintage
-                                    ? `¿Seguro de desvincular '${product.name}' de tu colección? Volverá a aparecer en Eternia (las estadísticas y ofertas del producto permanecerán intactas).`
-                                    : `¿Seguro de liberar '${product.name}' de tu colección?`;
-                                if (confirm(message)) {
-                                    toggleMutation.mutate();
-                                }
-                            }}
-                            disabled={toggleMutation.isPending}
-                            className="px-3 py-2 text-[10px] md:px-6 md:py-4 rounded-lg md:rounded-2xl bg-red-500/10 text-red-400 border border-red-500/20 font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all shadow-lg hover:shadow-red-500/20 flex items-center gap-2"
-                            title={product.is_vintage ? "Desvincular de la Colección" : "Liberar de la Colección"}
-                        >
-                            {toggleMutation.isPending ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
-                            {product.is_vintage ? 'Desvincular' : 'Liberar'}
-                        </button>
+                    <div className="mt-auto p-3 md:p-8 bg-black/40 border-t border-white/5 flex flex-col gap-4">
+                        {/* Action Buttons Row */}
+                        <div className="flex flex-row justify-center items-center gap-2 md:gap-4 w-full">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    const isVintage = !!product.is_vintage;
+                                    const message = isVintage
+                                        ? `¿Seguro de desvincular '${product.name}' de tu colección? Volverá a aparecer en Eternia (las estadísticas y ofertas del producto permanecerán intactas).`
+                                        : `¿Seguro de liberar '${product.name}' de tu colección?`;
+                                    if (confirm(message)) {
+                                        toggleMutation.mutate();
+                                    }
+                                }}
+                                disabled={toggleMutation.isPending}
+                                className="flex-1 sm:flex-initial min-w-[90px] sm:min-w-[140px] px-3 py-2 md:px-6 md:py-4 rounded-lg md:rounded-2xl bg-red-500/10 text-red-400 border border-red-500/20 font-black uppercase tracking-widest text-[8px] md:text-[10px] hover:bg-red-500 hover:text-white transition-all shadow-lg hover:shadow-red-500/20 flex justify-center items-center gap-2"
+                                title={product.is_vintage ? "Desvincular de la Colección" : "Liberar de la Colección"}
+                            >
+                                {toggleMutation.isPending ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
+                                <span>{product.is_vintage ? 'Desvincular' : 'Liberar'}</span>
+                            </button>
 
-                        <div className="flex-1"></div>
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                className="flex-1 sm:flex-initial min-w-[90px] sm:min-w-[140px] px-3 py-2 md:px-8 md:py-4 rounded-lg md:rounded-2xl bg-white/5 text-white/70 font-black uppercase tracking-widest text-[8px] md:text-[10px] hover:bg-white/10 transition-all border border-white/5 flex justify-center items-center"
+                            >
+                                Cancelar
+                            </button>
 
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="px-3 py-2 text-[10px] md:px-8 md:py-4 rounded-lg md:rounded-2xl bg-white/5 text-white/70 font-black uppercase tracking-widest hover:bg-white/10 transition-all border border-white/5"
-                        >
-                            Cancelar
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => updateMutation.mutate()}
-                            disabled={updateMutation.isPending}
-                            className="px-3 py-2 text-[10px] md:px-8 md:py-4 rounded-lg md:rounded-2xl bg-brand-primary text-white font-black uppercase tracking-widest shadow-xl shadow-brand-primary/20 hover:brightness-110 transition-all flex items-center gap-2"
-                        >
-                            {updateMutation.isPending ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                            {updateMutation.isPending ? 'Sincronizando...' : 'Guardar Legado'}
-                        </button>
+                            <button
+                                type="button"
+                                onClick={() => updateMutation.mutate()}
+                                disabled={updateMutation.isPending}
+                                className="flex-1 sm:flex-initial min-w-[95px] sm:min-w-[140px] px-3 py-2 md:px-8 md:py-4 rounded-lg md:rounded-2xl bg-brand-primary text-white font-black uppercase tracking-widest text-[8px] md:text-[10px] shadow-xl shadow-brand-primary/20 hover:brightness-110 transition-all flex justify-center items-center gap-2"
+                            >
+                                {updateMutation.isPending ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                                <span>{updateMutation.isPending ? 'Guardando...' : 'Guardar Legado'}</span>
+                            </button>
+                        </div>
+
+                        {/* Collapsible Grading Guide Section */}
+                        <div className="w-full border-t border-white/5 pt-3">
+                            <button
+                                type="button"
+                                onClick={() => setShowGradingGuide(!showGradingGuide)}
+                                className="w-full flex items-center justify-between px-3 py-2 bg-white/5 hover:bg-white/10 rounded-xl transition-all border border-white/5 group"
+                            >
+                                <span className="text-[9px] md:text-[10px] font-black text-white/80 uppercase tracking-widest flex items-center gap-2">
+                                    📋 Guía Rápida de Conservación (ASTM/C)
+                                </span>
+                                <ChevronDown className={`h-3 w-3 md:h-4 md:w-4 text-white/50 group-hover:text-white transition-transform duration-300 ${showGradingGuide ? 'rotate-180' : ''}`} />
+                            </button>
+
+                            {showGradingGuide && (
+                                <div className="mt-2 p-3 bg-white/[0.02] border border-white/5 rounded-xl text-[9px] md:text-[10px] text-white/60 space-y-3 leading-relaxed max-h-[160px] md:max-h-[220px] overflow-y-auto custom-scrollbar">
+                                    <div>
+                                        <h4 className="font-black text-white uppercase tracking-wider mb-1">1. Estado Base (Empaque)</h4>
+                                        <ul className="list-disc pl-3.5 space-y-0.5 text-[8px] md:text-[9px]">
+                                            <li><strong className="text-white">MOC (Mint on Card):</strong> Blíster original cerrado de fábrica. (100% valor base)</li>
+                                            <li><strong className="text-white">NEW (Open Box):</strong> Caja o blíster abierto; figura nueva. (75% valor base)</li>
+                                            <li><strong className="text-white">LOOSE (Loose):</strong> Figura suelta fuera de su empaque. (50% valor base)</li>
+                                        </ul>
+                                    </div>
+
+                                    <div>
+                                        <h4 className="font-black text-white uppercase tracking-wider mb-1">2. Escala C de Conservación (1.0 a 10.0)</h4>
+                                        <ul className="list-disc pl-3.5 space-y-0.5 text-[8px] md:text-[9px]">
+                                            <li><strong className="text-white">10.0 | Gem Mint (C-10):</strong> Cartón plano perfecto, burbuja impecable.</li>
+                                            <li><strong className="text-white">9.5  | Mint (C-9.5):</strong> Casi perfecta. Desgaste invisible a simple vista.</li>
+                                            <li><strong className="text-white">9.0  | NM/Mint (C-9.0):</strong> Cartón plano con arruga o doblez leve de almacenaje.</li>
+                                            <li><strong className="text-white">8.5  | Near Mint (C-8.5):</strong> Desgaste menor en bordes o marca de etiqueta.</li>
+                                            <li><strong className="text-white">8.0  | VG/NM (C-8.0):</strong> Dobleces moderados, rayones leves en plástico.</li>
+                                            <li><strong className="text-white">7.0  | Good (C-7.0):</strong> Marcas evidentes de estrés y desgaste en cartón.</li>
+                                            <li><strong className="text-white">5.0  | Fair (C-5.0):</strong> Cartón muy desgastado, burbuja amarilleada/semi-despegada.</li>
+                                            <li><strong className="text-white">1.0  | Poor (C-1.0):</strong> Blíster roto o reparado con cinta. Figura dañada/incompleta.</li>
+                                        </ul>
+                                    </div>
+
+                                    <div className="border-t border-white/5 pt-2">
+                                        <h4 className="font-black text-white uppercase tracking-wider mb-0.5">3. Algoritmo de Ajuste</h4>
+                                        <p className="text-[8px] md:text-[9px]">
+                                            Fórmula: <code className="text-brand-primary font-bold">Valor Base × Multiplicador de Estado × Factor de Conservación</code>
+                                        </p>
+                                        <p className="mt-0.5 text-[8px] md:text-[9px]">
+                                            Cada punto menos de la nota (partiendo de 10.0) resta un 4% de valor (2% por cada 0.5 de nota). Ejemplo: nota 9.0 aplica factor 0.96 (4% de descuento). Nota 1.0 aplica descuento de 36%.
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>

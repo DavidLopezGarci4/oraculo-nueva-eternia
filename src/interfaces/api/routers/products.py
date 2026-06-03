@@ -507,3 +507,27 @@ async def delete_product(product_id: int):
         }
 
 
+@router.get("/api/vintage/miscellaneous")
+async def get_vintage_miscellaneous():
+    with SessionCloud() as db:
+        from src.domain.models import VintageMiscellaneousModel
+        results = db.query(VintageMiscellaneousModel).order_by(desc(VintageMiscellaneousModel.added_at)).all()
+        
+        output = []
+        for item in results:
+            output.append({
+                "id": item.id,
+                "title": item.title,
+                "url": item.url,
+                "price": item.price,
+                "currency": item.currency,
+                "shop_name": item.shop_name,
+                "image_url": item.image_url,
+                "condition": item.condition or "Loose",
+                "grading": item.grading or 7.5,
+                "notes": item.notes,
+                "added_at": item.added_at.isoformat() if item.added_at else None
+            })
+        return output
+
+

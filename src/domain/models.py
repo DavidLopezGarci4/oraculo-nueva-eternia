@@ -216,6 +216,25 @@ class VintageProductModel(Base):
     # Relationships
     product: Mapped["ProductModel"] = relationship("ProductModel")
 
+class VintageMiscellaneousModel(Base):
+    """
+    Tabla de Lotes/Miscelánea Vintage (Fase 60): Almacena anuncios, lotes y
+    reliquias que no se asocian a un único muñeco.
+    """
+    __tablename__ = "vintage_miscellaneous"
+    
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    title: Mapped[str] = mapped_column(String)
+    url: Mapped[str] = mapped_column(String, unique=True, index=True)
+    price: Mapped[float] = mapped_column(Float)
+    currency: Mapped[str] = mapped_column(String, default="EUR")
+    shop_name: Mapped[str] = mapped_column(String)
+    image_url: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    condition: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    grading: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    notes: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    added_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+
 class ProductAliasModel(Base):
     """
     Capa de Alias (Phase 0): Mapea URLs de scraping a un Product ID interno.
@@ -473,6 +492,8 @@ __all__ = [
     "AuthorizedDeviceModel",
     "StagedImportModel",
     "WallapopIpLogModel",
+    "VintageProductModel",
+    "VintageMiscellaneousModel",
     "DOMAIN_VERSION"
 ]
 

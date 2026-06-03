@@ -9,6 +9,7 @@ import Purgatory from './pages/Purgatory';
 import Dashboard from './pages/Dashboard';
 import Config from './pages/Config';
 import Auctions from './pages/Auctions';
+import VintageMiscellaneous from './pages/VintageMiscellaneous';
 import ShieldBypass from './components/ShieldBypass';
 import MasterLogin from './components/auth/MasterLogin';
 import LoginPage from './pages/LoginPage';
@@ -149,7 +150,7 @@ function App() {
         <div className="flex flex-1 flex-col overflow-hidden relative">
           <Navbar
             onMenuClick={() => setIsMobileMenuOpen(prev => !prev)}
-            showSearch={activeTab === 'catalog' || activeTab === 'collection' || activeTab === 'eternia' || activeTab === 'fortaleza_vintage'}
+            showSearch={activeTab === 'catalog' || activeTab === 'collection' || activeTab === 'eternia' || activeTab === 'fortaleza_vintage' || activeTab === 'vintage_miscellaneous'}
             searchValue={searchQuery}
             onSearchChange={setSearchQuery}
             user={currentUser}
@@ -166,6 +167,7 @@ function App() {
                 {activeTab === 'auctions' && <Auctions user={currentUser} />}
                 {activeTab === 'collection' && <Collection user={currentUser} searchQuery={searchQuery} />}
                 {activeTab === 'fortaleza_vintage' && <Collection user={currentUser} isVintageOnly={true} searchQuery={searchQuery} />}
+                {activeTab === 'vintage_miscellaneous' && <VintageMiscellaneous user={currentUser} />}
                 {activeTab === 'purgatory' && <Purgatory />}
                 {activeTab === 'settings' && (
                   <Config

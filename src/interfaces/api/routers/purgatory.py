@@ -587,3 +587,92 @@ async def revert_vintage_offer(offer_id: int):
             db.rollback()
             logger.error(f"Error al revertir oferta vintage: {e}")
             raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/api/purgatory/{pending_id}/miscellaneous", dependencies=[Depends(verify_api_key)])
+async def match_purgatory_miscellaneous(pending_id: int):
+    with SessionCloud() as db:
+        item = db.query(PendingMatchModel).filter(PendingMatchModel.id == pending_id).first()
+        if not item:
+            raise HTTPException(status_code=404, detail="Reliquia no encontrada en el Purgatorio")
+
+        try:
+            from src.domain.models import VintageMiscellaneousModel
+
+            misc_item = VintageMiscellaneousModel(
+                title=item.scraped_name,
+                url=item.url,
+                price=item.price,
+                currency=item.currency,
+                shop_name=item.shop_name,
+                image_url=item.image_url,
+                condition=item.condition or "Loose",
+                grading=item.grading or 7.5,
+                notes=f"Clasificado como Lote/Miscelánea Vintage desde Purgatorio para {item.shop_name}"
+            )
+            db.add(misc_item)
+
+            from src.domain.models import OfferHistoryModel
+            history = OfferHistoryModel(
+                offer_url=item.url,
+                product_name=item.scraped_name,
+                shop_name=item.shop_name,
+                price=item.price,
+                action_type="LINKED_MISCELLANEOUS",
+                details=json.dumps({"receipt_id": item.receipt_id, "shop_name": item.shop_name}),
+            )
+            db.add(history)
+
+            db.delete(item)
+            db.commit()
+            return {"status": "success", "message": "Anuncio guardado en la sección de Miscelánea Vintage."}
+
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Error en match_purgatory_miscellaneous: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/api/vintage/miscellaneous/revert/{item_id}", dependencies=[Depends(verify_api_key)])
+async def revert_miscellaneous_item(item_id: int):
+    with SessionCloud() as db:
+        from src.domain.models import VintageMiscellaneousModel
+        misc_item = db.query(VintageMiscellaneousModel).filter(VintageMiscellaneousModel.id == item_id).first()
+        if not misc_item:
+            raise HTTPException(status_code=404, detail="Artículo de Miscelánea no encontrado")
+
+        try:
+            purgatory_item = PendingMatchModel(
+                scraped_name=misc_item.title,
+                ean=None,
+                price=misc_item.price,
+                currency=misc_item.currency,
+                url=misc_item.url,
+                shop_name=misc_item.shop_name,
+                image_url=misc_item.image_url,
+                source_type="Peer-to-Peer",
+                condition=misc_item.condition or "Loose",
+                grading=misc_item.grading or 7.5,
+                is_vintage=True
+            )
+            db.add(purgatory_item)
+
+            from src.domain.models import OfferHistoryModel
+            history = OfferHistoryModel(
+                offer_url=misc_item.url,
+                product_name=misc_item.title,
+                shop_name=misc_item.shop_name,
+                price=misc_item.price,
+                action_type="REVERTED_MISCELLANEOUS",
+                details=json.dumps({"reason": "Reversión manual desde Miscelánea Vintage", "item_id": misc_item.id}),
+            )
+            db.add(history)
+
+            db.delete(misc_item)
+            db.commit()
+            return {"status": "success", "message": "Artículo devuelto al Purgatorio con éxito."}
+
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Error al revertir miscelánea vintage: {e}")
+            raise HTTPException(status_code=500, detail=str(e))

@@ -1006,3 +1006,39 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
   - **Aprovisionamiento Frontend**: Instalación exitosa de los módulos de React (`npm install`) inyectando dinámicamente la ruta del nuevo ejecutable en el path del proceso.
   - **Despliegue Local Unificado Activo**: Levantamiento concurrente del frontend en el puerto `3001` (Vite) con proxy automático `/api` mapeado al backend (puerto `8000`), logrando una paridad funcional del 100% en local y despejando el camino para producción.
 
+### 🛡️ Fase 60: Optimización del Purgatorio y Modularización (26/05/2026)
+
+- **Hitos**: Modularización de endpoints de utilidades y optimización semántica del algoritmo del Purgatorio.
+- **Estado**: ✅ COMPLETADO
+- **Logros Técnicos**:
+  - **Separación de Concernientes**: El antiguo router `misc.py` fue dividido de forma limpia en 4 routers estructurados: `users.py`, `system.py`, `vault.py` y `logistics.py`.
+  - **Optimización de Matching**: Reescrito el backend del Purgatorio (`/api/purgatory`) para emplear un índice invertido por tokens. Esto reduce la complejidad temporal de búsqueda de O(N*M) a O(N*Candidatos), acelerando el matching semántico entre 10x y 50x.
+
+### 🛡️ Fase 61: Segregación Estricta y Ordenación Inteligente del Purgatorio (27/05/2026)
+
+- **Hitos**: Aislamiento estricto de catálogos e inventarios (Vintage vs. Nueva Eternia) y ordenación prioritaria de reliquias.
+- **Estado**: ✅ COMPLETADO
+- **Logros Técnicos**:
+  - **Aislamiento Físico/Lógico**: Implementado filtro estricto por `is_vintage` en base de datos SQLite y Postgres para diferenciar Eternia Vintage de Origins (Nueva Eternia).
+  - **Clasificación Segregada Limpia**: Reclasificación atómica de figuras erróneamente asociadas y blindaje de endpoints en el backend para respetar `is_vintage` del catálogo, erradicando auto-promociones redundantes.
+  - **Algoritmo Híbrido Retro**: Ordenación del catálogo vintage priorizando: 1º ofertas activas en el mercado secundario, 2º acumulados pendientes en Purgatorio y 3º fallback cronológico de base de datos.
+
+### 🛡️ Fase 62: Robustez de Backend y Python 3.12+ (29/05/2026)
+
+- **Hitos**: Saneamiento de incompatibilidades de fecha y hora asíncronas y optimización de base de datos para pruebas.
+- **Estado**: ✅ COMPLETADO
+- **Logros Técnicos**:
+  - **Zonificación UTC**: Remplazado el uso obsoleto de `datetime.utcnow()` por `datetime.now(timezone.utc)` en todos los routers y modelos de dominio para evitar advertencias de deprecación en Python 3.12+.
+  - **Deduplicación en Memoria**: Eliminado el uso de `DISTINCT ON` en consultas de catálogos para garantizar total compatibilidad cruzada entre SQLite y Postgres, delegando la deduplicación a conjuntos eficientes en Python.
+  - **Hardening de Suite de Tests**: Configurada la suite de pruebas mediante pytest aislando los archivos de test y agregando validadores automáticos para detectar variables de clave de seguridad inseguras en el arranque.
+
+### 🛡️ Fase 63: Miscelánea Vintage, Rediseño de Métricas y Manual de Usuario (03/06/2026)
+
+- **Hitos**: Soporte para lotes de productos en Eternia Vintage, mejoras visuales táctiles y documentación interactiva detallada de la aplicación.
+- **Estado**: ✅ COMPLETADO
+- **Logros Técnicos**:
+  - **Miscelánea Vintage**: Creado modelo de datos `vintage_miscellaneous`, APIs asociadas y la pestaña de "Miscelánea" en la barra de navegación para apartar ofertas de lotes clásicos imposibles de asociar a una sola figura. Permite desviar a miscelánea desde Purgatorio y revertir de vuelta al Purgatorio con un solo clic.
+  - **Ajustes y Guía Desplegable**: Botones del modal de inventario rediseñados para ser completamente simétricos. Retirado el icono de báscula/diana del Grado de Conservación e integrada la guía rápida interactiva sobre la escala C de conservación.
+  - **ROI Real y Valor Ajustado**: Modificadas las tarjetas del inventario para computar y destacar el Valor Ajustado de mercado y el porcentaje de revalorización (ROI) real según la conservación.
+  - **Manual de Usuario Completo**: Redactadas 8 guías de usuario estructuradas e independientes en la carpeta `docs/manual_usuario/` que explican de inicio a fin la operación de cada una de las pantallas.
+

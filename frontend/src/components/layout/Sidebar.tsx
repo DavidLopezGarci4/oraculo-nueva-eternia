@@ -31,6 +31,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen
     const vintageItems = [
         { id: 'fortaleza_vintage', label: 'Mi Fortaleza Vintage', icon: Box },
         { id: 'eternia', label: 'Eternia', icon: Database },
+        { id: 'vintage_miscellaneous', label: 'Miscelánea', icon: Box },
     ];
 
     // Clases base para el sidebar
