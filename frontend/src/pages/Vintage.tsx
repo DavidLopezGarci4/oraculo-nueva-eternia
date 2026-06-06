@@ -105,7 +105,7 @@ const Vintage: React.FC<VintageProps> = ({ user }) => {
     }, [vintageItems, sortBy]);
 
     if (isLoadingVintage) {
-        return <PowerSwordLoader variant="fullScreen" text="Desenterrando Reliquias del Purgatorio..." />;
+        return <PowerSwordLoader variant="fullScreen" text="Desenterrando Reliquias del Purgatorio..." isVintage={true} />;
     }
 
     if (isErrorVintage) {

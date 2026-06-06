@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import swordAsset from '../../assets/HemanGlassmorphSword.png';
+import vintageSwordAsset from '../../assets/bddg-heman.png';
 
 interface PowerSwordLoaderProps {
     className?: string;
@@ -8,6 +9,11 @@ interface PowerSwordLoaderProps {
     text?: string;
     progress?: number; // 0 to 100
     variant?: 'inline' | 'fullScreen';
+    isVintage?: boolean;
+    vintageGuardX?: number;
+    vintageGuardY?: number;
+    vintageTipX?: number;
+    vintageTipY?: number;
 }
 
 const PowerSwordLoader: React.FC<PowerSwordLoaderProps> = ({
@@ -15,11 +21,53 @@ const PowerSwordLoader: React.FC<PowerSwordLoaderProps> = ({
     size = 200,
     text,
     progress: manualProgress,
-    variant = 'inline'
+    variant = 'inline',
+    isVintage = false,
+    vintageGuardX,
+    vintageGuardY,
+    vintageTipX,
+    vintageTipY
 }) => {
     const [internalProgress, setInternalProgress] = useState(0);
 
     const isFullScreen = variant === 'fullScreen';
+    const activeSwordAsset = isVintage ? vintageSwordAsset : swordAsset;
+
+    // Get custom/stored vintage sword coordinates or use defaults
+    const [vintageCoords, setVintageCoords] = useState({
+        gX: 79.5,
+        gY: 66.5,
+        tX: 73.0,
+        tY: 20.5
+    });
+
+    useEffect(() => {
+        if (isVintage) {
+            const stored = localStorage.getItem('vintage_sword_coords');
+            if (stored) {
+                try {
+                    setVintageCoords(JSON.parse(stored));
+                } catch (e) {
+                    console.error("Failed to parse vintage sword coords", e);
+                }
+            }
+        }
+    }, [isVintage]);
+
+    // Use props if provided (useful for visualizer), otherwise use state/localStorage, or fallback to default modern coords
+    const activeGuardX = vintageGuardX !== undefined ? vintageGuardX : (isVintage ? vintageCoords.gX : 125);
+    const activeGuardY = vintageGuardY !== undefined ? vintageGuardY : (isVintage ? vintageCoords.gY : 175);
+    const activeTipX = vintageTipX !== undefined ? vintageTipX : (isVintage ? vintageCoords.tX : 125);
+    const activeTipY = vintageTipY !== undefined ? vintageTipY : (isVintage ? vintageCoords.tY : 10);
+
+    // Vector calculations for the sword axis (from guard to tip)
+    const dx = activeTipX - activeGuardX;
+    const dy = activeTipY - activeGuardY;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    const ux = len > 0 ? dx / len : 0;
+    const uy = len > 0 ? dy / len : -1;
+    const px = -uy; // Perpendicular vector x
+    const py = ux;  // Perpendicular vector y
 
     // Intelligent Progress Simulation (Trickle Strategy)
     useEffect(() => {
@@ -59,16 +107,34 @@ const PowerSwordLoader: React.FC<PowerSwordLoaderProps> = ({
     const renderLightning = () => {
         if (progress < 5) return null;
         const count = isFullScreen ? (progress > 80 ? 20 : 10) : (progress > 80 ? 12 : 6);
+
+        // Blade lightning starts ~9% along the length to leave guard clean, extending to current progress
+        const startDist = len * 0.09;
+        const maxBladeLen = len - startDist;
+        const currentLength = startDist + (progress / 100) * maxBladeLen;
+
         return [...Array(count)].map((_, i) => {
             const side = i % 2 === 0 ? 1 : -1;
-            // Blade lightning
-            const lightningY = 160 - (progress * 1.5);
+
+            // Randomize start and end points slightly around the sword axis
+            const rayStartDist = startDist + (Math.random() * 4 - 2);
+            const startX = activeGuardX + rayStartDist * ux + (Math.random() * 1.5 - 0.75) * px;
+            const startY = activeGuardY + rayStartDist * uy + (Math.random() * 1.5 - 0.75) * py;
+
+            const rayEndDist = Math.max(startDist + 2, currentLength + (Math.random() * 6 - 3));
+            const endX = activeGuardX + rayEndDist * ux + (Math.random() * 1.5 - 0.75) * px;
+            const endY = activeGuardY + rayEndDist * uy + (Math.random() * 1.5 - 0.75) * py;
+
+            // Wobble control point
+            const midDist = startDist + Math.random() * (rayEndDist - startDist);
+            const wobble = side * (5 + Math.random() * 10) * (isFullScreen ? 1.5 : 1);
+            const cx = activeGuardX + midDist * ux + wobble * px;
+            const cy = activeGuardY + midDist * uy + wobble * py;
+
             return (
                 <motion.path
                     key={`blade-${i}`}
-                    d={`M 125 ${160 - (Math.random() * 5)} 
-                        Q ${125 + (side * (10 + Math.random() * 15))} ${130 - (Math.random() * 30)} 
-                        ${125 + (side * (Math.random() * 5))} ${Math.max(10, lightningY)}`}
+                    d={`M ${startX} ${startY} Q ${cx} ${cy} ${endX} ${endY}`}
                     stroke={i % 3 === 0 ? "#BAE6FD" : "#38BDF8"}
                     strokeWidth={isFullScreen ? 2.5 : (Math.random() * 1.5 + 0.5)}
                     fill="none"
@@ -95,12 +161,12 @@ const PowerSwordLoader: React.FC<PowerSwordLoaderProps> = ({
             const angle = (i * (360 / count)) + (Math.random() * 20 - 10);
             const rad = angle * Math.PI / 180;
             const distance = isFullScreen ? 60 : 40;
-            const x2 = 125 + Math.cos(rad) * distance;
-            const y2 = 175 + Math.sin(rad) * distance;
+            const x2 = activeGuardX + Math.cos(rad) * distance;
+            const y2 = activeGuardY + Math.sin(rad) * distance;
             return (
                 <motion.path
                     key={`central-${i}`}
-                    d={`M 125 175 L ${x2} ${y2}`}
+                    d={`M ${activeGuardX} ${activeGuardY} L ${x2} ${y2}`}
                     stroke="#7DD3FC"
                     strokeWidth={isFullScreen ? 3 : 1.5}
                     initial={{ pathLength: 0, opacity: 0 }}
@@ -157,7 +223,7 @@ const PowerSwordLoader: React.FC<PowerSwordLoaderProps> = ({
                 >
                     {/* 1. Fully Visible Base Layer (Sharp) */}
                     <image
-                        href={swordAsset}
+                        href={activeSwordAsset}
                         x="0"
                         y="0"
                         width="250"

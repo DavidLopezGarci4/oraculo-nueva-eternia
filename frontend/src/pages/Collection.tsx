@@ -163,7 +163,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
     const totalWish = collection?.filter(p => p.is_wish).length || 0;
 
     if (isLoading) {
-        return <PowerSwordLoader variant="fullScreen" text="Sincronizando con la Fortaleza..." />;
+        return <PowerSwordLoader variant="fullScreen" text="Sincronizando con la Fortaleza..." isVintage={isVintageOnly} />;
     }
 
     if (isError) {

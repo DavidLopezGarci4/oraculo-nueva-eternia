@@ -55,6 +55,42 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
     const [ipLogs, setIpLogs] = useState<WallapopIpLog[]>([]);
     const [loadingIpLogs, setLoadingIpLogs] = useState(false);
 
+    // Vintage Sword Light Ray Calibrator States
+    const [showCalibrator, setShowCalibrator] = useState(false);
+    const [calibCoords, setCalibCoords] = useState({
+        gX: 79.5,
+        gY: 66.5,
+        tX: 73.0,
+        tY: 20.5
+    });
+
+    useEffect(() => {
+        if (showCalibrator) {
+            const stored = localStorage.getItem('vintage_sword_coords');
+            if (stored) {
+                try {
+                    setCalibCoords(JSON.parse(stored));
+                } catch (e) {
+                    console.error("Failed to parse vintage sword coords", e);
+                }
+            }
+        }
+    }, [showCalibrator]);
+
+    const handleSaveCalib = () => {
+        localStorage.setItem('vintage_sword_coords', JSON.stringify(calibCoords));
+        setShowCalibrator(false);
+    };
+
+    const handleResetCalib = () => {
+        setCalibCoords({
+            gX: 79.5,
+            gY: 66.5,
+            tX: 73.0,
+            tY: 20.5
+        });
+    };
+
     const handleOpenIpLogs = async () => {
         setShowIpLogsModal(true);
         setLoadingIpLogs(true);
@@ -804,6 +840,26 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                 )}
                             </div>
 
+                            {/* Calibrador de Haces de Luz Vintage */}
+                            <div className="glass border border-amber-500/30 p-6 rounded-3xl space-y-4 bg-amber-500/5">
+                                <div className="flex items-center gap-3 text-amber-500 font-bold uppercase tracking-widest text-xs mb-2">
+                                    <Zap className="h-4 w-4" />
+                                    Alineación Haces de Luz Vintage
+                                </div>
+                                <div className="space-y-4">
+                                    <p className="text-[10px] text-white/65 font-bold uppercase leading-tight">
+                                        Calibra la posición exacta de los haces de luz sobre la espada en la silueta de He-Man.
+                                    </p>
+                                    <button
+                                        onClick={() => setShowCalibrator(true)}
+                                        className="w-full bg-amber-500/10 hover:bg-amber-500 text-amber-500 hover:text-black border border-amber-500/25 px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-500/0 hover:shadow-amber-500/25"
+                                    >
+                                        <Settings className="h-3.5 w-3.5" />
+                                        Calibrar Espada Vintage
+                                    </button>
+                                </div>
+                            </div>
+
                             {/* --- SHIELD ARCHITECTURE: EXCEL BRIDGE --- */}
                             {(user?.role === 'admin' || user?.username === 'David') && (
                                 <div className="space-y-4">
@@ -1338,6 +1394,177 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                     </div>
                 )}
             </AnimatePresence>
+
+            {/* Vintage Sword Light Ray Calibrator Modal */}
+            {showCalibrator && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in duration-300">
+                    <div className="relative w-full max-w-4xl overflow-hidden rounded-[2.5rem] border border-amber-500/30 bg-[#0A0A0B] p-6 md:p-8 flex flex-col gap-6 shadow-[0_0_50px_rgba(245,158,11,0.2)]">
+                        <div className="flex items-center gap-3">
+                            <div className="p-3 rounded-xl bg-amber-500/10">
+                                <Zap className="h-6 w-6 text-amber-500" />
+                            </div>
+                            <div>
+                                <h4 className="text-2xl font-black text-white">Calibrador de Haces de Luz <span className="text-amber-500">Vintage</span></h4>
+                                <p className="text-[10px] text-white/50 font-bold uppercase tracking-wider">Alinea los rayos de energía de Grayskull sobre la espada de He-Man</p>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center justify-center">
+                            {/* Preview Area */}
+                            <div className="flex flex-col items-center justify-center gap-4 bg-black/40 border border-white/5 p-6 rounded-3xl">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-amber-500/60">Simulador de Pantalla de Carga</span>
+                                
+                                <div className="relative w-64 h-64 border border-white/10 rounded-2xl overflow-hidden bg-[#050608] flex items-center justify-center shadow-inner">
+                                    <PowerSwordLoader 
+                                        isVintage={true} 
+                                        size={250} 
+                                        vintageGuardX={calibCoords.gX}
+                                        vintageGuardY={calibCoords.gY}
+                                        vintageTipX={calibCoords.tX}
+                                        vintageTipY={calibCoords.tY}
+                                        progress={parseFloat(localStorage.getItem('calib_test_progress') || '75')} 
+                                    />
+                                    
+                                    {/* Overlay helper lines to visually debug guard & tip points */}
+                                    <svg viewBox="0 0 250 250" className="absolute inset-0 w-full h-full pointer-events-none">
+                                        {/* Guard center indicator */}
+                                        <circle cx={calibCoords.gX} cy={calibCoords.gY} r="4" fill="#10B981" stroke="white" strokeWidth="1" />
+                                        <text x={calibCoords.gX + 6} y={calibCoords.gY + 3} fill="#10B981" fontSize="8" fontWeight="bold">Empuñadura ({calibCoords.gX.toFixed(1)}, {calibCoords.gY.toFixed(1)})</text>
+                                        
+                                        {/* Tip indicator */}
+                                        <circle cx={calibCoords.tX} cy={calibCoords.tY} r="4" fill="#EF4444" stroke="white" strokeWidth="1" />
+                                        <text x={calibCoords.tX + 6} y={calibCoords.tY + 3} fill="#EF4444" fontSize="8" fontWeight="bold">Punta ({calibCoords.tX.toFixed(1)}, {calibCoords.tY.toFixed(1)})</text>
+                                        
+                                        {/* Axis line */}
+                                        <line x1={calibCoords.gX} y1={calibCoords.gY} x2={calibCoords.tX} y2={calibCoords.tY} stroke="rgba(245,158,11,0.3)" strokeDasharray="3" strokeWidth="1.5" />
+                                    </svg>
+                                </div>
+                                
+                                <div className="w-full space-y-1">
+                                    <div className="flex justify-between text-[10px] text-white/50 font-bold">
+                                        <span>PROGRESO DE PRUEBA</span>
+                                        <span className="text-amber-500 font-mono">{localStorage.getItem('calib_test_progress') || '75'}%</span>
+                                    </div>
+                                    <input 
+                                        type="range" 
+                                        min="0" 
+                                        max="100" 
+                                        value={localStorage.getItem('calib_test_progress') || '75'}
+                                        onChange={(e) => {
+                                            localStorage.setItem('calib_test_progress', e.target.value);
+                                            // Trigger state update to re-render preview
+                                            setCalibCoords({ ...calibCoords });
+                                        }}
+                                        className="w-full accent-amber-500" 
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Controls Area */}
+                            <div className="space-y-6">
+                                <div className="space-y-4 bg-white/[0.02] border border-white/5 p-4 rounded-2xl">
+                                    <div className="flex items-center gap-2 text-[#10B981] font-bold text-xs uppercase tracking-widest">
+                                        <div className="h-2 w-2 rounded-full bg-[#10B981]" />
+                                        Punto de Empuñadura / Hilt (X, Y)
+                                    </div>
+                                    <div className="space-y-3">
+                                        <div>
+                                            <div className="flex justify-between text-[10px] text-white/50 font-bold mb-1">
+                                                <span>Horizontal (X)</span>
+                                                <span className="text-white font-mono">{calibCoords.gX}px</span>
+                                            </div>
+                                            <input 
+                                                type="range" 
+                                                min="0" 
+                                                max="250" 
+                                                step="0.5"
+                                                value={calibCoords.gX}
+                                                onChange={(e) => setCalibCoords({ ...calibCoords, gX: parseFloat(e.target.value) })}
+                                                className="w-full accent-green-500" 
+                                            />
+                                        </div>
+                                        <div>
+                                            <div className="flex justify-between text-[10px] text-white/50 font-bold mb-1">
+                                                <span>Vertical (Y)</span>
+                                                <span className="text-white font-mono">{calibCoords.gY}px</span>
+                                            </div>
+                                            <input 
+                                                type="range" 
+                                                min="0" 
+                                                max="250" 
+                                                step="0.5"
+                                                value={calibCoords.gY}
+                                                onChange={(e) => setCalibCoords({ ...calibCoords, gY: parseFloat(e.target.value) })}
+                                                className="w-full accent-green-500" 
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4 bg-white/[0.02] border border-white/5 p-4 rounded-2xl">
+                                    <div className="flex items-center gap-2 text-[#EF4444] font-bold text-xs uppercase tracking-widest">
+                                        <div className="h-2 w-2 rounded-full bg-[#EF4444]" />
+                                        Punto de la Punta / Tip (X, Y)
+                                    </div>
+                                    <div className="space-y-3">
+                                        <div>
+                                            <div className="flex justify-between text-[10px] text-white/50 font-bold mb-1">
+                                                <span>Horizontal (X)</span>
+                                                <span className="text-white font-mono">{calibCoords.tX}px</span>
+                                            </div>
+                                            <input 
+                                                type="range" 
+                                                min="0" 
+                                                max="250" 
+                                                step="0.5"
+                                                value={calibCoords.tX}
+                                                onChange={(e) => setCalibCoords({ ...calibCoords, tX: parseFloat(e.target.value) })}
+                                                className="w-full accent-red-500" 
+                                            />
+                                        </div>
+                                        <div>
+                                            <div className="flex justify-between text-[10px] text-white/50 font-bold mb-1">
+                                                <span>Vertical (Y)</span>
+                                                <span className="text-white font-mono">{calibCoords.tY}px</span>
+                                            </div>
+                                            <input 
+                                                type="range" 
+                                                min="0" 
+                                                max="250" 
+                                                step="0.5"
+                                                value={calibCoords.tY}
+                                                onChange={(e) => setCalibCoords({ ...calibCoords, tY: parseFloat(e.target.value) })}
+                                                className="w-full accent-red-500" 
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-2 pt-2">
+                                    <button
+                                        onClick={handleResetCalib}
+                                        className="flex-1 px-4 py-2.5 rounded-xl border border-white/10 text-white/70 hover:text-white hover:bg-white/5 font-black text-[10px] uppercase tracking-widest transition-all"
+                                    >
+                                        Restablecer
+                                    </button>
+                                    <button
+                                        onClick={handleSaveCalib}
+                                        className="flex-1 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-black font-black text-[10px] uppercase tracking-widest transition-all shadow-[0_0_20px_rgba(245,158,11,0.2)]"
+                                    >
+                                        Guardar en Eternia
+                                    </button>
+                                    <button
+                                        onClick={() => setShowCalibrator(false)}
+                                        className="px-4 py-2.5 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 text-white font-black text-[10px] uppercase tracking-widest transition-all"
+                                    >
+                                        Cerrar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div >
     );
 };

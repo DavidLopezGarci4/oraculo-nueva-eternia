@@ -81,7 +81,7 @@ const VintageMiscellaneous: React.FC<VintageMiscellaneousProps> = ({ user }) => 
     }, [items, sortBy, sortOrder]);
 
     if (isLoading) {
-        return <PowerSwordLoader variant="fullScreen" text="Canalizando Bóvedas de Miscelánea..." />;
+        return <PowerSwordLoader variant="fullScreen" text="Canalizando Bóvedas de Miscelánea..." isVintage={true} />;
     }
 
     if (isError) {

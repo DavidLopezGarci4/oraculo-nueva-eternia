@@ -513,7 +513,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
     }, [historyCronosA, historyCronosB, selectedCronosA, selectedCronosB, activeCronosShops, availableShops]);
 
     if (isLoadingProducts || isLoadingCollection) {
-        return <PowerSwordLoader variant="fullScreen" text="Invocando el Catálogo Maestro..." />;
+        return <PowerSwordLoader variant="fullScreen" text="Invocando el Catálogo Maestro..." isVintage={isVintageOnly} />;
     }
 
     const getSentimentBadge = (product: Product) => {
