@@ -62,8 +62,13 @@ def _build_product_index(products: list) -> tuple[dict, dict]:
 @router.get("/api/purgatory", dependencies=[Depends(verify_api_key)])
 async def get_purgatory(page: int = 1, limit: int = 500):
     from src.core.brain_engine import engine
+    from src.infrastructure.scrapers.pipeline import clean_purgatory_globally
 
     with SessionCloud() as db:
+        # Limpieza global proactiva del purgatorio
+        clean_purgatory_globally(db)
+        db.commit()
+        
         offset = (page - 1) * limit
         pending = (
             db.query(PendingMatchModel)
@@ -234,10 +239,13 @@ async def discard_purgatory(request: PurgatoryDiscardRequest):
                 "receipt_id": item.receipt_id,
             }
 
-            exists = db.query(BlackcludedItemModel).filter(BlackcludedItemModel.url == item.url).first()
+            from src.core.url_utils import normalize_url
+            normalized_url = normalize_url(item.url)
+
+            exists = db.query(BlackcludedItemModel).filter(BlackcludedItemModel.url == normalized_url).first()
             if not exists:
                 bl = BlackcludedItemModel(
-                    url=item.url,
+                    url=normalized_url,
                     scraped_name=item.scraped_name,
                     reason=request.reason,
                     source_type=item.source_type,
@@ -275,11 +283,13 @@ async def discard_purgatory_bulk(request: PurgatoryBulkDiscardRequest):
     with SessionCloud() as db:
         items = db.query(PendingMatchModel).filter(PendingMatchModel.id.in_(request.pending_ids)).all()
         count = 0
+        from src.core.url_utils import normalize_url
         for item in items:
-            exists = db.query(BlackcludedItemModel).filter(BlackcludedItemModel.url == item.url).first()
+            normalized_url = normalize_url(item.url)
+            exists = db.query(BlackcludedItemModel).filter(BlackcludedItemModel.url == normalized_url).first()
             if not exists:
                 blacklist = BlackcludedItemModel(
-                    url=item.url,
+                    url=normalized_url,
                     scraped_name=item.scraped_name,
                     reason=request.reason,
                 )
@@ -598,10 +608,12 @@ async def match_purgatory_miscellaneous(pending_id: int):
 
         try:
             from src.domain.models import VintageMiscellaneousModel
+            from src.core.url_utils import normalize_url
+            normalized_url = normalize_url(item.url)
 
             misc_item = VintageMiscellaneousModel(
                 title=item.scraped_name,
-                url=item.url,
+                url=normalized_url,
                 price=item.price,
                 currency=item.currency,
                 shop_name=item.shop_name,
@@ -614,7 +626,7 @@ async def match_purgatory_miscellaneous(pending_id: int):
 
             from src.domain.models import OfferHistoryModel
             history = OfferHistoryModel(
-                offer_url=item.url,
+                offer_url=normalized_url,
                 product_name=item.scraped_name,
                 shop_name=item.shop_name,
                 price=item.price,
@@ -627,6 +639,13 @@ async def match_purgatory_miscellaneous(pending_id: int):
             db.commit()
             return {"status": "success", "message": "Anuncio guardado en la sección de Miscelánea Vintage."}
 
+        except IntegrityError as e:
+            db.rollback()
+            logger.error(f"Error de integridad en match_purgatory_miscellaneous: {e}")
+            # Si ya existía, de-duplicamos: borramos el del purgatorio directamente y evitamos error en frontend
+            db.delete(item)
+            db.commit()
+            return {"status": "success", "message": "El anuncio ya existía en la sección de Miscelánea. Removido de Purgatorio."}
         except Exception as e:
             db.rollback()
             logger.error(f"Error en match_purgatory_miscellaneous: {e}")

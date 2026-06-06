@@ -28,3 +28,14 @@ El objetivo del Purgatorio es limpiar la cola de ofertas pendientes para aliment
 El backend procesa las sugerencias empleando varios filtros de seguridad:
 *   **Vetos**: Evita sugerir figuras modernas en búsquedas marcadas estrictamente como vintage y viceversa. Por ejemplo, si una oferta tiene la bandera `is_vintage`, el sistema bloquea sugerencias modernas.
 *   **Lógica de Cercanía Semántica**: Emplea pesos de palabras clave (sabiendo que nombres como "Skeletor" o "He-Man" son más importantes que palabras genéricas como "Figura" o "Muñeco").
+
+---
+
+## Prevención y Limpieza Automática de Duplicados
+
+Para reducir el trabajo manual redundante del administrador, el Oráculo cuenta con un sistema de pre-filtrado en caliente:
+*   **Actualización y Omisión Directa**: Si las arañas web (o el importador de Wallapop) escanean una URL que ya posee una acción previa asignada, el sistema actúa de forma inteligente:
+    *   *Si ya está vinculada al catálogo*: Actualiza su precio en la oferta activa y no crea duplicados en el Purgatorio.
+    *   *Si ya fue clasificada en Miscelánea Vintage*: Actualiza el precio del lote directamente en la sección de Miscelánea y no genera registros en el Purgatorio.
+    *   *Si ya fue descartada en el pasado*: Es ignorada silenciosamente por el scraper.
+*   **Auto-Saneamiento del Purgatorio**: Si por algún desajuste o concurrencia existiese una URL en el Purgatorio que ya cuenta con una oferta activa, un descarte en lista negra o un registro en Miscelánea Vintage, la próxima incursión del scraper detectará la redundancia y eliminará automáticamente el artículo del Purgatorio.

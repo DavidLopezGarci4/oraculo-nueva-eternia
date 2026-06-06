@@ -1,10 +1,11 @@
+import json
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from loguru import logger
 
 from src.application.services.logistics_service import LogisticsService
-from src.domain.models import OfferModel, PendingMatchModel, ProductModel, UserModel
+from src.domain.models import OfferModel, PendingMatchModel, ProductModel, UserModel, BlackcludedItemModel, VintageMiscellaneousModel
 from src.infrastructure.database_cloud import SessionCloud
 from src.interfaces.api.deps import verify_device
 from src.interfaces.api.schemas import WallapopImportRequest
@@ -41,16 +42,78 @@ async def update_user_location(user_id: int, location: str):
 @router.post("/api/wallapop/import")
 async def import_wallapop_products(request: WallapopImportRequest):
     imported = 0
+    from src.core.url_utils import normalize_url
+    from src.core.vintage_utils import validate_motu_relevance
+    from src.infrastructure.scrapers.pipeline import clean_purgatory_globally
+    
+    # Normalize all incoming URLs first
+    for p in request.products:
+        if p.url:
+            p.url = normalize_url(p.url)
+            
     with SessionCloud() as db:
+        # Global proactive cleanup before processing new ones
+        clean_purgatory_globally(db)
+        
+        urls = [p.url for p in request.products if p.url]
+        if not urls:
+            return {"status": "success", "imported": 0, "total_received": 0}
+
+        active_urls = set(
+            x[0] for x in db.query(OfferModel.url).filter(OfferModel.url.in_(urls)).all()
+        )
+        blocked_urls = set(
+            x[0] for x in db.query(BlackcludedItemModel.url).filter(BlackcludedItemModel.url.in_(urls)).all()
+        )
+        misc_urls = set(
+            x[0] for x in db.query(VintageMiscellaneousModel.url).filter(VintageMiscellaneousModel.url.in_(urls)).all()
+        )
+        purgatory_urls = set(
+            x[0] for x in db.query(PendingMatchModel.url).filter(PendingMatchModel.url.in_(urls)).all()
+        )
+
         for product in request.products:
-            existing = db.query(PendingMatchModel).filter(PendingMatchModel.url == product.url).first()
-            if existing:
+            url_str = product.url
+            if not url_str:
                 continue
+                
+            # If already active, blocked, miscellaneous or in purgatory, skip
+            if (url_str in active_urls or 
+                url_str in blocked_urls or 
+                url_str in misc_urls or 
+                url_str in purgatory_urls):
+                continue
+                
+            # Apply MOTU Relevance check
+            is_relevant, reason = validate_motu_relevance(product.title)
+            if not is_relevant:
+                # Add to Blacklist to prevent future parsing
+                bl = BlackcludedItemModel(
+                    url=url_str,
+                    scraped_name=product.title,
+                    reason=f"Descarte automático (Importación): {reason}",
+                    source_type="Peer-to-Peer"
+                )
+                db.add(bl)
+                
+                # Add history log
+                history = OfferHistoryModel(
+                    offer_url=url_str,
+                    product_name=product.title,
+                    shop_name="Wallapop",
+                    price=product.price,
+                    action_type="AUTO_DISCARDED_RELEVANCE",
+                    details=json.dumps({"reason": reason})
+                )
+                db.add(history)
+                blocked_urls.add(url_str)
+                continue
+                
             pending = PendingMatchModel(
                 scraped_name=f"[Wallapop] {product.title}",
                 price=product.price,
                 currency="EUR",
-                url=product.url,
+                url=url_str,
                 shop_name="Wallapop",
                 source_type="Peer-to-Peer",
                 image_url=product.imageUrl,
@@ -58,6 +121,9 @@ async def import_wallapop_products(request: WallapopImportRequest):
             )
             db.add(pending)
             imported += 1
+            
+        # Clean up once more after addition, then commit
+        clean_purgatory_globally(db)
         db.commit()
 
     logger.info(f"[Wallapop Extension] Importados {imported} productos al Purgatorio")

@@ -11,7 +11,27 @@ from sqlalchemy.orm import Session
 from src.infrastructure.database_cloud import SessionCloud, init_cloud_db
 from src.infrastructure.services.telegram_service import telegram_service
 from src.application.services.deal_scorer import DealScorer
-from src.application.services.logistics_service import LogisticsService
+def clean_purgatory_globally(db: Session):
+    """
+    Elimina de forma proactiva y global del Purgatorio cualquier oferta 
+    cuya URL ya esté guardada en offers, blackcluded_items o vintage_miscellaneous.
+    """
+    from src.domain.models import PendingMatchModel, OfferModel, BlackcludedItemModel, VintageMiscellaneousModel
+    
+    try:
+        q_offers = db.query(OfferModel.url).subquery()
+        q_black = db.query(BlackcludedItemModel.url).subquery()
+        q_misc = db.query(VintageMiscellaneousModel.url).subquery()
+        
+        deleted_offers = db.query(PendingMatchModel).filter(PendingMatchModel.url.in_(q_offers)).delete(synchronize_session=False)
+        deleted_black = db.query(PendingMatchModel).filter(PendingMatchModel.url.in_(q_black)).delete(synchronize_session=False)
+        deleted_misc = db.query(PendingMatchModel).filter(PendingMatchModel.url.in_(q_misc)).delete(synchronize_session=False)
+        
+        total_deleted = deleted_offers + deleted_black + deleted_misc
+        if total_deleted > 0:
+            logger.info(f"🧹 Purgatory Cleanup: Removed {total_deleted} redundant items ({deleted_offers} linked, {deleted_black} blacklisted, {deleted_misc} misc)")
+    except Exception as e:
+        logger.error(f"⚠️ Error running global purgatory cleanup: {e}")
 
 class ScrapingPipeline:
     def __init__(self, scrapers: List[BaseScraper], cancel_event: threading.Event | None = None):
@@ -218,12 +238,15 @@ class ScrapingPipeline:
         repo = ProductRepository(db)
         from src.application.services.auditor import AuditorService
         from src.application.services.sentinel import SentinelService
-        from src.domain.models import PendingMatchModel, BlackcludedItemModel, OfferModel, LogisticRuleModel
+        from src.domain.models import PendingMatchModel, BlackcludedItemModel, OfferModel, LogisticRuleModel, VintageMiscellaneousModel
         
         auditor = AuditorService(repo)
         sentinel = SentinelService(repo)
         
         try:
+            # Limpieza global proactiva del purgatorio al inicio del lote
+            clean_purgatory_globally(db)
+            
             # --- PHASE 7.3: BULK PRE-FETCHING ---
             logger.info("🛡️ Pipeline: Initiating Bulk Pre-filtering...")
             
@@ -234,7 +257,7 @@ class ScrapingPipeline:
                 logger.warning("No valid URLs in batch. Aborting.")
                 return
 
-            # B. Bulk Check against Database (3 Queries instead of N)
+            # B. Bulk Check against Database (4 Queries instead of N)
             # 1. Blocked Items
             blocked_urls = set(
                 x[0] for x in db.query(BlackcludedItemModel.url).filter(BlackcludedItemModel.url.in_(incoming_urls)).all()
@@ -248,6 +271,21 @@ class ScrapingPipeline:
             existing_offers = {
                 o.url: o for o in db.query(OfferModel).filter(OfferModel.url.in_(incoming_urls)).all()
             }
+            # 4. Miscellaneous Items - Fetch full objects for updates
+            existing_misc = {
+                m.url: m for m in db.query(VintageMiscellaneousModel).filter(VintageMiscellaneousModel.url.in_(incoming_urls)).all()
+            }
+
+            # C. Clean up redundant items in Purgatory (already matched/discarded/miscellaneous)
+            redundant_pending_urls = existing_pending_urls.intersection(
+                blocked_urls.union(existing_offers.keys()).union(existing_misc.keys())
+            )
+            if redundant_pending_urls:
+                logger.info(f"🧹 Pipeline Cleanup: Removing {len(redundant_pending_urls)} redundant items from Purgatory (already matched/discarded/miscellaneous)")
+                db.query(PendingMatchModel).filter(PendingMatchModel.url.in_(redundant_pending_urls)).delete(synchronize_session=False)
+                for url in redundant_pending_urls:
+                    existing_pending_urls.discard(url)
+                    existing_pending.pop(url, None)
             
             # Pre-fetch all products for matching (only if needed)
             all_products = repo.get_all(limit=5000)
@@ -303,6 +341,43 @@ class ScrapingPipeline:
                         "last_price_update": datetime.utcnow()
                     }, commit=False)
                     continue
+
+                # c2. Check Miscellaneous Items (Update Logic)
+                if url_str in existing_misc:
+                    misc_item = existing_misc[url_str]
+                    new_price = offer.get('price', 0.0)
+                    if new_price > 0 and abs(misc_item.price - new_price) > 0.01:
+                        misc_item.price = new_price
+                        misc_item.added_at = datetime.utcnow()
+                    continue
+
+                # d2. Relevance check for MOTU (Brand exclusion & keyword check)
+                if url_str not in existing_offers and url_str not in existing_misc and url_str not in existing_pending_urls:
+                    from src.core.vintage_utils import validate_motu_relevance
+                    from src.domain.models import OfferHistoryModel
+                    is_relevant, reason = validate_motu_relevance(offer.get('product_name', ''))
+                    if not is_relevant:
+                        # Auto-blacklist the item to prevent future scraping attempts
+                        bl = BlackcludedItemModel(
+                            url=url_str,
+                            scraped_name=offer.get('product_name', 'Desconocido'),
+                            reason=f"Descarte automático: {reason}",
+                            source_type=offer.get('source_type', 'Retail')
+                        )
+                        db.add(bl)
+                        # Add history log for auditability
+                        history = OfferHistoryModel(
+                            offer_url=url_str,
+                            product_name=offer.get('product_name', 'Desconocido'),
+                            shop_name=offer.get('shop_name', 'Unknown'),
+                            price=offer.get('price', 0.0),
+                            action_type="AUTO_DISCARDED_RELEVANCE",
+                            details=json.dumps({"reason": reason})
+                        )
+                        db.add(history)
+                        blocked_urls.add(url_str)
+                        logger.info(f"🚫 Auto-Discarded: {offer.get('product_name')} ({reason})")
+                        continue
 
                 # d. Check Pending (Update price if changed)
                 if url_str in existing_pending_urls:
@@ -551,6 +626,8 @@ class ScrapingPipeline:
                         else:
                             logger.warning(f"⚠️ Item insertion error ({url_str}): {e}")
             
+            # Limpieza global proactiva del purgatorio al finalizar la actualización
+            clean_purgatory_globally(db)
             db.commit()
             logger.success(f"⚡ Batch Complete: {new_items_count} new items added to Purgatory (Atomic Safe Mode).")
 

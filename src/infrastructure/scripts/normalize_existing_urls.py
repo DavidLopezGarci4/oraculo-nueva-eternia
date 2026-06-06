@@ -15,7 +15,7 @@ if hasattr(sys.stdout, 'reconfigure'):
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
 
 from src.infrastructure.database_cloud import SessionCloud
-from src.domain.models import OfferModel, PendingMatchModel, BlackcludedItemModel
+from src.domain.models import OfferModel, PendingMatchModel, BlackcludedItemModel, VintageMiscellaneousModel
 from src.core.url_utils import normalize_url
 
 def run_migration():
@@ -68,10 +68,31 @@ def run_migration():
                     print(f"[MERGE-DELETE] Lista Negra: {dupe.scraped_name} ({dupe.url})")
                     db1.delete(dupe)
                     blocked_deleted += 1
+
+        # C. Duplicados en Miscelánea
+        print("[DE-DUP] Analizando Miscelánea (vintage_miscellaneous)...")
+        misc_items = db1.query(VintageMiscellaneousModel).all()
+        misc_by_clean = {}
+        for item in misc_items:
+            clean = normalize_url(item.url)
+            if clean not in misc_by_clean:
+                misc_by_clean[clean] = []
+            misc_by_clean[clean].append(item)
+            
+        misc_deleted = 0
+        for clean, items in misc_by_clean.items():
+            if len(items) > 1:
+                # Ordenar por el más reciente
+                items_sorted = sorted(items, key=lambda x: x.added_at or datetime.min, reverse=True)
+                # Mantener el primero, borrar el resto
+                for dupe in items_sorted[1:]:
+                    print(f"[MERGE-DELETE] Miscelánea: {dupe.title} ({dupe.url})")
+                    db1.delete(dupe)
+                    misc_deleted += 1
                     
         # Confirmar la fase de borrado
-        if pending_deleted > 0 or blocked_deleted > 0:
-            print(f"[SAVE] Confirmando eliminacion de {pending_deleted} pending_matches y {blocked_deleted} blackcluded_items...")
+        if pending_deleted > 0 or blocked_deleted > 0 or misc_deleted > 0:
+            print(f"[SAVE] Confirmando eliminacion de {pending_deleted} pending_matches, {blocked_deleted} blackcluded_items y {misc_deleted} vintage_miscellaneous...")
             db1.commit()
             print("[SUCCESS] Fase 1 completada. Base de datos libre de duplicados.")
         else:
@@ -127,6 +148,18 @@ def run_migration():
                 blocked_updated += 1
                 db2.add(item)
         print(f"[SUCCESS] Lista Negra normalizada: {blocked_updated}")
+
+        # D. Normalizar Miscelánea
+        print("[NORM] Normalizando Miscelánea (vintage_miscellaneous)...")
+        misc_items = db2.query(VintageMiscellaneousModel).all()
+        misc_updated = 0
+        for item in misc_items:
+            clean = normalize_url(item.url)
+            if item.url != clean:
+                item.url = clean
+                misc_updated += 1
+                db2.add(item)
+        print(f"[SUCCESS] Miscelánea normalizada: {misc_updated}")
 
         # Guardar todos los cambios limpios
         print("[SAVE] Confirmando cambios de normalizacion en la base de datos...")
