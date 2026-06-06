@@ -1,7 +1,7 @@
 import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { Gavel, AlertCircle, Info, Plus, Check, ShoppingCart, ShoppingBasket, RefreshCw, Star, TrendingUp, History, Package, X, ExternalLink } from 'lucide-react';
+import { Gavel, AlertCircle, Info, Plus, Check, ShoppingCart, ShoppingBasket, RefreshCw, Star, TrendingUp, History, Package, X, ExternalLink, ArrowUp, ArrowDown } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import PowerSwordLoader from '../components/ui/PowerSwordLoader';
 import { motion } from 'framer-motion';
@@ -58,7 +58,8 @@ const Auctions: React.FC<AuctionsProps> = ({ user }) => {
     const [selectedProduct, setSelectedProduct] = React.useState<Product | null>(null);
     const [historyProductId, setHistoryProductId] = React.useState<number | null>(null);
     const [expandedImage, setExpandedImage] = React.useState<string | null>(null);
-    const [sortBy, setSortBy] = React.useState<'name' | 'price' | 'figure_id'>('name');
+    const [sortBy, setSortBy] = React.useState<'name' | 'price' | 'time'>('name');
+    const [sortOrder, setSortOrder] = React.useState<'asc' | 'desc'>('asc');
     const [copiedId, setCopiedId] = React.useState<number | null>(null);
 
     const activeUserId = parseInt(localStorage.getItem('active_user_id') || '2');
@@ -148,12 +149,17 @@ const Auctions: React.FC<AuctionsProps> = ({ user }) => {
     const sortedProducts = React.useMemo(() => {
         if (!products) return [];
         return [...products].sort((a, b) => {
-            if (sortBy === 'name') return a.name.localeCompare(b.name);
-            if (sortBy === 'price') return (a.best_p2p_price || Infinity) - (b.best_p2p_price || Infinity);
-            if (sortBy === 'figure_id') return (parseInt(a.figure_id) || 0) - (parseInt(b.figure_id) || 0);
-            return 0;
+            let comparison = 0;
+            if (sortBy === 'name') {
+                comparison = a.name.localeCompare(b.name);
+            } else if (sortBy === 'price') {
+                comparison = (a.best_p2p_price || Infinity) - (b.best_p2p_price || Infinity);
+            } else if (sortBy === 'time') {
+                comparison = a.id - b.id;
+            }
+            return sortOrder === 'asc' ? comparison : -comparison;
         });
-    }, [products, sortBy]);
+    }, [products, sortBy, sortOrder]);
 
     if (isLoadingProducts || isLoadingCollection) {
         return <PowerSwordLoader variant="fullScreen" text="Infiltrándonos en Wallapop & eBay..." />;
@@ -170,7 +176,7 @@ const Auctions: React.FC<AuctionsProps> = ({ user }) => {
 
     return (
         <div className="space-y-2 md:space-y-3 animate-in fade-in duration-1000">
-            <div className="relative overflow-hidden flex flex-col gap-4 md:flex-row md:items-center md:justify-between rounded-2xl md:rounded-3xl border border-white/5 bg-black/25 p-4 md:p-6 backdrop-blur-2xl shadow-2xl">
+            <div className="relative overflow-hidden flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between rounded-2xl md:rounded-3xl border border-white/5 bg-black/25 p-4 md:p-6 backdrop-blur-2xl shadow-2xl">
                 <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-brand-primary/10 blur-[100px] pointer-events-none"></div>
                 <div className="relative z-10 flex flex-col gap-1">
                     <div className="flex items-center gap-2 text-brand-primary">
@@ -181,50 +187,62 @@ const Auctions: React.FC<AuctionsProps> = ({ user }) => {
                     </div>
                     <p className="max-w-xl text-[11px] md:text-sm text-white/40 font-medium uppercase tracking-[0.1em]">Subastas & Mercado de Segunda Mano</p>
                 </div>
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 w-full md:w-auto">
-                    <div className="grid grid-cols-3 gap-1 sm:gap-2 p-1 sm:p-1.5 rounded-xl bg-white/[0.03] border border-white/5 w-full sm:w-auto">
+                
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 w-full lg:w-auto relative z-10">
+                    <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
+                        <div className="grid grid-cols-3 gap-1 sm:gap-2 p-1 rounded-xl bg-white/[0.03] border border-white/5 flex-1 sm:flex-initial">
+                            <button
+                                onClick={() => setSortBy('name')}
+                                className={`py-1.5 px-2.5 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-[0.05em] transition-all ${sortBy === 'name' ? 'bg-brand-primary text-white shadow-[0_0_15px_rgba(14,165,233,0.3)]' : 'text-white/20 hover:text-white/40'}`}
+                            >
+                                Nombre
+                            </button>
+                            <button
+                                onClick={() => setSortBy('price')}
+                                className={`py-1.5 px-2.5 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-[0.05em] transition-all ${sortBy === 'price' ? 'bg-brand-primary text-white shadow-[0_0_15px_rgba(14,165,233,0.3)]' : 'text-white/20 hover:text-white/40'}`}
+                            >
+                                Precio
+                            </button>
+                            <button
+                                onClick={() => setSortBy('time')}
+                                className={`py-1.5 px-2.5 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-[0.05em] transition-all ${sortBy === 'time' ? 'bg-brand-primary text-white shadow-[0_0_15px_rgba(14,165,233,0.3)]' : 'text-white/20 hover:text-white/40'}`}
+                            >
+                                Tiempo
+                            </button>
+                        </div>
+                        
                         <button
-                            onClick={() => setSortBy('name')}
-                            className={`w-full py-1.5 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-[0.05em] sm:tracking-widest transition-all ${sortBy === 'name' ? 'bg-brand-primary text-white shadow-[0_0_15px_rgba(34,211,238,0.3)]' : 'text-white/20 hover:text-white/40'}`}
+                            onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+                            className="h-[38px] w-[38px] sm:h-[42px] sm:w-[42px] flex items-center justify-center rounded-xl bg-white/[0.03] border border-white/5 text-brand-primary hover:bg-white/10 hover:text-brand-primary/80 transition-all shrink-0 shadow-md"
+                            title={sortOrder === 'asc' ? 'Orden Ascendente' : 'Orden Descendente'}
                         >
-                            Nombre
-                        </button>
-                        <button
-                            onClick={() => setSortBy('price')}
-                            className={`w-full py-1.5 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-[0.05em] sm:tracking-widest transition-all ${sortBy === 'price' ? 'bg-brand-primary text-white shadow-[0_0_15px_rgba(34,211,238,0.3)]' : 'text-white/20 hover:text-white/40'}`}
-                        >
-                            Precio
-                        </button>
-                        <button
-                            onClick={() => setSortBy('figure_id')}
-                            className={`w-full py-1.5 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-[0.05em] sm:tracking-widest transition-all ${sortBy === 'figure_id' ? 'bg-brand-primary text-white shadow-[0_0_15px_rgba(34,211,238,0.3)]' : 'text-white/20 hover:text-white/40'}`}
-                        >
-                            ID
+                            {sortOrder === 'asc' ? <ArrowUp className="h-4 w-4 sm:h-5 sm:w-5" /> : <ArrowDown className="h-4 w-4 sm:h-5 sm:w-5" />}
                         </button>
                     </div>
-                    <div className="flex items-center justify-between sm:justify-start gap-3 rounded-xl sm:rounded-2xl bg-white/[0.03] px-4 sm:px-6 py-2 sm:py-3 border border-white/5 backdrop-blur-3xl w-full sm:w-auto">
+
+                    <div className="flex items-center justify-between sm:justify-start gap-3 rounded-xl sm:rounded-2xl bg-white/[0.03] px-4 py-2 sm:py-2.5 border border-white/5 backdrop-blur-3xl w-full sm:w-auto h-[38px] sm:h-[42px]">
                         <div className="flex items-center gap-2">
                             <Gavel className="h-4 w-4 sm:h-5 sm:w-5 text-brand-primary" />
-                            <span className="text-xl sm:text-2xl font-black text-white leading-none">{products?.length}</span>
+                            <span className="text-lg sm:text-xl font-black text-white leading-none">{sortedProducts?.length}</span>
                         </div>
-                        <span className="text-[8px] sm:text-[10px] font-black text-white/20 uppercase tracking-[0.15em] sm:tracking-[0.2em] pt-0.5 leading-tight text-right sm:text-left">
-                            Otras Reliquias<br className="sm:hidden" /> Libres
+                        <span className="text-[8px] sm:text-[9px] font-black text-white/20 uppercase tracking-[0.15em] pt-0.5 leading-tight text-right sm:text-left">
+                            Subastas<br className="sm:hidden" /> Filtradas
                         </span>
                     </div>
                 </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid grid-cols-2 gap-1.5 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {sortedProducts?.map((product) => {
                     const owned = isOwned(product.id);
                     const wished = isWished(product.id);
                     return (
                         <div
                             key={product.id}
-                            className="group relative flex flex-col gap-1.5 sm:gap-4 rounded-2xl sm:rounded-[2.5rem] border border-white/5 bg-black/25 backdrop-blur-md p-2 sm:p-5 hover:bg-white/[0.05] transition-all duration-500 hover:translate-y-[-4px] hover:shadow-2xl"
+                            className="group relative flex flex-col gap-1 sm:gap-1.5 md:gap-3 rounded-2xl sm:rounded-3xl border border-white/5 bg-black/25 backdrop-blur-md p-1.5 sm:p-2 md:p-3.5 hover:bg-white/[0.05] transition-all duration-500 hover:translate-y-[-4px] hover:shadow-2xl"
                         >
                             <div
-                                className="relative aspect-square w-full overflow-hidden rounded-2xl sm:rounded-[2rem] bg-black/40 border border-white/10 shadow-inner group/img cursor-pointer"
+                                className="relative aspect-square w-full overflow-hidden rounded-[1.2rem] sm:rounded-[1.5rem] bg-black/40 border border-white/10 shadow-inner group/img cursor-pointer"
                                 onClick={() => setSelectedProduct(product)}
                             >
                                 {product.image_url ? (
@@ -239,24 +257,24 @@ const Auctions: React.FC<AuctionsProps> = ({ user }) => {
                                 )}
 
                                 {/* Auction Badges */}
-                                <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-40 flex flex-col items-end gap-1 sm:gap-2">
-                                    <div className="flex items-center gap-1 rounded-md sm:rounded-xl bg-orange-500/10 px-1.5 py-0.5 sm:px-2.5 sm:py-1 border border-orange-500/20 backdrop-blur-md">
-                                        <span className="h-1 w-1 sm:h-1.5 sm:w-1.5 rounded-full bg-orange-500 animate-pulse"></span>
+                                <div className="absolute top-2 right-2 sm:top-3 sm:right-3 z-40 flex flex-col items-end gap-1">
+                                    <div className="flex items-center gap-1 rounded-md bg-orange-500/10 px-1.5 py-0.5 border border-orange-500/20 backdrop-blur-md">
+                                        <span className="h-1 w-1 rounded-full bg-orange-500 animate-pulse"></span>
                                         <span className="text-[6px] sm:text-[8px] font-black uppercase tracking-widest text-orange-500">Subasta</span>
                                     </div>
 
                                     {product.best_p2p_source?.toLowerCase().includes('wallapop') && (
-                                        <div className="flex items-center gap-1 rounded-lg sm:rounded-xl bg-[#c2f6ea]/10 px-1.5 py-0.5 sm:px-2.5 sm:py-1 border border-[#c2f6ea]/30 backdrop-blur-md">
+                                        <div className="flex items-center gap-1 rounded-lg bg-[#c2f6ea]/10 px-1.5 py-0.5 border border-[#c2f6ea]/30 backdrop-blur-md">
                                             <span className="text-[6px] sm:text-[8px] font-black uppercase tracking-widest text-[#c2f6ea]">Wallapop</span>
                                         </div>
                                     )}
                                     {product.best_p2p_source?.toLowerCase().includes('ebay') && (
-                                        <div className="flex items-center gap-1 rounded-lg sm:rounded-xl bg-blue-500/10 px-1.5 py-0.5 sm:px-2.5 sm:py-1 border border-blue-500/30 backdrop-blur-md">
+                                        <div className="flex items-center gap-1 rounded-lg bg-blue-500/10 px-1.5 py-0.5 border border-blue-500/30 backdrop-blur-md">
                                             <span className="text-[6px] sm:text-[8px] font-black uppercase tracking-widest text-blue-400">eBay</span>
                                         </div>
                                     )}
                                     {product.best_p2p_source?.toLowerCase().includes('vinted') && (
-                                        <div className="flex items-center gap-1 rounded-lg sm:rounded-xl bg-[#00c0ce]/10 px-1.5 py-0.5 sm:px-2.5 sm:py-1 border border-[#00c0ce]/30 backdrop-blur-md">
+                                        <div className="flex items-center gap-1 rounded-lg bg-[#00c0ce]/10 px-1.5 py-0.5 border border-[#00c0ce]/30 backdrop-blur-md">
                                             <span className="text-[6px] sm:text-[8px] font-black uppercase tracking-widest text-[#00c0ce]">Vinted</span>
                                         </div>
                                     )}
@@ -275,7 +293,7 @@ const Auctions: React.FC<AuctionsProps> = ({ user }) => {
                                         ? 'bg-green-500/20 text-green-400 hover:bg-red-500/40 hover:text-white'
                                         : wished
                                             ? 'bg-brand-primary/10 text-brand-primary hover:bg-brand-primary hover:text-white'
-                                            : 'bg-white/5 text-white/10 hover:bg-brand-primary/20 hover:text-white'
+                                            : 'bg-white/5 text-brand-primary/60 hover:text-brand-primary hover:bg-brand-primary/20'
                                         }`}
                                     onClick={(e) => {
                                         e.stopPropagation();
@@ -299,21 +317,21 @@ const Auctions: React.FC<AuctionsProps> = ({ user }) => {
                                     )}
                                 </div>
 
-                                <div className="absolute top-2 left-2 sm:top-4 sm:left-4 z-40 rounded-lg sm:rounded-xl bg-black/70 px-2 py-1 sm:px-3 sm:py-1.5 text-[8px] sm:text-[10px] font-black text-brand-primary backdrop-blur-md border border-brand-primary/20 opacity-0 group-hover:opacity-100 transition-all uppercase tracking-widest">#{product.figure_id}</div>
+                                <div className="absolute top-2 left-2 sm:top-3 sm:left-3 z-40 rounded-lg bg-black/70 px-2 py-0.5 text-[8px] sm:text-[9px] font-black text-brand-primary backdrop-blur-md border border-brand-primary/20 opacity-0 group-hover:opacity-100 transition-all uppercase tracking-widest">#{product.figure_id}</div>
                             </div>
 
-                            <div className="flex flex-1 flex-col gap-1 sm:gap-3 px-1">
-                                <div className="space-y-0.5 sm:space-y-1">
-                                    <span className="text-[7px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-brand-primary opacity-80 group-hover:opacity-100 transition-colors line-clamp-1">{product.sub_category}</span>
-                                    <h3 className="line-clamp-2 md:min-h-[2rem] text-[11px] sm:text-lg font-black leading-tight text-white group-hover:text-brand-primary transition-colors">{product.name}</h3>
+                            <div className="flex flex-1 flex-col gap-1 sm:gap-1.5 px-0.5">
+                                <div className="space-y-0.5">
+                                    <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-[0.2em] text-brand-primary opacity-80 group-hover:opacity-100 transition-colors line-clamp-1">{product.sub_category}</span>
+                                    <h3 className="line-clamp-2 md:min-h-[1.5rem] text-[10px] sm:text-xs md:text-sm lg:text-base font-black leading-tight text-white group-hover:text-brand-primary transition-colors">{product.name}</h3>
                                 </div>
 
-                                <div className="mt-auto flex flex-col gap-2">
-                                    <div className="flex flex-col flex-1 min-w-0 justify-end pt-2">
-                                        <div className="flex items-center gap-1 sm:gap-1.5 overflow-hidden w-full mb-0.5 sm:mb-1">
-                                            <span className="text-[6px] sm:text-[8px] font-black text-white/30 uppercase tracking-widest leading-none shrink-0">Mejor Precio Subasta</span>
+                                <div className="mt-auto flex flex-col gap-1.5">
+                                    <div className="flex flex-col flex-1 min-w-0 justify-end pt-1">
+                                        <div className="flex items-center gap-1 overflow-hidden w-full mb-0.5">
+                                            <span className="text-[6px] sm:text-[7px] font-black text-white/30 uppercase tracking-widest leading-none shrink-0">Mejor Precio Subasta</span>
                                         </div>
-                                        <div className="text-[16px] sm:text-2xl font-black text-brand-primary leading-[0.8] sm:leading-none tracking-tighter truncate">{product.best_p2p_price || 0} <span className="text-[8px] sm:text-xs text-white/40">€</span></div>
+                                        <div className="text-base sm:text-lg font-black text-brand-primary leading-none tracking-tighter truncate">{product.best_p2p_price || 0} <span className="text-[8px] sm:text-xs text-white/40">€</span></div>
                                     </div>
                                     
                                     {/* Action Buttons Row - Symmetrical Center Dock */}
@@ -321,32 +339,32 @@ const Auctions: React.FC<AuctionsProps> = ({ user }) => {
                                         {/* Action: Toggle Price History */}
                                         <button
                                             onClick={() => setHistoryProductId(historyProductId === product.id ? null : product.id)}
-                                            className={`flex h-8 w-8 items-center justify-center rounded-xl transition-all border hover:scale-110 active:scale-95 duration-300 shadow-md ${historyProductId === product.id ? 'bg-purple-500/20 text-purple-400 border-purple-500/50' : 'bg-white/5 text-white/30 border-white/10 hover:bg-white/10 hover:text-white'}`}
+                                            className={`flex h-7 w-7 items-center justify-center rounded-xl transition-all border hover:scale-110 active:scale-95 duration-300 shadow-md ${historyProductId === product.id ? 'bg-purple-500/20 text-purple-400 border-purple-500/50' : 'bg-white/5 text-white/30 border-white/10 hover:bg-white/10 hover:text-white'}`}
                                             title="Ver Evolución de Precios"
                                         >
-                                            <History className="h-4 w-4" />
+                                            <History className="h-3.5 w-3.5" />
                                         </button>
 
                                         {/* Action Button: Detail View */}
                                         <button
                                             onClick={() => setSelectedProduct(product)}
-                                            className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/5 text-white/40 border border-white/10 transition-all hover:bg-brand-primary/20 hover:text-brand-primary hover:border-brand-primary/45 hover:scale-110 active:scale-95 duration-300 shadow-md"
+                                            className="flex h-7 w-7 items-center justify-center rounded-xl bg-white/5 text-white/40 border border-white/10 transition-all hover:bg-brand-primary/20 hover:text-brand-primary hover:border-brand-primary/45 hover:scale-110 active:scale-95 duration-300 shadow-md"
                                             title="Ver Mercado Live"
                                         >
-                                            <Info className="h-4 w-4" />
+                                            <Info className="h-3.5 w-3.5" />
                                         </button>
 
                                         {/* Action: Toggle Wishlist */}
                                         <button
                                             onClick={() => toggleMutation.mutate({ productId: product.id, wish: true })}
                                             disabled={toggleMutation.isPending || owned}
-                                            className={`flex h-8 w-8 items-center justify-center rounded-xl transition-all border shadow-md hover:scale-110 active:scale-95 duration-300 ${wished
+                                            className={`flex h-7 w-7 items-center justify-center rounded-xl transition-all border shadow-md hover:scale-110 active:scale-95 duration-300 ${wished
                                                 ? 'bg-brand-primary/20 text-brand-primary border-brand-primary/30 hover:bg-red-500/20 hover:text-red-400'
                                                 : 'bg-white/5 text-white/20 border-white/10 hover:bg-brand-primary/10 hover:text-brand-primary'
                                                 } ${owned ? 'opacity-20 cursor-not-allowed' : ''} ${toggleMutation.isPending ? 'opacity-50 cursor-wait' : ''}`}
                                             title={wished ? 'Quitar de Deseos' : 'Añadir a Deseos'}
                                         >
-                                            <Star className={`h-4 w-4 ${wished ? 'fill-current' : ''}`} />
+                                            <Star className={`h-3.5 w-3.5 ${wished ? 'fill-current' : ''}`} />
                                         </button>
                                     </div>
                                 </div>

@@ -21,7 +21,9 @@ import {
     Gem,
     Search,
     Box,
-    Trash2
+    Trash2,
+    ArrowUp,
+    ArrowDown
 } from 'lucide-react';
 import { getOptimizedImageUrl } from '../utils/imageUtils';
 import {
@@ -59,6 +61,8 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
     const [selectedProduct, setSelectedProduct] = React.useState<Product | null>(null);
     const [editingProduct, setEditingProduct] = React.useState<Product | null>(null);
     const [expandedImage, setExpandedImage] = React.useState<string | null>(null);
+    const [sortBy, setSortBy] = React.useState<'name' | 'offers' | 'completion'>('name');
+    const [sortOrder, setSortOrder] = React.useState<'asc' | 'desc'>('asc');
 
     // Cronos Standalone states
     const [viewMode, setViewMode] = React.useState<'grid' | 'cronos'>('grid');
@@ -310,7 +314,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                 const query = searchQuery.toLowerCase();
                 const owned = isOwned(product.id);
 
-                // EXCLUSIÓN TOTAL: Si ya es propiedad del usuario, no aparece en Nueva Eternia
+                // EXCLUSIÓN TOTAL: Si ya es propiedad del usuario, no aparece en el Catálogo
                 if (owned) return false;
 
                 return (
@@ -320,56 +324,26 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                 );
             })
             .sort((a, b) => {
-                if (isVintageOnly) {
-                    const hasOfferA = (a.best_p2p_price && a.best_p2p_price > 0) || hasMarketIntel(a.id) ? 1 : 0;
-                    const hasOfferB = (b.best_p2p_price && b.best_p2p_price > 0) || hasMarketIntel(b.id) ? 1 : 0;
-                    if (hasOfferA !== hasOfferB) {
-                        return hasOfferB - hasOfferA; // Los que tienen ofertas activas en el catálogo van primero
-                    }
-
-                    const countA = a.purgatory_match_count || 0;
-                    const countB = b.purgatory_match_count || 0;
-                    if (countA !== countB) {
-                        return countB - countA;
-                    }
-                    return a.id - b.id;
+                let comparison = 0;
+                if (sortBy === 'name') {
+                    comparison = a.name.localeCompare(b.name);
+                } else if (sortBy === 'offers') {
+                    comparison = (a.purgatory_match_count || 0) - (b.purgatory_match_count || 0);
+                } else if (sortBy === 'completion') {
+                    const statsA = subCatStats[a.sub_category || 'Desconocida'] || { total: 1, owned: 0 };
+                    const statsB = subCatStats[b.sub_category || 'Desconocida'] || { total: 1, owned: 0 };
+                    const rateA = statsA.total > 0 ? statsA.owned / statsA.total : 0;
+                    const rateB = statsB.total > 0 ? statsB.owned / statsB.total : 0;
+                    comparison = rateA - rateB;
                 }
-
-                const aWished = isWished(a.id) ? 1 : 0;
-                const bWished = isWished(b.id) ? 1 : 0;
-
-                // 1. Favoritos/Deseos Primero
-                if (aWished !== bWished) {
-                    return bWished - aWished;
+                
+                if (comparison === 0) {
+                    comparison = a.id - b.id;
                 }
-
-                // 2. Cantidad de ofertas guardadas (>0) ascendente (menos ofertas primero)
-                const countA = a.purgatory_match_count || 0;
-                const countB = b.purgatory_match_count || 0;
-                const hasOffersA = countA > 0 ? 1 : 0;
-                const hasOffersB = countB > 0 ? 1 : 0;
-
-                if (hasOffersA !== hasOffersB) {
-                    return hasOffersB - hasOffersA;
-                }
-                if (countA > 0 && countB > 0 && countA !== countB) {
-                    return countA - countB;
-                }
-
-                // 3. Colección más cercana a terminarse (tasa de completitud descendente)
-                const statsA = subCatStats[a.sub_category || 'Desconocida'] || { total: 1, owned: 0 };
-                const statsB = subCatStats[b.sub_category || 'Desconocida'] || { total: 1, owned: 0 };
-                const rateA = statsA.total > 0 ? statsA.owned / statsA.total : 0;
-                const rateB = statsB.total > 0 ? statsB.owned / statsB.total : 0;
-
-                if (rateA !== rateB) {
-                    return rateB - rateA;
-                }
-
-                // Desempate por ID
-                return a.id - b.id;
+                
+                return sortOrder === 'asc' ? comparison : -comparison;
             });
-    }, [products, searchQuery, subCatStats, isOwned, isWished, isGrail, isVintageOnly, productsWithOffers]);
+    }, [products, searchQuery, subCatStats, isOwned, isWished, isGrail, isVintageOnly, productsWithOffers, sortBy, sortOrder]);
 
     const chartData = React.useMemo(() => {
         if (!historyCronosA && !historyCronosB) return [];
@@ -564,48 +538,95 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
     return (
         <div className="space-y-2 md:space-y-3 animate-in fade-in duration-1000">
             {/* Header / Search Area */}
-            <div className="relative overflow-hidden rounded-2xl md:rounded-3xl border border-white/5 bg-black/25 p-4 md:p-6 backdrop-blur-2xl shadow-2xl">
+            <div className="relative overflow-hidden flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between rounded-2xl md:rounded-3xl border border-white/5 bg-black/25 p-4 md:p-6 backdrop-blur-2xl shadow-2xl">
                 <div className={`absolute -right-20 -top-20 h-64 w-64 rounded-full blur-3xl pointer-events-none ${isVintageOnly ? 'bg-amber-500/10' : 'bg-brand-primary/10'}`}></div>
 
-                <div className="relative flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-                    <div className="flex flex-col gap-1">
-                        <div className={`flex items-center gap-2 ${isVintageOnly ? 'text-amber-500' : 'text-brand-primary'}`}>
-                            <Box className={`h-3 w-3 md:h-4 md:w-4 ${isVintageOnly ? 'fill-amber-500' : 'fill-brand-primary'}`} />
-                            <h2 className="text-sm md:text-base font-black uppercase tracking-[0.2em] text-white">
-                                {isVintageOnly ? (
-                                    <>
-                                        Eternia <span className="text-amber-500">Vintage</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        Nueva <span className="text-brand-primary">Eternia</span>
-                                    </>
-                                )}
-                            </h2>
-                        </div>
-                        <p className="max-w-xl text-[11px] md:text-sm text-white/70 font-medium uppercase tracking-[0.1em]">
-                            {isVintageOnly ? 'Almacén Sagrado de Reliquias Vintage' : 'Almacén Sagrado de Reliquias'}
-                        </p>
+                <div className="relative z-10 flex flex-col gap-1">
+                    <div className={`flex items-center gap-2 ${isVintageOnly ? 'text-amber-500' : 'text-brand-primary'}`}>
+                        <Box className={`h-3 w-3 md:h-4 md:w-4 ${isVintageOnly ? 'fill-amber-500' : 'fill-brand-primary'}`} />
+                        <h2 className="text-sm md:text-base font-black uppercase tracking-[0.2em] text-white">
+                            {isVintageOnly ? (
+                                <>
+                                    Eternia <span className="text-amber-500">Vintage</span>
+                                </>
+                            ) : (
+                                <>
+                                    Nueva <span className="text-brand-primary">Eternia</span>
+                                </>
+                            )}
+                        </h2>
                     </div>
+                    <p className="max-w-xl text-[11px] md:text-sm text-white/40 font-medium uppercase tracking-[0.1em]">
+                        {isVintageOnly ? 'Almacén Sagrado de Reliquias Vintage' : 'Almacén Sagrado de Reliquias'}
+                    </p>
+                </div>
 
-                    <div className="flex items-center gap-3">
-                        {isVintageOnly && isAdmin && (
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 w-full lg:w-auto relative z-10">
+                    {isVintageOnly && isAdmin && (
+                        <button
+                            onClick={handleTriggerVintageSync}
+                            className="flex items-center justify-center gap-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 font-bold uppercase tracking-wider text-[10px] px-3 py-2 border border-amber-500/30 transition-all duration-300 shadow-[0_0_15px_-5px_rgba(245,158,11,0.3)] hover:shadow-[0_0_20px_-2px_rgba(245,158,11,0.5)] cursor-pointer h-[38px] sm:h-[42px]"
+                        >
+                            <RefreshCw className={`h-3.5 w-3.5 ${vintageSyncStatus === 'running' ? 'animate-spin' : ''}`} />
+                            <span className="hidden sm:inline">Sincronizar Vintage</span>
+                            <span className="sm:hidden">Sincronizar</span>
+                        </button>
+                    )}
+
+                    <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
+                        <div className="grid grid-cols-3 gap-1 sm:gap-2 p-1 rounded-xl bg-white/[0.03] border border-white/5 flex-1 sm:flex-initial">
                             <button
-                                onClick={handleTriggerVintageSync}
-                                className="flex items-center gap-2 rounded-xl md:rounded-2xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 font-bold uppercase tracking-wider text-[10px] md:text-xs px-4 py-2.5 border border-amber-500/30 transition-all duration-300 shadow-[0_0_15px_-5px_rgba(245,158,11,0.3)] hover:shadow-[0_0_20px_-2px_rgba(245,158,11,0.5)] cursor-pointer"
+                                onClick={() => setSortBy('name')}
+                                className={`py-1.5 px-2.5 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-[0.05em] transition-all ${
+                                    sortBy === 'name' 
+                                        ? (isVintageOnly ? 'bg-amber-500 text-white shadow-[0_0_15px_rgba(245,158,11,0.3)]' : 'bg-brand-primary text-white shadow-[0_0_15px_rgba(14,165,233,0.3)]') 
+                                        : 'text-white/20 hover:text-white/40'
+                                }`}
                             >
-                                <RefreshCw className={`h-3.5 w-3.5 ${vintageSyncStatus === 'running' ? 'animate-spin' : ''}`} />
-                                <span>Sincronizar Catálogo Vintage</span>
+                                Nombre
                             </button>
-                        )}
-                        
-                        <div className="flex items-center gap-2 md:gap-3 rounded-xl md:rounded-2xl bg-white/5 px-4 py-2 border border-white/10 backdrop-blur-xl w-fit xl:w-auto">
-                            <Package className={`h-4 w-4 md:h-5 md:w-5 ${isVintageOnly ? 'text-amber-500' : 'text-brand-primary'}`} />
-                            <span className="text-xl md:text-2xl font-black text-white">{products?.length}</span>
-                            <span className="text-[8px] md:text-[10px] font-black text-white/20 uppercase tracking-[0.2em] pt-1">Modelos Purificados</span>
+                            <button
+                                onClick={() => setSortBy('offers')}
+                                className={`py-1.5 px-2.5 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-[0.05em] transition-all ${
+                                    sortBy === 'offers' 
+                                        ? (isVintageOnly ? 'bg-amber-500 text-white shadow-[0_0_15px_rgba(245,158,11,0.3)]' : 'bg-brand-primary text-white shadow-[0_0_15px_rgba(14,165,233,0.3)]') 
+                                        : 'text-white/20 hover:text-white/40'
+                                }`}
+                            >
+                                Ofertas
+                            </button>
+                            <button
+                                onClick={() => setSortBy('completion')}
+                                className={`py-1.5 px-2.5 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-[0.05em] transition-all ${
+                                    sortBy === 'completion' 
+                                        ? (isVintageOnly ? 'bg-amber-500 text-white shadow-[0_0_15px_rgba(245,158,11,0.3)]' : 'bg-brand-primary text-white shadow-[0_0_15px_rgba(14,165,233,0.3)]') 
+                                        : 'text-white/20 hover:text-white/40'
+                                }`}
+                            >
+                                Set
+                            </button>
                         </div>
+
+                        <button
+                            onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+                            className={`h-[38px] w-[38px] sm:h-[42px] sm:w-[42px] flex items-center justify-center rounded-xl bg-white/[0.03] border border-white/5 hover:bg-white/10 transition-all shrink-0 shadow-md ${
+                                isVintageOnly ? 'text-amber-500 hover:text-amber-400' : 'text-brand-primary hover:text-brand-primary/80'
+                            }`}
+                            title={sortOrder === 'asc' ? 'Orden Ascendente' : 'Orden Descendente'}
+                        >
+                            {sortOrder === 'asc' ? <ArrowUp className="h-4 w-4 sm:h-5 sm:w-5" /> : <ArrowDown className="h-4 w-4 sm:h-5 sm:w-5" />}
+                        </button>
                     </div>
 
+                    <div className="flex items-center justify-between sm:justify-start gap-3 rounded-xl sm:rounded-2xl bg-white/[0.03] px-4 py-2 sm:py-2.5 border border-white/5 backdrop-blur-3xl w-full sm:w-auto h-[38px] sm:h-[42px]">
+                        <div className="flex items-center gap-2">
+                            <Package className={`h-4 w-4 sm:h-5 sm:w-5 ${isVintageOnly ? 'text-amber-500' : 'text-brand-primary'}`} />
+                            <span className="text-lg sm:text-xl font-black text-white leading-none">{sortedProducts?.length}</span>
+                        </div>
+                        <span className="text-[8px] sm:text-[9px] font-black text-white/20 uppercase tracking-[0.15em] pt-0.5 leading-tight text-right sm:text-left">
+                            Reliquias<br className="sm:hidden" /> Filtradas
+                        </span>
+                    </div>
                 </div>
             </div>
 
@@ -883,8 +904,10 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                     return (
                         <div
                             key={product.id}
-                            className={`group relative flex flex-col gap-1 sm:gap-2 md:gap-5 rounded-2xl sm:rounded-[1.5rem] md:rounded-[2.5rem] border p-1.5 sm:p-2 md:p-5 transition-all duration-500 hover:translate-y-[-8px] ${hasIntel
-                                ? 'border-brand-primary/30 bg-brand-primary/[0.03] shadow-[0_0_20px_-5px_rgba(14,165,233,0.15)] hover:shadow-[0_40px_80px_-20px_rgba(14,165,233,0.2)]'
+                            className={`group relative flex flex-col gap-1 sm:gap-1.5 md:gap-3 rounded-2xl sm:rounded-[1.5rem] md:rounded-3xl border p-1.5 sm:p-2 md:p-3.5 transition-all duration-500 hover:translate-y-[-8px] ${hasIntel
+                                ? (isVintageOnly
+                                    ? 'border-amber-500/30 bg-amber-500/[0.03] shadow-[0_0_20px_-5px_rgba(245,158,11,0.15)] hover:shadow-[0_40px_80px_-20px_rgba(245,158,11,0.2)]'
+                                    : 'border-brand-primary/30 bg-brand-primary/[0.03] shadow-[0_0_20px_-5px_rgba(14,165,233,0.15)] hover:shadow-[0_40px_80px_-20px_rgba(14,165,233,0.2)]')
                                 : 'border-white/5 bg-black/25 backdrop-blur-md hover:bg-black/20 hover:shadow-[0_40px_80px_-20px_rgba(0,0,0,0.5)]'
                                 }`}
                         >
@@ -927,8 +950,10 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                                     className={`absolute top-0 right-0 h-full w-6 sm:w-12 flex flex-col items-center justify-center transition-all duration-300 z-30 border-l border-white/10 backdrop-blur-md hover:w-8 sm:hover:w-14 ${owned
                                         ? 'bg-green-500/20 text-green-400 hover:bg-red-500/40 hover:text-white'
                                         : wished
-                                            ? 'bg-brand-primary/20 text-brand-primary hover:brightness-150'
-                                            : 'bg-white/5 text-white/10 hover:bg-brand-primary/20 hover:text-white'
+                                            ? (isVintageOnly ? 'bg-amber-500/20 text-amber-500 hover:brightness-150' : 'bg-brand-primary/20 text-brand-primary hover:brightness-150')
+                                            : isVintageOnly
+                                                ? 'bg-white/5 text-amber-500/60 hover:text-amber-500 hover:bg-amber-500/20'
+                                                : 'bg-white/5 text-brand-primary/60 hover:text-brand-primary hover:bg-brand-primary/20'
                                         }`}
                                     onClick={(e) => {
                                         e.stopPropagation();
@@ -962,7 +987,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                                     let colorClass = 'text-blue-400 border-blue-400/20 bg-blue-400/10'; // Recent/Blue
                                     if (idNum > 0 && idNum < 4500) colorClass = 'text-amber-500 border-amber-500/20 bg-amber-500/10'; // Vintage/Amber
                                     if (idNum >= 4500 && idNum <= 9500) colorClass = 'text-slate-300 border-slate-300/20 bg-slate-300/10'; // Mid/Silver
-
+ 
                                     // Valuation Priority Logic
                                     const displayPrice = product.best_p2p_price || product.avg_market_price || 0;
                                     const isMaster = !product.best_p2p_price && product.avg_market_price;
@@ -972,8 +997,8 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                                             <div className={`rounded-lg sm:rounded-xl px-2 py-1 sm:px-3 sm:py-1.5 text-[8px] sm:text-[10px] font-black backdrop-blur-md border shadow-2xl transition-all transform uppercase tracking-widest ${colorClass}`}>
                                                 #{product.figure_id}
                                             </div>
-                                            <div className={`rounded-lg sm:rounded-xl px-2 py-1 sm:px-3 sm:py-1.5 text-[8px] sm:text-[10px] font-black backdrop-blur-md border shadow-2xl transition-all transform uppercase tracking-widest flex items-center gap-1.5 ${isMaster ? 'border-purple-500/30 bg-purple-500/20 text-purple-300' : 'border-brand-primary/30 bg-brand-primary/20 text-white'}`}>
-                                                <Gem className={`h-2 w-2 sm:h-3 sm:w-3 ${isMaster ? 'text-purple-400' : 'text-brand-primary'}`} />
+                                            <div className={`rounded-lg sm:rounded-xl px-2 py-1 sm:px-3 sm:py-1.5 text-[8px] sm:text-[10px] font-black backdrop-blur-md border shadow-2xl transition-all transform uppercase tracking-widest flex items-center gap-1.5 ${isMaster ? 'border-purple-500/30 bg-purple-500/20 text-purple-300' : (isVintageOnly ? 'border-amber-500/30 bg-amber-500/20 text-white' : 'border-brand-primary/30 bg-brand-primary/20 text-white')}`}>
+                                                <Gem className={`h-2 w-2 sm:h-3 sm:w-3 ${isMaster ? 'text-purple-400' : (isVintageOnly ? 'text-amber-500' : 'text-brand-primary')}`} />
                                                 <span>{displayPrice}€</span>
                                                 {product.best_p2p_source && (
                                                     <span className="opacity-40 text-[6px] sm:text-[7px] border-l border-white/20 pl-1.5 ml-0.5">{product.best_p2p_source}</span>
@@ -991,12 +1016,12 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                             <div className="flex flex-1 flex-col gap-1 sm:gap-4 px-0.5 pb-1">
                                 <div className="space-y-0.5 sm:space-y-1">
                                     <div className="flex flex-wrap gap-1 mb-1">
-                                        <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-brand-primary group-hover:text-brand-primary/80 transition-colors line-clamp-1">
+                                        <span className={`text-[8px] sm:text-[10px] font-black uppercase tracking-[0.2em] group-hover:text-opacity-80 transition-colors line-clamp-1 ${isVintageOnly ? 'text-amber-500' : 'text-brand-primary'}`}>
                                             {product.sub_category}
                                         </span>
                                         {getSentimentBadge(product)}
                                     </div>
-                                    <h3 className="line-clamp-2 min-h-[1.2rem] sm:min-h-[1.5rem] md:min-h-[2.5rem] text-[10px] sm:text-xs md:text-lg font-black leading-tight text-white group-hover:text-brand-primary transition-colors">
+                                    <h3 className={`line-clamp-2 min-h-[1.2rem] sm:min-h-[1.5rem] md:min-h-[2rem] text-[10px] sm:text-xs md:text-sm lg:text-base font-black leading-tight text-white transition-colors ${isVintageOnly ? 'group-hover:text-amber-500' : 'group-hover:text-brand-primary'}`}>
                                         {product.name}
                                     </h3>
 
@@ -1008,12 +1033,12 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                                         return (
                                             <div className="mt-1 space-y-1">
                                                 <div className="flex items-center justify-between text-[6px] sm:text-[8px] font-black uppercase tracking-tighter">
-                                                    <span className={`${progress > 80 ? 'text-brand-primary' : 'text-white/60'}`}>Set Completion</span>
+                                                    <span className={`${progress > 80 ? (isVintageOnly ? 'text-amber-500' : 'text-brand-primary') : 'text-white/60'}`}>Set Completion</span>
                                                     <span className="text-white/65">{Math.round(progress)}%</span>
                                                 </div>
                                                 <div className="h-0.5 w-full bg-white/5 rounded-full overflow-hidden">
                                                     <div
-                                                        className={`h-full transition-all duration-1000 ${progress > 80 ? 'bg-brand-primary shadow-[0_0_5px_rgba(14,165,233,0.5)]' : 'bg-white/20'}`}
+                                                        className={`h-full transition-all duration-1000 ${progress > 80 ? (isVintageOnly ? 'bg-amber-500 shadow-[0_0_5px_rgba(245,158,11,0.5)]' : 'bg-brand-primary shadow-[0_0_5px_rgba(14,165,233,0.5)]') : 'bg-white/20'}`}
                                                         style={{ width: `${progress}%` }}
                                                     ></div>
                                                 </div>
@@ -1024,27 +1049,31 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
 
                                 <div className="mt-auto flex flex-col gap-2">
                                     {/* Action Buttons Row - Symmetrical Center Dock */}
-                                    <div className="flex items-center justify-center gap-2 rounded-2xl bg-white/[0.03] p-1.5 border border-white/10 group-hover:border-brand-primary/20 transition-all backdrop-blur-sm w-full">
+                                    <div className={`flex items-center justify-center gap-2 rounded-2xl bg-white/[0.03] p-1.5 border border-white/10 transition-all backdrop-blur-sm w-full ${isVintageOnly ? 'group-hover:border-amber-500/20' : 'group-hover:border-brand-primary/20'}`}>
                                         {/* Action Button: Detail View */}
                                         <button
                                             onClick={() => setSelectedProduct(product)}
-                                            className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/5 text-white/65 border border-white/10 transition-all hover:bg-brand-primary/20 hover:text-brand-primary hover:border-brand-primary/45 hover:scale-110 active:scale-95 duration-300 shadow-md"
+                                            className={`flex h-7 w-7 items-center justify-center rounded-xl bg-white/5 text-white/65 border border-white/10 transition-all active:scale-95 duration-300 shadow-md ${isVintageOnly ? 'hover:bg-amber-500/20 hover:text-amber-500 hover:border-amber-500/45 hover:scale-110' : 'hover:bg-brand-primary/20 hover:text-brand-primary hover:border-brand-primary/45 hover:scale-110'}`}
                                             title="Ver Mercado Live"
                                         >
-                                            <Info className="h-4 w-4" />
+                                            <Info className="h-3.5 w-3.5" />
                                         </button>
 
                                         {/* Action: Toggle Wishlist */}
                                         <button
                                             onClick={() => toggleMutation.mutate({ productId: product.id, wish: true })}
                                             disabled={toggleMutation.isPending || owned}
-                                            className={`flex h-8 w-8 items-center justify-center rounded-xl transition-all border shadow-md hover:scale-110 active:scale-95 duration-300 ${wished
-                                                ? 'bg-brand-primary/20 text-brand-primary border-brand-primary/30 hover:bg-red-500/20 hover:text-red-400'
-                                                : 'bg-white/5 text-white/20 border-white/10 hover:bg-brand-primary/10 hover:text-brand-primary'
+                                            className={`flex h-7 w-7 items-center justify-center rounded-xl transition-all border shadow-md hover:scale-110 active:scale-95 duration-300 ${wished
+                                                ? (isVintageOnly
+                                                    ? 'bg-amber-500/20 text-amber-500 border-amber-500/30 hover:bg-red-500/20 hover:text-red-400'
+                                                    : 'bg-brand-primary/20 text-brand-primary border-brand-primary/30 hover:bg-red-500/20 hover:text-red-400')
+                                                : (isVintageOnly
+                                                    ? 'bg-white/5 text-white/20 border-white/10 hover:bg-amber-500/10 hover:text-amber-500'
+                                                    : 'bg-white/5 text-white/20 border-white/10 hover:bg-brand-primary/10 hover:text-brand-primary')
                                                 } ${owned ? 'opacity-20 cursor-not-allowed' : ''} ${toggleMutation.isPending ? 'opacity-50 cursor-wait' : ''}`}
                                             title={wished ? 'Quitar de Deseos' : 'Añadir a Deseos'}
                                         >
-                                            <Star className={`h-4 w-4 ${wished ? 'fill-current' : ''}`} />
+                                            <Star className={`h-3.5 w-3.5 ${wished ? 'fill-current' : ''}`} />
                                         </button>
 
                                         {/* Action: Universal Search (EAN/ASIN) */}
@@ -1052,20 +1081,20 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                                             href={product.asin ? `https://www.amazon.es/s?k=${product.asin}` : `https://www.google.com/search?q=${encodeURIComponent(product.name + ' masters of the universe origins')}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/5 text-white/20 border border-white/10 hover:bg-brand-secondary/20 hover:text-brand-secondary transition-all hover:scale-110 active:scale-95 duration-300 shadow-md"
+                                            className={`flex h-7 w-7 items-center justify-center rounded-xl bg-white/5 text-white/20 border border-white/10 transition-all hover:scale-110 active:scale-95 duration-300 shadow-md ${isVintageOnly ? 'hover:bg-amber-500/20 hover:text-amber-400' : 'hover:bg-brand-secondary/20 hover:text-brand-secondary'}`}
                                             title={product.asin ? "Buscar en Amazon.es por ASIN" : "Buscar en Google"}
                                         >
-                                            <Search className="h-4 w-4" />
+                                            <Search className="h-3.5 w-3.5" />
                                         </a>
 
                                         {/* Admin Action: Edit */}
                                         {isAdmin && (
                                             <button
                                                 onClick={() => setEditingProduct(product)}
-                                                className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/5 text-white/65 border border-white/10 transition-all hover:bg-brand-primary/20 hover:text-brand-primary hover:scale-110 active:scale-95 duration-300 shadow-md"
+                                                className={`flex h-7 w-7 items-center justify-center rounded-xl bg-white/5 text-white/65 border border-white/10 transition-all hover:scale-110 active:scale-95 duration-300 shadow-md ${isVintageOnly ? 'hover:bg-amber-500/20 hover:text-amber-500' : 'hover:bg-brand-primary/20 hover:text-brand-primary'}`}
                                                 title="Editar Metadatos (Arquitecto)"
                                             >
-                                                <Settings className="h-4 w-4" />
+                                                <Settings className="h-3.5 w-3.5" />
                                             </button>
                                         )}
                                     </div>

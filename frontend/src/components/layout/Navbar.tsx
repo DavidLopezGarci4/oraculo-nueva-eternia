@@ -1,4 +1,4 @@
-import { Search, Bell, Menu, Repeat } from 'lucide-react';
+import { Search, Menu, Repeat } from 'lucide-react';
 import masterRoleImg from '../../assets/role-master.png';
 import guardianRoleImg from '../../assets/role-guardian.png';
 
@@ -9,13 +9,12 @@ interface NavbarProps {
     showSearch?: boolean;
     searchValue?: string;
     onSearchChange?: (value: string) => void;
-    notifications?: number; // Added
     isSovereign?: boolean; // Added
     user: Hero | null; // Kept
     onIdentityChange?: () => void; // Changed to optional
 }
 
-const Navbar = ({ onMenuClick, showSearch = true, searchValue = "", onSearchChange, user, notifications = 3, isSovereign = false, onIdentityChange }: NavbarProps) => {
+const Navbar = ({ onMenuClick, showSearch = true, searchValue = "", onSearchChange, user, isSovereign = false, onIdentityChange }: NavbarProps) => {
     return (
         <nav className="sticky top-0 z-10 flex flex-col md:flex-row items-center justify-between border-b border-glass-border glass px-4 py-3 md:h-16 md:py-0 md:px-6 backdrop-blur-md gap-3 md:gap-4">
             {/* Mobile Top Row: Menu & User Profile */}
@@ -30,13 +29,6 @@ const Navbar = ({ onMenuClick, showSearch = true, searchValue = "", onSearchChan
                 </div>
 
                 <div className="flex items-center gap-2 md:gap-6 shrink-0 md:ml-auto">
-                    <button className="relative p-2 text-white/60 hover:text-white group">
-                        <Bell className="h-5 w-5" />
-                        {notifications > 0 && (
-                            <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-brand-primary border border-black shadow-[0_0_8px_rgba(14,165,233,0.5)]" title={`${notifications} notificaciones`} />
-                        )}
-                    </button>
-
                     {/* Identidad del Héroe */}
                     <div className="flex items-center gap-2 md:gap-3 border-l border-white/10 pl-3 md:pl-6 group py-1 px-2 rounded-xl transition-all">
                         <div className="relative flex h-8 w-8 md:h-9 md:w-9 items-center justify-center rounded-full overflow-hidden border border-white/20 shadow-lg bg-black/40">

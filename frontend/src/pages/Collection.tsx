@@ -18,7 +18,9 @@ import {
     Settings,
     Trash2,
     X,
-    Save
+    Save,
+    ArrowUp,
+    ArrowDown
 } from 'lucide-react';
 import PowerSwordLoader from '../components/ui/PowerSwordLoader';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -80,6 +82,8 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+    const [sortBy, setSortBy] = useState<'name' | 'id'>('name');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
     // Contexto de Autenticación (Fase 8.2)
     const activeUserId = parseInt(localStorage.getItem('active_user_id') || '2');
@@ -146,17 +150,32 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
         }
     });
 
-    const filteredItems = collection?.filter(product => {
-        const query = searchQuery.toLowerCase();
-        return (
-            product.name.toLowerCase().includes(query) ||
-            product.figure_id.toLowerCase().includes(query) ||
-            product.sub_category?.toLowerCase().includes(query)
-        );
-    }) || [];
+    const sortedFilteredItems = React.useMemo(() => {
+        if (!collection) return [];
+        
+        const filtered = collection.filter(product => {
+            const query = searchQuery.toLowerCase();
+            return (
+                product.name.toLowerCase().includes(query) ||
+                product.figure_id.toLowerCase().includes(query) ||
+                product.sub_category?.toLowerCase().includes(query)
+            );
+        });
 
-    const ownedItems = filteredItems.filter(p => !p.is_wish);
-    const wishItems = filteredItems.filter(p => p.is_wish);
+        return [...filtered].sort((a, b) => {
+            let comparison = 0;
+            if (sortBy === 'name') {
+                comparison = a.name.localeCompare(b.name);
+            } else if (sortBy === 'id') {
+                comparison = a.id - b.id;
+            }
+
+            return sortOrder === 'asc' ? comparison : -comparison;
+        });
+    }, [collection, searchQuery, sortBy, sortOrder]);
+
+    const ownedItems = sortedFilteredItems.filter(p => !p.is_wish);
+    const wishItems = sortedFilteredItems.filter(p => p.is_wish);
 
     // Total count for stats (unfiltered)
     const totalOwned = collection?.filter(p => !p.is_wish).length || 0;
@@ -178,11 +197,11 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
     return (
         <div className="space-y-2 md:space-y-3 animate-in fade-in duration-700 pb-20">
             {/* Header & Stats Banner */}
-            <div className="relative overflow-hidden rounded-2xl md:rounded-3xl border border-white/5 bg-black/50 p-4 md:p-6 backdrop-blur-2xl shadow-2xl">
+            {/* Header & Stats Banner */}
+            <div className="relative overflow-hidden flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between rounded-2xl md:rounded-3xl border border-white/5 bg-black/25 p-4 md:p-6 backdrop-blur-2xl shadow-2xl">
                 <div className={`absolute -right-20 -top-20 h-64 w-64 rounded-full blur-3xl pointer-events-none ${isVintageOnly ? 'bg-amber-500/10' : 'bg-brand-primary/10'}`}></div>
-                <div className="absolute -left-20 -bottom-20 h-48 w-48 rounded-full bg-purple-500/10 blur-3xl pointer-events-none"></div>
 
-                <div className="relative flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                <div className="relative z-10 flex flex-col gap-2">
                     <div className="flex flex-col gap-1">
                         <div className={`flex items-center gap-2 ${isVintageOnly ? 'text-amber-500' : 'text-brand-primary'}`}>
                             <Box className={`h-3 w-3 md:h-4 md:w-4 ${isVintageOnly ? 'fill-amber-500' : 'fill-brand-primary'}`} />
@@ -198,7 +217,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                                 )}
                             </h2>
                         </div>
-                        <p className="max-w-xl text-[11px] md:text-sm text-white/65 font-medium">
+                        <p className="max-w-xl text-[11px] md:text-sm text-white/40 font-medium uppercase tracking-[0.1em]">
                             {isVintageOnly 
                                 ? 'Coleccionando no solo figuras retro, sino reliquias históricas y valor del pasado.'
                                 : 'Coleccionando no solo figuras, sino fragmentos de historia y valor en el tiempo.'
@@ -206,67 +225,91 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                         </p>
                     </div>
 
-                    <div className="flex flex-col gap-4">
-                        {/* Bóveda Digital Buttons (Prominent) */}
-                        <div className="flex flex-row gap-2 md:gap-4 justify-start lg:justify-end">
-                            <button
-                                onClick={async () => {
-                                    try {
-                                        const { exportCollectionExcel, exportCollectionExcelVintage } = await import('../api/admin');
-                                        if (isVintageOnly) {
-                                            await exportCollectionExcelVintage(activeUserId);
-                                        } else {
-                                            await exportCollectionExcel(activeUserId);
-                                        }
-                                        alert('📊 Excel: Tu colección ha sido exportada con éxito.');
-                                    } catch (error) {
-                                        console.error('Export error:', error);
-                                        alert('❌ Error al exportar Excel.');
+                    {/* Export Buttons Dock */}
+                    <div className="flex flex-row gap-2 mt-1">
+                        <button
+                            onClick={async () => {
+                                try {
+                                    const { exportCollectionExcel, exportCollectionExcelVintage } = await import('../api/admin');
+                                    if (isVintageOnly) {
+                                        await exportCollectionExcelVintage(activeUserId);
+                                    } else {
+                                        await exportCollectionExcel(activeUserId);
                                     }
-                                }}
-                                className="flex-1 lg:flex-none flex items-center justify-center gap-1 md:gap-2 px-3 py-2 md:px-6 md:py-3 rounded-xl md:rounded-2xl bg-green-500/10 text-green-400 border border-green-500/20 text-[8px] md:text-[10px] font-black uppercase tracking-widest hover:bg-green-500 hover:text-white transition-all shadow-lg shadow-green-500/0 hover:shadow-green-500/20 group/vault"
+                                    alert('📊 Excel: Tu colección ha sido exportada con éxito.');
+                                } catch (error) {
+                                    console.error('Export error:', error);
+                                    alert('❌ Error al exportar Excel.');
+                                }
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-green-500/10 text-green-400 border border-green-500/20 text-[9px] font-black uppercase tracking-widest hover:bg-green-500 hover:text-white transition-all shadow-md cursor-pointer"
+                        >
+                            <Download className="h-3 w-3" />
+                            <span>Excel</span>
+                        </button>
+                        <button
+                            onClick={async () => {
+                                try {
+                                    const { exportCollectionSqlite } = await import('../api/admin');
+                                    await exportCollectionSqlite(activeUserId);
+                                    alert('🗄️ SQLite: Bóveda portátil generada con éxito.');
+                                } catch (error) {
+                                    console.error('Export error:', error);
+                                    alert('❌ Error al exportar SQLite.');
+                                }
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-[9px] font-black uppercase tracking-widest hover:bg-indigo-500 hover:text-white transition-all shadow-md cursor-pointer"
+                        >
+                            <Database className="h-3 w-3" />
+                            <span>SQLite</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 w-full lg:w-auto relative z-10">
+                    <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
+                        <div className="grid grid-cols-2 gap-1 sm:gap-2 p-1 rounded-xl bg-white/[0.03] border border-white/5 flex-1 sm:flex-initial">
+                            <button
+                                onClick={() => setSortBy('name')}
+                                className={`py-1.5 px-4 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-[0.05em] transition-all ${
+                                    sortBy === 'name' 
+                                        ? (isVintageOnly ? 'bg-amber-500 text-white shadow-[0_0_15px_rgba(245,158,11,0.3)]' : 'bg-brand-primary text-white shadow-[0_0_15px_rgba(14,165,233,0.3)]') 
+                                        : 'text-white/20 hover:text-white/40'
+                                }`}
                             >
-                                <Download className="h-3 w-3 md:h-4 md:w-4 group-hover/vault:scale-125 transition-transform" />
-                                Bóveda Excel
+                                Nombre
                             </button>
                             <button
-                                onClick={async () => {
-                                    try {
-                                        const { exportCollectionSqlite } = await import('../api/admin');
-                                        await exportCollectionSqlite(activeUserId);
-                                        alert('🗄️ SQLite: Bóveda portátil generada con éxito.');
-                                    } catch (error) {
-                                        console.error('Export error:', error);
-                                        alert('❌ Error al exportar SQLite.');
-                                    }
-                                }}
-                                className="flex-1 lg:flex-none flex items-center justify-center gap-1 md:gap-2 px-3 py-2 md:px-6 md:py-3 rounded-xl md:rounded-2xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-[8px] md:text-[10px] font-black uppercase tracking-widest hover:bg-indigo-500 hover:text-white transition-all shadow-lg shadow-indigo-500/0 hover:shadow-indigo-500/20 group/vault"
+                                onClick={() => setSortBy('id')}
+                                className={`py-1.5 px-4 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-[0.05em] transition-all ${
+                                    sortBy === 'id' 
+                                        ? (isVintageOnly ? 'bg-amber-500 text-white shadow-[0_0_15px_rgba(245,158,11,0.3)]' : 'bg-brand-primary text-white shadow-[0_0_15px_rgba(14,165,233,0.3)]') 
+                                        : 'text-white/20 hover:text-white/40'
+                                }`}
                             >
-                                <Database className="h-3 w-3 md:h-4 md:w-4 group-hover/vault:scale-125 transition-transform" />
-                                Bóveda SQLite
+                                ID
                             </button>
                         </div>
 
-                        {/* Fortaleza and Deseos stats */}
-                        <div className="flex flex-row gap-2 md:gap-4">
-                            <div className={`flex-1 flex flex-col gap-0.5 rounded-xl md:rounded-2xl bg-white/5 p-2 md:p-4 border border-white/10 backdrop-blur-xl group transition-all ${isVintageOnly ? 'hover:bg-amber-500/5 hover:border-amber-500/20' : 'hover:bg-white/10'}`}>
-                                <div className={`flex items-center justify-between text-white/65 ${isVintageOnly ? 'group-hover:text-amber-500' : 'group-hover:text-brand-primary'}`}>
-                                    <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest">Fortaleza</span>
-                                    <Box className="h-3 w-3 md:h-4 md:w-4" />
-                                </div>
-                                <span className="text-2xl md:text-4xl font-black text-white">{totalOwned}</span>
-                                <span className="text-[7px] md:text-[9px] font-bold text-white/20 uppercase">Items Poseídos</span>
-                            </div>
+                        <button
+                            onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+                            className={`h-[38px] w-[38px] sm:h-[42px] sm:w-[42px] flex items-center justify-center rounded-xl bg-white/[0.03] border border-white/5 hover:bg-white/10 transition-all shrink-0 shadow-md ${
+                                isVintageOnly ? 'text-amber-500 hover:text-amber-400' : 'text-brand-primary hover:text-brand-primary/80'
+                            }`}
+                            title={sortOrder === 'asc' ? 'Orden Ascendente' : 'Orden Descendente'}
+                        >
+                            {sortOrder === 'asc' ? <ArrowUp className="h-4 w-4 sm:h-5 sm:w-5" /> : <ArrowDown className="h-4 w-4 sm:h-5 sm:w-5" />}
+                        </button>
+                    </div>
 
-                            <div className={`flex-1 flex flex-col gap-0.5 rounded-xl md:rounded-2xl p-2 md:p-4 border backdrop-blur-xl group transition-all ${isVintageOnly ? 'bg-amber-500/5 border-amber-500/20 hover:bg-amber-500/10' : 'bg-brand-primary/5 border-brand-primary/20 hover:bg-brand-primary/10'}`}>
-                                <div className={`flex items-center justify-between ${isVintageOnly ? 'text-amber-500/40 group-hover:text-amber-500' : 'text-brand-primary/40 group-hover:text-brand-primary'}`}>
-                                    <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest">Deseos</span>
-                                    <Star className="h-3 w-3 md:h-4 md:w-4" />
-                                </div>
-                                <span className={`text-2xl md:text-4xl font-black ${isVintageOnly ? 'text-amber-500' : 'text-brand-primary'}`}>{totalWish}</span>
-                                <span className={`text-[7px] md:text-[9px] font-bold uppercase ${isVintageOnly ? 'text-amber-500/30' : 'text-brand-primary/30'}`}>En el Radar</span>
-                            </div>
+                    <div className="flex items-center justify-between sm:justify-start gap-3 rounded-xl sm:rounded-2xl bg-white/[0.03] px-4 py-2 sm:py-2.5 border border-white/5 backdrop-blur-3xl w-full sm:w-auto h-[38px] sm:h-[42px]">
+                        <div className="flex items-center gap-2">
+                            <Box className={`h-4 w-4 sm:h-5 sm:w-5 ${isVintageOnly ? 'text-amber-500' : 'text-brand-primary'}`} />
+                            <span className="text-lg sm:text-xl font-black text-white leading-none">{activeTab === 'owned' ? totalOwned : totalWish}</span>
                         </div>
+                        <span className="text-[8px] sm:text-[9px] font-black text-white/20 uppercase tracking-[0.15em] pt-0.5 leading-tight text-right sm:text-left">
+                            {activeTab === 'owned' ? 'Fortaleza' : 'Radar'}<br className="sm:hidden" /> Coleccionados
+                        </span>
                     </div>
                 </div>
             </div>
@@ -327,7 +370,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -20 }}
-                        className="grid grid-cols-2 gap-2 sm:gap-8 lg:grid-cols-3 xl:grid-cols-4 landscape:grid-cols-3"
+                        className="grid grid-cols-2 gap-1.5 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4 landscape:grid-cols-3"
                     >
                         {(activeTab === 'owned' ? ownedItems : wishItems).map((product) => {
                             const isGrail = product.is_grail;
@@ -336,11 +379,11 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                             return (
                                 <div
                                     key={product.id}
-                                    className={`group flex flex-col gap-2 sm:gap-4 relative overflow-hidden transition-all duration-500 hover:translate-y-[-8px] rounded-2xl sm:rounded-[2.5rem] p-3 sm:p-6 border ${isGrail ? 'border-yellow-500/30 bg-yellow-500/10 backdrop-blur-md shadow-[0_30px_60px_-15px_rgba(234,179,8,0.2)]' : 'border-white/5 bg-black/25 backdrop-blur-md hover:bg-black/20'}`}
+                                    className={`group flex flex-col gap-1 sm:gap-1.5 md:gap-3 relative overflow-hidden transition-all duration-500 hover:translate-y-[-8px] rounded-2xl sm:rounded-3xl p-1.5 sm:p-2 md:p-3.5 border ${isGrail ? 'border-yellow-500/30 bg-yellow-500/10 backdrop-blur-md shadow-[0_30px_60px_-15px_rgba(234,179,8,0.2)]' : 'border-white/5 bg-black/25 backdrop-blur-md hover:bg-black/20'}`}
                                 >
                                     {/* Image Container */}
                                     <div 
-                                        className="relative aspect-square w-full overflow-hidden rounded-[1.5rem] sm:rounded-[2rem] bg-black/40 border border-white/10 shadow-inner cursor-pointer"
+                                        className="relative aspect-square w-full overflow-hidden rounded-[1.2rem] sm:rounded-[1.5rem] bg-black/40 border border-white/10 shadow-inner cursor-pointer"
                                         onClick={() => {
                                             setSelectedProduct(product);
                                             setIsDetailOpen(true);
@@ -358,57 +401,57 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                                         )}
 
                                         {/* Corner Badges */}
-                                        <div className="absolute top-2 left-2 sm:top-4 sm:left-4 z-40 flex items-center gap-1 sm:gap-1.5">
-                                            <div className="rounded-lg sm:rounded-xl bg-black/70 px-2 py-1 sm:px-3 sm:py-1.5 text-[8px] sm:text-[10px] font-black text-white/90 backdrop-blur-md border border-white/20 shadow-2xl uppercase tracking-widest">
+                                        <div className="absolute top-2 left-2 sm:top-3 sm:left-3 z-40 flex items-center gap-1">
+                                            <div className="rounded-lg bg-black/70 px-2 py-0.5 text-[8px] sm:text-[9px] font-black text-white/90 backdrop-blur-md border border-white/20 shadow-2xl uppercase tracking-widest">
                                                 #{product.figure_id}
                                             </div>
                                             {isGrail && (
-                                                <div className="rounded-lg sm:rounded-xl bg-yellow-500 text-black px-2 py-1 sm:px-3 sm:py-1.5 text-[8px] sm:text-[10px] font-black backdrop-blur-md border border-yellow-400 shadow-[0_0_20px_rgba(234,179,8,0.5)] flex items-center gap-1.5">
-                                                    <Trophy className="h-3 w-3" />
+                                                <div className="rounded-lg bg-yellow-500 text-black px-2 py-0.5 text-[8px] sm:text-[9px] font-black backdrop-blur-md border border-yellow-400 shadow-[0_0_20px_rgba(234,179,8,0.5)] flex items-center gap-1">
+                                                    <Trophy className="h-2.5 w-2.5" />
                                                     GRIAL
                                                 </div>
                                             )}
                                         </div>
 
                                         {/* Status indicator */}
-                                        <div className="absolute bottom-4 left-4 flex items-center gap-2">
-                                            <div className={`h-2 w-2 rounded-full ${activeTab === 'owned' ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.8)]' : (isVintageOnly ? 'bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.8)] animate-pulse' : 'bg-brand-primary shadow-[0_0_10px_rgba(14,165,233,0.8)] animate-pulse')}`}></div>
-                                            <span className="text-[9px] font-black text-white uppercase tracking-widest opacity-80 backdrop-blur-sm bg-black/20 px-2 py-0.5 rounded-full">
+                                        <div className="absolute bottom-2 left-2 flex items-center gap-1.5">
+                                            <div className={`h-1.5 w-1.5 rounded-full ${activeTab === 'owned' ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.8)]' : (isVintageOnly ? 'bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.8)] animate-pulse' : 'bg-brand-primary shadow-[0_0_10px_rgba(14,165,233,0.8)] animate-pulse')}`}></div>
+                                            <span className="text-[8px] font-black text-white uppercase tracking-widest opacity-80 backdrop-blur-sm bg-black/20 px-1.5 py-0.5 rounded-full">
                                                 {activeTab === 'owned' ? 'Poseída' : 'Prioridad'}
                                             </span>
                                         </div>
                                     </div>
 
                                     {/* Info */}
-                                    <div className="space-y-3 flex-1">
-                                        <div className="space-y-1">
-                                            <span className={`text-[9px] font-black uppercase tracking-widest transition-colors ${isVintageOnly ? 'text-amber-500 group-hover:text-amber-500/80' : 'text-brand-primary group-hover:text-brand-primary/80'}`}>
+                                    <div className="space-y-1 flex-1 px-0.5">
+                                        <div className="space-y-0.5">
+                                            <span className={`text-[8px] sm:text-[9px] font-black uppercase tracking-widest transition-colors ${isVintageOnly ? 'text-amber-500 group-hover:text-amber-500/80' : 'text-brand-primary group-hover:text-brand-primary/80'}`}>
                                                 {product.sub_category}
                                             </span>
-                                            <h3 className="line-clamp-2 text-sm sm:text-lg font-black text-white leading-tight group-hover:text-white group-hover:translate-x-1 transition-all">
+                                            <h3 className={`line-clamp-2 text-[10px] sm:text-xs md:text-sm lg:text-base font-black leading-tight text-white transition-all ${isVintageOnly ? 'group-hover:text-amber-500' : 'group-hover:text-brand-primary'}`}>
                                                 {product.name}
                                             </h3>
                                         </div>
 
-                                        <div className="flex flex-wrap items-center gap-1 sm:gap-1.5 pt-1">
+                                        <div className="flex flex-wrap items-center gap-1 pt-0.5">
                                             {adjustedValue > 0 && (
-                                                <div className={`flex items-center gap-1 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl border font-black text-[8px] sm:text-[10px] whitespace-nowrap ${isGrail ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' : (isVintageOnly ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'bg-brand-primary/10 text-brand-primary border-brand-primary/20')}`}>
-                                                    <Euro className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                                                <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-lg border font-black text-[8px] sm:text-[9px] whitespace-nowrap ${isGrail ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' : (isVintageOnly ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'bg-brand-primary/10 text-brand-primary border-brand-primary/20')}`}>
+                                                    <Euro className="h-2 w-2 sm:h-2.5 sm:w-2.5" />
                                                     {adjustedValue.toFixed(2)}€
                                                 </div>
                                             )}
                                             {roi !== 0 && (
-                                                <div className={`flex items-center gap-1 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl border font-black text-[8px] sm:text-[10px] whitespace-nowrap ${roi >= 0 ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
-                                                    {roi >= 0 ? <TrendingUp className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> : <TrendingDown className="h-2.5 w-2.5 sm:h-3 sm:w-3" />}
+                                                <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-lg border font-black text-[8px] sm:text-[9px] whitespace-nowrap ${roi >= 0 ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
+                                                    {roi >= 0 ? <TrendingUp className="h-2 w-2 sm:h-2.5 sm:w-2.5" /> : <TrendingDown className="h-2 w-2 sm:h-2.5 sm:w-2.5" />}
                                                     {roi >= 0 ? '+' : ''}{roi.toFixed(1)}%
                                                 </div>
                                             )}
                                             {activeTab === 'owned' && (
                                                 <div className="flex items-center gap-1">
-                                                    <span className="px-1.5 py-0.5 rounded-md bg-white/5 border border-white/10 text-white/60 text-[7px] font-black uppercase tracking-wider">
+                                                    <span className="px-1 py-0.5 rounded-md bg-white/5 border border-white/10 text-white/60 text-[6px] sm:text-[7px] font-black uppercase tracking-wider">
                                                         {condition}
                                                     </span>
-                                                    <span className={`px-1.5 py-0.5 rounded-md text-[7px] font-black uppercase tracking-wider ${grading >= 9 ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-brand-primary/10 text-brand-primary border-brand-primary/20'}`}>
+                                                    <span className={`px-1 py-0.5 rounded-md text-[6px] sm:text-[7px] font-black uppercase tracking-wider ${grading >= 9 ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-brand-primary/10 text-brand-primary border-brand-primary/20'}`}>
                                                         {grading.toFixed(1)}
                                                     </span>
                                                 </div>
@@ -417,32 +460,32 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                                     </div>
 
                                     {/* Multi-Actions Bar */}
-                                    <div className="mt-auto flex items-center gap-1 sm:gap-2">
+                                    <div className="mt-auto flex items-center gap-1 sm:gap-1.5 pt-1">
                                         <button
                                             onClick={() => {
                                                 setSelectedProduct(product);
                                                 setIsDetailOpen(true);
                                             }}
-                                            className="h-6 sm:h-8 flex-1 flex items-center justify-center rounded-lg sm:rounded-xl bg-white/5 border border-white/5 text-white/60 hover:bg-white/10 hover:text-white transition-all group/info"
+                                            className="h-7 w-7 flex items-center justify-center rounded-xl bg-white/5 border border-white/5 text-white/60 hover:bg-white/10 hover:text-white transition-all group/info"
                                         >
-                                            <Info className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                                            <Info className="h-3.5 w-3.5 group-hover:scale-110 transition-transform" />
                                         </button>
 
                                         {isAdmin && (
                                             <>
                                                 <button
                                                     onClick={() => setEditingProduct(product)}
-                                                    className="h-6 sm:h-8 px-2 flex items-center justify-center rounded-lg sm:rounded-xl bg-white/5 border border-white/5 text-white/60 hover:bg-white/10 hover:text-white transition-all"
+                                                    className="h-7 w-7 flex items-center justify-center rounded-xl bg-white/5 border border-white/5 text-white/60 hover:bg-white/10 hover:text-white transition-all"
                                                     title="Editar metadatos"
                                                 >
-                                                    <Settings className="h-4 w-4" />
+                                                    <Settings className="h-3.5 w-3.5" />
                                                 </button>
                                                 <button
                                                     onClick={() => handleDeleteProduct(product)}
-                                                    className="h-6 sm:h-8 px-2 flex items-center justify-center rounded-lg sm:rounded-xl bg-white/5 border border-white/5 text-white/60 hover:bg-red-500/20 hover:text-red-400 transition-all"
+                                                    className="h-7 w-7 flex items-center justify-center rounded-xl bg-white/5 border border-white/5 text-white/60 hover:bg-red-500/20 hover:text-red-400 transition-all"
                                                     title="Eliminar y devolver al Purgatorio"
                                                 >
-                                                    <Trash2 className="h-4 w-4" />
+                                                    <Trash2 className="h-3.5 w-3.5" />
                                                 </button>
                                             </>
                                         )}
@@ -451,9 +494,9 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                                             <button
                                                 onClick={() => toggleMutation.mutate({ productId: product.id, wish: false })}
                                                 disabled={toggleMutation.isPending}
-                                                className={`h-6 sm:h-8 px-3 sm:px-6 flex items-center justify-center gap-1.5 sm:gap-3 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-xs uppercase tracking-widest shadow-lg transition-all ${isVintageOnly ? 'bg-amber-500 text-black border border-amber-500/50 shadow-amber-500/20 hover:brightness-110' : 'bg-brand-primary text-white border border-brand-primary/50 shadow-brand-primary/20 hover:brightness-110'}`}
+                                                className={`h-7 px-2.5 flex items-center justify-center gap-1 rounded-xl font-black text-[9px] uppercase tracking-widest shadow-lg transition-all flex-1 ${isVintageOnly ? 'bg-amber-500 text-black border border-amber-500/50 shadow-amber-500/20 hover:brightness-110' : 'bg-brand-primary text-white border border-brand-primary/50 shadow-brand-primary/20 hover:brightness-110'}`}
                                             >
-                                                {toggleMutation.isPending ? <RefreshCw className="h-4 w-4 animate-spin text-white/50" /> : <ShoppingCart className={`h-4 w-4 ${isVintageOnly ? 'text-black' : 'text-white'}`} />}
+                                                {toggleMutation.isPending ? <RefreshCw className="h-3 w-3 animate-spin text-white/50" /> : <ShoppingCart className={`h-3 w-3 ${isVintageOnly ? 'text-black' : 'text-white'}`} />}
                                                 <span className="hidden sm:inline">Reclamar</span>
                                             </button>
                                         ) : (
@@ -467,16 +510,16 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                                                     }
                                                 }}
                                                 disabled={toggleMutation.isPending}
-                                                className={`h-6 sm:h-8 px-3 sm:px-6 flex items-center justify-center gap-1.5 sm:gap-3 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-xs uppercase tracking-widest border transition-all group/action flex-1 ${
+                                                className={`h-7 px-2.5 flex items-center justify-center gap-1 rounded-xl font-black text-[9px] uppercase tracking-widest border transition-all group/action flex-1 ${
                                                     isVintageOnly 
                                                         ? 'bg-amber-500/10 text-amber-500 border-amber-500/20 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/30' 
                                                         : 'bg-green-500/10 text-green-400 border-green-500/20 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/30'
                                                 }`}
                                             >
-                                                {toggleMutation.isPending ? <RefreshCw className="h-4 w-4 animate-spin text-white/50" /> : (
+                                                {toggleMutation.isPending ? <RefreshCw className="h-3 w-3 animate-spin text-white/50" /> : (
                                                     <>
-                                                        <Check className="h-4 w-4 group-hover/action:hidden" />
-                                                        <Box className="h-4 w-4 hidden group-hover/action:block" />
+                                                        <Check className="h-3 w-3 group-hover/action:hidden" />
+                                                        <Box className="h-3 w-3 hidden group-hover/action:block" />
                                                     </>
                                                 )}
                                                 <span className="hidden sm:inline group-hover/action:hidden">
@@ -492,10 +535,10 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                                             <button
                                                 onClick={() => toggleMutation.mutate({ productId: product.id, wish: true })}
                                                 disabled={toggleMutation.isPending}
-                                                className="h-6 sm:h-8 px-3 flex items-center justify-center rounded-lg sm:rounded-xl bg-red-500/5 text-red-500/30 border border-red-500/10 hover:bg-red-500 hover:text-white transition-all"
+                                                className="h-7 w-7 flex items-center justify-center rounded-xl bg-red-500/5 text-red-500/30 border border-red-500/10 hover:bg-red-500 hover:text-white transition-all shrink-0"
                                                 title="Eliminar de Deseos"
                                             >
-                                                <Star className="h-4 w-4 fill-current" />
+                                                <Star className="h-3.5 w-3.5 fill-current" />
                                             </button>
                                         )}
                                     </div>

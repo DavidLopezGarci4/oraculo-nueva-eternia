@@ -352,3 +352,41 @@ Para gestionar adecuadamente ofertas que no corresponden a una Ãºnica figura (co
 2. **Registro**: El backend extrae la oferta de la cola del Purgatorio, la inyecta en la tabla de miscelÃ¡nea y registra la acciÃ³n `LINKED_MISCELLANEOUS` en `OfferHistoryModel`.
 3. **PÃ¡gina de MiscelÃ¡nea**: Los lotes se presentan en una galerÃ­a glassmorphic exclusiva en la pestaÃ±a **MiscelÃ¡nea** de Eternia Vintage.
 4. **ReversiÃ³n**: Los administradores Master disponen de un botÃ³n para devolver el lote a la cola del Purgatorio (`revert_miscellaneous_item`), registrando el evento `REVERTED_MISCELLANEOUS`.
+
+
+---
+
+## 12. Normalización de URLs, Filtros de Relevancia MOTU y Calibración de Haces de Luz
+
+La versión 2.2.0 del Oráculo implementa un blindaje de calidad de datos en el Purgatorio y una experiencia visual altamente calibrable en el Frontend:
+
+### 12.1 Normalización Universal de URLs (Deduplicación)
+Para evitar la duplicación de ofertas en el Purgatorio debido a parámetros de tracking o barras diagonales finales, se ha implementado la normalización universal mediante la función 
+ormalize_url(url: str):
+* **Remoción de parámetros**: Elimina todos los query parameters de tracking (ej. ?utm_source=..., ?utm_medium=...).
+* **Sanación de barras**: Asegura que las URLs terminen sin barras diagonales / redundantes.
+* **Integridad de Datos**: Tanto los scrapers en segundo plano (pipeline.py) como la extensión de navegador para importaciones manuales normalizan la URL antes de intentar la inserción en base de datos.
+* **Manejo de Colisiones**: El backend intercepta colisiones de clave única en base de datos (IntegrityError) y actualiza o de-duplica los registros correspondientes sin perturbar el flujo de usuario.
+
+### 12.2 Filtro de Relevancia MOTU (Inteligencia del Purgatorio)
+El pipeline incorpora un filtro automático de relevancia (alidate_motu_relevance) que analiza títulos y descripciones de las ofertas extraídas:
+* **Lista de Exclusión (Blacklist)**: Se descartan automáticamente ofertas de marcas ajenas al foco de la aplicación como unko, pop (palabra completa), ig jim, masterverse, gi joe, star wars, ction man, madelman, geyperman, max steel y arbie.
+* **Excepciones para Crossovers Oficiales**: Marcas que tienen crossovers oficiales con la línea Origins (ej. 	ransformers, 	hundercats, stranger things, 	mnt, 	urtles) no son excluidas de forma fulminante si vienen acompañadas de términos de He-Man/MOTU (ej. motu, origins, grayskull, he-man). Si no los contienen, se descartan de forma estándar.
+* **Soporte Multilingüe**: Incluye soporte para traducciones europeas como la francesa maitres de l\'univers (y variantes sin apóstrofe).
+* **Descarte Automático a Lista Negra**: Los ítems descartados se guardan directamente en la lista negra (lackcluded_items) con el motivo correspondiente, impidiendo que vuelvan a saturar la cola del Purgatorio.
+
+### 12.3 Limpieza Proactiva Global del Purgatorio
+Al iniciar y finalizar las incursiones de scraping o las importaciones manuales, el worker ejecuta la rutina clean_purgatory_globally(). Esta rutina elimina del buffer de pendientes (PendingMatchModel) cualquier oferta cuya URL ya figure en el catálogo principal (offers), en la lista negra (lackcluded_items) o en la sección de miscelánea (intage_miscellaneous), manteniendo la base de datos libre de residuos.
+
+### 12.4 Calibración Dinámica de Haces de Luz Vintage
+El componente de carga interactiva PowerSwordLoader.tsx se ha rediseñado para admitir coordenadas dinámicas para la animación de haces de luz vectoriales:
+* **Proyección Vectorial**: A partir de la posición de la empuñadura (GuardX, GuardY) y la punta de la espada (TipX, TipY), el cargador calcula vectorialmente la inclinación y longitud de los haces en tiempo real.
+* **Calibrador Interactivo**: Se ha añadido un calibrador en la sección de Ajustes (Config.tsx) con deslizadores para ajustar los ejes X e Y de guard y tip de forma visual con guías de depuración superpuestas. Los valores calibrados se persisten en el localStorage del cliente.
+* **Carga de Sección Vintage**: Se pre-configuraron las coordenadas óptimas para el asset de He-Man ddg-heman.png utilizado en las pantallas de carga de las páginas Vintage: empuñadura en (79.5, 66.5) y punta en (73.0, 20.5).
+
+### 12.5 Compactación Visual de la Interfaz Core
+Para optimizar el espacio en pantallas de ordenadores y dispositivos móviles y reducir el desplazamiento vertical, se ha rediseñado la rejilla de tarjetas en **Catálogo**, **Mi Fortaleza** y **El Pabellón**:
+* **Tarjetas y Dock**: Compactación general de márgenes, rellenos y tipografías. El dock de botones inferiores se unificó a un tamaño de h-7 w-7 con iconos de h-3.5 w-3.5.
+* **Botón Añadir (+)**: Se incrementó el contraste del botón de agregar en figuras no deseadas/poseídas usando el color temático de la sección (celeste/azul en moderno, ámbar/dorado en vintage) al 60% de opacidad en reposo y 100% al pasar el cursor (hover).
+* **Cabeceras de Ordenación y Contadores**: Unificación de las cabeceras del panel con selector de tipo de ordenamiento, indicador de dirección de ordenación reactivo (ArrowUp / ArrowDown), y contador del total de ítems con iconografía temática de color.
+* **Limpieza**: Remoción del icono de la campana de notificaciones de la barra superior (Navbar.tsx) y eliminación de su código muerto.
