@@ -1107,12 +1107,12 @@ const Purgatory: React.FC = React.memo(() => {
                                 </div>
                             </div>
 
-                            {/* Enviar a Miscelánea box */}
+                            {/* Enviar a Bazar del Oráculo box */}
                             <div className="rounded-2xl border border-dashed border-purple-500/20 bg-purple-500/[0.02] p-4 flex flex-col sm:flex-row items-center justify-between gap-3 hover:border-purple-500/30 hover:bg-purple-500/[0.04] transition-all">
                                 <div className="min-w-0 flex-1">
                                     <span className="text-[8px] font-black text-purple-400 uppercase tracking-widest">Lote o Varios MOTU</span>
-                                    <h5 className="text-xs font-black text-white leading-none mt-1">Clasificar como Miscelánea Vintage</h5>
-                                    <p className="text-[9px] text-white/40 uppercase tracking-tighter mt-0.5">Envía este anuncio/lote directamente al área de Miscelánea.</p>
+                                    <h5 className="text-xs font-black text-white leading-none mt-1">Clasificar en el Bazar del Oráculo</h5>
+                                    <p className="text-[9px] text-white/40 uppercase tracking-tighter mt-0.5">Envía este anuncio/lote directamente al Bazar del Oráculo.</p>
                                 </div>
                                 <button
                                     type="button"
@@ -1123,7 +1123,7 @@ const Purgatory: React.FC = React.memo(() => {
                                     className="w-full sm:w-auto px-4 py-2 rounded-xl bg-purple-600 text-white text-[9px] font-black uppercase tracking-widest hover:brightness-110 disabled:opacity-50 transition-all flex items-center justify-center gap-1.5 shrink-0 shadow-lg shadow-purple-500/20"
                                 >
                                     {matchMiscMutation.isPending ? <RefreshCcw className="h-3 w-3 animate-spin" /> : <Link className="h-3 w-3" />}
-                                    <span>Clasificar Miscelánea</span>
+                                    <span>Clasificar en el Bazar</span>
                                 </button>
                             </div>
 

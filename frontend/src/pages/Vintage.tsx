@@ -112,7 +112,7 @@ const Vintage: React.FC<VintageProps> = ({ user }) => {
         return (
             <div className="flex h-64 flex-col items-center justify-center gap-4 text-red-400">
                 <AlertCircle className="h-10 w-10" />
-                <p className="text-sm font-medium">Error al acceder al Pabellón Vintage</p>
+                <p className="text-sm font-medium">Error al acceder a Eternia Vintage</p>
             </div>
         );
     }
@@ -126,7 +126,7 @@ const Vintage: React.FC<VintageProps> = ({ user }) => {
                     <div className="flex items-center gap-2 text-amber-500">
                         <History className="h-4 w-4" />
                         <h2 className="text-sm md:text-base font-black uppercase tracking-[0.2em] text-white">
-                            Pabellón <span className="text-amber-500">Vintage</span>
+                            Eternia <span className="text-amber-500">Vintage</span>
                         </h2>
                     </div>
                     <p className="max-w-xl text-[11px] md:text-sm text-white/40 font-medium uppercase tracking-[0.1em]">Coleccionables retro de los 80s presentados individualmente</p>
@@ -168,7 +168,7 @@ const Vintage: React.FC<VintageProps> = ({ user }) => {
             {sortedItems.length === 0 ? (
                 <div className="flex flex-col items-center justify-center p-20 text-white/20 space-y-4">
                     <History className="h-16 w-16 opacity-20" />
-                    <p className="text-xl font-black uppercase tracking-widest">Pabellón Vacío...</p>
+                    <p className="text-xl font-black uppercase tracking-widest">Eternia Vintage Vacío...</p>
                     <p className="text-[10px] font-bold uppercase tracking-widest opacity-40">Clasifique reliquias de los 80s en el Purgatorio para verlas aquí.</p>
                 </div>
             ) : (

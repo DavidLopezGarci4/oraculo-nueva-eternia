@@ -81,14 +81,14 @@ const VintageMiscellaneous: React.FC<VintageMiscellaneousProps> = ({ user }) => 
     }, [items, sortBy, sortOrder]);
 
     if (isLoading) {
-        return <PowerSwordLoader variant="fullScreen" text="Canalizando Bóvedas de Miscelánea..." isVintage={true} />;
+        return <PowerSwordLoader variant="fullScreen" text="Abriendo el Bazar del Oráculo..." isVintage={true} />;
     }
 
     if (isError) {
         return (
             <div className="flex h-64 flex-col items-center justify-center gap-4 text-purple-400">
                 <AlertCircle className="h-10 w-10" />
-                <p className="text-sm font-medium">Error al acceder al Pabellón de Miscelánea Vintage</p>
+                <p className="text-sm font-medium">Error al acceder al Bazar del Oráculo</p>
             </div>
         );
     }
@@ -102,10 +102,10 @@ const VintageMiscellaneous: React.FC<VintageMiscellaneousProps> = ({ user }) => 
                     <div className="flex items-center gap-2 text-purple-400">
                         <Bookmark className="h-4 w-4" />
                         <h2 className="text-sm md:text-base font-black uppercase tracking-[0.2em] text-white">
-                            Miscelánea <span className="text-purple-400">Vintage</span>
+                            Bazar del <span className="text-purple-400">Oráculo</span>
                         </h2>
                     </div>
-                    <p className="max-w-xl text-[11px] md:text-sm text-white/40 font-medium uppercase tracking-[0.1em]">Lotes, packs y reliquias varias de MOTU sin catalogar individualmente</p>
+                    <p className="max-w-xl text-[11px] md:text-sm text-white/40 font-medium uppercase tracking-[0.1em]">Lotes de figuras y reliquias varias de MOTU sin catalogar individualmente</p>
                 </div>
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 w-full md:w-auto">
                     <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto">

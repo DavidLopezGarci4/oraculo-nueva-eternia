@@ -406,15 +406,16 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
   - [x] **Cálculo de ROI Real y Valor Ajustado**: Tarjetas de la colección actualizadas para mostrar el valor ajustado y el ROI real con plusvalías/depreciaciones.
   - [x] **Manual de Usuario Interactivo**: Creada la carpeta `docs/manual_usuario/` con 8 guías de usuario estructuradas detallando cada apartado de la aplicación.
 
-- [x] **Phase 64: Normalización de URLs, Filtro MOTU, Calibrador de Haces de Luz Vintage y Compactación Visual Core (06/06/2026)**
-  - [x] **Sección de Miscelánea Vintage (Lotes/Varios)**: Añadido modelo `VintageMiscellaneousModel`, APIs de clasificación, listado y reversión en el backend, y pestaña dedicada en Eternia Vintage.
+- [x] **Phase 64: Normalización de URLs, Filtro MOTU, Calibrador de Haces de Luz y Rebranding Temático Core (06/06/2026)**
+  - [x] **Sección de Bazar del Oráculo (Lotes/Varios)**: Añadido modelo `VintageMiscellaneousModel`, APIs de clasificación, listado y reversión en el backend, y pestaña dedicada en Eternia Vintage.
   - [x] **Normalización Universal de URLs**: Unificada la lógica de normalización de URLs (`normalize_url`) en pipelines de importación manual y scrapers de fondo para evitar duplicados en el Purgatorio.
   - [x] **Filtro de Relevancia MOTU**: Implementado motor de exclusión de marcas no deseadas (Funko, Masterverse, Big Jim) con excepciones y reglas permisivas para crossovers oficiales de Origins (Transformers, Thundercats, Stranger Things, TMNT) que incluyan palabras clave de He-Man/MOTU, con soporte multilingüe.
   - [x] **Limpieza Proactiva del Purgatorio**: Auto-limpieza en segundo plano de ítems del Purgatorio que ya figuren en colecciones, ofertas o blacklist.
   - [x] **Calibrador Interactivo de Haces de Luz Vintage**: Rediseño del `PowerSwordLoader` para proyectar haces de luz mediante cálculos vectoriales basados en coordenadas personalizables en Configuración y almacenadas en `localStorage`, usando `bddg-heman.png` por defecto.
-  - [x] **Compactación Visual de Tarjetas y Dock**: Reducción de gaps, padding y tamaños tipográficos en las tarjetas de Catálogo, Mi Fortaleza y El Pabellón para maximizar la densidad de información y reducir el scroll vertical.
+  - [x] **Rebranding Temático de Secciones e Iconos**: Renombradas las secciones principales a **Orbe de Grayskull** (antes Tablero, icono `Globe`), **Mercader de Eternos** (antes El Pabellón, icono `Store`) y **Bazar del Oráculo** (antes Miscelánea, icono `Sparkles`). Unificados los loaders y mensajes de carga con descripciones genéricas e inmersivas.
+  - [x] **Compactación Visual de Tarjetas y Dock**: Reducción de gaps, padding y tamaños tipográficos en las tarjetas de Catálogo, Mi Fortaleza y Mercader de Eternos para maximizar la densidad de información y reducir el scroll vertical.
   - [x] **Contraste del Botón Añadir (+)**: Incremento del contraste visual (60% de opacidad de color temático en reposo, 100% en hover) para mejorar notablemente la descubribilidad del botón de añadir.
-  - [x] **Cabeceras de Ordenación y Contadores Unificados**: Portada la interfaz premium de ordenación y contadores interactivos a Catálogo, Mi Fortaleza y El Pabellón (Subastas), con selector de orden y botón de dirección.
+  - [x] **Cabeceras de Ordenación y Contadores Unificados**: Portada la interfaz premium de ordenación y contadores interactivos a Catálogo, Mi Fortaleza y Mercader de Eternos, con selector de orden y botón de dirección.
   - [x] **Saneamiento de Navbar**: Eliminado el botón inoperante de campana de notificaciones de la barra superior.
 
 ---

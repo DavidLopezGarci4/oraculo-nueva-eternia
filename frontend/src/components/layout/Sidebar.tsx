@@ -1,5 +1,5 @@
 
-import { LayoutDashboard, Database, Box, ShieldAlert, Settings, LogOut, X, Gavel } from 'lucide-react';
+import { Globe, Store, Sparkles, Database, Box, ShieldAlert, Settings, LogOut, X } from 'lucide-react';
 import masterRoleImg from '../../assets/role-master.png';
 import guardianRoleImg from '../../assets/role-guardian.png';
 
@@ -18,20 +18,20 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen
     const isAdmin = user?.role === 'admin' || user?.username === 'David';
 
     const globalItems = [
-        { id: 'dashboard', label: 'Tablero', icon: LayoutDashboard },
+        { id: 'dashboard', label: 'Orbe de Grayskull', icon: Globe },
     ];
 
     const originsItems = [
         { id: 'collection', label: 'Mi Fortaleza', icon: Box },
         { id: 'catalog', label: 'Nueva Eternia', icon: Database },
-        { id: 'auctions', label: 'El Pabellón', icon: Gavel },
+        { id: 'auctions', label: 'Mercader de Eternos', icon: Store },
         ...(isAdmin ? [{ id: 'purgatory', label: 'Purgatorio', icon: ShieldAlert }] : []),
     ];
 
     const vintageItems = [
         { id: 'fortaleza_vintage', label: 'Mi Fortaleza Vintage', icon: Box },
         { id: 'eternia', label: 'Eternia', icon: Database },
-        { id: 'vintage_miscellaneous', label: 'Miscelánea', icon: Box },
+        { id: 'vintage_miscellaneous', label: 'Bazar del Oráculo', icon: Sparkles },
     ];
 
     // Clases base para el sidebar

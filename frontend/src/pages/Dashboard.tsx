@@ -113,7 +113,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
     }, [manualSearchTerm]);
 
     if (isLoadingStats) {
-        return <PowerSwordLoader variant="fullScreen" text="Sincronizando Oráculo..." />;
+        return <PowerSwordLoader variant="fullScreen" text="Sintonizando el Orbe de Grayskull..." />;
     }
 
     return (
@@ -131,11 +131,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                     <div className="flex items-center gap-2 text-brand-primary">
                         <Zap className="h-3 w-3 fill-brand-primary" />
                         <h2 className="text-sm md:text-base font-black uppercase tracking-[0.2em] text-white">
-                            Tablero de <span className="text-brand-primary">Poder</span>
+                            Orbe de <span className="text-brand-primary">Grayskull</span>
                         </h2>
                     </div>
                     <p className="max-w-xl text-[11px] md:text-sm text-white/65 font-medium">
-                        Bienvenido al Mando Central, <span className="text-white font-bold">{user?.username || (isAdmin ? 'Maestro' : 'Guardián')}</span>. La inteligencia de Nueva Eternia converge.
+                        Bienvenido al Orbe de Grayskull, <span className="text-white font-bold">{user?.username || (isAdmin ? 'Maestro' : 'Guardián')}</span>. La inteligencia de Nueva Eternia converge.
                     </p>
                 </div>
             </div>

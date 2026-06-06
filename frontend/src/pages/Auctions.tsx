@@ -162,14 +162,14 @@ const Auctions: React.FC<AuctionsProps> = ({ user }) => {
     }, [products, sortBy, sortOrder]);
 
     if (isLoadingProducts || isLoadingCollection) {
-        return <PowerSwordLoader variant="fullScreen" text="Infiltrándonos en Wallapop & eBay..." />;
+        return <PowerSwordLoader variant="fullScreen" text="Explorando los puestos del Mercader de Eternos..." />;
     }
 
     if (isErrorProducts) {
         return (
             <div className="flex h-64 flex-col items-center justify-center gap-4 text-red-400">
                 <AlertCircle className="h-10 w-10" />
-                <p className="text-sm font-medium">Error al conectar con la Red de Subastas</p>
+                <p className="text-sm font-medium">Error al conectar con el Mercader de Eternos</p>
             </div>
         );
     }
@@ -182,10 +182,10 @@ const Auctions: React.FC<AuctionsProps> = ({ user }) => {
                     <div className="flex items-center gap-2 text-brand-primary">
                         <span className="text-base md:text-xl">🏛️</span>
                         <h2 className="text-sm md:text-base font-black uppercase tracking-[0.2em] text-white">
-                            El <span className="text-brand-primary">Pabellón</span>
+                            Mercader de <span className="text-brand-primary">Eternos</span>
                         </h2>
                     </div>
-                    <p className="max-w-xl text-[11px] md:text-sm text-white/40 font-medium uppercase tracking-[0.1em]">Subastas & Mercado de Segunda Mano</p>
+                    <p className="max-w-xl text-[11px] md:text-sm text-white/40 font-medium uppercase tracking-[0.1em]">Mercado de Reliquias & Ofertas P2P</p>
                 </div>
                 
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 w-full lg:w-auto relative z-10">

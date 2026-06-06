@@ -339,7 +339,7 @@ El catÃ¡logo de **Eternia Vintage** utiliza un ordenamiento diferencial jerarqui
 
 ---
 
-## 11. SecciÃ³n de MiscelÃ¡nea Vintage (Lotes y Varios Retro)
+## 11. Bazar del OrÃ¡culo (Lotes y Varios Retro)
 
 Para gestionar adecuadamente ofertas que no corresponden a una Ãºnica figura (como lotes de juguetes clÃ¡sicos, packs variados o accesorios sueltos de Masters of the Universe), el sistema incorpora un circuito especializado:
 
@@ -350,7 +350,7 @@ Para gestionar adecuadamente ofertas que no corresponden a una Ãºnica figura (co
 ### 11.2 Flujo Operativo en el Purgatorio
 1. **DesvÃ­o**: El administrador Master puede presionar "Enviar a MiscelÃ¡nea (Lote / Varios)" desde el modal de emparejamiento.
 2. **Registro**: El backend extrae la oferta de la cola del Purgatorio, la inyecta en la tabla de miscelÃ¡nea y registra la acciÃ³n `LINKED_MISCELLANEOUS` en `OfferHistoryModel`.
-3. **PÃ¡gina de MiscelÃ¡nea**: Los lotes se presentan en una galerÃ­a glassmorphic exclusiva en la pestaÃ±a **MiscelÃ¡nea** de Eternia Vintage.
+3. **Bazar del OrÃ¡culo**: Los lotes se presentan en una galerÃ­a glassmorphic exclusiva en la pestaÃ±a **MiscelÃ¡nea** de Eternia Vintage.
 4. **ReversiÃ³n**: Los administradores Master disponen de un botÃ³n para devolver el lote a la cola del Purgatorio (`revert_miscellaneous_item`), registrando el evento `REVERTED_MISCELLANEOUS`.
 
 
@@ -376,7 +376,7 @@ El pipeline incorpora un filtro automático de relevancia (alidate_motu_relevanc
 * **Descarte Automático a Lista Negra**: Los ítems descartados se guardan directamente en la lista negra (lackcluded_items) con el motivo correspondiente, impidiendo que vuelvan a saturar la cola del Purgatorio.
 
 ### 12.3 Limpieza Proactiva Global del Purgatorio
-Al iniciar y finalizar las incursiones de scraping o las importaciones manuales, el worker ejecuta la rutina clean_purgatory_globally(). Esta rutina elimina del buffer de pendientes (PendingMatchModel) cualquier oferta cuya URL ya figure en el catálogo principal (offers), en la lista negra (lackcluded_items) o en la sección de miscelánea (intage_miscellaneous), manteniendo la base de datos libre de residuos.
+Al iniciar y finalizar las incursiones de scraping o las importaciones manuales, el worker ejecuta la rutina clean_purgatory_globally(). Esta rutina elimina del buffer de pendientes (PendingMatchModel) cualquier oferta cuya URL ya figure en el catálogo principal (offers), en la lista negra (lackcluded_items) o en la sección del Bazar del Oráculo (intage_miscellaneous), manteniendo la base de datos libre de residuos.
 
 ### 12.4 Calibración Dinámica de Haces de Luz Vintage
 El componente de carga interactiva PowerSwordLoader.tsx se ha rediseñado para admitir coordenadas dinámicas para la animación de haces de luz vectoriales:
@@ -385,7 +385,7 @@ El componente de carga interactiva PowerSwordLoader.tsx se ha rediseñado para ad
 * **Carga de Sección Vintage**: Se pre-configuraron las coordenadas óptimas para el asset de He-Man ddg-heman.png utilizado en las pantallas de carga de las páginas Vintage: empuñadura en (79.5, 66.5) y punta en (73.0, 20.5).
 
 ### 12.5 Compactación Visual de la Interfaz Core
-Para optimizar el espacio en pantallas de ordenadores y dispositivos móviles y reducir el desplazamiento vertical, se ha rediseñado la rejilla de tarjetas en **Catálogo**, **Mi Fortaleza** y **El Pabellón**:
+Para optimizar el espacio en pantallas de ordenadores y dispositivos móviles y reducir el desplazamiento vertical, se ha rediseñado la rejilla de tarjetas en **Catálogo**, **Mi Fortaleza** y **Mercader de Eternos**:
 * **Tarjetas y Dock**: Compactación general de márgenes, rellenos y tipografías. El dock de botones inferiores se unificó a un tamaño de h-7 w-7 con iconos de h-3.5 w-3.5.
 * **Botón Añadir (+)**: Se incrementó el contraste del botón de agregar en figuras no deseadas/poseídas usando el color temático de la sección (celeste/azul en moderno, ámbar/dorado en vintage) al 60% de opacidad en reposo y 100% al pasar el cursor (hover).
 * **Cabeceras de Ordenación y Contadores**: Unificación de las cabeceras del panel con selector de tipo de ordenamiento, indicador de dirección de ordenación reactivo (ArrowUp / ArrowDown), y contador del total de ítems con iconografía temática de color.

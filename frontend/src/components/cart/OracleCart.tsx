@@ -22,7 +22,7 @@ const OracleCart: React.FC = () => {
                 </div>
                 <div className="space-y-1">
                     <h3 className="text-white font-black uppercase tracking-widest text-sm">Carrito Ficticio Vacío</h3>
-                    <p className="text-[10px] text-white/20 font-bold max-w-xs uppercase">Añade reliquias desde Oportunidades, El Pabellón o Nueva Eternia para simular tu pedido logístico.</p>
+                    <p className="text-[10px] text-white/20 font-bold max-w-xs uppercase">Añade reliquias desde Oportunidades, Mercader de Eternos o Nueva Eternia para simular tu pedido logístico.</p>
                 </div>
             </div>
         );
