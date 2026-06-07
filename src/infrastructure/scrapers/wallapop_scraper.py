@@ -3,70 +3,207 @@ import logging
 import random
 import time
 import re
+import os
+import tempfile
 from typing import List, Optional
 from datetime import datetime
 from playwright.async_api import async_playwright, Page, BrowserContext
 from bs4 import BeautifulSoup
+from curl_cffi.requests import AsyncSession
 from src.infrastructure.scrapers.base import BaseScraper, ScrapedOffer
 
 logger = logging.getLogger(__name__)
 
 class WallapopScraper(BaseScraper):
     """
-    Scraper de Wallapop basado en Playwright (Phase 43).
-    Bypassa bloqueos 403 de CloudFront mediante renderizado real.
+    Scraper de Wallapop Híbrido (API Directa + Playwright Fallback) (Phase 43/Pareto).
+    Bypassa bloqueos 403 de CloudFront mediante curl_cffi impersonation.
     """
+    
+    USER_AGENTS = [
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+    ]
     
     def __init__(self):
         super().__init__(shop_name="Wallapop", base_url="https://es.wallapop.com")
         self.is_auction_source = True # Peer-to-Peer
         
+    async def search_via_api(self, query: str) -> List[ScrapedOffer]:
+        """
+        Intenta obtener las ofertas de Wallapop de forma directa y ultra-rápida
+        usando curl_cffi impersonation contra su endpoint general de búsqueda v3.
+        """
+        offers: List[ScrapedOffer] = []
+        self._log(f"⚡ Wallapop API: Buscando '{query}' de forma directa...")
+        
+        async with AsyncSession() as session:
+            user_agent = random.choice(self.USER_AGENTS)
+            headers = {
+                "Accept": "application/json, text/plain, */*",
+                "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
+                "User-Agent": user_agent,
+                "Origin": "https://es.wallapop.com",
+                "Referer": "https://es.wallapop.com/",
+            }
+            
+            params = {
+                "keywords": query,
+                "order_by": "newest",
+                "source": "search_box",
+                "latitude": 40.416775,
+                "longitude": -3.703790
+            }
+            
+            try:
+                # Opcional: Warm-up visitando la home
+                try:
+                    await session.get("https://es.wallapop.com/", headers={"User-Agent": user_agent}, timeout=10)
+                    await asyncio.sleep(1.0)
+                except Exception:
+                    pass
+                
+                response = await session.get(
+                    "https://api.wallapop.com/api/v3/general/search",
+                    params=params,
+                    headers=headers,
+                    impersonate="chrome120",
+                    timeout=15
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    search_objects = data.get("search_objects", [])
+                    self._log(f"🎉 Wallapop API: Encontrados {len(search_objects)} objetos en API para '{query}'.")
+                    
+                    for obj in search_objects:
+                        title = obj.get("title")
+                        price = obj.get("price")
+                        
+                        if not title or price is None:
+                            continue
+                            
+                        # Parse price
+                        if isinstance(price, dict):
+                            price_val = float(price.get("amount", 0))
+                        else:
+                            try:
+                                price_val = float(price)
+                            except ValueError:
+                                continue
+                                
+                        if price_val <= 0:
+                            continue
+                            
+                        # Filtro de ruido
+                        title_lower = title.lower()
+                        junk_keywords = ["camiseta", "t-shirt", "poster", "taza", "mug", "revista", "dvd", "llavero", "keyring", "reproduccion", "repro", "sticker", "pegatina"]
+                        if any(kw in title_lower for kw in junk_keywords):
+                            continue
+                            
+                        slug = obj.get("web_slug")
+                        if not slug:
+                            continue
+                            
+                        full_url = f"https://es.wallapop.com/item/{slug}"
+                        
+                        # Image URL
+                        image_url = None
+                        images = obj.get("images", [])
+                        if images and isinstance(images, list):
+                            image_url = images[0].get("original") or images[0].get("medium")
+                        elif obj.get("image"):
+                            img_obj = obj.get("image")
+                            if isinstance(img_obj, dict):
+                                image_url = img_obj.get("original") or img_obj.get("medium")
+                            else:
+                                image_url = img_obj
+                                
+                        offer = ScrapedOffer(
+                            product_name=title,
+                            price=price_val,
+                            url=full_url,
+                            shop_name=self.shop_name,
+                            image_url=image_url,
+                            source_type="Peer-to-Peer",
+                            sale_type="Fixed_P2P"
+                        )
+                        offers.append(offer)
+                else:
+                    self._log(f"⚠️ Wallapop API ha devuelto código de estado no-exitoso: {response.status_code}", level="warning")
+            except Exception as e:
+                self._log(f"⚠️ Error llamando a la API de Wallapop: {e}", level="warning")
+                
+        return offers
+
     async def search(self, query: str) -> List[ScrapedOffer]:
         offers: List[ScrapedOffer] = []
         
-        # 1. Configuración inteligente de palabras clave y límites de scroll
+        # 1. Configuración inteligente de palabras clave
         if query == "auto":
-            # Estrategia de 2 Consultas de Alta Cobertura (Español + Inglés)
-            # Evita bloqueos por navegación consecutiva reiterada y previene timeouts
             queries_config = [
-                ("masters del universo", 6, True),   # (query, scroll_cycles, click_load_more) - ¡Alta prioridad en España!
-                ("masters of the universe", 4, True)  # Cobertura de términos internacionales
+                ("masters del universo", 6, True),   # (query, scroll_cycles, click_load_more)
+                ("masters of the universe", 4, True)
             ]
         else:
             queries_config = [(query, 8, True)]
             
-        self._log(f"🌩️ Wallapop Playwright Nexus: Iniciando búsqueda integrada para {len(queries_config)} términos.")
+        self._log(f"🌩️ Wallapop Nexus: Iniciando búsqueda integrada para {len(queries_config)} términos.")
+        
+        # --- INTENTO 1: API DIRECTA CON IMPERSONACIÓN ---
+        api_success = True
+        api_offers: List[ScrapedOffer] = []
+        
+        for search_query, _, _ in queries_config:
+            try:
+                res = await self.search_via_api(search_query)
+                if res:
+                    api_offers.extend(res)
+                else:
+                    # Si la API no retorna nada, consideramos probar con Playwright
+                    api_success = False
+            except Exception:
+                api_success = False
+                
+        if api_success and api_offers:
+            # Deduplicar ofertas
+            seen_urls = set()
+            unique_offers = []
+            for o in api_offers:
+                if o.url not in seen_urls:
+                    seen_urls.add(o.url)
+                    unique_offers.append(o)
+            self.items_scraped = len(unique_offers)
+            self._log(f"🚀 Wallapop API: Búsqueda completada con éxito. {self.items_scraped} reliquias encontradas sin levantar navegador.")
+            return unique_offers
+            
+        # --- INTENTO 2: FALLBACK CON PLAYWRIGHT Y PERFIL PERSISTENTE ---
+        self._log("🌐 Wallapop Fallback: La API directa no ha retornado datos. Levantando navegador Playwright...", level="warning")
+        
+        user_data_dir = os.path.join(tempfile.gettempdir(), "playwright_wallapop_profile")
         
         async with async_playwright() as p:
-            # 2. Lanzar navegador con evasión de automatización estándar y argumentos de seguridad
-            browser = await p.chromium.launch(
+            # Lanzar con perfil persistente para mantener cookies
+            context = await p.chromium.launch_persistent_context(
+                user_data_dir,
                 headless=True,
                 args=[
                     '--disable-blink-features=AutomationControlled',
                     '--no-sandbox',
                     '--disable-setuid-sandbox'
-                ]
-            )
-            
-            # Contexto con User-Agent realista (Chrome 120 para evitar discrepancias TLS)
-            context = await browser.new_context(
+                ],
                 viewport={'width': 1280, 'height': 800},
                 user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                 locale="es-ES"
             )
             
-            page = await context.new_page()
+            page = context.pages[0] if context.pages else await context.new_page()
             
-            # STEALTH: Inyección de scripts anti-webdriver ligeros (sin romper React/SPA)
             await page.add_init_script("""
                 Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
                 Object.defineProperty(navigator, 'languages', { get: () => ['es-ES', 'es', 'en'] });
             """)
             
-            cookies_accepted = False
-            
-            # --- OBTENER IP Y DIAGNÓSTICO DE ACCESO A WALLAPOP ---
-            import os
             current_ip = "Desconocida"
             probe_status = "error"
             environment = "GitHub Actions" if os.environ.get("GITHUB_ACTIONS") == "true" else "Local"
@@ -74,38 +211,36 @@ class WallapopScraper(BaseScraper):
             details_str = "No details available."
 
             try:
-                # 1. Obtener la IP actual
+                # Obtener la IP actual
                 await page.goto("https://api.ipify.org?format=json", timeout=15000)
                 ip_text = await page.locator("body").text_content()
                 import json
                 ip_data = json.loads(ip_text.strip())
                 current_ip = ip_data.get("ip", "Desconocida")
-                self._log(f"🔎 IP de origen detectada para el runner: {current_ip}")
+                self._log(f"🔎 IP de origen detectada: {current_ip}")
             except Exception as e:
                 self._log(f"⚠️ No se pudo determinar la IP de origen: {e}", level="warning")
 
             try:
-                # 2. Probar acceso a la portada
-                self._log("🏠 Navegando a la portada de Wallapop para comprobar WAF/CloudFront e inicializar cookies...")
+                # Probar acceso a la portada
+                self._log("🏠 Validando estado de conexión con portada de Wallapop...")
                 response = await page.goto(self.base_url, wait_until="networkidle", timeout=30000)
                 if response:
                     resp_code = response.status
                 
-                # Validar de forma inmediata si la IP está greylisted/bloqueada
                 cover_content = await page.content()
                 page_title = await page.title()
                 
                 if "request could not be satisfied" in cover_content.lower() or "403 error" in cover_content.lower() or "request blocked" in cover_content.lower() or ("cloudflare" in cover_content.lower() and ("blocked" in cover_content.lower() or "security" in cover_content.lower())):
                     probe_status = "blocked"
                     details_str = f"Blocked page title: {page_title}. Content starts with: {cover_content[:500]}"
-                    self._log(f"🛡️ [PROBE] IP {current_ip} BLOQUEADA por CloudFront (WAF). Saltando Wallapop de forma segura.", level="warning")
+                    self._log(f"🛡️ [PROBE] IP {current_ip} BLOQUEADA por WAF de CloudFront. Abortando.", level="warning")
                     self.blocked = True
                 else:
                     probe_status = "allowed"
                     details_str = f"Successfully loaded Wallapop. Title: {page_title}. Response status: {resp_code}"
-                    self._log(f"🎉 [PROBE] IP {current_ip} TIENE ACCESO LIBRE. Procediendo con el raspado de Wallapop.")
                     
-                    # Si tiene acceso, aceptamos las cookies
+                    # Consentimiento de Cookies
                     accept_btn = page.locator("#onetrust-accept-btn-handler").or_(
                         page.get_by_role("button", name="Aceptar todo")
                     ).or_(
@@ -114,31 +249,15 @@ class WallapopScraper(BaseScraper):
                     
                     if await accept_btn.is_visible(timeout=5000):
                         await accept_btn.click()
-                        self._log("🍪 Cookies de portada aceptadas (Consentimiento completado).")
-                        cookies_accepted = True
+                        self._log("🍪 Cookies aceptadas en portada.")
                     await asyncio.sleep(2)
             except Exception as e:
-                # Comprobar si falló por bloqueo
-                try:
-                    cover_content = await page.content()
-                    page_title = await page.title()
-                    if "request could not be satisfied" in cover_content.lower() or "403 error" in cover_content.lower() or "request blocked" in cover_content.lower() or "cloudflare" in cover_content.lower():
-                        probe_status = "blocked"
-                        details_str = f"Blocked on exception. Title: {page_title}. Error: {str(e)[:200]}. Content snippet: {cover_content[:300]}"
-                        self._log(f"🛡️ [PROBE] IP {current_ip} BLOQUEADA por CloudFront (WAF). Saltando.", level="warning")
-                        self.blocked = True
-                    else:
-                        probe_status = "error"
-                        details_str = f"Navigation failed: {str(e)[:300]}"
-                        self._log(f"⚠️ [PROBE] Error de red o timeout conectando a Wallapop: {e}", level="warning")
-                        self.blocked = True
-                except Exception as inner_e:
-                    probe_status = "error"
-                    details_str = f"Navigation failed: {str(e)[:200]}. Inner error trying to read page content: {str(inner_e)[:100]}"
-                    self._log(f"⚠️ [PROBE] Error de red o timeout conectando a Wallapop: {e}", level="warning")
-                    self.blocked = True
+                probe_status = "error"
+                details_str = f"Navigation failed: {e}"
+                self._log(f"⚠️ [PROBE] Falló la comprobación de red: {e}", level="warning")
+                self.blocked = True
 
-            # Guardar el registro en la base de datos de producción de forma segura
+            # Registrar telemetría IP
             try:
                 from src.infrastructure.database_cloud import SessionCloud
                 from src.domain.models import WallapopIpLogModel
@@ -152,90 +271,51 @@ class WallapopScraper(BaseScraper):
                     )
                     db_session.add(ip_log)
                     db_session.commit()
-                self._log(f"💾 Log de auditoría IP guardado en Supabase (IP: {current_ip} | Status: {probe_status} | Env: {environment} | Code: {resp_code}).")
             except Exception as db_err:
-                self._log(f"⚠️ No se pudo registrar la auditoría IP en base de datos: {db_err}", level="warning")
+                self._log(f"⚠️ No se pudo registrar la auditoría IP: {db_err}", level="warning")
 
             if self.blocked:
-                await browser.close()
+                await context.close()
                 return offers
             
             try:
                 for search_query, scroll_cycles, click_load_more in queries_config:
                     if self.blocked:
-                        self._log("🛡️ Bloqueo detectado. Saltando consultas restantes de Wallapop.", level="warning")
                         break
                         
-                    self._log(f"🕵️ Wallapop: Iniciando búsqueda humana para '{search_query}'...")
+                    self._log(f"🕵️ Wallapop Browser: Navegando directamente a resultados de '{search_query}'...")
                     
                     try:
-                        # 1. Navegar a la home de Wallapop para establecer contexto seguro y limpio
-                        await page.goto(self.base_url, wait_until="networkidle", timeout=40000)
-                        await asyncio.sleep(1.5)
+                        # Navegar directamente por parámetros de URL (Stealth & Veloz)
+                        search_url = f"https://es.wallapop.com/app/search?keywords={search_query}"
+                        await page.goto(search_url, wait_until="networkidle", timeout=45000)
+                        await asyncio.sleep(2.5)
                         
-                        # Validar si la home devolvió un bloqueo de IP WAF de CloudFront
-                        content = await page.content()
-                        if "request could not be satisfied" in content.lower() or "403 error" in content.lower() or "request blocked" in content.lower():
-                            self._log("🛡️ Bloqueo de IP detectado (Rate Limit / Greylist de CloudFront) en el WAF. Tu IP local está marcada temporalmente. Por favor, espera 10 minutos para que se enfríe.", level="warning")
-                            self.blocked = True
-                            break
-                        
-                        # 2. Aceptar Cookies (Consentimiento)
+                        # Manejo cookies en resultados
                         try:
                             accept_btn = page.locator("#onetrust-accept-btn-handler").or_(
                                 page.get_by_role("button", name="Aceptar todo")
                             ).or_(
                                 page.locator("button:has-text('Aceptar')")
                             ).first
-                            
-                            if await accept_btn.is_visible(timeout=5000):
+                            if await accept_btn.is_visible(timeout=3000):
                                 await accept_btn.click()
-                                self._log("🍪 Cookies de sesión humana aceptadas.")
-                                cookies_accepted = True
-                                await asyncio.sleep(1.5)
+                                await asyncio.sleep(1.0)
                         except Exception:
                             pass
                             
-                        # 3. Localizar e interactuar con el campo de búsqueda de Wallapop de forma ultra-robusta
-                        search_input = page.locator("input[placeholder*='Buscar'], input[name='keywords'], input[type='search']").first
-                        try:
-                            await search_input.wait_for(state="visible", timeout=15000)
-                        except Exception as err:
-                            # Diagnóstico visual de error
-                            screenshot_path = "C:\\Users\\dace8\\.gemini\\antigravity\\brain\\bb7556b1-2949-4a09-94bc-1223b5dde66f\\scratch\\wallapop_visible_error.png"
-                            await page.screenshot(path=screenshot_path)
-                            self._log(f"⚠️ No se pudo localizar el campo de búsqueda (visible) de Wallapop: {err}. Captura guardada.", level="warning")
-                            continue
-                            
-                        # Asegurar interacción despejada
-                        await search_input.scroll_into_view_if_needed()
-                        await search_input.click()
-                        await asyncio.sleep(0.5)
+                        # Validar si devolvió un bloqueo de IP
+                        content = await page.content()
+                        if "request could not be satisfied" in content.lower() or "403 error" in content.lower() or "request blocked" in content.lower():
+                            self._log("🛡️ Bloqueo WAF detectado al cargar los resultados de búsqueda.", level="warning")
+                            self.blocked = True
+                            break
                         
-                        # Escribir término carácter por carácter con retardos dinámicos realistas
-                        for char in search_query:
-                            await search_input.type(char, delay=random.randint(40, 110))
-                            
-                        await asyncio.sleep(0.8)
-                        
-                        # 4. Pulsar ENTER para detonar la transición SPA de CloudFront
-                        await search_input.press("Enter")
-                        
-                        # 5. Esperar la carga de la página de resultados SPA de forma reactiva
-                        try:
-                            await page.wait_for_url("**/search*", timeout=15000)
-                            self._log(f"🔗 SPA Redirección: Navegado a resultados: {page.url}")
-                        except Exception as e:
-                            self._log(f"⏳ Nota: Timeout menor esperando URL de búsqueda: {e}", level="warning")
-                            
-                        await page.wait_for_load_state("networkidle")
-                        await asyncio.sleep(2)
-                        
-                        # 6. Secuencia de Expansión ("Cargar más")
+                        # Cargar más
                         if click_load_more:
                             try:
                                 await page.keyboard.press("End")
-                                await asyncio.sleep(1.2)
+                                await asyncio.sleep(1.0)
                                 load_more_btn = page.get_by_role("button", name="Cargar más").or_(page.locator("button:has-text('Cargar más')")).first
                                 if await load_more_btn.is_visible(timeout=4000):
                                     await load_more_btn.click()
@@ -244,40 +324,14 @@ class WallapopScraper(BaseScraper):
                             except Exception:
                                 pass
                                 
-                        # 7. Descenso de Scroll dinámico para recolección
+                        # Scrolls
                         for i in range(scroll_cycles):
                             await page.mouse.wheel(0, 1500)
-                            await asyncio.sleep(0.9)
+                            await asyncio.sleep(1.0)
                             
-                        # 8. Extraer y procesar HTML
+                        # Parsear HTML
                         content = await page.content()
                         soup = BeautifulSoup(content, 'html.parser')
-                        cards = soup.select("a[href*='/item/']")
-                        
-                        # 3OX Shield: Detección proactiva y robusta de bloqueos por Cloudflare/CloudFront/CAPTCHA (sin falsos positivos)
-                        is_blocked = False
-                        if len(cards) == 0:
-                            content_lower = content.lower()
-                            title_match = re.search(r"<title>(.*?)</title>", content_lower)
-                            title_text = title_match.group(1) if title_match else ""
-                            
-                            if (
-                                "attention required" in title_text or
-                                "just a moment" in title_text or
-                                "request could not be satisfied" in title_text or
-                                "cloudflare" in title_text or
-                                "forbidden" in title_text or
-                                "access denied" in title_text or
-                                "security code" in content_lower or
-                                "request blocked" in content_lower or
-                                len(content) < 45000
-                            ):
-                                is_blocked = True
-                                
-                        if is_blocked:
-                            self._log("🛡️ Bloqueo detectado (Cloudflare/CloudFront/WAF) al navegar en Wallapop.", level="warning")
-                            self.blocked = True
-                            break
                         cards = soup.select("a[href*='/item/']")
                         
                         query_offers_count = 0
@@ -292,24 +346,20 @@ class WallapopScraper(BaseScraper):
                                     
                                 price_text = price_node.get_text(strip=True)
                                 price_val = float(re.sub(r'[^\d.,]', '', price_text).replace(',', '.'))
-                                
                                 if price_val <= 0: continue
                                 
                                 title = title_node.get_text(strip=True)
-                                
-                                # Filtro Inteligente de Basura (Excluir ruidos no-figuras/no-reliquias)
                                 title_lower = title.lower()
                                 junk_keywords = ["camiseta", "t-shirt", "poster", "taza", "mug", "revista", "dvd", "llavero", "keyring", "reproduccion", "repro", "sticker", "pegatina"]
                                 if any(kw in title_lower for kw in junk_keywords):
-                                    # self._log(f"🗑️ Wallapop: Item descartado por filtro de ruido: '{title}'", level="debug")
                                     continue
+                                    
                                 href = card.get("href", "")
                                 clean_href = href.split("?")[0]
                                 full_url = clean_href if clean_href.startswith("http") else f"{self.base_url}{clean_href}"
                                 
                                 image_url = img_node.get("src") if img_node else None
                                 
-                                # Evitar duplicados del mismo artículo en búsquedas solapadas
                                 if any(o.url == full_url for o in offers):
                                     continue
                                     
@@ -328,40 +378,32 @@ class WallapopScraper(BaseScraper):
                             except Exception:
                                 continue
                                 
-                        self._log(f"🎁 Wallapop: Halladas {query_offers_count} reliquias para '{search_query}'.")
-                        
-                        # Retardo respetuoso entre búsquedas de la misma sesión
-                        await asyncio.sleep(random.uniform(3.0, 5.0))
+                        self._log(f"🎁 Wallapop Browser: Halladas {query_offers_count} reliquias para '{search_query}'.")
+                        await asyncio.sleep(random.uniform(2.0, 4.0))
                         
                     except Exception as e:
-                        self._log(f"⚠️ Error buscando '{search_query}': {e}", level="warning")
+                        self._log(f"⚠️ Error buscando '{search_query}' en navegador: {e}", level="warning")
                         
             except Exception as e:
-                self._log(f"💥 Error crítico general en Wallapop Playwright: {e}", level="error")
+                self._log(f"💥 Error general en Wallapop Playwright Fallback: {e}", level="error")
                 self.errors += 1
             finally:
-                await browser.close()
+                await context.close()
                 
         self.items_scraped = len(offers)
-        self._log(f"✅ Wallapop Complete: Halladas {self.items_scraped} reliquias en total en la superficie.")
+        self._log(f"✅ Wallapop Fallback Complete: Halladas {self.items_scraped} reliquias en total.")
         return offers
-
-# Regexp imported at the top
 
 if __name__ == "__main__":
     import sys
-    import io
-    # [3OX] Unicode Resilience
     if hasattr(sys.stdout, 'reconfigure'): sys.stdout.reconfigure(encoding='utf-8')
-    
-    # Enable logging to see _log output
     logging.basicConfig(level=logging.INFO, format='%(message)s')
     
     async def test():
         scraper = WallapopScraper()
         results = await scraper.search("masters of the universe origins")
         print(f"\n--- RESULTADOS FINALES ---")
-        print(f"Total items hallados: {len(results)}")
+        print(f"Total: {len(results)}")
         for r in results[:10]:
             print(f"- {r.product_name}: {r.price}€ -> {r.url}")
             

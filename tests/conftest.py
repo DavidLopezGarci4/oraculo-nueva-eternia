@@ -32,6 +32,7 @@ _SESSION_TARGETS = [
     "src.interfaces.api.routers.vault.SessionCloud",
     "src.interfaces.api.routers.logistics.SessionCloud",
     "src.interfaces.api.routers.auth.SessionCloud",
+    "src.interfaces.api.routers.showcase.SessionCloud",
     "src.interfaces.api.deps.SessionCloud",
 ]
 

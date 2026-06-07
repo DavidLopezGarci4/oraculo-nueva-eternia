@@ -304,6 +304,7 @@ class UserModel(Base):
     role: Mapped[str] = mapped_column(String, default="viewer") # admin, viewer
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     location: Mapped[str] = mapped_column(String, default="ES") # e.g. 'ES', 'DE', 'IT' - Phase 15 Logistics
+    is_public_showcase: Mapped[bool] = mapped_column(Boolean, default=False)
     
     # 🔐 Seguridad & Recuperación
     reset_token: Mapped[Optional[str]] = mapped_column(String, nullable=True, index=True)

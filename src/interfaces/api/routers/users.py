@@ -25,6 +25,7 @@ async def get_user_settings(user_id: int):
             "email": user.email,
             "location": user.location,
             "role": user.role,
+            "is_public_showcase": user.is_public_showcase,
         }
 
 
@@ -37,6 +38,17 @@ async def update_user_location(user_id: int, location: str):
         user.location = location.upper()
         db.commit()
         return {"status": "success", "location": user.location}
+
+
+@router.post("/api/users/{user_id}/public-showcase")
+async def update_user_showcase(user_id: int, is_public: bool):
+    with SessionCloud() as db:
+        user = db.query(UserModel).filter(UserModel.id == user_id).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        user.is_public_showcase = is_public
+        db.commit()
+        return {"status": "success", "is_public_showcase": user.is_public_showcase}
 
 
 @router.post("/api/wallapop/import")

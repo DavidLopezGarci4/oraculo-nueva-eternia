@@ -77,6 +77,9 @@ app.include_router(system_router.router)
 app.include_router(vault_router.router)
 app.include_router(logistics_router.router)
 
+from src.interfaces.api.routers import showcase as showcase_router
+app.include_router(showcase_router.router)
+
 
 if __name__ == "__main__":
     import uvicorn

@@ -61,6 +61,7 @@ const Auctions: React.FC<AuctionsProps> = ({ user }) => {
     const [sortBy, setSortBy] = React.useState<'name' | 'price' | 'time'>('name');
     const [sortOrder, setSortOrder] = React.useState<'asc' | 'desc'>('asc');
     const [copiedId, setCopiedId] = React.useState<number | null>(null);
+    const [showOnlyWishlist, setShowOnlyWishlist] = React.useState(false);
 
     const activeUserId = parseInt(localStorage.getItem('active_user_id') || '2');
     const isAdmin = user?.role === 'admin' || user?.username === 'David';
@@ -148,7 +149,11 @@ const Auctions: React.FC<AuctionsProps> = ({ user }) => {
 
     const sortedProducts = React.useMemo(() => {
         if (!products) return [];
-        return [...products].sort((a, b) => {
+        let filtered = products;
+        if (showOnlyWishlist) {
+            filtered = filtered.filter(p => isWished(p.id));
+        }
+        return [...filtered].sort((a, b) => {
             let comparison = 0;
             if (sortBy === 'name') {
                 comparison = a.name.localeCompare(b.name);
@@ -159,7 +164,7 @@ const Auctions: React.FC<AuctionsProps> = ({ user }) => {
             }
             return sortOrder === 'asc' ? comparison : -comparison;
         });
-    }, [products, sortBy, sortOrder]);
+    }, [products, sortBy, sortOrder, showOnlyWishlist, collection]);
 
     if (isLoadingProducts || isLoadingCollection) {
         return <PowerSwordLoader variant="fullScreen" text="Explorando los puestos del Mercader de Eternos..." />;
@@ -217,6 +222,19 @@ const Auctions: React.FC<AuctionsProps> = ({ user }) => {
                             title={sortOrder === 'asc' ? 'Orden Ascendente' : 'Orden Descendente'}
                         >
                             {sortOrder === 'asc' ? <ArrowUp className="h-4 w-4 sm:h-5 sm:w-5" /> : <ArrowDown className="h-4 w-4 sm:h-5 sm:w-5" />}
+                        </button>
+
+                        <button
+                            onClick={() => setShowOnlyWishlist(prev => !prev)}
+                            className={`h-[38px] px-3 sm:h-[42px] sm:px-4 flex items-center gap-1.5 rounded-xl border transition-all shrink-0 shadow-md text-[9px] sm:text-[10px] font-black uppercase tracking-wider ${
+                                showOnlyWishlist 
+                                    ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/35 shadow-[0_0_15px_rgba(234,179,8,0.25)]' 
+                                    : 'bg-white/[0.03] border-white/5 text-white/50 hover:bg-white/10 hover:text-white/70'
+                            }`}
+                            title="Filtrar solo artículos en Lista de Deseos"
+                        >
+                            <Star className={`h-3.5 w-3.5 ${showOnlyWishlist ? 'fill-yellow-400' : ''}`} />
+                            <span>Solo Deseos</span>
                         </button>
                     </div>
 
