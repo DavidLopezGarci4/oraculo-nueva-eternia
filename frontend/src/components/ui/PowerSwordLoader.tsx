@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import swordAsset from '../../assets/HemanGlassmorphSword.png';
 import vintageSwordAsset from '../../assets/bddg-heman.png';
-import skeletorStaffAsset from '../../assets/skeletor_staff.png';
+import skeletorSwordAsset from '../../assets/GlassmorphSword.png';
 
 interface PowerSwordLoaderProps {
     className?: string;
@@ -42,7 +42,7 @@ const PowerSwordLoader: React.FC<PowerSwordLoaderProps> = ({
     const [internalProgress, setInternalProgress] = useState(0);
 
     const isFullScreen = variant === 'fullScreen';
-    const activeSwordAsset = isSkeletor ? skeletorStaffAsset : (isVintage ? vintageSwordAsset : swordAsset);
+    const activeSwordAsset = isSkeletor ? skeletorSwordAsset : (isVintage ? vintageSwordAsset : swordAsset);
 
     // Get custom/stored vintage sword coordinates or use defaults
     const [vintageCoords, setVintageCoords] = useState({
@@ -55,9 +55,9 @@ const PowerSwordLoader: React.FC<PowerSwordLoaderProps> = ({
     // Get custom/stored skeletor staff coordinates or use defaults
     const [skeletorCoords, setSkeletorCoords] = useState({
         gX: 125.0,
-        gY: 100.0,
+        gY: 175.0,
         tX: 125.0,
-        tY: 35.0
+        tY: 10.0
     });
 
     useEffect(() => {
@@ -75,12 +75,12 @@ const PowerSwordLoader: React.FC<PowerSwordLoaderProps> = ({
 
     useEffect(() => {
         if (isSkeletor) {
-            const stored = localStorage.getItem('skeletor_staff_coords');
+            const stored = localStorage.getItem('skeletor_sword_coords');
             if (stored) {
                 try {
                     setSkeletorCoords(JSON.parse(stored));
                 } catch (e) {
-                    console.error("Failed to parse skeletor staff coords", e);
+                    console.error("Failed to parse skeletor sword coords", e);
                 }
             }
         }

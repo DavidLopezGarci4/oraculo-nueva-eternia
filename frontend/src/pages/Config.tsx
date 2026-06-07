@@ -79,13 +79,13 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
         tY: 20.5
     });
 
-    // Skeletor Staff Light Ray Calibrator States
+    // Skeletor Vintage Light Ray Calibrator States
     const [showSkeletorCalibrator, setShowSkeletorCalibrator] = useState(false);
     const [skeletorCoords, setSkeletorCoords] = useState({
         gX: 125.0,
-        gY: 100.0,
+        gY: 175.0,
         tX: 125.0,
-        tY: 35.0
+        tY: 10.0
     });
 
     useEffect(() => {
@@ -103,12 +103,12 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
 
     useEffect(() => {
         if (showSkeletorCalibrator) {
-            const stored = localStorage.getItem('skeletor_staff_coords');
+            const stored = localStorage.getItem('skeletor_sword_coords');
             if (stored) {
                 try {
                     setSkeletorCoords(JSON.parse(stored));
                 } catch (e) {
-                    console.error("Failed to parse skeletor staff coords", e);
+                    console.error("Failed to parse skeletor sword coords", e);
                 }
             }
         }
@@ -129,16 +129,16 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
     };
 
     const handleSaveSkeletorCalib = () => {
-        localStorage.setItem('skeletor_staff_coords', JSON.stringify(skeletorCoords));
+        localStorage.setItem('skeletor_sword_coords', JSON.stringify(skeletorCoords));
         setShowSkeletorCalibrator(false);
     };
 
     const handleResetSkeletorCalib = () => {
         setSkeletorCoords({
             gX: 125.0,
-            gY: 100.0,
+            gY: 175.0,
             tX: 125.0,
-            tY: 35.0
+            tY: 10.0
         });
     };
 
@@ -995,18 +995,18 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                 <div className="glass border border-purple-500/30 p-6 rounded-3xl space-y-4 bg-purple-500/5">
                                     <div className="flex items-center gap-3 text-purple-500 font-bold uppercase tracking-widest text-xs mb-2">
                                         <Zap className="h-4 w-4" />
-                                        Skeletor Staff
+                                        Skeletor Vintage
                                     </div>
                                     <div className="space-y-4">
                                         <p className="text-[10px] text-white/65 font-bold uppercase leading-tight">
-                                            Calibra la posición exacta de los rayos oscuros sobre el báculo de Skeletor.
+                                            Calibra la posición exacta de los haces de luz sobre la espada en la silueta de Skeletor.
                                         </p>
                                         <button
                                             onClick={() => setShowSkeletorCalibrator(true)}
                                             className="w-full bg-purple-500/10 hover:bg-purple-500 text-purple-500 hover:text-black border border-purple-500/25 px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg shadow-purple-500/0 hover:shadow-purple-500/25"
                                         >
                                             <Settings className="h-3.5 w-3.5" />
-                                            Calibrar Báculo Skeletor
+                                            Calibrar Espada Skeletor
                                         </button>
                                     </div>
                                 </div>
@@ -1718,7 +1718,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                 </div>
             )}
 
-            {/* Skeletor Staff Light Ray Calibrator Modal */}
+            {/* Skeletor Vintage loading screen Calibrator Modal */}
             {showSkeletorCalibrator && (
                 <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-md p-4 flex justify-center items-start animate-in fade-in duration-300 custom-scrollbar">
                     <div className="relative w-full max-w-4xl my-8 md:my-12 rounded-[2.5rem] border border-purple-500/30 bg-[#0A0A0B] p-6 md:p-8 flex flex-col gap-6 shadow-[0_0_50px_rgba(168,85,247,0.2)]">
@@ -1727,8 +1727,8 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                 <Zap className="h-6 w-6 text-purple-500 animate-pulse" />
                             </div>
                             <div>
-                                <h4 className="text-2xl font-black text-white">Calibrador de Magia Oscura <span className="text-purple-500">Skeletor</span></h4>
-                                <p className="text-[10px] text-white/50 font-bold uppercase tracking-wider">Alinea los rayos de energía mágica sobre el Báculo de Havoc</p>
+                                <h4 className="text-2xl font-black text-white">Calibrador de Pantalla de Carga <span className="text-purple-500">Skeletor Vintage</span></h4>
+                                <p className="text-[10px] text-white/50 font-bold uppercase tracking-wider">Alinea los rayos de energía mágica sobre la Espada de Skeletor</p>
                             </div>
                         </div>
 
@@ -1752,11 +1752,11 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                     <svg viewBox="0 0 250 250" className="absolute inset-0 w-full h-full pointer-events-none">
                                         {/* Guard center indicator */}
                                         <circle cx={skeletorCoords.gX} cy={skeletorCoords.gY} r="4" fill="#a855f7" stroke="white" strokeWidth="1" />
-                                        <text x={skeletorCoords.gX + 6} y={skeletorCoords.gY + 3} fill="#a855f7" fontSize="8" fontWeight="bold">Origen Cráneo ({skeletorCoords.gX.toFixed(1)}, {skeletorCoords.gY.toFixed(1)})</text>
+                                        <text x={skeletorCoords.gX + 6} y={skeletorCoords.gY + 3} fill="#a855f7" fontSize="8" fontWeight="bold">Empuñadura ({skeletorCoords.gX.toFixed(1)}, {skeletorCoords.gY.toFixed(1)})</text>
                                         
                                         {/* Tip indicator */}
                                         <circle cx={skeletorCoords.tX} cy={skeletorCoords.tY} r="4" fill="#ec4899" stroke="white" strokeWidth="1" />
-                                        <text x={skeletorCoords.tX + 6} y={skeletorCoords.tY + 3} fill="#ec4899" fontSize="8" fontWeight="bold">Punta Cuerno ({skeletorCoords.tX.toFixed(1)}, {skeletorCoords.tY.toFixed(1)})</text>
+                                        <text x={skeletorCoords.tX + 6} y={skeletorCoords.tY + 3} fill="#ec4899" fontSize="8" fontWeight="bold">Punta ({skeletorCoords.tX.toFixed(1)}, {skeletorCoords.tY.toFixed(1)})</text>
                                         
                                         {/* Axis line */}
                                         <line x1={skeletorCoords.gX} y1={skeletorCoords.gY} x2={skeletorCoords.tX} y2={skeletorCoords.tY} stroke="rgba(168,85,247,0.3)" strokeDasharray="3" strokeWidth="1.5" />
@@ -1788,7 +1788,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                 <div className="space-y-4 bg-white/[0.02] border border-white/5 p-4 rounded-2xl">
                                     <div className="flex items-center gap-2 text-[#a855f7] font-bold text-xs uppercase tracking-widest">
                                         <div className="h-2 w-2 rounded-full bg-[#a855f7]" />
-                                        Origen de Destellos / Skull Base (X, Y)
+                                        Punto de Empuñadura (X, Y)
                                     </div>
                                     <div className="space-y-3">
                                         <div>
@@ -1827,7 +1827,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                 <div className="space-y-4 bg-white/[0.02] border border-white/5 p-4 rounded-2xl">
                                     <div className="flex items-center gap-2 text-[#ec4899] font-bold text-xs uppercase tracking-widest">
                                         <div className="h-2 w-2 rounded-full bg-[#ec4899]" />
-                                        Extremo del Rayo / Horn Tip (X, Y)
+                                        Punto de la Punta (X, Y)
                                     </div>
                                     <div className="space-y-3">
                                         <div>

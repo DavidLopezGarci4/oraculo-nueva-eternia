@@ -159,7 +159,14 @@ Ejecutar: `python -m pytest tests/test_api_*.py -v` (25 tests, 0 fallos)
   - Creada página `VintageMiscellaneous.tsx` con listado de lotes e integración de reversión.
   - Rediseñados botones del modal de colección para ser simétricos e integrada la guía interactiva desplegable de la escala C de conservación.
   - Creadas 8 guías de usuario estructuradas e independientes en la carpeta `docs/manual_usuario/`.
+- **Phase 65**: Características Pareto 80/20 y Blindaje Wallapop (07/06/2026):
+  - Santuario Compartido (Showcase) público exento de costes financieros en `/santuario/:username`.
+  - Filtro Cruzado de Deseos ("Solo Deseos") en Mercader de Eternos.
+  - Completitud por subcategorías (Waves) y Arsenal Analytics (gráfico circular de conservación) en Orbe de Grayskull.
+  - Script `renew_ssl.sh` local con Certbot Docker y recarga de Nginx.
+  - Scraper Wallapop híbrido con peticiones directas API via `curl_cffi` (impersonación de TLS de Chrome) y Playwright de respaldo.
+  - Corrección del calibrador de carga de Skeletor: reemplazo de báculo por la silueta de Skeletor Vintage y la espada real (`GlassmorphSword.png`), alineación vertical centrada horizontalmente a 125, y migración a `skeletor_sword_coords`.
 
 ---
 
-*Última actualización: 2026-06-03 - Phase 64: Miscelánea Vintage, Rediseño de Métricas y Manual de Usuario.*
+*Última actualización: 2026-06-07 - Phase 65: Características Pareto 80/20 y Calibración Skeletor.*
