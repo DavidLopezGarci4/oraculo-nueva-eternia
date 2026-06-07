@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from src.infrastructure.database_cloud import SessionCloud, init_cloud_db
 from src.infrastructure.services.telegram_service import telegram_service
 from src.application.services.deal_scorer import DealScorer
+from src.application.services.logistics_service import LogisticsService
 def clean_purgatory_globally(db: Session):
     """
     Elimina de forma proactiva y global del Purgatorio cualquier oferta 
@@ -641,5 +642,6 @@ class ScrapingPipeline:
         except Exception as e:
             logger.error(f"❌ Pipeline Critical Error: {e}")
             db.rollback()
+            return 0
         finally:
             db.close()
