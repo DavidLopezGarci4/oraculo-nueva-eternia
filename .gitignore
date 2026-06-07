@@ -66,6 +66,8 @@ inspect_*.py
 
 # Database
 *.db
+*.db-shm
+*.db-wal
 *.db.bak
 oraculo.db
 *.sqlite3
