@@ -119,7 +119,18 @@ El sistema ahora garantiza el aislamiento absoluto entre las colecciones **Etern
 - **Flujo de Naming Interactivo**: Al clasificar ofertas en el Purgatorio como vintage, un modal interactivo obliga a asociar el muñeco a un nombre vintage (existente o nuevo).
 - **Sufijado Auto-Vintage**: Para evitar colisiones de nombres con la serie Origins, cualquier nuevo nombre ingresado se sufija automáticamente con " Vintage" de forma insensible a mayúsculas/minúsculas.
 
+### 11. Santuario Público, Filtro de Deseos, Completitud de Waves y Arsenal Analytics (Fase 61 - Pareto)
+
+El sistema incorpora características estratégicas de alto valor y bajo impacto para optimizar el coleccionismo:
+
+- **Santuario Compartido (Showcase)**: Los usuarios pueden hacer pública su colección eliminando todos los datos financieros sensibles (`purchase_price` e inversión total) para proteger su privacidad, accesible en `/santuario/:username`.
+- **Filtro Cruzado de Deseos**: Permite filtrar las ofertas activas en el Mercader de Eternos en base a las figuras en la Lista de Deseos en tiempo real.
+- **Regimientos de Completitud (Waves)**: Panel visual en el Orbe de Grayskull que agrupa y calcula el porcentaje de figuras adquiridas frente al total disponible de cada sub-categoría (Origins, Deluxe, Vintage, etc.).
+- **Arsenal Analytics (Estado de la Fortaleza)**: Un gráfico circular interactivo (Donut Chart) con Recharts en el Dashboard que detalla porcentajes por estado (MOC, New, Loose) y calcula el valor de mercado ponderado correspondiente.
+- **Renovación Local SSL**: Script `renew_ssl.sh` para renovación local autónoma del certificado vía Docker Certbot, previniendo la exposición de claves privadas SSH a GitHub Actions.
+- **Scraper Wallapop Híbrido**: Integración de llamadas directas a la API general de búsqueda mediante `curl_cffi` (impersonación de TLS de Chrome) con fallback a Playwright persistente ante bloqueos WAF.
+
 ---
 
-*Última actualización: 26/05/2026 - Fase 60: Segregación Vintage y Flujo de Naming en Purgatorio.*
+*Última actualización: 07/06/2026 - Fase 61: Características Pareto 80/20 y Blindaje Wallapop.*
 

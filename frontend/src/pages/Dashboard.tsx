@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
     Zap,
@@ -10,7 +10,9 @@ import {
     ShoppingCart,
     Target,
     Award,
-    X
+    X,
+    Layers,
+    Shield
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import OracleCart from '../components/cart/OracleCart';
@@ -23,6 +25,16 @@ import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import masterRoleImg from '../assets/role-master.png';
 import guardianRoleImg from '../assets/role-guardian.png';
+
+// Recharts & Collection API Imports for Arsenal Analytics & Completitud
+import {
+    ResponsiveContainer,
+    PieChart,
+    Pie,
+    Cell,
+    Tooltip as RechartsTooltip
+} from 'recharts';
+import { getCollection, type Product } from '../api/collection';
 
 interface DashboardProps {
     user: Hero | null;
@@ -94,6 +106,110 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
         queryFn: () => getHallOfFame(user?.id || 2),
         refetchInterval: 300000 // 5 min
     });
+
+    const activeUserId = user?.id || 2;
+
+    // Queries to support Pareto features (Completitud + Arsenal Analytics)
+    const { data: modernProducts } = useQuery<Product[]>({
+        queryKey: ['products', false],
+        queryFn: async () => {
+            const response = await axios.get('/api/products?is_vintage=false');
+            return response.data;
+        }
+    });
+
+    const { data: vintageProducts } = useQuery<Product[]>({
+        queryKey: ['products', true],
+        queryFn: async () => {
+            const response = await axios.get('/api/products?is_vintage=true');
+            return response.data;
+        }
+    });
+
+    const { data: modernCollection } = useQuery<Product[]>({
+        queryKey: ['collection', activeUserId, false],
+        queryFn: () => getCollection(activeUserId, false)
+    });
+
+    const { data: vintageCollection } = useQuery<Product[]>({
+        queryKey: ['collection', activeUserId, true],
+        queryFn: () => getCollection(activeUserId, true)
+    });
+
+    // Memos for calculations
+    const groups = useMemo(() => {
+        if (!modernProducts && !vintageProducts) return [];
+        const prodList = [...(modernProducts || []), ...(vintageProducts || [])];
+        const collList = [...(modernCollection || []), ...(vintageCollection || [])];
+        const ownedIds = new Set(collList.filter(c => !c.is_wish).map(c => c.id));
+
+        const map: Record<string, { total: number; owned: number; missing: Product[] }> = {};
+        prodList.forEach(p => {
+            const sub = p.sub_category || 'Otros';
+            if (!map[sub]) {
+                map[sub] = { total: 0, owned: 0, missing: [] };
+            }
+            map[sub].total++;
+            if (ownedIds.has(p.id)) {
+                map[sub].owned++;
+            } else {
+                map[sub].missing.push(p);
+            }
+        });
+
+        return Object.entries(map)
+            .map(([name, data]) => ({
+                name,
+                total: data.total,
+                owned: data.owned,
+                percentage: data.total > 0 ? (data.owned / data.total) * 100 : 0,
+                missing: data.missing
+            }))
+            .filter(g => g.total > 0)
+            .sort((a, b) => b.percentage - a.percentage);
+    }, [modernProducts, vintageProducts, modernCollection, vintageCollection]);
+
+    const conditionData = useMemo(() => {
+        const collList = [...(modernCollection || []), ...(vintageCollection || [])].filter(c => !c.is_wish);
+        const counts: Record<string, { count: number; value: number }> = {
+            MOC: { count: 0, value: 0 },
+            Loose: { count: 0, value: 0 },
+            New: { count: 0, value: 0 }
+        };
+
+        collList.forEach(item => {
+            let cond = (item.condition || 'New').trim();
+            if (cond.toUpperCase() === 'MOC') cond = 'MOC';
+            else if (cond.toUpperCase() === 'LOOSE') cond = 'Loose';
+            else cond = 'New';
+
+            const basePrice = item.market_value || item.avg_market_price || 0;
+            let condMult = 0.75;
+            if (cond === 'MOC') condMult = 1.0;
+            else if (cond === 'Loose') condMult = 0.5;
+
+            const grad = item.grading !== undefined ? item.grading : 10.0;
+            const gradFactor = Math.max(0.10, 1.0 - ((10.0 - grad) * 0.04));
+            const adjustedPrice = basePrice * condMult * gradFactor;
+
+            counts[cond].count++;
+            counts[cond].value += adjustedPrice;
+        });
+
+        return Object.entries(counts)
+            .map(([name, data]) => ({
+                name,
+                value: data.count,
+                estimatedValue: data.value
+            }))
+            .filter(d => d.value > 0);
+    }, [modernCollection, vintageCollection]);
+
+    const COLORS = {
+        MOC: '#10b981',   // Emerald
+        New: '#0ea5e9',   // Cyan
+        Loose: '#a8a29e'  // Slate Gray
+    };
 
     // Search Logic
     React.useEffect(() => {
@@ -355,6 +471,149 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Pareto features: Completitud and Donut Chart */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+                {/* Arsenal Analytics: Donut Chart */}
+                <div className="relative overflow-hidden rounded-2xl md:rounded-[2.5rem] border border-white/5 bg-black/60 backdrop-blur-md p-5 md:p-6 shadow-2xl flex flex-col justify-between">
+                    <div className="absolute top-0 right-0 h-24 w-24 rounded-full bg-brand-primary/5 blur-2xl pointer-events-none"></div>
+                    <div>
+                        <div className="flex items-center gap-2 mb-4">
+                            <span className="flex h-6 w-6 items-center justify-center rounded bg-brand-primary/10 text-brand-primary">
+                                <Shield className="h-3.5 w-3.5 fill-current" />
+                            </span>
+                            <h4 className="text-white font-black text-xs md:text-sm uppercase tracking-wider">Estado de la Fortaleza</h4>
+                        </div>
+                        
+                        {conditionData.length === 0 ? (
+                            <div className="py-12 text-center text-white/45 uppercase font-bold text-[10px] tracking-widest bg-white/[0.01] rounded-2xl border border-white/5">
+                                Registra figuras en tu colección para ver analíticas de conservación
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+                                {/* Pie Chart */}
+                                <div className="h-44 w-full relative flex items-center justify-center">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <PieChart>
+                                            <Pie
+                                                data={conditionData}
+                                                cx="50%"
+                                                cy="50%"
+                                                innerRadius={50}
+                                                outerRadius={75}
+                                                paddingAngle={4}
+                                                dataKey="value"
+                                            >
+                                                {conditionData.map((entry) => (
+                                                    <Cell 
+                                                        key={`cell-${entry.name}`} 
+                                                        fill={COLORS[entry.name as keyof typeof COLORS] || '#fff'} 
+                                                    />
+                                                ))}
+                                            </Pie>
+                                            <RechartsTooltip
+                                                content={({ active, payload }) => {
+                                                    if (active && payload && payload.length) {
+                                                        const data = payload[0].payload;
+                                                        return (
+                                                            <div className="glass p-2.5 rounded-xl border border-white/10 text-[10px] bg-black/95">
+                                                                <p className="font-black text-white uppercase tracking-wider mb-1">{data.name}</p>
+                                                                <p className="text-white/60">Cantidad: <span className="font-black text-brand-primary">{data.value}</span></p>
+                                                                <p className="text-white/60">Valor Est.: <span className="font-black text-emerald-400">{data.estimatedValue.toFixed(2)}€</span></p>
+                                                            </div>
+                                                        );
+                                                    }
+                                                    return null;
+                                                }}
+                                            />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                                        <span className="text-[9px] font-black uppercase text-white/35 tracking-wider leading-none">Total</span>
+                                        <span className="text-xl font-black text-white">
+                                            {conditionData.reduce((acc, curr) => acc + curr.value, 0)}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Custom Legend */}
+                                <div className="space-y-2">
+                                    {conditionData.map((entry) => {
+                                        const totalCount = conditionData.reduce((acc, curr) => acc + curr.value, 0);
+                                        const pct = totalCount > 0 ? (entry.value / totalCount) * 100 : 0;
+                                        const color = COLORS[entry.name as keyof typeof COLORS] || '#fff';
+                                        
+                                        return (
+                                            <div key={entry.name} className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.02] border border-white/5">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: color }}></span>
+                                                    <span className="text-[10px] font-black uppercase tracking-wider text-white/70">{entry.name}</span>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="text-[10px] font-black text-white">{entry.value} uds. ({pct.toFixed(0)}%)</div>
+                                                    <div className="text-[9px] font-medium text-emerald-400">{entry.estimatedValue.toFixed(2)}€</div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Hordas de Completitud: Wave Progress */}
+                <div className="relative overflow-hidden rounded-2xl md:rounded-[2.5rem] border border-white/5 bg-black/60 backdrop-blur-md p-5 md:p-6 shadow-2xl flex flex-col justify-between">
+                    <div className="absolute top-0 right-0 h-24 w-24 rounded-full bg-brand-primary/5 blur-2xl pointer-events-none"></div>
+                    <div>
+                        <div className="flex items-center gap-2 mb-4">
+                            <span className="flex h-6 w-6 items-center justify-center rounded bg-brand-primary/10 text-brand-primary">
+                                <Layers className="h-3.5 w-3.5 fill-current" />
+                            </span>
+                            <h4 className="text-white font-black text-xs md:text-sm uppercase tracking-wider">Regimientos del Destino (Completitud)</h4>
+                        </div>
+                        
+                        {groups.length === 0 ? (
+                            <div className="py-12 text-center text-white/45 uppercase font-bold text-[10px] tracking-widest bg-white/[0.01] rounded-2xl border border-white/5">
+                                Sincronizando catálogo para calcular las hordas...
+                            </div>
+                        ) : (
+                            <div className="space-y-4 max-h-[175px] overflow-y-auto pr-1 custom-scrollbar">
+                                {groups.map(group => (
+                                    <div key={group.name} className="space-y-1.5">
+                                        <div className="flex justify-between items-baseline">
+                                            <span className="text-[10px] font-black uppercase tracking-wider text-white/80">{group.name}</span>
+                                            <span className="text-[9px] font-black text-brand-primary uppercase tracking-widest">
+                                                {group.owned} / {group.total} ({group.percentage.toFixed(0)}%)
+                                            </span>
+                                        </div>
+                                        
+                                        {/* Progress Bar Container */}
+                                        <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden border border-white/[0.03]">
+                                            <div 
+                                                className={`h-full rounded-full transition-all duration-500 bg-gradient-to-r ${
+                                                    group.name.toLowerCase().includes('vintage')
+                                                        ? 'from-amber-500 to-amber-300'
+                                                        : 'from-brand-primary to-cyan-400'
+                                                }`}
+                                                style={{ width: `${group.percentage}%` }}
+                                            />
+                                        </div>
+
+                                        {/* Missing Figures List (Inline Pareto suggestion) */}
+                                        {group.missing.length > 0 && (
+                                            <div className="text-[8px] text-white/40 leading-normal font-bold uppercase tracking-wider truncate">
+                                                Falta: {group.missing.slice(0, 3).map(m => m.name).join(', ')}
+                                                {group.missing.length > 3 && ` y ${group.missing.length - 3} más...`}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

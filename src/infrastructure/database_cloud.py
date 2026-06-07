@@ -30,3 +30,17 @@ SessionCloud = sessionmaker(autocommit=False, autoflush=False, bind=engine_cloud
 def init_cloud_db():
     from src.domain.models import Base
     Base.metadata.create_all(bind=engine_cloud)
+    
+    # --- SCHEMA ALTERATION KAIZEN: ADD COLUMN IS_PUBLIC_SHOWCASE ---
+    try:
+        from sqlalchemy import text
+        with SessionCloud() as session:
+            dialect = engine_cloud.url.drivername or ""
+            if "postgresql" in dialect.lower():
+                session.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_public_showcase BOOLEAN DEFAULT FALSE;"))
+            else:
+                session.execute(text("ALTER TABLE users ADD COLUMN is_public_showcase BOOLEAN DEFAULT FALSE;"))
+            session.commit()
+    except Exception:
+        # Ignore if the column already exists or other issues
+        pass

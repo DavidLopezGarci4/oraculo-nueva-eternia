@@ -15,6 +15,7 @@ import MasterLogin from './components/auth/MasterLogin';
 import LoginPage from './pages/LoginPage';
 import { getUserSettings, type Hero } from './api/admin';
 import PowerSwordLoader from './components/ui/PowerSwordLoader';
+import Showcase from './pages/Showcase';
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -95,6 +96,18 @@ function App() {
   }, [currentUser, activeTab]);
 
   const [showMasterLogin, setShowMasterLogin] = useState(false);
+
+  // --- PUBLIC SHOWCASE BYPASS ---
+  const match = window.location.pathname.match(/^\/santuario\/([^/]+)/);
+  const showcaseUsername = match ? match[1] : null;
+
+  if (showcaseUsername) {
+    return (
+      <ErrorBoundary>
+        <Showcase username={showcaseUsername} />
+      </ErrorBoundary>
+    );
+  }
 
   if (loading) {
     return <PowerSwordLoader variant="fullScreen" text="Sincronizando Identidad..." />;

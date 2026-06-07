@@ -418,6 +418,14 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
   - [x] **Cabeceras de Ordenación y Contadores Unificados**: Portada la interfaz premium de ordenación y contadores interactivos a Catálogo, Mi Fortaleza y Mercader de Eternos, con selector de orden y botón de dirección.
   - [x] **Saneamiento de Navbar**: Eliminado el botón inoperante de campana de notificaciones de la barra superior.
 
+- [x] **Phase 65: Características Pareto 80/20 y Blindaje Wallapop (07/06/2026)**
+  - [x] **Santuario Compartido (Showcase)**: Campo `is_public_showcase` en base de datos y UI con endpoint público seguro exento de campos financieros, con bypass de login en `/santuario/:username`.
+  - [x] **Filtro Cruzado de Deseos**: Toggle "Solo Deseos" en Mercader de Eternos para cruzar ofertas de subastas con tu Lista de Deseos en tiempo real.
+  - [x] **Regimientos de Completitud (Waves)**: Panel en Orbe de Grayskull que agrupa el catálogo por sub-categorías y muestra el progreso de adquisición de figuras.
+  - [x] **Arsenal Analytics**: Gráfico circular Donut Chart con Recharts en Orbe de Grayskull detallando el estado de conservación (MOC, New, Loose) y estimación del valor de mercado ajustado.
+  - [x] **Renovación Local de SSL**: Script `renew_ssl.sh` local para renovación segura con Docker Certbot y recarga de Nginx.
+  - [x] **Scraper Wallapop Hardened**: Impersonación de TLS Chrome 120 mediante `curl_cffi` para peticiones API y fallback a Playwright persistente contra bloqueos WAF.
+
 ---
 
 ## ✅ Plan de Verificación

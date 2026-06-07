@@ -22,6 +22,7 @@ import {
     exportCollectionExcel,
     exportCollectionSqlite,
     updateUserLocation,
+    updateUserPublicShowcase,
     type ScraperStatus,
     type Hero
 } from '../api/admin';
@@ -205,6 +206,26 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
         } finally {
             setSavingSettings(false);
         }
+    };
+
+    const handleToggleShowcase = async () => {
+        if (!userSettings) return;
+        const targetState = !userSettings.is_public_showcase;
+        try {
+            await updateUserPublicShowcase(activeUserId, targetState);
+            setUserSettings({ ...userSettings, is_public_showcase: targetState });
+        } catch (error) {
+            console.error('Error updating public showcase state:', error);
+            alert('Error al actualizar el estado del Santuario');
+        }
+    };
+
+    const handleCopyShowcaseLink = () => {
+        if (!userSettings) return;
+        const link = `${window.location.origin}/santuario/${userSettings.username}`;
+        navigator.clipboard.writeText(link)
+            .then(() => alert('📋 Enlace de Santuario copiado al portapapeles!'))
+            .catch(() => alert('Fallo al copiar enlace.'));
     };
 
 
@@ -832,6 +853,39 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                             <div className="absolute right-1 top-1 h-2 w-2 bg-green-400 rounded-full"></div>
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+
+                            {/* Compartir Santuario (Public Showcase) */}
+                            <div className="glass border border-brand-primary/30 p-6 rounded-3xl space-y-4 bg-brand-primary/5">
+                                <div className="flex items-center gap-3 text-brand-primary font-bold uppercase tracking-widest text-xs mb-2">
+                                    <Globe className="h-4 w-4" />
+                                    Compartir Santuario (Público)
+                                </div>
+                                <div className="space-y-4">
+                                    <p className="text-[10px] text-white/65 font-bold uppercase leading-tight">
+                                        Permite que cualquier persona vea tu colección de figuras sin necesidad de registrarse. Se ocultarán todos tus datos financieros.
+                                    </p>
+
+                                    <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl">
+                                        <span className="text-xs text-white/70">Santuario Público</span>
+                                        <button
+                                            onClick={handleToggleShowcase}
+                                            className={`relative h-5 w-10 rounded-full transition-all ${userSettings?.is_public_showcase ? 'bg-brand-primary' : 'bg-white/10'}`}
+                                        >
+                                            <div className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${userSettings?.is_public_showcase ? 'right-0.5' : 'left-0.5'}`} />
+                                        </button>
+                                    </div>
+
+                                    {userSettings?.is_public_showcase && (
+                                        <button
+                                            onClick={handleCopyShowcaseLink}
+                                            className="w-full bg-brand-primary/10 hover:bg-brand-primary text-brand-primary hover:text-white border border-brand-primary/25 px-4 py-2.5 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2"
+                                        >
+                                            <Repeat className="h-3 w-3 animate-pulse text-brand-primary" />
+                                            Copiar Enlace Santuario
+                                        </button>
+                                    )}
                                 </div>
                             </div>
 

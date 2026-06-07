@@ -115,7 +115,15 @@ export interface Hero {
     is_active: boolean;
     collection_size: number;
     location: string;
+    is_public_showcase?: boolean;
 }
+
+export const updateUserPublicShowcase = async (userId: number, isPublic: boolean): Promise<{ status: string; is_public_showcase: boolean }> => {
+    const response = await adminAxios.post(`/users/${userId}/public-showcase`, null, {
+        params: { is_public: isPublic }
+    });
+    return response.data;
+};
 
 export const getHeroes = async (): Promise<Hero[]> => {
     const response = await adminAxios.get('/admin/users');
@@ -198,3 +206,9 @@ export const exportCollectionSqlite = async (userId: number = 2): Promise<void> 
     link.click();
     document.body.removeChild(link);
 };
+
+export const getPublicShowcase = async (username: string): Promise<any> => {
+    const response = await adminAxios.get(`/public/showcase/${username}`);
+    return response.data;
+};
+
