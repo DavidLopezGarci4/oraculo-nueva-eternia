@@ -4,6 +4,7 @@ import os
 import sys
 import json
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from pathlib import Path
 # from vec3.dev.adapters import initialize_runtime, create_db_backup, manage_pid, check_stop_signal, save_json_report
 
@@ -232,7 +233,7 @@ async def run_daily_scan(progress_callback=None):
                 status="running",
                 start_time=datetime.now(),
                 trigger_type=trigger,
-                logs=f"[{datetime.now().strftime('%H:%M:%S')}] 🚀 Inicia incursion en {scraper.spider_name} ({trigger})\n"
+                logs=f"[{datetime.now(ZoneInfo('Europe/Madrid')).strftime('%H:%M:%S')}] 🚀 Inicia incursion en {scraper.spider_name} ({trigger})\n"
             )
             try:
                 db.add(log_entry)
@@ -250,7 +251,7 @@ async def run_daily_scan(progress_callback=None):
                     with SessionLocal() as db_log:
                         entry = db_log.get(ScraperExecutionLogModel, log_id)
                         if entry:
-                            ts = datetime.now().strftime("%H:%M:%S")
+                            ts = datetime.now(ZoneInfo("Europe/Madrid")).strftime("%H:%M:%S")
                             new_line = f"[{ts}] {msg}"
                             if entry.logs: entry.logs += "\n" + new_line
                             else: entry.logs = new_line
@@ -267,7 +268,7 @@ async def run_daily_scan(progress_callback=None):
                 
                 try:
                     offers = await asyncio.wait_for(scraper.search("auto"), timeout=600)
-                    update_task_log(f"📡 Found {len(offers)} potential relics.")
+                    update_task_log(f"📡 Encontradas {len(offers)} reliquias potenciales.")
 
                     # PHASE 51: Post-Scraping Filter for Tradeinn (Techinn/Kidinn only)
                     if scraper.spider_name.lower() == "tradeinn" and offers:
@@ -284,7 +285,7 @@ async def run_daily_scan(progress_callback=None):
                         
                         if discarded > 0:
                             logger.info(f"🧹 [{scraper.spider_name}] Post-filter: Discarded {discarded} non-Techinn/Kidinn items. Keeping {len(offers)}.")
-                            update_task_log(f"🧹 Discarded {discarded} items outside Techinn/Kidinn.")
+                            update_task_log(f"🧹 Descartados {discarded} artículos fuera de Techinn/Kidinn.")
 
                 except asyncio.TimeoutError:
                     logger.error(f"⌛ [TIMEOUT] {scraper.spider_name} exceeded 10-minute limit.")
@@ -320,8 +321,9 @@ async def run_daily_scan(progress_callback=None):
 
                     # Update Database & Return new items count
                     # Phase 44: Pasamos el nombre de la tienda para sincronizar disponibilidad
+                    pipeline.log_callback = update_task_log
                     new_items_found = pipeline.update_database(offers, shop_names=[scraper.shop_name])
-                    update_task_log(f"💾 {new_items_found} new relics added to Purgatory.")
+                    update_task_log(f"💾 {new_items_found} nuevas reliquias añadidas al Purgatorio.")
                     total_stats["found"] += len(offers)
                     total_stats["new"] += new_items_found
                     
@@ -352,7 +354,7 @@ async def run_daily_scan(progress_callback=None):
 
                 results[scraper.spider_name] = {"items_found": len(offers), "new_items": new_items_found, "status": "Success"}
                 logger.info(f"✅ [END] {scraper.spider_name} Complete (New: {new_items_found})")
-                update_task_log(f"✅ [END] Complete: {len(offers)} found, {new_items_found} new.")
+                update_task_log(f"✅ [FIN] Completado: {len(offers)} encontradas, {new_items_found} nuevas.")
                 
             except Exception as e:
                 logger.error(f"❌ Failed {scraper.spider_name}: {e}")

@@ -38,6 +38,14 @@ class ScrapingPipeline:
     def __init__(self, scrapers: List[BaseScraper], cancel_event: threading.Event | None = None):
         self.scrapers = scrapers
         self.cancel_event = cancel_event
+        self.log_callback = None
+
+    def _log(self, msg: str):
+        if self.log_callback:
+            try:
+                self.log_callback(msg)
+            except:
+                pass
 
     async def run_product_search(self, product_name: str) -> List[dict]:
         """
@@ -249,6 +257,7 @@ class ScrapingPipeline:
             clean_purgatory_globally(db)
             
             # --- PHASE 7.3: BULK PRE-FETCHING ---
+            self._log("🛡️ [Filtro] Iniciando pre-filtrado y cruce de datos en base de datos...")
             logger.info("🛡️ Pipeline: Initiating Bulk Pre-filtering...")
             
             # A. Extract URLs from incoming batch
@@ -296,6 +305,7 @@ class ScrapingPipeline:
             rules_map = {f"{r.shop_name}_{r.country_code}": r for r in rules}
             user_location = "ES" # Default
 
+            self._log(f"📊 [Stats] {len(offers)} ofertas recibidas | {len(existing_offers)} activas en catálogo | {len(existing_pending_urls)} en Purgatorio | {len(blocked_urls)} en Lista Negra")
             logger.info(f"📊 Stats: {len(offers)} incoming | {len(existing_offers)} active links | {len(existing_pending_urls)} in Purgatory | {len(blocked_urls)} blocked")
 
             processed_urls_in_batch = set()
@@ -519,6 +529,7 @@ class ScrapingPipeline:
                     opp_score = DealScorer.calculate_score(best_match_product, landed_price, is_wish)
 
                     # Normal SmartMatch flow if no anomalies
+                    self._log(f"✅ [SmartMatch] Auto-vinculado: '{offer.get('product_name')}' ➔ '{best_match_product.name}' ({offer.get('price')}€)")
                     logger.info(f"✅ SmartMatch: '{offer.get('product_name')}' -> '{best_match_product.name}' (Match: {best_match_score:.2f} | Reason: {best_match_reason} | Deal: {opp_score})")
                     repo.add_offer(best_match_product, {
                         "shop_name": offer.get('shop_name'),
@@ -630,6 +641,7 @@ class ScrapingPipeline:
             # Limpieza global proactiva del purgatorio al finalizar la actualización
             clean_purgatory_globally(db)
             db.commit()
+            self._log(f"⚡ [Fin] Proceso de persistencia completado. {new_items_count} nuevas ofertas enviadas al Purgatorio.")
             logger.success(f"⚡ Batch Complete: {new_items_count} new items added to Purgatory (Atomic Safe Mode).")
 
             # --- PHASE 44: AVAILABILITY SYNC ---

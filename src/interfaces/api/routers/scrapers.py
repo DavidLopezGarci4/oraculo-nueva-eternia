@@ -2,6 +2,7 @@ import asyncio
 import os
 import threading
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import psutil
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response
@@ -56,7 +57,7 @@ def run_scraper_task(
             status="running",
             start_time=status.start_time,
             trigger_type=trigger_type,
-            logs=f"[{datetime.utcnow().strftime('%H:%M:%S')}] 🚀 Desplegando incursión manual: {spider_name}\n",
+            logs=f"[{datetime.now(ZoneInfo('Europe/Madrid')).strftime('%H:%M:%S')}] 🚀 Desplegando incursión manual: {spider_name}\n",
         )
         db.add(execution_log)
         db.commit()
@@ -69,7 +70,7 @@ def run_scraper_task(
             with SessionCloud() as db_l:
                 entry = db_l.query(ScraperExecutionLogModel).get(log_id)
                 if entry:
-                    ts = datetime.utcnow().strftime("%H:%M:%S")
+                    ts = datetime.now(ZoneInfo("Europe/Madrid")).strftime("%H:%M:%S")
                     line = f"[{ts}] {msg}"
                     if entry.logs:
                         entry.logs += "\n" + line
@@ -141,6 +142,7 @@ def run_scraper_task(
             pipeline = ScrapingPipeline(
                 spiders_to_run, cancel_event=scraper_cancel_event
             )
+            pipeline.log_callback = update_live_log
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             # PHASE 47: Use provided query or fallback to specific store defaults

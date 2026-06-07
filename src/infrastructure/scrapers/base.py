@@ -121,9 +121,24 @@ class BaseScraper(ABC):
         
         for attempt in range(3):
             try:
-                # Alternate wait strategies to bypass simple detection/loading issues
                 strategy = random.choice(wait_strategies) if attempt > 0 else "domcontentloaded"
-                self._log(f"🧭 Navegando a {url} (Intento {attempt+1}, Modo: {strategy})...")
+                # Clean URL logging to extract and show page number
+                import urllib.parse
+                page_num = 1
+                try:
+                    parsed = urllib.parse.urlparse(url)
+                    query_dict = urllib.parse.parse_qs(parsed.query)
+                    for param in ['page', 'p', 'start', 'offset', 'Pagenum', 'pag']:
+                        if param in query_dict:
+                            val = query_dict[param][0]
+                            if param in ['start', 'offset']:
+                                page_num = (int(val) // 20) + 1
+                            else:
+                                page_num = int(val)
+                            break
+                except:
+                    pass
+                self._log(f"🧭 [{self.spider_name}] Accediendo a página {page_num}...")
                 await page.goto(url, wait_until=strategy, timeout=timeout)
                 return True
             except Exception as e:

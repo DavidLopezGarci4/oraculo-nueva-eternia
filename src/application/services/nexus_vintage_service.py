@@ -2,6 +2,7 @@ import os
 import logging
 import asyncio
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from pathlib import Path
 from src.infrastructure.collectors.personal_vintage_collection import main as run_scraper
 from scripts.phase0_vintage_migration import migrate_excel_to_db
@@ -21,7 +22,7 @@ class TelemetryHandler(logging.Handler):
     def emit(self, record):
         try:
             msg = self.format(record)
-            ts = datetime.utcnow().strftime("%H:%M:%S")
+            ts = datetime.now(ZoneInfo("Europe/Madrid")).strftime("%H:%M:%S")
             line = f"[{ts}] {msg}"
             
             with SessionCloud() as db:
@@ -93,7 +94,7 @@ class NexusVintageService:
                 status="running",
                 start_time=status.start_time,
                 trigger_type="manual",
-                logs=f"[{datetime.utcnow().strftime('%H:%M:%S')}] 🚀 Iniciando Sincronización del Nexo Maestro Vintage...\n"
+                logs=f"[{datetime.now(ZoneInfo('Europe/Madrid')).strftime('%H:%M:%S')}] 🚀 Iniciando Sincronización del Nexo Maestro Vintage...\n"
             )
             db.add(exec_log)
             db.commit()
