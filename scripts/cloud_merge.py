@@ -122,7 +122,7 @@ def cloud_merge():
                         product_id=new_pid,
                         owner_id=david_id,
                         acquired=item.get('acquired', False),
-                        condition=item.get('condition', 'New'),
+                        condition="MOC" if item.get('condition') in ['New', 'NEW', None] else item.get('condition', 'MOC'),
                         notes=item.get('notes'),
                         acquired_at=datetime.fromisoformat(item['acquired_at']) if item.get('acquired_at') else datetime.utcnow()
                     )

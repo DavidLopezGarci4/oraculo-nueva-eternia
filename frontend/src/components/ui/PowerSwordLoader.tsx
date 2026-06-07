@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import swordAsset from '../../assets/HemanGlassmorphSword.png';
 import vintageSwordAsset from '../../assets/bddg-heman.png';
+import skeletorStaffAsset from '../../assets/skeletor_staff.png';
 
 interface PowerSwordLoaderProps {
     className?: string;
@@ -14,6 +15,11 @@ interface PowerSwordLoaderProps {
     vintageGuardY?: number;
     vintageTipX?: number;
     vintageTipY?: number;
+    isSkeletor?: boolean;
+    skeletorGuardX?: number;
+    skeletorGuardY?: number;
+    skeletorTipX?: number;
+    skeletorTipY?: number;
 }
 
 const PowerSwordLoader: React.FC<PowerSwordLoaderProps> = ({
@@ -26,12 +32,17 @@ const PowerSwordLoader: React.FC<PowerSwordLoaderProps> = ({
     vintageGuardX,
     vintageGuardY,
     vintageTipX,
-    vintageTipY
+    vintageTipY,
+    isSkeletor = false,
+    skeletorGuardX,
+    skeletorGuardY,
+    skeletorTipX,
+    skeletorTipY
 }) => {
     const [internalProgress, setInternalProgress] = useState(0);
 
     const isFullScreen = variant === 'fullScreen';
-    const activeSwordAsset = isVintage ? vintageSwordAsset : swordAsset;
+    const activeSwordAsset = isSkeletor ? skeletorStaffAsset : (isVintage ? vintageSwordAsset : swordAsset);
 
     // Get custom/stored vintage sword coordinates or use defaults
     const [vintageCoords, setVintageCoords] = useState({
@@ -39,6 +50,14 @@ const PowerSwordLoader: React.FC<PowerSwordLoaderProps> = ({
         gY: 66.5,
         tX: 73.0,
         tY: 20.5
+    });
+
+    // Get custom/stored skeletor staff coordinates or use defaults
+    const [skeletorCoords, setSkeletorCoords] = useState({
+        gX: 125.0,
+        gY: 100.0,
+        tX: 125.0,
+        tY: 35.0
     });
 
     useEffect(() => {
@@ -54,11 +73,24 @@ const PowerSwordLoader: React.FC<PowerSwordLoaderProps> = ({
         }
     }, [isVintage]);
 
+    useEffect(() => {
+        if (isSkeletor) {
+            const stored = localStorage.getItem('skeletor_staff_coords');
+            if (stored) {
+                try {
+                    setSkeletorCoords(JSON.parse(stored));
+                } catch (e) {
+                    console.error("Failed to parse skeletor staff coords", e);
+                }
+            }
+        }
+    }, [isSkeletor]);
+
     // Use props if provided (useful for visualizer), otherwise use state/localStorage, or fallback to default modern coords
-    const activeGuardX = vintageGuardX !== undefined ? vintageGuardX : (isVintage ? vintageCoords.gX : 125);
-    const activeGuardY = vintageGuardY !== undefined ? vintageGuardY : (isVintage ? vintageCoords.gY : 175);
-    const activeTipX = vintageTipX !== undefined ? vintageTipX : (isVintage ? vintageCoords.tX : 125);
-    const activeTipY = vintageTipY !== undefined ? vintageTipY : (isVintage ? vintageCoords.tY : 10);
+    const activeGuardX = vintageGuardX !== undefined ? vintageGuardX : (skeletorGuardX !== undefined ? skeletorGuardX : (isSkeletor ? skeletorCoords.gX : (isVintage ? vintageCoords.gX : 125)));
+    const activeGuardY = vintageGuardY !== undefined ? vintageGuardY : (skeletorGuardY !== undefined ? skeletorGuardY : (isSkeletor ? skeletorCoords.gY : (isVintage ? vintageCoords.gY : 175)));
+    const activeTipX = vintageTipX !== undefined ? vintageTipX : (skeletorTipX !== undefined ? skeletorTipX : (isSkeletor ? skeletorCoords.tX : (isVintage ? vintageCoords.tX : 125)));
+    const activeTipY = vintageTipY !== undefined ? vintageTipY : (skeletorTipY !== undefined ? skeletorTipY : (isSkeletor ? skeletorCoords.tY : (isVintage ? vintageCoords.tY : 10)));
 
     // Vector calculations for the sword axis (from guard to tip)
     const dx = activeTipX - activeGuardX;
@@ -131,11 +163,11 @@ const PowerSwordLoader: React.FC<PowerSwordLoaderProps> = ({
             const cx = activeGuardX + midDist * ux + wobble * px;
             const cy = activeGuardY + midDist * uy + wobble * py;
 
-            return (
+             return (
                 <motion.path
                     key={`blade-${i}`}
                     d={`M ${startX} ${startY} Q ${cx} ${cy} ${endX} ${endY}`}
-                    stroke={i % 3 === 0 ? "#BAE6FD" : "#38BDF8"}
+                    stroke={isSkeletor ? (i % 3 === 0 ? "#F5D0FE" : "#D946EF") : (i % 3 === 0 ? "#BAE6FD" : "#38BDF8")}
                     strokeWidth={isFullScreen ? 2.5 : (Math.random() * 1.5 + 0.5)}
                     fill="none"
                     initial={{ pathLength: 0, opacity: 0 }}
@@ -167,7 +199,7 @@ const PowerSwordLoader: React.FC<PowerSwordLoaderProps> = ({
                 <motion.path
                     key={`central-${i}`}
                     d={`M ${activeGuardX} ${activeGuardY} L ${x2} ${y2}`}
-                    stroke="#7DD3FC"
+                    stroke={isSkeletor ? "#E9D5FF" : "#7DD3FC"}
                     strokeWidth={isFullScreen ? 3 : 1.5}
                     initial={{ pathLength: 0, opacity: 0 }}
                     animate={{ pathLength: [0, 1, 0], opacity: [0, 1, 0] }}
@@ -266,14 +298,14 @@ const PowerSwordLoader: React.FC<PowerSwordLoaderProps> = ({
                     <div className="flex flex-col items-center gap-3">
                         <div className={`relative ${isFullScreen ? 'h-[4px] w-80 sm:w-96' : 'h-[2px] w-64'} bg-white/5 rounded-full overflow-hidden backdrop-blur-sm border border-white/5`}>
                             <motion.div
-                                className="h-full bg-cyan-400 shadow-[0_0_30px_#22D3EE]"
+                                className={`h-full ${isSkeletor ? 'bg-purple-500 shadow-[0_0_30px_#A855F7]' : 'bg-cyan-400 shadow-[0_0_30px_#22D3EE]'}`}
                                 initial={{ width: 0 }}
                                 animate={{ width: `${progress}%` }}
                                 transition={{ ease: "linear", duration: 0.1 }}
                             />
                         </div>
                         {isFullScreen && (
-                            <span className="text-sm font-black tracking-[0.5em] text-cyan-400/60 transition-all">
+                            <span className={`text-sm font-black tracking-[0.5em] ${isSkeletor ? 'text-purple-400/60' : 'text-cyan-400/60'} transition-all`}>
                                 {Math.round(progress)}%
                             </span>
                         )}

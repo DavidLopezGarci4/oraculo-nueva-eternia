@@ -85,6 +85,10 @@ def migrate_excel_to_db(excel_path: str, session):
                 if "Origins Action" in sub_category: sub_category = "Origins"
                 elif "Deluxe" in sub_category: sub_category = "Origins Deluxe"
                 elif "Exclusives" in sub_category: sub_category = "Origins Exclusives"
+                elif "WWE Universe Rin" in sub_category or sub_category == "Masters of the WWE Universe Rin":
+                    sub_category = "Masters of the WWE Universe Ring"
+                elif "WWE Universe Act" in sub_category or sub_category == "Masters of the WWE Universe Act":
+                    sub_category = "Masters of the WWE Universe Action Figures"
                 
                 # Validate required columns
                 required = ['Name', 'Figure ID', 'Detail Link']
@@ -247,7 +251,7 @@ def migrate_excel_to_db(excel_path: str, session):
                                 product_id=product.id,
                                 owner_id=target_user.id,
                                 acquired=True,
-                                condition="New",
+                                condition="MOC" if target_user.username == "David" else "New",
                                 notes=f"Imported from Phase 0 Excel ({sheet})"
                             )
                             session.add(item)

@@ -79,6 +79,15 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
         tY: 20.5
     });
 
+    // Skeletor Staff Light Ray Calibrator States
+    const [showSkeletorCalibrator, setShowSkeletorCalibrator] = useState(false);
+    const [skeletorCoords, setSkeletorCoords] = useState({
+        gX: 125.0,
+        gY: 100.0,
+        tX: 125.0,
+        tY: 35.0
+    });
+
     useEffect(() => {
         if (showCalibrator) {
             const stored = localStorage.getItem('vintage_sword_coords');
@@ -92,6 +101,19 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
         }
     }, [showCalibrator]);
 
+    useEffect(() => {
+        if (showSkeletorCalibrator) {
+            const stored = localStorage.getItem('skeletor_staff_coords');
+            if (stored) {
+                try {
+                    setSkeletorCoords(JSON.parse(stored));
+                } catch (e) {
+                    console.error("Failed to parse skeletor staff coords", e);
+                }
+            }
+        }
+    }, [showSkeletorCalibrator]);
+
     const handleSaveCalib = () => {
         localStorage.setItem('vintage_sword_coords', JSON.stringify(calibCoords));
         setShowCalibrator(false);
@@ -103,6 +125,20 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
             gY: 66.5,
             tX: 73.0,
             tY: 20.5
+        });
+    };
+
+    const handleSaveSkeletorCalib = () => {
+        localStorage.setItem('skeletor_staff_coords', JSON.stringify(skeletorCoords));
+        setShowSkeletorCalibrator(false);
+    };
+
+    const handleResetSkeletorCalib = () => {
+        setSkeletorCoords({
+            gX: 125.0,
+            gY: 100.0,
+            tX: 125.0,
+            tY: 35.0
         });
     };
 
@@ -933,23 +969,46 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                 )}
                             </div>
 
-                            {/* Calibrador de Haces de Luz Vintage */}
-                            <div className="glass border border-amber-500/30 p-6 rounded-3xl space-y-4 bg-amber-500/5">
-                                <div className="flex items-center gap-3 text-amber-500 font-bold uppercase tracking-widest text-xs mb-2">
-                                    <Zap className="h-4 w-4" />
-                                    Alineación Haces de Luz Vintage
+                            {/* Calibradores de Haces de Luz */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {/* Calibrador de Haces de Luz Vintage */}
+                                <div className="glass border border-amber-500/30 p-6 rounded-3xl space-y-4 bg-amber-500/5">
+                                    <div className="flex items-center gap-3 text-amber-500 font-bold uppercase tracking-widest text-xs mb-2">
+                                        <Zap className="h-4 w-4" />
+                                        He-Man Vintage
+                                    </div>
+                                    <div className="space-y-4">
+                                        <p className="text-[10px] text-white/65 font-bold uppercase leading-tight">
+                                            Calibra la posición exacta de los haces de luz sobre la espada en la silueta de He-Man.
+                                        </p>
+                                        <button
+                                            onClick={() => setShowCalibrator(true)}
+                                            className="w-full bg-amber-500/10 hover:bg-amber-500 text-amber-500 hover:text-black border border-amber-500/25 px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-500/0 hover:shadow-amber-500/25"
+                                        >
+                                            <Settings className="h-3.5 w-3.5" />
+                                            Calibrar Espada Vintage
+                                        </button>
+                                    </div>
                                 </div>
-                                <div className="space-y-4">
-                                    <p className="text-[10px] text-white/65 font-bold uppercase leading-tight">
-                                        Calibra la posición exacta de los haces de luz sobre la espada en la silueta de He-Man.
-                                    </p>
-                                    <button
-                                        onClick={() => setShowCalibrator(true)}
-                                        className="w-full bg-amber-500/10 hover:bg-amber-500 text-amber-500 hover:text-black border border-amber-500/25 px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-500/0 hover:shadow-amber-500/25"
-                                    >
-                                        <Settings className="h-3.5 w-3.5" />
-                                        Calibrar Espada Vintage
-                                    </button>
+
+                                {/* Calibrador de Haces de Luz Skeletor */}
+                                <div className="glass border border-purple-500/30 p-6 rounded-3xl space-y-4 bg-purple-500/5">
+                                    <div className="flex items-center gap-3 text-purple-500 font-bold uppercase tracking-widest text-xs mb-2">
+                                        <Zap className="h-4 w-4" />
+                                        Skeletor Staff
+                                    </div>
+                                    <div className="space-y-4">
+                                        <p className="text-[10px] text-white/65 font-bold uppercase leading-tight">
+                                            Calibra la posición exacta de los rayos oscuros sobre el báculo de Skeletor.
+                                        </p>
+                                        <button
+                                            onClick={() => setShowSkeletorCalibrator(true)}
+                                            className="w-full bg-purple-500/10 hover:bg-purple-500 text-purple-500 hover:text-black border border-purple-500/25 px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg shadow-purple-500/0 hover:shadow-purple-500/25"
+                                        >
+                                            <Settings className="h-3.5 w-3.5" />
+                                            Calibrar Báculo Skeletor
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
@@ -1490,8 +1549,8 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
 
             {/* Vintage Sword Light Ray Calibrator Modal */}
             {showCalibrator && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in duration-300">
-                    <div className="relative w-full max-w-4xl overflow-hidden rounded-[2.5rem] border border-amber-500/30 bg-[#0A0A0B] p-6 md:p-8 flex flex-col gap-6 shadow-[0_0_50px_rgba(245,158,11,0.2)]">
+                <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-md p-4 flex justify-center items-start animate-in fade-in duration-300 custom-scrollbar">
+                    <div className="relative w-full max-w-4xl my-8 md:my-12 rounded-[2.5rem] border border-amber-500/30 bg-[#0A0A0B] p-6 md:p-8 flex flex-col gap-6 shadow-[0_0_50px_rgba(245,158,11,0.2)]">
                         <div className="flex items-center gap-3">
                             <div className="p-3 rounded-xl bg-amber-500/10">
                                 <Zap className="h-6 w-6 text-amber-500" />
@@ -1648,6 +1707,177 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                     </button>
                                     <button
                                         onClick={() => setShowCalibrator(false)}
+                                        className="px-4 py-2.5 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 text-white font-black text-[10px] uppercase tracking-widest transition-all"
+                                    >
+                                        Cerrar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Skeletor Staff Light Ray Calibrator Modal */}
+            {showSkeletorCalibrator && (
+                <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-md p-4 flex justify-center items-start animate-in fade-in duration-300 custom-scrollbar">
+                    <div className="relative w-full max-w-4xl my-8 md:my-12 rounded-[2.5rem] border border-purple-500/30 bg-[#0A0A0B] p-6 md:p-8 flex flex-col gap-6 shadow-[0_0_50px_rgba(168,85,247,0.2)]">
+                        <div className="flex items-center gap-3">
+                            <div className="p-3 rounded-xl bg-purple-500/10">
+                                <Zap className="h-6 w-6 text-purple-500 animate-pulse" />
+                            </div>
+                            <div>
+                                <h4 className="text-2xl font-black text-white">Calibrador de Magia Oscura <span className="text-purple-500">Skeletor</span></h4>
+                                <p className="text-[10px] text-white/50 font-bold uppercase tracking-wider">Alinea los rayos de energía mágica sobre el Báculo de Havoc</p>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center justify-center">
+                            {/* Preview Area */}
+                            <div className="flex flex-col items-center justify-center gap-4 bg-black/40 border border-white/5 p-6 rounded-3xl">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-purple-500/60">Simulador de Pantalla de Carga</span>
+                                
+                                <div className="relative w-64 h-64 border border-white/10 rounded-2xl overflow-hidden bg-[#050608] flex items-center justify-center shadow-inner">
+                                    <PowerSwordLoader 
+                                        isSkeletor={true} 
+                                        size={250} 
+                                        skeletorGuardX={skeletorCoords.gX}
+                                        skeletorGuardY={skeletorCoords.gY}
+                                        skeletorTipX={skeletorCoords.tX}
+                                        skeletorTipY={skeletorCoords.tY}
+                                        progress={parseFloat(localStorage.getItem('calib_test_progress_skeletor') || '75')} 
+                                    />
+                                    
+                                    {/* Overlay helper lines to visually debug guard & tip points */}
+                                    <svg viewBox="0 0 250 250" className="absolute inset-0 w-full h-full pointer-events-none">
+                                        {/* Guard center indicator */}
+                                        <circle cx={skeletorCoords.gX} cy={skeletorCoords.gY} r="4" fill="#a855f7" stroke="white" strokeWidth="1" />
+                                        <text x={skeletorCoords.gX + 6} y={skeletorCoords.gY + 3} fill="#a855f7" fontSize="8" fontWeight="bold">Origen Cráneo ({skeletorCoords.gX.toFixed(1)}, {skeletorCoords.gY.toFixed(1)})</text>
+                                        
+                                        {/* Tip indicator */}
+                                        <circle cx={skeletorCoords.tX} cy={skeletorCoords.tY} r="4" fill="#ec4899" stroke="white" strokeWidth="1" />
+                                        <text x={skeletorCoords.tX + 6} y={skeletorCoords.tY + 3} fill="#ec4899" fontSize="8" fontWeight="bold">Punta Cuerno ({skeletorCoords.tX.toFixed(1)}, {skeletorCoords.tY.toFixed(1)})</text>
+                                        
+                                        {/* Axis line */}
+                                        <line x1={skeletorCoords.gX} y1={skeletorCoords.gY} x2={skeletorCoords.tX} y2={skeletorCoords.tY} stroke="rgba(168,85,247,0.3)" strokeDasharray="3" strokeWidth="1.5" />
+                                    </svg>
+                                </div>
+                                
+                                <div className="w-full space-y-1">
+                                    <div className="flex justify-between text-[10px] text-white/50 font-bold">
+                                        <span>PROGRESO DE PRUEBA</span>
+                                        <span className="text-purple-500 font-mono">{localStorage.getItem('calib_test_progress_skeletor') || '75'}%</span>
+                                    </div>
+                                    <input 
+                                        type="range" 
+                                        min="0" 
+                                        max="100" 
+                                        value={localStorage.getItem('calib_test_progress_skeletor') || '75'}
+                                        onChange={(e) => {
+                                            localStorage.setItem('calib_test_progress_skeletor', e.target.value);
+                                            // Trigger state update to re-render preview
+                                            setSkeletorCoords({ ...skeletorCoords });
+                                        }}
+                                        className="w-full accent-purple-500" 
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Controls Area */}
+                            <div className="space-y-6">
+                                <div className="space-y-4 bg-white/[0.02] border border-white/5 p-4 rounded-2xl">
+                                    <div className="flex items-center gap-2 text-[#a855f7] font-bold text-xs uppercase tracking-widest">
+                                        <div className="h-2 w-2 rounded-full bg-[#a855f7]" />
+                                        Origen de Destellos / Skull Base (X, Y)
+                                    </div>
+                                    <div className="space-y-3">
+                                        <div>
+                                            <div className="flex justify-between text-[10px] text-white/50 font-bold mb-1">
+                                                <span>Horizontal (X)</span>
+                                                <span className="text-white font-mono">{skeletorCoords.gX}px</span>
+                                            </div>
+                                            <input 
+                                                type="range" 
+                                                min="0" 
+                                                max="250" 
+                                                step="0.5"
+                                                value={skeletorCoords.gX}
+                                                onChange={(e) => setSkeletorCoords({ ...skeletorCoords, gX: parseFloat(e.target.value) })}
+                                                className="w-full accent-purple-500" 
+                                            />
+                                        </div>
+                                        <div>
+                                            <div className="flex justify-between text-[10px] text-white/50 font-bold mb-1">
+                                                <span>Vertical (Y)</span>
+                                                <span className="text-white font-mono">{skeletorCoords.gY}px</span>
+                                            </div>
+                                            <input 
+                                                type="range" 
+                                                min="0" 
+                                                max="250" 
+                                                step="0.5"
+                                                value={skeletorCoords.gY}
+                                                onChange={(e) => setSkeletorCoords({ ...skeletorCoords, gY: parseFloat(e.target.value) })}
+                                                className="w-full accent-purple-500" 
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4 bg-white/[0.02] border border-white/5 p-4 rounded-2xl">
+                                    <div className="flex items-center gap-2 text-[#ec4899] font-bold text-xs uppercase tracking-widest">
+                                        <div className="h-2 w-2 rounded-full bg-[#ec4899]" />
+                                        Extremo del Rayo / Horn Tip (X, Y)
+                                    </div>
+                                    <div className="space-y-3">
+                                        <div>
+                                            <div className="flex justify-between text-[10px] text-white/50 font-bold mb-1">
+                                                <span>Horizontal (X)</span>
+                                                <span className="text-white font-mono">{skeletorCoords.tX}px</span>
+                                            </div>
+                                            <input 
+                                                type="range" 
+                                                min="0" 
+                                                max="250" 
+                                                step="0.5"
+                                                value={skeletorCoords.tX}
+                                                onChange={(e) => setSkeletorCoords({ ...skeletorCoords, tX: parseFloat(e.target.value) })}
+                                                className="w-full accent-pink-500" 
+                                            />
+                                        </div>
+                                        <div>
+                                            <div className="flex justify-between text-[10px] text-white/50 font-bold mb-1">
+                                                <span>Vertical (Y)</span>
+                                                <span className="text-white font-mono">{skeletorCoords.tY}px</span>
+                                            </div>
+                                            <input 
+                                                type="range" 
+                                                min="0" 
+                                                max="250" 
+                                                step="0.5"
+                                                value={skeletorCoords.tY}
+                                                onChange={(e) => setSkeletorCoords({ ...skeletorCoords, tY: parseFloat(e.target.value) })}
+                                                className="w-full accent-pink-500" 
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-2 pt-2">
+                                    <button
+                                        onClick={handleResetSkeletorCalib}
+                                        className="flex-1 px-4 py-2.5 rounded-xl border border-white/10 text-white/70 hover:text-white hover:bg-white/5 font-black text-[10px] uppercase tracking-widest transition-all"
+                                    >
+                                        Restablecer
+                                    </button>
+                                    <button
+                                        onClick={handleSaveSkeletorCalib}
+                                        className="flex-1 px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-black text-[10px] uppercase tracking-widest transition-all shadow-[0_0_20px_rgba(168,85,247,0.2)]"
+                                    >
+                                        Guardar en Eternia
+                                    </button>
+                                    <button
+                                        onClick={() => setShowSkeletorCalibrator(false)}
                                         className="px-4 py-2.5 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 text-white font-black text-[10px] uppercase tracking-widest transition-all"
                                     >
                                         Cerrar

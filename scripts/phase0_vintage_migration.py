@@ -209,7 +209,7 @@ def migrate_excel_to_db(excel_path: str, session):
                                 product_id=product.id,
                                 owner_id=target_user.id,
                                 acquired=True,
-                                condition="New",
+                                condition="MOC" if target_user.username == "David" else "New",
                                 notes=f"Imported from Vintage Checklist ({sheet})"
                             )
                             session.add(item)

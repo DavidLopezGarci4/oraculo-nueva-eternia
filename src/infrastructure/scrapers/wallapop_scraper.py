@@ -139,6 +139,12 @@ class WallapopScraper(BaseScraper):
     async def search(self, query: str) -> List[ScrapedOffer]:
         offers: List[ScrapedOffer] = []
         
+        # CloudFront blocks GitHub Actions Azure IP ranges completely.
+        # To avoid constant false block alerts and WAF log clutter, we skip Wallapop in GitHub Actions.
+        if os.environ.get("GITHUB_ACTIONS") == "true":
+            self._log("⚠️ Wallapop: Detectado entorno GitHub Actions (Azure IP bloqueado por CloudFront). Saltando búsqueda de ofertas.")
+            return []
+            
         # 1. Configuración inteligente de palabras clave
         if query == "auto":
             queries_config = [

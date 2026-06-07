@@ -1042,3 +1042,14 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
   - **ROI Real y Valor Ajustado**: Modificadas las tarjetas del inventario para computar y destacar el Valor Ajustado de mercado y el porcentaje de revalorización (ROI) real según la conservación.
   - **Manual de Usuario Completo**: Redactadas 8 guías de usuario estructuradas e independientes en la carpeta `docs/manual_usuario/` que explican de inicio a fin la operación de cada una de las pantallas.
 
+### 🛡️ Fase 64: Características Pareto 80/20, Skeletor Staff Calibrator y Ajustes de UX (07/06/2026)
+
+- **Hitos**: Vitrina pública de colecciones, completitud por subcategorías y gráfico de donut de estado de conservación, calibrador de Skeletor y control de scroll, bypass de Wallapop en GHA.
+- **Estado**: COMPLETADO
+- **Logros Técnicos**:
+  - **Santuario Compartido (Showcase)**: Endpoint público seguro exento de campos financieros y bypass de login en `/showcase/:username` para compartir colecciones públicas.
+  - **Filtro Cruzado de Deseos**: Toggle "Solo Deseos" en Mercader de Eternos para cruzar ofertas de subastas con la Lista de Deseos en tiempo real.
+  - **Completitud y Rebranding**: Gráfico circular Donut Chart con Recharts detallando el estado de conservación (MOC, Loose, etc.). Completitud del destino por subcategorías con color dinámico (oro para Vintage, azul para Origins) y corrección de "Rin" a "Ring" y "Act" a "Action Figures" para WWE.
+  - **Reclasificación MOC para David**: Migración de colección de David y actualización de los scripts de merges y seeds para por defecto usar el estado MOC para sus figuras en caja.
+  - **Calibradores y Scroll Vertical**: Soporte de scroll vertical completo en calibradores de haz de luz He-Man (Espada de Poder) y Skeletor (Báculo de Havoc) con persistencia local para evitar desbordamiento y recortes en dispositivos móviles.
+  - **Bypass de Wallapop en GHA**: Desactivación del scraping de Wallapop en entornos GitHub Actions para evitar bloqueos del WAF de CloudFront en los rangos de IP de Azure, manteniendo la robustez del scraping local.

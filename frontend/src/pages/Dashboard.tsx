@@ -143,17 +143,20 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
         const collList = [...(modernCollection || []), ...(vintageCollection || [])];
         const ownedIds = new Set(collList.filter(c => !c.is_wish).map(c => c.id));
 
-        const map: Record<string, { total: number; owned: number; missing: Product[] }> = {};
+        const map: Record<string, { total: number; owned: number; missing: Product[]; isVintage: boolean }> = {};
         prodList.forEach(p => {
             const sub = p.sub_category || 'Otros';
             if (!map[sub]) {
-                map[sub] = { total: 0, owned: 0, missing: [] };
+                map[sub] = { total: 0, owned: 0, missing: [], isVintage: !!p.is_vintage };
             }
             map[sub].total++;
             if (ownedIds.has(p.id)) {
                 map[sub].owned++;
             } else {
                 map[sub].missing.push(p);
+            }
+            if (p.is_vintage) {
+                map[sub].isVintage = true;
             }
         });
 
@@ -163,7 +166,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                 total: data.total,
                 owned: data.owned,
                 percentage: data.total > 0 ? (data.owned / data.total) * 100 : 0,
-                missing: data.missing
+                missing: data.missing,
+                isVintage: data.isVintage
             }))
             .filter(g => g.total > 0)
             .sort((a, b) => b.percentage - a.percentage);
@@ -585,8 +589,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                                 {groups.map(group => (
                                     <div key={group.name} className="space-y-1.5">
                                         <div className="flex justify-between items-baseline">
-                                            <span className="text-[10px] font-black uppercase tracking-wider text-white/80">{group.name}</span>
-                                            <span className="text-[9px] font-black text-brand-primary uppercase tracking-widest">
+                                            <span className="text-[10px] font-black uppercase tracking-wider text-white/80">
+                                                {group.name.toUpperCase() === 'MASTERS OF THE WWE UNIVERSE RIN' ? 'MASTERS OF THE WWE UNIVERSE RING' : group.name}
+                                            </span>
+                                            <span className={`text-[9px] font-black uppercase tracking-widest ${group.isVintage ? 'text-amber-500' : 'text-brand-primary'}`}>
                                                 {group.owned} / {group.total} ({group.percentage.toFixed(0)}%)
                                             </span>
                                         </div>
@@ -595,7 +601,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                                         <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden border border-white/[0.03]">
                                             <div 
                                                 className={`h-full rounded-full transition-all duration-500 bg-gradient-to-r ${
-                                                    group.name.toLowerCase().includes('vintage')
+                                                    group.isVintage
                                                         ? 'from-amber-500 to-amber-300'
                                                         : 'from-brand-primary to-cyan-400'
                                                 }`}

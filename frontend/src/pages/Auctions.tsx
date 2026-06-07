@@ -195,22 +195,22 @@ const Auctions: React.FC<AuctionsProps> = ({ user }) => {
                 
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 w-full lg:w-auto relative z-10">
                     <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
-                        <div className="grid grid-cols-3 gap-1 sm:gap-2 p-1 rounded-xl bg-white/[0.03] border border-white/5 flex-1 sm:flex-initial">
+                        <div className="flex items-center gap-1 p-0.5 rounded-xl bg-white/[0.03] border border-white/5 h-[38px] sm:h-[42px]">
                             <button
                                 onClick={() => setSortBy('name')}
-                                className={`py-1.5 px-2.5 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-[0.05em] transition-all ${sortBy === 'name' ? 'bg-brand-primary text-white shadow-[0_0_15px_rgba(14,165,233,0.3)]' : 'text-white/20 hover:text-white/40'}`}
+                                className={`h-full rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-[0.05em] transition-all flex items-center justify-center px-3 sm:px-4 ${sortBy === 'name' ? 'bg-brand-primary text-white shadow-[0_0_15px_rgba(14,165,233,0.3)]' : 'text-white/20 hover:text-white/40'}`}
                             >
                                 Nombre
                             </button>
                             <button
                                 onClick={() => setSortBy('price')}
-                                className={`py-1.5 px-2.5 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-[0.05em] transition-all ${sortBy === 'price' ? 'bg-brand-primary text-white shadow-[0_0_15px_rgba(14,165,233,0.3)]' : 'text-white/20 hover:text-white/40'}`}
+                                className={`h-full rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-[0.05em] transition-all flex items-center justify-center px-3 sm:px-4 ${sortBy === 'price' ? 'bg-brand-primary text-white shadow-[0_0_15px_rgba(14,165,233,0.3)]' : 'text-white/20 hover:text-white/40'}`}
                             >
                                 Precio
                             </button>
                             <button
                                 onClick={() => setSortBy('time')}
-                                className={`py-1.5 px-2.5 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-[0.05em] transition-all ${sortBy === 'time' ? 'bg-brand-primary text-white shadow-[0_0_15px_rgba(14,165,233,0.3)]' : 'text-white/20 hover:text-white/40'}`}
+                                className={`h-full rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-[0.05em] transition-all flex items-center justify-center px-3 sm:px-4 ${sortBy === 'time' ? 'bg-brand-primary text-white shadow-[0_0_15px_rgba(14,165,233,0.3)]' : 'text-white/20 hover:text-white/40'}`}
                             >
                                 Tiempo
                             </button>
