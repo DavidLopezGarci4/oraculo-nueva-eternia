@@ -310,23 +310,36 @@ class ScrapingPipeline:
 
             processed_urls_in_batch = set()
             new_items_count = 0
+            price_updates_count = 0
+            unchanged_count = 0
+            discarded_count = 0
             
             for offer in offers:
                 url_str = str(offer.get('url', ''))
                 
                 # a. Dedup within batch
                 if url_str in processed_urls_in_batch:
+                    discarded_count += 1
                     continue
                 processed_urls_in_batch.add(url_str)
                 
                 # b. Check Blacklist
                 if url_str in blocked_urls:
+                    discarded_count += 1
                     # logger.debug(f"🛑 Blocked: {offer.get('product_name')}")
                     continue
                     
                 # c. Check Active Links (Update Logic)
                 if url_str in existing_offers:
                     existing_offer = existing_offers[url_str]
+                    # Track price updates vs unchanged
+                    old_price = existing_offer.price
+                    new_price = offer.get('price')
+                    if old_price is not None and new_price is not None and abs(old_price - new_price) > 0.01:
+                        price_updates_count += 1
+                    else:
+                        unchanged_count += 1
+
                     # --- PHASE 18: DEAL SCORER (UPDATE SCORE) ---
                     # We assume user_id 2 for location/wishlist check
                     landed_price = LogisticsService.optimized_get_landing_price(offer.get('price'), offer.get('shop_name'), user_location, rules_map)
@@ -360,6 +373,9 @@ class ScrapingPipeline:
                     if new_price > 0 and abs(misc_item.price - new_price) > 0.01:
                         misc_item.price = new_price
                         misc_item.added_at = datetime.utcnow()
+                        price_updates_count += 1
+                    else:
+                        unchanged_count += 1
                     continue
 
                 # d2. Relevance check for MOTU (Brand exclusion & keyword check)
@@ -387,6 +403,7 @@ class ScrapingPipeline:
                         )
                         db.add(history)
                         blocked_urls.add(url_str)
+                        discarded_count += 1
                         logger.info(f"🚫 Auto-Discarded: {offer.get('product_name')} ({reason})")
                         continue
 
@@ -420,7 +437,10 @@ class ScrapingPipeline:
                             pending_item.original_listing_date = offer["original_listing_date"]
                         
                         pending_item.last_price_update = datetime.utcnow()
+                        price_updates_count += 1
                         # Si quisiéramos alertas aquí (antes de vincular), se podrían añadir.
+                    else:
+                        unchanged_count += 1
                     continue
 
                 # --- IF HERE, IT IS A NEW CANDIDATE ---
@@ -641,8 +661,12 @@ class ScrapingPipeline:
             # Limpieza global proactiva del purgatorio al finalizar la actualización
             clean_purgatory_globally(db)
             db.commit()
+            
+            # --- RESUMEN DE MÉTRICAS COMPLETO (COMPATIBLE CON PARSER FRONTEND) ---
+            stats_msg = f"📊 [Resumen] Nuevas en Purgatorio: {new_items_count} | Precios actualizados: {price_updates_count} | Sin cambios: {unchanged_count} | Descartadas: {discarded_count}"
+            self._log(stats_msg)
             self._log(f"⚡ [Fin] Proceso de persistencia completado. {new_items_count} nuevas ofertas enviadas al Purgatorio.")
-            logger.success(f"⚡ Batch Complete: {new_items_count} new items added to Purgatory (Atomic Safe Mode).")
+            logger.success(f"⚡ Batch Complete: {stats_msg}")
 
             # --- PHASE 44: AVAILABILITY SYNC ---
             if shop_names:
@@ -652,7 +676,9 @@ class ScrapingPipeline:
             return new_items_count
 
         except Exception as e:
-            logger.error(f"❌ Pipeline Critical Error: {e}")
+            error_msg = f"❌ Pipeline Critical Error: {e}"
+            self._log(error_msg)
+            logger.error(error_msg)
             db.rollback()
             return 0
         finally:

@@ -83,6 +83,7 @@ def run_scraper_task(
     update_live_log(f"⚔️ Iniciando secuencia de extracción para {spider_name}...")
 
     items_found = 0
+    new_items = 0
 
     try:
         from src.infrastructure.scrapers.amazon_scraper import AmazonScraper
@@ -174,7 +175,7 @@ def run_scraper_task(
                 )
 
             update_live_log(f"💾 Persistiendo {len(results)} ofertas...")
-            pipeline.update_database(
+            new_items = pipeline.update_database(
                 results, shop_names=[s.shop_name for s in spiders_to_run]
             )
             items_found = len(results)
@@ -204,6 +205,7 @@ def run_scraper_task(
                 log.status = "success"
                 log.end_time = datetime.utcnow()
                 log.items_found = items_found
+                log.new_items = new_items
 
             db.commit()
 

@@ -32,6 +32,20 @@ interface ConfigProps {
     onIdentityChange?: (targetId: number) => void;
 }
 
+const getParsedMetrics = (logsText?: string) => {
+    if (!logsText) return null;
+    const match = logsText.match(/📊 \[Resumen\] Nuevas en Purgatorio: (\d+) \| Precios actualizados: (\d+) \| Sin cambios: (\d+) \| Descartadas: (\d+)/);
+    if (match) {
+        return {
+            newItems: parseInt(match[1]),
+            priceUpdates: parseInt(match[2]),
+            unchanged: parseInt(match[3]),
+            discarded: parseInt(match[4])
+        };
+    }
+    return null;
+};
+
 const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange }) => {
     const consoleRef = React.useRef<HTMLDivElement>(null);
     const [activeTab, setActiveTab] = useState<'scrapers' | 'system' | 'users' | 'wallapop' | 'inventory'>('scrapers');
@@ -564,6 +578,31 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                                         <p className="text-[10px] opacity-80 uppercase tracking-wider">{selectedLog.error_message}</p>
                                                     </div>
                                                 )}
+
+                                                {(() => {
+                                                    const metrics = getParsedMetrics(selectedLog?.logs);
+                                                    if (!metrics) return null;
+                                                    return (
+                                                        <div className="mb-6 grid grid-cols-2 sm:grid-cols-4 gap-3 border border-white/5 bg-white/[0.02] p-4 rounded-3xl backdrop-blur-xl">
+                                                            <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-2xl flex flex-col gap-0.5">
+                                                                <span className="text-[9px] font-black uppercase text-blue-400 tracking-wider">Nuevas (Purgatorio)</span>
+                                                                <span className="text-base font-black text-white">{metrics.newItems}</span>
+                                                            </div>
+                                                            <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex flex-col gap-0.5">
+                                                                <span className="text-[9px] font-black uppercase text-amber-400 tracking-wider">Actualizadas</span>
+                                                                <span className="text-base font-black text-white">{metrics.priceUpdates}</span>
+                                                            </div>
+                                                            <div className="p-3 bg-slate-500/10 border border-slate-500/20 rounded-2xl flex flex-col gap-0.5">
+                                                                <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Sin Cambios</span>
+                                                                <span className="text-base font-black text-white">{metrics.unchanged}</span>
+                                                            </div>
+                                                            <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-2xl flex flex-col gap-0.5">
+                                                                <span className="text-[9px] font-black uppercase text-red-400 tracking-wider">Descartadas</span>
+                                                                <span className="text-base font-black text-white">{metrics.discarded}</span>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })()}
 
                                                 {selectedLog?.logs ? (
                                                     selectedLog.logs.split(/\n|\\n/).map((line, i) => {

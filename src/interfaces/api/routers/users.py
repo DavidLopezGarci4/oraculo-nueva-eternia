@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from loguru import logger
 
 from src.application.services.logistics_service import LogisticsService
-from src.domain.models import OfferModel, PendingMatchModel, ProductModel, UserModel, BlackcludedItemModel, VintageMiscellaneousModel
+from src.domain.models import OfferModel, PendingMatchModel, ProductModel, UserModel, BlackcludedItemModel, VintageMiscellaneousModel, OfferHistoryModel
 from src.infrastructure.database_cloud import SessionCloud
 from src.interfaces.api.deps import verify_device
 from src.interfaces.api.schemas import WallapopImportRequest
