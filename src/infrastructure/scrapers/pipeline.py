@@ -18,11 +18,12 @@ def clean_purgatory_globally(db: Session):
     cuya URL ya esté guardada en offers, blackcluded_items o vintage_miscellaneous.
     """
     from src.domain.models import PendingMatchModel, OfferModel, BlackcludedItemModel, VintageMiscellaneousModel
+    from sqlalchemy import select
     
     try:
-        q_offers = db.query(OfferModel.url).subquery()
-        q_black = db.query(BlackcludedItemModel.url).subquery()
-        q_misc = db.query(VintageMiscellaneousModel.url).subquery()
+        q_offers = select(OfferModel.url)
+        q_black = select(BlackcludedItemModel.url)
+        q_misc = select(VintageMiscellaneousModel.url)
         
         deleted_offers = db.query(PendingMatchModel).filter(PendingMatchModel.url.in_(q_offers)).delete(synchronize_session=False)
         deleted_black = db.query(PendingMatchModel).filter(PendingMatchModel.url.in_(q_black)).delete(synchronize_session=False)
