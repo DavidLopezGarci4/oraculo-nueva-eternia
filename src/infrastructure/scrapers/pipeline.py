@@ -34,6 +34,66 @@ def clean_purgatory_globally(db: Session):
     except Exception as e:
         logger.error(f"⚠️ Error running global purgatory cleanup: {e}")
 
+def check_and_send_multiuser_alerts(db: Session, scraped_name: str, price: float, shop_name: str, url: str, is_vintage: bool):
+    """
+    Cruza una nueva oferta con las listas de deseos y alertas de precio de todos los usuarios
+    que tengan registrado un telegram_chat_id, disparando las alertas correspondientes.
+    """
+    from src.domain.models import UserModel, CollectionItemModel, ProductModel, PriceAlertModel
+    from src.infrastructure.services.telegram_service import telegram_service
+    import re
+    
+    try:
+        users_with_tg = db.query(UserModel).filter(UserModel.telegram_chat_id != None, UserModel.is_active == True).all()
+        if not users_with_tg:
+            return
+            
+        name_lower = scraped_name.lower()
+        
+        for u in users_with_tg:
+            # 1. Alertas de Lista de Deseos (Wishlist)
+            wishlist_items = db.query(ProductModel).join(CollectionItemModel).filter(
+                CollectionItemModel.owner_id == u.id,
+                CollectionItemModel.acquired == False
+            ).all()
+            
+            for p in wishlist_items:
+                p_clean = p.name.lower().replace("-", " ")
+                p_words = [w for w in re.sub(r'[^a-z0-9\s]', '', p_clean).split() if len(w) > 2]
+                if p_words and all(w in name_lower for w in p_words):
+                    # Coincidencia! Enviar alerta
+                    asyncio.create_task(telegram_service.send_wishlist_alert(
+                        chat_id=u.telegram_chat_id,
+                        product_name=p.name,
+                        price=price,
+                        shop_name=shop_name,
+                        url=url
+                    ))
+                    break # Evitar duplicados por oferta
+            
+            # 2. Alertas de Precio Objetivo (El Centinela)
+            price_alerts = db.query(PriceAlertModel).join(ProductModel).filter(
+                PriceAlertModel.user_id == u.id,
+                PriceAlertModel.is_active == True,
+                PriceAlertModel.target_price >= price
+            ).all()
+            
+            for pa in price_alerts:
+                p_clean = pa.product.name.lower().replace("-", " ")
+                p_words = [w for w in re.sub(r'[^a-z0-9\s]', '', p_clean).split() if len(w) > 2]
+                if p_words and all(w in name_lower for w in p_words):
+                    asyncio.create_task(telegram_service.send_price_alert(
+                        chat_id=u.telegram_chat_id,
+                        product_name=pa.product.name,
+                        price=price,
+                        target_price=pa.target_price,
+                        shop_name=shop_name,
+                        url=url
+                    ))
+                    break
+    except Exception as e:
+        logger.error(f"⚠️ Error en check_and_send_multiuser_alerts: {e}")
+
 class ScrapingPipeline:
     def __init__(self, scrapers: List[BaseScraper], cancel_event: threading.Event | None = None):
         self.scrapers = scrapers
@@ -581,7 +641,19 @@ class ScrapingPipeline:
                         asyncio.create_task(telegram_service.send_deal_alert(
                             product_name=best_match_product.name,
                             price=offer.get('price'),
-                            shop_name=offer.get('shop_name')))
+                            shop_name=offer.get('shop_name'),
+                            url=url_str
+                        ))
+                    
+                    # Alertas multi-usuario (Wishlist / Price Alerts) para items auto-vinculados
+                    check_and_send_multiuser_alerts(
+                        db,
+                        scraped_name=best_match_product.name,
+                        price=offer.get('price'),
+                        shop_name=offer.get('shop_name'),
+                        url=url_str,
+                        is_vintage=best_match_product.is_vintage
+                    )
                 else:
                     # Regla Vintage: Si es vintage (muñeco de los 80 o contiene 'vintage'), marcamos el flag para ir al Purgatorio
                     from src.core.vintage_utils import check_is_vintage
@@ -647,9 +719,27 @@ class ScrapingPipeline:
                                 else:
                                     pending = PendingMatchModel(**pending_data)
                                     db.add(pending)
-                        
                         # No db.commit() here! We commit the whole batch at the end.
                         new_items_count += 1
+                        
+                        # Disparar alertas para nuevos candidatos en Purgatorio
+                        if url_str not in existing_pending_urls:
+                            if is_v:
+                                asyncio.create_task(telegram_service.send_new_purgatory_vintage_alert(
+                                    scraped_name=pending_data["scraped_name"],
+                                    price=pending_data["price"],
+                                    shop_name=pending_data["shop_name"],
+                                    url=url_str
+                                ))
+                            
+                            check_and_send_multiuser_alerts(
+                                db,
+                                scraped_name=pending_data["scraped_name"],
+                                price=pending_data["price"],
+                                shop_name=pending_data["shop_name"],
+                                url=url_str,
+                                is_vintage=is_v
+                            )
                         
                     except Exception as e:
                         # db.begin_nested() context manager handles rollback of the savepoint automatically

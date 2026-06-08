@@ -285,6 +285,27 @@ def _sync_engine(engine, label: str):
                     logger.warning(f"Could not add details column to wallapop_ip_logs: {e}")
                     conn.rollback()
 
+        # --- Table: users ---
+        if "users" in inspector.get_table_names():
+            columns_users = [c['name'] for c in inspector.get_columns("users")]
+            if "is_public_showcase" not in columns_users:
+                logger.info(f"[{label}] Adding 'is_public_showcase' to users table...")
+                try:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN is_public_showcase BOOLEAN DEFAULT FALSE"))
+                    conn.commit()
+                except Exception as e:
+                    logger.warning(f"Could not add is_public_showcase to users: {e}")
+                    conn.rollback()
+
+            if "telegram_chat_id" not in columns_users:
+                logger.info(f"[{label}] Adding 'telegram_chat_id' to users table...")
+                try:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN telegram_chat_id VARCHAR(100)"))
+                    conn.commit()
+                except Exception as e:
+                    logger.warning(f"Could not add telegram_chat_id to users: {e}")
+                    conn.rollback()
+
         # --- Terminology Audit: Fix regressions and ensure 'spider_name' ---
         # Note: If someone accidentally renamed to scraper_name, we undo it here.
         rename_targets = [

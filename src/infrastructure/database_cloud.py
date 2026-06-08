@@ -38,8 +38,10 @@ def init_cloud_db():
             dialect = engine_cloud.url.drivername or ""
             if "postgresql" in dialect.lower():
                 session.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_public_showcase BOOLEAN DEFAULT FALSE;"))
+                session.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_chat_id VARCHAR;"))
             else:
                 session.execute(text("ALTER TABLE users ADD COLUMN is_public_showcase BOOLEAN DEFAULT FALSE;"))
+                session.execute(text("ALTER TABLE users ADD COLUMN telegram_chat_id VARCHAR;"))
             session.commit()
     except Exception:
         # Ignore if the column already exists or other issues

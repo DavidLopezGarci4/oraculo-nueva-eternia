@@ -36,8 +36,9 @@ Implementación de lógica de negocio siguiendo **Clean Architecture**.
 - **application/jobs/**: Tareas programadas (`daily_scan.py`).
 - **infrastructure/scrapers/**: Motores de incursión (Playwright, BeautifulSoup).
 - **infrastructure/database/**: Repositorios y sesión de base de datos (Supabase/PostgreSQL).
+- **infrastructure/services/**: Adaptadores de servicios externos (`telegram_service.py` para despacho de alertas y telemetría, `telegram_listener.py` para escucha asíncrona de comandos mediante Long Polling).
 - **interfaces/api/**: Puerta de enlace API (FastAPI). Estructura modular completa:
-  - `main.py` — startup, CORS, `include_router` únicamente (~55 líneas).
+  - `main.py` — startup con lifespan context manager, CORS, `include_router` únicamente.
   - `deps.py` — dependencias FastAPI: `verify_api_key`, `verify_device`, `ensure_scrapers_registered`, `get_current_user`, `create_access_token`.
   - `schemas.py` — modelos Pydantic centralizados (21 schemas, incluye `Token`).
   - `routers/health.py` — `/api/health`.
@@ -116,17 +117,23 @@ Audit realizado sobre `frontend/src/api/`. Los siguientes endpoints tienen imple
 
 ## 8. Tests (tests/)
 
-Suite de integración ejecutada con **pytest**:
+Suite de tests unitarios y de integración ejecutada con **pytest**:
 
-| Archivo | Cobertura |
-| :--- | :--- |
-| `tests/conftest.py` | Fixture sesión: SQLite in-memory (StaticPool), TestClient, usuarios de prueba. |
-| `tests/test_api_health.py` | `/api/health`, OpenAPI schema disponible. |
-| `tests/test_api_auth.py` | Register, login, JWT token, `get_current_user` con Bearer. |
-| `tests/test_api_permissions.py` | API key guard, device guard, endpoints públicos, dashboard stats. |
-| `tests/test_api_errors.py` | Validation error handler (422), HTTPException pass-through (403/404). |
+| Archivo | Cobertura / Tipo | Propósito |
+| :--- | :--- | :--- |
+| `tests/conftest.py` | Configuración Global | Fixture sesión: SQLite in-memory (StaticPool), TestClient, usuarios de prueba. |
+| `tests/integration/test_api_auth.py` | Integración (API) | Register, login, JWT token, `get_current_user` con Bearer. |
+| `tests/integration/test_api_errors.py` | Integración (API) | Validation error handler (422), HTTPException pass-through (403/404). |
+| `tests/integration/test_api_health.py` | Integración (API) | `/api/health`, OpenAPI schema disponible. |
+| `tests/integration/test_api_permissions.py` | Integración (API) | API key guard, device guard, endpoints públicos, dashboard stats. |
+| `tests/integration/test_api_showcase.py` | Integración (API) | Control de acceso y privacidad del Santuario (showcase público). |
+| `tests/integration/test_phase0_migration.py` | Integración (DB) | Migraciones de base de datos e integridad estructural. |
+| `tests/unit/test_api_motu_relevance.py` | Unitario (Core) | Filtros de relevancia y descarte heurístico para figuras clásicas MOTU. |
+| `tests/unit/test_api_telegram_alerts.py` | Unitario (Alertas) | Envío y coincidencia de alertas multi-usuario (Wishlist, precios, vintage). |
+| `tests/unit/test_matcher_precision.py` | Unitario (Matching) | Precisión de tokens y emparejamiento semántico del vinculador. |
+| `tests/unit/test_specific_purgatory_cases.py` | Unitario (Matching) | Casos extremos y resoluciones conflictivas en Purgatorio. |
 
-Ejecutar: `python -m pytest tests/test_api_*.py -v` (25 tests, 0 fallos)
+Ejecutar: `.venv\Scripts\python -m pytest` (33 tests, 0 fallos)
 
 ---
 
@@ -167,7 +174,12 @@ Ejecutar: `python -m pytest tests/test_api_*.py -v` (25 tests, 0 fallos)
   - Scraper Wallapop híbrido con peticiones directas API via `curl_cffi` (impersonación de TLS de Chrome) y Playwright de respaldo.
   - Corrección del calibrador de carga de Skeletor: reemplazo de báculo por la silueta de Skeletor Vintage y la espada real (`GlassmorphSword.png`), alineación vertical centrada horizontalmente a 125, y migración a `skeletor_sword_coords`.
   - Integración de calibración para He-Man Moderno: mapeo del calibrador y loader en la pantalla de carga predeterminada (`HemanGlassmorphSword.png`) usando la clave `modern_sword_coords` en localStorage para reflejar las coordenadas en toda la app.
+- **Phase 66**: Bot Bidireccional de Telegram, Alertas Multi-usuario y Telemetría de Auditoría (08/06/2026):
+  - Añadida columna `telegram_chat_id` en la tabla `users` con rutinas de migración automática en `database_cloud.py` y `universal_migrator.py`.
+  - Diseñado e integrado un receptor asíncrono de comandos (`telegram_listener.py`) en segundo plano que procesa comandos con autorización según rol.
+  - Desarrollado un motor de despacho de alertas multi-usuario (`check_and_send_multiuser_alerts` en `pipeline.py`) cruzando ofertas con listas de deseos y precio de múltiples Guardianes.
+  - Habilitada telemetría atómica en `data/telegram_telemetry.json` y redactado documento de auditoría de flujo y datos en `docs/AUDITORIA_TELEGRAM.md`.
 
 ---
 
-*Última actualización: 2026-06-07 - Phase 65: Características Pareto 80/20 y Calibración Skeletor.*
+*Última actualización: 2026-06-08 - Phase 66: Bot de Telegram Bidireccional y Alertas Multi-usuario.*

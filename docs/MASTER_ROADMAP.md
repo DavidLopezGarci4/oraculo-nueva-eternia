@@ -438,6 +438,10 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
   - [x] **Ejecución y Remediación SAST (Bandit)**: Ejecutado el análisis de seguridad estático del backend y resueltas las vulnerabilidades identificadas de nivel Medio y Alto:
     * Hardened hashes (`usedforsecurity=False` en MD5/SHA1) en `smoke_test.py`, `notifier.py`, `scrape_run_report.py`, `personal_collection.py` y `personal_vintage_collection.py`.
     * Silenciadas de forma segura falsas alarmas de seguridad en `restore_vault.py` (SQL injection), `dvdstorespain_scraper.py` (XML entity attack) y `main.py` (binding de interfaces de red).
+  - [x] **Bot Bidireccional de Telegram y Alertas Multi-usuario**:
+    * *Comandos*: Implementado un bot asíncrono que procesa `/register` (Guardianes), `/purgatorio` (conteo de pendientes), `/buscar` (consulta rápida local) y comandos administrativos (`/status`, `/run`, `/stop`).
+    * *Alertas Multi-usuario*: Añadida columna `telegram_chat_id` en la tabla `users`. El pipeline ahora cruza de forma reactiva las nuevas ofertas con las listas de deseos y alertas de precio (`PriceAlertModel`) de cada Guardián registrado.
+    * *Auditoría de Telemetría*: Creado `data/telegram_telemetry.json` para almacenamiento atómico de eventos y redactada la guía de datos y utilidad en `docs/AUDITORIA_TELEGRAM.md`.
 
 ---
 

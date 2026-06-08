@@ -1067,3 +1067,9 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
   - **Ejecución y Remediación SAST (Bandit)**: Ejecutado escaneo de seguridad en el backend resolviendo todas las alertas de severidad Media y Alta:
     * Hardened hashes (`usedforsecurity=False` en llamadas a MD5 y SHA1) en `smoke_test.py`, `notifier.py`, `scrape_run_report.py`, `personal_collection.py` y `personal_vintage_collection.py`.
     * Silenciado seguro de falsos positivos en la restauración de base de datos (`restore_vault.py`), descarga de sitemaps XML (`dvdstorespain_scraper.py`) y bind de interfaces de red uvicorn (`main.py`).
+  - **Bot de Telegram Bidireccional y Alertas de Guardianes**:
+    * **Bucle Asíncrono de Escucha**: Integrado un receptor en segundo plano (`telegram_listener.py`) que procesa comandos mediante Long Polling. 
+    * **Comandos y Autoregistro**: Los usuarios pueden vincular su cuenta usando `/register [username]`. Mapea comandos administrativos como `/status`, `/run` y `/stop` al administrador David, y comandos informativos como `/purgatorio` y `/buscar` para los Guardianes.
+    * **Despacho Reactivo de Alertas**: Modificado el pipeline para buscar usuarios que tengan el producto en su Wishlist (`CollectionItemModel` con `acquired=False`) o posean una alerta de precio (`PriceAlertModel` con `target_price >= price`) y enviar notificaciones individualizadas.
+    * **Registro de Telemetría**: Implementado `data/telegram_telemetry.json` para guardar de forma atómica cada evento, y redactada la guía de datos y auditoría de uso en `docs/AUDITORIA_TELEGRAM.md`.
+

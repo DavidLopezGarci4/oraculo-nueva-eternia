@@ -25,14 +25,31 @@ from src.interfaces.api.routers import (
     vault as vault_router,
 )
 
-app = FastAPI(title="Oráculo API Broker", version="1.0.0")
+import asyncio
+from contextlib import asynccontextmanager
 
-try:
-    from src.infrastructure.database_cloud import init_cloud_db
-    init_cloud_db()
-    ensure_scrapers_registered()
-except Exception as e:
-    logger.error(f"Startup initialization failed: {e}")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    try:
+        from src.infrastructure.database_cloud import init_cloud_db
+        init_cloud_db()
+        ensure_scrapers_registered()
+        
+        # Iniciar escucha de comandos de Telegram en segundo plano
+        from src.infrastructure.services.telegram_listener import telegram_listener
+        app.state.telegram_task = asyncio.create_task(telegram_listener.start_polling())
+    except Exception as e:
+        logger.error(f"Startup initialization failed: {e}")
+    yield
+    # Cleanup task on shutdown
+    if hasattr(app.state, "telegram_task"):
+        app.state.telegram_task.cancel()
+        try:
+            await app.state.telegram_task
+        except asyncio.CancelledError:
+            pass
+
+app = FastAPI(title="Oráculo API Broker", version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
