@@ -166,6 +166,7 @@ Ejecutar: `python -m pytest tests/test_api_*.py -v` (25 tests, 0 fallos)
   - Script `renew_ssl.sh` local con Certbot Docker y recarga de Nginx.
   - Scraper Wallapop híbrido con peticiones directas API via `curl_cffi` (impersonación de TLS de Chrome) y Playwright de respaldo.
   - Corrección del calibrador de carga de Skeletor: reemplazo de báculo por la silueta de Skeletor Vintage y la espada real (`GlassmorphSword.png`), alineación vertical centrada horizontalmente a 125, y migración a `skeletor_sword_coords`.
+  - Integración de calibración para He-Man Moderno: mapeo del calibrador y loader en la pantalla de carga predeterminada (`HemanGlassmorphSword.png`) usando la clave `modern_sword_coords` en localStorage para reflejar las coordenadas en toda la app.
 
 ---
 

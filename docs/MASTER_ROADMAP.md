@@ -426,6 +426,7 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
   - [x] **Renovación Local de SSL**: Script `renew_ssl.sh` local para renovación segura con Docker Certbot y recarga de Nginx.
   - [x] **Scraper Wallapop Hardened**: Impersonación de TLS Chrome 120 mediante `curl_cffi` para peticiones API y fallback a Playwright persistente contra bloqueos WAF.
   - [x] **Calibración de Carga Skeletor**: Reemplazado el báculo de Havoc por la silueta de Skeletor Vintage y la espada real (`GlassmorphSword.png`), configurando coordenadas por defecto alineadas verticalmente (`125.0, 175.0` a `125.0, 10.0`), actualizando los textos de la interfaz a Empuñadura/Punta, y migrando el almacenamiento a `skeletor_sword_coords`.
+  - [x] **Calibración de Carga He-Man Moderno**: Añadida calibración interactiva para la pantalla de carga predeterminada del app (`HemanGlassmorphSword.png`), guardando sus coordenadas personalizadas en `modern_sword_coords` para que los ajustes del calibrador se reflejen en producción de forma reactiva.
 
 ---
 

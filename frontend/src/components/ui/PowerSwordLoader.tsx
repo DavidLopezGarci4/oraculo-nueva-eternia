@@ -20,6 +20,10 @@ interface PowerSwordLoaderProps {
     skeletorGuardY?: number;
     skeletorTipX?: number;
     skeletorTipY?: number;
+    modernGuardX?: number;
+    modernGuardY?: number;
+    modernTipX?: number;
+    modernTipY?: number;
 }
 
 const PowerSwordLoader: React.FC<PowerSwordLoaderProps> = ({
@@ -37,7 +41,11 @@ const PowerSwordLoader: React.FC<PowerSwordLoaderProps> = ({
     skeletorGuardX,
     skeletorGuardY,
     skeletorTipX,
-    skeletorTipY
+    skeletorTipY,
+    modernGuardX,
+    modernGuardY,
+    modernTipX,
+    modernTipY
 }) => {
     const [internalProgress, setInternalProgress] = useState(0);
 
@@ -54,6 +62,14 @@ const PowerSwordLoader: React.FC<PowerSwordLoaderProps> = ({
 
     // Get custom/stored skeletor staff coordinates or use defaults
     const [skeletorCoords, setSkeletorCoords] = useState({
+        gX: 125.0,
+        gY: 175.0,
+        tX: 125.0,
+        tY: 10.0
+    });
+
+    // Get custom/stored modern sword coordinates or use defaults
+    const [modernCoords, setModernCoords] = useState({
         gX: 125.0,
         gY: 175.0,
         tX: 125.0,
@@ -86,11 +102,43 @@ const PowerSwordLoader: React.FC<PowerSwordLoaderProps> = ({
         }
     }, [isSkeletor]);
 
-    // Use props if provided (useful for visualizer), otherwise use state/localStorage, or fallback to default modern coords
-    const activeGuardX = vintageGuardX !== undefined ? vintageGuardX : (skeletorGuardX !== undefined ? skeletorGuardX : (isSkeletor ? skeletorCoords.gX : (isVintage ? vintageCoords.gX : 125)));
-    const activeGuardY = vintageGuardY !== undefined ? vintageGuardY : (skeletorGuardY !== undefined ? skeletorGuardY : (isSkeletor ? skeletorCoords.gY : (isVintage ? vintageCoords.gY : 175)));
-    const activeTipX = vintageTipX !== undefined ? vintageTipX : (skeletorTipX !== undefined ? skeletorTipX : (isSkeletor ? skeletorCoords.tX : (isVintage ? vintageCoords.tX : 125)));
-    const activeTipY = vintageTipY !== undefined ? vintageTipY : (skeletorTipY !== undefined ? skeletorTipY : (isSkeletor ? skeletorCoords.tY : (isVintage ? vintageCoords.tY : 10)));
+    useEffect(() => {
+        if (!isVintage && !isSkeletor) {
+            const stored = localStorage.getItem('modern_sword_coords');
+            if (stored) {
+                try {
+                    setModernCoords(JSON.parse(stored));
+                } catch (e) {
+                    console.error("Failed to parse modern sword coords", e);
+                }
+            }
+        }
+    }, [isVintage, isSkeletor]);
+
+    // Use props if provided (useful for visualizer), otherwise use state/localStorage, or fallback to defaults
+    const activeGuardX = isSkeletor 
+        ? (skeletorGuardX !== undefined ? skeletorGuardX : skeletorCoords.gX) 
+        : (isVintage 
+            ? (vintageGuardX !== undefined ? vintageGuardX : vintageCoords.gX) 
+            : (modernGuardX !== undefined ? modernGuardX : modernCoords.gX));
+
+    const activeGuardY = isSkeletor 
+        ? (skeletorGuardY !== undefined ? skeletorGuardY : skeletorCoords.gY) 
+        : (isVintage 
+            ? (vintageGuardY !== undefined ? vintageGuardY : vintageCoords.gY) 
+            : (modernGuardY !== undefined ? modernGuardY : modernCoords.gY));
+
+    const activeTipX = isSkeletor 
+        ? (skeletorTipX !== undefined ? skeletorTipX : skeletorCoords.tX) 
+        : (isVintage 
+            ? (vintageTipX !== undefined ? vintageTipX : vintageCoords.tX) 
+            : (modernTipX !== undefined ? modernTipX : modernCoords.tX));
+
+    const activeTipY = isSkeletor 
+        ? (skeletorTipY !== undefined ? skeletorTipY : skeletorCoords.tY) 
+        : (isVintage 
+            ? (vintageTipY !== undefined ? vintageTipY : vintageCoords.tY) 
+            : (modernTipY !== undefined ? modernTipY : modernCoords.tY));
 
     // Vector calculations for the sword axis (from guard to tip)
     const dx = activeTipX - activeGuardX;

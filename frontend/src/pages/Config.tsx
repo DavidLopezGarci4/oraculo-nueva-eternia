@@ -79,6 +79,15 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
         tY: 20.5
     });
 
+    // He-Man Modern Sword Light Ray Calibrator States
+    const [showModernCalibrator, setShowModernCalibrator] = useState(false);
+    const [modernCoords, setModernCoords] = useState({
+        gX: 125.0,
+        gY: 175.0,
+        tX: 125.0,
+        tY: 10.0
+    });
+
     // Skeletor Vintage Light Ray Calibrator States
     const [showSkeletorCalibrator, setShowSkeletorCalibrator] = useState(false);
     const [skeletorCoords, setSkeletorCoords] = useState({
@@ -100,6 +109,19 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
             }
         }
     }, [showCalibrator]);
+
+    useEffect(() => {
+        if (showModernCalibrator) {
+            const stored = localStorage.getItem('modern_sword_coords');
+            if (stored) {
+                try {
+                    setModernCoords(JSON.parse(stored));
+                } catch (e) {
+                    console.error("Failed to parse modern sword coords", e);
+                }
+            }
+        }
+    }, [showModernCalibrator]);
 
     useEffect(() => {
         if (showSkeletorCalibrator) {
@@ -125,6 +147,20 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
             gY: 66.5,
             tX: 73.0,
             tY: 20.5
+        });
+    };
+
+    const handleSaveModernCalib = () => {
+        localStorage.setItem('modern_sword_coords', JSON.stringify(modernCoords));
+        setShowModernCalibrator(false);
+    };
+
+    const handleResetModernCalib = () => {
+        setModernCoords({
+            gX: 125.0,
+            gY: 175.0,
+            tX: 125.0,
+            tY: 10.0
         });
     };
 
@@ -970,7 +1006,27 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                             </div>
 
                             {/* Calibradores de Haces de Luz */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                {/* Calibrador de Haces de Luz Moderno */}
+                                <div className="glass border border-cyan-500/30 p-6 rounded-3xl space-y-4 bg-cyan-500/5">
+                                    <div className="flex items-center gap-3 text-cyan-400 font-bold uppercase tracking-widest text-xs mb-2">
+                                        <Zap className="h-4 w-4" />
+                                        He-Man Moderno
+                                    </div>
+                                    <div className="space-y-4">
+                                        <p className="text-[10px] text-white/65 font-bold uppercase leading-tight">
+                                            Calibra la posición exacta de los haces de luz sobre la espada en la pantalla de carga principal.
+                                        </p>
+                                        <button
+                                            onClick={() => setShowModernCalibrator(true)}
+                                            className="w-full bg-cyan-500/10 hover:bg-cyan-500 text-cyan-400 hover:text-black border border-cyan-500/25 px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/0 hover:shadow-cyan-500/25"
+                                        >
+                                            <Settings className="h-3.5 w-3.5" />
+                                            Calibrar Espada He-Man
+                                        </button>
+                                    </div>
+                                </div>
+
                                 {/* Calibrador de Haces de Luz Vintage */}
                                 <div className="glass border border-amber-500/30 p-6 rounded-3xl space-y-4 bg-amber-500/5">
                                     <div className="flex items-center gap-3 text-amber-500 font-bold uppercase tracking-widest text-xs mb-2">
@@ -979,7 +1035,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                     </div>
                                     <div className="space-y-4">
                                         <p className="text-[10px] text-white/65 font-bold uppercase leading-tight">
-                                            Calibra la posición exacta de los haces de luz sobre la espada en la silueta de He-Man.
+                                            Calibra la posición exacta de los haces de luz sobre la espada en la silueta de He-Man Vintage.
                                         </p>
                                         <button
                                             onClick={() => setShowCalibrator(true)}
@@ -1707,6 +1763,178 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                     </button>
                                     <button
                                         onClick={() => setShowCalibrator(false)}
+                                        className="px-4 py-2.5 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 text-white font-black text-[10px] uppercase tracking-widest transition-all"
+                                    >
+                                        Cerrar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* He-Man Modern Sword Light Ray Calibrator Modal */}
+            {showModernCalibrator && (
+                <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-md p-4 flex justify-center items-start animate-in fade-in duration-300 custom-scrollbar">
+                    <div className="relative w-full max-w-4xl my-8 md:my-12 rounded-[2.5rem] border border-cyan-500/30 bg-[#0A0A0B] p-6 md:p-8 flex flex-col gap-6 shadow-[0_0_50px_rgba(34,211,238,0.2)]">
+                        <div className="flex items-center gap-3">
+                            <div className="p-3 rounded-xl bg-cyan-500/10">
+                                <Zap className="h-6 w-6 text-cyan-400 animate-pulse" />
+                            </div>
+                            <div>
+                                <h4 className="text-2xl font-black text-white">Calibrador de Pantalla de Carga <span className="text-cyan-400">He-Man Moderno</span></h4>
+                                <p className="text-[10px] text-white/50 font-bold uppercase tracking-wider">Alinea los rayos de energía de Grayskull sobre la espada de la pantalla de carga</p>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center justify-center">
+                            {/* Preview Area */}
+                            <div className="flex flex-col items-center justify-center gap-4 bg-black/40 border border-white/5 p-6 rounded-3xl">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-cyan-400/60">Simulador de Pantalla de Carga</span>
+                                
+                                <div className="relative w-64 h-64 border border-white/10 rounded-2xl overflow-hidden bg-[#050608] flex items-center justify-center shadow-inner">
+                                    <PowerSwordLoader 
+                                        isVintage={false} 
+                                        isSkeletor={false}
+                                        size={250} 
+                                        modernGuardX={modernCoords.gX}
+                                        modernGuardY={modernCoords.gY}
+                                        modernTipX={modernCoords.tX}
+                                        modernTipY={modernCoords.tY}
+                                        progress={parseFloat(localStorage.getItem('calib_test_progress_modern') || '75')} 
+                                    />
+                                    
+                                    {/* Overlay helper lines to visually debug guard & tip points */}
+                                    <svg viewBox="0 0 250 250" className="absolute inset-0 w-full h-full pointer-events-none">
+                                        {/* Guard center indicator */}
+                                        <circle cx={modernCoords.gX} cy={modernCoords.gY} r="4" fill="#06B6D4" stroke="white" strokeWidth="1" />
+                                        <text x={modernCoords.gX + 6} y={modernCoords.gY + 3} fill="#06B6D4" fontSize="8" fontWeight="bold">Empuñadura ({modernCoords.gX.toFixed(1)}, {modernCoords.gY.toFixed(1)})</text>
+                                        
+                                        {/* Tip indicator */}
+                                        <circle cx={modernCoords.tX} cy={modernCoords.tY} r="4" fill="#06B6D4" stroke="white" strokeWidth="1" />
+                                        <text x={modernCoords.tX + 6} y={modernCoords.tY + 3} fill="#06B6D4" fontSize="8" fontWeight="bold">Punta ({modernCoords.tX.toFixed(1)}, {modernCoords.tY.toFixed(1)})</text>
+                                        
+                                        {/* Axis line */}
+                                        <line x1={modernCoords.gX} y1={modernCoords.gY} x2={modernCoords.tX} y2={modernCoords.tY} stroke="rgba(34,211,238,0.3)" strokeDasharray="3" strokeWidth="1.5" />
+                                    </svg>
+                                </div>
+                                
+                                <div className="w-full space-y-1">
+                                    <div className="flex justify-between text-[10px] text-white/50 font-bold">
+                                        <span>PROGRESO DE PRUEBA</span>
+                                        <span className="text-cyan-400 font-mono">{localStorage.getItem('calib_test_progress_modern') || '75'}%</span>
+                                    </div>
+                                    <input 
+                                        type="range" 
+                                        min="0" 
+                                        max="100" 
+                                        value={localStorage.getItem('calib_test_progress_modern') || '75'}
+                                        onChange={(e) => {
+                                            localStorage.setItem('calib_test_progress_modern', e.target.value);
+                                            // Trigger state update to re-render preview
+                                            setModernCoords({ ...modernCoords });
+                                        }}
+                                        className="w-full accent-cyan-500" 
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Controls Area */}
+                            <div className="space-y-6">
+                                <div className="space-y-4 bg-white/[0.02] border border-white/5 p-4 rounded-2xl">
+                                    <div className="flex items-center gap-2 text-cyan-400 font-bold text-xs uppercase tracking-widest">
+                                        <div className="h-2 w-2 rounded-full bg-cyan-400" />
+                                        Punto de Empuñadura (X, Y)
+                                    </div>
+                                    <div className="space-y-3">
+                                        <div>
+                                            <div className="flex justify-between text-[10px] text-white/50 font-bold mb-1">
+                                                <span>Horizontal (X)</span>
+                                                <span className="text-white font-mono">{modernCoords.gX}px</span>
+                                            </div>
+                                            <input 
+                                                type="range" 
+                                                min="0" 
+                                                max="250" 
+                                                step="0.5"
+                                                value={modernCoords.gX}
+                                                onChange={(e) => setModernCoords({ ...modernCoords, gX: parseFloat(e.target.value) })}
+                                                className="w-full accent-cyan-500" 
+                                            />
+                                        </div>
+                                        <div>
+                                            <div className="flex justify-between text-[10px] text-white/50 font-bold mb-1">
+                                                <span>Vertical (Y)</span>
+                                                <span className="text-white font-mono">{modernCoords.gY}px</span>
+                                            </div>
+                                            <input 
+                                                type="range" 
+                                                min="0" 
+                                                max="250" 
+                                                step="0.5"
+                                                value={modernCoords.gY}
+                                                onChange={(e) => setModernCoords({ ...modernCoords, gY: parseFloat(e.target.value) })}
+                                                className="w-full accent-cyan-500" 
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4 bg-white/[0.02] border border-white/5 p-4 rounded-2xl">
+                                    <div className="flex items-center gap-2 text-cyan-400 font-bold text-xs uppercase tracking-widest">
+                                        <div className="h-2 w-2 rounded-full bg-cyan-400" />
+                                        Punto de la Punta (X, Y)
+                                    </div>
+                                    <div className="space-y-3">
+                                        <div>
+                                            <div className="flex justify-between text-[10px] text-white/50 font-bold mb-1">
+                                                <span>Horizontal (X)</span>
+                                                <span className="text-white font-mono">{modernCoords.tX}px</span>
+                                            </div>
+                                            <input 
+                                                type="range" 
+                                                min="0" 
+                                                max="250" 
+                                                step="0.5"
+                                                value={modernCoords.tX}
+                                                onChange={(e) => setModernCoords({ ...modernCoords, tX: parseFloat(e.target.value) })}
+                                                className="w-full accent-cyan-500" 
+                                            />
+                                        </div>
+                                        <div>
+                                            <div className="flex justify-between text-[10px] text-white/50 font-bold mb-1">
+                                                <span>Vertical (Y)</span>
+                                                <span className="text-white font-mono">{modernCoords.tY}px</span>
+                                            </div>
+                                            <input 
+                                                type="range" 
+                                                min="0" 
+                                                max="250" 
+                                                step="0.5"
+                                                value={modernCoords.tY}
+                                                onChange={(e) => setModernCoords({ ...modernCoords, tY: parseFloat(e.target.value) })}
+                                                className="w-full accent-cyan-500" 
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-2 pt-2">
+                                    <button
+                                        onClick={handleResetModernCalib}
+                                        className="flex-1 px-4 py-2.5 rounded-xl border border-white/10 text-white/70 hover:text-white hover:bg-white/5 font-black text-[10px] uppercase tracking-widest transition-all"
+                                    >
+                                        Restablecer
+                                    </button>
+                                    <button
+                                        onClick={handleSaveModernCalib}
+                                        className="flex-1 px-4 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-600 text-black font-black text-[10px] uppercase tracking-widest transition-all shadow-[0_0_20px_rgba(6,182,212,0.2)]"
+                                    >
+                                        Guardar en Eternia
+                                    </button>
+                                    <button
+                                        onClick={() => setShowModernCalibrator(false)}
                                         className="px-4 py-2.5 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 text-white font-black text-[10px] uppercase tracking-widest transition-all"
                                     >
                                         Cerrar
