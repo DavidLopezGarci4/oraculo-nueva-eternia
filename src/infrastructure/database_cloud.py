@@ -8,6 +8,10 @@ from loguru import logger
 # Validación de soberanía: En producción, exigimos conexión Postgres.
 cloud_url = settings.SUPABASE_DATABASE_URL or settings.DATABASE_URL
 
+# Robustness: Strip whitespace and quotes that may have been copy-pasted in env/secrets
+if isinstance(cloud_url, str):
+    cloud_url = cloud_url.strip().strip("'\"")
+
 if cloud_url and "postgresql" in cloud_url:
     logger.info("Cloud DB :: Connection to Supabase/Postgres detected.")
 else:
