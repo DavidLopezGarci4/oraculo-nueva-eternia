@@ -28,8 +28,8 @@ services:
       - SMTP_USER=${SMTP_USER}
       - SMTP_PASS=${SMTP_PASS}
       - SMTP_FROM=${SMTP_FROM}
-    # Multi-worker for production performance (no --reload)
-    command: uvicorn src.interfaces.api.main:app --host 0.0.0.0 --port 8000 --workers 2
+    # Single-worker in production to prevent duplicate background Telegram listeners and conflicts (no --reload)
+    command: uvicorn src.interfaces.api.main:app --host 0.0.0.0 --port 8000 --workers 1
     networks:
       - eternia-net-prod
     restart: always
