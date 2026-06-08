@@ -194,23 +194,24 @@ const Auctions: React.FC<AuctionsProps> = ({ user }) => {
                 </div>
                 
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 w-full lg:w-auto relative z-10">
+                    {/* Row 1 on mobile, left part of single line on desktop */}
                     <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
-                        <div className="flex items-center gap-1 p-0.5 rounded-xl bg-white/[0.03] border border-white/5 h-[38px] sm:h-[42px]">
+                        <div className="flex items-center gap-1 p-0.5 rounded-xl bg-white/[0.03] border border-white/5 h-[38px] sm:h-[42px] flex-1 sm:flex-initial">
                             <button
                                 onClick={() => setSortBy('name')}
-                                className={`h-full rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-[0.05em] transition-all flex items-center justify-center px-3 sm:px-4 ${sortBy === 'name' ? 'bg-brand-primary text-white shadow-[0_0_15px_rgba(14,165,233,0.3)]' : 'text-white/20 hover:text-white/40'}`}
+                                className={`h-full rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-[0.05em] transition-all flex items-center justify-center px-3 sm:px-4 flex-1 sm:flex-initial ${sortBy === 'name' ? 'bg-brand-primary text-white shadow-[0_0_15px_rgba(14,165,233,0.3)]' : 'text-white/20 hover:text-white/40'}`}
                             >
                                 Nombre
                             </button>
                             <button
                                 onClick={() => setSortBy('price')}
-                                className={`h-full rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-[0.05em] transition-all flex items-center justify-center px-3 sm:px-4 ${sortBy === 'price' ? 'bg-brand-primary text-white shadow-[0_0_15px_rgba(14,165,233,0.3)]' : 'text-white/20 hover:text-white/40'}`}
+                                className={`h-full rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-[0.05em] transition-all flex items-center justify-center px-3 sm:px-4 flex-1 sm:flex-initial ${sortBy === 'price' ? 'bg-brand-primary text-white shadow-[0_0_15px_rgba(14,165,233,0.3)]' : 'text-white/20 hover:text-white/40'}`}
                             >
                                 Precio
                             </button>
                             <button
                                 onClick={() => setSortBy('time')}
-                                className={`h-full rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-[0.05em] transition-all flex items-center justify-center px-3 sm:px-4 ${sortBy === 'time' ? 'bg-brand-primary text-white shadow-[0_0_15px_rgba(14,165,233,0.3)]' : 'text-white/20 hover:text-white/40'}`}
+                                className={`h-full rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-[0.05em] transition-all flex items-center justify-center px-3 sm:px-4 flex-1 sm:flex-initial ${sortBy === 'time' ? 'bg-brand-primary text-white shadow-[0_0_15px_rgba(14,165,233,0.3)]' : 'text-white/20 hover:text-white/40'}`}
                             >
                                 Tiempo
                             </button>
@@ -223,10 +224,13 @@ const Auctions: React.FC<AuctionsProps> = ({ user }) => {
                         >
                             {sortOrder === 'asc' ? <ArrowUp className="h-4 w-4 sm:h-5 sm:w-5" /> : <ArrowDown className="h-4 w-4 sm:h-5 sm:w-5" />}
                         </button>
+                    </div>
 
+                    {/* Row 2 on mobile, right part of single line on desktop */}
+                    <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
                         <button
                             onClick={() => setShowOnlyWishlist(prev => !prev)}
-                            className={`h-[38px] px-3 sm:h-[42px] sm:px-4 flex items-center gap-1.5 rounded-xl border transition-all shrink-0 shadow-md text-[9px] sm:text-[10px] font-black uppercase tracking-wider ${
+                            className={`h-[38px] px-3 sm:h-[42px] sm:px-4 flex items-center justify-center gap-1.5 rounded-xl border transition-all shrink-0 shadow-md text-[9px] sm:text-[10px] font-black uppercase tracking-wider flex-1 sm:flex-initial ${
                                 showOnlyWishlist 
                                     ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/35 shadow-[0_0_15px_rgba(234,179,8,0.25)]' 
                                     : 'bg-white/[0.03] border-white/5 text-white/50 hover:bg-white/10 hover:text-white/70'
@@ -234,18 +238,18 @@ const Auctions: React.FC<AuctionsProps> = ({ user }) => {
                             title="Filtrar solo artículos en Lista de Deseos"
                         >
                             <Star className={`h-3.5 w-3.5 ${showOnlyWishlist ? 'fill-yellow-400' : ''}`} />
-                            <span>Solo Deseos</span>
+                            <span className="leading-none pt-[1px]">Solo Deseos</span>
                         </button>
-                    </div>
 
-                    <div className="flex items-center justify-between sm:justify-start gap-3 rounded-xl sm:rounded-2xl bg-white/[0.03] px-4 py-2 sm:py-2.5 border border-white/5 backdrop-blur-3xl w-full sm:w-auto h-[38px] sm:h-[42px]">
-                        <div className="flex items-center gap-2">
-                            <Gavel className="h-4 w-4 sm:h-5 sm:w-5 text-brand-primary" />
-                            <span className="text-lg sm:text-xl font-black text-white leading-none">{sortedProducts?.length}</span>
+                        <div className="flex items-center justify-between sm:justify-start gap-3 rounded-xl sm:rounded-2xl bg-white/[0.03] px-4 py-2 sm:py-2.5 border border-white/5 backdrop-blur-3xl h-[38px] sm:h-[42px] flex-1 sm:flex-initial">
+                            <div className="flex items-center gap-2">
+                                <Gavel className="h-4 w-4 sm:h-5 sm:w-5 text-brand-primary" />
+                                <span className="text-lg sm:text-xl font-black text-white leading-none">{sortedProducts?.length}</span>
+                            </div>
+                            <span className="text-[8px] sm:text-[9px] font-black text-white/20 uppercase tracking-[0.15em] pt-0.5 leading-tight text-right sm:text-left">
+                                Subastas<br className="sm:hidden" /> Filtradas
+                            </span>
                         </div>
-                        <span className="text-[8px] sm:text-[9px] font-black text-white/20 uppercase tracking-[0.15em] pt-0.5 leading-tight text-right sm:text-left">
-                            Subastas<br className="sm:hidden" /> Filtradas
-                        </span>
                     </div>
                 </div>
             </div>
