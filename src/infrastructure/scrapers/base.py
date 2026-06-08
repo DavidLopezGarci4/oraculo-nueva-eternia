@@ -170,7 +170,13 @@ class BaseScraper(ABC):
     async def _random_sleep(self, min_sec: float = 0.5, max_sec: float = 2.0):
         await asyncio.sleep(random.uniform(min_sec, max_sec))
 
-    async def _curl_get(self, url: str, impersonate: str = "chrome120", use_scraperapi: bool = False) -> Optional[str]:
+    async def _curl_get(
+        self, 
+        url: str, 
+        impersonate: str = "chrome120", 
+        use_scraperapi: bool = False,
+        scraperapi_params: dict = None
+    ) -> Optional[str]:
         """
         Stealth GET request using curl-cffi impersonation.
         Bypasses most TLS-based bot detection.
@@ -180,7 +186,12 @@ class BaseScraper(ABC):
             api_key = os.environ.get("SCRAPERAPI_KEY")
             if use_scraperapi and api_key and os.environ.get("GITHUB_ACTIONS") == "true":
                 import urllib.parse
-                scraperapi_url = f"http://api.scraperapi.com?api_key={api_key}&url={urllib.parse.quote(url)}"
+                params = {"api_key": api_key, "url": url}
+                if scraperapi_params:
+                    params.update(scraperapi_params)
+                
+                query_string = urllib.parse.urlencode(params)
+                scraperapi_url = f"http://api.scraperapi.com?{query_string}"
                 self._log(f"📡 Ruteando a través de ScraperAPI: {url}")
                 # For ScraperAPI, do NOT send custom headers since ScraperAPI manages them
                 async with AsyncSession() as session:

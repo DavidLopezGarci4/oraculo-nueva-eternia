@@ -58,7 +58,12 @@ class AmazonScraper(BaseScraper):
     async def _fast_infiltration(self, url: str, search_query: str) -> List[ScrapedOffer]:
         """Attempt fast extraction via curl-cffi."""
         offers = []
-        html = await self._curl_get(url, impersonate="chrome120", use_scraperapi=True)
+        html = await self._curl_get(
+            url, 
+            impersonate="chrome120", 
+            use_scraperapi=True,
+            scraperapi_params={"premium": "true", "country_code": "es"}
+        )
         
         if not html:
             return []
