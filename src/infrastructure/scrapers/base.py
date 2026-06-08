@@ -1,3 +1,4 @@
+import os
 import sys
 import io
 import asyncio
@@ -169,12 +170,29 @@ class BaseScraper(ABC):
     async def _random_sleep(self, min_sec: float = 0.5, max_sec: float = 2.0):
         await asyncio.sleep(random.uniform(min_sec, max_sec))
 
-    async def _curl_get(self, url: str, impersonate: str = "chrome120") -> Optional[str]:
+    async def _curl_get(self, url: str, impersonate: str = "chrome120", use_scraperapi: bool = False) -> Optional[str]:
         """
         Stealth GET request using curl-cffi impersonation.
         Bypasses most TLS-based bot detection.
+        Optionally routes through ScraperAPI on cloud.
         """
         try:
+            api_key = os.environ.get("SCRAPERAPI_KEY")
+            if use_scraperapi and api_key and os.environ.get("GITHUB_ACTIONS") == "true":
+                import urllib.parse
+                scraperapi_url = f"http://api.scraperapi.com?api_key={api_key}&url={urllib.parse.quote(url)}"
+                self._log(f"📡 Ruteando a través de ScraperAPI: {url}")
+                # For ScraperAPI, do NOT send custom headers since ScraperAPI manages them
+                async with AsyncSession() as session:
+                    resp = await session.get(scraperapi_url, timeout=60)
+                    if resp.status_code == 200:
+                        return resp.text
+                    
+                    self._log(f"❌ ScraperAPI devolvió HTTP {resp.status_code} para {url}", level="error")
+                    if resp.status_code in [403, 429]:
+                        self.blocked = True
+                    return None
+            
             headers = self._get_random_header()
             async with AsyncSession() as session:
                 self._log(f"🌩️ Infiltración vía curl-cffi (impersonate={impersonate}) a {url}...")

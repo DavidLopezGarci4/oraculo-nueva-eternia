@@ -32,11 +32,11 @@ class AmazonScraper(BaseScraper):
         """
         Searches Amazon.es for MOTU Origins items.
         Evolved Strategy (Sirius A1): 
-        1. Try curl-cffi for fast infiltration.
-        2. If blocked or 0 items, escalate to Playwright with Human Interaction (Session Legitimization).
+        1. Try curl-cffi for fast infiltration (routed via ScraperAPI on GHA if key is present).
+        2. If blocked or 0 items, escalate to Playwright with Human Interaction (Session Legitimization) ONLY when running locally.
         """
-        if os.environ.get("GITHUB_ACTIONS") == "true":
-            self._log("⚠️ Amazon.es: Detectado entorno GitHub Actions (Azure IP bloqueado por Cloud WAF). Saltando búsqueda de ofertas.")
+        if os.environ.get("GITHUB_ACTIONS") == "true" and not os.environ.get("SCRAPERAPI_KEY"):
+            self._log("⚠️ Amazon.es: Detectado entorno GitHub Actions sin SCRAPERAPI_KEY (Azure IP bloqueado por Cloud WAF). Saltando búsqueda.")
             return []
             
         search_query = "masters of the universe origins" if query == "auto" else query
@@ -45,11 +45,11 @@ class AmazonScraper(BaseScraper):
         
         self._log(f"🕸️ Amazon.es: Iniciando incursión para '{search_query}'...")
         
-        # Phase 1: Fast Infiltration (curl-cffi)
+        # Phase 1: Fast Infiltration (curl-cffi / ScraperAPI)
         offers = await self._fast_infiltration(url, search_query)
         
-        # Phase 2: Tactical Escalation (Playwright Human-Like)
-        if not offers or self.blocked:
+        # Phase 2: Tactical Escalation (Playwright Human-Like) - Local only
+        if (not offers or self.blocked) and os.environ.get("GITHUB_ACTIONS") != "true":
             self._log(f"⚠️ Amazon.es: Infiltración rápida fallida o bloqueada. Escalamiento a Sirius A1 (Buscador Humano)...", level="warning")
             offers = await self._sirius_a1_human_search(search_query)
         
@@ -58,7 +58,7 @@ class AmazonScraper(BaseScraper):
     async def _fast_infiltration(self, url: str, search_query: str) -> List[ScrapedOffer]:
         """Attempt fast extraction via curl-cffi."""
         offers = []
-        html = await self._curl_get(url, impersonate="chrome120")
+        html = await self._curl_get(url, impersonate="chrome120", use_scraperapi=True)
         
         if not html:
             return []

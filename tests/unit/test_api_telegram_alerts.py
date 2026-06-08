@@ -4,6 +4,10 @@ from unittest.mock import AsyncMock, patch, MagicMock
 from src.infrastructure.scrapers.pipeline import check_and_send_multiuser_alerts
 from src.domain.models import UserModel, ProductModel, CollectionItemModel, PriceAlertModel
 
+@pytest.fixture
+def anyio_backend():
+    return "asyncio"
+
 @pytest.mark.anyio
 async def test_check_and_send_multiuser_alerts_wishlist():
     db = MagicMock()

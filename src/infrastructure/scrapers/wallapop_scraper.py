@@ -56,20 +56,24 @@ class WallapopScraper(BaseScraper):
             }
             
             try:
-                # Opcional: Warm-up visitando la home
-                try:
-                    await session.get("https://es.wallapop.com/", headers={"User-Agent": user_agent}, timeout=10)
-                    await asyncio.sleep(1.0)
-                except Exception:
-                    pass
+                import urllib.parse
+                target_url = "https://api.wallapop.com/api/v3/general/search?" + urllib.parse.urlencode(params)
                 
-                response = await session.get(
-                    "https://api.wallapop.com/api/v3/general/search",
-                    params=params,
-                    headers=headers,
-                    impersonate="chrome120",
-                    timeout=15
-                )
+                api_key = os.environ.get("SCRAPERAPI_KEY")
+                if api_key and os.environ.get("GITHUB_ACTIONS") == "true":
+                    scraperapi_url = f"http://api.scraperapi.com?api_key={api_key}&url={urllib.parse.quote(target_url)}"
+                    self._log(f"📡 Ruteando Wallapop API a través de ScraperAPI...")
+                    response = await session.get(
+                        scraperapi_url,
+                        timeout=30
+                    )
+                else:
+                    response = await session.get(
+                        target_url,
+                        headers=headers,
+                        impersonate="chrome120",
+                        timeout=15
+                    )
                 
                 if response.status_code == 200:
                     data = response.json()
@@ -140,9 +144,9 @@ class WallapopScraper(BaseScraper):
         offers: List[ScrapedOffer] = []
         
         # CloudFront blocks GitHub Actions Azure IP ranges completely.
-        # To avoid constant false block alerts and WAF log clutter, we skip Wallapop in GitHub Actions.
-        if os.environ.get("GITHUB_ACTIONS") == "true":
-            self._log("⚠️ Wallapop: Detectado entorno GitHub Actions (Azure IP bloqueado por CloudFront). Saltando búsqueda de ofertas.")
+        # To avoid constant false block alerts and WAF log clutter, we skip Wallapop in GitHub Actions if no ScraperAPI key is set.
+        if os.environ.get("GITHUB_ACTIONS") == "true" and not os.environ.get("SCRAPERAPI_KEY"):
+            self._log("⚠️ Wallapop: Detectado entorno GitHub Actions sin SCRAPERAPI_KEY (Azure IP bloqueado por CloudFront). Saltando búsqueda.")
             return []
             
         # 1. Configuración inteligente de palabras clave
@@ -183,7 +187,18 @@ class WallapopScraper(BaseScraper):
             self._log(f"🚀 Wallapop API: Búsqueda completada con éxito. {self.items_scraped} reliquias encontradas sin levantar navegador.")
             return unique_offers
             
-        # --- INTENTO 2: FALLBACK CON PLAYWRIGHT Y PERFIL PERSISTENTE ---
+        # --- INTENTO 2: FALLBACK CON PLAYWRIGHT Y PERFIL PERSISTENTE (Solo local) ---
+        if os.environ.get("GITHUB_ACTIONS") == "true":
+            self._log("⚠️ Wallapop: API directa fallida en GitHub Actions. Saltando fallback de Playwright para evitar bloqueos CloudWAF.")
+            seen_urls = set()
+            unique_offers = []
+            for o in api_offers:
+                if o.url not in seen_urls:
+                    seen_urls.add(o.url)
+                    unique_offers.append(o)
+            self.items_scraped = len(unique_offers)
+            return unique_offers
+
         self._log("🌐 Wallapop Fallback: La API directa no ha retornado datos. Levantando navegador Playwright...", level="warning")
         
         user_data_dir = os.path.join(tempfile.gettempdir(), "playwright_wallapop_profile")
