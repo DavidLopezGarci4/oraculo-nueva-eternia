@@ -17,7 +17,7 @@ if exist ".venv\Scripts\activate.bat" (
 )
 
 echo [2/3] Iniciando Escaneo Diario y Backup...
-python -m src.jobs.daily_scan
+python -m src.application.jobs.daily_scan
 
 echo.
 echo [3/3] Fin del Proceso.

@@ -35,6 +35,10 @@ class AmazonScraper(BaseScraper):
         1. Try curl-cffi for fast infiltration.
         2. If blocked or 0 items, escalate to Playwright with Human Interaction (Session Legitimization).
         """
+        if os.environ.get("GITHUB_ACTIONS") == "true":
+            self._log("⚠️ Amazon.es: Detectado entorno GitHub Actions (Azure IP bloqueado por Cloud WAF). Saltando búsqueda de ofertas.")
+            return []
+            
         search_query = "masters of the universe origins" if query == "auto" else query
         url = f"{self.search_url}{search_query.replace(' ', '+')}"
         self.blocked = False
