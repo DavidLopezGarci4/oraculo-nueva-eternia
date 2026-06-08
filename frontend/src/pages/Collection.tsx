@@ -454,6 +454,17 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                                                     <span className={`px-1 py-0.5 rounded-md text-[6px] sm:text-[7px] font-black uppercase tracking-wider ${grading >= 9 ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-brand-primary/10 text-brand-primary border-brand-primary/20'}`}>
                                                         {grading.toFixed(1)}
                                                     </span>
+                                                    {product.purchase_price && product.purchase_price > 0 ? (
+                                                        <span className={`px-1 py-0.5 rounded-md text-[6px] sm:text-[7px] font-black uppercase tracking-wider flex items-center gap-0.5 border ${isVintageOnly ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'bg-brand-primary/10 text-brand-primary border-brand-primary/20'}`} title={`Inversión manual: ${product.purchase_price}€`}>
+                                                            <ShoppingCart className="h-2 w-2" />
+                                                            {product.purchase_price.toFixed(0)}€
+                                                        </span>
+                                                    ) : (
+                                                        <span className="px-1 py-0.5 rounded-md bg-white/5 border border-white/10 text-white/20 text-[6px] sm:text-[7px] font-black uppercase tracking-wider flex items-center gap-0.5" title="Inversión por defecto (0€)">
+                                                            <ShoppingCart className="h-2 w-2 opacity-30" />
+                                                            --
+                                                        </span>
+                                                    )}
                                                 </div>
                                             )}
                                         </div>

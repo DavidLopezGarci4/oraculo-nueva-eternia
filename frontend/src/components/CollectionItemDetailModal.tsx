@@ -26,7 +26,9 @@ interface CollectionItemDetailModalProps {
 
 const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ product, userId, onClose }) => {
     const queryClient = useQueryClient();
-    const [price, setPrice] = useState<number>(product.purchase_price || 0);
+    const [price, setPrice] = useState<string>(
+        product.purchase_price && product.purchase_price > 0 ? String(product.purchase_price) : ''
+    );
     const [condition, setCondition] = useState<string>(product.condition || 'New');
     const [grading, setGrading] = useState<number>(product.grading || 10.0);
     const [notes, setNotes] = useState<string>(product.notes || '');
@@ -39,7 +41,7 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
 
     const updateMutation = useMutation({
         mutationFn: () => updateCollectionItem(product.id, userId, {
-            purchase_price: price,
+            purchase_price: price === '' ? 0.0 : (parseFloat(price) || 0.0),
             condition,
             grading,
             notes,
@@ -73,8 +75,9 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
     const multiplier = getMultiplier(condition, grading);
     const baseMarketVal = product.market_value || 0;
     const adjustedMarketVal = baseMarketVal * multiplier;
-    const profitLoss = adjustedMarketVal - price;
-    const roi = price > 0 ? (profitLoss / price) * 100 : 0;
+    const numericPrice = price === '' ? 0.0 : (parseFloat(price) || 0.0);
+    const profitLoss = adjustedMarketVal - numericPrice;
+    const roi = numericPrice > 0 ? (profitLoss / numericPrice) * 100 : 0;
 
     return (
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/90 backdrop-blur-xl p-2 md:p-10 animate-in fade-in duration-300">
@@ -126,9 +129,16 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
                                 <span className="text-[7px] sm:text-[8px] font-black text-white/60 uppercase tracking-widest block">Inversión (Tu Precio)</span>
                                 <div className="flex items-baseline gap-1">
                                     <input
-                                        type="number"
+                                        type="text"
+                                        inputMode="decimal"
                                         value={price}
-                                        onChange={(e) => setPrice(parseFloat(e.target.value) || 0)}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            if (val === '' || /^[0-9]*([.,][0-9]*)?$/.test(val)) {
+                                                setPrice(val.replace(',', '.'));
+                                            }
+                                        }}
+                                        placeholder="0"
                                         className="bg-transparent text-base sm:text-2xl font-black text-white border-none focus:ring-0 w-12 sm:w-20 p-0"
                                     />
                                     <span className="text-xs sm:text-lg font-bold text-white/70">€</span>
