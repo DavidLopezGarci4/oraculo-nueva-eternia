@@ -116,7 +116,7 @@ class ScrapeRunReporter:
     @staticmethod
     def _make_run_id(category_name: str) -> str:
         raw = f"{category_name}|{datetime.now(timezone.utc).isoformat()}|{os.getpid()}"
-        return hashlib.sha1(raw.encode("utf-8")).hexdigest()[:12]
+        return hashlib.sha1(raw.encode("utf-8"), usedforsecurity=False).hexdigest()[:12]
 
     def store_start(self, store: str, source_mode: str, category_url: str) -> StoreRun:
         s = StoreRun(store=store, source_mode=source_mode, category_url=category_url)

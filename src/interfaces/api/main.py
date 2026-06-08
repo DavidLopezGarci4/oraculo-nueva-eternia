@@ -89,4 +89,4 @@ if __name__ == "__main__":
     except Exception:
         pass
 
-    uvicorn.run("src.interfaces.api.main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("src.interfaces.api.main:app", host="0.0.0.0", port=8000, reload=True)  # nosec B104

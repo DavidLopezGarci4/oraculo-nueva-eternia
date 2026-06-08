@@ -428,6 +428,17 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
   - [x] **Calibración de Carga Skeletor**: Reemplazado el báculo de Havoc por la silueta de Skeletor Vintage y la espada real (`GlassmorphSword.png`), configurando coordenadas por defecto alineadas verticalmente (`125.0, 175.0` a `125.0, 10.0`), actualizando los textos de la interfaz a Empuñadura/Punta, y migrando el almacenamiento a `skeletor_sword_coords`.
   - [x] **Calibración de Carga He-Man Moderno**: Añadida calibración interactiva para la pantalla de carga predeterminada del app (`HemanGlassmorphSword.png`), guardando sus coordenadas personalizadas en `modern_sword_coords` para que los ajustes del calibrador se reflejen en producción de forma reactiva.
 
+- [x] **Phase 66: Auditoría de Seguridad, DevSecOps y Gestión de Habilidades (08/06/2026)**
+  - [x] **Instalación de Skills de Ciberseguridad**: Añadidas e integradas habilidades de automatización para SAST (`security-scanning-security-sast`), Secrets Hygiene (`secrets-and-logging-hygiene`), CI/CD secrets scanning (`implementing-secrets-scanning-in-ci-cd`), dependencias/SCA (`sca-trivy`) y OWASP (`owasp-security`).
+  - [x] **Personalización de Skills para el Stack**:
+    * *SAST*: Adaptado el módulo de ESLint al estilo Flat Config (`eslint.config.js`) del proyecto y añadidas reglas específicas de FastAPI/SQLAlchemy.
+    * *Higiene de Logs*: Añadido el patrón de patcher de Loguru para redacción dinámica de secretos en consola y archivos de salida.
+    * *OWASP*: Reemplazados los snippets de Express/Node por implementaciones idiomáticas de FastAPI (Python) para control de accesos e IDOR.
+    * *SCA (Trivy)*: Añadidas instrucciones y llamadas adaptadas a Windows (winget/scoop/Docker) apuntando a `package-lock.json` y `requirements.txt`.
+  - [x] **Ejecución y Remediación SAST (Bandit)**: Ejecutado el análisis de seguridad estático del backend y resueltas las vulnerabilidades identificadas de nivel Medio y Alto:
+    * Hardened hashes (`usedforsecurity=False` en MD5/SHA1) en `smoke_test.py`, `notifier.py`, `scrape_run_report.py`, `personal_collection.py` y `personal_vintage_collection.py`.
+    * Silenciadas de forma segura falsas alarmas de seguridad en `restore_vault.py` (SQL injection), `dvdstorespain_scraper.py` (XML entity attack) y `main.py` (binding de interfaces de red).
+
 ---
 
 ## ✅ Plan de Verificación

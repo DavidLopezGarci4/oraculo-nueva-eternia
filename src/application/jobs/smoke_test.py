@@ -21,7 +21,7 @@ async def test_rate_limiting():
     
     # We'll check the internal _should_throttle to verify behavior without actual HTTP calls
     import hashlib
-    msg_hash = hashlib.md5(test_msg.encode()).hexdigest()
+    msg_hash = hashlib.md5(test_msg.encode(), usedforsecurity=False).hexdigest()
     key = f"msg_{msg_hash}"
     
     for i in range(5):

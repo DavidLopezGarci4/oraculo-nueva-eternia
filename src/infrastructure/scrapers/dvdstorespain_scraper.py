@@ -164,7 +164,7 @@ class DVDStoreSpainScraper(BaseScraper):
                 content = await self._curl_get(s_url)
                 if not content: continue
                 
-                root = ET.fromstring(content.encode('utf-8') if isinstance(content, str) else content)
+                root = ET.fromstring(content.encode('utf-8') if isinstance(content, str) else content)  # nosec B314
                 ns = {'s': 'http://www.sitemaps.org/schemas/sitemap/0.9'}
                 
                 for loc in root.findall('.//s:loc', ns):

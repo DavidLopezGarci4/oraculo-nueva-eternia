@@ -480,7 +480,7 @@ def unique_sheet_name(title: str, used: Set[str]) -> str:
             return candidate
         counter += 1
         if counter > 99:
-            h = hashlib.sha1(title.encode("utf-8")).hexdigest()[:4]
+            h = hashlib.sha1(title.encode("utf-8"), usedforsecurity=False).hexdigest()[:4]
             base2 = (base[:31 - 5]) + "_" + h
             base = base2
             counter = 2

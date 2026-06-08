@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "skills": {
+    "implementing-secrets-scanning-in-ci-cd": {
+      "source": "mukul975/Anthropic-Cybersecurity-Skills",
+      "sourceType": "github",
+      "skillPath": "skills/implementing-secrets-scanning-in-ci-cd/SKILL.md",
+      "computedHash": "a7c27eb5b8538d6d1fbe8aa27509b0bc704eea90e867b22f3a17d0a9af9d9c8b"
+    },
+    "owasp-security": {
+      "source": "hoodini/ai-agents-skills",
+      "sourceType": "github",
+      "skillPath": "skills/owasp-security/SKILL.md",
+      "computedHash": "880d7aa73b001e7e28b9562639defeff11c073d958fe5a253eeea572539439a2"
+    },
+    "sca-trivy": {
+      "source": "aiskillstore/marketplace",
+      "sourceType": "github",
+      "skillPath": "skills/agentsecops/sca-trivy/SKILL.md",
+      "computedHash": "8936a208d209e3ec45acaf9c73623e67b32a5b522a1f0b5c1a2d9e53ee835390"
+    },
+    "secrets-and-logging-hygiene": {
+      "source": "Robotti-io/copilot-security-instructions",
+      "sourceType": "github",
+      "skillPath": "skills/secrets-and-logging-hygiene/SKILL.md",
+      "computedHash": "e7deb991b69cc5712be3dff814451102a318b8d0d765f25f48f3b96509b29657"
+    },
+    "security-scanning-security-sast": {
+      "source": "sickn33/antigravity-awesome-skills",
+      "sourceType": "github",
+      "skillPath": "skills/security-scanning-security-sast/SKILL.md",
+      "computedHash": "6a9250098d843ac0ef79b2c5b4f6fac596f82b4b4ed75fa3df3c417253698781"
+    }
+  }
+}

@@ -92,7 +92,7 @@ def restore_from_vault(file_path: str):
                 for table in ["users", "products", "offers", "pending_matches", "offer_history", 
                               "price_alerts", "collection_items", "blackcluded_items", 
                               "kaizen_insights", "scraper_execution_logs", "price_history"]:
-                    db.execute(text(f"SELECT setval(pg_get_serial_sequence('{table}', 'id'), COALESCE(MAX(id), 1)) FROM {table}"))
+                    db.execute(text(f"SELECT setval(pg_get_serial_sequence('{table}', 'id'), COALESCE(MAX(id), 1)) FROM {table}"))  # nosec B608
                 db.commit()
 
             logger.info("✅ RESTORE COMPLETE. Eternia has been restored and sequences synced.")

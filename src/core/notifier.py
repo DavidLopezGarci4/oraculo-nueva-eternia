@@ -107,7 +107,7 @@ class NotifierService:
 
         # Rate limit based on message content to avoid alert loops
         import hashlib
-        msg_hash = hashlib.md5(text.encode()).hexdigest()
+        msg_hash = hashlib.md5(text.encode(), usedforsecurity=False).hexdigest()
         if self._should_throttle(f"msg_{msg_hash}", minutes=30):
             logger.warning(f"Throttling duplicate message: {text[:50]}...")
             return

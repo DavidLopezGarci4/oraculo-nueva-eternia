@@ -1053,3 +1053,17 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
   - **Reclasificación MOC para David**: Migración de colección de David y actualización de los scripts de merges y seeds para por defecto usar el estado MOC para sus figuras en caja.
   - **Calibradores y Scroll Vertical**: Soporte de scroll vertical completo en calibradores de haz de luz He-Man Vintage (Espada de Poder), He-Man Moderno (HemanGlassmorphSword.png) y calibrador de Skeletor Vintage (Espada de Skeletor, usando la imagen real GlassmorphSword.png con coordenadas horizontales centradas a 125.0) con persistencia local para evitar desbordamiento y recortes en dispositivos móviles, trasladando de manera inmediata los haces de luz a todas las zonas de la app en producción.
   - **Bypass de Wallapop en GHA**: Desactivación del scraping de Wallapop en entornos GitHub Actions para evitar bloqueos del WAF de CloudFront en los rangos de IP de Azure, manteniendo la robustez del scraping local.
+
+### 🛡️ Fase 65: Auditoría de Seguridad, DevSecOps y Habilidades (08/06/2026)
+
+- **Hitos**: Integración y personalización de herramientas de ciberseguridad y análisis automatizado de dependencias y vulnerabilidades.
+- **Estado**: ✅ COMPLETADO
+- **Logros Técnicos**:
+  - **Instalación de Skills de Seguridad**: Añadidas e integradas habilidades de automatización para SAST (`security-scanning-security-sast`), Higiene de Logs (`secrets-and-logging-hygiene`), Auditoría de dependencias (`sca-trivy`) y OWASP (`owasp-security`).
+  - **Flat Config ESLint**: Adaptado el módulo de linting de seguridad de ESLint para operar sobre el sistema de configuración moderno Flat Config (`eslint.config.js`) del frontend de React/TypeScript.
+  - **Loguru Patcher**: Configurado un filtro de expresión regular y enmascaramiento dinámico (Loguru Patcher) para evitar que secretos, tokens de Supabase o contraseñas terminen en los logs de la aplicación.
+  - **FastAPI / SQLAlchemy OWASP**: Remplazados los ejemplos de Node.js por implementaciones de FastAPI (Python) para control de accesos e IDOR.
+  - **Integración Windows/Docker para Trivy**: Ajustadas las directrices de Software Composition Analysis (SCA) para ser ejecutadas localmente en Windows (con winget/scoop/Docker) escaneando archivos `package-lock.json` y `requirements.txt`.
+  - **Ejecución y Remediación SAST (Bandit)**: Ejecutado escaneo de seguridad en el backend resolviendo todas las alertas de severidad Media y Alta:
+    * Hardened hashes (`usedforsecurity=False` en llamadas a MD5 y SHA1) en `smoke_test.py`, `notifier.py`, `scrape_run_report.py`, `personal_collection.py` y `personal_vintage_collection.py`.
+    * Silenciado seguro de falsos positivos en la restauración de base de datos (`restore_vault.py`), descarga de sitemaps XML (`dvdstorespain_scraper.py`) y bind de interfaces de red uvicorn (`main.py`).
