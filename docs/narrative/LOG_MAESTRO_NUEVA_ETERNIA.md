@@ -1102,3 +1102,13 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
   - **Componente React MOTUImage**: Creado `MOTUImage.tsx` para interceptar la carga de imágenes. Lee la preferencia del localStorage (`use_local_images`). Si está activa, intenta cargar la imagen local `/api/static/images/{productId}.jpg` y, en caso de fallar o retornar error 404, cae inmediatamente al hotlink remoto original (onError fallback), previniendo imágenes rotas.
   - **Integración de Ajustes de Caché**: Añadida una tarjeta de control premium en la pestaña Ajustes de `Config.tsx` que permite activar/desactivar el caché local de imágenes y muestra el progreso de descarga de imágenes en tiempo real mediante una barra de progreso HSL/glassmorphism interactiva con botón de cancelación.
   - **Transición de Vistas del Frontend**: Reemplazadas las etiquetas `<img>` estándar por `<MOTUImage productId={...}>` en las páginas del Tablero (`Dashboard.tsx`), Catálogo (`Catalog.tsx`), Colección (`Collection.tsx`), Showcase Público (`Showcase.tsx`) y Vintage (`Vintage.tsx`).
+
+### 🛡️ Fase 69: Apertura Controlada de Ajustes y Excel Bridge Selectivo (09/06/2026)
+
+- **Hitos**: Habilitación del acceso al panel de Ajustes en la barra lateral para todos los roles de usuario (Guardianes y Administradores) y restricción del Excel Bridge exclusivamente para David/Admins.
+- **Estado**: ✅ COMPLETADO Y EN PRODUCCIÓN
+- **Logros Técnicos**:
+  - **Acceso Democrático a Ajustes**: Modificado `Sidebar.tsx` para eliminar la restricción que impedía a los usuarios con perfil Guardián acceder a la sección de Configuración (`Settings`).
+  - **Excel Bridge Seguro**: Restringido el renderizado y uso del panel "Excel Bridge" en `Config.tsx` mediante comprobación `{isAdmin && (...)}` para evitar que usuarios externos o remotos desencadenen sincronizaciones del archivo Excel que reside en el disco duro del servidor local (carpeta `data/MOTU/` del PC).
+  - **Preservación de Autonomía de Guardianes**: Los Guardianes mantienen el acceso activo a las opciones de Ubicación Geográfica, Santuario Público y Caché de Imágenes Local, preservando su configuración independiente.
+

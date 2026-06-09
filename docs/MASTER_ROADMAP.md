@@ -459,6 +459,11 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
   - [x] **Integración en Configuración**: Tarjeta de ajustes en Configuración con toggle de habilitación de imágenes locales y barra interactiva de progreso de descarga con opción de cancelación.
   - [x] **Etiquetas de Imagen Actualizadas**: Swappeados los elementos `<img>` tradicionales por `<MOTUImage>` en Showcase, Collection, Catalog, Vintage y Dashboard.
 
+- [x] **Phase 69: Apertura Controlada de Ajustes y Excel Bridge Selectivo (09/06/2026)**
+  - [x] **Acceso Democrático a Ajustes**: Modificado `Sidebar.tsx` para permitir el acceso a Configuración a los Guardianes.
+  - [x] **Excel Bridge Seguro**: Restringido el panel de Excel Bridge en `Config.tsx` a administradores (`isAdmin`), ocultándolo para los Guardianes.
+  - [x] **Preservación de Autonomía de Guardianes**: Los Guardianes mantienen el control activo de Ubicación Geográfica, Santuario Público y Caché de Imágenes Local.
+
 ---
 
 ## ✅ Plan de Verificación
