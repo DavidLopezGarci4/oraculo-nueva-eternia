@@ -443,6 +443,15 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
     * *Alertas Multi-usuario*: Añadida columna `telegram_chat_id` en la tabla `users`. El pipeline ahora cruza de forma reactiva las nuevas ofertas con las listas de deseos y alertas de precio (`PriceAlertModel`) de cada Guardián registrado.
     * *Auditoría de Telemetría*: Creado `data/telegram_telemetry.json` para almacenamiento atómico de eventos y redactada la guía de datos y utilidad en `docs/AUDITORIA_TELEGRAM.md`.
 
+
+- [x] **Phase 67: Optimización Extrema, Bypass de proxies en Amazon y Trazabilidad Operativa (09/06/2026)**
+  - [x] **Lazy Keep-Alive en Frontend**: Alternancia de pestañas persistente mediante la clase CSS `hidden` en `App.tsx` para evitar desmontar páginas, mejorando el TTI y preservando el scroll a 0ms.
+  - [x] **Saneamiento del Campo de Inversión y Badges**: Inputs de precio vacíos por defecto con coerción segura a 0.0 y badge de carrito de compra para precios personalizados.
+  - [x] **Amazon Bypass con Proxies Premium**: Configuración de `premium=true` y `country_code=es` en ScraperAPI para eludir el WAF de Amazon.es.
+  - [x] **Saneamiento de SUPABASE_DATABASE_URL**: Strip automático de espacios y comillas en `database_cloud.py`.
+  - [x] **Prevención de conflictos de Telegram**: Reducción a 1 worker de Uvicorn en docker-compose para evitar errores de colisión 409 webhook/listener.
+  - [x] **CI Actions (Node 20)**: Actualización de workflows de GitHub Actions para silenciar advertencias de obsolescencia.
+
 ---
 
 ## ✅ Plan de Verificación

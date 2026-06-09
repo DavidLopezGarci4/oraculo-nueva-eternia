@@ -1,7 +1,7 @@
 import httpx
 import logging
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 from src.core.config import settings
@@ -28,7 +28,7 @@ class TelegramService:
             telemetry_file.parent.mkdir(parents=True, exist_ok=True)
             
             log_entry = {
-                "timestamp": datetime.utcnow().isoformat() + "Z",
+                "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
                 "event_type": event_type,
                 "payload": payload
             }

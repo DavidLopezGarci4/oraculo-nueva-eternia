@@ -182,4 +182,13 @@ Ejecutar: `.venv\Scripts\python -m pytest` (33 tests, 0 fallos)
 
 ---
 
-*Última actualización: 2026-06-08 - Phase 66: Bot de Telegram Bidireccional y Alertas Multi-usuario.*
+
+- **Phase 67**: Optimización Extrema, Bypass de proxies en Amazon y Trazabilidad Operativa (09/06/2026):
+  - Implementación de Lazy Keep-Alive en `App.tsx` para persistencia en memoria de pestañas y aceleración de transiciones a 0ms.
+  - Refactorización de inputs de inversión en `CollectionItemDetailModal.tsx` (vacíos por defecto) y badges de compra en `Collection.tsx`.
+  - Configuración de ScraperAPI con proxies residenciales en España (`premium=true`, `country_code=es`) para eludir bloqueos WAF en Amazon.es.
+  - Sanitización robusta de comillas en la cadena de conexión de `database_cloud.py`.
+  - Reducción de workers de Uvicorn a 1 en contenedores de producción para eliminar colisiones del receptor de Telegram.
+  - Corrección de advertencias Node.js 20 en GitHub Actions (`ci.yml`).
+
+*Última actualización: 2026-06-09 - Phase 67: Carga Instantánea, Proxies Premium Amazon y Resiliencia Operativa.*

@@ -202,7 +202,7 @@ El cÃ³digo en producciÃ³n no vive en tu PC, vive en una instancia **ARM A1 (
 
 El despliegue en Oracle Cloud se realiza mediante `docker-compose.prod.yml`, que encapsula toda la complejidad:
 
-1. **Backend (FastAPI):** Se despliega bajo un contenedor con la instrucciÃ³n `uvicorn --workers 2`, optimizando el rendimiento para producciÃ³n en la arquitectura ARM. Consume el archivo `.env` que le inyectas en el servidor.
+1. **Backend (FastAPI):** Se despliega bajo un contenedor con la instrucciÃ³n `uvicorn --workers 1 (reducido a 1 para evitar conflictos de webhook 409 con el bot listener de Telegram)`, optimizando el rendimiento para producciÃ³n en la arquitectura ARM. Consume el archivo `.env` que le inyectas en el servidor.
 2. **Frontend (Nginx Proxy):** El contenedor de React no se sirve directamente. Se sirve a travÃ©s de **Nginx** (puertos 80/443), el cual intercepta el trÃ¡fico.
 3. **Blindaje SSL (Certbot):** Nginx utiliza certificados SSL generados por *Certbot* (Let's Encrypt), los cuales estÃ¡n mapeados en volÃºmenes (`/etc/letsencrypt`) entre la mÃ¡quina host y el contenedor.
 

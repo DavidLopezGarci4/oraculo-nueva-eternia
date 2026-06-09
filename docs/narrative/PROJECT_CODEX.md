@@ -132,5 +132,16 @@ El sistema incorpora características estratégicas de alto valor y bajo impacto
 
 ---
 
-*Última actualización: 07/06/2026 - Fase 61: Características Pareto 80/20 y Blindaje Wallapop.*
+
+
+### 12. Optimización Extrema de Renderizado (Fase 67)
+
+El Oráculo maximiza la respuesta y fluidez de la interfaz mediante técnicas no invasivas:
+- **Persistencia Lazy Keep-Alive**: Para evitar desensamblar el DOM en React al cambiar de pestaña, se usa una técnica híbrida en `App.tsx`. Los componentes se renderizan bajo demanda (Lazy) pero persisten montados usando la clase CSS `hidden` de Tailwind. Esto conserva el scroll y los estados cargados en memoria, acelerando el tiempo de respuesta visual a 0ms.
+- **Limpieza de Sesión Activa**: Al cambiar de identidad de usuario o cerrar la sesión, el estado del keep-alive y sus cachés de datos se limpian por completo, evitando que se muestren datos residuales (fugas de información horizontal).
+- **Sanitización del Ecosistema Operativo**:
+  - *Inputs Vacíos de Inversión*: Inputs de importes financieros vacíos por defecto, forzando `0.0` solo en la persistencia del backend si se omiten. Valida expresiones regulares de puntos y comas indistintamente.
+  - *Badges Visuales de Compra*: Visualización semántica (`ShoppingCart` en oro/cromo) en la Fortaleza para discernir las piezas donde se configuró un precio de adquisición personalizado, manteniendo el `--` limpio en las figuras que usan el promedio de mercado.
+
+*Última actualización: 09/06/2026 - Fase 67: Optimización Extrema, Bypass de proxies en Amazon y Trazabilidad Operativa.*
 
