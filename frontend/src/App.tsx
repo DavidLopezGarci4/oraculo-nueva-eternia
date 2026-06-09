@@ -28,6 +28,14 @@ function App() {
   const [isSovereign, setIsSovereign] = useState<boolean>(localStorage.getItem('is_sovereign') === 'true');
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(localStorage.getItem('is_logged_in') === 'true');
   const [activeUserId, setActiveUserId] = useState<number>(parseInt(localStorage.getItem('active_user_id') || '2'));
+  const [visitedTabs, setVisitedTabs] = useState<Record<string, boolean>>({ dashboard: true });
+
+  useEffect(() => {
+    if (isLoggedIn || isSovereign) {
+      setVisitedTabs(prev => ({ ...prev, [activeTab]: true }));
+    }
+  }, [activeTab, isLoggedIn, isSovereign]);
+
 
   const fetchUser = async (userId: number) => {
     try {
@@ -72,6 +80,8 @@ function App() {
     setCurrentUser(null);
     setIsSovereign(false);
     setActiveUserId(2);
+    setVisitedTabs({ dashboard: true });
+    setActiveTab('dashboard');
   };
 
   const handleIdentityChange = async (targetId?: number) => {
@@ -79,6 +89,8 @@ function App() {
     const newId = targetId || (activeUserId === 1 ? 2 : 1);
     localStorage.setItem('active_user_id', newId.toString());
     setActiveUserId(newId);
+    setVisitedTabs({ dashboard: true });
+    setActiveTab('dashboard');
     queryClient.resetQueries();
     await fetchUser(newId);
   };
@@ -174,20 +186,54 @@ function App() {
           <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-24 md:pb-6 scroll-smooth">
             <div className="max-w-7xl mx-auto w-full">
               <ErrorBoundary>
-                {activeTab === 'dashboard' && <Dashboard user={currentUser} />}
-                {activeTab === 'catalog' && <Catalog user={currentUser} searchQuery={searchQuery} />}
-                {activeTab === 'eternia' && <Catalog user={currentUser} isVintageOnly={true} searchQuery={searchQuery} />}
-                {activeTab === 'auctions' && <Auctions user={currentUser} />}
-                {activeTab === 'collection' && <Collection user={currentUser} searchQuery={searchQuery} />}
-                {activeTab === 'fortaleza_vintage' && <Collection user={currentUser} isVintageOnly={true} searchQuery={searchQuery} />}
-                {activeTab === 'vintage_miscellaneous' && <VintageMiscellaneous user={currentUser} />}
-                {activeTab === 'purgatory' && <Purgatory />}
-                {activeTab === 'settings' && (
-                  <Config
-                    user={currentUser}
-                    onUserUpdate={() => fetchUser(activeUserId)}
-                    onIdentityChange={handleIdentityChange}
-                  />
+                {visitedTabs['dashboard'] && (
+                  <div className={activeTab === 'dashboard' ? '' : 'hidden'}>
+                    <Dashboard user={currentUser} />
+                  </div>
+                )}
+                {visitedTabs['catalog'] && (
+                  <div className={activeTab === 'catalog' ? '' : 'hidden'}>
+                    <Catalog user={currentUser} searchQuery={searchQuery} />
+                  </div>
+                )}
+                {visitedTabs['eternia'] && (
+                  <div className={activeTab === 'eternia' ? '' : 'hidden'}>
+                    <Catalog user={currentUser} isVintageOnly={true} searchQuery={searchQuery} />
+                  </div>
+                )}
+                {visitedTabs['auctions'] && (
+                  <div className={activeTab === 'auctions' ? '' : 'hidden'}>
+                    <Auctions user={currentUser} />
+                  </div>
+                )}
+                {visitedTabs['collection'] && (
+                  <div className={activeTab === 'collection' ? '' : 'hidden'}>
+                    <Collection user={currentUser} searchQuery={searchQuery} />
+                  </div>
+                )}
+                {visitedTabs['fortaleza_vintage'] && (
+                  <div className={activeTab === 'fortaleza_vintage' ? '' : 'hidden'}>
+                    <Collection user={currentUser} isVintageOnly={true} searchQuery={searchQuery} />
+                  </div>
+                )}
+                {visitedTabs['vintage_miscellaneous'] && (
+                  <div className={activeTab === 'vintage_miscellaneous' ? '' : 'hidden'}>
+                    <VintageMiscellaneous user={currentUser} />
+                  </div>
+                )}
+                {visitedTabs['purgatory'] && (
+                  <div className={activeTab === 'purgatory' ? '' : 'hidden'}>
+                    <Purgatory />
+                  </div>
+                )}
+                {visitedTabs['settings'] && (
+                  <div className={activeTab === 'settings' ? '' : 'hidden'}>
+                    <Config
+                      user={currentUser}
+                      onUserUpdate={() => fetchUser(activeUserId)}
+                      onIdentityChange={handleIdentityChange}
+                    />
+                  </div>
                 )}
               </ErrorBoundary>
             </div>
