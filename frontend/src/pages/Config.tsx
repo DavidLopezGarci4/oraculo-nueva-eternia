@@ -486,7 +486,11 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                         <Terminal className="h-8 w-8 text-brand-primary" />
                         Poderes del <span className="text-brand-primary">{user?.role === 'admin' ? 'Arquitecto' : 'Guardián'} de Nueva Eternia</span>
                     </h2>
-                    <p className="text-white/50">{user?.role === 'admin' ? 'Control absoluto sobre las reliquias y sus fuentes.' : 'Gestiona tu legado personal y sincroniza tu bóveda sagrada.'}</p>
+                    <p className="text-white/50">
+                        {user?.role === 'admin' 
+                            ? 'Administra los scrapers de incursión, el catálogo de reliquias, la gestión de héroes y la calibración del sistema.' 
+                            : 'Configura tu ubicación geográfica, el Santuario público y la caché de imágenes local.'}
+                    </p>
                 </div>
 
                 {user?.role === 'admin' && (
