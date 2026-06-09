@@ -284,14 +284,18 @@ async def edit_product(product_id: int, request: ProductEditRequest):
 
 @router.post("/api/products/merge", dependencies=[Depends(verify_api_key)])
 async def merge_products(request: ProductMergeRequest):
+    from src.domain.models import ProductAliasModel, VintageProductModel, PriceAlertModel
+
     with SessionCloud() as db:
         source = db.query(ProductModel).filter(ProductModel.id == request.source_id).first()
         target = db.query(ProductModel).filter(ProductModel.id == request.target_id).first()
         if not source or not target:
             raise HTTPException(status_code=404, detail="Producto(s) no encontrado")
 
+        # 1. Transfer offers
         db.query(OfferModel).filter(OfferModel.product_id == source.id).update({"product_id": target.id})
 
+        # 2. Transfer collection items (preventing duplicates)
         source_items = db.query(CollectionItemModel).filter(CollectionItemModel.product_id == source.id).all()
         for item in source_items:
             exists = db.query(CollectionItemModel).filter(
@@ -303,6 +307,40 @@ async def merge_products(request: ProductMergeRequest):
             else:
                 db.delete(item)
 
+        # 3. Transfer/deduplicate aliases
+        source_aliases = db.query(ProductAliasModel).filter(ProductAliasModel.product_id == source.id).all()
+        for alias in source_aliases:
+            exists = db.query(ProductAliasModel).filter(
+                ProductAliasModel.product_id == target.id,
+                ProductAliasModel.source_url == alias.source_url
+            ).first()
+            if not exists:
+                alias.product_id = target.id
+            else:
+                db.delete(alias)
+
+        # 4. Transfer/deduplicate price alerts
+        source_alerts = db.query(PriceAlertModel).filter(PriceAlertModel.product_id == source.id).all()
+        for alert in source_alerts:
+            exists = db.query(PriceAlertModel).filter(
+                PriceAlertModel.product_id == target.id,
+                PriceAlertModel.user_id == alert.user_id
+            ).first()
+            if not exists:
+                alert.product_id = target.id
+            else:
+                db.delete(alert)
+
+        # 5. Transfer/deduplicate vintage product entry
+        source_vintage = db.query(VintageProductModel).filter(VintageProductModel.product_id == source.id).first()
+        if source_vintage:
+            exists = db.query(VintageProductModel).filter(VintageProductModel.product_id == target.id).first()
+            if not exists:
+                source_vintage.product_id = target.id
+            else:
+                db.delete(source_vintage)
+
+        # 6. Delete source product
         source_name = source.name
         db.delete(source)
         db.commit()
