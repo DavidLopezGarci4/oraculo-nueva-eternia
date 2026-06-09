@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { Play, Activity, Clock, AlertCircle, CheckCircle2, RefreshCw, Terminal, Target, Settings, Users, ShieldAlert, Trash2, Zap, History, Database, Download, FileSpreadsheet, Repeat, Globe, Package } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -69,6 +70,9 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
     const [showIpLogsModal, setShowIpLogsModal] = useState(false);
     const [ipLogs, setIpLogs] = useState<WallapopIpLog[]>([]);
     const [loadingIpLogs, setLoadingIpLogs] = useState(false);
+
+    const [localImagesEnabled, setLocalImagesEnabled] = useState(() => localStorage.getItem('use_local_images') === 'true');
+    const [downloadStatus, setDownloadStatus] = useState({ active: false, total: 0, current: 0, errors: 0, last_error: null as string | null });
 
     // Vintage Sword Light Ray Calibrator States
     const [showCalibrator, setShowCalibrator] = useState(false);
@@ -197,6 +201,57 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
         } catch (error) {
             console.error('Error downloading Wallapop IP logs:', error);
             alert('Error al descargar los logs. Compruebe la conexión.');
+        }
+    };
+
+    // Status polling effect for image downloader
+    useEffect(() => {
+        let interval: any;
+        
+        const checkStatus = async () => {
+            try {
+                const response = await axios.get('/api/vault/download-images/status');
+                setDownloadStatus(response.data);
+                if (!response.data.active) {
+                    clearInterval(interval);
+                }
+            } catch (e) {
+                console.error("Failed to fetch image download status", e);
+            }
+        };
+
+        if (downloadStatus.active) {
+            checkStatus();
+            interval = setInterval(checkStatus, 2000);
+        } else {
+            // Check status once on mount
+            checkStatus();
+        }
+
+        return () => clearInterval(interval);
+    }, [downloadStatus.active]);
+
+    const handleTriggerDownload = async () => {
+        try {
+            const response = await axios.post('/api/vault/download-images');
+            if (response.data.status === 'started' || response.data.status === 'running') {
+                setDownloadStatus(prev => ({ ...prev, active: true }));
+            }
+            alert(response.data.message);
+        } catch (e) {
+            console.error("Failed to trigger download", e);
+            alert("Error al iniciar la descarga de imágenes.");
+        }
+    };
+
+    const handleCancelDownload = async () => {
+        try {
+            const response = await axios.post('/api/vault/download-images/cancel');
+            setDownloadStatus(prev => ({ ...prev, active: false }));
+            alert(response.data.message);
+        } catch (e) {
+            console.error("Failed to cancel download", e);
+            alert("Error al cancelar la descarga de imágenes.");
         }
     };
 
@@ -1003,6 +1058,77 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                         Sincronizando con el Núcleo...
                                     </div>
                                 )}
+                            </div>
+
+                            {/* Local Image Cache */}
+                            <div className="glass border border-brand-primary/30 p-6 rounded-3xl space-y-4 bg-brand-primary/5">
+                                <div className="flex items-center gap-3 text-brand-primary font-bold uppercase tracking-widest text-xs mb-2">
+                                    <Download className="h-4 w-4" />
+                                    Caché de Imágenes Local
+                                </div>
+                                <div className="space-y-4">
+                                    <p className="text-[10px] text-white/65 font-bold uppercase leading-tight">
+                                        Permite descargar y utilizar copias locales de las imágenes de las figuras para acelerar la carga y evitar enlaces rotos.
+                                    </p>
+
+                                    <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl">
+                                        <span className="text-xs text-white/70">Usar Imágenes Locales</span>
+                                        <button
+                                            onClick={() => {
+                                                const current = localStorage.getItem('use_local_images') === 'true';
+                                                localStorage.setItem('use_local_images', !current ? 'true' : 'false');
+                                                setLocalImagesEnabled(!current);
+                                            }}
+                                            className={`relative h-5 w-10 rounded-full transition-all ${localImagesEnabled ? 'bg-brand-primary' : 'bg-white/10'}`}
+                                        >
+                                            <div className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${localImagesEnabled ? 'right-0.5' : 'left-0.5'}`} />
+                                        </button>
+                                    </div>
+
+                                    {/* Download Controls */}
+                                    <div className="space-y-2 pt-2 border-t border-white/5">
+                                        {downloadStatus.active ? (
+                                            <div className="space-y-2">
+                                                <div className="flex justify-between text-[10px] font-black uppercase text-white/60">
+                                                    <span>Descargando...</span>
+                                                    <span>{downloadStatus.current} / {downloadStatus.total}</span>
+                                                </div>
+                                                <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                                                    <div
+                                                        className="h-full bg-brand-primary transition-all duration-300"
+                                                        style={{ width: `${downloadStatus.total > 0 ? (downloadStatus.current / downloadStatus.total) * 100 : 0}%` }}
+                                                    />
+                                                </div>
+                                                {downloadStatus.errors > 0 && (
+                                                    <p className="text-[8px] text-red-400 font-bold uppercase">
+                                                        Errores: {downloadStatus.errors}
+                                                    </p>
+                                                )}
+                                                <button
+                                                    onClick={handleCancelDownload}
+                                                    className="w-full bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/20 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all"
+                                                >
+                                                    Cancelar Descarga
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-2">
+                                                <button
+                                                    onClick={handleTriggerDownload}
+                                                    className="w-full bg-brand-primary/15 hover:bg-brand-primary text-brand-primary hover:text-white border border-brand-primary/30 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2"
+                                                >
+                                                    <Download className="h-3 w-3" />
+                                                    Descargar Todas las Imágenes
+                                                </button>
+                                                {downloadStatus.total > 0 && !downloadStatus.active && (
+                                                    <div className="text-[9px] font-bold text-white/40 uppercase text-center">
+                                                        Último estado: {downloadStatus.current} / {downloadStatus.total} descargadas
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
 
                             {/* Calibradores de Haces de Luz */}

@@ -143,5 +143,12 @@ El Oráculo maximiza la respuesta y fluidez de la interfaz mediante técnicas no
   - *Inputs Vacíos de Inversión*: Inputs de importes financieros vacíos por defecto, forzando `0.0` solo en la persistencia del backend si se omiten. Valida expresiones regulares de puntos y comas indistintamente.
   - *Badges Visuales de Compra*: Visualización semántica (`ShoppingCart` en oro/cromo) en la Fortaleza para discernir las piezas donde se configuró un precio de adquisición personalizado, manteniendo el `--` limpio en las figuras que usan el promedio de mercado.
 
-*Última actualización: 09/06/2026 - Fase 67: Optimización Extrema, Bypass de proxies en Amazon y Trazabilidad Operativa.*
+### 13. Caché Local de Imágenes y Fallback Híbrido (Fase 68)
+
+El ecosistema cuenta con un sistema híbrido de caché y descarga local de imágenes para las figuras del catálogo:
+- **FastAPI Static Mount**: Montura de la ruta `/api/static/images` apuntando a `data/image_cache/` en FastAPI.
+- **Background Downloader**: Tareas asíncronas en segundo plano en `vault.py` para descargar imágenes de productos, rastreando el progreso (conteo total, descargados, errores) y soportando cancelación segura.
+- **Componente React MOTUImage**: Reemplazo de etiquetas `<img>` tradicionales por un componente con lógica de fallback. Intenta leer localmente si `use_local_images` está activo en localStorage. Si la carga falla (error 404/red), cambia instantáneamente al hotlink remoto original mediante el evento `onError` del navegador, garantizando consistencia visual absoluta y cero imágenes rotas.
+
+*Última actualización: 09/06/2026 - Fase 68: Caché Local de Imágenes y Fallback Híbrido.*
 

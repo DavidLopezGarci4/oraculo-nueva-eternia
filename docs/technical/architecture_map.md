@@ -51,7 +51,8 @@ Implementación de lógica de negocio siguiendo **Clean Architecture**.
   - `routers/dashboard.py` — `/api/dashboard/*`.
   - `routers/users.py` — `/api/users/*` (settings, location), `/api/wallapop/import`, `/api/radar/p2p-opportunities`.
   - `routers/system.py` — `/api/system/audit`.
-  - `routers/vault.py` — `/api/vault/*`, `/api/excel/sync`.
+  - `routers/vault.py` — `/api/vault/*`, `/api/excel/sync`, `/api/vault/download-images/*`.
+  - Mount `/api/static/images` — montura de StaticFiles para servir imágenes locales desde data/image_cache.
   - `routers/logistics.py` — `/api/logistics/calculate-cart`.
 - **core/**: Utilidades transversales (Logger, Config, Audit, SecurityShield).
   - `config.py` — incluye `JWT_SECRET` y `JWT_EXPIRE_MINUTES` (Phase 59).
@@ -127,6 +128,7 @@ Suite de tests unitarios y de integración ejecutada con **pytest**:
 | `tests/integration/test_api_health.py` | Integración (API) | `/api/health`, OpenAPI schema disponible. |
 | `tests/integration/test_api_permissions.py` | Integración (API) | API key guard, device guard, endpoints públicos, dashboard stats. |
 | `tests/integration/test_api_showcase.py` | Integración (API) | Control de acceso y privacidad del Santuario (showcase público). |
+| `tests/integration/test_api_image_cache.py` | Integración (API) | Endpoints de descarga, estado y cancelación del caché local de imágenes. |
 | `tests/integration/test_phase0_migration.py` | Integración (DB) | Migraciones de base de datos e integridad estructural. |
 | `tests/unit/test_api_motu_relevance.py` | Unitario (Core) | Filtros de relevancia y descarte heurístico para figuras clásicas MOTU. |
 | `tests/unit/test_api_telegram_alerts.py` | Unitario (Alertas) | Envío y coincidencia de alertas multi-usuario (Wishlist, precios, vintage). |
@@ -191,4 +193,12 @@ Ejecutar: `.venv\Scripts\python -m pytest` (33 tests, 0 fallos)
   - Reducción de workers de Uvicorn a 1 en contenedores de producción para eliminar colisiones del receptor de Telegram.
   - Corrección de advertencias Node.js 20 en GitHub Actions (`ci.yml`).
 
-*Última actualización: 2026-06-09 - Phase 67: Carga Instantánea, Proxies Premium Amazon y Resiliencia Operativa.*
+- **Phase 68**: Caché Local de Imágenes y Fallback Híbrido (09/06/2026):
+  - Servidor de estáticos FastAPI en `/api/static/images` apuntando a `data/image_cache`.
+  - APIs de descarga de imágenes en lote, estado y cancelación asíncrona segura en `routers/vault.py`.
+  - Componente React `MOTUImage` con soporte para toggle `use_local_images` en localStorage y fallback instantáneo a hotlink original en error.
+  - Integración de barra de progreso e interruptor en `Config.tsx`.
+  - Reemplazo de etiquetas `<img>` estándar por `<MOTUImage>` en Showcase, Collection, Catalog, Vintage y Dashboard.
+  - Creación de prueba de integración `test_api_image_cache.py` con cobertura completa del ciclo de vida de la descarga.
+
+*Última actualización: 2026-06-09 - Phase 68: Caché Local de Imágenes y Fallback Híbrido.*

@@ -1,14 +1,89 @@
 import json
 import os
+import threading
+import httpx
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse
 from loguru import logger
 
 from src.infrastructure.database_cloud import SessionCloud
+from src.core.config import settings
 
 router = APIRouter(tags=["vault"])
+
+# Estado de la descarga de imágenes en caché
+_image_download_status = {
+    "active": False,
+    "total": 0,
+    "current": 0,
+    "errors": 0,
+    "last_error": None
+}
+_image_download_lock = threading.Lock()
+
+
+async def download_all_images_task():
+    global _image_download_status
+    
+    from src.domain.models import ProductModel
+    
+    with SessionCloud() as db:
+        products = db.query(ProductModel).all()
+        
+    image_cache_dir = settings.IMAGE_CACHE_DIR
+    os.makedirs(image_cache_dir, exist_ok=True)
+    
+    with _image_download_lock:
+        _image_download_status["active"] = True
+        _image_download_status["total"] = len(products)
+        _image_download_status["current"] = 0
+        _image_download_status["errors"] = 0
+        _image_download_status["last_error"] = None
+        
+    async with httpx.AsyncClient(timeout=10) as client:
+        for p in products:
+            # Control de cancelación
+            with _image_download_lock:
+                if not _image_download_status["active"]:
+                    break
+                
+            if not p.image_url:
+                with _image_download_lock:
+                    _image_download_status["current"] += 1
+                continue
+                
+            file_path = os.path.join(image_cache_dir, f"{p.id}.jpg")
+            
+            # Si ya está en disco y pesa algo, saltar
+            if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
+                with _image_download_lock:
+                    _image_download_status["current"] += 1
+                continue
+                
+            try:
+                headers = {
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                }
+                response = await client.get(p.image_url, headers=headers)
+                if response.status_code == 200:
+                    with open(file_path, "wb") as f:
+                        f.write(response.content)
+                else:
+                    raise Exception(f"HTTP Status {response.status_code}")
+            except Exception as e:
+                logger.warning(f"Error descargando imagen para producto {p.id} ({p.name}): {e}")
+                with _image_download_lock:
+                    _image_download_status["errors"] += 1
+                    _image_download_status["last_error"] = str(e)
+            finally:
+                with _image_download_lock:
+                    _image_download_status["current"] += 1
+                    
+    with _image_download_lock:
+        _image_download_status["active"] = False
+        logger.info("Background product image cache download finished.")
 
 
 @router.get("/api/vault/generate")
@@ -70,3 +145,31 @@ async def api_sync_excel(user_id: int = 2):
         status_code=500,
         detail="Fallo en la sincronización del Excel. Verifique la ruta y el formato.",
     )
+
+
+@router.post("/api/vault/download-images")
+async def trigger_image_download(background_tasks: BackgroundTasks):
+    global _image_download_status
+    with _image_download_lock:
+        if _image_download_status["active"]:
+            return {"status": "running", "message": "Descarga de imágenes ya en curso."}
+            
+    background_tasks.add_task(download_all_images_task)
+    return {"status": "started", "message": "Descarga de imágenes iniciada en segundo plano."}
+
+
+@router.get("/api/vault/download-images/status")
+async def get_image_download_status():
+    global _image_download_status
+    with _image_download_lock:
+        return _image_download_status
+
+
+@router.post("/api/vault/download-images/cancel")
+async def cancel_image_download():
+    global _image_download_status
+    with _image_download_lock:
+        if _image_download_status["active"]:
+            _image_download_status["active"] = False
+            return {"status": "cancelled", "message": "Descarga cancelada."}
+        return {"status": "inactive", "message": "No hay descargas activas."}

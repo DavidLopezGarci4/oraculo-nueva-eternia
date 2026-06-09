@@ -452,6 +452,13 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
   - [x] **Prevención de conflictos de Telegram**: Reducción a 1 worker de Uvicorn en docker-compose para evitar errores de colisión 409 webhook/listener.
   - [x] **CI Actions (Node 20)**: Actualización de workflows de GitHub Actions para silenciar advertencias de obsolescencia.
 
+- [x] **Phase 68: Caché Local de Imágenes y Fallback Híbrido (09/06/2026)**
+  - [x] **FastAPI Static Mount**: Montaje de StaticFiles en `/api/static/images` apuntando a `data/image_cache/` para servir imágenes locales de figuras.
+  - [x] **APIs de Descarga**: Implementados endpoints de descarga en lote, status de progreso en tiempo real y cancelación en `vault.py`.
+  - [x] **Componente React MOTUImage**: Creado componente con lógica de fallback automático. Intenta cargar del cache local de imágenes si está habilitado en localStorage (`use_local_images`), y recurre al hotlink remoto original en caso de fallo o error 404.
+  - [x] **Integración en Configuración**: Tarjeta de ajustes en Configuración con toggle de habilitación de imágenes locales y barra interactiva de progreso de descarga con opción de cancelación.
+  - [x] **Etiquetas de Imagen Actualizadas**: Swappeados los elementos `<img>` tradicionales por `<MOTUImage>` en Showcase, Collection, Catalog, Vintage y Dashboard.
+
 ---
 
 ## ✅ Plan de Verificación

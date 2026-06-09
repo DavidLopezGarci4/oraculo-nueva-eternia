@@ -27,6 +27,7 @@ export interface DashboardStats {
 
 export interface TopDeal {
     id: number;
+    product_id?: number;
     product_name: string;
     price: number;
     landing_price: number;

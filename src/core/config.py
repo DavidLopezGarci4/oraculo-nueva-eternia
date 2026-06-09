@@ -41,6 +41,9 @@ class Settings(BaseSettings):
     JWT_SECRET: str = "oraculo-jwt-secret-CHANGE-IN-PRODUCTION"
     JWT_EXPIRE_MINUTES: int = 1440  # 24 hours
 
+    # Local Image Cache - Phase 68
+    IMAGE_CACHE_DIR: str = "data/image_cache"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_ignore_empty=True,

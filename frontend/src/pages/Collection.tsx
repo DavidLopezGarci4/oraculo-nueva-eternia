@@ -27,6 +27,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { getCollection, toggleCollection } from '../api/collection';
 import type { Product } from '../api/collection';
 import { getOptimizedImageUrl } from '../utils/imageUtils';
+import { MOTUImage } from '../components/ui/MOTUImage';
 import CollectionItemDetailModal from '../components/CollectionItemDetailModal';
 import { updateProduct, deleteProduct } from '../api/admin';
 import type { Hero } from '../api/admin';
@@ -390,7 +391,8 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                                         }}
                                     >
                                         {product.image_url ? (
-                                            <img 
+                                            <MOTUImage 
+                                                productId={product.id}
                                                 src={getOptimizedImageUrl(product.image_url, 300)} 
                                                 className="h-full w-full object-cover transition-all duration-700 group-hover:scale-110 group-hover:rotate-1" 
                                                 loading="lazy"

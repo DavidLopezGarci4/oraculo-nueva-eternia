@@ -11,6 +11,8 @@ Este módulo agrupa la información comercial en tiempo real recopilada de los p
 ### Funcionalidades clave:
 *   **Buscador y Filtros Avanzados**:
     Permite filtrar los anuncios por palabra clave, rango de precios, procedencia (tiendas específicas o plataformas como Wallapop/Vinted) y por el estado de conservación del artículo anunciado (`MOC`, `LOOSE`, etc.).
+*   **Filtro Solo Deseos (Wishlist Cross-Filter)**:
+    Un botón premium con el icono de estrella (`[★ Solo Deseos]`) que permite filtrar de forma reactiva todas las ofertas y subastas activas para mostrar únicamente aquellas que coinciden con figuras marcadas en tu **Lista de Deseos** de la Fortaleza, ahorrándote tiempo de búsqueda manual y reduciendo el ruido en el pabellón.
 *   **DealScore**:
     Cada tarjeta de oferta calcula un indicador numérico (del 1 al 100) que califica la oportunidad financiera. El cálculo tiene en cuenta el descuento frente al precio original (MSRP) y la diferencia frente a la media de precios de segunda mano recopilada por el sistema. Las ofertas con puntuaciones excelentes se destacan visualmente con bordes brillantes.
 *   **Redirección Externa**:

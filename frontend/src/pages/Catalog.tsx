@@ -26,6 +26,7 @@ import {
     ArrowDown
 } from 'lucide-react';
 import { getOptimizedImageUrl } from '../utils/imageUtils';
+import { MOTUImage } from '../components/ui/MOTUImage';
 import {
     ResponsiveContainer,
     LineChart,
@@ -933,7 +934,8 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                                 onClick={() => setSelectedProduct(product)}
                             >
                                 {product.image_url ? (
-                                    <img
+                                    <MOTUImage
+                                        productId={product.id}
                                         src={getOptimizedImageUrl(product.image_url, 300)}
                                         alt={product.name}
                                         loading="lazy"
@@ -1126,7 +1128,8 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                                     onClick={() => setExpandedImage(selectedProduct.image_url)}
                                     title="Expandir Reliquia"
                                 >
-                                    <img 
+                                    <MOTUImage 
+                                        productId={selectedProduct.id}
                                         src={getOptimizedImageUrl(selectedProduct.image_url, 600)} 
                                         className="h-full w-full object-cover" 
                                         loading="lazy"

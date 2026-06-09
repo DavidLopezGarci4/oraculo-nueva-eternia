@@ -49,7 +49,15 @@ async def lifespan(app: FastAPI):
         except asyncio.CancelledError:
             pass
 
+from fastapi.staticfiles import StaticFiles
+import os
+
 app = FastAPI(title="Oráculo API Broker", version="1.0.0", lifespan=lifespan)
+
+# Mount local image cache directory
+image_cache_dir = settings.IMAGE_CACHE_DIR
+os.makedirs(image_cache_dir, exist_ok=True)
+app.mount("/api/static/images", StaticFiles(directory=image_cache_dir), name="static_images")
 
 app.add_middleware(
     CORSMiddleware,

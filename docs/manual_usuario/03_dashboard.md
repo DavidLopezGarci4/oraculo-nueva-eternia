@@ -36,3 +36,20 @@ El tablero cuenta con widgets laterales de estado técnico que proporcionan info
 ## Listado de Oportunidades del Mercado
 
 El tablero también destaca ofertas activas e inmediatas clasificadas por el algoritmo con un **DealScore** excepcional (puntuaciones cercanas a 100). Sirve como acceso directo para comprar gangas que acaban de publicarse en internet antes de que otros coleccionistas las detecten.
+
+---
+
+## Regimientos del Destino (Completitud de Hordas)
+
+Ubicado en la parte inferior del Tablero, este panel táctico agrupa dinámicamente todo el catálogo del sistema por subcategoría (por ejemplo: Origins, Deluxe, Vintage, etc.) y calcula el porcentaje de completitud de tu colección:
+*   **Barras de Progreso Vectoriales**: Representadas con degradados HSL específicos para cada línea de figuras.
+*   **Identificador de Faltas**: Muestra una lista detallada con los nombres de las figuras que te faltan por adquirir en cada una de las líneas, facilitando el seguimiento para completar tus hordas.
+
+---
+
+## Arsenal Analytics (Estado de la Fortaleza)
+
+Gráfico circular interactivo (Donut Chart) en el Tablero que ilustra la composición de tu colección según el estado de conservación de tus figuras:
+*   **Distribución por Estado**: Clasifica visualmente las figuras en Loose (Sueltas), Carded/MOC (En blíster original) o New (Nuevas en caja).
+*   **Valoración Ponderada de Mercado**: Estima el valor económico real de tu colección aplicando porcentajes de reducción y factores de escala basados en el estado físico (Loose = 50%, Carded/MOC = 100%, New = 75%) y factores de grading.
+

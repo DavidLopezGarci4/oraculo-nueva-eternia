@@ -273,6 +273,7 @@ async def get_top_deals(user_id: int = 2):
             landing_p = LogisticsService.optimized_get_landing_price(o.price, o.shop_name, user_location, rules_map)
             results.append({
                 "id": o.id,
+                "product_id": o.product_id,
                 "product_name": o.product.name,
                 "price": o.price,
                 "landing_price": landing_p,

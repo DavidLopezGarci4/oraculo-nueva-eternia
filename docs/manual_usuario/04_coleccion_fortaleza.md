@@ -79,3 +79,22 @@ $$\text{Factor de Conservación} = 1.0 - ((10.0 - \text{Nota}) \times 0.04)$$
 Una vez obtenido el Valor Ajustado, el sistema calcula el **ROI Real**:
 $$\text{ROI Real} = \left( \frac{\text{Valor Ajustado} - \text{Precio Pagado}}{\text{Precio Pagado}} \right) \times 100$$
 Esto te permite saber con precisión matemática si tus decisiones de compra te están dando un retorno positivo o si has pagado de más por una pieza según su estado real de conservación.
+
+---
+
+## Mejoras de Usabilidad Financiera (Inversión Personalizada)
+
+Para agilizar el registro y edición de tus costos de adquisición, se han implementado las siguientes optimizaciones en el modal de detalle:
+1.  **Campos de Entrada Vacíos (Blank inputs)**: Si no has introducido una inversión para una figura, el campo de precio de compra se mostrará totalmente vacío (en blanco) en lugar de mostrar un `0` por defecto. Esto evita tener que borrar manualmente el cero antes de escribir tu precio.
+2.  **Teclado Decimal e Idiomas**: El campo ahora es compatible con la escritura móvil mediante `inputMode="decimal"` (despliega el teclado numérico de inmediato) y admite tanto puntos (`.`) como comas (`,`) como separador decimal.
+3.  **Distintivo de Compra Personalizada**: En la rejilla de la colección, aquellas figuras que posean un precio de compra manual configurado por ti se marcarán con una pequeña etiqueta visual (icono de carrito de compra) para distinguirlas rápidamente de aquellas que utilizan los valores estimados del sistema.
+
+---
+
+## Santuario Compartido (Showcase Público)
+
+El **Santuario Compartido** es una funcionalidad que te permite mostrar tu colección al resto del mundo sin comprometer tus datos privados ni financieros:
+*   **Activación Controlada**: Puedes activar o desactivar la visibilidad pública de tu santuario desde la pestaña de Ajustes de tu cuenta.
+*   **Enlace Único**: El sistema te genera un enlace directo con formato `/santuario/[tu_nombre_de_usuario]` que puedes copiar al portapapeles con un solo clic para compartir en redes o foros.
+*   **Seguridad y Privacidad Absoluta (OWASP compliant)**: La vista pública del santuario está totalmente exenta de inicio de sesión para los visitantes, pero **oculta de forma estricta los datos financieros** (lo que pagaste por cada figura, la inversión total y los márgenes de ROI real), mostrando únicamente fotos, notas del guardián, estados de conservación física, estadísticas de completitud general y valoraciones de mercado ponderadas.
+

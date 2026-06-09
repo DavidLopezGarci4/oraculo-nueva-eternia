@@ -8,6 +8,7 @@ import { getProductPriceHistory } from '../api/products';
 import { revertVintageItem } from '../api/purgatory';
 import PriceHistoryChart from '../components/products/PriceHistoryChart';
 import type { Hero } from '../api/admin';
+import { MOTUImage } from '../components/ui/MOTUImage';
 
 interface VintageProduct {
     id: number;
@@ -185,7 +186,7 @@ const Vintage: React.FC<VintageProps> = ({ user }) => {
                                     onClick={() => setSelectedProduct(item)}
                                 >
                                     {item.image_url ? (
-                                        <img src={item.image_url} alt={item.name} className="h-full w-full object-cover transition-all duration-700 group-hover/img:scale-110" />
+                                        <MOTUImage productId={item.id} src={item.image_url} alt={item.name} className="h-full w-full object-cover transition-all duration-700 group-hover/img:scale-110" />
                                     ) : (
                                         <div className="flex h-full w-full items-center justify-center italic text-white/20 text-[10px] sm:text-xs font-black uppercase tracking-widest">Sin Imagen</div>
                                     )}
@@ -282,7 +283,7 @@ const Vintage: React.FC<VintageProps> = ({ user }) => {
                                     onClick={() => setExpandedImage(selectedProduct.image_url ?? null)}
                                     title="Expandir Reliquia"
                                 >
-                                    <img src={selectedProduct.image_url || ''} className="h-full w-full object-cover" />
+                                    <MOTUImage productId={selectedProduct.id} src={selectedProduct.image_url || ''} className="h-full w-full object-cover" />
                                 </div>
                                 <div className="space-y-1">
                                     <h4 className="text-3xl font-black tracking-tighter text-white">Reliquia <span className="text-amber-500">Vintage</span></h4>

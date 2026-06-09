@@ -11,6 +11,7 @@ import {
 import { getPublicShowcase } from '../api/admin';
 import { getOptimizedImageUrl } from '../utils/imageUtils';
 import PowerSwordLoader from '../components/ui/PowerSwordLoader';
+import { MOTUImage } from '../components/ui/MOTUImage';
 
 interface ShowcaseProps {
     username: string;
@@ -263,7 +264,8 @@ const Showcase: React.FC<ShowcaseProps> = ({ username }) => {
                                 >
                                     {/* Image Container with Badges */}
                                     <div className="relative aspect-square w-full overflow-hidden bg-white/5 flex items-center justify-center">
-                                        <img
+                                        <MOTUImage
+                                            productId={item.product.id}
                                             src={getOptimizedImageUrl(item.product.image_url)}
                                             alt={item.product.name}
                                             className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"

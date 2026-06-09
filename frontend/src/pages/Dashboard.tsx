@@ -25,6 +25,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import masterRoleImg from '../assets/role-master.png';
 import guardianRoleImg from '../assets/role-guardian.png';
+import { MOTUImage } from '../components/ui/MOTUImage';
 
 // Recharts & Collection API Imports for Arsenal Analytics & Completitud
 import {
@@ -372,7 +373,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                                     {hallOfFame?.origins?.top_value?.map((item) => (
                                         <div key={item.id} className="group flex items-center gap-2.5 rounded-xl bg-white/[0.02] p-2 border border-white/5 hover:border-brand-primary/20 hover:bg-white/[0.04] transition-all duration-300">
                                             <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-black/40">
-                                                <img src={item.image_url || undefined} alt="" className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                                                <MOTUImage productId={item.id} src={item.image_url || undefined} alt="" className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <h5 className="truncate text-[11px] font-bold text-white/95 group-hover:text-brand-primary transition-colors">{item.name}</h5>
@@ -396,7 +397,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                                     {hallOfFame?.origins?.top_roi?.map((item) => (
                                         <div key={item.id} className="group flex items-center gap-2.5 rounded-xl bg-white/[0.02] p-2 border border-white/5 hover:border-brand-primary/20 hover:bg-white/[0.04] transition-all duration-300">
                                             <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-black/40">
-                                                <img src={item.image_url || undefined} alt="" className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                                                <MOTUImage productId={item.id} src={item.image_url || undefined} alt="" className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <h5 className="truncate text-[11px] font-bold text-white/95 group-hover:text-brand-primary transition-colors">{item.name}</h5>
@@ -434,7 +435,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                                     {hallOfFame?.vintage?.top_value?.map((item) => (
                                         <div key={item.id} className="group flex items-center gap-2.5 rounded-xl bg-white/[0.02] p-2 border border-white/5 hover:border-amber-500/20 hover:bg-white/[0.04] transition-all duration-300">
                                             <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-black/40">
-                                                <img src={item.image_url || undefined} alt="" className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                                                <MOTUImage productId={item.id} src={item.image_url || undefined} alt="" className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <h5 className="truncate text-[11px] font-bold text-white/95 group-hover:text-amber-500 transition-colors">{item.name}</h5>
@@ -458,7 +459,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                                     {hallOfFame?.vintage?.top_roi?.map((item) => (
                                         <div key={item.id} className="group flex items-center gap-2.5 rounded-xl bg-white/[0.02] p-2 border border-white/5 hover:border-amber-500/20 hover:bg-white/[0.04] transition-all duration-300">
                                             <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-black/40">
-                                                <img src={item.image_url || undefined} alt="" className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                                                <MOTUImage productId={item.id} src={item.image_url || undefined} alt="" className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <h5 className="truncate text-[11px] font-bold text-white/95 group-hover:text-amber-500 transition-colors">{item.name}</h5>
@@ -721,7 +722,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                                                 <div className="flex items-center gap-3">
                                                     <a href={deal.url} target="_blank" rel="noopener noreferrer" className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-black/40 border border-white/5">
                                                         {deal.image_url ? (
-                                                            <img src={deal.image_url || undefined} alt="" className="h-full w-full object-cover" />
+                                                            <MOTUImage productId={deal.product_id} src={deal.image_url || undefined} alt="" className="h-full w-full object-cover" />
                                                         ) : (
                                                             <div className="flex h-full w-full items-center justify-center bg-brand-primary/5">
                                                                 <ShoppingBag className="h-5 w-5 text-brand-primary/20" />
@@ -772,7 +773,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                                                 <div className="flex items-center justify-between gap-4">
                                                     <div className="flex items-center gap-3 min-w-0">
                                                         <a href={deal.url} target="_blank" rel="noopener noreferrer" className="h-10 w-10 shrink-0 rounded-lg bg-white/5 overflow-hidden block">
-                                                            <img src={deal.image_url || undefined} alt="" className="h-full w-full object-cover" />
+                                                            <MOTUImage productId={deal.product_id} src={deal.image_url || undefined} alt="" className="h-full w-full object-cover" />
                                                         </a>
                                                         <div className="min-w-0">
                                                             <a href={deal.url} target="_blank" rel="noopener noreferrer" className="truncate text-xs font-bold text-white block hover:text-brand-primary transition-colors">{deal.product_name}</a>

@@ -36,3 +36,30 @@ El Oráculo lleva una bitácora forense de todas las acciones importantes realiz
     *   `REVERTED_MISCELLANEOUS`: Cuando un lote de Miscelánea es devuelto al Purgatorio.
     *   `DISCARDED_OFFER`: Cuando una oferta es descartada del Purgatorio.
 *   **Detalles del Log**: Cada entrada del historial registra el nombre del usuario que realizó la acción, la fecha y hora exacta, la descripción del artículo involucrado y el identificador de la oferta.
+
+---
+
+## 4. Ajustes Generales del Sistema (Todos los Usuarios)
+
+La pestaña de **Ajustes de Sistema** está abierta tanto a Guardianes como a Administradores (Masters) y contiene configuraciones personalizadas del cliente y automatizaciones del perfil:
+
+### 4.1 Santuario Público (Santuario Compartido)
+*   **Toggle de Habilitación**: Permite encender o apagar la visibilidad pública de tu colección.
+*   **Enlace de Compartir**: Muestra el enlace exclusivo a tu Showcase y un botón rápido para copiarlo al portapapeles.
+
+### 4.2 Ubicación del Guardián (Cálculo de Envíos)
+*   Permite seleccionar el país de residencia (ej. España, Francia). El sistema cruzará esta ubicación con las reglas logísticas para calcular de forma dinámica y precisa el costo real de envío consolidado (Landed Price) de cada oferta de subasta o tienda.
+
+### 4.3 Caché Local de Imágenes (Acelerador de Carga)
+El Oráculo cuenta con un sistema híbrido e inteligente de almacenamiento local de imágenes para erradicar los tiempos de espera causados por la descarga de imágenes externas:
+*   **Preferencia en Local (`use_local_images`)**: Si se activa, la aplicación cargará las imágenes de las figuras directamente desde el almacenamiento local del PC/servidor (`/api/static/images/[id].jpg`), logrando transiciones instantáneas y fluidas.
+*   **Gestión de Descargas en Lote**: Un botón para iniciar la descarga en segundo plano de todas las imágenes de productos a la caché local.
+*   **Barra de Progreso y Control**: Muestra el progreso de descargas en tiempo real (conteo total, descargados, errores). Incluye un botón para **cancelar la descarga** en cualquier momento de forma segura.
+*   **Fallback Automático**: Si una imagen local no existe (error 404) o falla la carga, el componente React (`MOTUImage`) realiza un fallback transparente e instantáneo al hotlink de internet original, garantizando que el usuario nunca vea imágenes rotas.
+
+### 4.4 Vinculación con el Guardián de Telegram (Alertas Bidireccionales)
+Para recibir alertas personalizadas directamente en tu móvil:
+1.  Busca el bot del Oráculo en Telegram.
+2.  Escribe el comando `/register [tu_nombre_de_usuario]` (el nombre de usuario con el que inicias sesión en el Oráculo).
+3.  El bot asociará automáticamente tu cuenta y comenzarás a recibir de inmediato notificaciones enriquecidas en HTML cada vez que una nueva oferta en el Purgatorio coincida con una figura de tu **Lista de Deseos** o con una **Alerta de Precio** configurada.
+
