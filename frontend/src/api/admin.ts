@@ -96,6 +96,14 @@ export const getUserSettings = async (userId: number): Promise<any> => {
     return response.data;
 };
 
+export const updateUserImagePaths = async (userId: number, pcPath: string | null, mobilePath: string | null): Promise<any> => {
+    const response = await adminAxios.post(`/users/${userId}/image-paths`, {
+        pc_path: pcPath,
+        mobile_path: mobilePath
+    });
+    return response.data;
+};
+
 export const unlinkOffer = async (offerId: number): Promise<{ status: string; message: string }> => {
     const response = await adminAxios.post(`/offers/${offerId}/unlink`);
     return response.data;

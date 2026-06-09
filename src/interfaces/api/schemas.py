@@ -195,3 +195,10 @@ class WallapopImportRequest(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
+
+# --- User Image Paths (Phase 69) ---
+
+class UserImagePathsUpdateRequest(BaseModel):
+    pc_path: Optional[str] = None
+    mobile_path: Optional[str] = None

@@ -306,6 +306,8 @@ class UserModel(Base):
     location: Mapped[str] = mapped_column(String, default="ES") # e.g. 'ES', 'DE', 'IT' - Phase 15 Logistics
     is_public_showcase: Mapped[bool] = mapped_column(Boolean, default=False)
     telegram_chat_id: Mapped[Optional[str]] = mapped_column(String, nullable=True, index=True)
+    pc_image_path: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    mobile_image_path: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     
     # 🔐 Seguridad & Recuperación
     reset_token: Mapped[Optional[str]] = mapped_column(String, nullable=True, index=True)

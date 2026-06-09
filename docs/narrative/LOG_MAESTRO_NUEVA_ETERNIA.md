@@ -1112,3 +1112,15 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
   - **Excel Bridge Seguro**: Restringido el renderizado y uso del panel "Excel Bridge" en `Config.tsx` mediante comprobación `{isAdmin && (...)}` para evitar que usuarios externos o remotos desencadenen sincronizaciones del archivo Excel que reside en el disco duro del servidor local (carpeta `data/MOTU/` del PC).
   - **Preservación de Autonomía de Guardianes**: Los Guardianes mantienen el acceso activo a las opciones de Ubicación Geográfica, Santuario Público y Caché de Imágenes Local, preservando su configuración independiente.
 
+
+### 🔍 Fase 70: Caché en el Navegador (Cache API) y Rutas de Registro en Base de Datos (09/06/2026)
+
+- **Hitos**: Almacenamiento de rutas de imágenes personalizadas en la base de datos de cada usuario y migración de la descarga local a la Cache API del navegador para un rendimiento independiente, seguro y libre de descargas ZIP redundantes.
+- **Estado**: ✅ COMPLETADO
+- **Logros Técnicos**:
+  - **Persistencia de Rutas Personales**: Conectado el formulario de "Caché de Imágenes Local" con la base de datos para registrar las rutas del PC (`pc_image_path`) y del móvil (`mobile_image_path`) asociadas al perfil de cada usuario de forma personal.
+  - **Caché en Navegador (Cache API)**: Implementado el uso de la caché del navegador (`motu-image-cache`) mediante `caches.open` para almacenar localmente las imágenes de las figuras, logrando una carga inmediata (0ms, offline) sin forzar accesos prohibidos al explorador de archivos del sistema.
+  - **Descargador Reactivo en Cliente**: Reescrita la descarga masiva para ejecutarse del lado del cliente en lugar de usar tareas asíncronas en segundo plano del servidor, descargando de forma ordenada todas las fotos del catálogo con progreso en vivo, recuento y soporte de cancelación.
+  - **Auto-caching en Caliente**: Actualizado el componente `<MOTUImage>` para descargar y guardar automáticamente en la caché local del navegador cualquier imagen nueva en cuanto esta sea renderizada por primera vez en la Fortaleza, Nueva Eternia o Catálogo.
+
+

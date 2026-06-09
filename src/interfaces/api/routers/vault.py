@@ -5,7 +5,7 @@ import httpx
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, BackgroundTasks
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from loguru import logger
 
 from src.infrastructure.database_cloud import SessionCloud
@@ -24,15 +24,25 @@ _image_download_status = {
 _image_download_lock = threading.Lock()
 
 
-async def download_all_images_task():
+async def download_all_images_task(user_id: int = 2, client_type: str = "pc"):
     global _image_download_status
     
-    from src.domain.models import ProductModel
+    from src.domain.models import ProductModel, UserModel
     
     with SessionCloud() as db:
         products = db.query(ProductModel).all()
+        user = db.query(UserModel).filter(UserModel.id == user_id).first()
         
     image_cache_dir = settings.IMAGE_CACHE_DIR
+    if user:
+        custom_path = user.mobile_image_path if client_type == "mobile" else user.pc_image_path
+        if custom_path:
+            try:
+                os.makedirs(custom_path, exist_ok=True)
+                image_cache_dir = custom_path
+            except Exception as e:
+                logger.warning(f"No se pudo crear la ruta personalizada {custom_path}: {e}")
+                
     os.makedirs(image_cache_dir, exist_ok=True)
     
     with _image_download_lock:

@@ -464,6 +464,12 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
   - [x] **Excel Bridge Seguro**: Restringido el panel de Excel Bridge en `Config.tsx` a administradores (`isAdmin`), ocultándolo para los Guardianes.
   - [x] **Preservación de Autonomía de Guardianes**: Los Guardianes mantienen el control activo de Ubicación Geográfica, Santuario Público y Caché de Imágenes Local.
 
+- [x] **Phase 70: Caché en el Navegador (Cache API) y Rutas de Registro en Base de Datos (09/06/2026)**
+  - [x] **Persistencia de Rutas**: Conexión del formulario de "Caché de Imágenes Local" para registrar las rutas del PC (`pc_image_path`) y del móvil (`mobile_image_path`) de forma personal en base de datos.
+  - [x] **Cache API en Navegador**: Migración a caché nativa en navegador (`motu-image-cache`) para almacenamiento de imágenes local 100% independiente en cliente.
+  - [x] **Descargador Reactivo**: Descargador de imágenes en lote del lado del cliente con barra de progreso, conteo exacto y soporte de cancelación.
+  - [x] **Auto-caching en Caliente**: Carga en caché automática en tiempo real de cualquier nueva imagen renderizada en las vistas principales.
+
 ---
 
 ## ✅ Plan de Verificación

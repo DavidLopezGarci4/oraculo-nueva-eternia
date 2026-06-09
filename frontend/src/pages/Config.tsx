@@ -24,6 +24,7 @@ import {
     exportCollectionSqlite,
     updateUserLocation,
     updateUserPublicShowcase,
+    updateUserImagePaths,
     type ScraperStatus,
     type Hero
 } from '../api/admin';
@@ -73,6 +74,11 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
 
     const [localImagesEnabled, setLocalImagesEnabled] = useState(() => localStorage.getItem('use_local_images') === 'true');
     const [downloadStatus, setDownloadStatus] = useState({ active: false, total: 0, current: 0, errors: 0, last_error: null as string | null });
+    const [pcPath, setPcPath] = useState('');
+    const [mobilePath, setMobilePath] = useState('');
+    const [savingImagePaths, setSavingImagePaths] = useState(false);
+    const [cachedImagesCount, setCachedImagesCount] = useState(0);
+    const cancelDownloadRef = React.useRef(false);
 
     // Vintage Sword Light Ray Calibrator States
     const [showCalibrator, setShowCalibrator] = useState(false);
@@ -207,55 +213,82 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
         }
     };
 
-    // Status polling effect for image downloader
-    useEffect(() => {
-        let interval: any;
-        
-        const checkStatus = async () => {
-            try {
-                const response = await axios.get('/api/vault/download-images/status');
-                setDownloadStatus(response.data);
-                if (!response.data.active) {
-                    clearInterval(interval);
-                }
-            } catch (e) {
-                console.error("Failed to fetch image download status", e);
-            }
-        };
-
-        if (downloadStatus.active) {
-            checkStatus();
-            interval = setInterval(checkStatus, 2000);
-        } else {
-            // Check status once on mount
-            checkStatus();
-        }
-
-        return () => clearInterval(interval);
-    }, [downloadStatus.active]);
-
+    // We will download images directly in the browser's Cache API for Option C
     const handleTriggerDownload = async () => {
+        cancelDownloadRef.current = false;
+        setDownloadStatus({
+            active: true,
+            total: 0,
+            current: 0,
+            errors: 0,
+            last_error: null
+        });
+
         try {
-            const response = await axios.post('/api/vault/download-images');
-            if (response.data.status === 'started' || response.data.status === 'running') {
-                setDownloadStatus(prev => ({ ...prev, active: true }));
+            // 1. Fetch all products to get their IDs and image URLs
+            const response = await axios.get('/api/products');
+            const products = response.data;
+            // Filter products that actually have image urls
+            const productsWithImages = products.filter((p: any) => p.image_url);
+            const totalCount = productsWithImages.length;
+
+            setDownloadStatus(prev => ({ ...prev, total: totalCount }));
+
+            // 2. Open the browser's Cache API storage
+            const cache = await caches.open('motu-image-cache');
+
+            // 3. Download and cache each image sequentially
+            let current = 0;
+            let errors = 0;
+            let last_error: string | null = null;
+
+            for (const p of productsWithImages) {
+                if (cancelDownloadRef.current) {
+                    break;
+                }
+
+                const cacheKey = `/api/static/images/${p.id}.jpg`;
+                
+                try {
+                    // Fetch the remote image URL
+                    const imgResponse = await fetch(p.image_url);
+                    if (imgResponse.ok) {
+                        // Store the response in the cache
+                        await cache.put(cacheKey, imgResponse);
+                    } else {
+                        throw new Error(`HTTP ${imgResponse.status}`);
+                    }
+                } catch (err: any) {
+                    console.error(`Error caching image for product ${p.id}:`, err);
+                    errors++;
+                    last_error = err.message || String(err);
+                }
+
+                current++;
+                setDownloadStatus(prev => ({
+                    ...prev,
+                    current,
+                    errors,
+                    last_error
+                }));
             }
-            alert(response.data.message);
-        } catch (e) {
-            console.error("Failed to trigger download", e);
-            alert("Error al iniciar la descarga de imágenes.");
+
+            setDownloadStatus(prev => ({ ...prev, active: false }));
+            if (cancelDownloadRef.current) {
+                alert("Descarga en el navegador cancelada por el usuario.");
+            } else {
+                alert(`Descarga completada. ${current - errors} imágenes guardadas en el navegador.`);
+            }
+        } catch (e: any) {
+            console.error("Failed to download images to browser cache", e);
+            setDownloadStatus(prev => ({ ...prev, active: false, last_error: e.message || String(e) }));
+            alert("Error al iniciar la descarga de imágenes en el navegador: " + (e.message || String(e)));
         }
     };
 
-    const handleCancelDownload = async () => {
-        try {
-            const response = await axios.post('/api/vault/download-images/cancel');
-            setDownloadStatus(prev => ({ ...prev, active: false }));
-            alert(response.data.message);
-        } catch (e) {
-            console.error("Failed to cancel download", e);
-            alert("Error al cancelar la descarga de imágenes.");
-        }
+    const handleCancelDownload = () => {
+        cancelDownloadRef.current = true;
+        setDownloadStatus(prev => ({ ...prev, active: false }));
     };
 
     const queryClient = useQueryClient();
@@ -298,6 +331,40 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
             console.error('Error fetching admin data:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (userSettings) {
+            setPcPath(userSettings.pc_image_path || '');
+            setMobilePath(userSettings.mobile_image_path || '');
+        }
+    }, [userSettings]);
+
+    const updateCachedImagesCount = async () => {
+        try {
+            const cache = await caches.open('motu-image-cache');
+            const keys = await cache.keys();
+            setCachedImagesCount(keys.length);
+        } catch (e) {
+            console.error("Error checking cache count", e);
+        }
+    };
+
+    useEffect(() => {
+        updateCachedImagesCount();
+    }, [downloadStatus.active]);
+
+    const handleSaveImagePaths = async () => {
+        setSavingImagePaths(true);
+        try {
+            await updateUserImagePaths(activeUserId, pcPath || null, mobilePath || null);
+            alert("Rutas personales guardadas con éxito en la base de datos.");
+        } catch (e) {
+            console.error("Error saving image paths:", e);
+            alert("Error al guardar las rutas personales en la base de datos.");
+        } finally {
+            setSavingImagePaths(false);
         }
     };
 
@@ -1088,11 +1155,47 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                 </div>
                                 <div className="space-y-4">
                                     <p className="text-[10px] text-white/65 font-bold uppercase leading-tight">
-                                        Permite descargar y utilizar copias locales de las imágenes de las figuras para acelerar la carga y evitar enlaces rotos.
+                                        Permite almacenar y cargar las imágenes de tus figuras directamente desde el almacenamiento interno del navegador para navegación instantánea y modo offline.
                                     </p>
 
-                                    <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl">
-                                        <span className="text-xs text-white/70">Usar Imágenes Locales</span>
+                                    {/* Personal Paths Settings (Informativo) */}
+                                    <div className="space-y-3 p-3 bg-white/5 rounded-2xl border border-white/5">
+                                        <div className="text-[9px] font-black uppercase text-brand-primary tracking-wider mb-1">
+                                            Rutas Personales de Registro
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[8px] font-bold uppercase text-white/40 tracking-wider">Ruta de Almacenamiento en PC</label>
+                                            <input
+                                                type="text"
+                                                value={pcPath}
+                                                onChange={(e) => setPcPath(e.target.value)}
+                                                placeholder="Ej. C:\Figuras\Cache"
+                                                className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white placeholder-white/20 focus:outline-none focus:border-brand-primary transition-colors"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[8px] font-bold uppercase text-white/40 tracking-wider">Ruta de Almacenamiento en Móvil</label>
+                                            <input
+                                                type="text"
+                                                value={mobilePath}
+                                                onChange={(e) => setMobilePath(e.target.value)}
+                                                placeholder="Ej. /storage/emulated/0/Download"
+                                                className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white placeholder-white/20 focus:outline-none focus:border-brand-primary transition-colors"
+                                            />
+                                        </div>
+                                        <button
+                                            onClick={handleSaveImagePaths}
+                                            disabled={savingImagePaths}
+                                            className="w-full bg-white/10 hover:bg-white/15 text-white border border-white/10 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
+                                        >
+                                            {savingImagePaths ? <RefreshCw className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
+                                            {savingImagePaths ? 'Guardando...' : 'Guardar Rutas'}
+                                        </button>
+                                    </div>
+
+                                    {/* Browser Cache toggle and control */}
+                                    <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5">
+                                        <span className="text-xs text-white/70">Usar Imágenes de la Caché Local</span>
                                         <button
                                             onClick={() => {
                                                 const current = localStorage.getItem('use_local_images') === 'true';
@@ -1110,7 +1213,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                         {downloadStatus.active ? (
                                             <div className="space-y-2">
                                                 <div className="flex justify-between text-[10px] font-black uppercase text-white/60">
-                                                    <span>Descargando...</span>
+                                                    <span>Descargando a caché...</span>
                                                     <span>{downloadStatus.current} / {downloadStatus.total}</span>
                                                 </div>
                                                 <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
@@ -1138,13 +1241,11 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                                     className="w-full bg-brand-primary/15 hover:bg-brand-primary text-brand-primary hover:text-white border border-brand-primary/30 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2"
                                                 >
                                                     <Download className="h-3 w-3" />
-                                                    Descargar Todas las Imágenes
+                                                    Descargar todas las imágenes a la caché
                                                 </button>
-                                                {downloadStatus.total > 0 && !downloadStatus.active && (
-                                                    <div className="text-[9px] font-bold text-white/40 uppercase text-center">
-                                                        Último estado: {downloadStatus.current} / {downloadStatus.total} descargadas
-                                                    </div>
-                                                )}
+                                                <div className="text-[9px] font-bold text-white/40 uppercase text-center mt-1">
+                                                    Imágenes en la caché del navegador: <span className="text-brand-primary">{cachedImagesCount}</span>
+                                                </div>
                                             </div>
                                         )}
                                     </div>

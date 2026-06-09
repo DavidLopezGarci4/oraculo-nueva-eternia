@@ -35,7 +35,6 @@ def init_cloud_db():
     from src.domain.models import Base
     Base.metadata.create_all(bind=engine_cloud)
     
-    # --- SCHEMA ALTERATION KAIZEN: ADD COLUMN IS_PUBLIC_SHOWCASE ---
     try:
         from sqlalchemy import text
         with SessionCloud() as session:
@@ -43,9 +42,19 @@ def init_cloud_db():
             if "postgresql" in dialect.lower():
                 session.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_public_showcase BOOLEAN DEFAULT FALSE;"))
                 session.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_chat_id VARCHAR;"))
+                session.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS pc_image_path VARCHAR;"))
+                session.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS mobile_image_path VARCHAR;"))
             else:
                 session.execute(text("ALTER TABLE users ADD COLUMN is_public_showcase BOOLEAN DEFAULT FALSE;"))
                 session.execute(text("ALTER TABLE users ADD COLUMN telegram_chat_id VARCHAR;"))
+                try:
+                    session.execute(text("ALTER TABLE users ADD COLUMN pc_image_path VARCHAR;"))
+                except Exception:
+                    pass
+                try:
+                    session.execute(text("ALTER TABLE users ADD COLUMN mobile_image_path VARCHAR;"))
+                except Exception:
+                    pass
             session.commit()
     except Exception:
         # Ignore if the column already exists or other issues

@@ -8,7 +8,7 @@ from src.application.services.logistics_service import LogisticsService
 from src.domain.models import OfferModel, PendingMatchModel, ProductModel, UserModel, BlackcludedItemModel, VintageMiscellaneousModel, OfferHistoryModel
 from src.infrastructure.database_cloud import SessionCloud
 from src.interfaces.api.deps import verify_device
-from src.interfaces.api.schemas import WallapopImportRequest
+from src.interfaces.api.schemas import WallapopImportRequest, UserImagePathsUpdateRequest
 
 router = APIRouter(tags=["users"])
 
@@ -26,6 +26,24 @@ async def get_user_settings(user_id: int):
             "location": user.location,
             "role": user.role,
             "is_public_showcase": user.is_public_showcase,
+            "pc_image_path": user.pc_image_path,
+            "mobile_image_path": user.mobile_image_path,
+        }
+
+
+@router.post("/api/users/{user_id}/image-paths")
+async def update_user_image_paths(user_id: int, request: UserImagePathsUpdateRequest):
+    with SessionCloud() as db:
+        user = db.query(UserModel).filter(UserModel.id == user_id).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        user.pc_image_path = request.pc_path
+        user.mobile_image_path = request.mobile_path
+        db.commit()
+        return {
+            "status": "success",
+            "pc_image_path": user.pc_image_path,
+            "mobile_image_path": user.mobile_image_path
         }
 
 
