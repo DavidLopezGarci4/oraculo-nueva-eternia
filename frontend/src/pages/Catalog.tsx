@@ -1393,18 +1393,18 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                                 </div>
                             </div>
 
-                            <div className="p-8 border-t border-white/5 bg-white/[0.02] flex items-center justify-end gap-4">
+                            <div className="p-6 sm:p-8 border-t border-white/5 bg-white/[0.02] flex flex-col sm:flex-row items-center justify-end gap-3 sm:gap-4">
                                 <button
                                     type="button"
                                     onClick={() => setEditingProduct(null)}
-                                    className="px-6 h-12 rounded-2xl text-sm font-black uppercase tracking-widest text-white/60 hover:text-white transition-all flex items-center justify-center whitespace-nowrap"
+                                    className="w-full sm:w-auto px-6 h-12 rounded-2xl text-sm font-black uppercase tracking-widest text-white/60 hover:text-white transition-all flex items-center justify-center whitespace-nowrap order-2 sm:order-1"
                                 >
                                     Cancelar
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={updateMutation.isPending}
-                                    className="bg-brand-primary hover:bg-brand-secondary text-white px-8 h-12 rounded-2xl font-black uppercase tracking-widest transition-all shadow-[0_0_30px_rgba(14,165,233,0.3)] flex items-center justify-center gap-2 disabled:opacity-50 whitespace-nowrap"
+                                    className="w-full sm:w-auto bg-brand-primary hover:bg-brand-secondary text-white px-8 h-12 rounded-2xl font-black uppercase tracking-widest transition-all shadow-[0_0_30px_rgba(14,165,233,0.3)] flex items-center justify-center gap-2 disabled:opacity-50 whitespace-nowrap order-1 sm:order-2"
                                 >
                                     {updateMutation.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                                     Preservar Cambios
