@@ -489,33 +489,29 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                     <p className="text-white/50">{user?.role === 'admin' ? 'Control absoluto sobre las reliquias y sus fuentes.' : 'Gestiona tu legado personal y sincroniza tu bóveda sagrada.'}</p>
                 </div>
 
-                <div className="flex flex-wrap items-center justify-center gap-1 bg-white/5 p-1 rounded-2xl border border-white/10 backdrop-blur-xl w-full md:w-auto shadow-lg">
-                    {user?.role === 'admin' && (
-                        <>
-                            <button
-                                onClick={() => setActiveTab('scrapers')}
-                                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 flex-1 sm:flex-initial min-w-[100px] sm:min-w-0 ${activeTab === 'scrapers' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'text-white/65 hover:text-white'}`}
-                            >
-                                <Activity className="h-3.5 w-3.5" />
-                                Scrapers
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('inventory')}
-                                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 flex-1 sm:flex-initial min-w-[100px] sm:min-w-0 ${activeTab === 'inventory' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'text-white/65 hover:text-white'}`}
-                            >
-                                <Package className="h-3.5 w-3.5" />
-                                Inventario
-                            </button>
-                        </>
-                    )}
-                    <button
-                        onClick={() => setActiveTab('system')}
-                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 flex-1 sm:flex-initial min-w-[100px] sm:min-w-0 ${activeTab === 'system' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'text-white/65 hover:text-white'}`}
-                    >
-                        <Settings className="h-3.5 w-3.5" />
-                        Ajustes
-                    </button>
-                    {user?.role === 'admin' && (
+                {user?.role === 'admin' && (
+                    <div className="flex flex-wrap items-center justify-center gap-1 bg-white/5 p-1 rounded-2xl border border-white/10 backdrop-blur-xl w-full md:w-auto shadow-lg">
+                        <button
+                            onClick={() => setActiveTab('scrapers')}
+                            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 flex-1 sm:flex-initial min-w-[100px] sm:min-w-0 ${activeTab === 'scrapers' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'text-white/65 hover:text-white'}`}
+                        >
+                            <Activity className="h-3.5 w-3.5" />
+                            Scrapers
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('inventory')}
+                            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 flex-1 sm:flex-initial min-w-[100px] sm:min-w-0 ${activeTab === 'inventory' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'text-white/65 hover:text-white'}`}
+                        >
+                            <Package className="h-3.5 w-3.5" />
+                            Inventario
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('system')}
+                            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 flex-1 sm:flex-initial min-w-[100px] sm:min-w-0 ${activeTab === 'system' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'text-white/65 hover:text-white'}`}
+                        >
+                            <Settings className="h-3.5 w-3.5" />
+                            Ajustes
+                        </button>
                         <button
                             onClick={() => setActiveTab('users')}
                             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 flex-1 sm:flex-initial min-w-[100px] sm:min-w-0 ${activeTab === 'users' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'text-white/65 hover:text-white'}`}
@@ -523,8 +519,8 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                             <Users className="h-4 w-4" />
                             Héroes
                         </button>
-                    )}
-                </div>
+                    </div>
+                )}
             </div>
 
             <AnimatePresence mode="wait">
@@ -877,18 +873,20 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                         exit={{ opacity: 0, y: -10 }}
                         className="space-y-6"
                     >
-                        <div className="flex justify-between items-center mb-6">
-                            <div>
-                                <h2 className="text-2xl font-bold flex items-center gap-2">
-                                    <Database className="w-6 h-6 text-blue-400" />
-                                    {user?.role === 'admin' ? 'Cámara de Reliquias de Eternia' : 'Mi Bóveda Digital'}
-                                </h2>
-                                <p className="text-white/70 text-sm">Resguardo y sincronización de tu legado físico.</p>
+                        {user?.role === 'admin' && (
+                            <div className="flex justify-between items-center mb-6">
+                                <div>
+                                    <h2 className="text-2xl font-bold flex items-center gap-2">
+                                        <Database className="w-6 h-6 text-blue-400" />
+                                        Cámara de Reliquias de Eternia
+                                    </h2>
+                                    <p className="text-white/70 text-sm">Resguardo y sincronización de tu legado físico.</p>
+                                </div>
+                                <div className="px-3 py-1 rounded-full bg-blue-900/30 text-blue-400 text-xs font-mono border border-blue-800/50">
+                                    SHIELD LAYER 2
+                                </div>
                             </div>
-                            <div className="px-3 py-1 rounded-full bg-blue-900/30 text-blue-400 text-xs font-mono border border-blue-800/50">
-                                SHIELD LAYER 2
-                            </div>
-                        </div>
+                        )}
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {/* Sentinel Settings */}
                             <div className="glass border border-white/10 p-6 rounded-3xl space-y-4 opacity-60">
