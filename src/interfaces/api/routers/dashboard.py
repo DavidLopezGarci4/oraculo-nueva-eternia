@@ -26,32 +26,50 @@ router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 async def get_dashboard_stats(user_id: int = 1):
     try:
         with SessionCloud() as db:
-            total_products = db.query(ProductModel).filter(ProductModel.is_vintage.is_not(True)).count()
-            total_products_vintage = db.query(ProductModel).filter(ProductModel.is_vintage == True).count()
+            # Total products counts (Agrupado por is_vintage para ahorrar 1 query)
+            product_counts = db.query(
+                ProductModel.is_vintage,
+                func.count(ProductModel.id)
+            ).group_by(
+                ProductModel.is_vintage
+            ).all()
             
-            owned_count = db.query(CollectionItemModel).join(ProductModel).filter(
-                CollectionItemModel.owner_id == user_id,
-                CollectionItemModel.acquired == True,
-                ProductModel.is_vintage.is_not(True)
-            ).count()
-            
-            owned_count_vintage = db.query(CollectionItemModel).join(ProductModel).filter(
-                CollectionItemModel.owner_id == user_id,
-                CollectionItemModel.acquired == True,
-                ProductModel.is_vintage == True
-            ).count()
+            total_products = 0
+            total_products_vintage = 0
+            for is_vintage, cnt in product_counts:
+                if is_vintage:
+                    total_products_vintage = cnt
+                else:
+                    total_products = cnt
 
-            wish_count = db.query(CollectionItemModel).join(ProductModel).filter(
-                CollectionItemModel.owner_id == user_id,
-                CollectionItemModel.acquired == False,
-                ProductModel.is_vintage.is_not(True)
-            ).count()
-            
-            wish_count_vintage = db.query(CollectionItemModel).join(ProductModel).filter(
-                CollectionItemModel.owner_id == user_id,
-                CollectionItemModel.acquired == False,
-                ProductModel.is_vintage == True
-            ).count()
+            # Collection counts (owned vs wishlist, modern vs vintage) agrupados para ahorrar 3 queries
+            coll_counts = db.query(
+                CollectionItemModel.acquired,
+                ProductModel.is_vintage,
+                func.count(CollectionItemModel.id)
+            ).join(ProductModel).filter(
+                CollectionItemModel.owner_id == user_id
+            ).group_by(
+                CollectionItemModel.acquired,
+                ProductModel.is_vintage
+            ).all()
+
+            owned_count = 0
+            owned_count_vintage = 0
+            wish_count = 0
+            wish_count_vintage = 0
+
+            for acquired, is_vintage, cnt in coll_counts:
+                if acquired:
+                    if is_vintage:
+                        owned_count_vintage = cnt
+                    else:
+                        owned_count = cnt
+                else:
+                    if is_vintage:
+                        wish_count_vintage = cnt
+                    else:
+                        wish_count = cnt
 
             from src.application.services.valuation_service import ValuationService
 
@@ -134,6 +152,10 @@ async def get_dashboard_hall_of_fame(user_id: int = 1):
         from src.application.services.valuation_service import ValuationService
 
         valuation_service = ValuationService(db)
+        
+        # Pre-cargar ofertas activas para optimizar consultas N+1 en loops
+        product_ids = [item.product_id for item in items if item.product_id]
+        valuation_service.preload_offers_for_products(product_ids)
 
         user_location = "ES"
         user = db.query(UserModel).filter(UserModel.id == user_id).first()

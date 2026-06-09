@@ -1,21 +1,51 @@
 from collections import defaultdict
 from typing import List
+import time
+import threading
 
 from fastapi import APIRouter, Depends, HTTPException
 from loguru import logger
-from sqlalchemy import and_, desc, func, select
+from sqlalchemy import and_, desc, func, select, event
 
 from src.application.services.deal_scorer import DealScorer
 from src.application.services.logistics_service import LogisticsService
-from src.domain.models import CollectionItemModel, OfferModel, ProductModel, UserModel
+from src.domain.models import CollectionItemModel, OfferModel, ProductModel, UserModel, PendingMatchModel
 from src.infrastructure.database_cloud import SessionCloud
 from src.interfaces.api.deps import verify_api_key, verify_device
 from src.interfaces.api.schemas import ProductEditRequest, ProductMergeRequest, ProductOutput
 
 router = APIRouter(tags=["products"])
 
+# Variables de caché en memoria para los emparejamientos del Purgatorio
+_purgatory_counts_cache = None
+_purgatory_counts_timestamp = 0.0
+_purgatory_counts_lock = threading.Lock()
+
+def clear_purgatory_counts_cache():
+    global _purgatory_counts_cache, _purgatory_counts_timestamp
+    with _purgatory_counts_lock:
+        _purgatory_counts_cache = None
+        _purgatory_counts_timestamp = 0.0
+    logger.info("Purgatory match counts cache CLEARED reactively.")
+
+# Invalidar caché reactivamente cuando cambie la base de datos
+@event.listens_for(PendingMatchModel, 'after_insert')
+@event.listens_for(PendingMatchModel, 'after_update')
+@event.listens_for(PendingMatchModel, 'after_delete')
+@event.listens_for(ProductModel, 'after_insert')
+@event.listens_for(ProductModel, 'after_delete')
+def on_db_change(mapper, connection, target):
+    clear_purgatory_counts_cache()
+
 
 def get_purgatory_counts(db) -> dict[int, int]:
+    global _purgatory_counts_cache, _purgatory_counts_timestamp
+    
+    with _purgatory_counts_lock:
+        now = time.time()
+        if _purgatory_counts_cache is not None and (now - _purgatory_counts_timestamp) < 60:
+            return _purgatory_counts_cache
+
     from src.domain.models import PendingMatchModel, ProductModel
     from src.core.brain_engine import engine
     import re
@@ -49,6 +79,10 @@ def get_purgatory_counts(db) -> dict[int, int]:
             _, score, _ = engine.calculate_match(p.name, item.scraped_name, p.ean, item.ean)
             if score > 0.30:
                 counts[p.id] = counts.get(p.id, 0) + 1
+
+    with _purgatory_counts_lock:
+        _purgatory_counts_cache = counts
+        _purgatory_counts_timestamp = time.time()
 
     return counts
 

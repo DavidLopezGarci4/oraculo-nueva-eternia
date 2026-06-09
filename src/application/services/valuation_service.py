@@ -13,19 +13,55 @@ class ValuationService:
         # Pre-load logistics rules to optimize calculations
         rules = self.db.query(LogisticRuleModel).all()
         self.rules_map = {f"{r.shop_name}_{r.country_code}": r for r in rules}
+        self.preloaded_offers = {}
+
+    def preload_offers_for_products(self, product_ids: list[int]):
+        """Pre-carga ofertas activas para optimizar consultas N+1 en loops."""
+        if not product_ids:
+            return
+        
+        offers = self.db.query(OfferModel).filter(
+            OfferModel.product_id.in_(product_ids),
+            OfferModel.is_available == True
+        ).all()
+        
+        self.preloaded_offers = {}
+        for o in offers:
+            self.preloaded_offers.setdefault(o.product_id, []).append(o)
 
     def get_consolidated_value(self, product: ProductModel, user_location: str = "ES") -> float:
         """
         Implementation of the VALUATION WATERFALL.
         Returns the best possible market value estimation.
         """
-        # --- LEVEL 1: ACTIVE RETAIL OFFER (BEST LANDED) ---
-        best_retail = self.db.query(OfferModel).filter(
-            OfferModel.product_id == product.id,
-            OfferModel.is_available == True,
-            OfferModel.source_type == "Retail"
-        ).order_by(OfferModel.price.asc()).first()
+        best_retail = None
+        best_p2p = None
         
+        if product.id in self.preloaded_offers:
+            # Recuperar de las ofertas precargadas en memoria
+            product_offers = self.preloaded_offers[product.id]
+            for o in product_offers:
+                if o.source_type == "Retail":
+                    if not best_retail or o.price < best_retail.price:
+                        best_retail = o
+                elif o.source_type == "Peer-to-Peer":
+                    if not best_p2p or o.price < best_p2p.price:
+                        best_p2p = o
+        else:
+            # Fallback a consultas SQL individuales
+            best_retail = self.db.query(OfferModel).filter(
+                OfferModel.product_id == product.id,
+                OfferModel.is_available == True,
+                OfferModel.source_type == "Retail"
+            ).order_by(OfferModel.price.asc()).first()
+            
+            best_p2p = self.db.query(OfferModel).filter(
+                OfferModel.product_id == product.id,
+                OfferModel.is_available == True,
+                OfferModel.source_type == "Peer-to-Peer"
+            ).order_by(OfferModel.price.asc()).first()
+        
+        # --- LEVEL 1: ACTIVE RETAIL OFFER (BEST LANDED) ---
         if best_retail:
             return LogisticsService.optimized_get_landing_price(
                 best_retail.price, 
@@ -35,12 +71,6 @@ class ValuationService:
             )
 
         # --- LEVEL 2: ACTIVE P2P OFFER (BEST LANDED) ---
-        best_p2p = self.db.query(OfferModel).filter(
-            OfferModel.product_id == product.id,
-            OfferModel.is_available == True,
-            OfferModel.source_type == "Peer-to-Peer"
-        ).order_by(OfferModel.price.asc()).first()
-        
         if best_p2p:
             return LogisticsService.optimized_get_landing_price(
                 best_p2p.price, 
@@ -104,6 +134,9 @@ class ValuationService:
                 
         items = query.all()
 
+        # Pre-cargar ofertas activas para optimizar consultas N+1 en loops
+        product_ids = [item.product_id for item in items if item.product_id]
+        self.preload_offers_for_products(product_ids)
         
         total_value = 0.0
         total_invested = 0.0
@@ -141,13 +174,34 @@ class ValuationService:
         Returns ONLY the landed value if a live offer exists (Retail or P2P).
         Used for the independent 'Landed Value' metric.
         """
-        # --- LEVEL 1: RETAIL ---
-        best_retail = self.db.query(OfferModel).filter(
-            OfferModel.product_id == product.id,
-            OfferModel.is_available == True,
-            OfferModel.source_type == "Retail"
-        ).order_by(OfferModel.price.asc()).first()
+        best_retail = None
+        best_p2p = None
         
+        if product.id in self.preloaded_offers:
+            # Recuperar de las ofertas precargadas en memoria
+            product_offers = self.preloaded_offers[product.id]
+            for o in product_offers:
+                if o.source_type == "Retail":
+                    if not best_retail or o.price < best_retail.price:
+                        best_retail = o
+                elif o.source_type == "Peer-to-Peer":
+                    if not best_p2p or o.price < best_p2p.price:
+                        best_p2p = o
+        else:
+            # Fallback a consultas SQL individuales
+            best_retail = self.db.query(OfferModel).filter(
+                OfferModel.product_id == product.id,
+                OfferModel.is_available == True,
+                OfferModel.source_type == "Retail"
+            ).order_by(OfferModel.price.asc()).first()
+            
+            best_p2p = self.db.query(OfferModel).filter(
+                OfferModel.product_id == product.id,
+                OfferModel.is_available == True,
+                OfferModel.source_type == "Peer-to-Peer"
+            ).order_by(OfferModel.price.asc()).first()
+            
+        # --- LEVEL 1: RETAIL ---
         if best_retail:
             return LogisticsService.optimized_get_landing_price(
                 best_retail.price, 
@@ -157,12 +211,6 @@ class ValuationService:
             )
 
         # --- LEVEL 2: P2P ---
-        best_p2p = self.db.query(OfferModel).filter(
-            OfferModel.product_id == product.id,
-            OfferModel.is_available == True,
-            OfferModel.source_type == "Peer-to-Peer"
-        ).order_by(OfferModel.price.asc()).first()
-        
         if best_p2p:
             return LogisticsService.optimized_get_landing_price(
                 best_p2p.price, 
@@ -172,3 +220,4 @@ class ValuationService:
             )
             
         return 0.0
+
