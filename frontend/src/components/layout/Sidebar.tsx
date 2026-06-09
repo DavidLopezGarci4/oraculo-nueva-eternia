@@ -167,7 +167,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen
 
                 {/* Footer */}
                 <div className="border-t border-glass-border p-4 space-y-2 mt-auto">
-                    {(isAdmin || user?.username === 'David') && (
+                    {user && (
                         <button
                             onClick={() => {
                                 setActiveTab('settings');
