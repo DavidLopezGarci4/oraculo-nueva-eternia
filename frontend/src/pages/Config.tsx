@@ -1215,7 +1215,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                             )}
 
                             {/* --- SHIELD ARCHITECTURE: EXCEL BRIDGE --- */}
-                            {user && (
+                            {isAdmin && (
                                 <div className="space-y-4">
                                     <div className="flex items-center gap-3 px-2">
                                         <ShieldAlert className="h-6 w-6 text-brand-primary" />
