@@ -470,6 +470,11 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
   - [x] **Descargador Reactivo**: Descargador de imágenes en lote del lado del cliente con barra de progreso, conteo exacto y soporte de cancelación.
   - [x] **Auto-caching en Caliente**: Carga en caché automática en tiempo real de cualquier nueva imagen renderizada en las vistas principales.
 
+- [x] **Phase 71: Fusión Divina de Reliquias en el Catálogo (09/06/2026)**
+  - [x] **Interfaz de Fusión**: Añadido botón de fusión en los controles administrativos de la ficha de detalle de producto en `Catalog.tsx`.
+  - [x] **Buscador y Selección**: Buscador interactivo integrado con autocompletado en el cliente para seleccionar el producto destino para la absorción de datos.
+  - [x] **Sincronización de Base de Datos**: Integración con el endpoint de fusión divina del backend para traspasar ofertas y capturas de Fortaleza de forma atómica antes de eliminar el registro duplicado.
+
 ---
 
 ## ✅ Plan de Verificación

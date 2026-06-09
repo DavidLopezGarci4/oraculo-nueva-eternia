@@ -23,7 +23,8 @@ import {
     Box,
     Trash2,
     ArrowUp,
-    ArrowDown
+    ArrowDown,
+    GitMerge
 } from 'lucide-react';
 import { getOptimizedImageUrl } from '../utils/imageUtils';
 import { MOTUImage } from '../components/ui/MOTUImage';
@@ -41,7 +42,7 @@ import { useCart } from '../context/CartContext';
 import { motion } from 'framer-motion';
 import { getCollection, toggleCollection } from '../api/collection';
 import type { Product } from '../api/collection';
-import { updateProduct, unlinkOffer, deleteProduct } from '../api/admin';
+import { updateProduct, unlinkOffer, deleteProduct, mergeProducts } from '../api/admin';
 import { format, formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { getProductPriceHistory, getUniqueShops } from '../api/products';
@@ -77,6 +78,19 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
     const [showVintageSyncModal, setShowVintageSyncModal] = React.useState(false);
     const [vintageSyncLogs, setVintageSyncLogs] = React.useState<string>("");
     const [vintageSyncStatus, setVintageSyncStatus] = React.useState<string>("idle");
+
+    // Admin Fusion states
+    const [showMergePanel, setShowMergePanel] = React.useState(false);
+    const [mergeSearchQuery, setMergeSearchQuery] = React.useState('');
+    const [mergeTargetProduct, setMergeTargetProduct] = React.useState<Product | null>(null);
+    const [isMerging, setIsMerging] = React.useState(false);
+
+    React.useEffect(() => {
+        setShowMergePanel(false);
+        setMergeSearchQuery('');
+        setMergeTargetProduct(null);
+        setIsMerging(false);
+    }, [selectedProduct]);
 
     // Contexto de Autenticación (Fase 8.2)
     const activeUserId = parseInt(localStorage.getItem('active_user_id') || '2');
@@ -1164,12 +1178,138 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                                         {deleteProductMutation.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                                     </button>
                                 )}
+                                {isAdmin && (
+                                    <button
+                                        onClick={() => setShowMergePanel(!showMergePanel)}
+                                        className={`h-10 w-10 flex items-center justify-center rounded-xl transition-all shadow-lg border ${
+                                            showMergePanel 
+                                                ? 'bg-brand-primary text-white border-brand-primary shadow-brand-primary/20' 
+                                                : 'bg-brand-primary/10 text-brand-primary border-brand-primary/20 hover:bg-brand-primary hover:text-white'
+                                        }`}
+                                        title="Fusionar con otra figura (Arquitecto)"
+                                    >
+                                        <GitMerge className="h-4 w-4" />
+                                    </button>
+                                )}
                             </div>
                         </div>
 
-                        {/* Modal Body: Price List */}
                         <div className="flex-1 overflow-y-auto p-8 pt-4 custom-scrollbar relative z-10">
                             <div className="space-y-4">
+                                {showMergePanel && (
+                                    <div className="p-6 bg-white/[0.02] border border-white/5 rounded-3xl space-y-4 mb-4 relative z-50">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs font-black uppercase text-brand-primary tracking-wider">Fusionar Reliquia (Arquitecto)</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setShowMergePanel(false);
+                                                    setMergeSearchQuery('');
+                                                    setMergeTargetProduct(null);
+                                                }}
+                                                className="text-[10px] font-black uppercase text-white/50 hover:text-white"
+                                            >
+                                                Cerrar
+                                            </button>
+                                        </div>
+                                        <p className="text-[10px] text-white/60 font-bold uppercase leading-tight">
+                                            Transfiere todas las ofertas y vinculaciones de la colección de esta figura '{selectedProduct.name}' a otra figura existente en el catálogo, eliminando el registro duplicado.
+                                        </p>
+
+                                        <div className="space-y-2 relative">
+                                            <label className="text-[9px] font-black uppercase tracking-wider text-white/40">Buscar Reliquia Destino</label>
+                                            <div className="relative">
+                                                <input
+                                                    type="text"
+                                                    value={mergeSearchQuery}
+                                                    onChange={(e) => {
+                                                        setMergeSearchQuery(e.target.value);
+                                                        if (mergeTargetProduct) setMergeTargetProduct(null);
+                                                    }}
+                                                    placeholder="Escribe el nombre de la figura destino..."
+                                                    className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-2.5 text-xs text-white placeholder-white/20 focus:outline-none focus:border-brand-primary transition-all"
+                                                />
+                                                {mergeTargetProduct && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setMergeTargetProduct(null);
+                                                            setMergeSearchQuery('');
+                                                        }}
+                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white font-bold"
+                                                    >
+                                                        &times;
+                                                    </button>
+                                                )}
+                                            </div>
+                                            
+                                            {/* Dropdown Suggestions */}
+                                            {!mergeTargetProduct && mergeSearchQuery.trim().length > 1 && (
+                                                <div className="absolute z-50 w-full mt-1 bg-black/95 border border-white/10 rounded-2xl max-h-48 overflow-y-auto shadow-2xl custom-scrollbar">
+                                                    {products
+                                                        ?.filter(p => 
+                                                            p.id !== selectedProduct.id && 
+                                                            p.name.toLowerCase().includes(mergeSearchQuery.toLowerCase())
+                                                        )
+                                                        .map(p => (
+                                                            <div
+                                                                key={p.id}
+                                                                onClick={() => {
+                                                                    setMergeTargetProduct(p);
+                                                                    setMergeSearchQuery(p.name);
+                                                                }}
+                                                                className="px-4 py-2.5 hover:bg-white/5 text-xs text-white/70 hover:text-white cursor-pointer font-bold transition-colors border-b border-white/5 last:border-0"
+                                                            >
+                                                                {p.name} <span className="opacity-40 ml-2">#{p.figure_id}</span>
+                                                            </div>
+                                                        ))
+                                                    }
+                                                    {products?.filter(p => 
+                                                        p.id !== selectedProduct.id && 
+                                                        p.name.toLowerCase().includes(mergeSearchQuery.toLowerCase())
+                                                    ).length === 0 && (
+                                                        <div className="px-4 py-3 text-xs text-white/40 uppercase font-black">No se encontraron figuras</div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {mergeTargetProduct && (
+                                            <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/25 space-y-3">
+                                                <p className="text-[10px] text-red-400 font-bold uppercase leading-normal">
+                                                    ⚠️ ATENCIÓN: Al proceder, todas las ofertas y registros de '{selectedProduct.name}' se transferirán permanentemente a '{mergeTargetProduct.name}' y la figura original será destruida del catálogo.
+                                                </p>
+                                                <button
+                                                    type="button"
+                                                    onClick={async () => {
+                                                        if (confirm(`¿Confirmar fusión definitiva de '${selectedProduct.name}' dentro de '${mergeTargetProduct.name}'?`)) {
+                                                            setIsMerging(true);
+                                                            try {
+                                                                await mergeProducts(selectedProduct.id, mergeTargetProduct.id);
+                                                                alert(`Fusión divina completada. ${selectedProduct.name} absorbida por ${mergeTargetProduct.name}`);
+                                                                setShowMergePanel(false);
+                                                                setMergeSearchQuery('');
+                                                                setMergeTargetProduct(null);
+                                                                setSelectedProduct(null);
+                                                                queryClient.invalidateQueries({ queryKey: ['products'] });
+                                                            } catch (e: any) {
+                                                                console.error(e);
+                                                                alert("Error al realizar la fusión: " + (e.response?.data?.detail || e.message));
+                                                            } finally {
+                                                                setIsMerging(false);
+                                                            }
+                                                        }
+                                                    }}
+                                                    disabled={isMerging}
+                                                    className="w-full bg-red-500 hover:bg-red-600 text-white py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
+                                                >
+                                                    {isMerging ? <RefreshCw className="h-3 w-3 animate-spin" /> : <GitMerge className="h-3 w-3" />}
+                                                    {isMerging ? 'Fusionando...' : 'Confirmar Fusión Divina'}
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                                 <div className="flex items-center justify-between px-4">
                                     <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20">La Verdad del Mercado</h5>
                                     <span className={`text-[10px] font-black uppercase ${isVintageOnly ? 'text-amber-500' : 'text-brand-primary'}`}>Mejor Oferta Disponible</span>

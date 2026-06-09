@@ -1124,3 +1124,13 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
   - **Auto-caching en Caliente**: Actualizado el componente `<MOTUImage>` para descargar y guardar automáticamente en la caché local del navegador cualquier imagen nueva en cuanto esta sea renderizada por primera vez en la Fortaleza, Nueva Eternia o Catálogo.
 
 
+### 🛡️ Fase 71: Fusión Divina de Reliquias en el Catálogo (09/06/2026)
+
+- **Hitos**: Implementación de la funcionalidad de fusión (merge) interactiva en el Catálogo (Eternia / Nueva Eternia) para administradores, permitiendo la consolidación y limpieza de registros duplicados agregados por error mediante un buscador integrado.
+- **Estado**: ✅ COMPLETADO
+- **Logros Técnicos**:
+  - **Botón de Fusión en Catálogo**: Agregado el botón "Fusionar con otra figura" (icono `GitMerge`) en los controles de administrador dentro de la cabecera de la ficha detallada de la figura (`Catalog.tsx`).
+  - **Buscador de Destino y Autocompletado**: Integrada una sección interactiva colapsable con un campo de búsqueda en tiempo real que filtra las figuras existentes en el catálogo. Permite al administrador seleccionar la figura de destino exacta a la cual absorber los datos.
+  - **Consolidación en un Clic**: Al confirmar la fusión divina, se invoca de forma segura la API `/api/products/merge` en el backend para transferir ofertas, vinculaciones, historiales y pertenencias de la Fortaleza del ítem origen al destino, eliminando el duplicado y manteniendo la integridad de la base de datos de manera atómica.
+
+
