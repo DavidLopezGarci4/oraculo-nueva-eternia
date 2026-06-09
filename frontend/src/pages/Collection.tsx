@@ -677,14 +677,14 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                                 <button
                                     type="button"
                                     onClick={() => setEditingProduct(null)}
-                                    className="px-6 py-3 rounded-2xl text-sm font-black uppercase tracking-widest text-white/60 hover:text-white transition-all"
+                                    className="px-6 h-12 rounded-2xl text-sm font-black uppercase tracking-widest text-white/60 hover:text-white transition-all flex items-center justify-center whitespace-nowrap"
                                 >
                                     Cancelar
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={updateMutation.isPending}
-                                    className={`px-8 py-3 rounded-2xl font-black uppercase tracking-widest transition-all flex items-center gap-2 disabled:opacity-50 text-white ${editingProduct.is_vintage ? 'bg-amber-500 hover:bg-amber-600 text-black shadow-[0_0_30px_rgba(245,158,11,0.3)]' : 'bg-brand-primary hover:bg-brand-secondary shadow-[0_0_30px_rgba(14,165,233,0.3)]'}`}
+                                    className={`px-8 h-12 rounded-2xl font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-white whitespace-nowrap ${editingProduct.is_vintage ? 'bg-amber-500 hover:bg-amber-600 text-black shadow-[0_0_30px_rgba(245,158,11,0.3)]' : 'bg-brand-primary hover:bg-brand-secondary shadow-[0_0_30px_rgba(14,165,233,0.3)]'}`}
                                 >
                                     {updateMutation.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                                     Preservar Cambios

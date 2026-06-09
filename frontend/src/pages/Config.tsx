@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Play, Activity, Clock, AlertCircle, CheckCircle2, RefreshCw, Terminal, Target, Settings, Users, ShieldAlert, Trash2, Zap, History, Database, Download, FileSpreadsheet, Repeat, Globe, Package } from 'lucide-react';
+import { Play, Activity, Clock, AlertCircle, CheckCircle2, RefreshCw, Terminal, Target, Settings, Users, ShieldAlert, Trash2, Zap, History, Database, Download, FileSpreadsheet, Repeat, Globe, Package, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { resetSmartMatches, runScrapers, stopScrapers, getScraperLogs, type ScraperExecutionLog, getWallapopIpLogs, downloadWallapopIpLogs, type WallapopIpLog } from '../api/purgatory';
@@ -100,6 +100,9 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
         tX: 125.0,
         tY: 10.0
     });
+
+    const isAdmin = user?.role === 'admin' || user?.username === 'David';
+    const [showShowcaseGuide, setShowShowcaseGuide] = useState(false);
 
     useEffect(() => {
         if (showCalibrator) {
@@ -459,17 +462,6 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
         }
     };
 
-    const handleExportExcel = async () => {
-        let userId: number = activeUserId;
-        if (user?.role === 'admin') {
-            const input = prompt('🕵️ ACCESO AL ARCHIVO MAESTRO\nIngrese el ID del Héroe para exportar su Colección Excel:', activeUserId.toString());
-            if (input === null) return;
-            const parsed = parseInt(input);
-            if (!isNaN(parsed)) userId = parsed;
-        }
-        await handleExportExcelAdmin(userId);
-    };
-
     const handleExportSqliteAdmin = async (userId: number) => {
         try {
             await exportCollectionSqlite(userId);
@@ -478,17 +470,6 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
             console.error('Error exporting sqlite:', error);
             alert('❌ Error al exportar SQLite.');
         }
-    };
-
-    const handleExportSqlite = async () => {
-        let userId: number = activeUserId;
-        if (user?.role === 'admin') {
-            const input = prompt('🗄️ ACCESO AL BÚNKER DE DATOS\nIngrese el ID del Héroe para extraer su Bóveda SQLite:', activeUserId.toString());
-            if (input === null) return;
-            const parsed = parseInt(input);
-            if (!isNaN(parsed)) userId = parsed;
-        }
-        await handleExportSqliteAdmin(userId);
     };
 
 
@@ -1013,6 +994,43 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                             Copiar Enlace Santuario
                                         </button>
                                     )}
+
+                                    {/* Collapsible Showcase Guide Section */}
+                                    <div className="w-full border-t border-white/5 pt-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowShowcaseGuide(!showShowcaseGuide)}
+                                            className="w-full flex items-center justify-between px-3 py-2 bg-white/5 hover:bg-white/10 rounded-xl transition-all border border-white/5 group"
+                                        >
+                                            <span className="text-[9px] font-black text-white/80 uppercase tracking-widest flex items-center gap-1.5">
+                                                📋 ¿Cómo funciona el Santuario Público?
+                                            </span>
+                                            <ChevronDown className={`h-3 w-3 text-white/50 group-hover:text-white transition-transform duration-300 ${showShowcaseGuide ? 'rotate-180' : ''}`} />
+                                        </button>
+
+                                        {showShowcaseGuide && (
+                                            <div className="mt-2 p-3 bg-white/[0.02] border border-white/5 rounded-xl text-[9px] text-white/60 space-y-2.5 leading-relaxed">
+                                                <div>
+                                                    <h4 className="font-black text-white uppercase tracking-wider mb-1">1. Enlace Compartible</h4>
+                                                    <p className="text-[8px] leading-normal text-white/70">
+                                                        Cualquier persona a la que le envíes el link podrá ver tu colección en tiempo real, sin necesidad de tener cuenta ni registrarse.
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <h4 className="font-black text-white uppercase tracking-wider mb-1">2. Privacidad de Datos</h4>
+                                                    <p className="text-[8px] leading-normal text-amber-500 font-bold">
+                                                        Se ocultan automáticamente tu inversión, precios de adquisición, ROI y todas tus anotaciones personales de la base de datos.
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <h4 className="font-black text-white uppercase tracking-wider mb-1">3. Control de Acceso</h4>
+                                                    <p className="text-[8px] leading-normal text-white/70">
+                                                        Si desactivas el interruptor, el enlace dejará de ser accesible de inmediato para todo el mundo, mostrando una advertencia de acceso restringido.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 
@@ -1132,70 +1150,72 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                             </div>
 
                             {/* Calibradores de Haces de Luz */}
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                {/* Calibrador de Haces de Luz Moderno */}
-                                <div className="glass border border-cyan-500/30 p-6 rounded-3xl space-y-4 bg-cyan-500/5">
-                                    <div className="flex items-center gap-3 text-cyan-400 font-bold uppercase tracking-widest text-xs mb-2">
-                                        <Zap className="h-4 w-4" />
-                                        He-Man Moderno
+                            {isAdmin && (
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    {/* Calibrador de Haces de Luz Moderno */}
+                                    <div className="glass border border-cyan-500/30 p-6 rounded-3xl space-y-4 bg-cyan-500/5">
+                                        <div className="flex items-center gap-3 text-cyan-400 font-bold uppercase tracking-widest text-xs mb-2">
+                                            <Zap className="h-4 w-4" />
+                                            He-Man Moderno
+                                        </div>
+                                        <div className="space-y-4">
+                                            <p className="text-[10px] text-white/65 font-bold uppercase leading-tight">
+                                                Calibra la posición exacta de los haces de luz sobre la espada en la pantalla de carga principal.
+                                            </p>
+                                            <button
+                                                onClick={() => setShowModernCalibrator(true)}
+                                                className="w-full bg-cyan-500/10 hover:bg-cyan-500 text-cyan-400 hover:text-black border border-cyan-500/25 px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/0 hover:shadow-cyan-500/25"
+                                            >
+                                                <Settings className="h-3.5 w-3.5" />
+                                                Calibrar Espada He-Man
+                                            </button>
+                                        </div>
                                     </div>
-                                    <div className="space-y-4">
-                                        <p className="text-[10px] text-white/65 font-bold uppercase leading-tight">
-                                            Calibra la posición exacta de los haces de luz sobre la espada en la pantalla de carga principal.
-                                        </p>
-                                        <button
-                                            onClick={() => setShowModernCalibrator(true)}
-                                            className="w-full bg-cyan-500/10 hover:bg-cyan-500 text-cyan-400 hover:text-black border border-cyan-500/25 px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/0 hover:shadow-cyan-500/25"
-                                        >
-                                            <Settings className="h-3.5 w-3.5" />
-                                            Calibrar Espada He-Man
-                                        </button>
-                                    </div>
-                                </div>
 
-                                {/* Calibrador de Haces de Luz Vintage */}
-                                <div className="glass border border-amber-500/30 p-6 rounded-3xl space-y-4 bg-amber-500/5">
-                                    <div className="flex items-center gap-3 text-amber-500 font-bold uppercase tracking-widest text-xs mb-2">
-                                        <Zap className="h-4 w-4" />
-                                        He-Man Vintage
+                                    {/* Calibrador de Haces de Luz Vintage */}
+                                    <div className="glass border border-amber-500/30 p-6 rounded-3xl space-y-4 bg-amber-500/5">
+                                        <div className="flex items-center gap-3 text-amber-500 font-bold uppercase tracking-widest text-xs mb-2">
+                                            <Zap className="h-4 w-4" />
+                                            He-Man Vintage
+                                        </div>
+                                        <div className="space-y-4">
+                                            <p className="text-[10px] text-white/65 font-bold uppercase leading-tight">
+                                                Calibra la posición exacta de los haces de luz sobre la espada en la silueta de He-Man Vintage.
+                                            </p>
+                                            <button
+                                                onClick={() => setShowCalibrator(true)}
+                                                className="w-full bg-amber-500/10 hover:bg-amber-500 text-amber-500 hover:text-black border border-amber-500/25 px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-500/0 hover:shadow-amber-500/25"
+                                            >
+                                                <Settings className="h-3.5 w-3.5" />
+                                                Calibrar Espada Vintage
+                                            </button>
+                                        </div>
                                     </div>
-                                    <div className="space-y-4">
-                                        <p className="text-[10px] text-white/65 font-bold uppercase leading-tight">
-                                            Calibra la posición exacta de los haces de luz sobre la espada en la silueta de He-Man Vintage.
-                                        </p>
-                                        <button
-                                            onClick={() => setShowCalibrator(true)}
-                                            className="w-full bg-amber-500/10 hover:bg-amber-500 text-amber-500 hover:text-black border border-amber-500/25 px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-500/0 hover:shadow-amber-500/25"
-                                        >
-                                            <Settings className="h-3.5 w-3.5" />
-                                            Calibrar Espada Vintage
-                                        </button>
-                                    </div>
-                                </div>
 
-                                {/* Calibrador de Haces de Luz Skeletor */}
-                                <div className="glass border border-purple-500/30 p-6 rounded-3xl space-y-4 bg-purple-500/5">
-                                    <div className="flex items-center gap-3 text-purple-500 font-bold uppercase tracking-widest text-xs mb-2">
-                                        <Zap className="h-4 w-4" />
-                                        Skeletor Vintage
-                                    </div>
-                                    <div className="space-y-4">
-                                        <p className="text-[10px] text-white/65 font-bold uppercase leading-tight">
-                                            Calibra la posición exacta de los haces de luz sobre la espada en la silueta de Skeletor.
-                                        </p>
-                                        <button
-                                            onClick={() => setShowSkeletorCalibrator(true)}
-                                            className="w-full bg-purple-500/10 hover:bg-purple-500 text-purple-500 hover:text-black border border-purple-500/25 px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg shadow-purple-500/0 hover:shadow-purple-500/25"
-                                        >
-                                            <Settings className="h-3.5 w-3.5" />
-                                            Calibrar Espada Skeletor
-                                        </button>
+                                    {/* Calibrador de Haces de Luz Skeletor */}
+                                    <div className="glass border border-purple-500/30 p-6 rounded-3xl space-y-4 bg-purple-500/5">
+                                        <div className="flex items-center gap-3 text-purple-500 font-bold uppercase tracking-widest text-xs mb-2">
+                                            <Zap className="h-4 w-4" />
+                                            Skeletor Vintage
+                                        </div>
+                                        <div className="space-y-4">
+                                            <p className="text-[10px] text-white/65 font-bold uppercase leading-tight">
+                                                Calibra la posición exacta de los haces de luz sobre la espada en la silueta de Skeletor.
+                                            </p>
+                                            <button
+                                                onClick={() => setShowSkeletorCalibrator(true)}
+                                                className="w-full bg-purple-500/10 hover:bg-purple-500 text-purple-500 hover:text-black border border-purple-500/25 px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg shadow-purple-500/0 hover:shadow-purple-500/25"
+                                            >
+                                                <Settings className="h-3.5 w-3.5" />
+                                                Calibrar Espada Skeletor
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+                            )}
 
                             {/* --- SHIELD ARCHITECTURE: EXCEL BRIDGE --- */}
-                            {(user?.role === 'admin' || user?.username === 'David') && (
+                            {user && (
                                 <div className="space-y-4">
                                     <div className="flex items-center gap-3 px-2">
                                         <ShieldAlert className="h-6 w-6 text-brand-primary" />
@@ -1209,7 +1229,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                                 </div>
                                                 <div>
                                                     <h4 className="text-white font-bold text-sm">Excel Bridge</h4>
-                                                    <p className="text-[10px] text-white/60 font-mono">Sincronización David MOTU</p>
+                                                    <p className="text-[10px] text-white/60 font-mono">Sincronización {isAdmin ? 'David' : user?.username} MOTU</p>
                                                 </div>
                                             </div>
                                             <div className="flex flex-col items-end">
@@ -1229,66 +1249,6 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                     </div>
                                 </div>
                             )}
-
-                            {/* --- MI BÓVEDA DIGITAL: UNIVERSAL ACCESS --- */}
-                            <div className="lg:col-span-3 space-y-6">
-                                <div className="flex items-center gap-3 px-2">
-                                    <ShieldAlert className="h-6 w-6 text-brand-primary" />
-                                    <h3 className="text-xl font-black uppercase tracking-[0.2em] text-white">Mi Bóveda Digital</h3>
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="relative overflow-hidden group">
-                                        <div className="absolute inset-0 bg-gradient-to-br from-brand-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-[2.5rem]"></div>
-                                        <div className="relative glass border border-white/10 p-8 rounded-[2.5rem] flex flex-col gap-6 shadow-2xl backdrop-blur-3xl h-full transition-all group-hover:border-brand-primary/30">
-                                            <div className="flex items-center justify-between">
-                                                <div className="bg-brand-primary/10 p-4 rounded-2xl">
-                                                    <FileSpreadsheet className="h-8 w-8 text-brand-primary" />
-                                                </div>
-                                                <span className="text-[10px] font-black text-brand-primary uppercase tracking-[0.3em] bg-brand-primary/10 px-3 py-1 rounded-full">Heritage Sync</span>
-                                            </div>
-                                            <div>
-                                                <h4 className="text-2xl font-black text-white mb-2 uppercase tracking-tighter">Bóveda Excel</h4>
-                                                <p className="text-sm text-white/50 leading-relaxed font-medium">
-                                                    Descarga tu colección completa en formato Excel. Ideal para visualización rápida y edición manual heredada.
-                                                </p>
-                                            </div>
-                                            <button
-                                                onClick={() => handleExportExcel()}
-                                                className="mt-auto w-full group relative flex items-center justify-center gap-3 overflow-hidden rounded-2xl bg-brand-primary py-5 font-black text-white transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl shadow-brand-primary/20"
-                                            >
-                                                <Download className="h-5 w-5" />
-                                                <span className="uppercase tracking-[0.1em]">Bajar Excel Actualizado</span>
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <div className="relative overflow-hidden group">
-                                        <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-[2.5rem]"></div>
-                                        <div className="relative glass border border-white/10 p-8 rounded-[2.5rem] flex flex-col gap-6 shadow-2xl backdrop-blur-3xl h-full transition-all group-hover:border-indigo-500/30">
-                                            <div className="flex items-center justify-between">
-                                                <div className="bg-indigo-500/10 p-4 rounded-2xl">
-                                                    <Database className="h-8 w-8 text-indigo-400" />
-                                                </div>
-                                                <span className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.3em] bg-indigo-500/10 px-3 py-1 rounded-full">Deep Backup</span>
-                                            </div>
-                                            <div>
-                                                <h4 className="text-2xl font-black text-white mb-2 uppercase tracking-tighter">Cámaras de Resguardo SQLite</h4>
-                                                <p className="text-sm text-white/50 leading-relaxed font-medium">
-                                                    Tu base de datos SQLite íntegra en un solo archivo. Es el respaldo definitivo de todas tus reliquias y su historial.
-                                                </p>
-                                            </div>
-                                            <button
-                                                onClick={() => handleExportSqlite()}
-                                                className="mt-auto w-full group relative flex items-center justify-center gap-3 overflow-hidden rounded-2xl bg-indigo-600 py-5 font-black text-white transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl shadow-indigo-600/20"
-                                            >
-                                                <Database className="h-5 w-5" />
-                                                <span className="uppercase tracking-[0.1em]">Descargar Bóveda SQLite</span>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
 
                             {/* Purification (Admin Power) */}
                             {user?.role === 'admin' && (

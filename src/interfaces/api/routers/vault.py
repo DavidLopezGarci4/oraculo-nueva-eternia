@@ -132,15 +132,38 @@ async def api_stage_vault(user_id: int = 2, file_path: str = None):
 @router.post("/api/excel/sync")
 async def api_sync_excel(user_id: int = 2):
     from src.application.services.excel_manager import ExcelManager
+    from src.domain.models import UserModel
+    from src.infrastructure.database_cloud import SessionCloud
+    import shutil
+
+    with SessionCloud() as db:
+        user = db.query(UserModel).filter(UserModel.id == user_id).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        is_admin = user.role == 'admin' or user.username == 'David'
+        username = user.username
 
     project_root = Path(__file__).resolve().parents[4]
-    david_excel = str(project_root / "data" / "MOTU" / "lista_MOTU.xlsx")
+    
+    if is_admin:
+        excel_path = project_root / "data" / "MOTU" / "lista_MOTU.xlsx"
+    else:
+        # User-specific excel file path
+        excel_path = project_root / "data" / "MOTU" / f"lista_MOTU_{username}.xlsx"
+        # Copy template if it doesn't exist yet
+        if not excel_path.exists():
+            template_path = project_root / "data" / "MOTU" / "lista_MOTU.xlsx"
+            if not template_path.exists():
+                raise HTTPException(status_code=500, detail="Plantilla de Excel lista_MOTU.xlsx no encontrada.")
+            # Ensure directories exist
+            excel_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(template_path, excel_path)
 
-    manager = ExcelManager(david_excel)
+    manager = ExcelManager(str(excel_path))
     success = manager.sync_acquisitions_from_db(user_id)
 
     if success:
-        return {"status": "success", "message": "Excel Bridge sincronizado con éxito."}
+        return {"status": "success", "message": f"Excel Bridge de {username if not is_admin else 'David'} sincronizado con éxito."}
     raise HTTPException(
         status_code=500,
         detail="Fallo en la sincronización del Excel. Verifique la ruta y el formato.",

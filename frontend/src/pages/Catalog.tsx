@@ -1397,14 +1397,14 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                                 <button
                                     type="button"
                                     onClick={() => setEditingProduct(null)}
-                                    className="px-6 py-3 rounded-2xl text-sm font-black uppercase tracking-widest text-white/60 hover:text-white transition-all"
+                                    className="px-6 h-12 rounded-2xl text-sm font-black uppercase tracking-widest text-white/60 hover:text-white transition-all flex items-center justify-center whitespace-nowrap"
                                 >
                                     Cancelar
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={updateMutation.isPending}
-                                    className="bg-brand-primary hover:bg-brand-secondary text-white px-8 py-3 rounded-2xl font-black uppercase tracking-widest transition-all shadow-[0_0_30px_rgba(14,165,233,0.3)] flex items-center gap-2 disabled:opacity-50"
+                                    className="bg-brand-primary hover:bg-brand-secondary text-white px-8 h-12 rounded-2xl font-black uppercase tracking-widest transition-all shadow-[0_0_30px_rgba(14,165,233,0.3)] flex items-center justify-center gap-2 disabled:opacity-50 whitespace-nowrap"
                                 >
                                     {updateMutation.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                                     Preservar Cambios
