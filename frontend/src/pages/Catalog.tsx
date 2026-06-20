@@ -67,7 +67,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
     const [sortOrder, setSortOrder] = React.useState<'asc' | 'desc'>('asc');
 
     // Cronos Standalone states
-    const [viewMode, setViewMode] = React.useState<'grid' | 'cronos'>('grid');
+    const [viewMode, setViewMode] = React.useState<'grid' | 'cronos' | 'wish'>('grid');
     const [selectedCronosA, setSelectedCronosA] = React.useState<Product | null>(null);
     const [selectedCronosB, setSelectedCronosB] = React.useState<Product | null>(null);
     const [cronosSearchA, setCronosSearchA] = React.useState('');
@@ -232,6 +232,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
         },
         onSettled: () => {
             queryClient.invalidateQueries({ queryKey: ['collection', activeUserId, isVintageOnly] });
+            queryClient.invalidateQueries({ queryKey: ['dashboard-stats', activeUserId] });
         }
     });
 
@@ -240,6 +241,10 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
         const map = new Map<number, Product>();
         collection?.forEach(p => map.set(p.id, p));
         return map;
+    }, [collection]);
+
+    const totalWish = React.useMemo(() => {
+        return collection?.filter(p => p.is_wish).length || 0;
     }, [collection]);
 
     const getCollectionItem = React.useCallback((productId: number) => {
@@ -328,9 +333,13 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
             .filter(product => {
                 const query = searchQuery.toLowerCase();
                 const owned = isOwned(product.id);
+                const wished = isWished(product.id);
 
-                // EXCLUSIÓN TOTAL: Si ya es propiedad del usuario, no aparece en el Catálogo
-                if (owned) return false;
+                if (viewMode === 'wish') {
+                    if (!wished) return false;
+                } else {
+                    if (owned) return false;
+                }
 
                 return (
                     product.name.toLowerCase().includes(query) ||
@@ -358,7 +367,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                 
                 return sortOrder === 'asc' ? comparison : -comparison;
             });
-    }, [products, searchQuery, subCatStats, isOwned, isWished, isGrail, isVintageOnly, productsWithOffers, sortBy, sortOrder]);
+    }, [products, searchQuery, subCatStats, isOwned, isWished, isGrail, isVintageOnly, productsWithOffers, sortBy, sortOrder, viewMode]);
 
     const chartData = React.useMemo(() => {
         if (!historyCronosA && !historyCronosB) return [];
@@ -635,11 +644,15 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
 
                     <div className="flex items-center justify-between sm:justify-start gap-3 rounded-xl sm:rounded-2xl bg-white/[0.03] px-4 py-2 sm:py-2.5 border border-white/5 backdrop-blur-3xl w-full sm:w-auto h-[38px] sm:h-[42px]">
                         <div className="flex items-center gap-2">
-                            <Package className={`h-4 w-4 sm:h-5 sm:w-5 ${isVintageOnly ? 'text-amber-500' : 'text-brand-primary'}`} />
+                            {viewMode === 'wish' ? (
+                                <Star className={`h-4 w-4 sm:h-5 sm:w-5 fill-current ${isVintageOnly ? 'text-amber-500' : 'text-brand-primary'}`} />
+                            ) : (
+                                <Package className={`h-4 w-4 sm:h-5 sm:w-5 ${isVintageOnly ? 'text-amber-500' : 'text-brand-primary'}`} />
+                            )}
                             <span className="text-lg sm:text-xl font-black text-white leading-none">{sortedProducts?.length}</span>
                         </div>
                         <span className="text-[8px] sm:text-[9px] font-black text-white/20 uppercase tracking-[0.15em] pt-0.5 leading-tight text-right sm:text-left">
-                            Reliquias<br className="sm:hidden" /> Filtradas
+                            {viewMode === 'wish' ? 'Deseos' : 'Reliquias'}<br className="sm:hidden" /> Filtradas
                         </span>
                     </div>
                 </div>
@@ -651,17 +664,33 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                     onClick={() => setViewMode('grid')}
                     className={`pb-3 text-xs font-black uppercase tracking-widest border-b-2 transition-all ${
                         viewMode === 'grid' 
-                            ? 'border-brand-primary text-white' 
+                            ? (isVintageOnly ? 'border-amber-500 text-white' : 'border-brand-primary text-white') 
                             : 'border-transparent text-white/70 hover:text-white'
                     }`}
                 >
                     {isVintageOnly ? "Eternia Vintage" : "Nueva Eternia"}
                 </button>
                 <button
+                    onClick={() => setViewMode('wish')}
+                    className={`pb-3 text-xs font-black uppercase tracking-widest border-b-2 transition-all flex items-center gap-1.5 ${
+                        viewMode === 'wish' 
+                            ? (isVintageOnly ? 'border-amber-500 text-white' : 'border-brand-primary text-white') 
+                            : 'border-transparent text-white/70 hover:text-white'
+                    }`}
+                >
+                    <Star className={`h-3.5 w-3.5 ${viewMode === 'wish' ? 'fill-current' : ''}`} />
+                    Lista de Deseos
+                    {totalWish > 0 && (
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded-md ml-1 ${isVintageOnly ? 'bg-amber-500/20 text-amber-400 font-extrabold' : 'bg-brand-primary/20 text-brand-primary font-extrabold'}`}>
+                            {totalWish}
+                        </span>
+                    )}
+                </button>
+                <button
                     onClick={() => setViewMode('cronos')}
                     className={`pb-3 text-xs font-black uppercase tracking-widest border-b-2 transition-all ${
                         viewMode === 'cronos' 
-                            ? 'border-brand-primary text-white' 
+                            ? (isVintageOnly ? 'border-amber-500 text-white' : 'border-brand-primary text-white') 
                             : 'border-transparent text-white/70 hover:text-white'
                     }`}
                 >
@@ -907,6 +936,25 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                         {isVintageOnly 
                             ? "No hay reliquias registradas en Eternia todavía." 
                             : "No hay reliquias registradas en Nueva Eternia todavía."
+                        }
+                    </p>
+                </div>
+            ) : sortedProducts.length === 0 ? (
+                <div className="flex flex-col items-center justify-center p-20 text-white/20 space-y-4 rounded-[2.5rem] border border-white/5 bg-black/20 backdrop-blur-md">
+                    {viewMode === 'wish' ? (
+                        <Star className="h-16 w-16 opacity-20" />
+                    ) : (
+                        <Package className="h-16 w-16 opacity-20" />
+                    )}
+                    <p className="text-xl font-black uppercase tracking-widest text-white/60">
+                        {viewMode === 'wish' ? 'Lista de Deseos Vacía' : 'Sin Resultados'}
+                    </p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest opacity-40">
+                        {viewMode === 'wish' 
+                            ? (isVintageOnly 
+                                ? "Añade reliquias vintage a tu lista de deseos presionando la estrella en el catálogo." 
+                                : "Añade reliquias a tu lista de deseos presionando la estrella en el catálogo.")
+                            : "Intenta ajustar tus filtros o buscar otro término."
                         }
                     </p>
                 </div>

@@ -482,6 +482,13 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
   - [x] **Resalto de Ofertas en Catálogo**: Incrementado el brillo de borde y sombra de acento en tarjetas de figura del catálogo que posean ofertas activas (celeste para Moderno, ámbar para Vintage), manteniendo la vista limpia sin añadir badges adicionales.
   - [x] **Filtro de Tránsito Experimental**: Incorporado interruptor selector "On/Off" en el Purgatorio para alternar el filtrado de ofertas según tipo de origen (Retail vs P2P).
 
+- [x] **Phase 73: Pestaña de Deseos y Sincronización de Lista de Deseos en Catálogos (21/06/2026)**
+  - [x] **Pestaña en Catálogos**: Añadida una pestaña dedicada "Lista de Deseos" en la sub-navegación del Catálogo Maestro (`Catalog.tsx`), tanto para la versión moderna (Nueva Eternia) como para la retro (Eternia Vintage).
+  - [x] **Badge de Conteo Reactivo**: Implementado un badge dinámico con el total de deseos (`totalWish`) junto al título de la pestaña, adaptado al color temático de la versión (azul vs ámbar).
+  - [x] **Filtrado Integrado (`sortedProducts`)**: Configurado el hook de filtrado para mostrar únicamente productos deseados (`isWished(product.id) === true`) al estar en el modo de deseos.
+  - [x] **Experiencia de Usuario Inmersiva**: Diseñado un contenedor de estado vacío premium con icono de estrella y guías explicativas para listas de deseos vacías, y adaptados los iconos y contadores del encabezado principal.
+  - [x] **Sincronización Bidireccional de Caché**: Conectado el flujo de mutación `toggleMutation` para invalidar reactivamente las claves `collection` y `dashboard-stats`, asegurando que cualquier cambio de deseos o capturas desde el Catálogo o la Fortaleza se propague en tiempo real a todas las vistas.
+
 ---
 
 ## ✅ Plan de Verificación
