@@ -2,12 +2,14 @@ import json
 import re
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from loguru import logger
 from sqlalchemy import desc, func
 from sqlalchemy.exc import IntegrityError
 from pydantic import BaseModel
 from typing import Optional
+
+PROCESSING_IDS = set()
 
 class VintageMatchRequest(BaseModel):
     custom_name: Optional[str] = None
@@ -70,9 +72,12 @@ async def get_purgatory(page: int = 1, limit: int = 500):
         db.commit()
         
         offset = (page - 1) * limit
+        query = db.query(PendingMatchModel)
+        if PROCESSING_IDS:
+            query = query.filter(~PendingMatchModel.id.in_(list(PROCESSING_IDS)))
+            
         pending = (
-            db.query(PendingMatchModel)
-            .order_by(desc(PendingMatchModel.found_at))
+            query.order_by(desc(PendingMatchModel.found_at))
             .offset(offset)
             .limit(limit)
             .all()
@@ -135,24 +140,15 @@ async def get_purgatory(page: int = 1, limit: int = 500):
         return results
 
 
-@router.post("/api/purgatory/match", dependencies=[Depends(verify_api_key)])
-async def match_purgatory(request: PurgatoryMatchRequest):
-    with SessionCloud() as db:
-        item = db.query(PendingMatchModel).filter(PendingMatchModel.id == request.pending_id).first()
-        product = db.query(ProductModel).filter(ProductModel.id == request.product_id).first()
+def run_match_task(pending_id: int, product_id: int):
+    try:
+        with SessionCloud() as db:
+            item = db.query(PendingMatchModel).filter(PendingMatchModel.id == pending_id).first()
+            product = db.query(ProductModel).filter(ProductModel.id == product_id).first()
+            if not item or not product:
+                return
 
-        if not item:
-            existing_offer = db.query(OfferModel).filter(OfferModel.product_id == request.product_id).first()
-            if existing_offer:
-                return {"status": "success", "message": "Reliquia ya procesada previamente (Idempotencia)"}
-            raise HTTPException(status_code=404, detail="Reliquia no encontrada en el Purgatorio")
-
-        if not product:
-            raise HTTPException(status_code=404, detail="Producto objetivo no encontrado")
-
-        try:
             from src.infrastructure.repositories.product import ProductRepository
-
             repo = ProductRepository(db)
 
             user_location = "ES"
@@ -164,7 +160,6 @@ async def match_purgatory(request: PurgatoryMatchRequest):
             is_wish = any(ci.owner_id == 1 and not ci.acquired for ci in product.collection_items)
             fresh_score = DealScorer.calculate_score(product, landed_p, is_wish)
 
-            # Check if this item is vintage automatically or manually
             is_v = bool(product.is_vintage)
             if is_v:
                 from src.domain.models import VintageProductModel
@@ -207,27 +202,42 @@ async def match_purgatory(request: PurgatoryMatchRequest):
 
             db.delete(item)
             db.commit()
-            return {"status": "success", "message": "Vínculo sagrado establecido para la posteridad"}
-
-        except IntegrityError as e:
-            db.rollback()
-            logger.error(f"Error de integridad en match_purgatory: {e}")
-            raise HTTPException(status_code=409, detail="Error de integridad: Posible duplicidad de URL o Producto")
-        except Exception as e:
-            db.rollback()
-            logger.error(f"Error inesperado en match_purgatory: {e}")
-            raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error inesperado en background match_purgatory para item {pending_id}: {e}")
+    finally:
+        PROCESSING_IDS.discard(pending_id)
 
 
-@router.post("/api/purgatory/discard", dependencies=[Depends(verify_api_key)])
-async def discard_purgatory(request: PurgatoryDiscardRequest):
+@router.post("/api/purgatory/match", dependencies=[Depends(verify_api_key)])
+async def match_purgatory(request: PurgatoryMatchRequest, background_tasks: BackgroundTasks):
+    if request.pending_id in PROCESSING_IDS:
+        return {"status": "success", "message": "Vinculación ya se está procesando en segundo plano"}
+
     with SessionCloud() as db:
         item = db.query(PendingMatchModel).filter(PendingMatchModel.id == request.pending_id).first()
+        product = db.query(ProductModel).filter(ProductModel.id == request.product_id).first()
 
         if not item:
-            return {"status": "success", "message": "Reliquia ya procesada o inexistente (Idempotencia)"}
+            existing_offer = db.query(OfferModel).filter(OfferModel.product_id == request.product_id).first()
+            if existing_offer:
+                return {"status": "success", "message": "Reliquia ya procesada previamente (Idempotencia)"}
+            raise HTTPException(status_code=404, detail="Reliquia no encontrada en el Purgatorio")
 
-        try:
+        if not product:
+            raise HTTPException(status_code=404, detail="Producto objetivo no encontrado")
+
+    PROCESSING_IDS.add(request.pending_id)
+    background_tasks.add_task(run_match_task, request.pending_id, request.product_id)
+    return {"status": "success", "message": "Vinculación programada en segundo plano"}
+
+
+def run_discard_task(pending_id: int, reason: str):
+    try:
+        with SessionCloud() as db:
+            item = db.query(PendingMatchModel).filter(PendingMatchModel.id == pending_id).first()
+            if not item:
+                return
+
             item_data = {
                 "scraped_name": item.scraped_name,
                 "ean": item.ean,
@@ -247,7 +257,7 @@ async def discard_purgatory(request: PurgatoryDiscardRequest):
                 bl = BlackcludedItemModel(
                     url=normalized_url,
                     scraped_name=item.scraped_name,
-                    reason=request.reason,
+                    reason=reason,
                     source_type=item.source_type,
                 )
                 db.add(bl)
@@ -258,59 +268,90 @@ async def discard_purgatory(request: PurgatoryDiscardRequest):
                 shop_name=item.shop_name,
                 price=item.price,
                 action_type="DISCARDED_MANUAL",
-                details=json.dumps({"reason": request.reason, "original_item": item_data}),
+                details=json.dumps({"reason": reason, "original_item": item_data}),
             )
             db.add(history)
 
             db.delete(item)
             db.commit()
-            return {"status": "success", "message": "Item enviado a las sombras de la lista negra"}
+    except IntegrityError as e:
+        db.rollback()
+        # Idempotent cleanup if it already exists in blacklist
+        try:
+            with SessionCloud() as db2:
+                item2 = db2.query(PendingMatchModel).filter(PendingMatchModel.id == pending_id).first()
+                if item2:
+                    db2.delete(item2)
+                    db2.commit()
+        except:
+            pass
+    except Exception as e:
+        logger.error(f"Error inesperado en background discard_purgatory para item {pending_id}: {e}")
+    finally:
+        PROCESSING_IDS.discard(pending_id)
 
-        except IntegrityError as e:
-            db.rollback()
-            logger.error(f"Error de integridad en discard_purgatory: {e}")
-            db.delete(item)
+
+@router.post("/api/purgatory/discard", dependencies=[Depends(verify_api_key)])
+async def discard_purgatory(request: PurgatoryDiscardRequest, background_tasks: BackgroundTasks):
+    if request.pending_id in PROCESSING_IDS:
+        return {"status": "success", "message": "El descarte ya se está procesando en segundo plano"}
+
+    with SessionCloud() as db:
+        item = db.query(PendingMatchModel).filter(PendingMatchModel.id == request.pending_id).first()
+        if not item:
+            return {"status": "success", "message": "Reliquia ya procesada o inexistente (Idempotencia)"}
+
+    PROCESSING_IDS.add(request.pending_id)
+    background_tasks.add_task(run_discard_task, request.pending_id, request.reason)
+    return {"status": "success", "message": "Descarte programado en segundo plano"}
+
+
+def run_discard_bulk_task(pending_ids: list[int], reason: str):
+    try:
+        with SessionCloud() as db:
+            items = db.query(PendingMatchModel).filter(PendingMatchModel.id.in_(pending_ids)).all()
+            from src.core.url_utils import normalize_url
+            for item in items:
+                normalized_url = normalize_url(item.url)
+                exists = db.query(BlackcludedItemModel).filter(BlackcludedItemModel.url == normalized_url).first()
+                if not exists:
+                    blacklist = BlackcludedItemModel(
+                        url=normalized_url,
+                        scraped_name=item.scraped_name,
+                        reason=reason,
+                    )
+                    blacklist_ref = db.add(blacklist)
+
+                history = OfferHistoryModel(
+                    offer_url=item.url,
+                    product_name=item.scraped_name,
+                    shop_name=item.shop_name,
+                    price=item.price,
+                    action_type="DISCARDED_BULK",
+                    details=json.dumps({"reason": reason}),
+                )
+                db.add(history)
+
+                db.delete(item)
             db.commit()
-            return {"status": "success", "message": "Item ya estaba en lista negra, purificado del Purgatorio"}
-        except Exception as e:
-            db.rollback()
-            logger.error(f"Error inesperado en discard_purgatory: {e}")
-            raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error inesperado en background discard_purgatory_bulk: {e}")
+    finally:
+        for pid in pending_ids:
+            PROCESSING_IDS.discard(pid)
 
 
 @router.post("/api/purgatory/discard/bulk", dependencies=[Depends(verify_api_key)])
-async def discard_purgatory_bulk(request: PurgatoryBulkDiscardRequest):
-    with SessionCloud() as db:
-        items = db.query(PendingMatchModel).filter(PendingMatchModel.id.in_(request.pending_ids)).all()
-        count = 0
-        from src.core.url_utils import normalize_url
-        for item in items:
-            normalized_url = normalize_url(item.url)
-            exists = db.query(BlackcludedItemModel).filter(BlackcludedItemModel.url == normalized_url).first()
-            if not exists:
-                blacklist = BlackcludedItemModel(
-                    url=normalized_url,
-                    scraped_name=item.scraped_name,
-                    reason=request.reason,
-                )
-                db.add(blacklist)
+async def discard_purgatory_bulk(request: PurgatoryBulkDiscardRequest, background_tasks: BackgroundTasks):
+    to_process = [pid for pid in request.pending_ids if pid not in PROCESSING_IDS]
+    if not to_process:
+        return {"status": "success", "message": "Todos los descartes ya se están procesando"}
 
-            history = OfferHistoryModel(
-                offer_url=item.url,
-                product_name=item.scraped_name,
-                shop_name=item.shop_name,
-                price=item.price,
-                action_type="DISCARDED_BULK",
-                details=json.dumps({"reason": request.reason}),
-            )
-            db.add(history)
+    for pid in to_process:
+        PROCESSING_IDS.add(pid)
 
-            db.delete(item)
-            count += 1
-
-        db.commit()
-
-    return {"status": "success", "message": f"{count} items desterrados al abismo."}
+    background_tasks.add_task(run_discard_bulk_task, to_process, request.reason)
+    return {"status": "success", "message": f"Descarte en lote de {len(to_process)} items programado en segundo plano"}
 
 
 @router.post("/api/offers/{offer_id}/unlink", dependencies=[Depends(verify_api_key)])
@@ -395,17 +436,13 @@ async def relink_offer(offer_id: int, request: RelinkOfferRequest):
         return {"status": "success", "message": f"Decreto del Arquitecto: Oferta reasignada a '{new_product.name}'"}
 
 
-@router.post("/api/purgatory/{pending_id}/vintage", dependencies=[Depends(verify_api_key)])
-async def match_purgatory_vintage(pending_id: int, request: Optional[VintageMatchRequest] = None):
-    with SessionCloud() as db:
-        item = db.query(PendingMatchModel).filter(PendingMatchModel.id == pending_id).first()
-        if not item:
-            raise HTTPException(status_code=404, detail="Reliquia no encontrada en el Purgatorio")
+def run_match_vintage_task(pending_id: int, custom_name: Optional[str], product_id: Optional[int]):
+    try:
+        with SessionCloud() as db:
+            item = db.query(PendingMatchModel).filter(PendingMatchModel.id == pending_id).first()
+            if not item:
+                return
 
-        custom_name = request.custom_name if request else None
-        product_id = request.product_id if request else None
-
-        try:
             product = None
             if product_id:
                 product = db.query(ProductModel).filter(ProductModel.id == product_id).first()
@@ -528,12 +565,28 @@ async def match_purgatory_vintage(pending_id: int, request: Optional[VintageMatc
 
             db.delete(item)
             db.commit()
-            return {"status": "success", "message": "Reliquia clasificada como Vintage individualmente."}
+    except Exception as e:
+        logger.error(f"Error en background match_purgatory_vintage para item {pending_id}: {e}")
+    finally:
+        PROCESSING_IDS.discard(pending_id)
 
-        except Exception as e:
-            db.rollback()
-            logger.error(f"Error en match_purgatory_vintage: {e}")
-            raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/api/purgatory/{pending_id}/vintage", dependencies=[Depends(verify_api_key)])
+async def match_purgatory_vintage(pending_id: int, background_tasks: BackgroundTasks, request: Optional[VintageMatchRequest] = None):
+    if pending_id in PROCESSING_IDS:
+        return {"status": "success", "message": "La clasificación vintage ya se está procesando en segundo plano"}
+
+    with SessionCloud() as db:
+        item = db.query(PendingMatchModel).filter(PendingMatchModel.id == pending_id).first()
+        if not item:
+            raise HTTPException(status_code=404, detail="Reliquia no encontrada en el Purgatorio")
+
+    custom_name = request.custom_name if request else None
+    product_id = request.product_id if request else None
+
+    PROCESSING_IDS.add(pending_id)
+    background_tasks.add_task(run_match_vintage_task, pending_id, custom_name, product_id)
+    return {"status": "success", "message": "Clasificación vintage programada en segundo plano."}
 
 
 @router.post("/api/vintage/revert-offer/{offer_id}", dependencies=[Depends(verify_api_key)])
@@ -599,14 +652,13 @@ async def revert_vintage_offer(offer_id: int):
             raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/api/purgatory/{pending_id}/miscellaneous", dependencies=[Depends(verify_api_key)])
-async def match_purgatory_miscellaneous(pending_id: int):
-    with SessionCloud() as db:
-        item = db.query(PendingMatchModel).filter(PendingMatchModel.id == pending_id).first()
-        if not item:
-            raise HTTPException(status_code=404, detail="Reliquia no encontrada en el Purgatorio")
+def run_match_miscellaneous_task(pending_id: int):
+    try:
+        with SessionCloud() as db:
+            item = db.query(PendingMatchModel).filter(PendingMatchModel.id == pending_id).first()
+            if not item:
+                return
 
-        try:
             from src.domain.models import VintageMiscellaneousModel
             from src.core.url_utils import normalize_url
             normalized_url = normalize_url(item.url)
@@ -637,19 +689,36 @@ async def match_purgatory_miscellaneous(pending_id: int):
 
             db.delete(item)
             db.commit()
-            return {"status": "success", "message": "Anuncio guardado en la sección de Miscelánea Vintage."}
+    except IntegrityError as e:
+        db.rollback()
+        # Deduplicate: if it already existed in miscellaneous, just delete the pending match to keep it clean
+        try:
+            with SessionCloud() as db2:
+                item2 = db2.query(PendingMatchModel).filter(PendingMatchModel.id == pending_id).first()
+                if item2:
+                    db2.delete(item2)
+                    db2.commit()
+        except:
+            pass
+    except Exception as e:
+        logger.error(f"Error en background match_purgatory_miscellaneous para item {pending_id}: {e}")
+    finally:
+        PROCESSING_IDS.discard(pending_id)
 
-        except IntegrityError as e:
-            db.rollback()
-            logger.error(f"Error de integridad en match_purgatory_miscellaneous: {e}")
-            # Si ya existía, de-duplicamos: borramos el del purgatorio directamente y evitamos error en frontend
-            db.delete(item)
-            db.commit()
-            return {"status": "success", "message": "El anuncio ya existía en la sección de Miscelánea. Removido de Purgatorio."}
-        except Exception as e:
-            db.rollback()
-            logger.error(f"Error en match_purgatory_miscellaneous: {e}")
-            raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/api/purgatory/{pending_id}/miscellaneous", dependencies=[Depends(verify_api_key)])
+async def match_purgatory_miscellaneous(pending_id: int, background_tasks: BackgroundTasks):
+    if pending_id in PROCESSING_IDS:
+        return {"status": "success", "message": "La clasificación miscelánea ya se está procesando en segundo plano"}
+
+    with SessionCloud() as db:
+        item = db.query(PendingMatchModel).filter(PendingMatchModel.id == pending_id).first()
+        if not item:
+            raise HTTPException(status_code=404, detail="Reliquia no encontrada en el Purgatorio")
+
+    PROCESSING_IDS.add(pending_id)
+    background_tasks.add_task(run_match_miscellaneous_task, pending_id)
+    return {"status": "success", "message": "Clasificación miscelánea programada en segundo plano."}
 
 
 @router.post("/api/vintage/miscellaneous/revert/{item_id}", dependencies=[Depends(verify_api_key)])

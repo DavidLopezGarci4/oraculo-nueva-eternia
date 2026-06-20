@@ -921,8 +921,8 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                             key={product.id}
                             className={`group relative flex flex-col gap-1 sm:gap-1.5 md:gap-3 rounded-2xl sm:rounded-[1.5rem] md:rounded-3xl border p-1.5 sm:p-2 md:p-3.5 transition-all duration-500 hover:translate-y-[-8px] ${hasIntel
                                 ? (isVintageOnly
-                                    ? 'border-amber-500/30 bg-amber-500/[0.03] shadow-[0_0_20px_-5px_rgba(245,158,11,0.15)] hover:shadow-[0_40px_80px_-20px_rgba(245,158,11,0.2)]'
-                                    : 'border-brand-primary/30 bg-brand-primary/[0.03] shadow-[0_0_20px_-5px_rgba(14,165,233,0.15)] hover:shadow-[0_40px_80px_-20px_rgba(14,165,233,0.2)]')
+                                    ? 'border-amber-500/50 bg-amber-500/[0.04] shadow-[0_0_22px_2px_rgba(245,158,11,0.3)] hover:shadow-[0_40px_80px_-10px_rgba(245,158,11,0.45)]'
+                                    : 'border-brand-primary/50 bg-brand-primary/[0.04] shadow-[0_0_22px_2px_rgba(14,165,233,0.3)] hover:shadow-[0_40px_80px_-10px_rgba(14,165,233,0.45)]')
                                 : 'border-white/5 bg-black/25 backdrop-blur-md hover:bg-black/20 hover:shadow-[0_40px_80px_-20px_rgba(0,0,0,0.5)]'
                                 }`}
                         >

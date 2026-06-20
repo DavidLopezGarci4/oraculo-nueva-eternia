@@ -62,13 +62,13 @@ class AmazonScraper(BaseScraper):
             url, 
             impersonate="chrome120", 
             use_scraperapi=True,
-            scraperapi_params={"premium": "true", "country_code": "es"}
+            scraperapi_params={"premium": "true", "country_code": "es", "render": "true"}
         )
         
         if not html:
             return []
 
-        if "captcha" in html.lower() or "robot" in html.lower() or "api-services-support" in html.lower():
+        if "g-recaptcha" in html.lower() or "robot check" in html.lower() or "api-services-support" in html.lower() or "introduce los caracteres" in html.lower() or "enter the characters" in html.lower():
             self._log("🛡️ Amazon.es: Bloqueo detectado en curl-cffi (CAPTCHA/503).", level="debug")
             self.blocked = True
             return []
@@ -81,7 +81,13 @@ class AmazonScraper(BaseScraper):
             if not asin or len(asin) != 10: continue
 
             try:
-                title_el = res.select_one("h2 a span") or res.select_one(".a-size-medium")
+                title_el = (
+                    res.select_one("h2 span")
+                    or res.select_one(".s-line-clamp-2 span")
+                    or res.select_one("h2 a span")
+                    or res.select_one(".a-size-medium")
+                    or res.select_one("h2")
+                )
                 title = title_el.get_text(strip=True) if title_el else "Unknown"
                 
                 price_el = res.select_one(".a-price .a-offscreen") or res.select_one(".a-price-whole")

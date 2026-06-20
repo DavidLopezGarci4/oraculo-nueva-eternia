@@ -184,7 +184,7 @@ class BaseScraper(ABC):
         """
         try:
             api_key = os.environ.get("SCRAPERAPI_KEY")
-            if use_scraperapi and api_key and os.environ.get("GITHUB_ACTIONS") == "true":
+            if use_scraperapi and api_key:
                 import urllib.parse
                 params = {"api_key": api_key, "url": url}
                 if scraperapi_params:

@@ -40,6 +40,10 @@ const Purgatory: React.FC = React.memo(() => {
         return saved ? JSON.parse(saved) : [];
     });
 
+    // Experimental Transit Filter State
+    const [enableTransitFilter, setEnableTransitFilter] = useState(false);
+    const [transitType, setTransitType] = useState<'all' | 'retail' | 'p2p'>('all');
+
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 15;
@@ -422,7 +426,16 @@ const Purgatory: React.FC = React.memo(() => {
         // ALWAYS keep the selected item visible so they don't lose context while matching
         if (item.id === selectedPendingId) return true;
 
-        return matchesSearch;
+        let matchesTransit = true;
+        if (enableTransitFilter) {
+            if (transitType === 'retail') {
+                matchesTransit = item.source_type === 'Retail';
+            } else if (transitType === 'p2p') {
+                matchesTransit = item.source_type === 'Peer-to-Peer';
+            }
+        }
+
+        return matchesSearch && matchesTransit;
     });
 
     // Pagination Logic
@@ -539,6 +552,48 @@ const Purgatory: React.FC = React.memo(() => {
                                 <CheckCircle2 className="h-3 w-3" /> Seleccionar Todos los Resultados
                             </button>
                         )}
+                    </div>
+                )}
+            </div>
+
+            {/* Filtro de Tránsito Experimental */}
+            <div className={`flex flex-wrap items-center gap-4 bg-white/[0.01] border border-white/5 p-4 rounded-3xl backdrop-blur-md transition-all duration-500 ${selectedPendingId ? 'opacity-20 grayscale pointer-events-none' : 'opacity-100'}`}>
+                <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                    <input
+                        type="checkbox"
+                        checked={enableTransitFilter}
+                        onChange={(e) => {
+                            setEnableTransitFilter(e.target.checked);
+                            setCurrentPage(1);
+                        }}
+                        className="h-4 w-4 rounded border-white/10 bg-white/5 text-brand-primary focus:ring-brand-primary"
+                    />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-white/65 flex items-center gap-1.5">
+                        <span className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse"></span>
+                        Filtro de Tránsito (Experimental)
+                    </span>
+                </label>
+
+                {enableTransitFilter && (
+                    <div className="flex items-center gap-2 border-l border-white/10 pl-4 animate-in slide-in-from-left-4 duration-300">
+                        <button
+                            onClick={() => { setTransitType('all'); setCurrentPage(1); }}
+                            className={`px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${transitType === 'all' ? 'bg-brand-primary/20 text-white border border-brand-primary/30' : 'text-white/60 hover:text-white bg-white/5 border border-transparent'}`}
+                        >
+                            Todos
+                        </button>
+                        <button
+                            onClick={() => { setTransitType('retail'); setCurrentPage(1); }}
+                            className={`px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${transitType === 'retail' ? 'bg-brand-primary/20 text-white border border-brand-primary/30' : 'text-white/60 hover:text-white bg-white/5 border border-transparent'}`}
+                        >
+                            Retail
+                        </button>
+                        <button
+                            onClick={() => { setTransitType('p2p'); setCurrentPage(1); }}
+                            className={`px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${transitType === 'p2p' ? 'bg-brand-primary/20 text-white border border-brand-primary/30' : 'text-white/60 hover:text-white bg-white/5 border border-transparent'}`}
+                        >
+                            P2P (Wallapop/eBay)
+                        </button>
                     </div>
                 )}
             </div>
