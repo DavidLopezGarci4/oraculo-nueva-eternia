@@ -475,6 +475,13 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
   - [x] **Buscador y Selección**: Buscador interactivo integrado con autocompletado en el cliente para seleccionar el producto destino para la absorción de datos.
   - [x] **Sincronización de Base de Datos**: Integración con el endpoint de fusión divina del backend para traspasar ofertas y capturas de Fortaleza de forma atómica antes de eliminar el registro duplicado.
 
+- [x] **Phase 72: Bypass de Amazon, Purgatorio Asíncrono y Resalto de Ofertas (20/06/2026)**
+  - [x] **Bypass de Amazon.es**: Implementado renderizado de Javascript (`render=true`) en ScraperAPI para peticiones en la nube y corregido el falso positivo de CAPTCHA que bloqueaba búsquedas de figuras de tipo "Robot" (Roboto, Multi-Bot).
+  - [x] **Asignación Asíncrona (`BackgroundTasks`)**: Migrados los endpoints de emparejamiento manual y descarte en el Purgatorio a procesamiento en segundo plano nativo en FastAPI, devolviendo éxito inmediato (0ms).
+  - [x] **Escudo de Consistencia (`PROCESSING_IDS`)**: Incorporada exclusión temporal en memoria para evitar el retorno de ítems en proceso de escritura, eliminando parpadeos y race conditions en el refresco del cliente.
+  - [x] **Resalto de Ofertas en Catálogo**: Incrementado el brillo de borde y sombra de acento en tarjetas de figura del catálogo que posean ofertas activas (celeste para Moderno, ámbar para Vintage), manteniendo la vista limpia sin añadir badges adicionales.
+  - [x] **Filtro de Tránsito Experimental**: Incorporado interruptor selector "On/Off" en el Purgatorio para alternar el filtrado de ofertas según tipo de origen (Retail vs P2P).
+
 ---
 
 ## ✅ Plan de Verificación

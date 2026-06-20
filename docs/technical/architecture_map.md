@@ -201,4 +201,11 @@ Ejecutar: `.venv\Scripts\python -m pytest` (33 tests, 0 fallos)
   - Reemplazo de etiquetas `<img>` estándar por `<MOTUImage>` en Showcase, Collection, Catalog, Vintage y Dashboard.
   - Creación de prueba de integración `test_api_image_cache.py` con cobertura completa del ciclo de vida de la descarga.
 
-*Última actualización: 2026-06-09 - Phase 68: Caché Local de Imágenes y Fallback Híbrido.*
+- **Phase 72**: Bypass de Amazon, Purgatorio Asíncrono y Resalto de Ofertas (20/06/2026):
+  - Integración de renderizado completo JS (`render=true`) en ScraperAPI para Amazon.es y corrección de bloqueos falsos por nombres de figuras robóticas (como Multi-Bot o Roboto).
+  - Migración de acciones de Purgatorio a BackgroundTasks en el backend de FastAPI para encolamiento asíncrono con respuesta inmediata (0ms).
+  - Implementación de set en memoria `PROCESSING_IDS` en el Purgatorio para ocultación reactiva inmediata en el frontend (prevención de efecto zombie).
+  - Intensificación del resplandor de color en las tarjetas de figuras del Catálogo que tengan ofertas activas (celeste para Moderno, dorado para Vintage) sin badges flotantes.
+  - Incorporación de filtro de tránsito experimental con switch "On/Off" en el frontend del Purgatorio para separar ofertas de tipo Retail de ofertas P2P (Wallapop/eBay).
+
+*Última actualización: 2026-06-20 - Phase 72: Bypass de Amazon, Purgatorio Asíncrono y Resalto de Ofertas.*
