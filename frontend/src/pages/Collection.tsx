@@ -45,11 +45,11 @@ const getAdjustedStats = (product: Product, isOwned: boolean) => {
         };
     }
 
-    const cond = product.condition || 'New';
+    const cond = product.condition || 'MOC';
     const grad = product.grading !== undefined ? product.grading : 10.0;
     
-    let condMult = 0.75;
-    if (cond.toUpperCase() === 'MOC') condMult = 1.0;
+    let condMult = 1.0;
+    if (cond.toUpperCase() === 'NEW') condMult = 0.75;
     else if (cond.toUpperCase() === 'LOOSE') condMult = 0.5;
 
     const gradFactor = Math.max(0.10, 1.0 - ((10.0 - grad) * 0.04));

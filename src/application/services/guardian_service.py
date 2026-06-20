@@ -85,7 +85,7 @@ class GuardianService:
                         product_id=product.id,
                         owner_id=entry["owner_id"],
                         acquired=entry["acquired"],
-                        condition=entry.get("condition", "New"),
+                        condition=entry.get("condition", "MOC"),
                         purchase_price=entry.get("purchase_price"),
                         notes=f"[RESTORER] {entry.get('notes', '')}",
                         acquired_at=datetime.fromisoformat(entry["acquired_at"]) if entry.get("acquired_at") else datetime.now()

@@ -103,7 +103,7 @@ class ProductOutput(BaseModel):
     is_wish: bool = False
     opportunity_score: int = 0
     acquired_at: Optional[str] = None
-    condition: Optional[str] = "New"
+    condition: Optional[str] = "MOC"
     grading: Optional[float] = 10.0
     notes: Optional[str] = None
     purgatory_match_count: int = 0

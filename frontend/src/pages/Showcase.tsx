@@ -19,11 +19,11 @@ interface ShowcaseProps {
 
 const getAdjustedValue = (item: any) => {
     const baseValue = item.product.avg_market_price || item.product.p25_price || 0;
-    const cond = item.condition || 'New';
+    const cond = item.condition || 'MOC';
     const grad = item.grading !== undefined ? item.grading : 10.0;
     
-    let condMult = 0.75;
-    if (cond.toUpperCase() === 'MOC') condMult = 1.0;
+    let condMult = 1.0;
+    if (cond.toUpperCase() === 'NEW') condMult = 0.75;
     else if (cond.toUpperCase() === 'LOOSE') condMult = 0.5;
 
     const gradFactor = Math.max(0.10, 1.0 - ((10.0 - grad) * 0.04));
@@ -285,7 +285,7 @@ const Showcase: React.FC<ShowcaseProps> = ({ username }) => {
                                                 ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
                                                 : 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
                                         }`}>
-                                            {item.condition || 'NEW'}
+                                            {item.condition || 'MOC'}
                                         </span>
                                     </div>
 

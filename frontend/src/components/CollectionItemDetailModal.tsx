@@ -29,7 +29,7 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
     const [price, setPrice] = useState<string>(
         product.purchase_price && product.purchase_price > 0 ? String(product.purchase_price) : ''
     );
-    const [condition, setCondition] = useState<string>(product.condition || 'New');
+    const [condition, setCondition] = useState<string>(product.condition || 'MOC');
     const [grading, setGrading] = useState<number>(product.grading || 10.0);
     const [notes, setNotes] = useState<string>(product.notes || '');
     const [acquiredAt, setAcquiredAt] = useState<string>(
@@ -67,7 +67,7 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
     // Advanced Valuation Engine (Frontend Simulation)
     const getMultiplier = (cond: string, grd: number) => {
         const mults: Record<string, number> = { 'MOC': 1.0, 'NEW': 0.75, 'LOOSE': 0.5 };
-        const base = mults[cond.toUpperCase()] || 0.75;
+        const base = mults[cond.toUpperCase()] || 1.0;
         const gradeFactor = 1.0 - ((10.0 - grd) * 0.04);
         return base * Math.max(0.1, gradeFactor);
     };

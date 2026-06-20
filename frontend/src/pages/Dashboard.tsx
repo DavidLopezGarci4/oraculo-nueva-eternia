@@ -183,14 +183,14 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
         };
 
         collList.forEach(item => {
-            let cond = (item.condition || 'New').trim();
-            if (cond.toUpperCase() === 'MOC') cond = 'MOC';
+            let cond = (item.condition || 'MOC').trim();
+            if (cond.toUpperCase() === 'NEW') cond = 'New';
             else if (cond.toUpperCase() === 'LOOSE') cond = 'Loose';
-            else cond = 'New';
+            else cond = 'MOC';
 
             const basePrice = item.market_value || item.avg_market_price || 0;
-            let condMult = 0.75;
-            if (cond === 'MOC') condMult = 1.0;
+            let condMult = 1.0;
+            if (cond === 'New') condMult = 0.75;
             else if (cond === 'Loose') condMult = 0.5;
 
             const grad = item.grading !== undefined ? item.grading : 10.0;

@@ -108,7 +108,7 @@ class ValuationService:
             "LOOSE": 0.5
         }
         
-        base_mult = multipliers.get(condition.upper(), 0.75) # Default to NEW if unknown
+        base_mult = multipliers.get(condition.upper(), 1.0) # Default to MOC if unknown
         
         # Grading Adjustment: -2% per 0.5 point below 10
         # Grade 9.0 = 0.96 (4% reduction)
