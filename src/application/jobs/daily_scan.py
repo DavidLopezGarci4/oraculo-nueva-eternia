@@ -23,6 +23,7 @@ from src.infrastructure.scrapers.frikiverso_scraper import FrikiversoScraper
 from src.infrastructure.scrapers.pixelatoy_scraper import PixelatoyScraper
 from src.infrastructure.scrapers.electropolis_scraper import ElectropolisScraper
 from src.infrastructure.scrapers.triguetech_scraper import TriguetechScraper
+from src.infrastructure.scrapers.lamansiondelterror_scraper import LaMansionDelTerrorScraper
 
 # Phase 8.4: European Expansion Scrapers
 from src.infrastructure.scrapers.detoyboys_scraper import DeToyboysNLScraper
@@ -123,6 +124,7 @@ async def run_daily_scan(progress_callback=None):
             PixelatoyScraper(),
             ElectropolisScraper(),
             TriguetechScraper(),
+            LaMansionDelTerrorScraper(),
             # European Expansion
             ToymiEUScraper(),
             Time4ActionToysDEScraper(),

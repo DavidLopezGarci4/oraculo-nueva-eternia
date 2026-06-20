@@ -7,7 +7,7 @@ on:
   workflow_dispatch:           # Manual trigger
     inputs:
       shops:
-        description: 'Specific shops to scrape (space separated, e.g. actiontoys fantasia)'
+        description: 'Specific shops to scrape (space separated, e.g. actiontoys fantasia lamansiondelterror)'
         required: false
         default: ''
 

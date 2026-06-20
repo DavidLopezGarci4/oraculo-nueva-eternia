@@ -95,6 +95,7 @@ def run_scraper_task(
         from src.infrastructure.scrapers.fantasia_scraper import FantasiaScraper
         from src.infrastructure.scrapers.frikiverso_scraper import FrikiversoScraper
         from src.infrastructure.scrapers.frikimaz_scraper import FrikimazScraper
+        from src.infrastructure.scrapers.lamansiondelterror_scraper import LaMansionDelTerrorScraper
         from src.infrastructure.scrapers.pipeline import ScrapingPipeline
         from src.infrastructure.scrapers.pixelatoy_scraper import PixelatoyScraper
         from src.infrastructure.scrapers.time4actiontoys_scraper import Time4ActionToysDEScraper
@@ -121,6 +122,7 @@ def run_scraper_task(
             # "Tradeinn": TradeinnScraper(),
             "DVDStoreSpain": DVDStoreSpainScraper(),
             "Triguetech": TriguetechScraper(),
+            "LaMansionDelTerror": LaMansionDelTerrorScraper(),
         }
 
         lookup_name = spider_name.lower()
