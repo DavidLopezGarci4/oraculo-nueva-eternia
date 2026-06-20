@@ -85,6 +85,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
     const [sortBy, setSortBy] = useState<'name' | 'id'>('name');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+    const [conditionFilter, setConditionFilter] = useState<string>('all');
 
     // Contexto de Autenticación (Fase 8.2)
     const activeUserId = parseInt(localStorage.getItem('active_user_id') || '2');
@@ -156,11 +157,20 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
         
         const filtered = collection.filter(product => {
             const query = searchQuery.toLowerCase();
-            return (
+            const matchesQuery = (
                 product.name.toLowerCase().includes(query) ||
                 product.figure_id.toLowerCase().includes(query) ||
                 product.sub_category?.toLowerCase().includes(query)
             );
+
+            if (!matchesQuery) return false;
+
+            if (conditionFilter !== 'all') {
+                const productCondition = (product.condition || 'MOC').toUpperCase();
+                return productCondition === conditionFilter.toUpperCase();
+            }
+
+            return true;
         });
 
         return [...filtered].sort((a, b) => {
@@ -173,7 +183,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
 
             return sortOrder === 'asc' ? comparison : -comparison;
         });
-    }, [collection, searchQuery, sortBy, sortOrder]);
+    }, [collection, searchQuery, conditionFilter, sortBy, sortOrder]);
 
     const ownedItems = sortedFilteredItems.filter(p => !p.is_wish);
     const wishItems = sortedFilteredItems.filter(p => p.is_wish);
@@ -269,6 +279,19 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
 
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 w-full lg:w-auto relative z-10">
                     <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
+                        {/* Selector de Estado */}
+                        <select
+                            value={conditionFilter}
+                            onChange={(e) => setConditionFilter(e.target.value)}
+                            className="h-[38px] sm:h-[42px] px-3 sm:px-4 rounded-xl bg-white/[0.03] border border-white/5 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.05em] text-white/70 hover:text-white transition-all outline-none cursor-pointer focus:border-white/20"
+                            title="Filtrar por Estado de Conservación"
+                        >
+                            <option value="all" className="bg-[#121212] text-white">Estado: Todos</option>
+                            <option value="MOC" className="bg-[#121212] text-white">MOC</option>
+                            <option value="NEW" className="bg-[#121212] text-white">New</option>
+                            <option value="LOOSE" className="bg-[#121212] text-white">Loose</option>
+                        </select>
+
                         <div className="grid grid-cols-2 gap-1 sm:gap-2 p-1 rounded-xl bg-white/[0.03] border border-white/5 flex-1 sm:flex-initial">
                             <button
                                 onClick={() => setSortBy('name')}
