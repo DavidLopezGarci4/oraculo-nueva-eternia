@@ -29,6 +29,7 @@ function App() {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(localStorage.getItem('is_logged_in') === 'true');
   const [activeUserId, setActiveUserId] = useState<number>(parseInt(localStorage.getItem('active_user_id') || '2'));
   const [visitedTabs, setVisitedTabs] = useState<Record<string, boolean>>({ dashboard: true });
+  const [isIncognito, setIsIncognito] = useState<boolean>(() => localStorage.getItem('motu_incognito') === 'true');
 
   useEffect(() => {
     if (isLoggedIn || isSovereign) {
@@ -153,7 +154,7 @@ function App() {
   }
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-transparent text-white font-inter">
+    <div className={`flex h-screen w-screen overflow-hidden bg-transparent text-white font-inter ${isIncognito ? 'mode-incognito' : ''}`}>
       {/* Global Background Layer with Glassmorphism Haloes */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
         <div className="absolute top-[-10%] right-[-5%] h-[60%] w-[60%] rounded-full bg-brand-primary/5 blur-[120px]" />
@@ -188,17 +189,25 @@ function App() {
               <ErrorBoundary>
                 {visitedTabs['dashboard'] && (
                   <div className={activeTab === 'dashboard' ? '' : 'hidden'}>
-                    <Dashboard user={currentUser} />
+                    <Dashboard 
+                      user={currentUser} 
+                      isIncognito={isIncognito}
+                      onToggleIncognito={() => setIsIncognito(prev => {
+                        const val = !prev;
+                        localStorage.setItem('motu_incognito', val ? 'true' : 'false');
+                        return val;
+                      })}
+                    />
                   </div>
                 )}
                 {visitedTabs['catalog'] && (
                   <div className={activeTab === 'catalog' ? '' : 'hidden'}>
-                    <Catalog user={currentUser} searchQuery={searchQuery} />
+                    <Catalog user={currentUser} searchQuery={searchQuery} isIncognito={isIncognito} />
                   </div>
                 )}
                 {visitedTabs['eternia'] && (
                   <div className={activeTab === 'eternia' ? '' : 'hidden'}>
-                    <Catalog user={currentUser} isVintageOnly={true} searchQuery={searchQuery} />
+                    <Catalog user={currentUser} isVintageOnly={true} searchQuery={searchQuery} isIncognito={isIncognito} />
                   </div>
                 )}
                 {visitedTabs['auctions'] && (
@@ -208,12 +217,12 @@ function App() {
                 )}
                 {visitedTabs['collection'] && (
                   <div className={activeTab === 'collection' ? '' : 'hidden'}>
-                    <Collection user={currentUser} searchQuery={searchQuery} />
+                    <Collection user={currentUser} searchQuery={searchQuery} isIncognito={isIncognito} />
                   </div>
                 )}
                 {visitedTabs['fortaleza_vintage'] && (
                   <div className={activeTab === 'fortaleza_vintage' ? '' : 'hidden'}>
-                    <Collection user={currentUser} isVintageOnly={true} searchQuery={searchQuery} />
+                    <Collection user={currentUser} isVintageOnly={true} searchQuery={searchQuery} isIncognito={isIncognito} />
                   </div>
                 )}
                 {visitedTabs['vintage_miscellaneous'] && (

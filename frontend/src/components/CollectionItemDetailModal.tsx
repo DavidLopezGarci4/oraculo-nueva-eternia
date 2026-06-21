@@ -21,10 +21,12 @@ import { getOptimizedImageUrl } from '../utils/imageUtils';
 interface CollectionItemDetailModalProps {
     product: Product;
     userId: number;
+    isIncognito?: boolean;
     onClose: () => void;
 }
 
-const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ product, userId, onClose }) => {
+const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ product, userId, isIncognito = false, onClose }) => {
+    void isIncognito;
     const queryClient = useQueryClient();
     const [price, setPrice] = useState<string>(
         product.purchase_price && product.purchase_price > 0 ? String(product.purchase_price) : ''
@@ -139,7 +141,7 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
                                             }
                                         }}
                                         placeholder="0"
-                                        className="bg-transparent text-base sm:text-2xl font-black text-white border-none focus:ring-0 w-12 sm:w-20 p-0"
+                                        className="bg-transparent text-base sm:text-2xl font-black text-white border-none focus:ring-0 w-12 sm:w-20 p-0 blur-incognito"
                                     />
                                     <span className="text-xs sm:text-lg font-bold text-white/70">€</span>
                                 </div>
@@ -148,12 +150,12 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
                                 <span className="text-[7px] sm:text-[8px] font-black text-white/60 uppercase tracking-widest block">Revalorización (ROI)</span>
                                 <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-1.5">
                                     <div className="flex items-baseline gap-1">
-                                        <h4 className={`text-base sm:text-2xl font-black ${profitLoss >= 0 ? 'text-green-400' : 'text-brand-primary'}`}>
+                                        <h4 className={`text-base sm:text-2xl font-black blur-incognito ${profitLoss >= 0 ? 'text-green-400' : 'text-brand-primary'}`}>
                                             {profitLoss >= 0 ? '+' : ''}{profitLoss.toFixed(2)}
                                         </h4>
                                         <span className={`text-xs sm:text-lg font-bold ${profitLoss >= 0 ? 'text-green-400/40' : 'text-brand-primary/40'}`}>€</span>
                                     </div>
-                                    <div className={`flex w-fit items-center gap-1 sm:gap-1.5 px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-[8px] sm:text-[10px] font-black ${profitLoss >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-brand-primary/20 text-brand-primary'}`}>
+                                    <div className={`flex w-fit items-center gap-1 sm:gap-1.5 px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-[8px] sm:text-[10px] font-black blur-incognito ${profitLoss >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-brand-primary/20 text-brand-primary'}`}>
                                         {profitLoss >= 0 ? <TrendingUp className="h-2 w-2 sm:h-3 sm:w-3" /> : <TrendingDown className="h-2 w-2 sm:h-3 sm:w-3" />}
                                         {roi.toFixed(1)}%
                                     </div>

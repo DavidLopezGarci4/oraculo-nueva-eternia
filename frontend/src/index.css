@@ -81,3 +81,14 @@ body {
     writing-mode: vertical-rl;
     text-orientation: mixed;
 }
+
+/* ── Incognito Mode Blurring ── */
+.blur-incognito {
+    transition: filter 0.3s ease;
+}
+
+.mode-incognito .blur-incognito {
+    filter: blur(8px) !important;
+    user-select: none !important;
+    pointer-events: none !important;
+}

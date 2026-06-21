@@ -54,10 +54,12 @@ import PowerSwordLoader from '../components/ui/PowerSwordLoader';
 interface CatalogProps {
     searchQuery?: string;
     isVintageOnly?: boolean;
-    user?: Hero | null;
+    user: Hero | null;
+    isIncognito?: boolean;
 }
 
-const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintageOnly = false, user }) => {
+const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintageOnly = false, user, isIncognito = false }) => {
+    void isIncognito;
     const queryClient = useQueryClient();
     const { addToCart } = useCart();
     const [selectedProduct, setSelectedProduct] = React.useState<Product | null>(null);
@@ -832,11 +834,11 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                                     <div className="flex gap-4">
                                         <div className="text-right">
                                             <span className="block text-[8px] font-black uppercase text-white/40">Mínimo</span>
-                                            <span className="text-base font-black text-green-400">{cronosStats.a.min.toFixed(2)} €</span>
+                                            <span className="text-base font-black text-green-400 blur-incognito">{cronosStats.a.min.toFixed(2)} €</span>
                                         </div>
                                         <div className="text-right">
                                             <span className="block text-[8px] font-black uppercase text-white/40">Máximo</span>
-                                            <span className="text-base font-black text-red-400">{cronosStats.a.max.toFixed(2)} €</span>
+                                            <span className="text-base font-black text-red-400 blur-incognito">{cronosStats.a.max.toFixed(2)} €</span>
                                         </div>
                                     </div>
                                 </div>
@@ -850,11 +852,11 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                                     <div className="flex gap-4">
                                         <div className="text-right">
                                             <span className="block text-[8px] font-black uppercase text-white/40">Mínimo</span>
-                                            <span className="text-base font-black text-green-400">{cronosStats.b.min.toFixed(2)} €</span>
+                                            <span className="text-base font-black text-green-400 blur-incognito">{cronosStats.b.min.toFixed(2)} €</span>
                                         </div>
                                         <div className="text-right">
                                             <span className="block text-[8px] font-black uppercase text-white/40">Máximo</span>
-                                            <span className="text-base font-black text-red-400">{cronosStats.b.max.toFixed(2)} €</span>
+                                            <span className="text-base font-black text-red-400 blur-incognito">{cronosStats.b.max.toFixed(2)} €</span>
                                         </div>
                                     </div>
                                 </div>
@@ -1063,7 +1065,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                                             </div>
                                             <div className={`rounded-lg sm:rounded-xl px-2 py-1 sm:px-3 sm:py-1.5 text-[8px] sm:text-[10px] font-black backdrop-blur-md border shadow-2xl transition-all transform uppercase tracking-widest flex items-center gap-1.5 ${isMaster ? 'border-purple-500/30 bg-purple-500/20 text-purple-300' : (isVintageOnly ? 'border-amber-500/30 bg-amber-500/20 text-white' : 'border-brand-primary/30 bg-brand-primary/20 text-white')}`}>
                                                 <Gem className={`h-2 w-2 sm:h-3 sm:w-3 ${isMaster ? 'text-purple-400' : (isVintageOnly ? 'text-amber-500' : 'text-brand-primary')}`} />
-                                                <span>{displayPrice}€</span>
+                                                <span className="blur-incognito">{displayPrice}€</span>
                                                 {product.best_p2p_source && (
                                                     <span className="opacity-40 text-[6px] sm:text-[7px] border-l border-white/20 pl-1.5 ml-0.5">{product.best_p2p_source}</span>
                                                 )}
@@ -1405,16 +1407,16 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
 
                                                 <div className="flex flex-row items-center justify-between w-full md:w-auto md:justify-end gap-5">
                                                     <div className="text-left md:text-right space-y-0.5">
-                                                        <div className={`text-xl font-black ${offer.is_best ? (isVintageOnly ? 'text-amber-500' : 'text-brand-primary') : 'text-white'}`}>{offer.price} €</div>
+                                                        <div className={`text-xl font-black blur-incognito ${offer.is_best ? (isVintageOnly ? 'text-amber-500' : 'text-brand-primary') : 'text-white'}`}>{offer.price} €</div>
                                                         {offer.landing_price && offer.landing_price !== offer.price && (
                                                             <div className="text-[10px] font-black text-brand-secondary/80 flex flex-col items-start md:items-end">
                                                                 <span className="flex items-center gap-1">
                                                                     <Package className="h-2.5 w-2.5" />
-                                                                    {offer.landing_price} €
+                                                                    <span className="blur-incognito">{offer.landing_price} €</span>
                                                                 </span>
                                                             </div>
                                                         )}
-                                                        <div className="text-[9px] font-black uppercase tracking-tighter text-white/10">Mín: {offer.min_historical}€</div>
+                                                        <div className="text-[9px] font-black uppercase tracking-tighter text-white/10">Mín: <span className="blur-incognito">{offer.min_historical}€</span></div>
                                                     </div>
 
                                                     <div className="flex items-center gap-2 shrinks-0">

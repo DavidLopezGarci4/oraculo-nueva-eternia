@@ -12,7 +12,9 @@ import {
     Award,
     X,
     Layers,
-    Shield
+    Shield,
+    Eye,
+    EyeOff
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import OracleCart from '../components/cart/OracleCart';
@@ -39,9 +41,11 @@ import { getCollection, type Product } from '../api/collection';
 
 interface DashboardProps {
     user: Hero | null;
+    isIncognito: boolean;
+    onToggleIncognito: () => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ user }) => {
+const Dashboard: React.FC<DashboardProps> = ({ user, isIncognito, onToggleIncognito }) => {
     const { addToCart } = useCart();
     const isAdmin = user?.role === 'admin';
 
@@ -248,16 +252,25 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                         className="w-full h-full object-cover blur-2xl scale-125"
                     />
                 </div>
-                <div className="relative flex flex-col gap-1">
-                    <div className="flex items-center gap-2 text-brand-primary">
-                        <Zap className="h-3 w-3 fill-brand-primary" />
-                        <h2 className="text-sm md:text-base font-black uppercase tracking-[0.2em] text-white">
-                            Orbe de <span className="text-brand-primary">Grayskull</span>
-                        </h2>
+                <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2 text-brand-primary">
+                            <Zap className="h-3 w-3 fill-brand-primary" />
+                            <h2 className="text-sm md:text-base font-black uppercase tracking-[0.2em] text-white">
+                                Orbe de <span className="text-brand-primary">Grayskull</span>
+                            </h2>
+                        </div>
+                        <p className="max-w-xl text-[11px] md:text-sm text-white/65 font-medium">
+                            Bienvenido al Orbe de Grayskull, <span className="text-white font-bold">{user?.username || (isAdmin ? 'Maestro' : 'Guardián')}</span>. La inteligencia de Nueva Eternia converge.
+                        </p>
                     </div>
-                    <p className="max-w-xl text-[11px] md:text-sm text-white/65 font-medium">
-                        Bienvenido al Orbe de Grayskull, <span className="text-white font-bold">{user?.username || (isAdmin ? 'Maestro' : 'Guardián')}</span>. La inteligencia de Nueva Eternia converge.
-                    </p>
+                    <button
+                        onClick={onToggleIncognito}
+                        className="flex h-[38px] w-[38px] sm:h-[42px] sm:w-[42px] items-center justify-center rounded-xl bg-white/[0.03] border border-white/10 hover:bg-white/10 text-white/65 hover:text-white transition-all duration-300 shadow-md self-end sm:self-auto shrink-0 cursor-pointer"
+                        title={isIncognito ? "Desactivar Modo Incógnito" : "Activar Modo Incógnito"}
+                    >
+                        {isIncognito ? <EyeOff className="h-4 w-4 sm:h-5 sm:w-5" /> : <Eye className="h-4 w-4 sm:h-5 sm:w-5" />}
+                    </button>
                 </div>
             </div>
 
@@ -292,7 +305,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                         </div>
                         <div className="text-center md:text-left">
                             <p className="text-[6px] xs:text-[8px] md:text-[10px] font-black uppercase tracking-widest text-white/60 mb-0.5 md:mb-1">Valor Venta</p>
-                            <h3 className="text-xs xs:text-sm md:text-3xl font-black text-white">{(stats?.financial?.market_value || 0).toLocaleString('es-ES')}€</h3>
+                            <h3 className="text-xs xs:text-sm md:text-3xl font-black text-white blur-incognito">{(stats?.financial?.market_value || 0).toLocaleString('es-ES')}€</h3>
                         </div>
                     </div>
                 </div>
@@ -339,7 +352,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                                 </div>
                                 <div className="text-center md:text-left">
                                     <p className="text-[6px] xs:text-[8px] md:text-[10px] font-black uppercase tracking-widest text-amber-500/60 mb-0.5 md:mb-1">Valor Vintage</p>
-                                    <h3 className="text-xs xs:text-sm md:text-3xl font-black text-amber-500">{(stats?.financial_vintage?.market_value || 0).toLocaleString('es-ES')}€</h3>
+                                    <h3 className="text-xs xs:text-sm md:text-3xl font-black text-amber-500 blur-incognito">{(stats?.financial_vintage?.market_value || 0).toLocaleString('es-ES')}€</h3>
                                 </div>
                             </div>
                         </div>
@@ -378,8 +391,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                                             <div className="flex-1 min-w-0">
                                                 <h5 className="truncate text-[11px] font-bold text-white/95 group-hover:text-brand-primary transition-colors">{item.name}</h5>
                                                 <div className="flex items-center justify-between text-[9px] font-black text-white/60">
-                                                    <span>PVP: {item.invested_value || item.purchase_price || 0}€</span>
-                                                    <span className="text-white font-black">{item.market_value}€</span>
+                                                    <span>PVP: <span className="blur-incognito">{item.invested_value || item.purchase_price || 0}€</span></span>
+                                                    <span className="text-white font-black blur-incognito">{item.market_value}€</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -402,8 +415,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                                             <div className="flex-1 min-w-0">
                                                 <h5 className="truncate text-[11px] font-bold text-white/95 group-hover:text-brand-primary transition-colors">{item.name}</h5>
                                                 <div className="flex items-center justify-between text-[9px] font-black text-white/60">
-                                                    <span>ROI: <span className="text-green-500 font-black">+{item.roi_percentage || item.roi || 0}%</span></span>
-                                                    <span className="text-white font-black">{item.market_value}€</span>
+                                                    <span>ROI: <span className="text-green-500 font-black blur-incognito">+{item.roi_percentage || item.roi || 0}%</span></span>
+                                                    <span className="text-white font-black blur-incognito">{item.market_value}€</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -440,8 +453,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                                             <div className="flex-1 min-w-0">
                                                 <h5 className="truncate text-[11px] font-bold text-white/95 group-hover:text-amber-500 transition-colors">{item.name}</h5>
                                                 <div className="flex items-center justify-between text-[9px] font-black text-white/60">
-                                                    <span>Original: {item.invested_value || item.purchase_price || 0}€</span>
-                                                    <span className="text-amber-500 font-extrabold">{item.market_value}€</span>
+                                                    <span>Original: <span className="blur-incognito">{item.invested_value || item.purchase_price || 0}€</span></span>
+                                                    <span className="text-amber-500 font-extrabold blur-incognito">{item.market_value}€</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -464,8 +477,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                                             <div className="flex-1 min-w-0">
                                                 <h5 className="truncate text-[11px] font-bold text-white/95 group-hover:text-amber-500 transition-colors">{item.name}</h5>
                                                 <div className="flex items-center justify-between text-[9px] font-black text-white/60">
-                                                    <span>ROI: <span className="text-green-500 font-black">+{item.roi_percentage || item.roi || 0}%</span></span>
-                                                    <span className="text-amber-500 font-extrabold">{(item.market_value)}€</span>
+                                                    <span>ROI: <span className="text-green-500 font-black blur-incognito">+{item.roi_percentage || item.roi || 0}%</span></span>
+                                                    <span className="text-amber-500 font-extrabold blur-incognito">{(item.market_value)}€</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -527,7 +540,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                                                             <div className="glass p-2.5 rounded-xl border border-white/10 text-[10px] bg-black/95">
                                                                 <p className="font-black text-white uppercase tracking-wider mb-1">{data.name}</p>
                                                                 <p className="text-white/60">Cantidad: <span className="font-black text-brand-primary">{data.value}</span></p>
-                                                                <p className="text-white/60">Valor Est.: <span className="font-black text-emerald-400">{data.estimatedValue.toFixed(2)}€</span></p>
+                                                                <p className="text-white/60">Valor Est.: <span className="font-black text-emerald-400 blur-incognito">{data.estimatedValue.toFixed(2)}€</span></p>
                                                             </div>
                                                         );
                                                     }
@@ -559,7 +572,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                                                 </div>
                                                 <div className="text-right">
                                                     <div className="text-[10px] font-black text-white">{entry.value} uds. ({pct.toFixed(0)}%)</div>
-                                                    <div className="text-[9px] font-medium text-emerald-400">{entry.estimatedValue.toFixed(2)}€</div>
+                                                    <div className="text-[9px] font-medium text-emerald-400 blur-incognito">{entry.estimatedValue.toFixed(2)}€</div>
                                                 </div>
                                             </div>
                                         );
