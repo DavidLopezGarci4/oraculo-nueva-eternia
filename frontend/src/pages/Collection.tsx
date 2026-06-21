@@ -463,13 +463,13 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                                             {adjustedValue > 0 && (
                                                 <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-lg border font-black text-[8px] sm:text-[9px] whitespace-nowrap ${isGrail ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' : (isVintageOnly ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'bg-brand-primary/10 text-brand-primary border-brand-primary/20')}`}>
                                                     <Euro className="h-2 w-2 sm:h-2.5 sm:w-2.5" />
-                                                    <span className="blur-incognito">{adjustedValue.toFixed(2)}€</span>
+                                                    <span>{adjustedValue.toFixed(2)}€</span>
                                                 </div>
                                             )}
                                             {roi !== 0 && (
                                                 <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-lg border font-black text-[8px] sm:text-[9px] whitespace-nowrap ${roi >= 0 ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
                                                     {roi >= 0 ? <TrendingUp className="h-2 w-2 sm:h-2.5 sm:w-2.5" /> : <TrendingDown className="h-2 w-2 sm:h-2.5 sm:w-2.5" />}
-                                                    <span className="blur-incognito">{roi >= 0 ? '+' : ''}{roi.toFixed(1)}%</span>
+                                                    <span>{roi >= 0 ? '+' : ''}{roi.toFixed(1)}%</span>
                                                 </div>
                                             )}
                                             {activeTab === 'owned' && (
@@ -481,7 +481,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                                                         {grading.toFixed(1)}
                                                     </span>
                                                     {product.purchase_price && product.purchase_price > 0 ? (
-                                                        <span className={`px-1 py-0.5 rounded-md text-[6px] sm:text-[7px] font-black uppercase tracking-wider flex items-center gap-0.5 border ${isVintageOnly ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'bg-brand-primary/10 text-brand-primary border-brand-primary/20'}`} title={`Inversión manual: ${product.purchase_price}€`}>
+                                                        <span className={`px-1 py-0.5 rounded-md text-[6px] sm:text-[7px] font-black uppercase tracking-wider flex items-center gap-0.5 border ${isVintageOnly ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'bg-brand-primary/10 text-brand-primary border-brand-primary/20'}`} title={isIncognito ? "Inversión manual: •••" : `Inversión manual: ${product.purchase_price}€`}>
                                                             <ShoppingCart className="h-2 w-2" />
                                                             <span className="blur-incognito">{product.purchase_price.toFixed(0)}€</span>
                                                         </span>
