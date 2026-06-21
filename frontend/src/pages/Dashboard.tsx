@@ -294,7 +294,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isIncognito, onToggleIncogn
                         </div>
                         <div className="text-center md:text-left">
                             <p className="text-[6px] xs:text-[8px] md:text-[10px] font-black uppercase tracking-widest text-white/60 mb-0.5 md:mb-1">Fortaleza</p>
-                            <h3 className="text-xs xs:text-sm md:text-3xl font-black text-white">{stats?.owned_count || 0}</h3>
+                            <h3 className="text-xs xs:text-sm md:text-3xl font-black text-white blur-incognito">{stats?.owned_count || 0}</h3>
                         </div>
                     </div>
                 </div>
@@ -337,7 +337,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isIncognito, onToggleIncogn
                                 </div>
                                 <div className="text-center md:text-left">
                                     <p className="text-[6px] xs:text-[8px] md:text-[10px] font-black uppercase tracking-widest text-amber-500/60 mb-0.5 md:mb-1">Fortaleza Vintage</p>
-                                    <h3 className="text-xs xs:text-sm md:text-3xl font-black text-amber-500">{stats?.owned_count_vintage || 0}</h3>
+                                    <h3 className="text-xs xs:text-sm md:text-3xl font-black text-amber-500 blur-incognito">{stats?.owned_count_vintage || 0}</h3>
                                 </div>
                             </div>
                         </div>

@@ -330,7 +330,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                     <div className="flex items-center justify-between sm:justify-start gap-3 rounded-xl sm:rounded-2xl bg-white/[0.03] px-4 py-2 sm:py-2.5 border border-white/5 backdrop-blur-3xl w-full sm:w-auto h-[38px] sm:h-[42px]">
                         <div className="flex items-center gap-2">
                             <Box className={`h-4 w-4 sm:h-5 sm:w-5 ${isVintageOnly ? 'text-amber-500' : 'text-brand-primary'}`} />
-                            <span className="text-lg sm:text-xl font-black text-white leading-none">{activeTab === 'owned' ? totalOwned : totalWish}</span>
+                            <span className="text-lg sm:text-xl font-black text-white leading-none blur-incognito">{activeTab === 'owned' ? totalOwned : totalWish}</span>
                         </div>
                         <span className="text-[8px] sm:text-[9px] font-black text-white/20 uppercase tracking-[0.15em] pt-0.5 leading-tight text-right sm:text-left">
                             {activeTab === 'owned' ? 'Fortaleza' : 'Radar'}<br className="sm:hidden" /> Coleccionados
