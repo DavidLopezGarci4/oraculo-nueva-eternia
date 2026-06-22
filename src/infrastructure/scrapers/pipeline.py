@@ -234,7 +234,7 @@ class ScrapingPipeline:
         """
         if not offers and not shop_names:
             logger.warning("🛡️ Circuit Breaker: No offers found to process. Skipping DB update for this batch.")
-            return
+            return 0
 
         # Ensure offers are dicts (Standardize objects from different Pydantic versions)
         standardized_offers = []
@@ -339,7 +339,7 @@ class ScrapingPipeline:
             
             if not incoming_urls:
                 logger.warning("No valid URLs in batch. Aborting.")
-                return
+                return 0
 
             # B. Bulk Check against Database (4 Queries instead of N)
             # 1. Blocked Items

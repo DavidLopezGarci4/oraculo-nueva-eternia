@@ -495,6 +495,8 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
   - [x] **Reglas del Espacio de Trabajo (`AGENTS.md`)**: Creado el archivo de reglas técnicas y de negocio en `.agents/AGENTS.md` (FastAPI, React, SQLite/Supabase y recordatorio del bloqueo temporal de scrapers vintage).
   - [x] **Remoción de Componente Inactivo**: Verificada y eliminada la página obsoleta `Vintage.tsx` por carecer de referencias en la aplicación, optimizando el análisis del codebase.
   - [x] **Corrección de Telemetría de Amazon**: Añadida la carga de variables `.env` mediante `dotenv` al inicio de `base.py` para asegurar que `SCRAPERAPI_KEY` se cargue en ejecuciones en segundo plano/segundo plano, y robustecido el selector de títulos en el fallback de Playwright de `amazon_scraper.py`.
+  - [x] **Corrección de Violación SQL NOT NULL**: Modificados los retornos tempranos de `update_database` en `pipeline.py` para devolver `0` en vez de `None` en lotes vacíos (como bloqueos de CloudFront WAF en Wallapop), evitando errores de base de datos en `scraper_execution_logs.new_items`.
+  - [x] **Auto-scroll y Seguimiento de Telemetría**: Implementada la creación síncrona de `log_id` en el backend para poder auto-seleccionar y seguir instantáneamente en el frontend (`targetLogId`) la telemetría del scraper lanzado. Añadido auto-scroll automático vertical en la consola de logs de `Config.tsx`.
 
 ---
 

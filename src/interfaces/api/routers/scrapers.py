@@ -24,6 +24,7 @@ def run_scraper_task(
     spider_name: str = "all",
     trigger_type: str = "manual",
     query: str | None = None,
+    log_id: int | None = None,
 ):
     """Wrapper para ejecutar recolectores y actualizar el estado en BD"""
     scraper_cancel_event.clear()
@@ -39,29 +40,30 @@ def run_scraper_task(
     except Exception as e:
         logger.warning(f"⚠️ Log purge failed: {e}")
 
-    # 1. Marcar inicio en la base de datos y crear Log
-    with SessionCloud() as db:
-        status = (
-            db.query(ScraperStatusModel)
-            .filter(ScraperStatusModel.spider_name == spider_name)
-            .first()
-        )
-        if not status:
-            status = ScraperStatusModel(spider_name=spider_name)
-            db.add(status)
-        status.status = "running"
-        status.start_time = datetime.utcnow()
+    # 1. Marcar inicio en la base de datos y crear Log (si no viene ya creado)
+    if not log_id:
+        with SessionCloud() as db:
+            status = (
+                db.query(ScraperStatusModel)
+                .filter(ScraperStatusModel.spider_name == spider_name)
+                .first()
+            )
+            if not status:
+                status = ScraperStatusModel(spider_name=spider_name)
+                db.add(status)
+            status.status = "running"
+            status.start_time = datetime.utcnow()
 
-        execution_log = ScraperExecutionLogModel(
-            spider_name=spider_name,
-            status="running",
-            start_time=status.start_time,
-            trigger_type=trigger_type,
-            logs=f"[{datetime.now(ZoneInfo('Europe/Madrid')).strftime('%H:%M:%S')}] 🚀 Desplegando incursión manual: {spider_name}\n",
-        )
-        db.add(execution_log)
-        db.commit()
-        log_id = execution_log.id
+            execution_log = ScraperExecutionLogModel(
+                spider_name=spider_name,
+                status="running",
+                start_time=status.start_time,
+                trigger_type=trigger_type,
+                logs=f"[{datetime.now(ZoneInfo('Europe/Madrid')).strftime('%H:%M:%S')}] 🚀 Desplegando incursión manual: {spider_name}\n",
+            )
+            db.add(execution_log)
+            db.commit()
+            log_id = execution_log.id
 
     def update_live_log(msg: str):
         if not log_id:
@@ -180,6 +182,7 @@ def run_scraper_task(
             new_items = pipeline.update_database(
                 results, shop_names=[s.shop_name for s in spiders_to_run]
             )
+            new_items = new_items if new_items is not None else 0
             items_found = len(results)
             logger.info(
                 f"💾 Persistidas {items_found} ofertas tras incursión de {spider_name}."
@@ -207,7 +210,7 @@ def run_scraper_task(
                 log.status = "success"
                 log.end_time = datetime.utcnow()
                 log.items_found = items_found
-                log.new_items = new_items
+                log.new_items = new_items if new_items is not None else 0
 
             db.commit()
 
@@ -266,11 +269,36 @@ async def get_scrapers_logs():
 @router.post("/run", dependencies=[Depends(verify_api_key)])
 async def run_scrapers(request: ScraperRunRequest, background_tasks: BackgroundTasks):
     """Inicia la recolección de reliquias en segundo plano (Admin Only)"""
+    # 1. Marcar inicio en la base de datos y crear Log
+    with SessionCloud() as db:
+        status = (
+            db.query(ScraperStatusModel)
+            .filter(ScraperStatusModel.spider_name == request.spider_name)
+            .first()
+        )
+        if not status:
+            status = ScraperStatusModel(spider_name=request.spider_name)
+            db.add(status)
+        status.status = "running"
+        status.start_time = datetime.utcnow()
+
+        execution_log = ScraperExecutionLogModel(
+            spider_name=request.spider_name,
+            status="running",
+            start_time=status.start_time,
+            trigger_type=request.trigger_type,
+            logs=f"[{datetime.now(ZoneInfo('Europe/Madrid')).strftime('%H:%M:%S')}] 🚀 Desplegando incursión manual: {request.spider_name}\n",
+        )
+        db.add(execution_log)
+        db.commit()
+        log_id = execution_log.id
+
     background_tasks.add_task(
-        run_scraper_task, request.spider_name, request.trigger_type, request.query
+        run_scraper_task, request.spider_name, request.trigger_type, request.query, log_id
     )
     return {
         "status": "success",
+        "log_id": log_id,
         "message": f"Incursión '{request.spider_name}' para '{request.query or 'auto'}' desplegada en los páramos de Eternia",
     }
 

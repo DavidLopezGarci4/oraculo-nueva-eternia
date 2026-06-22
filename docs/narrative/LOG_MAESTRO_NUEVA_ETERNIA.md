@@ -1155,6 +1155,11 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
   - **Remoción de Componente Inactivo**: Verificado y eliminado el archivo de página obsoleto `Vintage.tsx` por no contar con ninguna referencia ni afectación de importación directa o indirecta, reduciendo el ruido en el análisis de código.
   - **Alineación de Privacidad de Incógnito**: Revertida la ocultación de incógnito en elementos ajenos a la propiedad del usuario (Bazar del Oráculo y cantidades de la Lista de Deseos), preservando el difuminado estrictamente para los inventarios de posesión real en la Fortaleza.
   - **Corrección de Telemetría de Amazon (Carga de .env)**: Detectada e implementada la carga de variables de entorno mediante `dotenv.load_dotenv()` al inicio de `base.py`. Esto solventa el fallo donde `SCRAPERAPI_KEY` era `None` en ejecuciones asíncronas y scripts de telemetría (daily scan/segundo plano), provocando bloqueos del WAF en Amazon. Adicionalmente, se fortaleció el selector de títulos en el fallback de Playwright de `amazon_scraper.py` para evitar que guarde registros con título `"Unknown"`.
+  - **Corrección de Violación de Restricción SQL (NOT NULL)**: Corregidos los retornos tempranos del pipeline de base de datos (`update_database` en `pipeline.py`) para que devuelvan explícitamente `0` en lugar de `None` si la lista de ofertas o URLs entrantes está vacía (como cuando hay un bloqueo por WAF de CloudFront en Wallapop). Esto evita fallas de constraint `NOT NULL` en el campo `new_items` de la base de datos Supabase/PostgreSQL.
+  - **Visualización en Tiempo Real y Auto-scroll de Telemetría**: Actualizado el panel de control del administrador en el frontend (`Config.tsx`) y el backend (`scrapers.py`) para:
+    - Crear el `log_id` de forma síncrona en el endpoint `/run` de scrapers y pasarlo a la tarea en segundo plano.
+    - Capturar e inyectar el `log_id` de la ejecución iniciada en el frontend para forzar la selección automática y el seguimiento del raspador en ejecución (`targetLogId`).
+    - Añadir soporte de scroll automático (`scrollTop = scrollHeight` en `consoleRef`) cuando se anexan nuevas líneas de log de telemetría.
 
 
 

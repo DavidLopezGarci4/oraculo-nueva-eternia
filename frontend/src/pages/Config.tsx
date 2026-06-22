@@ -67,6 +67,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
     const [isResetting, setIsResetting] = useState(false);
     const [selectedLog, setSelectedLog] = useState<ScraperExecutionLog | null>(null);
     const [advancedLogs, setAdvancedLogs] = useState<ScraperExecutionLog[]>([]);
+    const [targetLogId, setTargetLogId] = useState<number | null>(null);
 
     const [showIpLogsModal, setShowIpLogsModal] = useState(false);
     const [ipLogs, setIpLogs] = useState<WallapopIpLog[]>([]);
@@ -301,6 +302,13 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
         }
     }, [user, activeTab]);
 
+    // Auto-scroll log console to bottom when new logs are added
+    useEffect(() => {
+        if (consoleRef.current) {
+            consoleRef.current.scrollTop = consoleRef.current.scrollHeight;
+        }
+    }, [selectedLog?.logs]);
+
     const fetchData = async () => {
         try {
             // Fetch everything, but handle individual failures gracefully
@@ -320,7 +328,18 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
 
             // update selected log if necessary
             if (al && al.length > 0) {
-                if (selectedLog) {
+                const targetId = targetLogId;
+                if (targetId) {
+                    const matched = al.find((l: any) => l.id === targetId);
+                    if (matched) {
+                        setSelectedLog(matched);
+                        if (matched.status !== 'running') {
+                            setTargetLogId(null);
+                        }
+                    } else {
+                        setSelectedLog(al[0]);
+                    }
+                } else if (selectedLog) {
                     const current = al.find((l: any) => l.id === selectedLog.id);
                     if (current) setSelectedLog(current);
                 } else {
@@ -370,8 +389,11 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
 
     const runScrapersMutation = useMutation({
         mutationFn: (scraperName: string) => runScrapers(scraperName, 'manual'),
-        onSuccess: () => {
+        onSuccess: (data: any) => {
             queryClient.invalidateQueries({ queryKey: ['scrapers-status'] });
+            if (data && data.log_id) {
+                setTargetLogId(data.log_id);
+            }
             fetchData();
         }
     });
@@ -712,7 +734,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                         {advancedLogs.map((log) => (
                                             <button
                                                 key={log.id}
-                                                onClick={() => setSelectedLog(log)}
+                                                onClick={() => { setSelectedLog(log); setTargetLogId(null); }}
                                                 className={`group w - full flex flex - col gap - 2 rounded - 2xl border p - 4 text - left transition - all relative overflow - hidden ${selectedLog?.id === log.id
                                                     ? 'bg-brand-primary/10 border-brand-primary/30 shadow-lg'
                                                     : 'bg-white/[0.03] border-white/5 hover:bg-white/5'
