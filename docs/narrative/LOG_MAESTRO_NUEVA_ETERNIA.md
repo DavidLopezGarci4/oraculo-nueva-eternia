@@ -1154,6 +1154,7 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
   - **Consolidación de Reglas de Negocio**: Creado el archivo de reglas de espacio de trabajo `AGENTS.md` bajo el directorio `.agents/` para establecer las pautas técnicas obligatorias (FastAPI, React, SQLite/Supabase) y recordar inmutablemente la desactivación temporal de scrapers vintage.
   - **Remoción de Componente Inactivo**: Verificado y eliminado el archivo de página obsoleto `Vintage.tsx` por no contar con ninguna referencia ni afectación de importación directa o indirecta, reduciendo el ruido en el análisis de código.
   - **Alineación de Privacidad de Incógnito**: Revertida la ocultación de incógnito en elementos ajenos a la propiedad del usuario (Bazar del Oráculo y cantidades de la Lista de Deseos), preservando el difuminado estrictamente para los inventarios de posesión real en la Fortaleza.
+  - **Corrección de Telemetría de Amazon (Carga de .env)**: Detectada e implementada la carga de variables de entorno mediante `dotenv.load_dotenv()` al inicio de `base.py`. Esto solventa el fallo donde `SCRAPERAPI_KEY` era `None` en ejecuciones asíncronas y scripts de telemetría (daily scan/segundo plano), provocando bloqueos del WAF en Amazon. Adicionalmente, se fortaleció el selector de títulos en el fallback de Playwright de `amazon_scraper.py` para evitar que guarde registros con título `"Unknown"`.
 
 
 

@@ -6,6 +6,10 @@ import logging
 import re
 import random
 import json
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 from abc import ABC, abstractmethod
 from typing import List, Optional
 from pydantic import BaseModel, Field

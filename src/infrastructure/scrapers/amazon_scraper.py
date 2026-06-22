@@ -207,7 +207,13 @@ class AmazonScraper(BaseScraper):
                             if not asin or len(asin) != 10: continue
 
                             # Title
-                            title_el = await res.query_selector("h2")
+                            title_el = (
+                                await res.query_selector("h2 span")
+                                or await res.query_selector(".s-line-clamp-2 span")
+                                or await res.query_selector("h2 a span")
+                                or await res.query_selector(".a-size-medium")
+                                or await res.query_selector("h2")
+                            )
                             title = await title_el.text_content() if title_el else "Unknown"
                             title = title.strip() if title else "Unknown"
                             

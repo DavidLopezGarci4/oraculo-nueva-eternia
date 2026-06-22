@@ -494,6 +494,7 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
   - [x] **Skills Locales y Globales**: Creado el skill de Desarrollo Guiado por Especificaciones (`specification-driven-development`) de forma local en `.agents/skills/` y global en `.gemini/config/skills/` para homogeneizar la planificación y mitigar el vibe coding.
   - [x] **Reglas del Espacio de Trabajo (`AGENTS.md`)**: Creado el archivo de reglas técnicas y de negocio en `.agents/AGENTS.md` (FastAPI, React, SQLite/Supabase y recordatorio del bloqueo temporal de scrapers vintage).
   - [x] **Remoción de Componente Inactivo**: Verificada y eliminada la página obsoleta `Vintage.tsx` por carecer de referencias en la aplicación, optimizando el análisis del codebase.
+  - [x] **Corrección de Telemetría de Amazon**: Añadida la carga de variables `.env` mediante `dotenv` al inicio de `base.py` para asegurar que `SCRAPERAPI_KEY` se cargue en ejecuciones en segundo plano/segundo plano, y robustecido el selector de títulos en el fallback de Playwright de `amazon_scraper.py`.
 
 ---
 
