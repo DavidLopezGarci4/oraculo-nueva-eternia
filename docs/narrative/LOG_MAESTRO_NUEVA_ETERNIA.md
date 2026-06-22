@@ -1134,3 +1134,14 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
   - **Consolidación en un Clic**: Al confirmar la fusión divina, se invoca de forma segura la API `/api/products/merge` en el backend para transferir ofertas, vinculaciones, historiales y pertenencias de la Fortaleza del ítem origen al destino, eliminando el duplicado y manteniendo la integridad de la base de datos de manera atómica. Se resolvió un error de servidor (HTTP 500 / IntegrityError) asegurando que todas las alertas de precio (`PriceAlertModel`), alias (`ProductAliasModel`) y entradas de reliquia vintage (`VintageProductModel`) vinculadas al producto origen sean traspasadas o eliminadas de forma limpia en cascada antes de destruir el registro origen.
 
 
+### 🛡️ Fase 72: Desactivación Temporal de Búsquedas y Procesamiento Vintage (22/06/2026)
+
+- **Hitos**: Inhabilitación de palabras clave vintage en Vinted y pre-filtrado defensivo en el pipeline de base de datos para omitir el procesamiento de figuras de los 80 o con la marca vintage de forma temporal.
+- **Estado**: ✅ COMPLETADO Y VERIFICADO
+- **Logros Técnicos**:
+  - **Desactivación de Búsquedas en Vinted**: Comentadas temporalmente las consultas específicas para ítems vintage en la configuración de `VintedScraper` (`queries_config` para `"masters of the universe vintage"`, `"masters del universo vintage"`, y `"motu vintage"`), reduciendo peticiones y ruido.
+  - **Pre-filtrado de Base de Datos (Bypass Vintage)**: Añadida una capa de pre-filtrado defensivo al inicio de `pipeline.update_database` en `pipeline.py`. Evalúa cada oferta usando la utilidad `check_is_vintage` sobre el nombre del producto, descartando cualquier artículo vintage o del rango de años 1980-1989. Esto previene que se guarden ofertas o se envíen ítems al Purgatorio desde cualquier scraper genérico (como eBay o Wallapop) que emplean búsquedas genéricas de MOTU.
+  - **Medida Temporal Documentada**: Se mantiene toda la estructura de datos existente intacta (Eternia, Mi Fortaleza Vintage, Purgatorio, etc.), inhabilitando únicamente la inyección de nuevas ofertas para la categoría Vintage.
+
+
+

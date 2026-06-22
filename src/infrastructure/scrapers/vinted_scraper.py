@@ -58,10 +58,10 @@ class VintedScraper(BaseScraper):
                 ("masters del universo origins", 2),
                 ("motu origins", 2),
                 
-                # Foco Vintage (Clásicos de los 80 - muy específicos para evitar ruido)
-                ("masters of the universe vintage", 2),
-                ("masters del universo vintage", 2),
-                ("motu vintage", 2),
+                # Foco Vintage (Clásicos de los 80 - Desactivado temporalmente)
+                # ("masters of the universe vintage", 2),
+                # ("masters del universo vintage", 2),
+                # ("motu vintage", 2),
                 
                 # Foco General (Bajo volumen de páginas para evitar spam/bloqueos)
                 ("masters of the universe", 1),

@@ -253,6 +253,19 @@ class ScrapingPipeline:
                     standardized_offers.append(o)
         offers = standardized_offers
 
+        # --- VINTAGE DEACTIVATION LAYER (TEMPORARY) ---
+        # Skip vintage / 80s items from database updates
+        from src.core.vintage_utils import check_is_vintage
+        filtered_offers = []
+        for o in offers:
+            product_name = o.get('product_name', '')
+            is_v = check_is_vintage(product_name) or bool(o.get('is_vintage'))
+            if is_v:
+                logger.info(f"🚫 [Vintage Bypass] Ignorando artículo vintage: '{product_name}'")
+                continue
+            filtered_offers.append(o)
+        offers = filtered_offers
+
         # --- UNIVERSAL URL NORMALIZATION LAYER ---
         from src.core.url_utils import normalize_url
         for o in offers:
