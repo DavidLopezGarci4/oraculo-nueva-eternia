@@ -489,6 +489,12 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
   - [x] **Experiencia de Usuario Inmersiva**: Diseñado un contenedor de estado vacío premium con icono de estrella y guías explicativas para listas de deseos vacías, y adaptados los iconos y contadores del encabezado principal.
   - [x] **Sincronización Bidireccional de Caché**: Conectado el flujo de mutación `toggleMutation` para invalidar reactivamente las claves `collection` y `dashboard-stats`, asegurando que cualquier cambio de deseos o capturas desde el Catálogo o la Fortaleza se propague en tiempo real a todas las vistas.
 
+- [x] **Phase 74: Integración de Servidores MCP y Skill Global de SDD (22/06/2026)**
+  - [x] **Servidores MCP Configurados**: Creado el archivo `mcp_config.json` en el directorio de usuario de Antigravity, registrando Playwright MCP y CodeGraph para dotar al agente de herramientas interactivas de navegador y mapas sintácticos de código.
+  - [x] **Skills Locales y Globales**: Creado el skill de Desarrollo Guiado por Especificaciones (`specification-driven-development`) de forma local en `.agents/skills/` y global en `.gemini/config/skills/` para homogeneizar la planificación y mitigar el vibe coding.
+  - [x] **Reglas del Espacio de Trabajo (`AGENTS.md`)**: Creado el archivo de reglas técnicas y de negocio en `.agents/AGENTS.md` (FastAPI, React, SQLite/Supabase y recordatorio del bloqueo temporal de scrapers vintage).
+  - [x] **Remoción de Componente Inactivo**: Verificada y eliminada la página obsoleta `Vintage.tsx` por carecer de referencias en la aplicación, optimizando el análisis del codebase.
+
 ---
 
 ## ✅ Plan de Verificación

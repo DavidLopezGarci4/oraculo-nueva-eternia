@@ -1144,4 +1144,17 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
   - **Medida Temporal Documentada**: Se mantiene toda la estructura de datos existente intacta (Eternia, Mi Fortaleza Vintage, Purgatorio, etc.), inhabilitando únicamente la inyección de nuevas ofertas para la categoría Vintage.
 
 
+### 🛡️ Fase 73: Integración de Model Context Protocol (MCP) y Configuración Global (22/06/2026)
+
+- **Hitos**: Configuración del entorno de Antigravity para soportar servidores MCP de depuración (Playwright y CodeGraph), creación de skills y reglas estructuradas (SDD), eliminación de componentes obsoletos e integridad de la privacidad en inventario.
+- **Estado**: ✅ COMPLETADO Y VERIFICADO
+- **Logros Técnicos**:
+  - **Servidores MCP Configurados**: Creada la configuración global en `mcp_config.json` para habilitar Playwright MCP y CodeGraph en el entorno local del agente, proporcionando herramientas de navegación e indexación sintáctica AST.
+  - **Skills de SDD Locales y Globales**: Creado el skill de Desarrollo Guiado por Especificaciones (`specification-driven-development`) en el directorio local de `.agents/skills/` y en el directorio global del agente en `.gemini/config/skills/` para homogeneizar el flujo de trabajo (Grill-with-Docs + Spec-Kit) en futuros proyectos.
+  - **Consolidación de Reglas de Negocio**: Creado el archivo de reglas de espacio de trabajo `AGENTS.md` bajo el directorio `.agents/` para establecer las pautas técnicas obligatorias (FastAPI, React, SQLite/Supabase) y recordar inmutablemente la desactivación temporal de scrapers vintage.
+  - **Remoción de Componente Inactivo**: Verificado y eliminado el archivo de página obsoleto `Vintage.tsx` por no contar con ninguna referencia ni afectación de importación directa o indirecta, reduciendo el ruido en el análisis de código.
+  - **Alineación de Privacidad de Incógnito**: Revertida la ocultación de incógnito en elementos ajenos a la propiedad del usuario (Bazar del Oráculo y cantidades de la Lista de Deseos), preservando el difuminado estrictamente para los inventarios de posesión real en la Fortaleza.
+
+
+
 
