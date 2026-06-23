@@ -256,10 +256,40 @@ async def download_images_zip():
     if not image_files:
         raise HTTPException(status_code=404, detail="No hay imágenes en el caché local para descargar.")
         
+    from src.domain.models import ProductModel
+    product_map = {}
+    with SessionCloud() as db:
+        products = db.query(ProductModel.id, ProductModel.name, ProductModel.figure_id).all()
+        for p_id, name, figure_id in products:
+            product_map[p_id] = (name, figure_id)
+            
+    import re
+    def slugify(text: str) -> str:
+        text = text.lower().strip()
+        text = re.sub(r'[^a-z0-9]+', '-', text)
+        text = re.sub(r'-+', '-', text)
+        return text.strip('-')
+
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
         for img_path in image_files:
-            zip_file.write(img_path, img_path.name)
+            try:
+                p_id = int(img_path.stem)
+            except ValueError:
+                zip_file.write(img_path, img_path.name)
+                continue
+                
+            if p_id in product_map:
+                name, fig_id = product_map[p_id]
+                slug_name = slugify(name)
+                if not slug_name:
+                    slug_name = "product"
+                slug_id = fig_id if fig_id else str(p_id)
+                new_name = f"{slug_name}-{slug_id}{img_path.suffix}"
+            else:
+                new_name = img_path.name
+                
+            zip_file.write(img_path, new_name)
             
     zip_buffer.seek(0)
     
