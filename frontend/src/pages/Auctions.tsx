@@ -13,6 +13,7 @@ import { getProductPriceHistory } from '../api/products';
 import PriceHistoryChart from '../components/products/PriceHistoryChart';
 import { unlinkOffer, type Hero } from '../api/admin';
 import { getOptimizedImageUrl } from '../utils/imageUtils';
+import { MOTUImage } from '../components/ui/MOTUImage';
 
 const MarketStatCard: React.FC<{ title: string, value: number, type: 'retail' | 'p2p' }> = ({ title, value, type }) => {
     const { data: analytics, isLoading } = useQuery({
@@ -268,7 +269,8 @@ const Auctions: React.FC<AuctionsProps> = ({ user }) => {
                                 onClick={() => setSelectedProduct(product)}
                             >
                                 {product.image_url ? (
-                                    <img 
+                                    <MOTUImage 
+                                        productId={product.id}
                                         src={getOptimizedImageUrl(product.image_url, 300)} 
                                         alt={product.name} 
                                         loading="lazy"
@@ -425,7 +427,8 @@ const Auctions: React.FC<AuctionsProps> = ({ user }) => {
                                     onClick={() => setExpandedImage(selectedProduct.image_url)}
                                     title="Expandir Reliquia"
                                 >
-                                    <img 
+                                    <MOTUImage 
+                                        productId={selectedProduct.id}
                                         src={getOptimizedImageUrl(selectedProduct.image_url, 600)} 
                                         className="h-full w-full object-cover" 
                                         loading="lazy"
@@ -582,7 +585,8 @@ const Auctions: React.FC<AuctionsProps> = ({ user }) => {
                     onClick={() => setExpandedImage(null)}
                 >
                     <div className="relative max-w-full max-h-full group">
-                        <img
+                        <MOTUImage
+                            productId={selectedProduct?.id}
                             src={expandedImage}
                             alt="Expanded Relic"
                             className="max-w-full max-h-[90vh] rounded-[2rem] sm:rounded-[3rem] border border-white/10 shadow-[0_0_100px_rgba(0,0,0,0.8)] object-contain"

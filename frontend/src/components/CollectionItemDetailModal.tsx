@@ -16,6 +16,7 @@ import {
 import { updateCollectionItem, toggleCollection } from '../api/collection';
 import type { Product } from '../api/collection';
 import { getOptimizedImageUrl } from '../utils/imageUtils';
+import { MOTUImage } from './ui/MOTUImage';
 
 
 interface CollectionItemDetailModalProps {
@@ -92,7 +93,8 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
                         onClick={() => setExpandedImage(product.image_url || null)}
                         title="Expandir Reliquia"
                     >
-                        <img 
+                        <MOTUImage 
+                            productId={product.id}
                             src={getOptimizedImageUrl(product.image_url, 600)} 
                             className="h-full w-full object-cover" 
                             alt={product.name} 
@@ -342,7 +344,8 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
                     onClick={() => setExpandedImage(null)}
                 >
                     <div className="relative max-w-full max-h-full group">
-                        <img
+                        <MOTUImage
+                            productId={product.id}
                             src={expandedImage}
                             alt="Expanded Vintage Relic"
                             className="max-w-full max-h-[90vh] rounded-[2rem] sm:rounded-[3rem] border border-white/10 shadow-[0_0_100px_rgba(0,0,0,0.8)] object-contain"
