@@ -8,7 +8,8 @@ interface MOTUImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
 export function MOTUImage({ productId, fallbackSrc = '', src, ...props }: MOTUImageProps) {
   const useLocal = localStorage.getItem('use_local_images') === 'true';
   const defaultSrc = src || fallbackSrc;
-  const [currentSrc, setCurrentSrc] = useState(defaultSrc);
+  const localSrc = productId ? `/api/static/images/${productId}.webp` : defaultSrc;
+  const [currentSrc, setCurrentSrc] = useState(useLocal ? localSrc : defaultSrc);
 
   useEffect(() => {
     let active = true;
@@ -36,26 +37,24 @@ export function MOTUImage({ productId, fallbackSrc = '', src, ...props }: MOTUIm
             return;
           }
 
-          // If it's not in the cache, display the remote image first,
+          // If it's not in the cache, display the local static image first,
           // then download and save it to the cache in the background.
-          if (active) setCurrentSrc(defaultSrc);
+          if (active) setCurrentSrc(cacheKey);
 
-          if (defaultSrc) {
-            // Asynchronously fetch and cache it
-            fetch(defaultSrc)
-              .then(async (response) => {
-                if (response.ok) {
-                  const cacheToPut = await caches.open('motu-image-cache');
-                  await cacheToPut.put(cacheKey, response);
-                }
-              })
-              .catch((err) => {
-                console.warn(`Auto-caching failed for product ${productId}:`, err);
-              });
-          }
+          // Asynchronously fetch and cache it from the local static directory
+          fetch(cacheKey)
+            .then(async (response) => {
+              if (response.ok) {
+                const cacheToPut = await caches.open('motu-image-cache');
+                await cacheToPut.put(cacheKey, response);
+              }
+            })
+            .catch((err) => {
+              console.warn(`Auto-caching failed for product ${productId}:`, err);
+            });
         } catch (e) {
           console.error("Cache API resolution failed:", e);
-          if (active) setCurrentSrc(defaultSrc);
+          if (active) setCurrentSrc(cacheKey);
         }
       } else {
         if (active) setCurrentSrc(defaultSrc);
