@@ -401,11 +401,10 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                 const wished = isWished(product.id);
 
                 // Quick-Chips filter applications
-                if (selectedChips.includes('wishlist') && !wished) return false;
-                if (selectedChips.includes('vintage') && !product.is_vintage) return false;
-                if (selectedChips.includes('moderno') && product.is_vintage) return false;
                 if (selectedChips.includes('offers') && !(product.purgatory_match_count && product.purgatory_match_count > 0)) return false;
                 if (selectedChips.includes('coleccionado') && !owned) return false;
+                if (selectedChips.includes('manual_price') && !(product.retail_price && product.retail_price > 0)) return false;
+                if (selectedChips.includes('no_manual_price') && (product.retail_price && product.retail_price > 0)) return false;
 
                 // If not explicitly filtering by owned items, maintain standard hunting list logic (hide owned)
                 if (!selectedChips.includes('coleccionado')) {
@@ -1007,12 +1006,6 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                             Todos
                         </button>
                         <button
-                            onClick={() => setSelectedChips(prev => prev.includes('wishlist') ? prev.filter(c => c !== 'wishlist') : [...prev, 'wishlist'])}
-                            className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5 ${selectedChips.includes('wishlist') ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/20' : 'text-white/60 bg-white/5 hover:bg-white/10 hover:text-white'}`}
-                        >
-                            <Star className="h-3 w-3 fill-current" /> Wishlist
-                        </button>
-                        <button
                             onClick={() => setSelectedChips(prev => prev.includes('coleccionado') ? prev.filter(c => c !== 'coleccionado') : [...prev, 'coleccionado'])}
                             className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedChips.includes('coleccionado') ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/20' : 'text-white/60 bg-white/5 hover:bg-white/10 hover:text-white'}`}
                         >
@@ -1025,10 +1018,24 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                             🔥 En Oferta
                         </button>
                         <button
-                            onClick={() => setSelectedChips(prev => prev.includes('vintage') ? prev.filter(c => c !== 'vintage') : [...prev, 'vintage'])}
-                            className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedChips.includes('vintage') ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/20' : 'text-white/60 bg-white/5 hover:bg-white/10 hover:text-white'}`}
+                            onClick={() => setSelectedChips(prev => {
+                                const next = prev.includes('manual_price') ? prev.filter(c => c !== 'manual_price') : [...prev.filter(c => c !== 'no_manual_price'), 'manual_price'];
+                                return next;
+                            })}
+                            className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedChips.includes('manual_price') ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/20' : 'text-white/60 bg-white/5 hover:bg-white/10 hover:text-white'}`}
+                            title="Mostrar figuras con importe asignado manualmente"
                         >
-                            🕰️ Vintage
+                            ✍️ Man
+                        </button>
+                        <button
+                            onClick={() => setSelectedChips(prev => {
+                                const next = prev.includes('no_manual_price') ? prev.filter(c => c !== 'no_manual_price') : [...prev.filter(c => c !== 'manual_price'), 'no_manual_price'];
+                                return next;
+                            })}
+                            className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedChips.includes('no_manual_price') ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/20' : 'text-white/60 bg-white/5 hover:bg-white/10 hover:text-white'}`}
+                            title="Mostrar figuras con importe automático (scrapers/maestro)"
+                        >
+                            🤖 Auto
                         </button>
                         {selectedShopFilter && (
                             <button
@@ -1685,7 +1692,8 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                                             type="number"
                                             value={editingProduct.retail_price || 0}
                                             onChange={(e) => setEditingProduct({ ...editingProduct, retail_price: parseFloat(e.target.value) })}
-                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-white focus:outline-none focus:border-brand-primary/50 transition-all"
+                                            className={`w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-white focus:outline-none focus:border-brand-primary/50 transition-all ${isIncognito ? 'blur-incognito' : ''}`}
+                                            title={isIncognito ? "Precio manual: •••" : undefined}
                                         />
                                     </div>
 

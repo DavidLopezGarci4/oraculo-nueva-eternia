@@ -399,12 +399,14 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                 >
                     🎖️ Graded
                 </button>
-                <button
-                    onClick={() => setSelectedChips(prev => prev.includes('vintage') ? prev.filter(c => c !== 'vintage') : [...prev, 'vintage'])}
-                    className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedChips.includes('vintage') ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/20' : 'text-white/60 bg-white/5 hover:bg-white/10 hover:text-white'}`}
-                >
-                    🕰️ Vintage
-                </button>
+                {!isVintageOnly && (
+                    <button
+                        onClick={() => setSelectedChips(prev => prev.includes('vintage') ? prev.filter(c => c !== 'vintage') : [...prev, 'vintage'])}
+                        className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedChips.includes('vintage') ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/20' : 'text-white/60 bg-white/5 hover:bg-white/10 hover:text-white'}`}
+                    >
+                        🕰️ Vintage
+                    </button>
+                )}
             </div>
 
             {/* Grid Area */}
@@ -732,7 +734,8 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                                             type="number"
                                             value={editingProduct.retail_price || 0}
                                             onChange={(e) => setEditingProduct({ ...editingProduct, retail_price: parseFloat(e.target.value) })}
-                                            className={`w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-white focus:outline-none transition-all ${editingProduct.is_vintage ? 'focus:border-amber-500/50' : 'focus:border-brand-primary/50'}`}
+                                            className={`w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-white focus:outline-none transition-all ${editingProduct.is_vintage ? 'focus:border-amber-500/50' : 'focus:border-brand-primary/50'} ${isIncognito ? 'blur-incognito' : ''}`}
+                                            title={isIncognito ? "Precio manual: •••" : undefined}
                                         />
                                     </div>
 
