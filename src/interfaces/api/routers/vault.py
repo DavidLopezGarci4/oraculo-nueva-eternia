@@ -66,7 +66,25 @@ async def download_all_images_task(user_id: int = 2, client_type: str = "pc"):
                 
             file_path = os.path.join(image_cache_dir, f"{p.id}.webp")
             
-            # Si ya está en disco y pesa algo, saltar
+            # 1. Intentar copiar desde la caché local del servidor (data/image_cache) para evitar descargas HTTP de Supabase (bloqueado por quota/402)
+            server_cache_file = os.path.join("data/image_cache", f"{p.id}.webp")
+            if os.path.exists(server_cache_file) and os.path.getsize(server_cache_file) > 0:
+                if os.path.abspath(server_cache_file) != os.path.abspath(file_path):
+                    import shutil
+                    try:
+                        shutil.copy2(server_cache_file, file_path)
+                        with _image_download_lock:
+                            _image_download_status["current"] += 1
+                        continue
+                    except Exception as ce:
+                        logger.warning(f"Error copiando imagen local {p.id} a destino: {ce}")
+                else:
+                    # Si es la misma ruta, ya existe en el disco y es válida
+                    with _image_download_lock:
+                        _image_download_status["current"] += 1
+                    continue
+
+            # Si ya está en disco y pesa algo (caso general), saltar
             if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
                 with _image_download_lock:
                     _image_download_status["current"] += 1
