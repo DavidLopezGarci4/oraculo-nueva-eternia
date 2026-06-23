@@ -1096,15 +1096,21 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                                                 ))}
                                                             </Pie>
                                                             <RechartsTooltip
-                                                                contentStyle={{
-                                                                    backgroundColor: 'rgba(0, 0, 0, 0.9)',
-                                                                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                                                                    borderRadius: '12px',
-                                                                    fontSize: '10px',
-                                                                    color: '#fff',
-                                                                    fontFamily: 'monospace'
+                                                                content={({ active, payload }: any) => {
+                                                                    if (active && payload && payload.length) {
+                                                                        return (
+                                                                            <div className="bg-black/95 border border-white/15 p-3 rounded-xl shadow-2xl backdrop-blur-md flex flex-col gap-0.5 select-none">
+                                                                                <span className="text-[9px] font-black uppercase tracking-widest text-white/50">
+                                                                                    {payload[0].name}
+                                                                                </span>
+                                                                                <span className="text-xs font-black text-brand-primary uppercase tracking-wider">
+                                                                                    {payload[0].value} Reliquias
+                                                                                </span>
+                                                                            </div>
+                                                                        );
+                                                                    }
+                                                                    return null;
                                                                 }}
-                                                                formatter={(value: any) => [`${value} Reliquias`, 'Matches']}
                                                             />
                                                         </PieChart>
                                                     </ResponsiveContainer>
