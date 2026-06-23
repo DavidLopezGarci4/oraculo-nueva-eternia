@@ -54,6 +54,36 @@ import os
 
 app = FastAPI(title="Oráculo API Broker", version="1.0.0", lifespan=lifespan)
 
+@app.get("/api/static/images/{product_id}.webp")
+async def get_static_image_override(product_id: int, source: str = None, user_id: int = 2):
+    from fastapi.responses import FileResponse
+    from fastapi import HTTPException
+    from src.infrastructure.database_cloud import SessionCloud
+    from src.domain.models import UserModel
+    
+    extensions = [".webp", ".jpg", ".jpeg", ".png"]
+    
+    # 1. Try custom path if not explicitly cache-only
+    if source != "cache":
+        with SessionCloud() as db:
+            user = db.query(UserModel).filter(UserModel.id == user_id).first()
+            if user:
+                for custom_dir in [user.pc_image_path, user.mobile_image_path]:
+                    if custom_dir:
+                        for ext in extensions:
+                            file_path = os.path.join(custom_dir, f"{product_id}{ext}")
+                            if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
+                                return FileResponse(file_path)
+                                
+    # 2. Try server cache if not explicitly custom-only
+    if source != "custom":
+        for ext in extensions:
+            server_cache_file = os.path.join(settings.IMAGE_CACHE_DIR, f"{product_id}{ext}")
+            if os.path.exists(server_cache_file) and os.path.getsize(server_cache_file) > 0:
+                return FileResponse(server_cache_file)
+                
+    raise HTTPException(status_code=404, detail="Imagen no encontrada")
+
 # Mount local image cache directory
 image_cache_dir = settings.IMAGE_CACHE_DIR
 os.makedirs(image_cache_dir, exist_ok=True)

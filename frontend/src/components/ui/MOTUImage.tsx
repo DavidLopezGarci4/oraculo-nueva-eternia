@@ -6,10 +6,19 @@ interface MOTUImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
 }
 
 export function MOTUImage({ productId, fallbackSrc = '', src, ...props }: MOTUImageProps) {
-  const useLocal = localStorage.getItem('use_local_images') === 'true';
+  const imageSource = localStorage.getItem('image_source') || 'supabase';
   const defaultSrc = src || fallbackSrc;
-  const localSrc = productId ? `/api/static/images/${productId}.webp` : defaultSrc;
-  const [currentSrc, setCurrentSrc] = useState(useLocal ? localSrc : defaultSrc);
+  
+  let initialSrc = defaultSrc;
+  if (productId) {
+    if (imageSource === 'local_cache') {
+      initialSrc = `/api/static/images/${productId}.webp?source=cache`;
+    } else if (imageSource === 'custom_path') {
+      initialSrc = `/api/static/images/${productId}.webp?source=custom`;
+    }
+  }
+
+  const [currentSrc, setCurrentSrc] = useState(initialSrc);
 
   useEffect(() => {
     let active = true;
@@ -23,7 +32,7 @@ export function MOTUImage({ productId, fallbackSrc = '', src, ...props }: MOTUIm
 
       const cacheKey = `/api/static/images/${productId}.webp`;
 
-      if (useLocal) {
+      if (imageSource !== 'supabase') {
         try {
           const cache = await caches.open('motu-image-cache');
           const cachedResponse = await cache.match(cacheKey);
@@ -37,12 +46,12 @@ export function MOTUImage({ productId, fallbackSrc = '', src, ...props }: MOTUIm
             return;
           }
 
-          // If it's not in the cache, display the local static image first,
-          // then download and save it to the cache in the background.
-          if (active) setCurrentSrc(cacheKey);
+          const srcParam = imageSource === 'custom_path' ? 'custom' : 'cache';
+          const fetchUrl = `${cacheKey}?source=${srcParam}`;
+          if (active) setCurrentSrc(fetchUrl);
 
           // Asynchronously fetch and cache it from the local static directory
-          fetch(cacheKey)
+          fetch(fetchUrl)
             .then(async (response) => {
               if (response.ok) {
                 const cacheToPut = await caches.open('motu-image-cache');
@@ -54,7 +63,8 @@ export function MOTUImage({ productId, fallbackSrc = '', src, ...props }: MOTUIm
             });
         } catch (e) {
           console.error("Cache API resolution failed:", e);
-          if (active) setCurrentSrc(cacheKey);
+          const srcParam = imageSource === 'custom_path' ? 'custom' : 'cache';
+          if (active) setCurrentSrc(`${cacheKey}?source=${srcParam}`);
         }
       } else {
         if (active) setCurrentSrc(defaultSrc);
@@ -69,7 +79,7 @@ export function MOTUImage({ productId, fallbackSrc = '', src, ...props }: MOTUIm
         URL.revokeObjectURL(objectUrl);
       }
     };
-  }, [src, fallbackSrc, productId, useLocal, defaultSrc]);
+  }, [src, fallbackSrc, productId, imageSource, defaultSrc]);
 
   const handleError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     const localStaticUrl = `/api/static/images/${productId}.webp`;

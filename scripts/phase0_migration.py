@@ -38,6 +38,100 @@ def normalize_us_price(val_usd: float) -> float:
     if not val_usd or val_usd <= 0: return 0.0
     return round(val_usd * 0.92, 2)
 
+def download_missing_image(url: str, local_path: str) -> bool:
+    import requests
+    try:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+        r = requests.get(url, headers=headers, timeout=15, stream=True)
+        if r.status_code == 200:
+            os.makedirs(os.path.dirname(local_path), exist_ok=True)
+            with open(local_path, "wb") as f:
+                for chunk in r.iter_content(chunk_size=8192):
+                    f.write(chunk)
+            logger.info(f"⬇️ Downloaded missing image from web: {url} -> {local_path}")
+            return True
+        else:
+            logger.warning(f"⚠️ Failed to download image from web (status {r.status_code}): {url}")
+            return False
+    except Exception as e:
+        logger.warning(f"⚠️ Error downloading image from web {url}: {e}")
+        return False
+
+def resolve_local_image_path(image_path_str: str, image_url: str = None) -> str | None:
+    if not image_path_str:
+        return None
+    
+    # Normalize paths
+    path_str = image_path_str.replace('\\', '/')
+    if path_str.startswith('/app/'):
+        path_str = path_str.replace('/app/', '', 1)
+        
+    project_root = Path(__file__).resolve().parent.parent
+    local_path = project_root / path_str
+    
+    if local_path.exists():
+        return str(local_path)
+        
+    # Try direct path
+    direct_path = Path(image_path_str)
+    if direct_path.exists():
+        return str(direct_path)
+        
+    # If file doesn't exist but we have a web URL, download it!
+    if image_url and image_url.startswith('http'):
+        if "supabase.co" not in image_url:
+            success = download_missing_image(image_url, str(local_path))
+            if success:
+                return str(local_path)
+                
+    return None
+
+def cache_image_locally(src_path: str, product_id: int, session):
+    if os.getenv("GITHUB_ACTIONS") == "true":
+        return
+        
+    try:
+        from PIL import Image
+        cache_dir = settings.IMAGE_CACHE_DIR
+        os.makedirs(cache_dir, exist_ok=True)
+        dest_path = os.path.join(cache_dir, f"{product_id}.webp")
+        
+        # 1. Convert to WebP and save in server cache if not exists
+        if not os.path.exists(dest_path) or os.path.getsize(dest_path) == 0:
+            with Image.open(src_path) as img:
+                if img.mode in ('RGBA', 'LA'):
+                    background = Image.new('RGB', img.size, (255, 255, 255))
+                    background.paste(img, mask=img.split()[3])
+                    img = background
+                elif img.mode != 'RGB':
+                    img = img.convert('RGB')
+                img.save(dest_path, "WEBP", quality=85)
+                logger.info(f"📸 Cached image locally: {dest_path}")
+        
+        # 2. Copy to user's configured custom paths (pc_image_path / mobile_image_path)
+        from src.domain.models import UserModel
+        users = session.query(UserModel).filter(
+            (UserModel.pc_image_path != None) | (UserModel.mobile_image_path != None)
+        ).all()
+        
+        import shutil
+        for user in users:
+            for path_attr in ['pc_image_path', 'mobile_image_path']:
+                custom_dir = getattr(user, path_attr)
+                if custom_dir:
+                    try:
+                        os.makedirs(custom_dir, exist_ok=True)
+                        user_dest = os.path.join(custom_dir, f"{product_id}.webp")
+                        if not os.path.exists(user_dest) or os.path.getsize(user_dest) == 0:
+                            shutil.copy2(dest_path, user_dest)
+                            logger.info(f"📂 Copied WebP to user custom {path_attr}: {user_dest}")
+                    except Exception as ce:
+                        logger.warning(f"⚠️ Failed to copy WebP to custom folder {custom_dir}: {ce}")
+    except Exception as e:
+        logger.warning(f"⚠️ Error caching image {src_path} for product {product_id}: {e}")
+
 def migrate_excel_to_db(excel_path: str, session):
     """
     Core migration logic.
@@ -125,21 +219,21 @@ def migrate_excel_to_db(excel_path: str, session):
                     if not product:
                         # Fallback to Name + Series if Figure ID missing or not found
                         product = session.query(ProductModel).filter_by(name=name, sub_category=sub_category, figure_id=None).first()
-
+                    
                     if not product:
                         # Create NEW
-                        image_url = row.get('Image URL')
+                        image_url_raw = row.get('Image URL')
+                        image_url = image_url_raw
                         image_path = row.get('Image Path')
                         
-                        # Phase 26: If we have a local path, we assume it's synced to Supabase
-                        # The URL pattern for Supabase is predictable
-                        if image_path and os.path.exists(image_path):
-                            filename = os.path.basename(image_path)
-                            # Fallback if image_url is missing or ActionFigure411 specific
+                        resolved_path = resolve_local_image_path(image_path, image_url_raw)
+                        if resolved_path:
+                            filename = os.path.basename(resolved_path)
+                            filename_webp = os.path.splitext(filename)[0] + ".webp"
                             from src.core.config import settings
                             supabase_url = getattr(settings, "SUPABASE_URL", "")
                             if supabase_url:
-                                image_url = f"{supabase_url}/storage/v1/object/public/motu-catalog/{filename}"
+                                image_url = f"{supabase_url}/storage/v1/object/public/motu-catalog/{filename_webp}"
 
                         # Phase 10 (Master Nexus): Segregated Benchmarks
                         currency = row.get('Currency', 'USD')
@@ -149,7 +243,7 @@ def migrate_excel_to_db(excel_path: str, session):
                              avg_us = normalize_us_price(avg_raw)
                         else:
                              avg_us = avg_raw # Already in EUR
-                             
+                              
                         product = ProductModel(
                             name=name,
                             figure_id=figure_id,
@@ -173,21 +267,28 @@ def migrate_excel_to_db(excel_path: str, session):
                         session.add(product)
                         session.flush() # Get ID
                         total_imported += 1
+                        
+                        if resolved_path:
+                            cache_image_locally(resolved_path, product.id, session)
                     else:
                         # UPDATE existing if needed
                         if figure_id and not product.figure_id:
                             product.figure_id = figure_id
                         
                         # Ensure we have a cloud/valid image URL
+                        image_url_raw = row.get('Image URL')
                         image_path = row.get('Image Path')
-                        if image_path and os.path.exists(image_path):
-                            filename = os.path.basename(image_path)
+                        resolved_path = resolve_local_image_path(image_path, image_url_raw)
+                        if resolved_path:
+                            filename = os.path.basename(resolved_path)
+                            filename_webp = os.path.splitext(filename)[0] + ".webp"
                             from src.core.config import settings
                             supabase_url = getattr(settings, "SUPABASE_URL", "")
                             if supabase_url:
-                                product.image_url = f"{supabase_url}/storage/v1/object/public/motu-catalog/{filename}"
+                                product.image_url = f"{supabase_url}/storage/v1/object/public/motu-catalog/{filename_webp}"
+                            cache_image_locally(resolved_path, product.id, session)
                         elif not product.image_url:
-                            product.image_url = row.get('Image URL')
+                            product.image_url = image_url_raw
                         
                         # Phase 18: Update intelligence fields even if product exists
                         product.retail_price = clean_price(row.get('Retail'))

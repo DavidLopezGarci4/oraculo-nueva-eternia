@@ -63,17 +63,43 @@ class StorageService:
             logger.warning(f"⚠️ Local image not found: {local_path}")
             return None
 
-        file_name = path.name
+        temp_webp_path = None
+        # Convert to WebP on-the-fly to optimize space in Supabase
+        if path.suffix.lower() != ".webp":
+            try:
+                from PIL import Image
+                temp_webp_path = str(path.with_suffix(".temp.webp"))
+                with Image.open(local_path) as img:
+                    if img.mode in ('RGBA', 'LA'):
+                        background = Image.new('RGB', img.size, (255, 255, 255))
+                        background.paste(img, mask=img.split()[3])
+                        img = background
+                    elif img.mode != 'RGB':
+                        img = img.convert('RGB')
+                    img.save(temp_webp_path, "WEBP", quality=85)
+                upload_file_path = temp_webp_path
+                file_name = path.stem + ".webp"
+                content_type = "image/webp"
+            except Exception as e:
+                logger.warning(f"⚠️ Failed to convert {local_path} to WebP before upload: {e}")
+                upload_file_path = local_path
+                file_name = path.name
+                content_type = "image/jpeg"
+        else:
+            upload_file_path = local_path
+            file_name = path.name
+            content_type = "image/webp"
+
         path_in_bucket = f"{folder}/{file_name}" if folder else file_name
         
         try:
             # Upload file
-            with open(local_path, "rb") as f:
+            with open(upload_file_path, "rb") as f:
                 # We overwrite if exists to ensure latest version
                 self.client.storage.from_(self.bucket_name).upload(
                     path_in_bucket, 
                     f, 
-                    file_options={"upsert": "true", "content-type": "image/jpeg"}
+                    file_options={"upsert": "true", "content-type": content_type}
                 )
             
             # Get Public URL
@@ -88,6 +114,12 @@ class StorageService:
                 logger.warning("⚠️ Disabling further Supabase Storage uploads due to quota limits.")
                 self.storage_disabled = True
             return None
+        finally:
+            if temp_webp_path and os.path.exists(temp_webp_path):
+                try:
+                    os.remove(temp_webp_path)
+                except Exception:
+                    pass
 
     def upload_all_local_images(self, images_dir: str, folder: str = ""):
          """Syncs all images in the local folder to the cloud."""

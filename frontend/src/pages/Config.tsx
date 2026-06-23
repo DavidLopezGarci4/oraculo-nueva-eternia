@@ -153,7 +153,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
     const [ipLogs, setIpLogs] = useState<WallapopIpLog[]>([]);
     const [loadingIpLogs, setLoadingIpLogs] = useState(false);
 
-    const [localImagesEnabled, setLocalImagesEnabled] = useState(() => localStorage.getItem('use_local_images') === 'true');
+    const [, setLocalImagesEnabled] = useState(() => localStorage.getItem('use_local_images') === 'true');
     const [downloadStatus, setDownloadStatus] = useState({ active: false, total: 0, current: 0, errors: 0, last_error: null as string | null });
     const [pcPath, setPcPath] = useState('');
     const [mobilePath, setMobilePath] = useState('');
@@ -1441,19 +1441,41 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                         )}
                                     </div>
 
-                                    {/* Browser Cache toggle and control */}
-                                    <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5">
-                                        <span className="text-xs text-white/70">Usar Imágenes de la Caché Local</span>
-                                        <button
-                                            onClick={() => {
-                                                const current = localStorage.getItem('use_local_images') === 'true';
-                                                localStorage.setItem('use_local_images', !current ? 'true' : 'false');
-                                                setLocalImagesEnabled(!current);
-                                            }}
-                                            className={`relative h-5 w-10 rounded-full transition-all ${localImagesEnabled ? 'bg-brand-primary' : 'bg-white/10'}`}
-                                        >
-                                            <div className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${localImagesEnabled ? 'right-0.5' : 'left-0.5'}`} />
-                                        </button>
+                                    {/* Origen de Imágenes Selection */}
+                                    <div className="space-y-2 p-3 bg-white/5 rounded-xl border border-white/5">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs text-white/70 flex items-center gap-1.5">
+                                                <Globe className="h-3.5 w-3.5" />
+                                                Origen de Imágenes
+                                            </span>
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-1 pt-1">
+                                            {(['supabase', 'local_cache', 'custom_path'] as const).map((src) => {
+                                                const isActive = (localStorage.getItem('image_source') || 'supabase') === src;
+                                                let label = 'Nube';
+                                                if (src === 'local_cache') label = 'Caché';
+                                                if (src === 'custom_path') label = 'Ruta User';
+                                                return (
+                                                    <button
+                                                        key={src}
+                                                        onClick={() => {
+                                                            localStorage.setItem('image_source', src);
+                                                            localStorage.setItem('use_local_images', src !== 'supabase' ? 'true' : 'false');
+                                                            setLocalImagesEnabled(src !== 'supabase');
+                                                            window.dispatchEvent(new Event('storage'));
+                                                            fetchData();
+                                                        }}
+                                                        className={`py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                                                            isActive
+                                                                ? 'bg-brand-primary text-white shadow-lg'
+                                                                : 'bg-white/5 hover:bg-white/10 text-white/60 hover:text-white'
+                                                        }`}
+                                                    >
+                                                        {label}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
                                     </div>
 
                                     {/* Download Controls */}

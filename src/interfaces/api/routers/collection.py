@@ -2,13 +2,47 @@ import os
 from datetime import datetime
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse
 from loguru import logger
 from sqlalchemy import select
 
 from src.domain.models import CollectionItemModel, OfferModel, ProductModel, UserModel
 from src.infrastructure.database_cloud import SessionCloud
+
+def trigger_excel_sync_background(user_id: int, product_id: int):
+    try:
+        from src.domain.models import UserModel, ProductModel
+        from src.application.services.excel_manager import ExcelManager
+        from src.infrastructure.database_cloud import SessionCloud
+        from pathlib import Path
+        
+        with SessionCloud() as db:
+            user = db.query(UserModel).filter(UserModel.id == user_id).first()
+            product = db.query(ProductModel).filter(ProductModel.id == product_id).first()
+            if not user or not product:
+                return
+            
+            is_admin = user.role == 'admin' or user.username == 'David'
+            username = user.username
+            is_vintage = product.is_vintage or False
+            
+        project_root = Path(__file__).resolve().parents[4]
+        
+        if is_admin:
+            if is_vintage:
+                excel_path = project_root / "data" / "MOTU" / "lista_vintage.xlsx"
+            else:
+                excel_path = project_root / "data" / "MOTU" / "lista_MOTU.xlsx"
+        else:
+            excel_path = project_root / "data" / "MOTU" / f"lista_MOTU_{username}.xlsx"
+            
+        if excel_path.exists():
+            manager = ExcelManager(str(excel_path))
+            manager.sync_acquisitions_from_db(user_id)
+            logger.info(f"🔄 Automatically synchronized Excel at: {excel_path}")
+    except Exception as e:
+        logger.error(f"❌ Failed to auto-sync Excel: {e}")
 from src.interfaces.api.schemas import (
     CollectionItemUpdateRequest,
     CollectionToggleRequest,
@@ -152,7 +186,7 @@ async def export_sqlite(user_id: int = 1):
 
 
 @router.post("/api/collection/toggle")
-async def toggle_collection(request: CollectionToggleRequest):
+async def toggle_collection(request: CollectionToggleRequest, background_tasks: BackgroundTasks):
     with SessionCloud() as db:
         item = db.query(CollectionItemModel).filter(
             CollectionItemModel.product_id == request.product_id,
@@ -176,11 +210,12 @@ async def toggle_collection(request: CollectionToggleRequest):
             action = "added_wish" if request.wish else "added_owned"
 
         db.commit()
+        background_tasks.add_task(trigger_excel_sync_background, request.user_id, request.product_id)
         return {"status": "success", "action": action, "product_id": request.product_id}
 
 
 @router.patch("/api/collection/{product_id}")
-async def update_collection_item(product_id: int, request: CollectionItemUpdateRequest):
+async def update_collection_item(product_id: int, request: CollectionItemUpdateRequest, background_tasks: BackgroundTasks):
     with SessionCloud() as db:
         item = db.query(CollectionItemModel).filter(
             CollectionItemModel.product_id == product_id,
@@ -208,4 +243,5 @@ async def update_collection_item(product_id: int, request: CollectionItemUpdateR
                 raise HTTPException(status_code=400, detail="Formato de fecha inválido")
 
         db.commit()
+        background_tasks.add_task(trigger_excel_sync_background, request.user_id, product_id)
         return {"status": "success", "message": "Detalles del legado actualizados"}
