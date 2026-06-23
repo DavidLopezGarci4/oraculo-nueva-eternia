@@ -767,17 +767,17 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                             <button
                                                 key={log.id}
                                                 onClick={() => { setSelectedLog(log); setTargetLogId(null); }}
-                                                className={`group w - full flex flex - col gap - 2 rounded - 2xl border p - 4 text - left transition - all relative overflow - hidden ${selectedLog?.id === log.id
+                                                className={`group w-full flex flex-col gap-2 rounded-2xl border p-4 text-left transition-all relative overflow-hidden ${selectedLog?.id === log.id
                                                     ? 'bg-brand-primary/10 border-brand-primary/30 shadow-lg'
                                                     : 'bg-white/[0.03] border-white/5 hover:bg-white/5'
-                                                    } `}
+                                                    }`}
                                             >
                                                 {selectedLog?.id === log.id && (
                                                     <motion.div layoutId="log-active" className="absolute left-0 top-0 bottom-0 w-1 bg-brand-primary" />
                                                 )}
                                                 <div className="flex items-center justify-between">
                                                     <span className="text-[10px] font-black uppercase tracking-widest text-white group-hover:text-brand-primary transition-colors">{log.spider_name}</span>
-                                                    <span className={`text - [8px] font - bold px - 1.5 py - 0.5 rounded - md uppercase tracking - tighter ${log.status === 'success' ? 'bg-green-500/20 text-green-400' : log.status === 'running' ? 'bg-blue-500/20 text-blue-400' : 'bg-red-500/20 text-red-400'} `}>
+                                                    <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-tighter ${log.status === 'success' ? 'bg-green-500/20 text-green-400' : log.status === 'running' ? 'bg-blue-500/20 text-blue-400' : 'bg-red-500/20 text-red-400'}`}>
                                                         {log.status === 'success' ? 'Éxito' : log.status === 'running' ? 'En Ejecución' : 'Fallo'}
                                                     </span>
                                                 </div>
@@ -899,7 +899,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                                         const isWarning = line.toLowerCase().includes('warning') || line.toLowerCase().includes('alert');
 
                                                         return (
-                                                            <div key={i} className={`flex gap - 4 group / line ${isError ? 'text-red-400' : isSuccess ? 'text-green-400' : isWarning ? 'text-yellow-400' : 'text-white/60'} `}>
+                                                            <div key={i} className={`flex gap-4 group/line ${isError ? 'text-red-400' : isSuccess ? 'text-green-400' : isWarning ? 'text-yellow-400' : 'text-white/60'}`}>
                                                                 <span className="text-white/10 select-none w-8 text-right group-hover/line:text-white/60 transition-colors">{String(i + 1).padStart(3, '0')}</span>
                                                                 <p className="break-all whitespace-pre-wrap flex-1">{line}</p>
                                                             </div>
@@ -1236,10 +1236,10 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                                 key={country.code}
                                                 onClick={() => handleUpdateLocation(country.code)}
                                                 disabled={savingSettings}
-                                                className={`flex items - center justify - between px - 4 py - 3 rounded - 2xl border transition - all ${userSettings?.location === country.code
+                                                className={`flex items-center justify-between px-4 py-3 rounded-2xl border transition-all ${userSettings?.location === country.code
                                                     ? 'bg-brand-primary border-brand-primary text-white shadow-lg shadow-brand-primary/20'
                                                     : 'bg-white/5 border-white/10 text-white/50 hover:bg-white/10 hover:text-white'
-                                                    } `}
+                                                    }`}
                                             >
                                                 <span className="text-xs font-bold">{country.label}</span>
                                                 {userSettings?.location === country.code && (
@@ -1729,11 +1729,11 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                             initial={{ scale: 0.9, opacity: 0, y: 20 }}
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                            className={`relative w - full max - w - md overflow - hidden rounded - [2.5rem] border p - 8 shadow - 2xl ${resetStep === 1 ? 'border-orange-500/30 bg-orange-950/20' : 'border-red-500/50 bg-red-950/30'} `}
+                            className={`relative w-full max-w-md overflow-hidden rounded-[2.5rem] border p-8 shadow-2xl ${resetStep === 1 ? 'border-orange-500/30 bg-orange-950/20' : 'border-red-500/50 bg-red-950/30'}`}
                         >
                             <div className="flex flex-col items-center gap-6 text-center">
-                                <div className={`h - 20 w - 20 rounded - full flex items - center justify - center border animate - pulse ${resetStep === 1 ? 'bg-orange-500/20 border-orange-500/50' : 'bg-red-500/20 border-red-500/80'} `}>
-                                    <ShieldAlert className={`h - 10 w - 10 ${resetStep === 1 ? 'text-orange-500' : 'text-red-500'} `} />
+                                <div className={`h-20 w-20 rounded-full flex items-center justify-center border animate-pulse ${resetStep === 1 ? 'bg-orange-500/20 border-orange-500/50' : 'bg-red-500/20 border-red-500/80'}`}>
+                                    <ShieldAlert className={`h-10 w-10 ${resetStep === 1 ? 'text-orange-500' : 'text-red-500'}`} />
                                 </div>
 
                                 <div className="space-y-2">
@@ -1758,7 +1758,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                     <button
                                         disabled={isResetting}
                                         onClick={() => resetStep === 1 ? setResetStep(2) : handleResetSmartMatches()}
-                                        className={`rounded - 2xl py - 4 text - xs font - black text - white transition - all uppercase tracking - widest shadow - lg ${resetStep === 1 ? 'bg-orange-500 hover:bg-orange-600 shadow-orange-500/20' : 'bg-red-600 hover:bg-red-700 shadow-red-500/40'} `}
+                                        className={`rounded-2xl py-4 text-xs font-black text-white transition-all uppercase tracking-widest shadow-lg ${resetStep === 1 ? 'bg-orange-500 hover:bg-orange-600 shadow-orange-500/20' : 'bg-red-600 hover:bg-red-700 shadow-red-500/40'}`}
                                     >
                                         {isResetting ? 'PURIFICANDO...' : resetStep === 1 ? 'COMPRENDO' : 'PURIFICAR TODO'}
                                     </button>
