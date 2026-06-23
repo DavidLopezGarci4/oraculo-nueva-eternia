@@ -128,6 +128,25 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
     const [mergeTargetProduct, setMergeTargetProduct] = React.useState<Product | null>(null);
     const [isMerging, setIsMerging] = React.useState(false);
     const [selectedChips, setSelectedChips] = React.useState<string[]>([]);
+    const [selectedShopFilter, setSelectedShopFilter] = React.useState<string | null>(() => {
+        return localStorage.getItem('catalog_shop_filter');
+    });
+
+    React.useEffect(() => {
+        const handleNavigate = (e: Event) => {
+            const customEvent = e as CustomEvent;
+            if (customEvent.detail && customEvent.detail.shop) {
+                setSelectedShopFilter(customEvent.detail.shop);
+            }
+        };
+        window.addEventListener('navigate-to-catalog', handleNavigate);
+        return () => window.removeEventListener('navigate-to-catalog', handleNavigate);
+    }, []);
+
+    const clearShopFilter = React.useCallback(() => {
+        setSelectedShopFilter(null);
+        localStorage.removeItem('catalog_shop_filter');
+    }, []);
 
     React.useEffect(() => {
         setShowMergePanel(false);
@@ -184,9 +203,13 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
 
     // 1. Fetch de todos los productos
     const { data: products, isLoading: isLoadingProducts, isError: isErrorProducts } = useQuery<Product[]>({
-        queryKey: ['products', isVintageOnly],
+        queryKey: ['products', isVintageOnly, selectedShopFilter],
         queryFn: async () => {
-            const response = await axios.get(`/api/products${isVintageOnly ? '?is_vintage=true' : ''}`);
+            let url = `/api/products?is_vintage=${isVintageOnly ? 'true' : 'false'}`;
+            if (selectedShopFilter) {
+                url += `&shop=${encodeURIComponent(selectedShopFilter)}`;
+            }
+            const response = await axios.get(url);
             return response.data;
         }
     });
@@ -1007,6 +1030,15 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                         >
                             🕰️ Vintage
                         </button>
+                        {selectedShopFilter && (
+                            <button
+                                onClick={clearShopFilter}
+                                className="px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/35 hover:text-red-300 flex items-center gap-1.5 shadow-md shadow-red-950/20"
+                                title="Quitar filtro de tienda"
+                            >
+                                🏪 {selectedShopFilter} <span className="text-white/60 font-black">&times;</span>
+                            </button>
+                        )}
                     </div>
 
                     {!products || products.length === 0 ? (

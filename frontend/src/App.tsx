@@ -78,6 +78,14 @@ function App() {
     }
   }, [activeTab, isLoggedIn, isSovereign]);
 
+  useEffect(() => {
+    const handleNavigate = () => {
+      setActiveTab('catalog');
+    };
+    window.addEventListener('navigate-to-catalog', handleNavigate);
+    return () => window.removeEventListener('navigate-to-catalog', handleNavigate);
+  }, []);
+
 
   const fetchUser = async (userId: number) => {
     try {

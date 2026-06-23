@@ -51,11 +51,12 @@ const PowerSwordLoader: React.FC<PowerSwordLoaderProps> = ({
 }) => {
     const [internalProgress, setInternalProgress] = useState(0);
 
-    // Random choice on mount between Skeletor (purple rays) and Vintage He-Man (cyan rays)
-    const [randomTheme] = useState(() => Math.random() < 0.5 ? 'skeletor' : 'vintage');
+    // Random choice on mount between Vintage He-Man (vintage) and Modern He-Man (modern)
+    const [randomTheme] = useState(() => Math.random() < 0.5 ? 'vintage' : 'modern');
 
-    const activeIsSkeletor = disableRandom ? isSkeletor : (randomTheme === 'skeletor');
+    const activeIsSkeletor = disableRandom ? isSkeletor : false;
     const activeIsVintage = disableRandom ? isVintage : (randomTheme === 'vintage');
+    const activeIsViolet = activeIsSkeletor || (!activeIsVintage);
 
     const isFullScreen = variant === 'fullScreen';
     const activeSwordAsset = activeIsSkeletor ? skeletorSwordAsset : (activeIsVintage ? vintageSwordAsset : swordAsset);
@@ -223,7 +224,7 @@ const PowerSwordLoader: React.FC<PowerSwordLoaderProps> = ({
                 <motion.path
                     key={`blade-${i}`}
                     d={`M ${startX} ${startY} Q ${cx} ${cy} ${endX} ${endY}`}
-                    stroke={activeIsSkeletor ? (i % 3 === 0 ? "#F5D0FE" : "#D946EF") : (i % 3 === 0 ? "#BAE6FD" : "#38BDF8")}
+                    stroke={activeIsViolet ? (i % 3 === 0 ? "#F5D0FE" : "#D946EF") : (i % 3 === 0 ? "#BAE6FD" : "#38BDF8")}
                     strokeWidth={isFullScreen ? 2.5 : (Math.random() * 1.5 + 0.5)}
                     fill="none"
                     initial={{ pathLength: 0, opacity: 0 }}
@@ -255,7 +256,7 @@ const PowerSwordLoader: React.FC<PowerSwordLoaderProps> = ({
                 <motion.path
                     key={`central-${i}`}
                     d={`M ${activeGuardX} ${activeGuardY} L ${x2} ${y2}`}
-                    stroke={activeIsSkeletor ? "#E9D5FF" : "#7DD3FC"}
+                    stroke={activeIsViolet ? "#E9D5FF" : "#7DD3FC"}
                     strokeWidth={isFullScreen ? 3 : 1.5}
                     initial={{ pathLength: 0, opacity: 0 }}
                     animate={{ pathLength: [0, 1, 0], opacity: [0, 1, 0] }}
@@ -327,7 +328,7 @@ const PowerSwordLoader: React.FC<PowerSwordLoaderProps> = ({
                     preserveAspectRatio={isFullScreen ? "xMidYMid slice" : "xMidYMid meet"}
                     fill="none"
                     xmlns="http://www.w3.org/2000/svg"
-                    className={`w-full h-full drop-shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-all duration-500 ${progress >= 99 ? (activeIsSkeletor ? 'skeletor-glow-active' : 'sword-glow-active') : ''}`}
+                    className={`w-full h-full drop-shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-all duration-500 ${progress >= 99 ? (activeIsViolet ? 'skeletor-glow-active' : 'sword-glow-active') : ''}`}
                 >
                     {/* 1. Fully Visible Base Layer (Sharp) */}
                     <image
@@ -374,14 +375,14 @@ const PowerSwordLoader: React.FC<PowerSwordLoaderProps> = ({
                     <div className="flex flex-col items-center gap-3">
                         <div className={`relative ${isFullScreen ? 'h-[4px] w-80 sm:w-96' : 'h-[2px] w-64'} bg-white/5 rounded-full overflow-hidden backdrop-blur-sm border border-white/5`}>
                             <motion.div
-                                className={`h-full ${activeIsSkeletor ? 'bg-purple-500 shadow-[0_0_30px_#A855F7]' : 'bg-cyan-400 shadow-[0_0_30px_#22D3EE]'}`}
+                                className={`h-full ${activeIsViolet ? 'bg-purple-500 shadow-[0_0_30px_#A855F7]' : 'bg-cyan-400 shadow-[0_0_30px_#22D3EE]'}`}
                                 initial={{ width: 0 }}
                                 animate={{ width: `${progress}%` }}
                                 transition={{ ease: "linear", duration: 0.1 }}
                             />
                         </div>
                         {isFullScreen && (
-                            <span className={`text-sm font-black tracking-[0.5em] ${activeIsSkeletor ? 'text-purple-400/60' : 'text-cyan-400/60'} transition-all`}>
+                            <span className={`text-sm font-black tracking-[0.5em] ${activeIsViolet ? 'text-purple-400/60' : 'text-cyan-400/60'} transition-all`}>
                                 {Math.round(progress)}%
                             </span>
                         )}

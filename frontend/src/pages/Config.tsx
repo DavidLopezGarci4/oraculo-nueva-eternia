@@ -9,6 +9,13 @@ import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import WallapopImporter from '../components/admin/WallapopImporter';
 import { getDashboardMatchStats } from '../api/dashboard';
+import {
+    PieChart,
+    Pie,
+    Cell,
+    ResponsiveContainer,
+    Tooltip as RechartsTooltip
+} from 'recharts';
 
 
 import {
@@ -128,6 +135,19 @@ const getStepperStatus = (logsText?: string, statusText?: string): StepperStatus
     return steps;
 };
 
+const CHART_COLORS = [
+    '#8b5cf6', // Violeta/Esqueleto
+    '#06b6d4', // Cian/Tecnológico
+    '#f59e0b', // Ámbar/He-Man
+    '#10b981', // Esmeralda/Grayskull
+    '#ec4899', // Rosa/Eternia
+    '#ef4444', // Rojo/Horda
+    '#3b82f6', // Azul/Héroe
+    '#f97316', // Naranja/Fuego
+    '#6366f1', // Índigo/Místico
+    '#a855f7'  // Púrpura/Mágico
+];
+
 const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange }) => {
     const consoleRef = React.useRef<HTMLDivElement>(null);
     const [activeTab, setActiveTab] = useState<'scrapers' | 'system' | 'users' | 'wallapop' | 'inventory'>('scrapers');
@@ -178,6 +198,11 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
 
     const isAdmin = user?.role === 'admin' || user?.username === 'David';
     const [showShowcaseGuide, setShowShowcaseGuide] = useState(false);
+
+    const handleCardClick = (shop: string) => {
+        localStorage.setItem('catalog_shop_filter', shop);
+        window.dispatchEvent(new CustomEvent('navigate-to-catalog', { detail: { shop } }));
+    };
 
     useEffect(() => {
         if (showCalibrator) {
@@ -995,39 +1020,129 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                         </div>
                     </motion.div>
                 ) : activeTab === 'inventory' ? (
-                    <motion.div
-                        key="inventory"
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className="space-y-6"
-                    >
-                        <div className="flex justify-between items-center mb-6">
-                            <div>
-                                <h2 className="text-2xl font-bold flex items-center gap-2">
-                                    <Package className="w-6 h-6 text-brand-primary" />
-                                    Conquistas de Mercado (Inventario)
-                                </h2>
-                                <p className="text-white/70 text-sm">Resumen de reliquias indexadas por cada portal del mercado.</p>
-                            </div>
-                        </div>
+                    (() => {
+                        const totalMatches = matchStats?.reduce((sum, item) => sum + item.count, 0) || 0;
+                        const sortedMatchStats = matchStats ? [...matchStats].sort((a, b) => b.count - a.count) : [];
+                        const chartData = sortedMatchStats.map(item => ({
+                            name: item.shop,
+                            value: item.count
+                        }));
 
-                        <div className="rounded-2xl md:rounded-[2.5rem] border border-white/5 bg-black/50 backdrop-blur-md p-4 md:p-8 space-y-6">
-                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3 md:gap-4">
-                                {matchStats?.map((item) => (
-                                    <div key={item.shop} className="flex flex-col gap-1 rounded-2xl bg-white/[0.03] p-3 md:p-4 border border-white/5">
-                                        <span className="text-[8px] md:text-[9px] font-black uppercase text-white/60 tracking-widest truncate">{item.shop}</span>
-                                        <span className="text-xl md:text-2xl font-black text-white">{item.count}</span>
+                        return (
+                            <motion.div
+                                key="inventory"
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                className="space-y-6"
+                            >
+                                <div className="flex justify-between items-center mb-6">
+                                    <div>
+                                        <h2 className="text-2xl font-bold flex items-center gap-2">
+                                            <Package className="w-6 h-6 text-brand-primary" />
+                                            Conquistas de Mercado (Inventario)
+                                        </h2>
+                                        <p className="text-white/70 text-sm">Resumen de reliquias indexadas por cada portal del mercado.</p>
                                     </div>
-                                ))}
-                                {(!matchStats || matchStats.length === 0) && (
-                                    <div className="col-span-full py-6 text-center text-white/60 uppercase font-black text-[9px] tracking-widest">
-                                        Sin estadísticas de mercado
+                                </div>
+
+                                <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 md:gap-8">
+                                    {/* Left Column: Sorted market cards grid */}
+                                    <div className="xl:col-span-7 rounded-2xl md:rounded-[2.5rem] border border-white/5 bg-black/50 backdrop-blur-md p-4 md:p-8 space-y-6">
+                                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 mb-2">Desglose de Conquistas</h3>
+                                        
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 md:gap-4">
+                                            {sortedMatchStats.map((item) => (
+                                                <button
+                                                    key={item.shop}
+                                                    onClick={() => handleCardClick(item.shop)}
+                                                    className="flex flex-col gap-1 rounded-2xl bg-white/[0.03] p-3 md:p-4 border border-white/5 text-left hover:bg-white/[0.08] hover:border-white/10 active:scale-[0.98] transition-all cursor-pointer w-full group outline-none focus:ring-1 focus:ring-brand-primary/50"
+                                                >
+                                                    <span className="text-[8px] md:text-[9px] font-black uppercase text-white/60 tracking-widest truncate w-full">{item.shop}</span>
+                                                    <span className="text-xl md:text-2xl font-black text-white">{item.count}</span>
+                                                </button>
+                                            ))}
+                                            {sortedMatchStats.length === 0 && (
+                                                <div className="col-span-full py-6 text-center text-white/60 uppercase font-black text-[9px] tracking-widest">
+                                                    Sin estadísticas de mercado
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
-                                )}
-                            </div>
-                        </div>
-                    </motion.div>
+
+                                    {/* Right Column: Beautiful Doughnut Chart */}
+                                    <div className="xl:col-span-5 rounded-2xl md:rounded-[2.5rem] border border-white/5 bg-black/50 backdrop-blur-md p-4 md:p-8 flex flex-col justify-between space-y-6 min-h-[350px]">
+                                        <div>
+                                            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 mb-1">Cuota de Mercado</h3>
+                                            <p className="text-[9px] font-bold text-white/50 uppercase tracking-wider leading-relaxed">Representación de la presencia de tus reliquias en diferentes portales.</p>
+                                        </div>
+
+                                        {sortedMatchStats.length > 0 ? (
+                                            <>
+                                                <div className="relative flex-1 flex items-center justify-center min-h-[260px]">
+                                                    <ResponsiveContainer width="100%" height={260}>
+                                                        <PieChart>
+                                                            <Pie
+                                                                data={chartData}
+                                                                cx="50%"
+                                                                cy="50%"
+                                                                innerRadius={70}
+                                                                outerRadius={95}
+                                                                paddingAngle={3}
+                                                                dataKey="value"
+                                                            >
+                                                                {chartData.map((_, index) => (
+                                                                    <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                                                                ))}
+                                                            </Pie>
+                                                            <RechartsTooltip
+                                                                contentStyle={{
+                                                                    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                                                                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                                                                    borderRadius: '12px',
+                                                                    fontSize: '10px',
+                                                                    color: '#fff',
+                                                                    fontFamily: 'monospace'
+                                                                }}
+                                                                formatter={(value: any) => [`${value} Reliquias`, 'Matches']}
+                                                            />
+                                                        </PieChart>
+                                                    </ResponsiveContainer>
+                                                    <div className="absolute flex flex-col items-center justify-center pointer-events-none">
+                                                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/30">Total</span>
+                                                        <span className="text-3xl font-black text-white tracking-tighter leading-none my-1">{totalMatches}</span>
+                                                        <span className="text-[8px] font-bold uppercase tracking-wider text-brand-primary">Vinculadas</span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid grid-cols-2 gap-2 mt-2">
+                                                    {sortedMatchStats.slice(0, 6).map((item, index) => {
+                                                        const pct = totalMatches > 0 ? ((item.count / totalMatches) * 100).toFixed(1) : '0.0';
+                                                        return (
+                                                            <div key={item.shop} className="flex items-center gap-2 bg-white/[0.01] border border-white/[0.03] px-3 py-1.5 rounded-xl min-w-0">
+                                                                <span 
+                                                                    className="w-2.5 h-2.5 rounded-full shrink-0" 
+                                                                    style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }} 
+                                                                />
+                                                                <div className="flex flex-col min-w-0 flex-1">
+                                                                    <span className="text-[8px] font-black uppercase text-white/50 truncate tracking-wider">{item.shop}</span>
+                                                                    <span className="text-[10px] font-black text-white leading-tight">{pct}% <span className="text-[8px] font-bold text-white/40">({item.count})</span></span>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div className="flex-1 flex flex-col items-center justify-center text-white/20 uppercase font-black text-[9px] tracking-widest">
+                                                Sin datos de mercado para graficar
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </motion.div>
+                        );
+                    })()
                 ) : activeTab === 'system' ? (
                     <motion.div
                         key="system"

@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import List
+from typing import List, Optional
 import time
 import threading
 
@@ -88,7 +88,7 @@ def get_purgatory_counts(db) -> dict[int, int]:
 
 
 @router.get("/api/products", response_model=List[ProductOutput])
-async def get_products(is_vintage: bool = False):
+async def get_products(is_vintage: bool = False, shop: Optional[str] = None):
     with SessionCloud() as db:
         subq = (
             select(OfferModel.product_id, func.min(OfferModel.price).label("min_price"))
@@ -115,6 +115,14 @@ async def get_products(is_vintage: bool = False):
             query = query.where(ProductModel.is_vintage == True)
         else:
             query = query.where(ProductModel.is_vintage.is_not(True))
+
+        if shop:
+            shop_exists_subq = (
+                select(OfferModel.product_id)
+                .where(OfferModel.shop_name == shop)
+                .where(OfferModel.is_available == True)
+            )
+            query = query.where(ProductModel.id.in_(shop_exists_subq))
 
         results = db.execute(query).all()
         counts = get_purgatory_counts(db)
