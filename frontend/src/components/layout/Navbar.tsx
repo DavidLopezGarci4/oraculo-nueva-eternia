@@ -1,4 +1,5 @@
-import { Search, Menu, Repeat, Eye, EyeOff } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Search, Menu, Repeat, Eye, EyeOff, Volume2, VolumeX } from 'lucide-react';
 import masterRoleImg from '../../assets/role-master.png';
 import guardianRoleImg from '../../assets/role-guardian.png';
 
@@ -17,6 +18,45 @@ interface NavbarProps {
 }
 
 const Navbar = ({ onMenuClick, showSearch = true, searchValue = "", onSearchChange, user, isSovereign = false, onIdentityChange, isIncognito = false, onToggleIncognito }: NavbarProps) => {
+    const audioRef = useRef<HTMLAudioElement | null>(null);
+    const [isPlaying, setIsPlaying] = useState(false);
+
+    useEffect(() => {
+        audioRef.current = new Audio('/theme.mp3');
+        audioRef.current.loop = true;
+
+        const savedPlayState = localStorage.getItem('theme_music_playing') === 'true';
+        if (savedPlayState) {
+            audioRef.current.play().then(() => {
+                setIsPlaying(true);
+            }).catch(() => {
+                setIsPlaying(false);
+            });
+        }
+
+        return () => {
+            if (audioRef.current) {
+                audioRef.current.pause();
+                audioRef.current = null;
+            }
+        };
+    }, []);
+
+    const toggleMusic = () => {
+        if (!audioRef.current) return;
+        if (isPlaying) {
+            audioRef.current.pause();
+            setIsPlaying(false);
+            localStorage.setItem('theme_music_playing', 'false');
+        } else {
+            audioRef.current.play().then(() => {
+                setIsPlaying(true);
+                localStorage.setItem('theme_music_playing', 'true');
+            }).catch(err => {
+                console.error("Audio playback failed:", err);
+            });
+        }
+    };
     return (
         <nav className="sticky top-0 z-10 flex flex-col md:flex-row items-center justify-between border-b border-glass-border glass px-4 py-3 md:h-16 md:py-0 md:px-6 backdrop-blur-md gap-3 md:gap-4">
             {/* Mobile Top Row: Menu & User Profile */}
@@ -75,6 +115,15 @@ const Navbar = ({ onMenuClick, showSearch = true, searchValue = "", onSearchChan
                                 {isIncognito ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                             </button>
                         )}
+
+                        {/* Botón de Música */}
+                        <button
+                            onClick={toggleMusic}
+                            className={`ml-1.5 p-1 md:p-2 rounded-lg transition-all border ${isPlaying ? 'bg-brand-primary/15 text-brand-primary border-brand-primary/30 hover:bg-brand-primary hover:text-white' : 'bg-white/5 text-white/60 border-white/10 hover:bg-white/10 hover:text-white'}`}
+                            title={isPlaying ? "Silenciar Música" : "Reproducir Música"}
+                        >
+                            {isPlaying ? <Volume2 className="h-4 w-4 animate-pulse text-brand-primary group-hover:text-white" /> : <VolumeX className="h-4 w-4" />}
+                        </button>
                     </div>
                 </div>
             </div>
