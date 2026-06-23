@@ -73,8 +73,12 @@ export function MOTUImage({ productId, fallbackSrc = '', src, ...props }: MOTUIm
   }, [src, fallbackSrc, productId, useLocal, defaultSrc]);
 
   const handleError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    // Si falla al cargar la imagen local, cambiar a la remota
-    if (currentSrc !== defaultSrc) {
+    const localStaticUrl = `/api/static/images/${productId}.jpg`;
+    if (currentSrc !== localStaticUrl && productId) {
+      // Si falla la imagen actual (remota o blob de caché), probar el servidor de estáticos local
+      setCurrentSrc(localStaticUrl);
+    } else if (currentSrc !== defaultSrc) {
+      // Si falla el servidor de estáticos local, probar la URL remota por si acaso
       setCurrentSrc(defaultSrc);
     } else if (props.onError) {
       props.onError(e);

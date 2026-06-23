@@ -331,8 +331,13 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                 const cacheKey = `/api/static/images/${p.id}.jpg`;
                 
                 try {
-                    // Fetch the remote image URL
-                    const imgResponse = await fetch(p.image_url);
+                    // Intentar descargar desde el servidor de estáticos local primero
+                    let imgResponse = await fetch(cacheKey);
+                    if (!imgResponse.ok) {
+                        // Fallback a la URL remota de Supabase si falla el estático local
+                        imgResponse = await fetch(p.image_url);
+                    }
+                    
                     if (imgResponse.ok) {
                         // Store the response in the cache
                         await cache.put(cacheKey, imgResponse);
@@ -1385,6 +1390,23 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                                 </button>
                                                 <div className="text-[9px] font-bold text-white/40 uppercase text-center mt-1">
                                                     Imágenes en la caché del navegador: <span className="text-brand-primary">{cachedImagesCount}</span>
+                                                </div>
+                                                <div className="mt-3 p-3 rounded-2xl bg-white/[0.01] border border-white/[0.03] space-y-2">
+                                                    <span className="text-[8px] font-black uppercase tracking-widest text-white/40 block">Jerarquía de Resolución Resiliente:</span>
+                                                    <div className="space-y-1 text-[8px] uppercase font-bold text-white/50">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="h-1.5 w-1.5 rounded-full bg-brand-primary shrink-0"></span>
+                                                            <span>1. Supabase CDN (Nube / Principal por defecto)</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0"></span>
+                                                            <span>2. Caché del Navegador (Caché local si está activa)</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="h-1.5 w-1.5 rounded-full bg-green-500 shrink-0"></span>
+                                                            <span>3. Servidor de Estáticos local (Bypass automático/Offline)</span>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         )}
