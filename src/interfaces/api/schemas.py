@@ -160,6 +160,15 @@ class PurgatoryBulkDiscardRequest(BaseModel):
     reason: str = "manual_bulk_discard"
 
 
+class PurgatoryBulkMatchItem(BaseModel):
+    pending_id: int
+    product_id: int
+
+
+class PurgatoryBulkMatchRequest(BaseModel):
+    matches: List[PurgatoryBulkMatchItem]
+
+
 class AnomalyValidationRequest(BaseModel):
     id: int
     action: str  # "validate" or "block"

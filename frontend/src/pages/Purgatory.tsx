@@ -19,7 +19,7 @@ import {
     ArrowDown,
     Check
 } from 'lucide-react';
-import { getPurgatory, matchItem, discardItem, discardItemsBulk, matchVintageItem, matchMiscellaneousItem } from '../api/purgatory';
+import { getPurgatory, discardItem, discardItemsBulk, matchVintageItem, matchMiscellaneousItem, matchItemsBulk } from '../api/purgatory';
 
 import QuickPreviewModal from '../components/QuickPreviewModal';
 import PowerSwordLoader from '../components/ui/PowerSwordLoader';
@@ -433,22 +433,28 @@ const Purgatory: React.FC = React.memo(() => {
 
     // Mutations
     const discardBulkMutation = useMutation({
-        mutationFn: (ids: number[]) => discardItemsBulk(ids),
+        mutationFn: async (ids: number[]) => {
+            return ids;
+        },
         onMutate: async (ids) => {
             // Find names/urls for forensic context
             const affectedItems = queryClient.getQueryData<any[]>(['purgatory'])?.filter(i => ids.includes(i.id)) || [];
 
             // Persistence: Add to local buffer immediately
-            setPendingActions(prev => [...prev, {
-                id: Date.now(),
-                type: 'bulk-discard',
-                pendingIds: ids,
-                items: affectedItems.map(i => ({ id: i.id, name: i.scraped_name, url: i.url })),
-                timestamp: new Date().toISOString()
-            }]);
+            setPendingActions(prev => {
+                if (prev.some(a => a.type === 'bulk-discard' && JSON.stringify(a.pendingIds) === JSON.stringify(ids))) {
+                    return prev;
+                }
+                return [...prev, {
+                    id: Date.now(),
+                    type: 'bulk-discard',
+                    pendingIds: ids,
+                    items: affectedItems.map(i => ({ id: i.id, name: i.scraped_name, url: i.url })),
+                    timestamp: new Date().toISOString()
+                }];
+            });
 
             await queryClient.cancelQueries({ queryKey: ['purgatory'] });
-            // Snapshot the previous value
             const previousItems = queryClient.getQueryData(['purgatory']);
             // Optimistically update the cache
             queryClient.setQueryData(['purgatory'], (old: any) =>
@@ -458,12 +464,10 @@ const Purgatory: React.FC = React.memo(() => {
         },
         onError: (err, _variables, context: any) => {
             queryClient.setQueryData(['purgatory'], context.previousItems);
-            console.error('Bulk discard failed:', err);
+            console.error('Bulk discard enqueue failed:', err);
         },
-        onSuccess: (_, ids) => {
-            // Success: Remove from local buffer
-            setPendingActions(prev => prev.filter(a => !(a.type === 'bulk-discard' && JSON.stringify(a.pendingIds) === JSON.stringify(ids))));
-            queryClient.invalidateQueries({ queryKey: ['purgatory'] });
+        onSuccess: () => {
+            // Background worker handles syncing
         },
         onSettled: () => {
             setSelectedIds([]);
@@ -495,19 +499,25 @@ const Purgatory: React.FC = React.memo(() => {
 
 
     const discardMutation = useMutation({
-        mutationFn: (id: number) => discardItem(id),
+        mutationFn: async (id: number) => {
+            return id;
+        },
         onMutate: async (id) => {
             const item = queryClient.getQueryData<any[]>(['purgatory'])?.find(i => i.id === id);
 
-            // Persistence: Add to local buffer
-            setPendingActions(prev => [...prev, {
-                id: Date.now(),
-                type: 'discard',
-                pendingIds: [id],
-                scrapedName: item?.scraped_name,
-                action_url: item?.url,
-                timestamp: new Date().toISOString()
-            }]);
+            setPendingActions(prev => {
+                if (prev.some(a => a.type === 'discard' && a.pendingIds.includes(id))) {
+                    return prev;
+                }
+                return [...prev, {
+                    id: Date.now(),
+                    type: 'discard',
+                    pendingIds: [id],
+                    scrapedName: item?.scraped_name,
+                    action_url: item?.url,
+                    timestamp: new Date().toISOString()
+                }];
+            });
 
             await queryClient.cancelQueries({ queryKey: ['purgatory'] });
             const previousItems = queryClient.getQueryData(['purgatory']);
@@ -518,26 +528,64 @@ const Purgatory: React.FC = React.memo(() => {
         },
         onError: (err, _id, context: any) => {
             queryClient.setQueryData(['purgatory'], context.previousItems);
-            console.error('Individual discard failed:', err);
+            console.error('Discard enqueue failed:', err);
         },
-        onSuccess: (_, id) => {
-            // Success: Remove from local buffer
-            setPendingActions(prev => prev.filter(a => !(a.type === 'discard' && a.pendingIds[0] === id)));
-            queryClient.invalidateQueries({ queryKey: ['purgatory'] });
+        onSuccess: () => {
+            // Background worker handles syncing
         }
     });
 
     const matchMutation = useMutation({
-        mutationFn: ({ pendingId, productId }: { pendingId: number, productId: number }) =>
-            matchItem(pendingId, productId),
+        mutationFn: async ({ pendingId, productId }: { pendingId: number, productId: number }) => {
+            return { pendingId, productId };
+        },
         onMutate: async ({ pendingId, productId }) => {
             const item = queryClient.getQueryData<any[]>(['purgatory'])?.find(i => i.id === pendingId);
 
-            // Persistence: Add to local buffer
+            setPendingActions(prev => {
+                if (prev.some(a => a.type === 'match' && a.pendingIds.includes(pendingId))) {
+                    return prev;
+                }
+                return [...prev, {
+                    id: Date.now(),
+                    type: 'match',
+                    pendingIds: [pendingId],
+                    productId,
+                    scrapedName: item?.scraped_name,
+                    action_url: item?.url,
+                    timestamp: new Date().toISOString()
+                }];
+            });
+
+            await queryClient.cancelQueries({ queryKey: ['purgatory'] });
+            const previousItems = queryClient.getQueryData(['purgatory']);
+            queryClient.setQueryData(['purgatory'], (old: any) =>
+                (old || []).filter((item: any) => item.id !== pendingId)
+            );
+            return { previousItems };
+        },
+        onError: (err, _variables, context: any) => {
+            queryClient.setQueryData(['purgatory'], context.previousItems);
+            console.error('Match enqueue failed:', err);
+        },
+        onSuccess: () => {
+            setSelectedPendingId(null);
+            setManualSearchTerm('');
+        }
+    });
+
+    const matchVintageMutation = useMutation({
+        mutationFn: async ({ pendingId, customName, productId }: { pendingId: number, customName?: string, productId?: number }) => {
+            return { pendingId, customName, productId };
+        },
+        onMutate: async ({ pendingId, customName, productId }) => {
+            const item = queryClient.getQueryData<any[]>(['purgatory'])?.find(i => i.id === pendingId);
+
             setPendingActions(prev => [...prev, {
                 id: Date.now(),
-                type: 'match',
+                type: 'match-vintage',
                 pendingIds: [pendingId],
+                customName,
                 productId,
                 scrapedName: item?.scraped_name,
                 action_url: item?.url,
@@ -553,60 +601,18 @@ const Purgatory: React.FC = React.memo(() => {
         },
         onError: (err, _variables, context: any) => {
             queryClient.setQueryData(['purgatory'], context.previousItems);
-            console.error('Match failed:', err);
+            console.error('Vintage match enqueue failed:', err);
         },
-        onSuccess: (_, variables) => {
-            // Success: Remove from local buffer
-            setPendingActions(prev => prev.filter(a => !(a.type === 'match' && a.pendingIds[0] === variables.pendingId)));
-            queryClient.invalidateQueries({ queryKey: ['purgatory'] });
-            queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
-            setSelectedPendingId(null);
-            setManualSearchTerm('');
-        }
-    });
-
-    const matchVintageMutation = useMutation({
-        mutationFn: ({ pendingId, customName, productId }: { pendingId: number, customName?: string, productId?: number }) =>
-            matchVintageItem(pendingId, customName, productId),
-        onMutate: async ({ pendingId }) => {
-            const item = queryClient.getQueryData<any[]>(['purgatory'])?.find(i => i.id === pendingId);
-
-            // Persistence: Add to local buffer
-            setPendingActions(prev => [...prev, {
-                id: Date.now(),
-                type: 'match-vintage',
-                pendingIds: [pendingId],
-                scrapedName: item?.scraped_name,
-                action_url: item?.url,
-                timestamp: new Date().toISOString()
-            }]);
-
-            await queryClient.cancelQueries({ queryKey: ['purgatory'] });
-            const previousItems = queryClient.getQueryData(['purgatory']);
-            queryClient.setQueryData(['purgatory'], (old: any) =>
-                (old || []).filter((item: any) => item.id !== pendingId)
-            );
-            return { previousItems };
-        },
-        onError: (err, _variables, context: any) => {
-            queryClient.setQueryData(['purgatory'], context.previousItems);
-            console.error('Vintage match failed:', err);
-        },
-        onSuccess: (_, variables) => {
-            // Success: Remove from local buffer
-            setPendingActions(prev => prev.filter(a => !(a.type === 'match-vintage' && a.pendingIds[0] === variables.pendingId)));
-            queryClient.invalidateQueries({ queryKey: ['purgatory'] });
-            queryClient.invalidateQueries({ queryKey: ['vintage-products'] });
-            queryClient.invalidateQueries({ queryKey: ['vintage-unique-products'] });
-            queryClient.invalidateQueries({ queryKey: ['products'] });
-            queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+        onSuccess: () => {
             setSelectedPendingId(null);
             setIsVintageModalOpen(false);
         }
     });
 
     const matchMiscMutation = useMutation({
-        mutationFn: (pendingId: number) => matchMiscellaneousItem(pendingId),
+        mutationFn: async (pendingId: number) => {
+            return pendingId;
+        },
         onMutate: async (pendingId) => {
             const item = queryClient.getQueryData<any[]>(['purgatory'])?.find(i => i.id === pendingId);
             setPendingActions(prev => [...prev, {
@@ -626,13 +632,9 @@ const Purgatory: React.FC = React.memo(() => {
         },
         onError: (err, _variables, context: any) => {
             queryClient.setQueryData(['purgatory'], context.previousItems);
-            console.error('Miscellaneous match failed:', err);
+            console.error('Miscellaneous match enqueue failed:', err);
         },
-        onSuccess: (_, pendingId) => {
-            setPendingActions(prev => prev.filter(a => !(a.type === 'match-misc' && a.pendingIds[0] === pendingId)));
-            queryClient.invalidateQueries({ queryKey: ['purgatory'] });
-            queryClient.invalidateQueries({ queryKey: ['vintage-miscellaneous'] });
-            queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+        onSuccess: () => {
             setSelectedPendingId(null);
             setIsVintageModalOpen(false);
         }
@@ -684,8 +686,6 @@ const Purgatory: React.FC = React.memo(() => {
             if (isSyncing.current || pendingActions.length === 0) return;
             isSyncing.current = true;
 
-            // Use a local copy for processing. We filter out actions that are already in failedActions
-            // to avoid re-attempting known poisoned actions automatically unless manually triggered.
             const failedIds = new Set(failedActions.map(f => f.action.id));
             const actionsToProcess = [...pendingActions].filter(a => !failedIds.has(a.id));
 
@@ -694,51 +694,90 @@ const Purgatory: React.FC = React.memo(() => {
                 return;
             }
 
-            for (const action of actionsToProcess) {
+            // 1. Group 'match' actions to send in bulk
+            const matchActions = actionsToProcess.filter(a => a.type === 'match');
+            if (matchActions.length > 0) {
+                const batch = matchActions.slice(0, 20);
+                const batchIds = batch.map(a => a.id);
                 try {
-                    if (action.type === 'discard') {
-                        await discardItem(action.pendingIds[0]);
-                    } else if (action.type === 'bulk-discard') {
-                        await discardItemsBulk(action.pendingIds);
-                    } else if (action.type === 'match') {
-                        await matchItem(action.pendingIds[0], action.productId);
-                    } else if (action.type === 'match-vintage') {
-                        await matchVintageItem(action.pendingIds[0]);
-                    }
+                    const matchesPayload = batch.map(a => ({
+                        pending_id: a.pendingIds[0],
+                        product_id: a.productId
+                    }));
+                    await matchItemsBulk(matchesPayload);
 
-                    // Success: Remove from local state
-                    setPendingActions(prev => prev.filter(a => a.id !== action.id));
-
-                    // Small delay to prevent overwhelming the server
-                    await new Promise(resolve => setTimeout(resolve, 300));
+                    // Remove from pendingActions
+                    setPendingActions(prev => prev.filter(a => !batchIds.includes(a.id)));
+                    queryClient.invalidateQueries({ queryKey: ['purgatory'] });
+                    queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+                    queryClient.invalidateQueries({ queryKey: ['products'] });
                 } catch (err: any) {
-                    console.error('Persistence sync failed for action:', action.id, err);
-
-                    // Forensic mark: Move to failed actions with error context
+                    console.error('Bulk match sync failed:', err);
                     const errorMessage = err.response?.data?.detail || err.message || 'Unknown Error';
-
+                    // Mark all actions in this batch as failed
                     setFailedActions(prev => {
-                        // Avoid duplicates if already there
-                        if (prev.some(f => f.action.id === action.id)) return prev;
-                        return [...prev, {
-                            action,
-                            error: errorMessage,
-                            timestamp: new Date().toISOString(),
-                            // Store metadata for easy forensic access
-                            url: action.action_url || null, // We might need to ensure actions contain the URL
-                            productId: action.productId || null
-                        }];
+                        const newFailures = [...prev];
+                        for (const action of batch) {
+                            if (!newFailures.some(f => f.action.id === action.id)) {
+                                newFailures.push({
+                                    action,
+                                    error: errorMessage,
+                                    timestamp: new Date().toISOString(),
+                                    url: action.action_url || null,
+                                    productId: action.productId || null
+                                });
+                            }
+                        }
+                        return newFailures;
                     });
-
-                    // NON-BLOCKING: We DON'T break anymore. We continue with the next one.
                 }
+                isSyncing.current = false;
+                return;
+            }
+
+            // 2. Process non-match actions (e.g. discard, vintage, misc) one by one
+            const otherAction = actionsToProcess[0];
+            try {
+                if (otherAction.type === 'discard') {
+                    await discardItem(otherAction.pendingIds[0]);
+                } else if (otherAction.type === 'bulk-discard') {
+                    await discardItemsBulk(otherAction.pendingIds);
+                } else if (otherAction.type === 'match-vintage') {
+                    await matchVintageItem(otherAction.pendingIds[0], otherAction.customName, otherAction.productId);
+                } else if (otherAction.type === 'match-misc') {
+                    await matchMiscellaneousItem(otherAction.pendingIds[0]);
+                }
+
+                // Remove from pendingActions
+                setPendingActions(prev => prev.filter(a => a.id !== otherAction.id));
+                queryClient.invalidateQueries({ queryKey: ['purgatory'] });
+                if (otherAction.type === 'match-vintage' || otherAction.type === 'match-misc') {
+                    queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+                    queryClient.invalidateQueries({ queryKey: ['vintage-products'] });
+                    queryClient.invalidateQueries({ queryKey: ['vintage-unique-products'] });
+                    queryClient.invalidateQueries({ queryKey: ['products'] });
+                    queryClient.invalidateQueries({ queryKey: ['vintage-miscellaneous'] });
+                }
+            } catch (err: any) {
+                console.error(`Sync failed for action type ${otherAction.type}:`, otherAction.id, err);
+                const errorMessage = err.response?.data?.detail || err.message || 'Unknown Error';
+                setFailedActions(prev => {
+                    if (prev.some(f => f.action.id === otherAction.id)) return prev;
+                    return [...prev, {
+                        action: otherAction,
+                        error: errorMessage,
+                        timestamp: new Date().toISOString(),
+                        url: otherAction.action_url || null,
+                        productId: otherAction.productId || null
+                    }];
+                });
             }
 
             isSyncing.current = false;
         };
 
-        const interval = setInterval(syncPending, 300000); // Retry every 5 min
-        const initialTimeout = setTimeout(syncPending, 3000); // Initial delay
+        const interval = setInterval(syncPending, 4000); // Process queue every 4 seconds
+        const initialTimeout = setTimeout(syncPending, 1000); // Fast initial run
 
         return () => {
             clearInterval(interval);

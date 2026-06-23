@@ -33,6 +33,7 @@ from src.interfaces.api.schemas import (
     PurgatoryBulkDiscardRequest,
     PurgatoryDiscardRequest,
     PurgatoryMatchRequest,
+    PurgatoryBulkMatchRequest,
     RelinkOfferRequest,
 )
 
@@ -231,6 +232,108 @@ async def match_purgatory(request: PurgatoryMatchRequest, background_tasks: Back
     PROCESSING_IDS.add(request.pending_id)
     background_tasks.add_task(run_match_task, request.pending_id, request.product_id)
     return {"status": "success", "message": "Vinculación programada en segundo plano"}
+
+
+def run_match_bulk_task(matches: list[dict]):
+    from src.infrastructure.repositories.product import ProductRepository
+    
+    with SessionCloud() as db:
+        repo = ProductRepository(db)
+        user_location = "ES"
+        user = db.query(UserModel).filter(UserModel.id == 1).first()
+        if user:
+            user_location = user.location
+            
+        for m in matches:
+            pending_id = m["pending_id"]
+            product_id = m["product_id"]
+            
+            try:
+                with db.begin_nested():
+                    item = db.query(PendingMatchModel).filter(PendingMatchModel.id == pending_id).first()
+                    product = db.query(ProductModel).filter(ProductModel.id == product_id).first()
+                    
+                    if not item:
+                        existing_offer = db.query(OfferModel).filter(OfferModel.product_id == product_id).first()
+                        if existing_offer:
+                            logger.info(f"Bulk match item {pending_id} already matched previously.")
+                            continue
+                        raise ValueError(f"Reliquia {pending_id} no encontrada.")
+                        
+                    if not product:
+                        raise ValueError(f"Producto {product_id} no encontrado.")
+                        
+                    landed_p = LogisticsService.get_landing_price(item.price, item.shop_name, user_location)
+                    is_wish = any(ci.owner_id == 1 and not ci.acquired for ci in product.collection_items)
+                    fresh_score = DealScorer.calculate_score(product, landed_p, is_wish)
+                    
+                    is_v = bool(product.is_vintage)
+                    if is_v:
+                        from src.domain.models import VintageProductModel
+                        exists_v = db.query(VintageProductModel).filter(VintageProductModel.product_id == product.id).first()
+                        if not exists_v:
+                            v_prod = VintageProductModel(product_id=product.id, notes="Auto-detectado vintage al vincular (Bulk)")
+                            db.add(v_prod)
+                            
+                    offer_data = {
+                        "shop_name": item.shop_name,
+                        "price": item.price,
+                        "currency": item.currency,
+                        "url": item.url,
+                        "is_available": True,
+                        "source_type": item.source_type,
+                        "receipt_id": item.receipt_id,
+                        "opportunity_score": fresh_score,
+                        "first_seen_at": item.found_at,
+                        "last_price_update": datetime.now(timezone.utc),
+                        "is_vintage": is_v,
+                        "condition": item.condition or "Loose",
+                        "grading": item.grading or 7.5,
+                    }
+                    
+                    repo.add_offer(product, offer_data, commit=False)
+                    
+                    history = OfferHistoryModel(
+                        offer_url=item.url,
+                        product_name=product.name,
+                        shop_name=item.shop_name,
+                        price=item.price,
+                        action_type="LINKED_MANUAL_BULK",
+                        details=json.dumps({"product_id": product.id, "receipt_id": item.receipt_id, "is_vintage": is_v}),
+                    )
+                    db.add(history)
+                    
+                    db.query(ProductAliasModel).filter(ProductAliasModel.source_url == item.url).delete()
+                    db.add(ProductAliasModel(product_id=product.id, source_url=item.url, confirmed=True))
+                    
+                    db.delete(item)
+                logger.info(f"Bulk match item {pending_id} staged successfully.")
+            except Exception as e:
+                logger.error(f"Error procesando bulk match item {pending_id} -> producto {product_id}: {e}")
+            finally:
+                PROCESSING_IDS.discard(pending_id)
+                
+        try:
+            db.commit()
+            logger.info("Committed successful bulk matches.")
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Fallo crítico al hacer commit del lote bulk match: {e}")
+
+
+@router.post("/api/purgatory/match/bulk", dependencies=[Depends(verify_api_key)])
+async def match_purgatory_bulk(request: PurgatoryBulkMatchRequest, background_tasks: BackgroundTasks):
+    to_process = []
+    for m in request.matches:
+        if m.pending_id not in PROCESSING_IDS:
+            PROCESSING_IDS.add(m.pending_id)
+            to_process.append({"pending_id": m.pending_id, "product_id": m.product_id})
+            
+    if not to_process:
+        return {"status": "success", "message": "Todas las vinculaciones ya se están procesando"}
+        
+    background_tasks.add_task(run_match_bulk_task, to_process)
+    return {"status": "success", "message": f"{len(to_process)} vinculaciones programadas en segundo plano"}
 
 
 def run_discard_task(pending_id: int, reason: str):

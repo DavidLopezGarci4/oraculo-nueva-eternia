@@ -80,6 +80,11 @@ export const discardItemsBulk = async (pendingIds: number[], reason: string = 'm
     return response.data;
 };
 
+export const matchItemsBulk = async (matches: { pending_id: number, product_id: number }[]) => {
+    const response = await axios.post(`${API_BASE}/purgatory/match/bulk`, { matches }, adminHeaders);
+    return response.data;
+};
+
 export const getScrapersStatus = async (): Promise<ScraperStatus[]> => {
     const response = await axios.get(`${API_BASE}/scrapers/status`, adminHeaders);
     return response.data;
