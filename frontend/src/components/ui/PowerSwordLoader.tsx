@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import swordAsset from '../../assets/HemanGlassmorphSword.png';
 import vintageSwordAsset from '../../assets/GlassmorphSwordHeMan.png';
-import skeletorSwordAsset from '../../assets/GlassmorphSword.png';
+import skeletorSwordAsset from '../../assets/HemanGlassmorphSword.png';
 
 interface PowerSwordLoaderProps {
     className?: string;
