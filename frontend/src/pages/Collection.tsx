@@ -180,6 +180,9 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
             if (selectedChips.includes('loose') && cond !== 'LOOSE') return false;
             if (selectedChips.includes('graded') && !(gradingVal > 0 && product.grading !== null)) return false;
             if (selectedChips.includes('vintage') && !product.is_vintage) return false;
+            if (selectedChips.includes('manual_price') && !(product.purchase_price && product.purchase_price > 0)) return false;
+            if (selectedChips.includes('no_manual_price') && (product.purchase_price && product.purchase_price > 0)) return false;
+
 
             return true;
         });
@@ -407,6 +410,26 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                         🕰️ Vintage
                     </button>
                 )}
+                <button
+                    onClick={() => setSelectedChips(prev => {
+                        const next = prev.includes('manual_price') ? prev.filter(c => c !== 'manual_price') : [...prev.filter(c => c !== 'no_manual_price'), 'manual_price'];
+                        return next;
+                    })}
+                    className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedChips.includes('manual_price') ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/20' : 'text-white/60 bg-white/5 hover:bg-white/10 hover:text-white'}`}
+                    title="Mostrar figuras con inversión asignada manualmente"
+                >
+                    ✍️ Man
+                </button>
+                <button
+                    onClick={() => setSelectedChips(prev => {
+                        const next = prev.includes('no_manual_price') ? prev.filter(c => c !== 'no_manual_price') : [...prev.filter(c => c !== 'manual_price'), 'no_manual_price'];
+                        return next;
+                    })}
+                    className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedChips.includes('no_manual_price') ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/20' : 'text-white/60 bg-white/5 hover:bg-white/10 hover:text-white'}`}
+                    title="Mostrar figuras sin inversión manual"
+                >
+                    🤖 Auto
+                </button>
             </div>
 
             {/* Grid Area */}

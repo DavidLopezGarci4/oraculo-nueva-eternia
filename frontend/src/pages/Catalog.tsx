@@ -403,8 +403,6 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                 // Quick-Chips filter applications
                 if (selectedChips.includes('offers') && !(product.purgatory_match_count && product.purgatory_match_count > 0)) return false;
                 if (selectedChips.includes('coleccionado') && !owned) return false;
-                if (selectedChips.includes('manual_price') && !(product.retail_price && product.retail_price > 0)) return false;
-                if (selectedChips.includes('no_manual_price') && (product.retail_price && product.retail_price > 0)) return false;
 
                 // If not explicitly filtering by owned items, maintain standard hunting list logic (hide owned)
                 if (!selectedChips.includes('coleccionado')) {
@@ -1016,26 +1014,6 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                             className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedChips.includes('offers') ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/20' : 'text-white/60 bg-white/5 hover:bg-white/10 hover:text-white'}`}
                         >
                             🔥 En Oferta
-                        </button>
-                        <button
-                            onClick={() => setSelectedChips(prev => {
-                                const next = prev.includes('manual_price') ? prev.filter(c => c !== 'manual_price') : [...prev.filter(c => c !== 'no_manual_price'), 'manual_price'];
-                                return next;
-                            })}
-                            className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedChips.includes('manual_price') ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/20' : 'text-white/60 bg-white/5 hover:bg-white/10 hover:text-white'}`}
-                            title="Mostrar figuras con importe asignado manualmente"
-                        >
-                            ✍️ Man
-                        </button>
-                        <button
-                            onClick={() => setSelectedChips(prev => {
-                                const next = prev.includes('no_manual_price') ? prev.filter(c => c !== 'no_manual_price') : [...prev.filter(c => c !== 'manual_price'), 'no_manual_price'];
-                                return next;
-                            })}
-                            className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedChips.includes('no_manual_price') ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/20' : 'text-white/60 bg-white/5 hover:bg-white/10 hover:text-white'}`}
-                            title="Mostrar figuras con importe automático (scrapers/maestro)"
-                        >
-                            🤖 Auto
                         </button>
                         {selectedShopFilter && (
                             <button
