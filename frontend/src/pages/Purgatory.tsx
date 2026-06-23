@@ -73,6 +73,7 @@ const SwipeCard: React.FC<SwipeCardProps> = ({
 }) => {
     const x = useMotionValue(0);
     const y = useMotionValue(0);
+    const [showAllSuggestions, setShowAllSuggestions] = useState(false);
 
     // Dynamic rotation and overlay opacities based on translation
     const rotate = useTransform(x, [-200, 200], [-15, 15]);
@@ -285,40 +286,55 @@ const SwipeCard: React.FC<SwipeCardProps> = ({
                         <div className="space-y-1.5">
                             <span className="text-[9px] font-black uppercase tracking-widest text-white/40 block">Coincidencias Sugeridas</span>
                             <div className="flex flex-col gap-1.5 max-h-[135px] overflow-y-auto custom-scrollbar pr-1">
-                                {item.suggestions && item.suggestions.filter((s: any) => !s.is_vintage).slice(0, 4).map((sug: any) => {
-                                    const isSelected = associatedProductId === sug.product_id;
-                                    return (
-                                        <button
-                                            key={sug.product_id}
-                                            onClick={() => setAssociatedProductId(sug.product_id)}
-                                            className={`w-full flex items-center justify-between rounded-xl p-2.5 text-left transition-all border text-xs ${isSelected ? 'bg-brand-primary/20 border-brand-primary/60 text-white' : 'bg-white/5 border-white/5 text-white/70 hover:bg-white/10 hover:border-white/10'}`}
-                                        >
-                                            <div className="min-w-0 pr-2">
-                                                <div className="font-bold truncate text-white">{sug.name}</div>
-                                                <div className="flex flex-wrap items-center gap-1 mt-0.5 text-[8px] uppercase font-black tracking-wider text-white/50">
-                                                    <span className="text-brand-primary bg-brand-primary/10 px-1.5 py-0.5 rounded border border-brand-primary/25">
-                                                        {sug.sub_category}
-                                                    </span>
-                                                    {sug.release_year && (
-                                                        <span className="bg-white/5 px-1.5 py-0.5 rounded border border-white/5">
-                                                            {sug.release_year}
+                                {(() => {
+                                    const filtered = item.suggestions ? item.suggestions.filter((s: any) => !s.is_vintage) : [];
+                                    const visible = showAllSuggestions ? filtered : filtered.slice(0, 4);
+                                    return visible.map((sug: any) => {
+                                        const isSelected = associatedProductId === sug.product_id;
+                                        return (
+                                            <button
+                                                key={sug.product_id}
+                                                onClick={() => setAssociatedProductId(sug.product_id)}
+                                                className={`w-full flex items-center justify-between rounded-xl p-2.5 text-left transition-all border text-xs ${isSelected ? 'bg-brand-primary/20 border-brand-primary/60 text-white' : 'bg-white/5 border-white/5 text-white/70 hover:bg-white/10 hover:border-white/10'}`}
+                                            >
+                                                <div className="min-w-0 pr-2">
+                                                    <div className="font-bold truncate text-white">{sug.name}</div>
+                                                    <div className="flex flex-wrap items-center gap-1 mt-0.5 text-[8px] uppercase font-black tracking-wider text-white/50">
+                                                        <span className="text-brand-primary bg-brand-primary/10 px-1.5 py-0.5 rounded border border-brand-primary/25">
+                                                            {sug.sub_category}
                                                         </span>
-                                                    )}
-                                                    {sug.variant_name && (
-                                                        <span className="bg-white/5 px-1.5 py-0.5 rounded border border-white/5 truncate max-w-[80px]">
-                                                            {sug.variant_name}
-                                                        </span>
-                                                    )}
+                                                        {sug.release_year && (
+                                                            <span className="bg-white/5 px-1.5 py-0.5 rounded border border-white/5">
+                                                                {sug.release_year}
+                                                            </span>
+                                                        )}
+                                                        {sug.variant_name && (
+                                                            <span className="bg-white/5 px-1.5 py-0.5 rounded border border-white/5 truncate max-w-[80px]">
+                                                                {sug.variant_name}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                            <div className="flex items-center gap-2 shrink-0">
-                                                <span className={`text-[8px] font-black px-1.5 py-0.5 rounded ${sug.match_score >= 80 ? 'bg-green-500/20 text-green-400' : sug.match_score >= 50 ? 'bg-yellow-500/20 text-yellow-400' : 'bg-red-500/20 text-red-400'}`}>
-                                                    {sug.match_score}%
-                                                </span>
-                                            </div>
-                                        </button>
-                                    );
-                                })}
+                                                <div className="flex items-center gap-2 shrink-0">
+                                                    <span className={`text-[8px] font-black px-1.5 py-0.5 rounded ${sug.match_score >= 80 ? 'bg-green-500/20 text-green-400' : sug.match_score >= 50 ? 'bg-yellow-500/20 text-yellow-400' : 'bg-red-500/20 text-red-400'}`}>
+                                                        {sug.match_score}%
+                                                    </span>
+                                                </div>
+                                            </button>
+                                        );
+                                    });
+                                })()}
+                                {item.suggestions && item.suggestions.filter((s: any) => !s.is_vintage).length > 4 && (
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setShowAllSuggestions(prev => !prev);
+                                        }}
+                                        className="w-full text-center py-1.5 rounded-lg border border-dashed border-white/10 hover:border-white/20 text-[8px] font-black uppercase tracking-widest text-brand-primary hover:text-brand-primary/80 transition-colors cursor-pointer mt-1 bg-white/[0.01]"
+                                    >
+                                        {showAllSuggestions ? 'Contraer' : `Ver más (+${item.suggestions.filter((s: any) => !s.is_vintage).length - 4})`}
+                                    </button>
+                                )}
                                 {(!item.suggestions || item.suggestions.filter((s: any) => !s.is_vintage).length === 0) && (
                                     <div className="text-center text-[9px] font-bold text-white/30 uppercase tracking-widest py-3 bg-white/[0.01] rounded-xl border border-white/5">Sin sugerencias del oráculo</div>
                                 )}
