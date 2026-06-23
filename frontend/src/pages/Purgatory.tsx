@@ -126,7 +126,7 @@ const SwipeCard: React.FC<SwipeCardProps> = ({
             animate={isTop ? { x: 0, y: 0, rotate: 0, scale: 1 } : { y: stackY, scale: stackScale }}
             transition={isTop ? { type: 'spring', stiffness: 300, damping: 20 } : { duration: 0.3 }}
             exit={{ opacity: 0, scale: 0.8, transition: { duration: 0.2 } }}
-            className={`absolute w-full h-[500px] rounded-[2.5rem] border bg-gradient-to-br from-black/85 via-black/90 to-white/[0.04] p-6 shadow-2xl backdrop-blur-xl flex flex-col justify-between ${isTop ? 'border-brand-primary/30 cursor-grab active:cursor-grabbing shadow-brand-primary/10' : 'border-white/5 shadow-black/80 pointer-events-none'}`}
+            className={`absolute w-full h-[530px] rounded-[2.5rem] border bg-gradient-to-br from-black/85 via-black/90 to-white/[0.04] p-6 shadow-2xl backdrop-blur-xl flex flex-col justify-between ${isTop ? 'border-brand-primary/30 cursor-grab active:cursor-grabbing shadow-brand-primary/10' : 'border-white/5 shadow-black/80 pointer-events-none'}`}
         >
             {/* Swiping Indicator Overlays */}
             {isTop && (
@@ -210,7 +210,7 @@ const SwipeCard: React.FC<SwipeCardProps> = ({
                                                         {p.release_year}
                                                     </span>
                                                 )}
-                                                {p.variant_name && (
+                                                {selectedProduct?.variant_name && selectedProduct.variant_name !== 'NAN' && selectedProduct.variant_name !== 'nan' && (
                                                     <span className="bg-white/5 px-1.5 py-0.5 rounded border border-white/5 truncate max-w-[80px]">
                                                         {p.variant_name}
                                                     </span>
@@ -237,7 +237,7 @@ const SwipeCard: React.FC<SwipeCardProps> = ({
                         {/* 1. Asociación Activa */}
                         <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-3">
                             <div className="flex items-center justify-between mb-1.5">
-                                <span className="text-[9px] font-black uppercase tracking-widest text-white/40">Vinculación Seleccionada</span>
+                                <span className="text-[9px] font-black uppercase tracking-widest text-white/40">Vincular con</span>
                                 <button
                                     onClick={() => setIsSearchingAssociation(true)}
                                     className="text-[9px] font-black uppercase tracking-widest text-brand-primary hover:underline flex items-center gap-1"
@@ -260,7 +260,7 @@ const SwipeCard: React.FC<SwipeCardProps> = ({
                                                     {selectedProduct.release_year}
                                                 </span>
                                             )}
-                                            {selectedProduct?.variant_name && (
+                                            {selectedProduct?.variant_name && selectedProduct.variant_name !== 'NAN' && selectedProduct.variant_name !== 'nan' && (
                                                 <span className="bg-white/5 px-1.5 py-0.5 rounded border border-white/5 truncate max-w-[80px]">
                                                     {selectedProduct.variant_name}
                                                 </span>
@@ -308,7 +308,7 @@ const SwipeCard: React.FC<SwipeCardProps> = ({
                                                                 {sug.release_year}
                                                             </span>
                                                         )}
-                                                        {sug.variant_name && (
+                                                        {sug.variant_name && sug.variant_name !== 'NAN' && sug.variant_name !== 'nan' && (
                                                             <span className="bg-white/5 px-1.5 py-0.5 rounded border border-white/5 truncate max-w-[80px]">
                                                                 {sug.variant_name}
                                                             </span>
@@ -348,19 +348,19 @@ const SwipeCard: React.FC<SwipeCardProps> = ({
             <div className="flex gap-2.5 pt-4 border-t border-white/5 select-none shrink-0 text-white">
                 <button
                     onClick={() => handleDiscardCard(item)}
-                    className="flex-1 py-3 rounded-2xl bg-red-500/5 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/10 hover:border-red-500 flex items-center justify-center gap-1.5 transition-all duration-200"
+                    className="flex-1 py-2 px-1 rounded-xl bg-red-500/5 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/10 hover:border-red-500 flex flex-col items-center justify-center gap-1 transition-all duration-200"
                     title="Descartar Item [A]"
                 >
-                    <Trash2 className="h-4 w-4 text-red-500 hover:text-white" />
-                    <span className="text-[9px] font-black uppercase tracking-widest">Descartar</span>
+                    <Trash2 className="h-4 w-4 text-red-500 hover:text-white shrink-0" />
+                    <span className="text-[8px] font-black uppercase tracking-widest text-center">Descartar</span>
                 </button>
                 <button
                     onClick={() => handleSwipeDown(item)}
-                    className="flex-1 py-3 rounded-2xl bg-blue-500/5 hover:bg-blue-500 text-blue-500 hover:text-white border border-blue-500/10 hover:border-blue-500 flex items-center justify-center gap-1.5 transition-all duration-200"
+                    className="flex-1 py-2 px-1 rounded-xl bg-blue-500/5 hover:bg-blue-500 text-blue-500 hover:text-white border border-blue-500/10 hover:border-blue-500 flex flex-col items-center justify-center gap-1 transition-all duration-200"
                     title="Re-encolar para después [S]"
                 >
-                    <ArrowDown className="h-4 w-4 text-blue-500 hover:text-white" />
-                    <span className="text-[9px] font-black uppercase tracking-widest">Re-encolar</span>
+                    <ArrowDown className="h-4 w-4 text-blue-500 hover:text-white shrink-0" />
+                    <span className="text-[8px] font-black uppercase tracking-widest text-center">Re-encolar</span>
                 </button>
                 <button
                     onClick={() => {
@@ -370,20 +370,20 @@ const SwipeCard: React.FC<SwipeCardProps> = ({
                         setSelectedVintageProductId(null);
                         setIsVintageModalOpen(true);
                     }}
-                    className="flex-1 py-3 rounded-2xl bg-amber-500/5 hover:bg-amber-500 text-amber-500 hover:text-black border border-amber-500/10 hover:border-amber-500 flex items-center justify-center gap-1.5 transition-all duration-200"
+                    className="flex-1 py-2 px-1 rounded-xl bg-amber-500/5 hover:bg-amber-500 text-amber-500 hover:text-black border border-amber-500/10 hover:border-amber-500 flex flex-col items-center justify-center gap-1 transition-all duration-200"
                     title="Clasificar como Vintage / Nuevo [N]"
                 >
-                    <History className="h-4 w-4 text-amber-500 hover:text-black" />
-                    <span className="text-[9px] font-black uppercase tracking-widest">Vintage [N]</span>
+                    <History className="h-4 w-4 text-amber-500 hover:text-black shrink-0" />
+                    <span className="text-[8px] font-black uppercase tracking-widest text-center">Vintage [N]</span>
                 </button>
                 <button
                     onClick={() => handleApproveCard(item)}
                     disabled={!associatedProductId}
-                    className={`flex-1 py-3 rounded-2xl flex items-center justify-center gap-1.5 transition-all duration-200 ${associatedProductId ? 'bg-brand-primary text-white hover:brightness-110 shadow-lg shadow-brand-primary/20' : 'bg-white/5 text-white/35 border border-white/5 cursor-not-allowed'}`}
+                    className={`flex-1 py-2 px-1 rounded-xl flex flex-col items-center justify-center gap-1 transition-all duration-200 ${associatedProductId ? 'bg-brand-primary text-white hover:brightness-110 shadow-lg shadow-brand-primary/20' : 'bg-white/5 text-white/35 border border-white/5 cursor-not-allowed'}`}
                     title="Aprobar vinculación [D]"
                 >
-                    <Check className="h-4 w-4" />
-                    <span className="text-[9px] font-black uppercase tracking-widest">Aprobar [D]</span>
+                    <Check className="h-4 w-4 shrink-0" />
+                    <span className="text-[8px] font-black uppercase tracking-widest text-center">Aprobar [D]</span>
                 </button>
             </div>
         </motion.div>
@@ -965,7 +965,7 @@ const Purgatory: React.FC = React.memo(() => {
             } else if (e.key === 's' || e.key === 'S' || e.key === 'ArrowDown') {
                 e.preventDefault();
                 handleSwipeDown(currentItem);
-            } else if (e.key === 'n' || e.key === 'N') {
+            } else if (e.key === 'n' || e.key === 'N' || e.key === 'ArrowUp') {
                 e.preventDefault();
                 setVintageModalItemId(currentItem.id);
                 setVintageModalItemName(currentItem.scraped_name);
