@@ -1,4 +1,4 @@
-import { Search, Menu, Repeat } from 'lucide-react';
+import { Search, Menu, Repeat, Eye, EyeOff } from 'lucide-react';
 import masterRoleImg from '../../assets/role-master.png';
 import guardianRoleImg from '../../assets/role-guardian.png';
 
@@ -12,9 +12,11 @@ interface NavbarProps {
     isSovereign?: boolean; // Added
     user: Hero | null; // Kept
     onIdentityChange?: () => void; // Changed to optional
+    isIncognito?: boolean;
+    onToggleIncognito?: () => void;
 }
 
-const Navbar = ({ onMenuClick, showSearch = true, searchValue = "", onSearchChange, user, isSovereign = false, onIdentityChange }: NavbarProps) => {
+const Navbar = ({ onMenuClick, showSearch = true, searchValue = "", onSearchChange, user, isSovereign = false, onIdentityChange, isIncognito = false, onToggleIncognito }: NavbarProps) => {
     return (
         <nav className="sticky top-0 z-10 flex flex-col md:flex-row items-center justify-between border-b border-glass-border glass px-4 py-3 md:h-16 md:py-0 md:px-6 backdrop-blur-md gap-3 md:gap-4">
             {/* Mobile Top Row: Menu & User Profile */}
@@ -60,6 +62,17 @@ const Navbar = ({ onMenuClick, showSearch = true, searchValue = "", onSearchChan
                                 title="Alternar Identidad (Admin/David)"
                             >
                                 <Repeat className="h-4 w-4" />
+                            </button>
+                        )}
+
+                        {/* Botón de Modo Incógnito */}
+                        {onToggleIncognito && (
+                            <button
+                                onClick={onToggleIncognito}
+                                className={`ml-1.5 p-1 md:p-2 rounded-lg transition-all border ${isIncognito ? 'bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500 hover:text-white' : 'bg-white/5 text-white/60 border-white/10 hover:bg-white/10 hover:text-white'}`}
+                                title={isIncognito ? "Desactivar Modo Incógnito (Esc dual / Ctrl+I)" : "Activar Modo Incógnito (Esc dual / Ctrl+I)"}
+                            >
+                                {isIncognito ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                             </button>
                         )}
                     </div>

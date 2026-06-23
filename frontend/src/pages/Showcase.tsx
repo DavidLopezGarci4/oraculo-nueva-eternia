@@ -12,6 +12,7 @@ import { getPublicShowcase } from '../api/admin';
 import { getOptimizedImageUrl } from '../utils/imageUtils';
 import PowerSwordLoader from '../components/ui/PowerSwordLoader';
 import { MOTUImage } from '../components/ui/MOTUImage';
+import { FoilTiltCard } from '../components/ui/FoilTiltCard';
 
 interface ShowcaseProps {
     username: string;
@@ -256,11 +257,13 @@ const Showcase: React.FC<ShowcaseProps> = ({ username }) => {
                         {filteredItems.map((item: any) => {
                             const adjustedValue = getAdjustedValue(item);
                             const hasGrading = item.grading && item.grading > 0;
+                            const isSpecial = item.product.is_vintage || item.condition?.toUpperCase() === 'MOC' || (item.grading && item.grading > 0);
                             
                             return (
-                                <div
+                                <FoilTiltCard
                                     key={item.id}
-                                    className="group relative flex flex-col rounded-3xl border border-white/5 bg-black/20 overflow-hidden hover:border-brand-primary/30 hover:bg-brand-primary/[0.02] transition-all duration-300 shadow-lg hover:shadow-2xl"
+                                    isSpecial={isSpecial}
+                                    className="group relative flex flex-col rounded-3xl border border-white/5 bg-black/20 hover:border-brand-primary/30 hover:bg-brand-primary/[0.02] transition-all duration-300 shadow-lg hover:shadow-2xl"
                                 >
                                     {/* Image Container with Badges */}
                                     <div className="relative aspect-square w-full overflow-hidden bg-white/5 flex items-center justify-center">
@@ -335,8 +338,8 @@ const Showcase: React.FC<ShowcaseProps> = ({ username }) => {
                                             </p>
                                         )}
                                     </div>
-                                </div>
-                            );
+                                    </FoilTiltCard>
+                                );
                         })}
                     </div>
                 )}

@@ -31,6 +31,42 @@ function App() {
   const [visitedTabs, setVisitedTabs] = useState<Record<string, boolean>>({ dashboard: true });
   const [isIncognito, setIsIncognito] = useState<boolean>(() => localStorage.getItem('motu_incognito') === 'true');
 
+  // Global Incognito Keyboard Shortcuts: Double Esc or Ctrl + I
+  useEffect(() => {
+    let lastEscTime = 0;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      // Do not trigger shortcuts when user is typing in form fields
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+        return;
+      }
+
+      if (e.ctrlKey && (e.key === 'i' || e.key === 'I')) {
+        e.preventDefault();
+        setIsIncognito(prev => {
+          const val = !prev;
+          localStorage.setItem('motu_incognito', val ? 'true' : 'false');
+          return val;
+        });
+      } else if (e.key === 'Escape') {
+        const now = Date.now();
+        if (now - lastEscTime < 300) {
+          e.preventDefault();
+          setIsIncognito(prev => {
+            const val = !prev;
+            localStorage.setItem('motu_incognito', val ? 'true' : 'false');
+            return val;
+          });
+        }
+        lastEscTime = now;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   useEffect(() => {
     if (isLoggedIn || isSovereign) {
       setVisitedTabs(prev => ({ ...prev, [activeTab]: true }));
@@ -182,6 +218,12 @@ function App() {
             user={currentUser}
             isSovereign={isSovereign}
             onIdentityChange={handleIdentityChange}
+            isIncognito={isIncognito}
+            onToggleIncognito={() => setIsIncognito(prev => {
+              const val = !prev;
+              localStorage.setItem('motu_incognito', val ? 'true' : 'false');
+              return val;
+            })}
           />
 
           <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-24 md:pb-6 scroll-smooth">

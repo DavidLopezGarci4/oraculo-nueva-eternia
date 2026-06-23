@@ -50,6 +50,47 @@ import type { Hero } from '../api/admin';
 import PowerSwordLoader from '../components/ui/PowerSwordLoader';
 
 
+const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+        const valA = payload[0]?.value;
+        const valB = payload[1]?.value;
+
+        let deltaStr = '';
+        if (typeof valA === 'number' && typeof valB === 'number') {
+            const diff = valA - valB;
+            const pct = ((valA - valB) / valB) * 100;
+            const sign = diff > 0 ? '+' : '';
+            deltaStr = `Dif: ${sign}${diff.toFixed(2)}€ (${sign}${pct.toFixed(1)}%)`;
+        }
+
+        return (
+            <div className="bg-black/90 border border-white/10 rounded-2xl p-4 shadow-2xl backdrop-blur-xl space-y-2">
+                <p className="text-[10px] font-black text-white/40 uppercase tracking-widest">{label}</p>
+                <div className="space-y-1">
+                    {payload.map((item: any, idx: number) => (
+                        <div key={idx} className="flex items-center gap-3 text-xs font-bold justify-between">
+                            <div className="flex items-center gap-1.5 min-w-0 pr-4">
+                                <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: item.color }}></span>
+                                <span className="text-white/80 truncate max-w-[150px]">{item.name}</span>
+                            </div>
+                            <span className="text-white font-black whitespace-nowrap">{item.value.toFixed(2)} €</span>
+                        </div>
+                    ))}
+                </div>
+                {deltaStr && (
+                    <div className="h-px bg-white/5 my-1.5"></div>
+                )}
+                {deltaStr && (
+                    <p className="text-[10px] font-black text-brand-primary uppercase tracking-widest text-center">
+                        {deltaStr}
+                    </p>
+                )}
+            </div>
+        );
+    }
+    return null;
+};
+
 // Para desarrollo, usamos el ID de David
 interface CatalogProps {
     searchQuery?: string;
@@ -86,6 +127,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
     const [mergeSearchQuery, setMergeSearchQuery] = React.useState('');
     const [mergeTargetProduct, setMergeTargetProduct] = React.useState<Product | null>(null);
     const [isMerging, setIsMerging] = React.useState(false);
+    const [selectedChips, setSelectedChips] = React.useState<string[]>([]);
 
     React.useEffect(() => {
         setShowMergePanel(false);
@@ -337,10 +379,20 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                 const owned = isOwned(product.id);
                 const wished = isWished(product.id);
 
-                if (viewMode === 'wish') {
-                    if (!wished) return false;
-                } else {
-                    if (owned) return false;
+                // Quick-Chips filter applications
+                if (selectedChips.includes('wishlist') && !wished) return false;
+                if (selectedChips.includes('vintage') && !product.is_vintage) return false;
+                if (selectedChips.includes('moderno') && product.is_vintage) return false;
+                if (selectedChips.includes('offers') && !(product.purgatory_match_count && product.purgatory_match_count > 0)) return false;
+                if (selectedChips.includes('coleccionado') && !owned) return false;
+
+                // If not explicitly filtering by owned items, maintain standard hunting list logic (hide owned)
+                if (!selectedChips.includes('coleccionado')) {
+                    if (viewMode === 'wish') {
+                        if (!wished) return false;
+                    } else {
+                        if (owned) return false;
+                    }
                 }
 
                 return (
@@ -369,7 +421,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                 
                 return sortOrder === 'asc' ? comparison : -comparison;
             });
-    }, [products, searchQuery, subCatStats, isOwned, isWished, isGrail, isVintageOnly, productsWithOffers, sortBy, sortOrder, viewMode]);
+    }, [products, searchQuery, subCatStats, isOwned, isWished, isGrail, isVintageOnly, productsWithOffers, sortBy, sortOrder, viewMode, selectedChips]);
 
     const chartData = React.useMemo(() => {
         if (!historyCronosA && !historyCronosB) return [];
@@ -451,7 +503,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
         if (selectedCronosA && selectedCronosB) {
             return [
                 { key: selectedCronosA.name, color: '#0ea5e9' },
-                { key: selectedCronosB.name, color: '#ec4899' }
+                { key: selectedCronosB.name, color: '#8b5cf6' }
             ];
         } else if (selectedCronosA) {
             const allowedShops = activeCronosShops.length > 0 ? activeCronosShops : (availableShops || []);
@@ -891,15 +943,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                                         />
                                         <Tooltip
                                             cursor={{ stroke: 'rgba(255, 255, 255, 0.15)', strokeWidth: 1.5, strokeDasharray: '4 4' }}
-                                            contentStyle={{
-                                                backgroundColor: '#000',
-                                                border: '1px solid rgba(255,255,255,0.1)',
-                                                borderRadius: '1.5rem',
-                                                backdropFilter: 'blur(20px)',
-                                                padding: '12px'
-                                            }}
-                                            itemStyle={{ fontSize: '12px', fontWeight: 900 }}
-                                            labelStyle={{ color: 'rgba(255,255,255,0.4)', marginBottom: '6px', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase' }}
+                                            content={<CustomTooltip />}
                                         />
                                         <Legend
                                             iconType="circle"
@@ -930,7 +974,44 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                         )}
                     </div>
                 </div>
-            ) : !products || products.length === 0 ? (
+            ) : (
+                <>
+                    {/* Quick-Chips de filtrado rápido */}
+                    <div className="flex flex-wrap items-center gap-2 mb-6 bg-white/[0.02] border border-white/5 p-3 rounded-2xl backdrop-blur-md">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-white/50 mr-2 ml-1">Filtros Rápidos:</span>
+                        <button
+                            onClick={() => setSelectedChips([])}
+                            className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedChips.length === 0 ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/20' : 'text-white/60 bg-white/5 hover:bg-white/10 hover:text-white'}`}
+                        >
+                            Todos
+                        </button>
+                        <button
+                            onClick={() => setSelectedChips(prev => prev.includes('wishlist') ? prev.filter(c => c !== 'wishlist') : [...prev, 'wishlist'])}
+                            className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5 ${selectedChips.includes('wishlist') ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/20' : 'text-white/60 bg-white/5 hover:bg-white/10 hover:text-white'}`}
+                        >
+                            <Star className="h-3 w-3 fill-current" /> Wishlist
+                        </button>
+                        <button
+                            onClick={() => setSelectedChips(prev => prev.includes('coleccionado') ? prev.filter(c => c !== 'coleccionado') : [...prev, 'coleccionado'])}
+                            className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedChips.includes('coleccionado') ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/20' : 'text-white/60 bg-white/5 hover:bg-white/10 hover:text-white'}`}
+                        >
+                            📦 Coleccionado
+                        </button>
+                        <button
+                            onClick={() => setSelectedChips(prev => prev.includes('offers') ? prev.filter(c => c !== 'offers') : [...prev, 'offers'])}
+                            className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedChips.includes('offers') ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/20' : 'text-white/60 bg-white/5 hover:bg-white/10 hover:text-white'}`}
+                        >
+                            🔥 En Oferta
+                        </button>
+                        <button
+                            onClick={() => setSelectedChips(prev => prev.includes('vintage') ? prev.filter(c => c !== 'vintage') : [...prev, 'vintage'])}
+                            className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedChips.includes('vintage') ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/20' : 'text-white/60 bg-white/5 hover:bg-white/10 hover:text-white'}`}
+                        >
+                            🕰️ Vintage
+                        </button>
+                    </div>
+
+                    {!products || products.length === 0 ? (
                 <div className="flex flex-col items-center justify-center p-20 text-white/20 space-y-4 rounded-[2.5rem] border border-white/5 bg-black/20 backdrop-blur-md">
                     <Package className="h-16 w-16 opacity-20" />
                     <p className="text-xl font-black uppercase tracking-widest text-white/60">El Oráculo está vacío...</p>
@@ -1170,6 +1251,8 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                     );
                 })}
             </div>
+            )}
+                </>
             )}
 
             {/* PRODUCT DETAIL MODAL (OFFERS) */}

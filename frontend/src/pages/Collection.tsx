@@ -29,6 +29,7 @@ import type { Product } from '../api/collection';
 import { getOptimizedImageUrl } from '../utils/imageUtils';
 import { MOTUImage } from '../components/ui/MOTUImage';
 import CollectionItemDetailModal from '../components/CollectionItemDetailModal';
+import { FoilTiltCard } from '../components/ui/FoilTiltCard';
 import { updateProduct, deleteProduct } from '../api/admin';
 import type { Hero } from '../api/admin';
 
@@ -87,6 +88,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
     const [sortBy, setSortBy] = useState<'name' | 'id'>('name');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
     const [conditionFilter, setConditionFilter] = useState<string>('all');
+    const [selectedChips, setSelectedChips] = useState<string[]>([]);
 
     // Contexto de Autenticación (Fase 8.2)
     const activeUserId = parseInt(localStorage.getItem('active_user_id') || '2');
@@ -168,8 +170,16 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
 
             if (conditionFilter !== 'all') {
                 const productCondition = (product.condition || 'MOC').toUpperCase();
-                return productCondition === conditionFilter.toUpperCase();
+                if (productCondition !== conditionFilter.toUpperCase()) return false;
             }
+
+            // Quick-Chips filter applications in Collection
+            const cond = (product.condition || 'MOC').toUpperCase();
+            const gradingVal = product.grading !== undefined ? product.grading : 10.0;
+            if (selectedChips.includes('moc') && cond !== 'MOC') return false;
+            if (selectedChips.includes('loose') && cond !== 'LOOSE') return false;
+            if (selectedChips.includes('graded') && !(gradingVal > 0 && product.grading !== null)) return false;
+            if (selectedChips.includes('vintage') && !product.is_vintage) return false;
 
             return true;
         });
@@ -184,7 +194,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
 
             return sortOrder === 'asc' ? comparison : -comparison;
         });
-    }, [collection, searchQuery, conditionFilter, sortBy, sortOrder]);
+    }, [collection, searchQuery, conditionFilter, sortBy, sortOrder, selectedChips]);
 
     const ownedItems = sortedFilteredItems.filter(p => !p.is_wish);
     const wishItems = sortedFilteredItems.filter(p => p.is_wish);
@@ -362,6 +372,41 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                 </button>
             </div>
 
+            {/* Quick-Chips de filtrado rápido */}
+            <div className="flex flex-wrap items-center gap-2 mb-6 bg-white/[0.02] border border-white/5 p-3 rounded-2xl backdrop-blur-md">
+                <span className="text-[10px] font-black uppercase tracking-widest text-white/50 mr-2 ml-1">Filtros Rápidos:</span>
+                <button
+                    onClick={() => setSelectedChips([])}
+                    className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedChips.length === 0 ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/20' : 'text-white/60 bg-white/5 hover:bg-white/10 hover:text-white'}`}
+                >
+                    Todos
+                </button>
+                <button
+                    onClick={() => setSelectedChips(prev => prev.includes('moc') ? prev.filter(c => c !== 'moc') : [...prev, 'moc'])}
+                    className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedChips.includes('moc') ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/20' : 'text-white/60 bg-white/5 hover:bg-white/10 hover:text-white'}`}
+                >
+                    📦 MOC
+                </button>
+                <button
+                    onClick={() => setSelectedChips(prev => prev.includes('loose') ? prev.filter(c => c !== 'loose') : [...prev, 'loose'])}
+                    className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedChips.includes('loose') ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/20' : 'text-white/60 bg-white/5 hover:bg-white/10 hover:text-white'}`}
+                >
+                    🎒 Loose
+                </button>
+                <button
+                    onClick={() => setSelectedChips(prev => prev.includes('graded') ? prev.filter(c => c !== 'graded') : [...prev, 'graded'])}
+                    className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedChips.includes('graded') ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/20' : 'text-white/60 bg-white/5 hover:bg-white/10 hover:text-white'}`}
+                >
+                    🎖️ Graded
+                </button>
+                <button
+                    onClick={() => setSelectedChips(prev => prev.includes('vintage') ? prev.filter(c => c !== 'vintage') : [...prev, 'vintage'])}
+                    className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedChips.includes('vintage') ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/20' : 'text-white/60 bg-white/5 hover:bg-white/10 hover:text-white'}`}
+                >
+                    🕰️ Vintage
+                </button>
+            </div>
+
             {/* Grid Area */}
             <AnimatePresence mode="wait">
                 {(activeTab === 'owned' ? ownedItems : wishItems).length === 0 ? (
@@ -401,10 +446,13 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                             const isGrail = product.is_grail;
                             const { adjustedValue, roi, condition, grading } = getAdjustedStats(product, activeTab === 'owned');
 
+                            const isSpecial = product.is_vintage || condition === 'MOC' || grading > 0 || isGrail;
+
                             return (
-                                <div
+                                <FoilTiltCard
                                     key={product.id}
-                                    className={`group flex flex-col gap-1 sm:gap-1.5 md:gap-3 relative overflow-hidden transition-all duration-500 hover:translate-y-[-8px] rounded-2xl sm:rounded-3xl p-1.5 sm:p-2 md:p-3.5 border ${isGrail ? 'border-yellow-500/30 bg-yellow-500/10 backdrop-blur-md shadow-[0_30px_60px_-15px_rgba(234,179,8,0.2)]' : 'border-white/5 bg-black/25 backdrop-blur-md hover:bg-black/20'}`}
+                                    isSpecial={isSpecial}
+                                    className={`group flex flex-col gap-1 sm:gap-1.5 md:gap-3 relative transition-all duration-500 rounded-2xl sm:rounded-3xl p-1.5 sm:p-2 md:p-3.5 border ${isGrail ? 'border-yellow-500/30 bg-yellow-500/10 backdrop-blur-md shadow-[0_30px_60px_-15px_rgba(234,179,8,0.2)]' : 'border-white/5 bg-black/25 backdrop-blur-md hover:bg-black/20'}`}
                                 >
                                     {/* Image Container */}
                                     <div 
@@ -579,7 +627,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                                             </button>
                                         )}
                                     </div>
-                                </div>
+                                </FoilTiltCard>
                             )
                         })}
                     </motion.div>

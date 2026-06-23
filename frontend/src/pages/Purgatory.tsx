@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
     Flame,
     Zap,
@@ -14,14 +15,321 @@ import {
     ChevronLeft,
     ChevronRight,
     X,
-    History
+    History,
+    ArrowRight,
+    ArrowLeft,
+    ArrowUp,
+    ArrowDown,
+    HelpCircle,
+    Check,
+    Briefcase
 } from 'lucide-react';
 import { getPurgatory, matchItem, discardItem, discardItemsBulk, matchVintageItem, matchMiscellaneousItem } from '../api/purgatory';
 
 import QuickPreviewModal from '../components/QuickPreviewModal';
 import PowerSwordLoader from '../components/ui/PowerSwordLoader';
 import axios from 'axios';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
+
+const PERSISTENCE_KEY = 'purgatory_offline_actions';
+
+interface SwipeCardProps {
+    item: any;
+    isTop: boolean;
+    originalIndex: number;
+    handleApproveCard: (item: any) => void;
+    handleDiscardCard: (item: any) => void;
+    handleSwipeDown: (item: any) => void;
+    setVintageModalItemId: (id: number) => void;
+    setVintageModalItemName: (name: string) => void;
+    setVintageCustomName: (name: string) => void;
+    setSelectedVintageProductId: (id: number | null) => void;
+    setIsVintageModalOpen: (open: boolean) => void;
+    isSearchingAssociation: boolean;
+    setIsSearchingAssociation: (search: boolean) => void;
+    associatedProductId: number | null;
+    setAssociatedProductId: (id: number | null) => void;
+    manualSearchTerm: string;
+    setManualSearchTerm: (term: string) => void;
+    filteredProducts: any[];
+    matchMutation: any;
+}
+
+const SwipeCard: React.FC<SwipeCardProps> = ({
+    item,
+    isTop,
+    originalIndex,
+    handleApproveCard,
+    handleDiscardCard,
+    handleSwipeDown,
+    setVintageModalItemId,
+    setVintageModalItemName,
+    setVintageCustomName,
+    setSelectedVintageProductId,
+    setIsVintageModalOpen,
+    isSearchingAssociation,
+    setIsSearchingAssociation,
+    associatedProductId,
+    setAssociatedProductId,
+    manualSearchTerm,
+    setManualSearchTerm,
+    filteredProducts,
+    matchMutation
+}) => {
+    const x = useMotionValue(0);
+    const y = useMotionValue(0);
+
+    // Dynamic rotation and overlay opacities based on translation
+    const rotate = useTransform(x, [-200, 200], [-15, 15]);
+    const opacityRight = useTransform(x, [20, 120], [0, 1]);
+    const opacityLeft = useTransform(x, [-120, -20], [1, 0]);
+    const opacityUp = useTransform(y, [-120, -20], [1, 0]);
+    const opacityDown = useTransform(y, [20, 120], [0, 1]);
+
+    // Position offset for stack depth effect
+    const stackY = originalIndex * 12;
+    const stackScale = 1 - originalIndex * 0.04;
+    const stackZ = 50 - originalIndex;
+
+    const handleDragEnd = (event: any, info: any) => {
+        if (!isTop) return;
+        const threshold = 120;
+        const swipeX = info.offset.x;
+        const swipeY = info.offset.y;
+
+        if (Math.abs(swipeX) > Math.abs(swipeY)) {
+            if (swipeX > threshold) {
+                handleApproveCard(item);
+            } else if (swipeX < -threshold) {
+                handleDiscardCard(item);
+            }
+        } else {
+            if (swipeY > threshold) {
+                handleSwipeDown(item);
+            } else if (swipeY < -threshold) {
+                setVintageModalItemId(item.id);
+                setVintageModalItemName(item.scraped_name);
+                setVintageCustomName('');
+                setSelectedVintageProductId(null);
+                setIsVintageModalOpen(true);
+            }
+        }
+    };
+
+    // Find details of the selected associated product to show it in the card
+    const currentSuggestion = item.suggestions?.find((s: any) => s.product_id === associatedProductId);
+    const associatedProductName = currentSuggestion ? currentSuggestion.name : 'Producto personalizado';
+
+    return (
+        <motion.div
+            style={isTop ? { x, y, rotate, zIndex: stackZ } : { y: stackY, scale: stackScale, zIndex: stackZ, opacity: 1 - originalIndex * 0.25 }}
+            drag={isTop}
+            dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
+            dragElastic={0.6}
+            onDragEnd={handleDragEnd}
+            animate={isTop ? { x: 0, y: 0, rotate: 0, scale: 1 } : { y: stackY, scale: stackScale }}
+            transition={isTop ? { type: 'spring', stiffness: 300, damping: 20 } : { duration: 0.3 }}
+            exit={{ opacity: 0, scale: 0.8, transition: { duration: 0.2 } }}
+            className={`absolute w-full h-[500px] rounded-[2.5rem] border bg-gradient-to-br from-black/85 via-black/90 to-white/[0.04] p-6 shadow-2xl backdrop-blur-xl flex flex-col justify-between ${isTop ? 'border-brand-primary/30 cursor-grab active:cursor-grabbing shadow-brand-primary/10' : 'border-white/5 shadow-black/80 pointer-events-none'}`}
+        >
+            {/* Swiping Indicator Overlays */}
+            {isTop && (
+                <>
+                    <motion.div style={{ opacity: opacityRight }} className="absolute inset-0 bg-green-500/20 border border-green-500/50 rounded-[2.5rem] flex items-center justify-center pointer-events-none z-50">
+                        <span className="text-xl font-black text-green-400 uppercase tracking-widest bg-black/90 border border-green-500/30 px-6 py-3 rounded-full shadow-lg">VINCULAR/APROBAR</span>
+                    </motion.div>
+                    <motion.div style={{ opacity: opacityLeft }} className="absolute inset-0 bg-red-500/20 border border-red-500/50 rounded-[2.5rem] flex items-center justify-center pointer-events-none z-50">
+                        <span className="text-xl font-black text-red-400 uppercase tracking-widest bg-black/90 border border-red-500/30 px-6 py-3 rounded-full shadow-lg">DESCARTAR</span>
+                    </motion.div>
+                    <motion.div style={{ opacity: opacityUp }} className="absolute inset-0 bg-amber-500/20 border border-amber-500/50 rounded-[2.5rem] flex items-center justify-center pointer-events-none z-50">
+                        <span className="text-xl font-black text-amber-400 uppercase tracking-widest bg-black/90 border border-amber-500/30 px-6 py-3 rounded-full shadow-lg">NUEVO PRODUCTO</span>
+                    </motion.div>
+                    <motion.div style={{ opacity: opacityDown }} className="absolute inset-0 bg-blue-500/20 border border-blue-500/50 rounded-[2.5rem] flex items-center justify-center pointer-events-none z-50">
+                        <span className="text-xl font-black text-blue-400 uppercase tracking-widest bg-black/90 border border-blue-500/30 px-6 py-3 rounded-full shadow-lg">RE-ENCOLAR</span>
+                    </motion.div>
+                </>
+            )}
+
+            {/* Top Details (Image + Scraped Info) */}
+            <div className="flex gap-4 items-start select-none">
+                <div className="relative h-24 w-24 rounded-2xl bg-black border border-white/10 overflow-hidden shrink-0 shadow-lg">
+                    {item.image_url ? (
+                        <img src={item.image_url} alt={item.scraped_name} className="h-full w-full object-cover p-0.5" />
+                    ) : (
+                        <div className="flex h-full w-full items-center justify-center text-[9px] text-white/20 uppercase font-black">No IMG</div>
+                    )}
+                    <div className="absolute bottom-0 left-0 right-0 bg-black/85 text-[8px] font-black uppercase text-center text-white/60 tracking-widest py-0.5 border-t border-white/5">{item.shop_name}</div>
+                </div>
+
+                <div className="flex-1 min-w-0 space-y-1">
+                    <span className="text-[9px] font-bold text-white/30 uppercase tracking-widest">ID: #{item.id} <span className="text-white/10">|</span> {new Date(item.found_at || item.scraped_at).toLocaleDateString()}</span>
+                    <h3 className="text-sm font-bold text-white leading-tight line-clamp-2" title={item.scraped_name}>{item.scraped_name}</h3>
+                    <div className="flex items-baseline gap-1">
+                        <span className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Precio:</span>
+                        <span className="text-lg font-black text-brand-primary">{item.price} <span className="text-xs text-brand-primary/80">{item.currency}</span></span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Middle Section (Linking Panel / Quick Association) */}
+            <div className="flex-1 my-4 flex flex-col justify-end min-h-0">
+                {isSearchingAssociation ? (
+                    /* BÚSQUEDA MANUAL */
+                    <div className="space-y-2 bg-black/40 border border-white/5 p-3 rounded-2xl flex flex-col h-[230px]">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[9px] font-black uppercase tracking-widest text-brand-primary">Buscador Manual [Esc para salir]</span>
+                            <button onClick={() => setIsSearchingAssociation(false)} className="text-[9px] font-black uppercase tracking-widest text-white/45 hover:text-white">Cerrar</button>
+                        </div>
+                        <div className="relative shrink-0">
+                            <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-white/40" />
+                            <input
+                                id={`assoc-search-${item.id}`}
+                                type="text"
+                                placeholder="Buscar figura en catálogo..."
+                                className="w-full rounded-xl bg-black/60 border border-white/10 py-2 pl-9 pr-3 text-xs font-bold text-white placeholder:text-white/20 outline-none focus:border-brand-primary/50 transition-all"
+                                value={manualSearchTerm}
+                                onChange={(e) => setManualSearchTerm(e.target.value)}
+                            />
+                        </div>
+                        <div className="flex-1 overflow-y-auto custom-scrollbar space-y-1">
+                            {manualSearchTerm ? (
+                                filteredProducts.map((p: any) => (
+                                    <button
+                                        key={p.id}
+                                        onClick={() => {
+                                            setAssociatedProductId(p.id);
+                                            setIsSearchingAssociation(false);
+                                            setManualSearchTerm('');
+                                        }}
+                                        className="w-full flex items-center justify-between rounded-lg bg-white/5 p-2 text-left hover:bg-white/10 border border-transparent hover:border-white/10 transition-all text-xs font-bold"
+                                    >
+                                        <div className="truncate pr-2">
+                                            <div className="text-white truncate">{p.name}</div>
+                                            <div className="text-[8px] text-white/40 uppercase tracking-widest truncate">{p.figure_id}</div>
+                                        </div>
+                                        <Check className="h-3.5 w-3.5 text-brand-primary shrink-0" />
+                                    </button>
+                                ))
+                            ) : (
+                                <div className="h-full flex items-center justify-center text-center text-white/20 text-[9px] uppercase tracking-widest font-black">Escriba para buscar</div>
+                            )}
+                            {manualSearchTerm && filteredProducts.length === 0 && (
+                                <div className="text-center text-white/30 text-[9px] py-4 uppercase font-black tracking-widest">No se encontraron figuras</div>
+                            )}
+                        </div>
+                    </div>
+                ) : (
+                    /* PANEL DE VINCULACIÓN ACTIVA Y SUGERENCIAS */
+                    <div className="space-y-3 flex flex-col justify-end h-[230px]">
+                        {/* 1. Asociación Activa */}
+                        <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-3">
+                            <div className="flex items-center justify-between mb-1.5">
+                                <span className="text-[9px] font-black uppercase tracking-widest text-white/40">Vinculación Seleccionada</span>
+                                <button
+                                    onClick={() => setIsSearchingAssociation(true)}
+                                    className="text-[9px] font-black uppercase tracking-widest text-brand-primary hover:underline flex items-center gap-1"
+                                >
+                                    <Search className="h-2.5 w-2.5" /> Cambiar [E]
+                                </button>
+                            </div>
+                            {associatedProductId ? (
+                                <div className="flex items-center justify-between bg-brand-primary/10 border border-brand-primary/30 rounded-xl p-2.5">
+                                    <div className="min-w-0 pr-2">
+                                        <div className="text-xs font-black text-white truncate">{associatedProductName}</div>
+                                        <div className="text-[8px] text-brand-primary uppercase tracking-widest font-black">ID: #{associatedProductId}</div>
+                                    </div>
+                                    <button
+                                        onClick={() => setAssociatedProductId(null)}
+                                        className="text-[8px] font-black text-red-400 hover:text-red-300 uppercase tracking-widest hover:bg-red-500/10 px-2 py-1 rounded-md transition-colors"
+                                    >
+                                        Quitar
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="text-center py-2.5 border border-dashed border-white/10 rounded-xl text-[10px] text-white/40 font-bold uppercase tracking-wider">
+                                    ⚠️ Ningún item vinculado
+                                </div>
+                            )}
+                        </div>
+
+                        {/* 2. Sugerencias rápidas del Oráculo */}
+                        <div className="space-y-1.5">
+                            <span className="text-[9px] font-black uppercase tracking-widest text-white/40 block">Coincidencias Sugeridas</span>
+                            <div className="flex flex-col gap-1.5 max-h-[120px] overflow-y-auto custom-scrollbar pr-1">
+                                {item.suggestions && item.suggestions.filter((s: any) => !s.is_vintage).slice(0, 2).map((sug: any) => {
+                                    const isSelected = associatedProductId === sug.product_id;
+                                    return (
+                                        <button
+                                            key={sug.product_id}
+                                            onClick={() => setAssociatedProductId(sug.product_id)}
+                                            className={`w-full flex items-center justify-between rounded-xl p-2.5 text-left transition-all border text-xs ${isSelected ? 'bg-brand-primary/20 border-brand-primary/60 text-white' : 'bg-white/5 border-white/5 text-white/70 hover:bg-white/10 hover:border-white/10'}`}
+                                        >
+                                            <div className="min-w-0 pr-2">
+                                                <div className="font-bold truncate">{sug.name}</div>
+                                                <div className="text-[8px] text-white/40 uppercase tracking-widest truncate">{sug.reason || 'Sugerencia'}</div>
+                                            </div>
+                                            <div className="flex items-center gap-2 shrink-0">
+                                                <span className={`text-[8px] font-black px-1.5 py-0.5 rounded ${sug.match_score >= 80 ? 'bg-green-500/20 text-green-400' : sug.match_score >= 50 ? 'bg-yellow-500/20 text-yellow-400' : 'bg-red-500/20 text-red-400'}`}>
+                                                    {sug.match_score}%
+                                                </span>
+                                            </div>
+                                        </button>
+                                    );
+                                })}
+                                {(!item.suggestions || item.suggestions.filter((s: any) => !s.is_vintage).length === 0) && (
+                                    <div className="text-center text-[9px] font-bold text-white/30 uppercase tracking-widest py-3 bg-white/[0.01] rounded-xl border border-white/5">Sin sugerencias del oráculo</div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Bottom Actions (Buttons for classic clicking) */}
+            <div className="flex gap-2.5 pt-4 border-t border-white/5 select-none shrink-0 text-white">
+                <button
+                    onClick={() => handleDiscardCard(item)}
+                    className="flex-1 py-3 rounded-2xl bg-red-500/5 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/10 hover:border-red-500 flex items-center justify-center gap-1.5 transition-all duration-200"
+                    title="Descartar Item [A]"
+                >
+                    <Trash2 className="h-4 w-4 text-red-500 hover:text-white" />
+                    <span className="text-[9px] font-black uppercase tracking-widest">Descartar</span>
+                </button>
+                <button
+                    onClick={() => handleSwipeDown(item)}
+                    className="flex-1 py-3 rounded-2xl bg-blue-500/5 hover:bg-blue-500 text-blue-500 hover:text-white border border-blue-500/10 hover:border-blue-500 flex items-center justify-center gap-1.5 transition-all duration-200"
+                    title="Re-encolar para después [S]"
+                >
+                    <ArrowDown className="h-4 w-4 text-blue-500 hover:text-white" />
+                    <span className="text-[9px] font-black uppercase tracking-widest">Re-encolar</span>
+                </button>
+                <button
+                    onClick={() => {
+                        setVintageModalItemId(item.id);
+                        setVintageModalItemName(item.scraped_name);
+                        setVintageCustomName('');
+                        setSelectedVintageProductId(null);
+                        setIsVintageModalOpen(true);
+                    }}
+                    className="flex-1 py-3 rounded-2xl bg-amber-500/5 hover:bg-amber-500 text-amber-500 hover:text-black border border-amber-500/10 hover:border-amber-500 flex items-center justify-center gap-1.5 transition-all duration-200"
+                    title="Clasificar como Vintage / Nuevo [N]"
+                >
+                    <History className="h-4 w-4 text-amber-500 hover:text-black" />
+                    <span className="text-[9px] font-black uppercase tracking-widest">Vintage [N]</span>
+                </button>
+                <button
+                    onClick={() => handleApproveCard(item)}
+                    disabled={!associatedProductId}
+                    className={`flex-1 py-3 rounded-2xl flex items-center justify-center gap-1.5 transition-all duration-200 ${associatedProductId ? 'bg-brand-primary text-white hover:brightness-110 shadow-lg shadow-brand-primary/20' : 'bg-white/5 text-white/35 border border-white/5 cursor-not-allowed'}`}
+                    title="Aprobar vinculación [D]"
+                >
+                    <Check className="h-4 w-4" />
+                    <span className="text-[9px] font-black uppercase tracking-widest">Aprobar [D]</span>
+                </button>
+            </div>
+        </motion.div>
+    );
+};
 
 const PERSISTENCE_KEY = 'purgatory_offline_actions';
 
@@ -39,6 +347,15 @@ const Purgatory: React.FC = React.memo(() => {
         const saved = localStorage.getItem(PERSISTENCE_KEY);
         return saved ? JSON.parse(saved) : [];
     });
+
+    // UX/UI Custom States
+    const [viewLayout, setViewLayout] = useState<'mazo' | 'lista'>('mazo');
+    const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'highest_match' | 'lowest_match'>('highest_match');
+    const [shopFilter, setShopFilter] = useState<string>('all');
+    const [deckItems, setDeckItems] = useState<any[]>([]);
+    const [lastFilteredHash, setLastFilteredHash] = useState('');
+    const [associatedProductId, setAssociatedProductId] = useState<number | null>(null);
+    const [isSearchingAssociation, setIsSearchingAssociation] = useState(false);
 
     // Experimental Transit Filter State
     const [enableTransitFilter, setEnableTransitFilter] = useState(false);
@@ -438,11 +755,152 @@ const Purgatory: React.FC = React.memo(() => {
         return matchesSearch && matchesTransit;
     });
 
-    // Pagination Logic
-    const totalItems = filteredPendingItems.length;
+    // --- SORTING AND FILTERING FOR DECK & LIST ---
+    const sortedAndFilteredItems = useMemo(() => {
+        let items = [...filteredPendingItems];
+
+        // 1. Filtrar por Tienda
+        if (shopFilter !== 'all') {
+            items = items.filter(i => i.shop_name?.toLowerCase() === shopFilter.toLowerCase());
+        }
+
+        // 2. Ordenación
+        items.sort((a, b) => {
+            const getBestScore = (item: any) => {
+                if (!item.suggestions || item.suggestions.length === 0) return 0;
+                const scores = item.suggestions.filter((s: any) => !s.is_vintage).map((s: any) => s.match_score || 0);
+                return scores.length > 0 ? Math.max(...scores) : 0;
+            };
+
+            if (sortBy === 'newest') {
+                return new Date(b.found_at || b.scraped_at).getTime() - new Date(a.found_at || a.scraped_at).getTime();
+            } else if (sortBy === 'oldest') {
+                return new Date(a.found_at || a.scraped_at).getTime() - new Date(b.found_at || b.scraped_at).getTime();
+            } else if (sortBy === 'highest_match') {
+                return getBestScore(b) - getBestScore(a);
+            } else if (sortBy === 'lowest_match') {
+                return getBestScore(a) - getBestScore(b);
+            }
+            return 0;
+        });
+
+        return items;
+    }, [filteredPendingItems, sortBy, shopFilter]);
+
+    // Sincronizar deckItems localmente de forma que conserve re-encolados
+    const filteredHash = sortedAndFilteredItems.map(i => i.id).join(',');
+
+    useEffect(() => {
+        setDeckItems(sortedAndFilteredItems);
+        setLastFilteredHash(filteredHash);
+    }, [filteredHash]);
+
+    // Sincronizar la asociación por defecto con el primer item de la pila
+    useEffect(() => {
+        if (deckItems.length > 0) {
+            const currentItem = deckItems[0];
+            const firstSug = currentItem.suggestions?.filter((s: any) => !s.is_vintage)?.[0];
+            setAssociatedProductId(firstSug ? firstSug.product_id : null);
+        } else {
+            setAssociatedProductId(null);
+        }
+        setIsSearchingAssociation(false);
+        setManualSearchTerm('');
+    }, [deckItems[0]?.id]);
+
+    // Handlers para las Acciones del Mazo
+    const handleApproveCard = (item: any) => {
+        let prodId = associatedProductId;
+        if (!prodId) {
+            const sug = item.suggestions?.filter((s: any) => !s.is_vintage)?.[0];
+            if (sug) prodId = sug.product_id;
+        }
+
+        if (!prodId) {
+            alert('Vincule un producto del catálogo antes de aprobar.');
+            setIsSearchingAssociation(true);
+            setTimeout(() => {
+                document.getElementById(`assoc-search-${item.id}`)?.focus();
+            }, 50);
+            return;
+        }
+
+        matchMutation.mutate({ pendingId: item.id, productId: prodId });
+        setDeckItems(prev => prev.filter(i => i.id !== item.id));
+        setAssociatedProductId(null);
+        setIsSearchingAssociation(false);
+    };
+
+    const handleDiscardCard = (item: any) => {
+        discardMutation.mutate(item.id);
+        setDeckItems(prev => prev.filter(i => i.id !== item.id));
+        setAssociatedProductId(null);
+        setIsSearchingAssociation(false);
+    };
+
+    const handleSwipeDown = (item: any) => {
+        setDeckItems(prev => {
+            const remaining = prev.filter(i => i.id !== item.id);
+            return [...remaining, item];
+        });
+        setAssociatedProductId(null);
+        setIsSearchingAssociation(false);
+    };
+
+    // Keyboard controls listener for deck curating
+    useEffect(() => {
+        if (viewLayout !== 'mazo' || deckItems.length === 0) return;
+        const currentItem = deckItems[0];
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            const target = e.target as HTMLElement;
+            if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+                if (e.key === 'Escape') {
+                    setIsSearchingAssociation(false);
+                    target.blur();
+                }
+                return;
+            }
+
+            if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') {
+                e.preventDefault();
+                handleApproveCard(currentItem);
+            } else if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') {
+                e.preventDefault();
+                handleDiscardCard(currentItem);
+            } else if (e.key === 's' || e.key === 'S' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                handleSwipeDown(currentItem);
+            } else if (e.key === 'n' || e.key === 'N') {
+                e.preventDefault();
+                setVintageModalItemId(currentItem.id);
+                setVintageModalItemName(currentItem.scraped_name);
+                setVintageCustomName('');
+                setSelectedVintageProductId(null);
+                setIsVintageModalOpen(true);
+            } else if (e.key === 'e' || e.key === 'E') {
+                e.preventDefault();
+                setIsSearchingAssociation(true);
+                setTimeout(() => {
+                    document.getElementById(`assoc-search-${currentItem.id}`)?.focus();
+                }, 50);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [viewLayout, deckItems, associatedProductId]);
+
+    // Dynamic list of unique shops in pending items for filter pills
+    const uniqueShopsInPending = useMemo(() => {
+        return Array.from(new Set((pendingItems || []).map((i: any) => i.shop_name).filter(Boolean))) as string[];
+    }, [pendingItems]);
+
+    // Pagination Logic (Lista tradicional)
+    const totalItems = sortedAndFilteredItems.length;
     const totalPages = Math.ceil(totalItems / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
-    const paginatedItems = filteredPendingItems.slice(startIndex, startIndex + itemsPerPage);
+    const paginatedItems = sortedAndFilteredItems.slice(startIndex, startIndex + itemsPerPage);
 
     // Ensure we don't stay on an empty page after items are matched/discarded
     if (currentPage > 1 && paginatedItems.length === 0 && totalItems > 0) {
@@ -556,46 +1014,109 @@ const Purgatory: React.FC = React.memo(() => {
                 )}
             </div>
 
-            {/* Filtro de Tránsito Experimental */}
-            <div className={`flex flex-wrap items-center gap-4 bg-white/[0.01] border border-white/5 p-4 rounded-3xl backdrop-blur-md transition-all duration-500 ${selectedPendingId ? 'opacity-20 grayscale pointer-events-none' : 'opacity-100'}`}>
-                <label className="flex items-center gap-2.5 cursor-pointer select-none">
-                    <input
-                        type="checkbox"
-                        checked={enableTransitFilter}
-                        onChange={(e) => {
-                            setEnableTransitFilter(e.target.checked);
-                            setCurrentPage(1);
-                        }}
-                        className="h-4 w-4 rounded border-white/10 bg-white/5 text-brand-primary focus:ring-brand-primary"
-                    />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-white/65 flex items-center gap-1.5">
-                        <span className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse"></span>
-                        Filtro de Tránsito (Experimental)
-                    </span>
-                </label>
-
-                {enableTransitFilter && (
-                    <div className="flex items-center gap-2 border-l border-white/10 pl-4 animate-in slide-in-from-left-4 duration-300">
+            {/* Controles y Filtros del Purgatorio */}
+            <div className={`space-y-4 bg-white/[0.01] border border-white/5 p-5 rounded-3xl backdrop-blur-md transition-all duration-500 ${selectedPendingId ? 'opacity-20 grayscale pointer-events-none' : 'opacity-100'}`}>
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    {/* 1. Selector de Diseño / Layout Toggle */}
+                    <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-white/50 mr-2">Diseño:</span>
                         <button
-                            onClick={() => { setTransitType('all'); setCurrentPage(1); }}
-                            className={`px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${transitType === 'all' ? 'bg-brand-primary/20 text-white border border-brand-primary/30' : 'text-white/60 hover:text-white bg-white/5 border border-transparent'}`}
+                            onClick={() => setViewLayout('mazo')}
+                            className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewLayout === 'mazo' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'bg-white/5 text-white/60 hover:text-white hover:bg-white/10'}`}
                         >
-                            Todos
+                            🗂️ Modo Mazo
                         </button>
                         <button
-                            onClick={() => { setTransitType('retail'); setCurrentPage(1); }}
-                            className={`px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${transitType === 'retail' ? 'bg-brand-primary/20 text-white border border-brand-primary/30' : 'text-white/60 hover:text-white bg-white/5 border border-transparent'}`}
+                            onClick={() => setViewLayout('lista')}
+                            className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewLayout === 'lista' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'bg-white/5 text-white/60 hover:text-white hover:bg-white/10'}`}
                         >
-                            Retail
-                        </button>
-                        <button
-                            onClick={() => { setTransitType('p2p'); setCurrentPage(1); }}
-                            className={`px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${transitType === 'p2p' ? 'bg-brand-primary/20 text-white border border-brand-primary/30' : 'text-white/60 hover:text-white bg-white/5 border border-transparent'}`}
-                        >
-                            P2P (Wallapop/eBay)
+                            📋 Modo Listado
                         </button>
                     </div>
-                )}
+
+                    {/* 2. Ordenación del Mazo */}
+                    <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-white/50 mr-2">Ordenar por:</span>
+                        <select
+                            value={sortBy}
+                            onChange={(e: any) => setSortBy(e.target.value)}
+                            className="bg-black/60 border border-white/10 rounded-xl px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-white outline-none focus:border-brand-primary/50 transition-all cursor-pointer"
+                        >
+                            <option value="highest_match">Mayor Probabilidad</option>
+                            <option value="lowest_match">Menor Probabilidad</option>
+                            <option value="newest">Más Nuevas Primero</option>
+                            <option value="oldest">Más Antiguas Primero</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div className="h-px bg-white/5 my-2"></div>
+
+                <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+                    {/* 3. Filtro de Tiendas (Chips Dinámicos) */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-white/50 mr-2">Tienda:</span>
+                        <button
+                            onClick={() => setShopFilter('all')}
+                            className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${shopFilter === 'all' ? 'bg-brand-secondary/20 text-brand-secondary border border-brand-secondary/30' : 'text-white/40 hover:text-white bg-white/5 border border-transparent'}`}
+                        >
+                            Todas
+                        </button>
+                        {uniqueShopsInPending.map(shop => (
+                            <button
+                                key={shop}
+                                onClick={() => setShopFilter(shop)}
+                                className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${shopFilter === shop ? 'bg-brand-secondary/20 text-brand-secondary border border-brand-secondary/30' : 'text-white/40 hover:text-white bg-white/5 border border-transparent'}`}
+                            >
+                                {shop}
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="hidden md:block h-4 w-px bg-white/10"></div>
+
+                    {/* 4. Filtro de Tránsito */}
+                    <div className="flex items-center gap-3">
+                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                            <input
+                                type="checkbox"
+                                checked={enableTransitFilter}
+                                onChange={(e) => {
+                                    setEnableTransitFilter(e.target.checked);
+                                    setCurrentPage(1);
+                                }}
+                                className="h-4 w-4 rounded border-white/10 bg-white/5 text-brand-primary focus:ring-brand-primary"
+                            />
+                            <span className="text-[9px] font-black uppercase tracking-widest text-white/65 flex items-center gap-1">
+                                <span className="h-1 w-1 rounded-full bg-orange-500 animate-pulse"></span>
+                                Tránsito (Expr.)
+                            </span>
+                        </label>
+
+                        {enableTransitFilter && (
+                            <div className="flex items-center gap-1.5 animate-in slide-in-from-left-4 duration-300">
+                                <button
+                                    onClick={() => { setTransitType('all'); setCurrentPage(1); }}
+                                    className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest transition-all ${transitType === 'all' ? 'bg-brand-primary/20 text-white border border-brand-primary/30' : 'text-white/55 hover:text-white bg-white/5 border border-transparent'}`}
+                                >
+                                    Todos
+                                </button>
+                                <button
+                                    onClick={() => { setTransitType('retail'); setCurrentPage(1); }}
+                                    className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest transition-all ${transitType === 'retail' ? 'bg-brand-primary/20 text-white border border-brand-primary/30' : 'text-white/55 hover:text-white bg-white/5 border border-transparent'}`}
+                                >
+                                    Retail
+                                </button>
+                                <button
+                                    onClick={() => { setTransitType('p2p'); setCurrentPage(1); }}
+                                    className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest transition-all ${transitType === 'p2p' ? 'bg-brand-primary/20 text-white border border-brand-primary/30' : 'text-white/55 hover:text-white bg-white/5 border border-transparent'}`}
+                                >
+                                    P2P
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
 
 
@@ -610,6 +1131,62 @@ const Purgatory: React.FC = React.memo(() => {
                             <p className="text-lg font-bold text-white/60">Purgatorio Vacío</p>
                             <p className="text-sm text-white/60">Todas las reliquias han sido purificadas o descartadas.</p>
                         </div>
+                    </div>
+                                ) : viewLayout === 'mazo' ? (
+                    <div className="flex flex-col items-center justify-center py-6 min-h-[600px] relative w-full">
+                        {deckItems.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center gap-4 text-center py-12 rounded-3xl border border-dashed border-white/10 bg-white/[0.01] w-full max-w-xl">
+                                <CheckCircle2 className="h-12 w-12 text-green-500/40 animate-bounce" />
+                                <div className="space-y-1">
+                                    <p className="text-lg font-black text-white/60 uppercase tracking-widest">Fin del Mazo</p>
+                                    <p className="text-xs text-white/65">Has procesado todas las cartas filtradas en esta ronda.</p>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="relative w-full max-w-xl flex flex-col items-center">
+                                {/* Instrucciones rápidas en cabecera */}
+                                <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 mb-6 text-[9px] font-black uppercase tracking-widest text-white/40 bg-white/[0.02] border border-white/5 px-4 py-2 rounded-full backdrop-blur-md select-none">
+                                    <span>⬅️ [A] Descartar</span>
+                                    <span>➡️ [D] Vincular</span>
+                                    <span>⬇️ [S] Re-encolar</span>
+                                    <span>⬆️ [N] Vintage</span>
+                                    <span>🔍 [E] Buscar</span>
+                                </div>
+
+                                <div className="relative w-full h-[540px] flex items-center justify-center">
+                                    <AnimatePresence>
+                                        {deckItems.slice(0, 3).reverse().map((item, idx) => {
+                                            const originalIndex = deckItems.slice(0, 3).indexOf(item);
+                                            const isTop = originalIndex === 0;
+                                            return (
+                                                <SwipeCard
+                                                    key={item.id}
+                                                    item={item}
+                                                    isTop={isTop}
+                                                    originalIndex={originalIndex}
+                                                    handleApproveCard={handleApproveCard}
+                                                    handleDiscardCard={handleDiscardCard}
+                                                    handleSwipeDown={handleSwipeDown}
+                                                    setVintageModalItemId={setVintageModalItemId}
+                                                    setVintageModalItemName={setVintageModalItemName}
+                                                    setVintageCustomName={setVintageCustomName}
+                                                    setSelectedVintageProductId={setSelectedVintageProductId}
+                                                    setIsVintageModalOpen={setIsVintageModalOpen}
+                                                    isSearchingAssociation={isSearchingAssociation}
+                                                    setIsSearchingAssociation={setIsSearchingAssociation}
+                                                    associatedProductId={associatedProductId}
+                                                    setAssociatedProductId={setAssociatedProductId}
+                                                    manualSearchTerm={manualSearchTerm}
+                                                    setManualSearchTerm={setManualSearchTerm}
+                                                    filteredProducts={filteredProducts}
+                                                    matchMutation={matchMutation}
+                                                />
+                                            );
+                                        })}
+                                    </AnimatePresence>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 ) : (
                     <>

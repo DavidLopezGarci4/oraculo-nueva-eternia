@@ -271,6 +271,26 @@ const PowerSwordLoader: React.FC<PowerSwordLoaderProps> = ({
 
     return (
         <div className={containerClasses}>
+            <style dangerouslySetInnerHTML={{__html: `
+                @keyframes sword-blast-glow {
+                    0% { filter: drop-shadow(0 0 10px rgba(14,165,233,0.5)); transform: scale(1); }
+                    50% { filter: drop-shadow(0 0 35px rgba(14,165,233,0.85)) drop-shadow(0 0 70px rgba(34,211,238,0.7)); transform: scale(1.03); }
+                    100% { filter: drop-shadow(0 0 10px rgba(14,165,233,0.5)); transform: scale(1); }
+                }
+                @keyframes skeletor-blast-glow {
+                    0% { filter: drop-shadow(0 0 10px rgba(139,92,246,0.5)); transform: scale(1); }
+                    50% { filter: drop-shadow(0 0 35px rgba(139,92,246,0.85)) drop-shadow(0 0 70px rgba(217,70,239,0.7)); transform: scale(1.03); }
+                    100% { filter: drop-shadow(0 0 10px rgba(139,92,246,0.5)); transform: scale(1); }
+                }
+                .sword-glow-active {
+                    animation: sword-blast-glow 2s infinite ease-in-out;
+                    transform-origin: center center;
+                }
+                .skeletor-glow-active {
+                    animation: skeletor-blast-glow 2s infinite ease-in-out;
+                    transform-origin: center center;
+                }
+            `}} />
             <div className={isFullScreen ? "" : "relative"} style={svgWrapperStyles}>
                 {/* SVG Definitions */}
                 <svg width="0" height="0" className="absolute">
@@ -299,7 +319,7 @@ const PowerSwordLoader: React.FC<PowerSwordLoaderProps> = ({
                     preserveAspectRatio={isFullScreen ? "xMidYMid slice" : "xMidYMid meet"}
                     fill="none"
                     xmlns="http://www.w3.org/2000/svg"
-                    className="w-full h-full drop-shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
+                    className={`w-full h-full drop-shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-all duration-500 ${progress >= 99 ? (isSkeletor ? 'skeletor-glow-active' : 'sword-glow-active') : ''}`}
                 >
                     {/* 1. Fully Visible Base Layer (Sharp) */}
                     <image

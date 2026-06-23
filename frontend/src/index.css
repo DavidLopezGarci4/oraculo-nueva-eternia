@@ -92,3 +92,49 @@ body {
     user-select: none !important;
     pointer-events: none !important;
 }
+
+/* ── Heroic Primary Buttons Glow & Hover Effects ── */
+button.bg-brand-primary, 
+button.bg-brand-secondary,
+button.bg-amber-500 {
+    transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1) !important;
+    position: relative;
+    overflow: hidden;
+}
+
+button.bg-brand-primary:hover,
+button.bg-brand-secondary:hover,
+button.bg-amber-500:hover {
+    transform: scale(1.02) !important;
+    box-shadow: 0 0 25px rgba(14, 165, 233, 0.4), 0 0 50px rgba(14, 165, 233, 0.15) !important;
+}
+
+button.bg-brand-secondary:hover {
+    box-shadow: 0 0 25px rgba(139, 92, 246, 0.4), 0 0 50px rgba(139, 92, 246, 0.15) !important;
+}
+
+button.bg-amber-500:hover {
+    box-shadow: 0 0 25px rgba(245, 158, 11, 0.4), 0 0 50px rgba(245, 158, 11, 0.15) !important;
+}
+
+/* Shimmer ray flash animation on hover */
+button.bg-brand-primary::after,
+button.bg-brand-secondary::after,
+button.bg-amber-500::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -150%;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.25), transparent);
+    transform: skewX(-25deg);
+    transition: none;
+}
+
+button.bg-brand-primary:hover::after,
+button.bg-brand-secondary:hover::after,
+button.bg-amber-500:hover::after {
+    left: 150%;
+    transition: left 0.8s ease-in-out !important;
+}

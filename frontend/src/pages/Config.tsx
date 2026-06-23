@@ -49,6 +49,86 @@ const getParsedMetrics = (logsText?: string) => {
     return null;
 };
 
+interface StepperStatus {
+    step: number;
+    title: string;
+    description: string;
+    status: 'pending' | 'running' | 'completed' | 'error' | 'warning';
+}
+
+const getStepperStatus = (logsText?: string, statusText?: string): StepperStatus[] => {
+    const steps: StepperStatus[] = [
+        { step: 1, title: 'Inicialización', description: 'Arranque de sistemas', status: 'pending' },
+        { step: 2, title: 'Bypass de WAF', description: 'Validación de CloudFront', status: 'pending' },
+        { step: 3, title: 'Extracción', description: 'Raspado de ofertas', status: 'pending' },
+        { step: 4, title: 'Ingesta', description: 'Persistencia en BD', status: 'pending' },
+    ];
+    
+    if (!logsText) return steps;
+
+    const lower = logsText.toLowerCase();
+
+    // --- STEP 1: Inicialización ---
+    if (lower.includes('desplegando incursión') || lower.includes('iniciando secuencia') || lower.includes('buscando reliquias')) {
+        steps[0].status = 'completed';
+        steps[0].description = 'Sistemas listos';
+    }
+    
+    // --- STEP 2: Bypass de WAF ---
+    if (lower.includes('validando estado de conexión') || lower.includes('intentando conexión directa') || lower.includes('ip de origen detectada')) {
+        steps[1].status = 'running';
+        steps[1].description = 'Verificando firewall';
+    }
+    
+    if (lower.includes('bloqueada por waf')) {
+        if (lower.includes('re-intentando playwright con proxy') || lower.includes('ruteando wallapop api a través de scraperapi')) {
+            steps[1].status = 'completed';
+            steps[1].description = 'Bypass con Proxy';
+        } else {
+            steps[1].status = 'error';
+            steps[1].description = 'IP bloqueada por WAF';
+        }
+    } else if (lower.includes('ip de origen detectada') || lower.includes('bypassing probe') || lower.includes('de forma directa')) {
+        steps[1].status = 'completed';
+        steps[1].description = 'Conexión directa limpia';
+    }
+
+    // --- STEP 3: Extracción ---
+    if (lower.includes('navegando directamente') || lower.includes('buscando') || lower.includes('iniciando búsqueda') || lower.includes('re-intentando playwright con proxy')) {
+        if (steps[1].status !== 'error') {
+            steps[2].status = 'running';
+            steps[2].description = 'Buscando reliquias';
+        }
+    }
+
+    if (lower.includes('halladas') || lower.includes('encontrados') || lower.includes('encontradas') || lower.includes('persistiendo')) {
+        steps[2].status = 'completed';
+        const matchFound = logsText.match(/(?:halladas|encontrados|encontradas) (\d+) reliquias/i) || logsText.match(/encontrados (\d+) objetos/i);
+        const count = matchFound ? matchFound[1] : '?';
+        steps[2].description = `Encontradas ${count} reliquias`;
+    } else if (lower.includes('timeout') || lower.includes('falló la comprobación de red') || lower.includes('error general')) {
+        steps[2].status = 'error';
+        steps[2].description = 'Error de red / Timeout';
+    }
+
+    // --- STEP 4: Ingesta ---
+    if (lower.includes('persistiendo')) {
+        steps[3].status = 'running';
+        steps[3].description = 'Persistiendo ofertas...';
+    }
+
+    if (lower.includes('incursión completada con éxito') || lower.includes('incursión completada') || statusText === 'success' || statusText === 'completed') {
+        steps[3].status = 'completed';
+        steps[3].description = 'BD Purificada con éxito';
+        if (steps[2].status === 'running') steps[2].status = 'completed';
+    } else if (lower.includes('fallo crítico') || statusText === 'error' || lower.includes('error detectado')) {
+        steps[3].status = 'error';
+        steps[3].description = 'Fallo de persistencia';
+    }
+
+    return steps;
+};
+
 const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange }) => {
     const consoleRef = React.useRef<HTMLDivElement>(null);
     const [activeTab, setActiveTab] = useState<'scrapers' | 'system' | 'users' | 'wallapop' | 'inventory'>('scrapers');
@@ -779,6 +859,44 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                             </div>
                                         )}
                                     </div>
+
+                                    {selectedLog && (
+                                        <div className="mb-6 border border-white/10 bg-black/40 p-5 rounded-[2rem] backdrop-blur-3xl shadow-xl relative overflow-hidden">
+                                            <div className="absolute inset-0 bg-gradient-to-r from-brand-primary/5 via-brand-secondary/5 to-transparent pointer-events-none"></div>
+                                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 relative z-10">
+                                                {getStepperStatus(selectedLog.logs, selectedLog.status).map((s) => {
+                                                    const isCompleted = s.status === 'completed';
+                                                    const isRunning = s.status === 'running';
+                                                    const isError = s.status === 'error';
+                                                    
+                                                    let circleColor = 'border-white/10 text-white/40 bg-white/[0.02]';
+                                                    let textColor = 'text-white/45';
+                                                    if (isCompleted) {
+                                                        circleColor = 'border-green-500/30 bg-green-500/10 text-green-400';
+                                                        textColor = 'text-green-400';
+                                                    } else if (isRunning) {
+                                                        circleColor = 'border-brand-primary bg-brand-primary/10 text-brand-primary animate-pulse';
+                                                        textColor = 'text-brand-primary font-bold';
+                                                    } else if (isError) {
+                                                        circleColor = 'border-red-500/30 bg-red-500/10 text-red-400';
+                                                        textColor = 'text-red-400 font-bold';
+                                                    }
+
+                                                    return (
+                                                        <div key={s.step} className="flex items-center sm:items-start gap-3 p-3 rounded-2xl bg-white/[0.01] border border-white/[0.03] hover:border-white/5 transition-all">
+                                                            <div className={`h-8 w-8 rounded-full border flex items-center justify-center font-bold text-xs shrink-0 ${circleColor}`}>
+                                                                {isCompleted ? '✓' : isError ? '✗' : s.step}
+                                                            </div>
+                                                            <div className="flex flex-col min-w-0">
+                                                                <span className={`text-[10px] font-black uppercase tracking-wider truncate ${textColor}`}>{s.title}</span>
+                                                                <span className="text-[9px] text-white/40 truncate">{s.description}</span>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
 
                                     <div className="relative group">
                                         <div className="absolute inset-0 bg-brand-primary/5 blur-3xl rounded-[2.5rem] -z-10 group-hover:bg-brand-primary/10 transition-all"></div>
