@@ -149,11 +149,14 @@ class NexusVintageService:
             try:
                 from src.application.services.storage_service import StorageService
                 storage = StorageService()
-                await storage.ensure_bucket()
+                bucket_ok = await storage.ensure_bucket()
                 
-                images_dir = os.path.join(os.path.dirname(str(excel_path)), "vintage_images")
-                # Upload all images into the specific "vintage" subfolder inside the bucket
-                await loop.run_in_executor(None, storage.upload_all_local_images, images_dir, "vintage")
+                if bucket_ok:
+                    images_dir = os.path.join(os.path.dirname(str(excel_path)), "vintage_images")
+                    # Upload all images into the specific "vintage" subfolder inside the bucket
+                    await loop.run_in_executor(None, storage.upload_all_local_images, images_dir, "vintage")
+                else:
+                    logger.warning("⚠️ Cloud storage sync bypassed (Supabase Storage is unavailable or locked). Local files are fully functional.")
             except Exception as se:
                 logger.warning(f"⚠️ Aviso en Sincro de Imágenes Vintage: {se}")
 

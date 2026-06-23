@@ -17,10 +17,23 @@ class StorageService:
             self.client: Client = create_client(url, key)
         
         self.bucket_name = "motu-catalog"
+        self.storage_disabled = False
+
+    def _get_safe_error_message(self, e: Exception) -> str:
+        try:
+            return str(e)
+        except Exception:
+            try:
+                msg = getattr(e, "message", None)
+                if isinstance(msg, dict):
+                    return f"Storage API Error: {msg.get('error', 'Unknown')} (Status: {msg.get('statusCode', 'Unknown')})"
+                return f"Storage API Error: {msg}"
+            except Exception:
+                return "Unknown storage client error (likely HTTP 402 Payment Required or quota limits exceeded)"
 
     async def ensure_bucket(self):
         """Ensures the motu-catalog bucket exists and is public."""
-        if not self.client: return False
+        if not self.client or self.storage_disabled: return False
         try:
             # Check if bucket exists
             buckets = self.client.storage.list_buckets()
@@ -29,7 +42,11 @@ class StorageService:
                 self.client.storage.create_bucket(self.bucket_name, options={"public": True})
             return True
         except Exception as e:
-            logger.error(f"❌ Error ensuring bucket: {e}")
+            err_msg = self._get_safe_error_message(e)
+            logger.error(f"❌ Error ensuring bucket: {err_msg}")
+            if "402" in err_msg or "Payment" in err_msg or "quota" in err_msg or "attribute" in err_msg:
+                logger.warning("⚠️ Disabling Supabase Storage integration due to quota limits / Payment Required.")
+                self.storage_disabled = True
             return False
 
     def upload_image(self, local_path: str, folder: str = "") -> str:
@@ -37,8 +54,8 @@ class StorageService:
         Uploads a local image to Supabase Storage.
         Returns the public URL of the uploaded image.
         """
-        if not self.client: 
-             logger.warning("⚠️ Storage client not initialized. Skipping upload.")
+        if not self.client or self.storage_disabled: 
+             logger.warning("⚠️ Storage client not initialized or disabled. Skipping upload.")
              return None
              
         path = Path(local_path)
@@ -65,11 +82,18 @@ class StorageService:
             return public_url
             
         except Exception as e:
-            logger.error(f"❌ Error uploading {path_in_bucket}: {e}")
+            err_msg = self._get_safe_error_message(e)
+            logger.error(f"❌ Error uploading {path_in_bucket}: {err_msg}")
+            if "402" in err_msg or "Payment" in err_msg or "quota" in err_msg or "attribute" in err_msg:
+                logger.warning("⚠️ Disabling further Supabase Storage uploads due to quota limits.")
+                self.storage_disabled = True
             return None
 
     def upload_all_local_images(self, images_dir: str, folder: str = ""):
          """Syncs all images in the local folder to the cloud."""
+         if self.storage_disabled:
+              logger.warning("⚠️ Supabase Storage is disabled. Skipping directory sync.")
+              return
          logger.info(f"🔄 Syncing all images from {images_dir} to Cloud folder '{folder}'...")
          p = Path(images_dir)
          if not p.exists(): return
@@ -77,7 +101,11 @@ class StorageService:
          count = 0
          # Match both jpg, png, jpeg, and webp for extra robustness
          for ext in ("*.jpg", "*.png", "*.jpeg", "*.webp"):
+             if self.storage_disabled:
+                  break
              for img_file in p.glob(ext):
+                 if self.storage_disabled:
+                      break
                  url = self.upload_image(str(img_file), folder=folder)
                  if url: count += 1
          
