@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import {
     Flame,
     Zap,
@@ -16,13 +16,8 @@ import {
     ChevronRight,
     X,
     History,
-    ArrowRight,
-    ArrowLeft,
-    ArrowUp,
     ArrowDown,
-    HelpCircle,
-    Check,
-    Briefcase
+    Check
 } from 'lucide-react';
 import { getPurgatory, matchItem, discardItem, discardItemsBulk, matchVintageItem, matchMiscellaneousItem } from '../api/purgatory';
 
@@ -52,7 +47,6 @@ interface SwipeCardProps {
     manualSearchTerm: string;
     setManualSearchTerm: (term: string) => void;
     filteredProducts: any[];
-    matchMutation: any;
 }
 
 const SwipeCard: React.FC<SwipeCardProps> = ({
@@ -73,8 +67,7 @@ const SwipeCard: React.FC<SwipeCardProps> = ({
     setAssociatedProductId,
     manualSearchTerm,
     setManualSearchTerm,
-    filteredProducts,
-    matchMutation
+    filteredProducts
 }) => {
     const x = useMotionValue(0);
     const y = useMotionValue(0);
@@ -91,7 +84,7 @@ const SwipeCard: React.FC<SwipeCardProps> = ({
     const stackScale = 1 - originalIndex * 0.04;
     const stackZ = 50 - originalIndex;
 
-    const handleDragEnd = (event: any, info: any) => {
+    const handleDragEnd = (_event: any, info: any) => {
         if (!isTop) return;
         const threshold = 120;
         const swipeX = info.offset.x;
@@ -331,8 +324,6 @@ const SwipeCard: React.FC<SwipeCardProps> = ({
     );
 };
 
-const PERSISTENCE_KEY = 'purgatory_offline_actions';
-
 const Purgatory: React.FC = React.memo(() => {
     const queryClient = useQueryClient();
     const [searchTerm, setSearchTerm] = useState('');
@@ -353,7 +344,6 @@ const Purgatory: React.FC = React.memo(() => {
     const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'highest_match' | 'lowest_match'>('highest_match');
     const [shopFilter, setShopFilter] = useState<string>('all');
     const [deckItems, setDeckItems] = useState<any[]>([]);
-    const [lastFilteredHash, setLastFilteredHash] = useState('');
     const [associatedProductId, setAssociatedProductId] = useState<number | null>(null);
     const [isSearchingAssociation, setIsSearchingAssociation] = useState(false);
 
@@ -773,9 +763,9 @@ const Purgatory: React.FC = React.memo(() => {
             };
 
             if (sortBy === 'newest') {
-                return new Date(b.found_at || b.scraped_at).getTime() - new Date(a.found_at || a.scraped_at).getTime();
+                return new Date(b.found_at).getTime() - new Date(a.found_at).getTime();
             } else if (sortBy === 'oldest') {
-                return new Date(a.found_at || a.scraped_at).getTime() - new Date(b.found_at || b.scraped_at).getTime();
+                return new Date(a.found_at).getTime() - new Date(b.found_at).getTime();
             } else if (sortBy === 'highest_match') {
                 return getBestScore(b) - getBestScore(a);
             } else if (sortBy === 'lowest_match') {
@@ -792,7 +782,6 @@ const Purgatory: React.FC = React.memo(() => {
 
     useEffect(() => {
         setDeckItems(sortedAndFilteredItems);
-        setLastFilteredHash(filteredHash);
     }, [filteredHash]);
 
     // Sincronizar la asociación por defecto con el primer item de la pila
@@ -1155,7 +1144,7 @@ const Purgatory: React.FC = React.memo(() => {
 
                                 <div className="relative w-full h-[540px] flex items-center justify-center">
                                     <AnimatePresence>
-                                        {deckItems.slice(0, 3).reverse().map((item, idx) => {
+                                        {deckItems.slice(0, 3).reverse().map((item) => {
                                             const originalIndex = deckItems.slice(0, 3).indexOf(item);
                                             const isTop = originalIndex === 0;
                                             return (
@@ -1179,7 +1168,6 @@ const Purgatory: React.FC = React.memo(() => {
                                                     manualSearchTerm={manualSearchTerm}
                                                     setManualSearchTerm={setManualSearchTerm}
                                                     filteredProducts={filteredProducts}
-                                                    matchMutation={matchMutation}
                                                 />
                                             );
                                         })}

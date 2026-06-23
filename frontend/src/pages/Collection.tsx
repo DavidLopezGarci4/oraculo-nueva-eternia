@@ -446,7 +446,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                             const isGrail = product.is_grail;
                             const { adjustedValue, roi, condition, grading } = getAdjustedStats(product, activeTab === 'owned');
 
-                            const isSpecial = product.is_vintage || condition === 'MOC' || grading > 0 || isGrail;
+                            const isSpecial = !!product.is_vintage || condition === 'MOC' || grading > 0 || !!isGrail;
 
                             return (
                                 <FoilTiltCard
