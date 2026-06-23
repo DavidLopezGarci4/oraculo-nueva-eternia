@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import swordAsset from '../../assets/HemanGlassmorphSword.png';
 import vintageSwordAsset from '../../assets/GlassmorphSwordHeMan.png';
-import skeletorSwordAsset from '../../assets/GlassmorphSword.png';
 
 interface PowerSwordLoaderProps {
     className?: string;
@@ -59,7 +58,7 @@ const PowerSwordLoader: React.FC<PowerSwordLoaderProps> = ({
     const activeIsViolet = activeIsSkeletor || (!activeIsVintage);
 
     const isFullScreen = variant === 'fullScreen';
-    const activeSwordAsset = activeIsSkeletor ? skeletorSwordAsset : (activeIsVintage ? vintageSwordAsset : swordAsset);
+    const activeSwordAsset = activeIsVintage ? vintageSwordAsset : swordAsset;
 
     // Get custom/stored vintage sword coordinates or use defaults
     const [vintageCoords, setVintageCoords] = useState({
