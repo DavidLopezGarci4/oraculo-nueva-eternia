@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import patch
 from src.interfaces.api.routers.vault import _image_download_status, _image_download_lock
 
-async def mock_download_no_clear():
+async def mock_download_no_clear(*args, **kwargs):
     global _image_download_status
     with _image_download_lock:
         _image_download_status["active"] = True

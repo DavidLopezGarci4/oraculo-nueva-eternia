@@ -159,6 +159,8 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
     const [mobilePath, setMobilePath] = useState('');
     const [savingImagePaths, setSavingImagePaths] = useState(false);
     const [cachedImagesCount, setCachedImagesCount] = useState(0);
+    const [serverDownloadActive, setServerDownloadActive] = useState(false);
+    const [serverDownloadProgress, setServerDownloadProgress] = useState({ current: 0, total: 0, errors: 0 });
     const cancelDownloadRef = React.useRef(false);
 
     // Vintage Sword Light Ray Calibrator States
@@ -291,6 +293,60 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
         } catch (error) {
             console.error('Error downloading Wallapop IP logs:', error);
             alert('Error al descargar los logs. Compruebe la conexión.');
+        }
+    };
+
+    useEffect(() => {
+        let interval: any;
+        if (serverDownloadActive) {
+            interval = setInterval(async () => {
+                try {
+                    const res = await axios.get('/api/vault/download-images/status');
+                    const status = res.data;
+                    setServerDownloadProgress({
+                        current: status.current,
+                        total: status.total,
+                        errors: status.errors
+                    });
+                    if (!status.active) {
+                        setServerDownloadActive(false);
+                        clearInterval(interval);
+                    }
+                } catch (e) {
+                    console.error("Error al obtener estado de descarga del servidor:", e);
+                }
+            }, 2000);
+        }
+        return () => {
+            if (interval) clearInterval(interval);
+        };
+    }, [serverDownloadActive]);
+
+    const handleServerTriggerDownload = async (clientType: 'pc' | 'mobile') => {
+        const targetPath = clientType === 'pc' ? pcPath : mobilePath;
+        if (!targetPath) {
+            alert(`Por favor, configure y guarde la ruta de almacenamiento de ${clientType.toUpperCase()} primero.`);
+            return;
+        }
+
+        try {
+            setServerDownloadActive(true);
+            const res = await axios.post(`/api/vault/download-images?user_id=${activeUserId}&client_type=${clientType}`);
+            alert(res.data.message);
+        } catch (e) {
+            console.error("Error al iniciar descarga en el servidor:", e);
+            alert("Error al iniciar descarga en el servidor.");
+            setServerDownloadActive(false);
+        }
+    };
+
+    const handleCancelServerDownload = async () => {
+        try {
+            const res = await axios.post('/api/vault/download-images/cancel');
+            setServerDownloadActive(false);
+            alert(res.data.message);
+        } catch (e) {
+            console.error("Error al cancelar descarga en el servidor:", e);
         }
     };
 
@@ -1336,6 +1392,53 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                             {savingImagePaths ? <RefreshCw className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
                                             {savingImagePaths ? 'Guardando...' : 'Guardar Rutas'}
                                         </button>
+
+                                        {serverDownloadActive ? (
+                                            <div className="space-y-2 pt-2 border-t border-white/5">
+                                                <div className="flex justify-between text-[9px] font-black uppercase text-brand-primary">
+                                                    <span>Descargando en servidor...</span>
+                                                    <span>{serverDownloadProgress.current} / {serverDownloadProgress.total}</span>
+                                                </div>
+                                                <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+                                                    <div
+                                                        className="h-full bg-brand-primary transition-all duration-300"
+                                                        style={{ width: `${serverDownloadProgress.total > 0 ? (serverDownloadProgress.current / serverDownloadProgress.total) * 100 : 0}%` }}
+                                                    />
+                                                </div>
+                                                {serverDownloadProgress.errors > 0 && (
+                                                    <p className="text-[8px] text-red-400 font-bold uppercase">
+                                                        Errores: {serverDownloadProgress.errors}
+                                                    </p>
+                                                )}
+                                                <button
+                                                    onClick={handleCancelServerDownload}
+                                                    className="w-full bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/20 py-1.5 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all cursor-pointer flex items-center justify-center"
+                                                >
+                                                    Cancelar Descarga Servidor
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/5">
+                                                <button
+                                                    onClick={() => handleServerTriggerDownload('pc')}
+                                                    disabled={!pcPath}
+                                                    className="bg-brand-primary/10 hover:bg-brand-primary text-brand-primary hover:text-white border border-brand-primary/20 py-1.5 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all disabled:opacity-30 disabled:pointer-events-none cursor-pointer flex items-center justify-center gap-1"
+                                                    title="Descarga todas las imágenes del catálogo en la carpeta local de tu PC"
+                                                >
+                                                    <Download className="h-2.5 w-2.5" />
+                                                    Sincronizar PC
+                                                </button>
+                                                <button
+                                                    onClick={() => handleServerTriggerDownload('mobile')}
+                                                    disabled={!mobilePath}
+                                                    className="bg-brand-primary/10 hover:bg-brand-primary text-brand-primary hover:text-white border border-brand-primary/20 py-1.5 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all disabled:opacity-30 disabled:pointer-events-none cursor-pointer flex items-center justify-center gap-1"
+                                                    title="Descarga todas las imágenes del catálogo en la carpeta local de tu móvil"
+                                                >
+                                                    <Download className="h-2.5 w-2.5" />
+                                                    Sincronizar Móvil
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
 
                                     {/* Browser Cache toggle and control */}

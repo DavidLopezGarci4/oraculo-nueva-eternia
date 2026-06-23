@@ -192,13 +192,17 @@ async def api_sync_excel(user_id: int = 2):
 
 
 @router.post("/api/vault/download-images")
-async def trigger_image_download(background_tasks: BackgroundTasks):
+async def trigger_image_download(
+    background_tasks: BackgroundTasks,
+    user_id: int = 2,
+    client_type: str = "pc"
+):
     global _image_download_status
     with _image_download_lock:
         if _image_download_status["active"]:
             return {"status": "running", "message": "Descarga de imágenes ya en curso."}
             
-    background_tasks.add_task(download_all_images_task)
+    background_tasks.add_task(download_all_images_task, user_id, client_type)
     return {"status": "started", "message": "Descarga de imágenes iniciada en segundo plano."}
 
 

@@ -12,9 +12,7 @@ import {
     Award,
     X,
     Layers,
-    Shield,
-    Eye,
-    EyeOff
+    Shield
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import OracleCart from '../components/cart/OracleCart';
@@ -41,11 +39,9 @@ import { getCollection, type Product } from '../api/collection';
 
 interface DashboardProps {
     user: Hero | null;
-    isIncognito: boolean;
-    onToggleIncognito: () => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ user, isIncognito, onToggleIncognito }) => {
+const Dashboard: React.FC<DashboardProps> = ({ user }) => {
     const { addToCart } = useCart();
     const isAdmin = user?.role === 'admin';
 
@@ -264,13 +260,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isIncognito, onToggleIncogn
                             Bienvenido al Orbe de Grayskull, <span className="text-white font-bold">{user?.username || (isAdmin ? 'Maestro' : 'Guardián')}</span>. La inteligencia de Nueva Eternia converge.
                         </p>
                     </div>
-                    <button
-                        onClick={onToggleIncognito}
-                        className="flex h-[38px] w-[38px] sm:h-[42px] sm:w-[42px] items-center justify-center rounded-xl bg-white/[0.03] border border-white/10 hover:bg-white/10 text-white/65 hover:text-white transition-all duration-300 shadow-md self-end sm:self-auto shrink-0 cursor-pointer"
-                        title={isIncognito ? "Desactivar Modo Incógnito" : "Activar Modo Incógnito"}
-                    >
-                        {isIncognito ? <EyeOff className="h-4 w-4 sm:h-5 sm:w-5" /> : <Eye className="h-4 w-4 sm:h-5 sm:w-5" />}
-                    </button>
                 </div>
             </div>
 

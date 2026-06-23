@@ -327,12 +327,6 @@ function App() {
                   <div className={activeTab === 'dashboard' ? '' : 'hidden'}>
                     <Dashboard 
                       user={currentUser} 
-                      isIncognito={isIncognito}
-                      onToggleIncognito={() => setIsIncognito(prev => {
-                        const val = !prev;
-                        localStorage.setItem('motu_incognito', val ? 'true' : 'false');
-                        return val;
-                      })}
                     />
                   </div>
                 )}
