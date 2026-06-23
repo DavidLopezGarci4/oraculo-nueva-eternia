@@ -88,17 +88,14 @@ def resolve_local_image_path(image_path_str: str, image_url: str = None) -> str 
                 
     return None
 
-def cache_image_locally(src_path: str, product_id: int, session):
-    if os.getenv("GITHUB_ACTIONS") == "true":
-        return
-        
+def cache_image_locally(src_path: str, product_id: int):
     try:
         from PIL import Image
         cache_dir = settings.IMAGE_CACHE_DIR
         os.makedirs(cache_dir, exist_ok=True)
         dest_path = os.path.join(cache_dir, f"{product_id}.webp")
         
-        # 1. Convert to WebP and save in server cache if not exists
+        # Convert to WebP and save in server cache if not exists
         if not os.path.exists(dest_path) or os.path.getsize(dest_path) == 0:
             with Image.open(src_path) as img:
                 if img.mode in ('RGBA', 'LA'):
@@ -109,26 +106,6 @@ def cache_image_locally(src_path: str, product_id: int, session):
                     img = img.convert('RGB')
                 img.save(dest_path, "WEBP", quality=85)
                 logger.info(f"📸 Cached image locally: {dest_path}")
-        
-        # 2. Copy to user's configured custom paths (pc_image_path / mobile_image_path)
-        from src.domain.models import UserModel
-        users = session.query(UserModel).filter(
-            (UserModel.pc_image_path != None) | (UserModel.mobile_image_path != None)
-        ).all()
-        
-        import shutil
-        for user in users:
-            for path_attr in ['pc_image_path', 'mobile_image_path']:
-                custom_dir = getattr(user, path_attr)
-                if custom_dir:
-                    try:
-                        os.makedirs(custom_dir, exist_ok=True)
-                        user_dest = os.path.join(custom_dir, f"{product_id}.webp")
-                        if not os.path.exists(user_dest) or os.path.getsize(user_dest) == 0:
-                            shutil.copy2(dest_path, user_dest)
-                            logger.info(f"📂 Copied WebP to user custom {path_attr}: {user_dest}")
-                    except Exception as ce:
-                        logger.warning(f"⚠️ Failed to copy WebP to custom folder {custom_dir}: {ce}")
     except Exception as e:
         logger.warning(f"⚠️ Error caching image {src_path} for product {product_id}: {e}")
 
@@ -269,7 +246,7 @@ def migrate_excel_to_db(excel_path: str, session):
                         total_imported += 1
                         
                         if resolved_path:
-                            cache_image_locally(resolved_path, product.id, session)
+                            cache_image_locally(resolved_path, product.id)
                     else:
                         # UPDATE existing if needed
                         if figure_id and not product.figure_id:
@@ -286,7 +263,7 @@ def migrate_excel_to_db(excel_path: str, session):
                             supabase_url = getattr(settings, "SUPABASE_URL", "")
                             if supabase_url:
                                 product.image_url = f"{supabase_url}/storage/v1/object/public/motu-catalog/{filename_webp}"
-                            cache_image_locally(resolved_path, product.id, session)
+                            cache_image_locally(resolved_path, product.id)
                         elif not product.image_url:
                             product.image_url = image_url_raw
                         

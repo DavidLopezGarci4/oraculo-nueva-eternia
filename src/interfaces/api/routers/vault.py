@@ -2,6 +2,8 @@ import json
 import os
 import threading
 import httpx
+import io
+import zipfile
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, BackgroundTasks
@@ -239,3 +241,31 @@ async def cancel_image_download():
             _image_download_status["active"] = False
             return {"status": "cancelled", "message": "Descarga cancelada."}
         return {"status": "inactive", "message": "No hay descargas activas."}
+
+
+@router.get("/api/vault/download-images/zip")
+async def download_images_zip():
+    cache_dir = Path(settings.IMAGE_CACHE_DIR)
+    if not cache_dir.exists():
+        raise HTTPException(status_code=404, detail="El directorio de caché de imágenes no existe.")
+    
+    image_files = []
+    for ext in ("*.webp", "*.jpg", "*.jpeg", "*.png"):
+        image_files.extend(cache_dir.glob(ext))
+        
+    if not image_files:
+        raise HTTPException(status_code=404, detail="No hay imágenes en el caché local para descargar.")
+        
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+        for img_path in image_files:
+            zip_file.write(img_path, img_path.name)
+            
+    zip_buffer.seek(0)
+    
+    return StreamingResponse(
+        zip_buffer,
+        media_type="application/zip",
+        headers={"Content-Disposition": "attachment; filename=motu_images.zip"}
+    )
+

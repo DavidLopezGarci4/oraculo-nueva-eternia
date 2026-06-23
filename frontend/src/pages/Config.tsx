@@ -1449,12 +1449,10 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                                 Origen de Imágenes
                                             </span>
                                         </div>
-                                        <div className="grid grid-cols-3 gap-1 pt-1">
-                                            {(['supabase', 'local_cache', 'custom_path'] as const).map((src) => {
+                                        <div className="grid grid-cols-2 gap-1 pt-1">
+                                            {(['supabase', 'local_cache'] as const).map((src) => {
                                                 const isActive = (localStorage.getItem('image_source') || 'supabase') === src;
-                                                let label = 'Nube';
-                                                if (src === 'local_cache') label = 'Caché';
-                                                if (src === 'custom_path') label = 'Ruta User';
+                                                let label = src === 'supabase' ? 'Nube' : 'Caché';
                                                 return (
                                                     <button
                                                         key={src}
@@ -1512,6 +1510,13 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                                 >
                                                     <Download className="h-3 w-3" />
                                                     Descargar todas las imágenes a la caché
+                                                </button>
+                                                <button
+                                                    onClick={() => window.open('/api/vault/download-images/zip', '_blank')}
+                                                    className="w-full bg-emerald-500/15 hover:bg-emerald-500 text-emerald-400 hover:text-white border border-emerald-500/30 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2"
+                                                >
+                                                    <Package className="h-3 w-3" />
+                                                    Descargar ZIP de imágenes WebP
                                                 </button>
                                                 <div className="text-[9px] font-bold text-white/40 uppercase text-center mt-1">
                                                     Imágenes en la caché del navegador: <span className="text-brand-primary">{cachedImagesCount}</span>
