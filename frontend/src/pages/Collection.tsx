@@ -448,11 +448,27 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
 
                             const isSpecial = !!product.is_vintage || condition === 'MOC' || grading > 0 || !!isGrail;
 
+                            const idNum = parseInt(product.figure_id?.replace(/[^0-9]/g, '') || '0');
+                            
+                            let cardBorderClass = 'border-cyan-500/20 bg-black/25 shadow-[0_15px_30px_-10px_rgba(6,182,212,0.08)] hover:shadow-[0_40px_80px_-10px_rgba(6,182,212,0.22)]';
+                            let colorClass = 'text-cyan-400 border-cyan-500/30 bg-black/65'; // Recent/Blue
+                            
+                            if (isGrail) {
+                                cardBorderClass = 'border-orange-500/30 bg-orange-500/[0.02] shadow-[0_15px_30px_-10px_rgba(249,115,22,0.15)] hover:shadow-[0_40px_80px_-10px_rgba(249,115,22,0.35)]';
+                                colorClass = 'text-orange-400 border-orange-500/35 bg-black/65 shadow-[0_0_15px_rgba(249,115,22,0.15)]'; // Grail/Orange
+                            } else if (idNum > 0 && idNum < 4500) {
+                                cardBorderClass = 'border-amber-500/25 bg-amber-500/[0.01] shadow-[0_15px_30px_-10px_rgba(245,158,11,0.1)] hover:shadow-[0_40px_80px_-10px_rgba(245,158,11,0.25)]';
+                                colorClass = 'text-amber-400 border-amber-500/30 bg-black/65'; // Vintage/Amber
+                            } else if (idNum >= 4500 && idNum <= 9500) {
+                                cardBorderClass = 'border-slate-300/15 bg-black/25 hover:shadow-[0_40px_80px_-10px_rgba(255,255,255,0.08)]';
+                                colorClass = 'text-slate-300 border-slate-300/30 bg-black/65'; // Mid/Silver
+                            }
+
                             return (
                                 <FoilTiltCard
                                     key={product.id}
                                     isSpecial={isSpecial}
-                                    className={`group flex flex-col gap-1 sm:gap-1.5 md:gap-3 relative transition-all duration-500 rounded-2xl sm:rounded-3xl p-1.5 sm:p-2 md:p-3.5 border ${isGrail ? 'border-yellow-500/30 bg-yellow-500/10 backdrop-blur-md shadow-[0_30px_60px_-15px_rgba(234,179,8,0.2)]' : 'border-white/5 bg-black/25 backdrop-blur-md hover:bg-black/20'}`}
+                                    className={`group flex flex-col gap-1 sm:gap-1.5 md:gap-3 relative transition-all duration-500 rounded-2xl sm:rounded-3xl p-1.5 sm:p-2 md:p-3.5 border backdrop-blur-md ${cardBorderClass}`}
                                 >
                                     {/* Image Container */}
                                     <div 
@@ -476,11 +492,11 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
 
                                         {/* Corner Badges */}
                                         <div className="absolute top-2 left-2 sm:top-3 sm:left-3 z-40 flex items-center gap-1">
-                                            <div className="rounded-lg bg-black/70 px-2 py-0.5 text-[8px] sm:text-[9px] font-black text-white/90 backdrop-blur-md border border-white/20 shadow-2xl uppercase tracking-widest">
+                                            <div className={`rounded-lg px-2 py-0.5 text-[8px] sm:text-[9px] font-black backdrop-blur-md border shadow-2xl transition-all transform uppercase tracking-widest ${colorClass}`}>
                                                 #{product.figure_id}
                                             </div>
                                             {isGrail && (
-                                                <div className="rounded-lg bg-yellow-500 text-black px-2 py-0.5 text-[8px] sm:text-[9px] font-black backdrop-blur-md border border-yellow-400 shadow-[0_0_20px_rgba(234,179,8,0.5)] flex items-center gap-1">
+                                                <div className="rounded-lg bg-orange-500 text-black px-2 py-0.5 text-[8px] sm:text-[9px] font-black backdrop-blur-md border border-orange-400 shadow-[0_0_20px_rgba(249,115,22,0.5)] flex items-center gap-1">
                                                     <Trophy className="h-2.5 w-2.5" />
                                                     GRIAL
                                                 </div>
@@ -509,7 +525,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
 
                                         <div className="flex flex-wrap items-center gap-1 pt-0.5">
                                             {adjustedValue > 0 && (
-                                                <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-lg border font-black text-[8px] sm:text-[9px] whitespace-nowrap ${isGrail ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' : (isVintageOnly ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'bg-brand-primary/10 text-brand-primary border-brand-primary/20')}`}>
+                                                <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-lg border font-black text-[8px] sm:text-[9px] whitespace-nowrap ${isGrail ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' : (isVintageOnly ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'bg-brand-primary/10 text-brand-primary border-brand-primary/20')}`}>
                                                     <Euro className="h-2 w-2 sm:h-2.5 sm:w-2.5" />
                                                     <span>{adjustedValue.toFixed(2)}€</span>
                                                 </div>

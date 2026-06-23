@@ -236,8 +236,6 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
         enabled: viewMode === 'cronos'
     });
 
-    const hasMarketIntel = (productId: number) => productsWithOffers?.includes(productId);
-
     // 4. Mutación para alternar estado (Optimistic Updates)
     const toggleMutation = useMutation({
         mutationFn: ({ productId, wish }: { productId: number, wish: boolean }) => toggleCollection(productId, activeUserId, wish),
@@ -1043,19 +1041,26 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                 </div>
             ) : (
                 <div className="grid grid-cols-2 gap-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4 landscape:grid-cols-3">
-                {sortedProducts?.map((product) => {
+                 {sortedProducts?.map((product) => {
                     const owned = isOwned(product.id);
                     const wished = isWished(product.id);
-                    const hasIntel = hasMarketIntel(product.id);
+                    
+                    const idNum = parseInt(product.figure_id?.replace(/[^0-9]/g, '') || '0');
+                    const itemIsGrail = isGrail(product.id);
+                    
+                    let cardBorderClass = 'border-cyan-500/20 bg-black/25 shadow-[0_15px_30px_-10px_rgba(6,182,212,0.08)] hover:shadow-[0_40px_80px_-10px_rgba(6,182,212,0.22)]';
+                    if (itemIsGrail) {
+                        cardBorderClass = 'border-orange-500/30 bg-orange-500/[0.02] shadow-[0_15px_30px_-10px_rgba(249,115,22,0.15)] hover:shadow-[0_40px_80px_-10px_rgba(249,115,22,0.35)]';
+                    } else if (idNum > 0 && idNum < 4500) {
+                        cardBorderClass = 'border-amber-500/25 bg-amber-500/[0.01] shadow-[0_15px_30px_-10px_rgba(245,158,11,0.1)] hover:shadow-[0_40px_80px_-10px_rgba(245,158,11,0.25)]';
+                    } else if (idNum >= 4500 && idNum <= 9500) {
+                        cardBorderClass = 'border-slate-300/15 bg-black/25 hover:shadow-[0_40px_80px_-10px_rgba(255,255,255,0.08)]';
+                    }
+                    
                     return (
                         <div
                             key={product.id}
-                            className={`group relative flex flex-col gap-1 sm:gap-1.5 md:gap-3 rounded-2xl sm:rounded-[1.5rem] md:rounded-3xl border p-1.5 sm:p-2 md:p-3.5 transition-all duration-500 hover:translate-y-[-8px] ${hasIntel
-                                ? (isVintageOnly
-                                    ? 'border-amber-500/50 bg-amber-500/[0.04] shadow-[0_0_22px_2px_rgba(245,158,11,0.3)] hover:shadow-[0_40px_80px_-10px_rgba(245,158,11,0.45)]'
-                                    : 'border-brand-primary/50 bg-brand-primary/[0.04] shadow-[0_0_22px_2px_rgba(14,165,233,0.3)] hover:shadow-[0_40px_80px_-10px_rgba(14,165,233,0.45)]')
-                                : 'border-white/5 bg-black/25 backdrop-blur-md hover:bg-black/20 hover:shadow-[0_40px_80px_-20px_rgba(0,0,0,0.5)]'
-                                }`}
+                            className={`group relative flex flex-col gap-1 sm:gap-1.5 md:gap-3 rounded-2xl sm:rounded-[1.5rem] md:rounded-3xl border p-1.5 sm:p-2 md:p-3.5 transition-all duration-500 hover:translate-y-[-8px] backdrop-blur-md ${cardBorderClass}`}
                         >
                             {/* Owned/Wish Badge */}
                             {owned && (
@@ -1131,9 +1136,16 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
 
                                 {(() => {
                                     const idNum = parseInt(product.figure_id?.replace(/[^0-9]/g, '') || '0');
-                                    let colorClass = 'text-blue-400 border-blue-400/20 bg-blue-400/10'; // Recent/Blue
-                                    if (idNum > 0 && idNum < 4500) colorClass = 'text-amber-500 border-amber-500/20 bg-amber-500/10'; // Vintage/Amber
-                                    if (idNum >= 4500 && idNum <= 9500) colorClass = 'text-slate-300 border-slate-300/20 bg-slate-300/10'; // Mid/Silver
+                                    const itemIsGrail = isGrail(product.id);
+                                    
+                                    let colorClass = 'text-cyan-400 border-cyan-500/30 bg-black/65'; // Recent/Blue
+                                    if (itemIsGrail) {
+                                        colorClass = 'text-orange-400 border-orange-500/35 bg-black/65 shadow-[0_0_15px_rgba(249,115,22,0.15)]'; // Grail/Orange
+                                    } else if (idNum > 0 && idNum < 4500) {
+                                        colorClass = 'text-amber-400 border-amber-500/30 bg-black/65'; // Vintage/Amber
+                                    } else if (idNum >= 4500 && idNum <= 9500) {
+                                        colorClass = 'text-slate-300 border-slate-300/30 bg-black/65'; // Mid/Silver
+                                    }
  
                                     // Valuation Priority Logic
                                     const displayPrice = product.best_p2p_price || product.avg_market_price || 0;
