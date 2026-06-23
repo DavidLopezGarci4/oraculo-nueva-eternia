@@ -24,7 +24,6 @@ import {
     exportCollectionSqlite,
     updateUserLocation,
     updateUserPublicShowcase,
-    updateUserImagePaths,
     type ScraperStatus,
     type Hero
 } from '../api/admin';
@@ -155,12 +154,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
 
     const [, setLocalImagesEnabled] = useState(() => localStorage.getItem('use_local_images') === 'true');
     const [downloadStatus, setDownloadStatus] = useState({ active: false, total: 0, current: 0, errors: 0, last_error: null as string | null });
-    const [pcPath, setPcPath] = useState('');
-    const [mobilePath, setMobilePath] = useState('');
-    const [savingImagePaths, setSavingImagePaths] = useState(false);
     const [cachedImagesCount, setCachedImagesCount] = useState(0);
-    const [serverDownloadActive, setServerDownloadActive] = useState(false);
-    const [serverDownloadProgress, setServerDownloadProgress] = useState({ current: 0, total: 0, errors: 0 });
     const cancelDownloadRef = React.useRef(false);
 
     // Vintage Sword Light Ray Calibrator States
@@ -172,18 +166,9 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
         tY: 20.5
     });
 
-    // He-Man Modern Sword Light Ray Calibrator States
+    // He-Man Modern Sword Light Ray Calibrator States (Renamed visually to Skeletor)
     const [showModernCalibrator, setShowModernCalibrator] = useState(false);
     const [modernCoords, setModernCoords] = useState({
-        gX: 125.0,
-        gY: 175.0,
-        tX: 125.0,
-        tY: 10.0
-    });
-
-    // Skeletor Vintage Light Ray Calibrator States
-    const [showSkeletorCalibrator, setShowSkeletorCalibrator] = useState(false);
-    const [skeletorCoords, setSkeletorCoords] = useState({
         gX: 125.0,
         gY: 175.0,
         tX: 125.0,
@@ -219,19 +204,6 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
         }
     }, [showModernCalibrator]);
 
-    useEffect(() => {
-        if (showSkeletorCalibrator) {
-            const stored = localStorage.getItem('skeletor_sword_coords');
-            if (stored) {
-                try {
-                    setSkeletorCoords(JSON.parse(stored));
-                } catch (e) {
-                    console.error("Failed to parse skeletor sword coords", e);
-                }
-            }
-        }
-    }, [showSkeletorCalibrator]);
-
     const handleSaveCalib = () => {
         localStorage.setItem('vintage_sword_coords', JSON.stringify(calibCoords));
         setShowCalibrator(false);
@@ -253,20 +225,6 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
 
     const handleResetModernCalib = () => {
         setModernCoords({
-            gX: 125.0,
-            gY: 175.0,
-            tX: 125.0,
-            tY: 10.0
-        });
-    };
-
-    const handleSaveSkeletorCalib = () => {
-        localStorage.setItem('skeletor_sword_coords', JSON.stringify(skeletorCoords));
-        setShowSkeletorCalibrator(false);
-    };
-
-    const handleResetSkeletorCalib = () => {
-        setSkeletorCoords({
             gX: 125.0,
             gY: 175.0,
             tX: 125.0,
@@ -296,60 +254,6 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
         }
     };
 
-    useEffect(() => {
-        let interval: any;
-        if (serverDownloadActive) {
-            interval = setInterval(async () => {
-                try {
-                    const res = await axios.get('/api/vault/download-images/status');
-                    const status = res.data;
-                    setServerDownloadProgress({
-                        current: status.current,
-                        total: status.total,
-                        errors: status.errors
-                    });
-                    if (!status.active) {
-                        setServerDownloadActive(false);
-                        clearInterval(interval);
-                    }
-                } catch (e) {
-                    console.error("Error al obtener estado de descarga del servidor:", e);
-                }
-            }, 2000);
-        }
-        return () => {
-            if (interval) clearInterval(interval);
-        };
-    }, [serverDownloadActive]);
-
-    const handleServerTriggerDownload = async (clientType: 'pc' | 'mobile') => {
-        const targetPath = clientType === 'pc' ? pcPath : mobilePath;
-        if (!targetPath) {
-            alert(`Por favor, configure y guarde la ruta de almacenamiento de ${clientType.toUpperCase()} primero.`);
-            return;
-        }
-
-        try {
-            setServerDownloadActive(true);
-            const res = await axios.post(`/api/vault/download-images?user_id=${activeUserId}&client_type=${clientType}`);
-            alert(res.data.message);
-        } catch (e) {
-            console.error("Error al iniciar descarga en el servidor:", e);
-            alert("Error al iniciar descarga en el servidor.");
-            setServerDownloadActive(false);
-        }
-    };
-
-    const handleCancelServerDownload = async () => {
-        try {
-            const res = await axios.post('/api/vault/download-images/cancel');
-            setServerDownloadActive(false);
-            alert(res.data.message);
-        } catch (e) {
-            console.error("Error al cancelar descarga en el servidor:", e);
-        }
-    };
-
     // We will download images directly in the browser's Cache API for Option C
     const handleTriggerDownload = async () => {
         cancelDownloadRef.current = false;
@@ -362,9 +266,12 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
         });
 
         try {
-            // 1. Fetch all products to get their IDs and image URLs
-            const response = await axios.get('/api/products');
-            const products = response.data;
+            // 1. Fetch both non-vintage and vintage products to get their IDs and image URLs
+            const [modernRes, vintageRes] = await Promise.all([
+                axios.get('/api/products'),
+                axios.get('/api/products?is_vintage=true')
+            ]);
+            const products = [...modernRes.data, ...vintageRes.data];
             // Filter products that actually have image urls
             const productsWithImages = products.filter((p: any) => p.image_url);
             const totalCount = productsWithImages.length;
@@ -494,13 +401,6 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
         }
     };
 
-    useEffect(() => {
-        if (userSettings) {
-            setPcPath(userSettings.pc_image_path || '');
-            setMobilePath(userSettings.mobile_image_path || '');
-        }
-    }, [userSettings]);
-
     const updateCachedImagesCount = async () => {
         try {
             const cache = await caches.open('motu-image-cache');
@@ -514,19 +414,6 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
     useEffect(() => {
         updateCachedImagesCount();
     }, [downloadStatus.active]);
-
-    const handleSaveImagePaths = async () => {
-        setSavingImagePaths(true);
-        try {
-            await updateUserImagePaths(activeUserId, pcPath || null, mobilePath || null);
-            alert("Rutas personales guardadas con éxito en la base de datos.");
-        } catch (e) {
-            console.error("Error saving image paths:", e);
-            alert("Error al guardar las rutas personales en la base de datos.");
-        } finally {
-            setSavingImagePaths(false);
-        }
-    };
 
     const runScrapersMutation = useMutation({
         mutationFn: (scraperName: string) => runScrapers(scraperName, 'manual'),
@@ -1358,89 +1245,6 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                     <p className="text-[10px] text-white/65 font-bold uppercase leading-tight">
                                         Permite almacenar y cargar las imágenes de tus figuras directamente desde el almacenamiento interno del navegador para navegación instantánea y modo offline.
                                     </p>
-
-                                    {/* Personal Paths Settings (Informativo) */}
-                                    <div className="space-y-3 p-3 bg-white/5 rounded-2xl border border-white/5">
-                                        <div className="text-[9px] font-black uppercase text-brand-primary tracking-wider mb-1">
-                                            Rutas Personales de Registro
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-[8px] font-bold uppercase text-white/40 tracking-wider">Ruta de Almacenamiento en PC</label>
-                                            <input
-                                                type="text"
-                                                value={pcPath}
-                                                onChange={(e) => setPcPath(e.target.value)}
-                                                placeholder="Ej. C:\Figuras\Cache"
-                                                className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white placeholder-white/20 focus:outline-none focus:border-brand-primary transition-colors"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-[8px] font-bold uppercase text-white/40 tracking-wider">Ruta de Almacenamiento en Móvil</label>
-                                            <input
-                                                type="text"
-                                                value={mobilePath}
-                                                onChange={(e) => setMobilePath(e.target.value)}
-                                                placeholder="Ej. /storage/emulated/0/Download"
-                                                className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white placeholder-white/20 focus:outline-none focus:border-brand-primary transition-colors"
-                                            />
-                                        </div>
-                                        <button
-                                            onClick={handleSaveImagePaths}
-                                            disabled={savingImagePaths}
-                                            className="w-full bg-white/10 hover:bg-white/15 text-white border border-white/10 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
-                                        >
-                                            {savingImagePaths ? <RefreshCw className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
-                                            {savingImagePaths ? 'Guardando...' : 'Guardar Rutas'}
-                                        </button>
-
-                                        {serverDownloadActive ? (
-                                            <div className="space-y-2 pt-2 border-t border-white/5">
-                                                <div className="flex justify-between text-[9px] font-black uppercase text-brand-primary">
-                                                    <span>Descargando en servidor...</span>
-                                                    <span>{serverDownloadProgress.current} / {serverDownloadProgress.total}</span>
-                                                </div>
-                                                <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
-                                                    <div
-                                                        className="h-full bg-brand-primary transition-all duration-300"
-                                                        style={{ width: `${serverDownloadProgress.total > 0 ? (serverDownloadProgress.current / serverDownloadProgress.total) * 100 : 0}%` }}
-                                                    />
-                                                </div>
-                                                {serverDownloadProgress.errors > 0 && (
-                                                    <p className="text-[8px] text-red-400 font-bold uppercase">
-                                                        Errores: {serverDownloadProgress.errors}
-                                                    </p>
-                                                )}
-                                                <button
-                                                    onClick={handleCancelServerDownload}
-                                                    className="w-full bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/20 py-1.5 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all cursor-pointer flex items-center justify-center"
-                                                >
-                                                    Cancelar Descarga Servidor
-                                                </button>
-                                            </div>
-                                        ) : (
-                                            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/5">
-                                                <button
-                                                    onClick={() => handleServerTriggerDownload('pc')}
-                                                    disabled={!pcPath}
-                                                    className="bg-brand-primary/10 hover:bg-brand-primary text-brand-primary hover:text-white border border-brand-primary/20 py-1.5 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all disabled:opacity-30 disabled:pointer-events-none cursor-pointer flex items-center justify-center gap-1"
-                                                    title="Descarga todas las imágenes del catálogo en la carpeta local de tu PC"
-                                                >
-                                                    <Download className="h-2.5 w-2.5" />
-                                                    Sincronizar PC
-                                                </button>
-                                                <button
-                                                    onClick={() => handleServerTriggerDownload('mobile')}
-                                                    disabled={!mobilePath}
-                                                    className="bg-brand-primary/10 hover:bg-brand-primary text-brand-primary hover:text-white border border-brand-primary/20 py-1.5 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all disabled:opacity-30 disabled:pointer-events-none cursor-pointer flex items-center justify-center gap-1"
-                                                    title="Descarga todas las imágenes del catálogo en la carpeta local de tu móvil"
-                                                >
-                                                    <Download className="h-2.5 w-2.5" />
-                                                    Sincronizar Móvil
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-
                                     {/* Origen de Imágenes Selection */}
                                     <div className="space-y-2 p-3 bg-white/5 rounded-xl border border-white/5">
                                         <div className="flex items-center justify-between">
@@ -1546,12 +1350,12 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
 
                             {/* Calibradores de Haces de Luz */}
                             {isAdmin && (
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    {/* Calibrador de Haces de Luz Moderno */}
-                                    <div className="glass border border-cyan-500/30 p-6 rounded-3xl space-y-4 bg-cyan-500/5">
-                                        <div className="flex items-center gap-3 text-cyan-400 font-bold uppercase tracking-widest text-xs mb-2">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {/* Calibrador de Haces de Luz Moderno (Visualmente Skeletor) */}
+                                    <div className="glass border border-purple-500/30 p-6 rounded-3xl space-y-4 bg-purple-500/5">
+                                        <div className="flex items-center gap-3 text-purple-400 font-bold uppercase tracking-widest text-xs mb-2">
                                             <Zap className="h-4 w-4" />
-                                            He-Man Moderno
+                                            Skeletor
                                         </div>
                                         <div className="space-y-4">
                                             <p className="text-[10px] text-white/65 font-bold uppercase leading-tight">
@@ -1559,7 +1363,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                             </p>
                                             <button
                                                 onClick={() => setShowModernCalibrator(true)}
-                                                className="w-full bg-cyan-500/10 hover:bg-cyan-500 text-cyan-400 hover:text-black border border-cyan-500/25 px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/0 hover:shadow-cyan-500/25"
+                                                className="w-full bg-purple-500/10 hover:bg-purple-500 text-purple-400 hover:text-black border border-purple-500/25 px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg shadow-purple-500/0 hover:shadow-purple-500/25"
                                             >
                                                 <Settings className="h-3.5 w-3.5" />
                                                 Calibrar Espada He-Man
@@ -1583,26 +1387,6 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                             >
                                                 <Settings className="h-3.5 w-3.5" />
                                                 Calibrar Espada Vintage
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    {/* Calibrador de Haces de Luz Skeletor */}
-                                    <div className="glass border border-purple-500/30 p-6 rounded-3xl space-y-4 bg-purple-500/5">
-                                        <div className="flex items-center gap-3 text-purple-500 font-bold uppercase tracking-widest text-xs mb-2">
-                                            <Zap className="h-4 w-4" />
-                                            Skeletor Vintage
-                                        </div>
-                                        <div className="space-y-4">
-                                            <p className="text-[10px] text-white/65 font-bold uppercase leading-tight">
-                                                Calibra la posición exacta de los haces de luz sobre la espada en la silueta de Skeletor.
-                                            </p>
-                                            <button
-                                                onClick={() => setShowSkeletorCalibrator(true)}
-                                                className="w-full bg-purple-500/10 hover:bg-purple-500 text-purple-500 hover:text-black border border-purple-500/25 px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg shadow-purple-500/0 hover:shadow-purple-500/25"
-                                            >
-                                                <Settings className="h-3.5 w-3.5" />
-                                                Calibrar Espada Skeletor
                                             </button>
                                         </div>
                                     </div>
@@ -1667,14 +1451,6 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                     </div>
                                 </div>
                             )}
-                        </div>
-
-                        <div className="p-8 glass border border-dashed border-white/10 rounded-[3rem] bg-brand-primary/5 flex flex-col items-center gap-4">
-                            <AlertCircle className="h-8 w-8 text-brand-primary animate-pulse" />
-                            <div className="text-center">
-                                <h4 className="text-white font-bold">Panel Protector Activo</h4>
-                                <p className="text-white/65 text-sm max-w-md mx-auto">Estas configuraciones se sincronizarán con los workers de GitHub Actions y el Backend en la Phase 13.</p>
-                            </div>
                         </div>
                     </motion.div>
                 ) : activeTab === 'users' ? (
@@ -2416,177 +2192,6 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                     </button>
                                     <button
                                         onClick={() => setShowModernCalibrator(false)}
-                                        className="px-4 py-2.5 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 text-white font-black text-[10px] uppercase tracking-widest transition-all"
-                                    >
-                                        Cerrar
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Skeletor Vintage loading screen Calibrator Modal */}
-            {showSkeletorCalibrator && (
-                <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-md p-4 flex justify-center items-start animate-in fade-in duration-300 custom-scrollbar">
-                    <div className="relative w-full max-w-4xl my-8 md:my-12 rounded-[2.5rem] border border-purple-500/30 bg-[#0A0A0B] p-6 md:p-8 flex flex-col gap-6 shadow-[0_0_50px_rgba(168,85,247,0.2)]">
-                        <div className="flex items-center gap-3">
-                            <div className="p-3 rounded-xl bg-purple-500/10">
-                                <Zap className="h-6 w-6 text-purple-500 animate-pulse" />
-                            </div>
-                            <div>
-                                <h4 className="text-2xl font-black text-white">Calibrador de Pantalla de Carga <span className="text-purple-500">Skeletor Vintage</span></h4>
-                                <p className="text-[10px] text-white/50 font-bold uppercase tracking-wider">Alinea los rayos de energía mágica sobre la Espada de Skeletor</p>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center justify-center">
-                            {/* Preview Area */}
-                            <div className="flex flex-col items-center justify-center gap-4 bg-black/40 border border-white/5 p-6 rounded-3xl">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-purple-500/60">Simulador de Pantalla de Carga</span>
-                                
-                                <div className="relative w-64 h-64 border border-white/10 rounded-2xl overflow-hidden bg-[#050608] flex items-center justify-center shadow-inner">
-                                    <PowerSwordLoader 
-                                        isSkeletor={true} 
-                                        size={250} 
-                                        skeletorGuardX={skeletorCoords.gX}
-                                        skeletorGuardY={skeletorCoords.gY}
-                                        skeletorTipX={skeletorCoords.tX}
-                                        skeletorTipY={skeletorCoords.tY}
-                                        progress={parseFloat(localStorage.getItem('calib_test_progress_skeletor') || '75')} 
-                                    />
-                                    
-                                    {/* Overlay helper lines to visually debug guard & tip points */}
-                                    <svg viewBox="0 0 250 250" className="absolute inset-0 w-full h-full pointer-events-none">
-                                        {/* Guard center indicator */}
-                                        <circle cx={skeletorCoords.gX} cy={skeletorCoords.gY} r="4" fill="#a855f7" stroke="white" strokeWidth="1" />
-                                        <text x={skeletorCoords.gX + 6} y={skeletorCoords.gY + 3} fill="#a855f7" fontSize="8" fontWeight="bold">Empuñadura ({skeletorCoords.gX.toFixed(1)}, {skeletorCoords.gY.toFixed(1)})</text>
-                                        
-                                        {/* Tip indicator */}
-                                        <circle cx={skeletorCoords.tX} cy={skeletorCoords.tY} r="4" fill="#ec4899" stroke="white" strokeWidth="1" />
-                                        <text x={skeletorCoords.tX + 6} y={skeletorCoords.tY + 3} fill="#ec4899" fontSize="8" fontWeight="bold">Punta ({skeletorCoords.tX.toFixed(1)}, {skeletorCoords.tY.toFixed(1)})</text>
-                                        
-                                        {/* Axis line */}
-                                        <line x1={skeletorCoords.gX} y1={skeletorCoords.gY} x2={skeletorCoords.tX} y2={skeletorCoords.tY} stroke="rgba(168,85,247,0.3)" strokeDasharray="3" strokeWidth="1.5" />
-                                    </svg>
-                                </div>
-                                
-                                <div className="w-full space-y-1">
-                                    <div className="flex justify-between text-[10px] text-white/50 font-bold">
-                                        <span>PROGRESO DE PRUEBA</span>
-                                        <span className="text-purple-500 font-mono">{localStorage.getItem('calib_test_progress_skeletor') || '75'}%</span>
-                                    </div>
-                                    <input 
-                                        type="range" 
-                                        min="0" 
-                                        max="100" 
-                                        value={localStorage.getItem('calib_test_progress_skeletor') || '75'}
-                                        onChange={(e) => {
-                                            localStorage.setItem('calib_test_progress_skeletor', e.target.value);
-                                            // Trigger state update to re-render preview
-                                            setSkeletorCoords({ ...skeletorCoords });
-                                        }}
-                                        className="w-full accent-purple-500" 
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Controls Area */}
-                            <div className="space-y-6">
-                                <div className="space-y-4 bg-white/[0.02] border border-white/5 p-4 rounded-2xl">
-                                    <div className="flex items-center gap-2 text-[#a855f7] font-bold text-xs uppercase tracking-widest">
-                                        <div className="h-2 w-2 rounded-full bg-[#a855f7]" />
-                                        Punto de Empuñadura (X, Y)
-                                    </div>
-                                    <div className="space-y-3">
-                                        <div>
-                                            <div className="flex justify-between text-[10px] text-white/50 font-bold mb-1">
-                                                <span>Horizontal (X)</span>
-                                                <span className="text-white font-mono">{skeletorCoords.gX}px</span>
-                                            </div>
-                                            <input 
-                                                type="range" 
-                                                min="0" 
-                                                max="250" 
-                                                step="0.5"
-                                                value={skeletorCoords.gX}
-                                                onChange={(e) => setSkeletorCoords({ ...skeletorCoords, gX: parseFloat(e.target.value) })}
-                                                className="w-full accent-purple-500" 
-                                            />
-                                        </div>
-                                        <div>
-                                            <div className="flex justify-between text-[10px] text-white/50 font-bold mb-1">
-                                                <span>Vertical (Y)</span>
-                                                <span className="text-white font-mono">{skeletorCoords.gY}px</span>
-                                            </div>
-                                            <input 
-                                                type="range" 
-                                                min="0" 
-                                                max="250" 
-                                                step="0.5"
-                                                value={skeletorCoords.gY}
-                                                onChange={(e) => setSkeletorCoords({ ...skeletorCoords, gY: parseFloat(e.target.value) })}
-                                                className="w-full accent-purple-500" 
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-4 bg-white/[0.02] border border-white/5 p-4 rounded-2xl">
-                                    <div className="flex items-center gap-2 text-[#ec4899] font-bold text-xs uppercase tracking-widest">
-                                        <div className="h-2 w-2 rounded-full bg-[#ec4899]" />
-                                        Punto de la Punta (X, Y)
-                                    </div>
-                                    <div className="space-y-3">
-                                        <div>
-                                            <div className="flex justify-between text-[10px] text-white/50 font-bold mb-1">
-                                                <span>Horizontal (X)</span>
-                                                <span className="text-white font-mono">{skeletorCoords.tX}px</span>
-                                            </div>
-                                            <input 
-                                                type="range" 
-                                                min="0" 
-                                                max="250" 
-                                                step="0.5"
-                                                value={skeletorCoords.tX}
-                                                onChange={(e) => setSkeletorCoords({ ...skeletorCoords, tX: parseFloat(e.target.value) })}
-                                                className="w-full accent-pink-500" 
-                                            />
-                                        </div>
-                                        <div>
-                                            <div className="flex justify-between text-[10px] text-white/50 font-bold mb-1">
-                                                <span>Vertical (Y)</span>
-                                                <span className="text-white font-mono">{skeletorCoords.tY}px</span>
-                                            </div>
-                                            <input 
-                                                type="range" 
-                                                min="0" 
-                                                max="250" 
-                                                step="0.5"
-                                                value={skeletorCoords.tY}
-                                                onChange={(e) => setSkeletorCoords({ ...skeletorCoords, tY: parseFloat(e.target.value) })}
-                                                className="w-full accent-pink-500" 
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center gap-2 pt-2">
-                                    <button
-                                        onClick={handleResetSkeletorCalib}
-                                        className="flex-1 px-4 py-2.5 rounded-xl border border-white/10 text-white/70 hover:text-white hover:bg-white/5 font-black text-[10px] uppercase tracking-widest transition-all"
-                                    >
-                                        Restablecer
-                                    </button>
-                                    <button
-                                        onClick={handleSaveSkeletorCalib}
-                                        className="flex-1 px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-black text-[10px] uppercase tracking-widest transition-all shadow-[0_0_20px_rgba(168,85,247,0.2)]"
-                                    >
-                                        Guardar en Eternia
-                                    </button>
-                                    <button
-                                        onClick={() => setShowSkeletorCalibrator(false)}
                                         className="px-4 py-2.5 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 text-white font-black text-[10px] uppercase tracking-widest transition-all"
                                     >
                                         Cerrar

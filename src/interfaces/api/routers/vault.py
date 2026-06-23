@@ -1,12 +1,10 @@
 import json
 import os
-import threading
-import httpx
 import io
 import zipfile
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 from loguru import logger
 
@@ -14,117 +12,6 @@ from src.infrastructure.database_cloud import SessionCloud
 from src.core.config import settings
 
 router = APIRouter(tags=["vault"])
-
-# Estado de la descarga de imágenes en caché
-_image_download_status = {
-    "active": False,
-    "total": 0,
-    "current": 0,
-    "errors": 0,
-    "last_error": None
-}
-_image_download_lock = threading.Lock()
-
-
-async def download_all_images_task(user_id: int = 2, client_type: str = "pc"):
-    global _image_download_status
-    
-    from src.domain.models import ProductModel, UserModel
-    
-    with SessionCloud() as db:
-        products = db.query(ProductModel).all()
-        user = db.query(UserModel).filter(UserModel.id == user_id).first()
-        
-    image_cache_dir = settings.IMAGE_CACHE_DIR
-    if user:
-        custom_path = user.mobile_image_path if client_type == "mobile" else user.pc_image_path
-        if custom_path:
-            try:
-                os.makedirs(custom_path, exist_ok=True)
-                image_cache_dir = custom_path
-            except Exception as e:
-                logger.warning(f"No se pudo crear la ruta personalizada {custom_path}: {e}")
-                
-    os.makedirs(image_cache_dir, exist_ok=True)
-    
-    with _image_download_lock:
-        _image_download_status["active"] = True
-        _image_download_status["total"] = len(products)
-        _image_download_status["current"] = 0
-        _image_download_status["errors"] = 0
-        _image_download_status["last_error"] = None
-        
-    async with httpx.AsyncClient(timeout=10) as client:
-        for p in products:
-            # Control de cancelación
-            with _image_download_lock:
-                if not _image_download_status["active"]:
-                    break
-                
-            if not p.image_url:
-                with _image_download_lock:
-                    _image_download_status["current"] += 1
-                continue
-                
-            file_path = os.path.join(image_cache_dir, f"{p.id}.webp")
-            
-            # 1. Intentar copiar desde la caché local del servidor (data/image_cache) para evitar descargas HTTP de Supabase (bloqueado por quota/402)
-            server_cache_file = os.path.join("data/image_cache", f"{p.id}.webp")
-            if os.path.exists(server_cache_file) and os.path.getsize(server_cache_file) > 0:
-                if os.path.abspath(server_cache_file) != os.path.abspath(file_path):
-                    import shutil
-                    try:
-                        shutil.copy2(server_cache_file, file_path)
-                        with _image_download_lock:
-                            _image_download_status["current"] += 1
-                        continue
-                    except Exception as ce:
-                        logger.warning(f"Error copiando imagen local {p.id} a destino: {ce}")
-                else:
-                    # Si es la misma ruta, ya existe en el disco y es válida
-                    with _image_download_lock:
-                        _image_download_status["current"] += 1
-                    continue
-
-            # Si ya está en disco y pesa algo (caso general), saltar
-            if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
-                with _image_download_lock:
-                    _image_download_status["current"] += 1
-                continue
-                
-            try:
-                headers = {
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-                }
-                response = await client.get(p.image_url, headers=headers)
-                if response.status_code == 200:
-                    from PIL import Image
-                    import io
-                    # Convert to WebP
-                    img = Image.open(io.BytesIO(response.content))
-                    # Handle transparency
-                    if img.mode in ('RGBA', 'LA'):
-                        background = Image.new('RGB', img.size, (255, 255, 255))
-                        background.paste(img, mask=img.split()[3])
-                        img = background
-                    elif img.mode != 'RGB':
-                        img = img.convert('RGB')
-                    
-                    img.save(file_path, "WEBP", quality=85)
-                else:
-                    raise Exception(f"HTTP Status {response.status_code}")
-            except Exception as e:
-                logger.warning(f"Error descargando imagen para producto {p.id} ({p.name}): {e}")
-                with _image_download_lock:
-                    _image_download_status["errors"] += 1
-                    _image_download_status["last_error"] = str(e)
-            finally:
-                with _image_download_lock:
-                    _image_download_status["current"] += 1
-                    
-    with _image_download_lock:
-        _image_download_status["active"] = False
-        logger.info("Background product image cache download finished.")
 
 
 @router.get("/api/vault/generate")
@@ -209,38 +96,6 @@ async def api_sync_excel(user_id: int = 2):
         status_code=500,
         detail="Fallo en la sincronización del Excel. Verifique la ruta y el formato.",
     )
-
-
-@router.post("/api/vault/download-images")
-async def trigger_image_download(
-    background_tasks: BackgroundTasks,
-    user_id: int = 2,
-    client_type: str = "pc"
-):
-    global _image_download_status
-    with _image_download_lock:
-        if _image_download_status["active"]:
-            return {"status": "running", "message": "Descarga de imágenes ya en curso."}
-            
-    background_tasks.add_task(download_all_images_task, user_id, client_type)
-    return {"status": "started", "message": "Descarga de imágenes iniciada en segundo plano."}
-
-
-@router.get("/api/vault/download-images/status")
-async def get_image_download_status():
-    global _image_download_status
-    with _image_download_lock:
-        return _image_download_status
-
-
-@router.post("/api/vault/download-images/cancel")
-async def cancel_image_download():
-    global _image_download_status
-    with _image_download_lock:
-        if _image_download_status["active"]:
-            _image_download_status["active"] = False
-            return {"status": "cancelled", "message": "Descarga cancelada."}
-        return {"status": "inactive", "message": "No hay descargas activas."}
 
 
 @router.get("/api/vault/download-images/zip")
