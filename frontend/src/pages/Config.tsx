@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Play, Activity, Clock, AlertCircle, CheckCircle2, RefreshCw, Terminal, Target, Settings, Users, ShieldAlert, Trash2, Zap, History, Database, Download, FileSpreadsheet, Repeat, Globe, Package, ChevronDown } from 'lucide-react';
+import { Play, Activity, Clock, AlertCircle, CheckCircle2, RefreshCw, Terminal, Target, Settings, Users, ShieldAlert, Trash2, Zap, History, Database, Download, FileSpreadsheet, Repeat, Globe, Package, ChevronDown, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { resetSmartMatches, runScrapers, stopScrapers, getScraperLogs, type ScraperExecutionLog, getWallapopIpLogs, downloadWallapopIpLogs, type WallapopIpLog } from '../api/purgatory';
@@ -155,6 +155,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
     const [, setLocalImagesEnabled] = useState(() => localStorage.getItem('use_local_images') === 'true');
     const [downloadStatus, setDownloadStatus] = useState({ active: false, total: 0, current: 0, errors: 0, last_error: null as string | null });
     const [cachedImagesCount, setCachedImagesCount] = useState(0);
+    const [syncingExcel, setSyncingExcel] = useState(false);
     const cancelDownloadRef = React.useRef(false);
 
     // Vintage Sword Light Ray Calibrator States
@@ -193,7 +194,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
 
     useEffect(() => {
         if (showModernCalibrator) {
-            const stored = localStorage.getItem('modern_sword_coords');
+            const stored = localStorage.getItem('skeletor_sword_coords');
             if (stored) {
                 try {
                     setModernCoords(JSON.parse(stored));
@@ -219,7 +220,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
     };
 
     const handleSaveModernCalib = () => {
-        localStorage.setItem('modern_sword_coords', JSON.stringify(modernCoords));
+        localStorage.setItem('skeletor_sword_coords', JSON.stringify(modernCoords));
         setShowModernCalibrator(false);
     };
 
@@ -559,6 +560,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
     };
 
     const handleSyncExcel = async () => {
+        setSyncingExcel(true);
         try {
             const res = await syncExcel(activeUserId);
             alert(`📊 Excel Bridge: ${res.message} `);
@@ -566,6 +568,8 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
             console.error('Error syncing excel:', error);
             const detail = error.response?.data?.detail || "Fallo en la conexión local.";
             alert(`❌ Error en Excel Bridge: ${detail} `);
+        } finally {
+            setSyncingExcel(false);
         }
     };
 
@@ -1048,7 +1052,10 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                         )}
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {/* Sentinel Settings */}
-                            <div className="glass border border-white/10 p-6 rounded-3xl space-y-4 opacity-60">
+                            <div className="glass border border-white/10 p-6 rounded-3xl space-y-4 opacity-60 relative group">
+                                <div className="absolute right-4 top-4 text-white/30 group-hover:text-white/60 transition-colors cursor-help" title="Configuración de solo lectura en .env">
+                                    <Lock className="h-3.5 w-3.5" />
+                                </div>
                                 <div className="flex items-center gap-3 text-orange-400 font-bold uppercase tracking-widest text-xs mb-2">
                                     <AlertCircle className="h-4 w-4" />
                                     Vigilancia (Sentinel)
@@ -1069,11 +1076,17 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                             <div className="absolute left-1 top-1 h-2 w-2 bg-white/30 rounded-full"></div>
                                         </div>
                                     </div>
+                                    <div className="text-[8px] text-white/40 font-bold uppercase tracking-wider text-center mt-2 border-t border-white/5 pt-2">
+                                        Parámetro fijado en el Servidor (.env)
+                                    </div>
                                 </div>
                             </div>
 
                             {/* Financial Engine Settings */}
-                            <div className="glass border border-white/10 p-6 rounded-3xl space-y-4 opacity-60">
+                            <div className="glass border border-white/10 p-6 rounded-3xl space-y-4 opacity-60 relative group">
+                                <div className="absolute right-4 top-4 text-white/30 group-hover:text-white/60 transition-colors cursor-help" title="Configuración de solo lectura en .env">
+                                    <Lock className="h-3.5 w-3.5" />
+                                </div>
                                 <div className="flex items-center gap-3 text-yellow-500 font-bold uppercase tracking-widest text-xs mb-2">
                                     <Target className="h-4 w-4" />
                                     Motor Financiero (Griales)
@@ -1093,11 +1106,17 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                             <span className="text-white/60 text-xs">€</span>
                                         </div>
                                     </div>
+                                    <div className="text-[8px] text-white/40 font-bold uppercase tracking-wider text-center mt-2 border-t border-white/5 pt-2">
+                                        Parámetro fijado en el Servidor (.env)
+                                    </div>
                                 </div>
                             </div>
 
                             {/* Scraper Global Timing */}
-                            <div className="glass border border-white/10 p-6 rounded-3xl space-y-4 opacity-60">
+                            <div className="glass border border-white/10 p-6 rounded-3xl space-y-4 opacity-60 relative group">
+                                <div className="absolute right-4 top-4 text-white/30 group-hover:text-white/60 transition-colors cursor-help" title="Configuración de solo lectura en .env">
+                                    <Lock className="h-3.5 w-3.5" />
+                                </div>
                                 <div className="flex items-center gap-3 text-blue-400 font-bold uppercase tracking-widest text-xs mb-2">
                                     <Clock className="h-4 w-4" />
                                     Tiempos de Incursión
@@ -1117,6 +1136,9 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                         <div className="h-4 w-8 bg-green-500/30 rounded-full relative">
                                             <div className="absolute right-1 top-1 h-2 w-2 bg-green-400 rounded-full"></div>
                                         </div>
+                                    </div>
+                                    <div className="text-[8px] text-white/40 font-bold uppercase tracking-wider text-center mt-2 border-t border-white/5 pt-2">
+                                        Parámetro fijado en el Servidor (.env)
                                     </div>
                                 </div>
                             </div>
@@ -1359,7 +1381,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                         </div>
                                         <div className="space-y-4">
                                             <p className="text-[10px] text-white/65 font-bold uppercase leading-tight">
-                                                Calibra la posición exacta de los haces de luz sobre la espada en la pantalla de carga principal.
+                                                Calibra los haces de luz sobre el báculo de Skeletor en la pantalla de carga.
                                             </p>
                                             <button
                                                 onClick={() => setShowModernCalibrator(true)}
@@ -1420,10 +1442,11 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                         </p>
                                         <button
                                             onClick={handleSyncExcel}
-                                            className="w-full bg-green-500/10 hover:bg-green-500 text-green-400 hover:text-white border border-green-500/20 px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg shadow-green-500/0 hover:shadow-green-500/20"
+                                            disabled={syncingExcel}
+                                            className={`w-full bg-green-500/10 hover:bg-green-500 text-green-400 hover:text-white border border-green-500/20 px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg shadow-green-500/0 hover:shadow-green-500/20 ${syncingExcel ? 'opacity-50 cursor-not-allowed' : ''}`}
                                         >
-                                            <RefreshCw className="h-3 w-3" />
-                                            📊 Sincronizar Excel
+                                            <RefreshCw className={`h-3 w-3 ${syncingExcel ? 'animate-spin' : ''}`} />
+                                            {syncingExcel ? 'Sincronizando...' : '📊 Sincronizar Excel'}
                                         </button>
                                     </div>
                                 </div>
@@ -1882,6 +1905,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                 <div className="relative w-64 h-64 border border-white/10 rounded-2xl overflow-hidden bg-[#050608] flex items-center justify-center shadow-inner">
                                     <PowerSwordLoader 
                                         isVintage={true} 
+                                        disableRandom={true}
                                         size={250} 
                                         vintageGuardX={calibCoords.gX}
                                         vintageGuardY={calibCoords.gY}
@@ -2031,56 +2055,57 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                 </div>
             )}
 
-            {/* He-Man Modern Sword Light Ray Calibrator Modal */}
+            {/* Skeletor Light Ray Calibrator Modal */}
             {showModernCalibrator && (
                 <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-md p-4 flex justify-center items-start animate-in fade-in duration-300 custom-scrollbar">
-                    <div className="relative w-full max-w-4xl my-8 md:my-12 rounded-[2.5rem] border border-cyan-500/30 bg-[#0A0A0B] p-6 md:p-8 flex flex-col gap-6 shadow-[0_0_50px_rgba(34,211,238,0.2)]">
+                    <div className="relative w-full max-w-4xl my-8 md:my-12 rounded-[2.5rem] border border-purple-500/30 bg-[#0A0A0B] p-6 md:p-8 flex flex-col gap-6 shadow-[0_0_50px_rgba(168,85,247,0.2)]">
                         <div className="flex items-center gap-3">
-                            <div className="p-3 rounded-xl bg-cyan-500/10">
-                                <Zap className="h-6 w-6 text-cyan-400 animate-pulse" />
+                            <div className="p-3 rounded-xl bg-purple-500/10">
+                                <Zap className="h-6 w-6 text-purple-400 animate-pulse" />
                             </div>
                             <div>
-                                <h4 className="text-2xl font-black text-white">Calibrador de Pantalla de Carga <span className="text-cyan-400">He-Man Moderno</span></h4>
-                                <p className="text-[10px] text-white/50 font-bold uppercase tracking-wider">Alinea los rayos de energía de Grayskull sobre la espada de la pantalla de carga</p>
+                                <h4 className="text-2xl font-black text-white">Calibrador de Pantalla de Carga <span className="text-purple-400">Skeletor</span></h4>
+                                <p className="text-[10px] text-white/50 font-bold uppercase tracking-wider">Alinea los rayos de energía de Grayskull sobre el báculo de Skeletor en la pantalla de carga</p>
                             </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center justify-center">
                             {/* Preview Area */}
                             <div className="flex flex-col items-center justify-center gap-4 bg-black/40 border border-white/5 p-6 rounded-3xl">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-cyan-400/60">Simulador de Pantalla de Carga</span>
+                                <span className="text-[10px] font-black uppercase tracking-widest text-purple-400/60">Simulador de Pantalla de Carga</span>
                                 
                                 <div className="relative w-64 h-64 border border-white/10 rounded-2xl overflow-hidden bg-[#050608] flex items-center justify-center shadow-inner">
                                     <PowerSwordLoader 
                                         isVintage={false} 
-                                        isSkeletor={false}
+                                        isSkeletor={true}
+                                        disableRandom={true}
                                         size={250} 
-                                        modernGuardX={modernCoords.gX}
-                                        modernGuardY={modernCoords.gY}
-                                        modernTipX={modernCoords.tX}
-                                        modernTipY={modernCoords.tY}
+                                        skeletorGuardX={modernCoords.gX}
+                                        skeletorGuardY={modernCoords.gY}
+                                        skeletorTipX={modernCoords.tX}
+                                        skeletorTipY={modernCoords.tY}
                                         progress={parseFloat(localStorage.getItem('calib_test_progress_modern') || '75')} 
                                     />
                                     
                                     {/* Overlay helper lines to visually debug guard & tip points */}
                                     <svg viewBox="0 0 250 250" className="absolute inset-0 w-full h-full pointer-events-none">
                                         {/* Guard center indicator */}
-                                        <circle cx={modernCoords.gX} cy={modernCoords.gY} r="4" fill="#06B6D4" stroke="white" strokeWidth="1" />
-                                        <text x={modernCoords.gX + 6} y={modernCoords.gY + 3} fill="#06B6D4" fontSize="8" fontWeight="bold">Empuñadura ({modernCoords.gX.toFixed(1)}, {modernCoords.gY.toFixed(1)})</text>
+                                        <circle cx={modernCoords.gX} cy={modernCoords.gY} r="4" fill="#A855F7" stroke="white" strokeWidth="1" />
+                                        <text x={modernCoords.gX + 6} y={modernCoords.gY + 3} fill="#A855F7" fontSize="8" fontWeight="bold">Empuñadura ({modernCoords.gX.toFixed(1)}, {modernCoords.gY.toFixed(1)})</text>
                                         
                                         {/* Tip indicator */}
-                                        <circle cx={modernCoords.tX} cy={modernCoords.tY} r="4" fill="#06B6D4" stroke="white" strokeWidth="1" />
-                                        <text x={modernCoords.tX + 6} y={modernCoords.tY + 3} fill="#06B6D4" fontSize="8" fontWeight="bold">Punta ({modernCoords.tX.toFixed(1)}, {modernCoords.tY.toFixed(1)})</text>
+                                        <circle cx={modernCoords.tX} cy={modernCoords.tY} r="4" fill="#A855F7" stroke="white" strokeWidth="1" />
+                                        <text x={modernCoords.tX + 6} y={modernCoords.tY + 3} fill="#A855F7" fontSize="8" fontWeight="bold">Punta ({modernCoords.tX.toFixed(1)}, {modernCoords.tY.toFixed(1)})</text>
                                         
                                         {/* Axis line */}
-                                        <line x1={modernCoords.gX} y1={modernCoords.gY} x2={modernCoords.tX} y2={modernCoords.tY} stroke="rgba(34,211,238,0.3)" strokeDasharray="3" strokeWidth="1.5" />
+                                        <line x1={modernCoords.gX} y1={modernCoords.gY} x2={modernCoords.tX} y2={modernCoords.tY} stroke="rgba(168,85,247,0.3)" strokeDasharray="3" strokeWidth="1.5" />
                                     </svg>
                                 </div>
                                 
                                 <div className="w-full space-y-1">
                                     <div className="flex justify-between text-[10px] text-white/50 font-bold">
                                         <span>PROGRESO DE PRUEBA</span>
-                                        <span className="text-cyan-400 font-mono">{localStorage.getItem('calib_test_progress_modern') || '75'}%</span>
+                                        <span className="text-purple-400 font-mono">{localStorage.getItem('calib_test_progress_modern') || '75'}%</span>
                                     </div>
                                     <input 
                                         type="range" 
@@ -2092,7 +2117,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                             // Trigger state update to re-render preview
                                             setModernCoords({ ...modernCoords });
                                         }}
-                                        className="w-full accent-cyan-500" 
+                                        className="w-full accent-purple-500" 
                                     />
                                 </div>
                             </div>
@@ -2100,8 +2125,8 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                             {/* Controls Area */}
                             <div className="space-y-6">
                                 <div className="space-y-4 bg-white/[0.02] border border-white/5 p-4 rounded-2xl">
-                                    <div className="flex items-center gap-2 text-cyan-400 font-bold text-xs uppercase tracking-widest">
-                                        <div className="h-2 w-2 rounded-full bg-cyan-400" />
+                                    <div className="flex items-center gap-2 text-purple-400 font-bold text-xs uppercase tracking-widest">
+                                        <div className="h-2 w-2 rounded-full bg-purple-400" />
                                         Punto de Empuñadura (X, Y)
                                     </div>
                                     <div className="space-y-3">
@@ -2117,7 +2142,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                                 step="0.5"
                                                 value={modernCoords.gX}
                                                 onChange={(e) => setModernCoords({ ...modernCoords, gX: parseFloat(e.target.value) })}
-                                                className="w-full accent-cyan-500" 
+                                                className="w-full accent-purple-500" 
                                             />
                                         </div>
                                         <div>
@@ -2132,15 +2157,15 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                                 step="0.5"
                                                 value={modernCoords.gY}
                                                 onChange={(e) => setModernCoords({ ...modernCoords, gY: parseFloat(e.target.value) })}
-                                                className="w-full accent-cyan-500" 
+                                                className="w-full accent-purple-500" 
                                             />
                                         </div>
                                     </div>
                                 </div>
 
                                 <div className="space-y-4 bg-white/[0.02] border border-white/5 p-4 rounded-2xl">
-                                    <div className="flex items-center gap-2 text-cyan-400 font-bold text-xs uppercase tracking-widest">
-                                        <div className="h-2 w-2 rounded-full bg-cyan-400" />
+                                    <div className="flex items-center gap-2 text-purple-400 font-bold text-xs uppercase tracking-widest">
+                                        <div className="h-2 w-2 rounded-full bg-purple-400" />
                                         Punto de la Punta (X, Y)
                                     </div>
                                     <div className="space-y-3">
@@ -2156,7 +2181,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                                 step="0.5"
                                                 value={modernCoords.tX}
                                                 onChange={(e) => setModernCoords({ ...modernCoords, tX: parseFloat(e.target.value) })}
-                                                className="w-full accent-cyan-500" 
+                                                className="w-full accent-purple-500" 
                                             />
                                         </div>
                                         <div>
@@ -2171,7 +2196,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                                 step="0.5"
                                                 value={modernCoords.tY}
                                                 onChange={(e) => setModernCoords({ ...modernCoords, tY: parseFloat(e.target.value) })}
-                                                className="w-full accent-cyan-500" 
+                                                className="w-full accent-purple-500" 
                                             />
                                         </div>
                                     </div>
@@ -2186,7 +2211,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                     </button>
                                     <button
                                         onClick={handleSaveModernCalib}
-                                        className="flex-1 px-4 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-600 text-black font-black text-[10px] uppercase tracking-widest transition-all shadow-[0_0_20px_rgba(6,182,212,0.2)]"
+                                        className="flex-1 px-4 py-2.5 rounded-xl bg-purple-500 hover:bg-purple-600 text-black font-black text-[10px] uppercase tracking-widest transition-all shadow-[0_0_20px_rgba(168,85,247,0.2)]"
                                     >
                                         Guardar en Eternia
                                     </button>
