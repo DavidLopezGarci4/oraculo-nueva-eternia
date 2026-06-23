@@ -1048,13 +1048,22 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                     const idNum = parseInt(product.figure_id?.replace(/[^0-9]/g, '') || '0');
                     const itemIsGrail = isGrail(product.id);
                     
-                    let cardBorderClass = 'border-cyan-500/20 bg-black/25 shadow-[0_15px_30px_-10px_rgba(6,182,212,0.08)] hover:shadow-[0_40px_80px_-10px_rgba(6,182,212,0.22)]';
-                    if (itemIsGrail) {
-                        cardBorderClass = 'border-orange-500/30 bg-orange-500/[0.02] shadow-[0_15px_30px_-10px_rgba(249,115,22,0.15)] hover:shadow-[0_40px_80px_-10px_rgba(249,115,22,0.35)]';
-                    } else if (idNum > 0 && idNum < 4500) {
-                        cardBorderClass = 'border-amber-500/25 bg-amber-500/[0.01] shadow-[0_15px_30px_-10px_rgba(245,158,11,0.1)] hover:shadow-[0_40px_80px_-10px_rgba(245,158,11,0.25)]';
-                    } else if (idNum >= 4500 && idNum <= 9500) {
-                        cardBorderClass = 'border-slate-300/15 bg-black/25 hover:shadow-[0_40px_80px_-10px_rgba(255,255,255,0.08)]';
+                    let cardBorderClass = '';
+                    if (isVintageOnly) {
+                        if (itemIsGrail) {
+                            cardBorderClass = 'border-orange-500/30 bg-orange-500/[0.02] shadow-[0_15px_30px_-10px_rgba(249,115,22,0.15)] hover:shadow-[0_40px_80px_-10px_rgba(249,115,22,0.35)]';
+                        } else {
+                            cardBorderClass = 'border-yellow-500/25 bg-yellow-500/[0.01] shadow-[0_15px_30px_-10px_rgba(234,179,8,0.1)] hover:shadow-[0_40px_80px_-10px_rgba(234,179,8,0.25)]';
+                        }
+                    } else {
+                        cardBorderClass = 'border-cyan-500/20 bg-black/25 shadow-[0_15px_30px_-10px_rgba(6,182,212,0.08)] hover:shadow-[0_40px_80px_-10px_rgba(6,182,212,0.22)]';
+                        if (itemIsGrail) {
+                            cardBorderClass = 'border-orange-500/30 bg-orange-500/[0.02] shadow-[0_15px_30px_-10px_rgba(249,115,22,0.15)] hover:shadow-[0_40px_80px_-10px_rgba(249,115,22,0.35)]';
+                        } else if (idNum > 0 && idNum < 4500) {
+                            cardBorderClass = 'border-amber-500/25 bg-amber-500/[0.01] shadow-[0_15px_30px_-10px_rgba(245,158,11,0.1)] hover:shadow-[0_40px_80px_-10px_rgba(245,158,11,0.25)]';
+                        } else if (idNum >= 4500 && idNum <= 9500) {
+                            cardBorderClass = 'border-slate-300/15 bg-black/25 hover:shadow-[0_40px_80px_-10px_rgba(255,255,255,0.08)]';
+                        }
                     }
                     
                     return (
@@ -1138,13 +1147,22 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                                     const idNum = parseInt(product.figure_id?.replace(/[^0-9]/g, '') || '0');
                                     const itemIsGrail = isGrail(product.id);
                                     
-                                    let colorClass = 'text-cyan-400 border-cyan-500/30 bg-black/65'; // Recent/Blue
-                                    if (itemIsGrail) {
-                                        colorClass = 'text-orange-400 border-orange-500/35 bg-black/65 shadow-[0_0_15px_rgba(249,115,22,0.15)]'; // Grail/Orange
-                                    } else if (idNum > 0 && idNum < 4500) {
-                                        colorClass = 'text-amber-400 border-amber-500/30 bg-black/65'; // Vintage/Amber
-                                    } else if (idNum >= 4500 && idNum <= 9500) {
-                                        colorClass = 'text-slate-300 border-slate-300/30 bg-black/65'; // Mid/Silver
+                                    let colorClass = '';
+                                    if (isVintageOnly) {
+                                        if (itemIsGrail) {
+                                            colorClass = 'text-orange-400 border-orange-500/35 bg-black/65 shadow-[0_0_15px_rgba(249,115,22,0.15)]'; // Grail/Orange
+                                        } else {
+                                            colorClass = 'text-yellow-400 border-yellow-500/30 bg-black/65'; // Vintage/Yellow
+                                        }
+                                    } else {
+                                        colorClass = 'text-cyan-400 border-cyan-500/30 bg-black/65'; // Recent/Blue
+                                        if (itemIsGrail) {
+                                            colorClass = 'text-orange-400 border-orange-500/35 bg-black/65 shadow-[0_0_15px_rgba(249,115,22,0.15)]'; // Grail/Orange
+                                        } else if (idNum > 0 && idNum < 4500) {
+                                            colorClass = 'text-amber-400 border-amber-500/30 bg-black/65'; // Vintage/Amber
+                                        } else if (idNum >= 4500 && idNum <= 9500) {
+                                            colorClass = 'text-slate-300 border-slate-300/30 bg-black/65'; // Mid/Silver
+                                        }
                                     }
  
                                     // Valuation Priority Logic

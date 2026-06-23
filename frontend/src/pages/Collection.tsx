@@ -450,18 +450,31 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
 
                             const idNum = parseInt(product.figure_id?.replace(/[^0-9]/g, '') || '0');
                             
-                            let cardBorderClass = 'border-cyan-500/20 bg-black/25 shadow-[0_15px_30px_-10px_rgba(6,182,212,0.08)] hover:shadow-[0_40px_80px_-10px_rgba(6,182,212,0.22)]';
-                            let colorClass = 'text-cyan-400 border-cyan-500/30 bg-black/65'; // Recent/Blue
+                            let cardBorderClass = '';
+                            let colorClass = '';
                             
-                            if (isGrail) {
-                                cardBorderClass = 'border-orange-500/30 bg-orange-500/[0.02] shadow-[0_15px_30px_-10px_rgba(249,115,22,0.15)] hover:shadow-[0_40px_80px_-10px_rgba(249,115,22,0.35)]';
-                                colorClass = 'text-orange-400 border-orange-500/35 bg-black/65 shadow-[0_0_15px_rgba(249,115,22,0.15)]'; // Grail/Orange
-                            } else if (idNum > 0 && idNum < 4500) {
-                                cardBorderClass = 'border-amber-500/25 bg-amber-500/[0.01] shadow-[0_15px_30px_-10px_rgba(245,158,11,0.1)] hover:shadow-[0_40px_80px_-10px_rgba(245,158,11,0.25)]';
-                                colorClass = 'text-amber-400 border-amber-500/30 bg-black/65'; // Vintage/Amber
-                            } else if (idNum >= 4500 && idNum <= 9500) {
-                                cardBorderClass = 'border-slate-300/15 bg-black/25 hover:shadow-[0_40px_80px_-10px_rgba(255,255,255,0.08)]';
-                                colorClass = 'text-slate-300 border-slate-300/30 bg-black/65'; // Mid/Silver
+                            if (isVintageOnly) {
+                                if (isGrail) {
+                                    cardBorderClass = 'border-orange-500/30 bg-orange-500/[0.02] shadow-[0_15px_30px_-10px_rgba(249,115,22,0.15)] hover:shadow-[0_40px_80px_-10px_rgba(249,115,22,0.35)]';
+                                    colorClass = 'text-orange-400 border-orange-500/35 bg-black/65 shadow-[0_0_15px_rgba(249,115,22,0.15)]'; // Grail/Orange
+                                } else {
+                                    cardBorderClass = 'border-yellow-500/25 bg-yellow-500/[0.01] shadow-[0_15px_30px_-10px_rgba(234,179,8,0.1)] hover:shadow-[0_40px_80px_-10px_rgba(234,179,8,0.25)]';
+                                    colorClass = 'text-yellow-400 border-yellow-500/30 bg-black/65'; // Vintage/Yellow
+                                }
+                            } else {
+                                if (isGrail) {
+                                    cardBorderClass = 'border-orange-500/30 bg-orange-500/[0.02] shadow-[0_15px_30px_-10px_rgba(249,115,22,0.15)] hover:shadow-[0_40px_80px_-10px_rgba(249,115,22,0.35)]';
+                                    colorClass = 'text-orange-400 border-orange-500/35 bg-black/65 shadow-[0_0_15px_rgba(249,115,22,0.15)]'; // Grail/Orange
+                                } else if (idNum > 0 && idNum < 4500) {
+                                    cardBorderClass = 'border-amber-500/25 bg-amber-500/[0.01] shadow-[0_15px_30px_-10px_rgba(245,158,11,0.1)] hover:shadow-[0_40px_80px_-10px_rgba(245,158,11,0.25)]';
+                                    colorClass = 'text-amber-400 border-amber-500/30 bg-black/65'; // Vintage/Amber
+                                } else if (idNum >= 4500 && idNum <= 9500) {
+                                    cardBorderClass = 'border-slate-300/15 bg-black/25 hover:shadow-[0_40px_80px_-10px_rgba(255,255,255,0.08)]';
+                                    colorClass = 'text-slate-300 border-slate-300/30 bg-black/65'; // Mid/Silver
+                                } else {
+                                    cardBorderClass = 'border-cyan-500/20 bg-cyan-500/[0.02] shadow-[0_15px_30px_-10px_rgba(6,182,212,0.08)] hover:shadow-[0_40px_80px_-10px_rgba(6,182,212,0.22)]';
+                                    colorClass = 'text-cyan-400 border-cyan-500/30 bg-black/65'; // Recent/Blue
+                                }
                             }
 
                             return (
@@ -492,7 +505,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
 
                                         {/* Corner Badges */}
                                         <div className="absolute top-2 left-2 sm:top-3 sm:left-3 z-40 flex items-center gap-1">
-                                            <div className={`rounded-lg px-2 py-0.5 text-[8px] sm:text-[9px] font-black backdrop-blur-md border shadow-2xl transition-all transform uppercase tracking-widest ${colorClass}`}>
+                                            <div className={`rounded-lg sm:rounded-xl px-2 py-1 sm:px-3 sm:py-1.5 text-[8px] sm:text-[10px] font-black backdrop-blur-md border shadow-2xl transition-all transform uppercase tracking-widest ${colorClass}`}>
                                                 #{product.figure_id}
                                             </div>
                                             {isGrail && (
@@ -505,7 +518,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
 
                                         {/* Status indicator */}
                                         <div className="absolute bottom-2 left-2 flex items-center gap-1.5">
-                                            <div className={`h-1.5 w-1.5 rounded-full ${activeTab === 'owned' ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.8)]' : (isVintageOnly ? 'bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.8)] animate-pulse' : 'bg-brand-primary shadow-[0_0_10px_rgba(14,165,233,0.8)] animate-pulse')}`}></div>
+                                            <div className={`h-1.5 w-1.5 rounded-full ${activeTab === 'owned' ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.8)]' : (isVintageOnly ? 'bg-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.8)] animate-pulse' : 'bg-brand-primary shadow-[0_0_10px_rgba(14,165,233,0.8)] animate-pulse')}`}></div>
                                             <span className="text-[8px] font-black text-white uppercase tracking-widest opacity-80 backdrop-blur-sm bg-black/20 px-1.5 py-0.5 rounded-full">
                                                 {activeTab === 'owned' ? 'Poseída' : 'Prioridad'}
                                             </span>
@@ -515,17 +528,17 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                                     {/* Info */}
                                     <div className="space-y-1 flex-1 px-0.5">
                                         <div className="space-y-0.5">
-                                            <span className={`text-[8px] sm:text-[9px] font-black uppercase tracking-widest transition-colors ${isVintageOnly ? 'text-amber-500 group-hover:text-amber-500/80' : 'text-brand-primary group-hover:text-brand-primary/80'}`}>
+                                            <span className={`text-[8px] sm:text-[9px] font-black uppercase tracking-widest transition-colors ${isVintageOnly ? 'text-yellow-500 group-hover:text-yellow-500/80' : 'text-brand-primary group-hover:text-brand-primary/80'}`}>
                                                 {product.sub_category}
                                             </span>
-                                            <h3 className={`line-clamp-2 text-[10px] sm:text-xs md:text-sm lg:text-base font-black leading-tight text-white transition-all ${isVintageOnly ? 'group-hover:text-amber-500' : 'group-hover:text-brand-primary'}`}>
+                                            <h3 className={`line-clamp-2 text-[10px] sm:text-xs md:text-sm lg:text-base font-black leading-tight text-white transition-all ${isVintageOnly ? 'group-hover:text-yellow-500' : 'group-hover:text-brand-primary'}`}>
                                                 {product.name}
                                             </h3>
                                         </div>
 
                                         <div className="flex flex-wrap items-center gap-1 pt-0.5">
                                             {adjustedValue > 0 && (
-                                                <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-lg border font-black text-[8px] sm:text-[9px] whitespace-nowrap ${isGrail ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' : (isVintageOnly ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'bg-brand-primary/10 text-brand-primary border-brand-primary/20')}`}>
+                                                <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-lg border font-black text-[8px] sm:text-[9px] whitespace-nowrap ${isGrail ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' : (isVintageOnly ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' : 'bg-brand-primary/10 text-brand-primary border-brand-primary/20')}`}>
                                                     <Euro className="h-2 w-2 sm:h-2.5 sm:w-2.5" />
                                                     <span>{adjustedValue.toFixed(2)}€</span>
                                                 </div>
