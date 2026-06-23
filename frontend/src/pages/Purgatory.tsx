@@ -47,6 +47,7 @@ interface SwipeCardProps {
     manualSearchTerm: string;
     setManualSearchTerm: (term: string) => void;
     filteredProducts: any[];
+    allProducts: any[];
 }
 
 const SwipeCard: React.FC<SwipeCardProps> = ({
@@ -67,7 +68,8 @@ const SwipeCard: React.FC<SwipeCardProps> = ({
     setAssociatedProductId,
     manualSearchTerm,
     setManualSearchTerm,
-    filteredProducts
+    filteredProducts,
+    allProducts
 }) => {
     const x = useMotionValue(0);
     const y = useMotionValue(0);
@@ -110,8 +112,8 @@ const SwipeCard: React.FC<SwipeCardProps> = ({
     };
 
     // Find details of the selected associated product to show it in the card
-    const currentSuggestion = item.suggestions?.find((s: any) => s.product_id === associatedProductId);
-    const associatedProductName = currentSuggestion ? currentSuggestion.name : 'Producto personalizado';
+    const selectedProduct = allProducts?.find((p: any) => p.id === associatedProductId);
+    const associatedProductName = selectedProduct ? selectedProduct.name : 'Producto personalizado';
 
     return (
         <motion.div
@@ -198,7 +200,24 @@ const SwipeCard: React.FC<SwipeCardProps> = ({
                                     >
                                         <div className="truncate pr-2">
                                             <div className="text-white truncate">{p.name}</div>
-                                            <div className="text-[8px] text-white/40 uppercase tracking-widest truncate">{p.figure_id}</div>
+                                            <div className="flex flex-wrap items-center gap-1 mt-0.5 text-[8px] uppercase font-black tracking-wider text-white/45">
+                                                <span className="text-brand-primary bg-brand-primary/10 px-1.5 py-0.5 rounded border border-brand-primary/20">
+                                                    {p.sub_category}
+                                                </span>
+                                                {p.release_year && (
+                                                    <span className="bg-white/5 px-1.5 py-0.5 rounded border border-white/5">
+                                                        {p.release_year}
+                                                    </span>
+                                                )}
+                                                {p.variant_name && (
+                                                    <span className="bg-white/5 px-1.5 py-0.5 rounded border border-white/5 truncate max-w-[80px]">
+                                                        {p.variant_name}
+                                                    </span>
+                                                )}
+                                                {p.figure_id && (
+                                                    <span className="text-white/30 font-mono">#{p.figure_id}</span>
+                                                )}
+                                            </div>
                                         </div>
                                         <Check className="h-3.5 w-3.5 text-brand-primary shrink-0" />
                                     </button>
@@ -229,7 +248,24 @@ const SwipeCard: React.FC<SwipeCardProps> = ({
                                 <div className="flex items-center justify-between bg-brand-primary/10 border border-brand-primary/30 rounded-xl p-2.5">
                                     <div className="min-w-0 pr-2">
                                         <div className="text-xs font-black text-white truncate">{associatedProductName}</div>
-                                        <div className="text-[8px] text-brand-primary uppercase tracking-widest font-black">ID: #{associatedProductId}</div>
+                                        <div className="flex flex-wrap items-center gap-1 mt-1 text-[8px] uppercase font-black tracking-wider text-white/50">
+                                            {selectedProduct?.sub_category && (
+                                                <span className="text-brand-primary bg-brand-primary/10 px-1.5 py-0.5 rounded border border-brand-primary/20">
+                                                    {selectedProduct.sub_category}
+                                                </span>
+                                            )}
+                                            {selectedProduct?.release_year && (
+                                                <span className="bg-white/5 px-1.5 py-0.5 rounded border border-white/5">
+                                                    {selectedProduct.release_year}
+                                                </span>
+                                            )}
+                                            {selectedProduct?.variant_name && (
+                                                <span className="bg-white/5 px-1.5 py-0.5 rounded border border-white/5 truncate max-w-[80px]">
+                                                    {selectedProduct.variant_name}
+                                                </span>
+                                            )}
+                                            <span className="text-white/40 font-mono">ID: #{associatedProductId}</span>
+                                        </div>
                                     </div>
                                     <button
                                         onClick={() => setAssociatedProductId(null)}
@@ -248,8 +284,8 @@ const SwipeCard: React.FC<SwipeCardProps> = ({
                         {/* 2. Sugerencias rápidas del Oráculo */}
                         <div className="space-y-1.5">
                             <span className="text-[9px] font-black uppercase tracking-widest text-white/40 block">Coincidencias Sugeridas</span>
-                            <div className="flex flex-col gap-1.5 max-h-[120px] overflow-y-auto custom-scrollbar pr-1">
-                                {item.suggestions && item.suggestions.filter((s: any) => !s.is_vintage).slice(0, 2).map((sug: any) => {
+                            <div className="flex flex-col gap-1.5 max-h-[135px] overflow-y-auto custom-scrollbar pr-1">
+                                {item.suggestions && item.suggestions.filter((s: any) => !s.is_vintage).slice(0, 4).map((sug: any) => {
                                     const isSelected = associatedProductId === sug.product_id;
                                     return (
                                         <button
@@ -258,8 +294,22 @@ const SwipeCard: React.FC<SwipeCardProps> = ({
                                             className={`w-full flex items-center justify-between rounded-xl p-2.5 text-left transition-all border text-xs ${isSelected ? 'bg-brand-primary/20 border-brand-primary/60 text-white' : 'bg-white/5 border-white/5 text-white/70 hover:bg-white/10 hover:border-white/10'}`}
                                         >
                                             <div className="min-w-0 pr-2">
-                                                <div className="font-bold truncate">{sug.name}</div>
-                                                <div className="text-[8px] text-white/40 uppercase tracking-widest truncate">{sug.reason || 'Sugerencia'}</div>
+                                                <div className="font-bold truncate text-white">{sug.name}</div>
+                                                <div className="flex flex-wrap items-center gap-1 mt-0.5 text-[8px] uppercase font-black tracking-wider text-white/50">
+                                                    <span className="text-brand-primary bg-brand-primary/10 px-1.5 py-0.5 rounded border border-brand-primary/25">
+                                                        {sug.sub_category}
+                                                    </span>
+                                                    {sug.release_year && (
+                                                        <span className="bg-white/5 px-1.5 py-0.5 rounded border border-white/5">
+                                                            {sug.release_year}
+                                                        </span>
+                                                    )}
+                                                    {sug.variant_name && (
+                                                        <span className="bg-white/5 px-1.5 py-0.5 rounded border border-white/5 truncate max-w-[80px]">
+                                                            {sug.variant_name}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
                                             <div className="flex items-center gap-2 shrink-0">
                                                 <span className={`text-[8px] font-black px-1.5 py-0.5 rounded ${sug.match_score >= 80 ? 'bg-green-500/20 text-green-400' : sug.match_score >= 50 ? 'bg-yellow-500/20 text-yellow-400' : 'bg-red-500/20 text-red-400'}`}>
@@ -1168,6 +1218,7 @@ const Purgatory: React.FC = React.memo(() => {
                                                     manualSearchTerm={manualSearchTerm}
                                                     setManualSearchTerm={setManualSearchTerm}
                                                     filteredProducts={filteredProducts}
+                                                    allProducts={products || []}
                                                 />
                                             );
                                         })}

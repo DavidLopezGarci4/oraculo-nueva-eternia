@@ -110,6 +110,8 @@ async def get_purgatory(page: int = 1, limit: int = 500):
                             "figure_id": p.figure_id,
                             "sub_category": p.sub_category,
                             "is_vintage": p.is_vintage,
+                            "release_year": p.release_year,
+                            "variant_name": p.variant_name,
                             "match_score": round(score * 100, 1),
                             "reason": reason,
                         })
