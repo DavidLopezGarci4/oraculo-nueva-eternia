@@ -75,8 +75,8 @@ class StorageService:
          if not p.exists(): return
          
          count = 0
-         # Match both jpg and png for extra robustness
-         for ext in ("*.jpg", "*.png", "*.jpeg"):
+         # Match both jpg, png, jpeg, and webp for extra robustness
+         for ext in ("*.jpg", "*.png", "*.jpeg", "*.webp"):
              for img_file in p.glob(ext):
                  url = self.upload_image(str(img_file), folder=folder)
                  if url: count += 1

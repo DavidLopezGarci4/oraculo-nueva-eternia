@@ -328,7 +328,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                     break;
                 }
 
-                const cacheKey = `/api/static/images/${p.id}.jpg`;
+                const cacheKey = `/api/static/images/${p.id}.webp`;
                 
                 try {
                     // Intentar descargar desde el servidor de estáticos local primero

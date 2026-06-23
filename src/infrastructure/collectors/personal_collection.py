@@ -341,19 +341,45 @@ def extract_deep_intelligence(detail_html: str) -> dict:
     return intelligence
 
 def download_image(session: requests.Session, url: str, dest_path: Path) -> bool:
-    """Descarga binaria con streaming si no existe. Devuelve True si queda en disco."""
+    """Descarga binaria con streaming, la convierte a WebP y la guarda en dest_path."""
     try:
         if dest_path.exists():
             return True
+            
+        temp_path = dest_path.with_suffix(".tmp_download")
         resp = session.get(url, stream=True, timeout=REQUEST_TIMEOUT)
         if not resp.ok:
             logging.warning("No se pudo descargar imagen %s -> %s", url, resp.status_code)
             return False
-        with dest_path.open("wb") as f:
+            
+        with temp_path.open("wb") as f:
             for chunk in resp.iter_content(chunk_size=8192):
                 if chunk:
                     f.write(chunk)
-        return True
+                    
+        # Convert to WebP using Pillow
+        from PIL import Image
+        try:
+            with Image.open(temp_path) as img:
+                if img.mode in ('RGBA', 'LA'):
+                    background = Image.new('RGB', img.size, (255, 255, 255))
+                    background.paste(img, mask=img.split()[3])
+                    img = background
+                elif img.mode != 'RGB':
+                    img = img.convert('RGB')
+                
+                img.save(dest_path, "WEBP", quality=85)
+            
+            # Clean up temp file
+            if temp_path.exists():
+                os.remove(temp_path)
+            return True
+        except Exception as e:
+            logging.error("Fallo al convertir la imagen descargada a WebP: %s", e)
+            if temp_path.exists():
+                os.remove(temp_path)
+            return False
+            
     except requests.RequestException as exc:
         logging.warning("Error descargando imagen %s: %s", url, exc)
         return False
@@ -455,7 +481,9 @@ def process_table(
                 img_url = extract_image_url(html_text, SITE_BASE)
                 if img_url:
                     image_url = img_url
-                    image_name = Path(urllib.parse.urlparse(img_url).path).name
+                    original_name = Path(urllib.parse.urlparse(img_url).path).name
+                    # Force file extension to WebP locally
+                    image_name = f"{Path(original_name).stem}.webp"
                     image_path = images_dir / image_name
                     if download_image(session, img_url, image_path):
                         image_path_str = str(image_path)

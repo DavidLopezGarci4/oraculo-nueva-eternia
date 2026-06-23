@@ -20,7 +20,7 @@ export function MOTUImage({ productId, fallbackSrc = '', src, ...props }: MOTUIm
         return;
       }
 
-      const cacheKey = `/api/static/images/${productId}.jpg`;
+      const cacheKey = `/api/static/images/${productId}.webp`;
 
       if (useLocal) {
         try {
@@ -73,10 +73,26 @@ export function MOTUImage({ productId, fallbackSrc = '', src, ...props }: MOTUIm
   }, [src, fallbackSrc, productId, useLocal, defaultSrc]);
 
   const handleError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    const localStaticUrl = `/api/static/images/${productId}.jpg`;
+    const localStaticUrl = `/api/static/images/${productId}.webp`;
     if (currentSrc !== localStaticUrl && productId) {
-      // Si falla la imagen actual (remota o blob de caché), probar el servidor de estáticos local
-      setCurrentSrc(localStaticUrl);
+      // Intentar primero ver si está en la caché del navegador para máxima rapidez
+      caches.open('motu-image-cache')
+        .then((cache) => cache.match(localStaticUrl))
+        .then((cachedResponse) => {
+          if (cachedResponse) {
+            cachedResponse.blob().then((blob) => {
+              const objectUrl = URL.createObjectURL(blob);
+              setCurrentSrc(objectUrl);
+            });
+          } else {
+            // Si no está en la caché del navegador, cargar desde el servidor de estáticos
+            setCurrentSrc(localStaticUrl);
+          }
+        })
+        .catch((err) => {
+          console.warn("Error recuperando de caché del navegador en handleError:", err);
+          setCurrentSrc(localStaticUrl);
+        });
     } else if (currentSrc !== defaultSrc) {
       // Si falla el servidor de estáticos local, probar la URL remota por si acaso
       setCurrentSrc(defaultSrc);

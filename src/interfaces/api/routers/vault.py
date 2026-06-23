@@ -64,7 +64,7 @@ async def download_all_images_task(user_id: int = 2, client_type: str = "pc"):
                     _image_download_status["current"] += 1
                 continue
                 
-            file_path = os.path.join(image_cache_dir, f"{p.id}.jpg")
+            file_path = os.path.join(image_cache_dir, f"{p.id}.webp")
             
             # Si ya está en disco y pesa algo, saltar
             if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
@@ -78,8 +78,19 @@ async def download_all_images_task(user_id: int = 2, client_type: str = "pc"):
                 }
                 response = await client.get(p.image_url, headers=headers)
                 if response.status_code == 200:
-                    with open(file_path, "wb") as f:
-                        f.write(response.content)
+                    from PIL import Image
+                    import io
+                    # Convert to WebP
+                    img = Image.open(io.BytesIO(response.content))
+                    # Handle transparency
+                    if img.mode in ('RGBA', 'LA'):
+                        background = Image.new('RGB', img.size, (255, 255, 255))
+                        background.paste(img, mask=img.split()[3])
+                        img = background
+                    elif img.mode != 'RGB':
+                        img = img.convert('RGB')
+                    
+                    img.save(file_path, "WEBP", quality=85)
                 else:
                     raise Exception(f"HTTP Status {response.status_code}")
             except Exception as e:

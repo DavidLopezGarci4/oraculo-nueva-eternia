@@ -16,6 +16,8 @@ import LoginPage from './pages/LoginPage';
 import { getUserSettings, type Hero } from './api/admin';
 import PowerSwordLoader from './components/ui/PowerSwordLoader';
 import Showcase from './pages/Showcase';
+import axios from 'axios';
+import CacheWelcomeModal from './components/ui/CacheWelcomeModal';
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -30,6 +32,9 @@ function App() {
   const [activeUserId, setActiveUserId] = useState<number>(parseInt(localStorage.getItem('active_user_id') || '2'));
   const [visitedTabs, setVisitedTabs] = useState<Record<string, boolean>>({ dashboard: true });
   const [isIncognito, setIsIncognito] = useState<boolean>(() => localStorage.getItem('motu_incognito') === 'true');
+  const [useLocalImages, setUseLocalImages] = useState<boolean>(() => localStorage.getItem('use_local_images') === 'true');
+  const [bgDownloadEnabled, setBgDownloadEnabled] = useState<boolean>(() => localStorage.getItem('motu_background_download_enabled') === 'true');
+  const [showCacheWelcome, setShowCacheWelcome] = useState<boolean>(false);
 
   // Global Incognito Keyboard Shortcuts: Double Esc or Ctrl + I
   useEffect(() => {
@@ -97,6 +102,95 @@ function App() {
       setLoading(false);
     }
   }, [activeUserId, isSovereign, isLoggedIn]);
+
+  // Background Image Pre-fetching (Best Practice for smooth offline experience)
+  useEffect(() => {
+    if (!isLoggedIn && !isSovereign) return;
+    if (!useLocalImages || !bgDownloadEnabled) return;
+
+    let active = true;
+    const cacheImagesInBackground = async () => {
+      // Delay initial execution by 4 seconds to allow primary resources to load
+      await new Promise(resolve => setTimeout(resolve, 4000));
+      if (!active) return;
+
+      try {
+        const response = await axios.get('/api/products');
+        const products = response.data;
+        const productsWithImages = products.filter((p: any) => p.image_url);
+        
+        const cache = await caches.open('motu-image-cache');
+
+        // Throttle downloads to prevent CPU/network spikes: 1 image every 1500ms
+        for (const p of productsWithImages) {
+          if (!active) break;
+          const cacheKey = `/api/static/images/${p.id}.webp`;
+          
+          try {
+            const hasMatch = await cache.match(cacheKey);
+            if (!hasMatch) {
+              // Fetch from local static server first (since it is populated and fast)
+              let imgResponse = await fetch(cacheKey);
+              if (!imgResponse.ok) {
+                // Fallback to Supabase remote image URL if local is missing
+                imgResponse = await fetch(p.image_url);
+              }
+              if (imgResponse.ok) {
+                await cache.put(cacheKey, imgResponse);
+              }
+            }
+          } catch (err) {
+            // Silently handle single image fetch failures in background
+          }
+          
+          // Wait 1.5s between images
+          await new Promise(resolve => setTimeout(resolve, 1500));
+        }
+      } catch (err) {
+        console.warn("Background image caching initialization failed:", err);
+      }
+    };
+
+    cacheImagesInBackground();
+
+    return () => {
+      active = false;
+    };
+  }, [isLoggedIn, isSovereign, useLocalImages, bgDownloadEnabled]);
+
+  // Show Cache Welcome Dialog for first time users
+  useEffect(() => {
+    if (isLoggedIn || isSovereign) {
+      const seen = localStorage.getItem('motu_cache_intro_seen') === 'true';
+      if (!seen) {
+        // Show after a brief delay
+        const timer = setTimeout(() => {
+          setShowCacheWelcome(true);
+        }, 3000);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [isLoggedIn, isSovereign]);
+
+  const handleCacheWelcomeSelect = (mode: 'download_all' | 'on_demand' | 'none') => {
+    localStorage.setItem('motu_cache_intro_seen', 'true');
+    if (mode === 'download_all') {
+      localStorage.setItem('use_local_images', 'true');
+      localStorage.setItem('motu_background_download_enabled', 'true');
+      setUseLocalImages(true);
+      setBgDownloadEnabled(true);
+    } else if (mode === 'on_demand') {
+      localStorage.setItem('use_local_images', 'true');
+      localStorage.setItem('motu_background_download_enabled', 'false');
+      setUseLocalImages(true);
+      setBgDownloadEnabled(false);
+    } else {
+      localStorage.setItem('use_local_images', 'false');
+      localStorage.setItem('motu_background_download_enabled', 'false');
+      setUseLocalImages(false);
+      setBgDownloadEnabled(false);
+    }
+  };
 
   const handleLoginSuccess = (user: any, sovereign: boolean) => {
     setIsLoggedIn(true);
@@ -291,6 +385,12 @@ function App() {
           </main>
         </div>
       </div>
+      
+      <CacheWelcomeModal
+        isOpen={showCacheWelcome}
+        onClose={() => setShowCacheWelcome(false)}
+        onSelect={handleCacheWelcomeSelect}
+      />
     </div>
   );
 }
