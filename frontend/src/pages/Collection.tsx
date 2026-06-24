@@ -21,7 +21,6 @@ import {
     Save,
     ArrowUp,
     ArrowDown,
-    History,
     PenTool,
     Cpu
 } from 'lucide-react';
@@ -382,15 +381,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                 >
                     Todos
                 </button>
-                {!isVintageOnly && (
-                    <button
-                        onClick={() => setSelectedChips(prev => prev.includes('vintage') ? prev.filter(c => c !== 'vintage') : [...prev, 'vintage'])}
-                        className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5 ${selectedChips.includes('vintage') ? (isVintageOnly ? 'bg-amber-500 text-black shadow-md shadow-amber-500/20' : 'bg-brand-primary text-white shadow-md shadow-brand-primary/20') : 'text-white/60 bg-white/5 hover:bg-white/10 hover:text-white'}`}
-                    >
-                        <History className="h-3 w-3" />
-                        Vintage
-                    </button>
-                )}
+
                 <button
                     onClick={() => setSelectedChips(prev => {
                         const next = prev.includes('manual_price') ? prev.filter(c => c !== 'manual_price') : [...prev.filter(c => c !== 'no_manual_price'), 'manual_price'];
