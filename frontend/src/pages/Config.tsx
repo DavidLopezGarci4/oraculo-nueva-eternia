@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Play, Activity, Clock, AlertCircle, CheckCircle2, RefreshCw, Terminal, Target, Settings, Users, ShieldAlert, Trash2, Zap, History, Database, Download, FileSpreadsheet, Repeat, Globe, Package, ChevronDown, Lock } from 'lucide-react';
+import { Play, Activity, Clock, AlertCircle, CheckCircle2, RefreshCw, Terminal, Target, Settings, Users, ShieldAlert, Trash2, Zap, History, Database, Download, FileSpreadsheet, Repeat, Globe, Package, ChevronDown, Lock, Swords, Shield, Search, Sparkles, Home } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { resetSmartMatches, runScrapers, stopScrapers, getScraperLogs, type ScraperExecutionLog, getWallapopIpLogs, downloadWallapopIpLogs, type WallapopIpLog } from '../api/purgatory';
@@ -953,10 +953,32 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                                         const isSuccess = line.toLowerCase().includes('success') || line.toLowerCase().includes('found') || line.toLowerCase().includes('completed');
                                                         const isWarning = line.toLowerCase().includes('warning') || line.toLowerCase().includes('alert');
 
+                                                        // Parse emojis to Lucide icons
+                                                        const emojiMap: { [key: string]: React.ReactNode } = {
+                                                            '🚀': <Play className="inline h-3 w-3 mr-1 text-brand-primary align-middle" />,
+                                                            '⚔️': <Swords className="inline h-3 w-3 mr-1 text-brand-primary align-middle" />,
+                                                            '🔎': <Search className="inline h-3 w-3 mr-1 text-brand-primary align-middle" />,
+                                                            '🔍': <Search className="inline h-3 w-3 mr-1 text-brand-primary align-middle" />,
+                                                            '🔮': <Sparkles className="inline h-3 w-3 mr-1 text-purple-400 align-middle" />,
+                                                            '⚡': <Zap className="inline h-3 w-3 mr-1 text-yellow-400 align-middle" />,
+                                                            '⚠️': <AlertCircle className="inline h-3 w-3 mr-1 text-yellow-500 align-middle" />,
+                                                            '🌐': <Globe className="inline h-3 w-3 mr-1 text-blue-400 align-middle" />,
+                                                            '🏠': <Home className="inline h-3 w-3 mr-1 text-green-400 align-middle" />,
+                                                            '🛡️': <Shield className="inline h-3 w-3 mr-1 text-brand-primary align-middle" />,
+                                                            '⚙️': <Settings className="inline h-3 w-3 mr-1 text-slate-400 align-middle" />,
+                                                            '📥': <Download className="inline h-3 w-3 mr-1 text-green-400 align-middle" />,
+                                                            '📦': <Package className="inline h-3 w-3 mr-1 text-brand-primary align-middle" />
+                                                        };
+                                                        
+                                                        const regex = /(🚀|⚔️|🔎|🔍|🔮|⚡|⚠️|🌐|🏠|🛡️|⚙️|📥|📦)/g;
+                                                        const parts = line.split(regex);
+
                                                         return (
                                                             <div key={i} className={`flex gap-4 group/line ${isError ? 'text-red-400' : isSuccess ? 'text-green-400' : isWarning ? 'text-yellow-400' : 'text-white/60'}`}>
                                                                 <span className="text-white/10 select-none w-8 text-right group-hover/line:text-white/60 transition-colors">{String(i + 1).padStart(3, '0')}</span>
-                                                                <p className="break-all whitespace-pre-wrap flex-1">{line}</p>
+                                                                <p className="break-all whitespace-pre-wrap flex-1 align-middle">
+                                                                    {parts.map((part, idx) => emojiMap[part] ? <React.Fragment key={idx}>{emojiMap[part]}</React.Fragment> : part)}
+                                                                </p>
                                                             </div>
                                                         );
                                                     })
@@ -1683,14 +1705,22 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                                     <span className="text-[10px] font-mono text-brand-primary/70 bg-brand-primary/10 px-1.5 py-0.5 rounded-md border border-brand-primary/20">{hero.id}</span>
                                                 </td>
                                                 <td className="px-4 py-3">
-                                                    <select
-                                                        value={hero.role}
-                                                        onChange={(e) => handleUpdateRole(hero.id, e.target.value)}
-                                                        className="bg-brand-primary/10 text-brand-primary text-[9px] uppercase font-black border border-brand-primary/20 rounded px-1.5 py-0.5 outline-none cursor-pointer hover:bg-brand-primary/30"
-                                                    >
-                                                        <option value="viewer" className="bg-black text-white">🛡️ Guardián</option>
-                                                        <option value="admin" className="bg-black text-white">⚔️ Maestro</option>
-                                                    </select>
+                                                    <div className="relative flex items-center w-fit">
+                                                        {hero.role === 'admin' ? (
+                                                            <Swords className="absolute left-2 h-3 w-3 text-brand-primary pointer-events-none" />
+                                                        ) : (
+                                                            <Shield className="absolute left-2 h-3 w-3 text-brand-primary pointer-events-none" />
+                                                        )}
+                                                        <select
+                                                            value={hero.role}
+                                                            onChange={(e) => handleUpdateRole(hero.id, e.target.value)}
+                                                            className="bg-brand-primary/10 text-brand-primary text-[9px] uppercase font-black border border-brand-primary/20 rounded pl-6 pr-5 py-1.5 outline-none cursor-pointer hover:bg-brand-primary/30 appearance-none text-left"
+                                                        >
+                                                            <option value="viewer" className="bg-black text-white">Guardián</option>
+                                                            <option value="admin" className="bg-black text-white">Maestro</option>
+                                                        </select>
+                                                        <ChevronDown className="absolute right-1.5 h-2.5 w-2.5 text-brand-primary pointer-events-none" />
+                                                    </div>
                                                 </td>
                                                 <td className="px-4 py-3">
                                                     <div className="flex items-center gap-1.5">
@@ -1834,10 +1864,14 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-black text-white/65 uppercase tracking-widest pl-1">Rango del Héroe (Rol)</label>
-                                        <select disabled className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white/50 focus:outline-none appearance-none font-bold">
-                                            <option>🛡️ Guardián de Eternia (Viewer)</option>
-                                            <option>⚔️ Master del Universo (Admin)</option>
-                                        </select>
+                                        <div className="relative flex items-center">
+                                            <Shield className="absolute left-4 h-4 w-4 text-brand-primary pointer-events-none" />
+                                            <select disabled className="w-full bg-white/5 border border-white/10 rounded-2xl pl-11 pr-10 py-3 text-white/50 focus:outline-none appearance-none font-bold">
+                                                <option>Guardián de Eternia (Viewer)</option>
+                                                <option>Master del Universo (Admin)</option>
+                                            </select>
+                                            <ChevronDown className="absolute right-4 h-4 w-4 text-white/30 pointer-events-none" />
+                                        </div>
                                     </div>
                                 </div>
 

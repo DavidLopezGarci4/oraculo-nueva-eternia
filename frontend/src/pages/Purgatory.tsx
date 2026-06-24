@@ -17,7 +17,9 @@ import {
     X,
     History,
     ArrowDown,
-    Check
+    Check,
+    LayoutGrid,
+    LayoutList
 } from 'lucide-react';
 import { getPurgatory, discardItem, discardItemsBulk, matchVintageItem, matchMiscellaneousItem, matchItemsBulk } from '../api/purgatory';
 
@@ -1151,15 +1153,17 @@ const Purgatory: React.FC = React.memo(() => {
                         <span className="text-[10px] font-black uppercase tracking-widest text-white/50 mr-2">Diseño:</span>
                         <button
                             onClick={() => setViewLayout('mazo')}
-                            className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewLayout === 'mazo' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'bg-white/5 text-white/60 hover:text-white hover:bg-white/10'}`}
+                            className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5 ${viewLayout === 'mazo' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'bg-white/5 text-white/60 hover:text-white hover:bg-white/10'}`}
                         >
-                            🗂️ Modo Mazo
+                            <LayoutGrid className="h-3 w-3" />
+                            Modo Mazo
                         </button>
                         <button
                             onClick={() => setViewLayout('lista')}
-                            className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewLayout === 'lista' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'bg-white/5 text-white/60 hover:text-white hover:bg-white/10'}`}
+                            className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5 ${viewLayout === 'lista' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'bg-white/5 text-white/60 hover:text-white hover:bg-white/10'}`}
                         >
-                            📋 Modo Listado
+                            <LayoutList className="h-3 w-3" />
+                            Modo Listado
                         </button>
                     </div>
 

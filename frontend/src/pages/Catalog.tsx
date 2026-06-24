@@ -24,7 +24,8 @@ import {
     Trash2,
     ArrowUp,
     ArrowDown,
-    GitMerge
+    GitMerge,
+    Store
 } from 'lucide-react';
 import { getOptimizedImageUrl } from '../utils/imageUtils';
 import { MOTUImage } from '../components/ui/MOTUImage';
@@ -999,21 +1000,23 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                         <span className="text-[10px] font-black uppercase tracking-widest text-white/50 mr-2 ml-1">Filtros Rápidos:</span>
                         <button
                             onClick={() => setSelectedChips([])}
-                            className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedChips.length === 0 ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/20' : 'text-white/60 bg-white/5 hover:bg-white/10 hover:text-white'}`}
+                            className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedChips.length === 0 ? (isVintageOnly ? 'bg-amber-500 text-black shadow-md shadow-amber-500/20' : 'bg-brand-primary text-white shadow-md shadow-brand-primary/20') : 'text-white/60 bg-white/5 hover:bg-white/10 hover:text-white'}`}
                         >
                             Todos
                         </button>
                         <button
                             onClick={() => setSelectedChips(prev => prev.includes('coleccionado') ? prev.filter(c => c !== 'coleccionado') : [...prev, 'coleccionado'])}
-                            className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedChips.includes('coleccionado') ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/20' : 'text-white/60 bg-white/5 hover:bg-white/10 hover:text-white'}`}
+                            className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5 ${selectedChips.includes('coleccionado') ? (isVintageOnly ? 'bg-amber-500 text-black shadow-md shadow-amber-500/20' : 'bg-brand-primary text-white shadow-md shadow-brand-primary/20') : 'text-white/60 bg-white/5 hover:bg-white/10 hover:text-white'}`}
                         >
-                            📦 Coleccionado
+                            <Package className="h-3 w-3" />
+                            Coleccionado
                         </button>
                         <button
                             onClick={() => setSelectedChips(prev => prev.includes('offers') ? prev.filter(c => c !== 'offers') : [...prev, 'offers'])}
-                            className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedChips.includes('offers') ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/20' : 'text-white/60 bg-white/5 hover:bg-white/10 hover:text-white'}`}
+                            className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5 ${selectedChips.includes('offers') ? (isVintageOnly ? 'bg-amber-500 text-black shadow-md shadow-amber-500/20' : 'bg-brand-primary text-white shadow-md shadow-brand-primary/20') : 'text-white/60 bg-white/5 hover:bg-white/10 hover:text-white'}`}
                         >
-                            🔥 En Oferta
+                            <Flame className="h-3 w-3" />
+                            En Oferta
                         </button>
                         {selectedShopFilter && (
                             <button
@@ -1021,7 +1024,8 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                                 className="px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/35 hover:text-red-300 flex items-center gap-1.5 shadow-md shadow-red-950/20"
                                 title="Quitar filtro de tienda"
                             >
-                                🏪 {selectedShopFilter} <span className="text-white/60 font-black">&times;</span>
+                                <Store className="h-3 w-3" />
+                                {selectedShopFilter} <span className="text-white/60 font-black">&times;</span>
                             </button>
                         )}
                     </div>
