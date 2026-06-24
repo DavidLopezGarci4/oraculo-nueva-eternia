@@ -1,6 +1,7 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import ValidationError
 import sys
+import os
 from loguru import logger
 
 class Settings(BaseSettings):
@@ -44,6 +45,9 @@ class Settings(BaseSettings):
     # Local Image Cache - Phase 68
     IMAGE_CACHE_DIR: str = "data/image_cache"
 
+    # ScraperAPI Key
+    SCRAPERAPI_KEY: str | None = None
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_ignore_empty=True,
@@ -79,3 +83,6 @@ else:
     if not settings.TELEGRAM_BOT_TOKEN: missing.append("TOKEN")
     if not settings.TELEGRAM_CHAT_ID: missing.append("CHAT_ID")
     logger.warning(f"📡 System Cloud: Telegram Alerts DISABLED. Missing: {', '.join(missing)}")
+
+if settings.SCRAPERAPI_KEY:
+    os.environ["SCRAPERAPI_KEY"] = settings.SCRAPERAPI_KEY
