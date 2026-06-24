@@ -247,7 +247,7 @@ async def get_scrapers_status():
             db.query(ScraperStatusModel)
             .filter(
                 ScraperStatusModel.spider_name.notin_(
-                    ["Nexus", "NexusVintage", "Harvester", "harvester", "all", "idealo.es", "Idealo.es"]
+                    ["Nexus", "NexusVintage", "Harvester", "harvester", "all", "idealo.es", "Idealo.es", "Amazon"]
                 )
             )
             .all()
