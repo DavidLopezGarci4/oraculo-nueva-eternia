@@ -477,6 +477,15 @@ class WallapopIpLogModel(Base):
     details: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     recorded_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
 
+class SystemConfigModel(Base):
+    """
+    Configuraciones globales del sistema (Fase 62)
+    Utilizado para unificar configuraciones como las coordenadas de los haces de luz.
+    """
+    __tablename__ = "system_config"
+    key: Mapped[str] = mapped_column(String, primary_key=True, index=True)
+    value: Mapped[str] = mapped_column(String)
+
 __all__ = [
     "Base", 
     "ProductModel", 
@@ -492,6 +501,7 @@ __all__ = [
     "KaizenInsightModel",
     "ProductAliasModel",
     "SyncQueueModel",
+    "SystemConfigModel",
     "LogisticRuleModel",
     "AuthorizedDeviceModel",
     "StagedImportModel",

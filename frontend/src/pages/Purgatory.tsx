@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, useTransform, useDragControls } from 'framer-motion';
 import {
     Flame,
     Zap,
@@ -74,6 +74,7 @@ const SwipeCard: React.FC<SwipeCardProps> = ({
     const x = useMotionValue(0);
     const y = useMotionValue(0);
     const [showAllSuggestions, setShowAllSuggestions] = useState(false);
+    const dragControls = useDragControls();
 
     // Dynamic rotation and overlay opacities based on translation
     const rotate = useTransform(x, [-200, 200], [-15, 15]);
@@ -122,11 +123,13 @@ const SwipeCard: React.FC<SwipeCardProps> = ({
             drag={isTop}
             dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
             dragElastic={0.6}
+            dragControls={dragControls}
+            dragListener={false}
             onDragEnd={handleDragEnd}
             animate={isTop ? { x: 0, y: 0, rotate: 0, scale: 1 } : { y: stackY, scale: stackScale }}
             transition={isTop ? { type: 'spring', stiffness: 300, damping: 20 } : { duration: 0.3 }}
             exit={{ opacity: 0, scale: 0.8, transition: { duration: 0.2 } }}
-            className={`absolute w-full h-[530px] rounded-[2.5rem] border bg-gradient-to-br from-black/85 via-black/90 to-white/[0.04] p-6 shadow-2xl backdrop-blur-xl flex flex-col justify-between ${isTop ? 'border-brand-primary/30 cursor-grab active:cursor-grabbing shadow-brand-primary/10' : 'border-white/5 shadow-black/80 pointer-events-none'}`}
+            className={`absolute w-full h-[530px] rounded-[2.5rem] border bg-gradient-to-br from-black/85 via-black/90 to-white/[0.04] p-6 shadow-2xl backdrop-blur-xl flex flex-col justify-between ${isTop ? 'border-brand-primary/30 cursor-default shadow-brand-primary/10' : 'border-white/5 shadow-black/80 pointer-events-none'}`}
         >
             {/* Swiping Indicator Overlays */}
             {isTop && (
@@ -146,8 +149,11 @@ const SwipeCard: React.FC<SwipeCardProps> = ({
                 </>
             )}
 
-            {/* Top Details (Image + Scraped Info) */}
-            <div className="flex gap-4 items-start select-none">
+            {/* Top Details (Image + Scraped Info) - Serve as drag handle */}
+            <div 
+                onPointerDown={(e) => isTop && dragControls.start(e)}
+                className={`flex gap-4 items-start select-none relative pr-8 ${isTop ? 'cursor-grab active:cursor-grabbing touch-none' : ''}`}
+            >
                 <div className="relative h-24 w-24 rounded-2xl bg-black border border-white/10 overflow-hidden shrink-0 shadow-lg">
                     {item.image_url ? (
                         <img src={item.image_url} alt={item.scraped_name} className="h-full w-full object-cover p-0.5" />
@@ -165,6 +171,20 @@ const SwipeCard: React.FC<SwipeCardProps> = ({
                         <span className="text-lg font-black text-brand-primary">{item.price} <span className="text-xs text-brand-primary/80">{item.currency}</span></span>
                     </div>
                 </div>
+
+                {item.url && isTop && (
+                    <a
+                        href={item.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        className="absolute right-0 top-0 p-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-brand-primary/20 hover:border-brand-primary/30 text-white/50 hover:text-white transition-all shadow-md cursor-pointer z-10"
+                        title="Abrir enlace original"
+                    >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                )}
             </div>
 
             {/* Middle Section (Linking Panel / Quick Association) */}
@@ -410,6 +430,7 @@ const Purgatory: React.FC = React.memo(() => {
     const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'highest_match' | 'lowest_match'>('highest_match');
     const [shopFilter, setShopFilter] = useState<string>('all');
     const [deckItems, setDeckItems] = useState<any[]>([]);
+    const [snoozedIds, setSnoozedIds] = useState<number[]>([]);
     const [associatedProductId, setAssociatedProductId] = useState<number | null>(null);
     const [isSearchingAssociation, setIsSearchingAssociation] = useState(false);
 
@@ -886,8 +907,20 @@ const Purgatory: React.FC = React.memo(() => {
     const filteredHash = sortedAndFilteredItems.map(i => i.id).join(',');
 
     useEffect(() => {
-        setDeckItems(sortedAndFilteredItems);
-    }, [filteredHash]);
+        // Ordenar sortedAndFilteredItems de tal manera que los IDs en snoozedIds vayan al final
+        const reordered = [...sortedAndFilteredItems].sort((a, b) => {
+            const indexA = snoozedIds.indexOf(a.id);
+            const indexB = snoozedIds.indexOf(b.id);
+            
+            if (indexA !== -1 && indexB !== -1) {
+                return indexA - indexB; // Ambos snoozed, conservar orden de snooze
+            }
+            if (indexA !== -1) return 1; // a va al final
+            if (indexB !== -1) return -1; // b va al final
+            return 0; // Conservar orden relativo original
+        });
+        setDeckItems(reordered);
+    }, [filteredHash, snoozedIds]);
 
     // Sincronizar la asociación por defecto con el primer item de la pila
     useEffect(() => {
@@ -920,6 +953,7 @@ const Purgatory: React.FC = React.memo(() => {
         }
 
         matchMutation.mutate({ pendingId: item.id, productId: prodId });
+        setSnoozedIds(prev => prev.filter(id => id !== item.id));
         setDeckItems(prev => prev.filter(i => i.id !== item.id));
         setAssociatedProductId(null);
         setIsSearchingAssociation(false);
@@ -927,15 +961,16 @@ const Purgatory: React.FC = React.memo(() => {
 
     const handleDiscardCard = (item: any) => {
         discardMutation.mutate(item.id);
+        setSnoozedIds(prev => prev.filter(id => id !== item.id));
         setDeckItems(prev => prev.filter(i => i.id !== item.id));
         setAssociatedProductId(null);
         setIsSearchingAssociation(false);
     };
 
     const handleSwipeDown = (item: any) => {
-        setDeckItems(prev => {
-            const remaining = prev.filter(i => i.id !== item.id);
-            return [...remaining, item];
+        setSnoozedIds(prev => {
+            const filtered = prev.filter(id => id !== item.id);
+            return [...filtered, item.id];
         });
         setAssociatedProductId(null);
         setIsSearchingAssociation(false);

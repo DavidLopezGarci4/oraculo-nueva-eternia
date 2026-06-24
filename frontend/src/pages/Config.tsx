@@ -31,6 +31,8 @@ import {
     exportCollectionSqlite,
     updateUserLocation,
     updateUserPublicShowcase,
+    getSystemSwordConfigs,
+    saveSystemSwordConfigs,
     type ScraperStatus,
     type Hero
 } from '../api/admin';
@@ -205,33 +207,50 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
     };
 
     useEffect(() => {
-        if (showCalibrator) {
-            const stored = localStorage.getItem('vintage_sword_coords');
-            if (stored) {
-                try {
-                    setCalibCoords(JSON.parse(stored));
-                } catch (e) {
-                    console.error("Failed to parse vintage sword coords", e);
+        const loadConfigs = async () => {
+            let loadedRemote = false;
+            try {
+                const configs = await getSystemSwordConfigs();
+                if (configs && Object.keys(configs).length > 0) {
+                    if (configs.vintage_sword_coords) {
+                        setCalibCoords(configs.vintage_sword_coords);
+                    }
+                    if (configs.skeletor_sword_coords) {
+                        setModernCoords(configs.skeletor_sword_coords);
+                    }
+                    loadedRemote = true;
+                }
+            } catch (e) {
+                console.error("Failed to load remote configs", e);
+            }
+
+            if (!loadedRemote) {
+                const storedVintage = localStorage.getItem('vintage_sword_coords');
+                if (storedVintage) {
+                    try { setCalibCoords(JSON.parse(storedVintage)); } catch(e){}
+                }
+                const storedSkeletor = localStorage.getItem('skeletor_sword_coords');
+                if (storedSkeletor) {
+                    try { setModernCoords(JSON.parse(storedSkeletor)); } catch(e){}
                 }
             }
-        }
-    }, [showCalibrator]);
+        };
+        loadConfigs();
+    }, []);
 
-    useEffect(() => {
-        if (showModernCalibrator) {
-            const stored = localStorage.getItem('skeletor_sword_coords');
-            if (stored) {
-                try {
-                    setModernCoords(JSON.parse(stored));
-                } catch (e) {
-                    console.error("Failed to parse modern sword coords", e);
-                }
-            }
-        }
-    }, [showModernCalibrator]);
-
-    const handleSaveCalib = () => {
+    const handleSaveCalib = async () => {
         localStorage.setItem('vintage_sword_coords', JSON.stringify(calibCoords));
+        if (isAdmin) {
+            try {
+                await saveSystemSwordConfigs({
+                    vintage_sword_coords: calibCoords,
+                    skeletor_sword_coords: modernCoords
+                });
+            } catch (e) {
+                console.error("Error saving global vintage coords", e);
+                alert("Error al guardar en el servidor global. Se guardó localmente.");
+            }
+        }
         setShowCalibrator(false);
     };
 
@@ -244,8 +263,19 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
         });
     };
 
-    const handleSaveModernCalib = () => {
+    const handleSaveModernCalib = async () => {
         localStorage.setItem('skeletor_sword_coords', JSON.stringify(modernCoords));
+        if (isAdmin) {
+            try {
+                await saveSystemSwordConfigs({
+                    vintage_sword_coords: calibCoords,
+                    skeletor_sword_coords: modernCoords
+                });
+            } catch (e) {
+                console.error("Error saving global skeletor coords", e);
+                alert("Error al guardar en el servidor global. Se guardó localmente.");
+            }
+        }
         setShowModernCalibrator(false);
     };
 

@@ -220,3 +220,13 @@ export const getPublicShowcase = async (username: string): Promise<any> => {
     return response.data;
 };
 
+export const getSystemSwordConfigs = async (): Promise<any> => {
+    const response = await adminAxios.get('/system/sword-configs');
+    return response.data;
+};
+
+export const saveSystemSwordConfigs = async (configs: any): Promise<{ status: string; message: string }> => {
+    const response = await adminAxios.post('/system/sword-configs', configs);
+    return response.data;
+};
+

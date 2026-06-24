@@ -106,3 +106,32 @@ async def system_audit():
                 "error_detail": str(e),
                 "hint": "Check if DB credentials are correct or if the DB server is reachable.",
             }
+
+import json
+from src.interfaces.api.deps import get_current_user
+from src.domain.models import SystemConfigModel, UserModel
+
+@router.get("/api/system/sword-configs")
+async def get_sword_configs(current_user: UserModel = Depends(get_current_user)):
+    with SessionCloud() as db:
+        cfg = db.query(SystemConfigModel).filter(SystemConfigModel.key == "sword_configs").first()
+        if cfg:
+            try:
+                return json.loads(cfg.value)
+            except Exception:
+                return {}
+        return {}
+
+@router.post("/api/system/sword-configs")
+async def save_sword_configs(configs: dict, current_user: UserModel = Depends(get_current_user)):
+    if current_user.role != "admin" and current_user.id != 2:
+        raise HTTPException(status_code=403, detail="No autorizado para modificar la configuración de espadas.")
+        
+    with SessionCloud() as db:
+        cfg = db.query(SystemConfigModel).filter(SystemConfigModel.key == "sword_configs").first()
+        if not cfg:
+            cfg = SystemConfigModel(key="sword_configs")
+            db.add(cfg)
+        cfg.value = json.dumps(configs)
+        db.commit()
+    return {"status": "success", "message": "Configuración de espadas guardada exitosamente."}

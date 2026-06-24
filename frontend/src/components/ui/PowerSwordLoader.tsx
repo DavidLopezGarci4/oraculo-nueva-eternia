@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import swordAsset from '../../assets/HemanGlassmorphSword.png';
 import vintageSwordAsset from '../../assets/GlassmorphSwordHeMan.png';
+import { getSystemSwordConfigs } from '../../api/admin';
 
 interface PowerSwordLoaderProps {
     className?: string;
@@ -84,7 +85,31 @@ const PowerSwordLoader: React.FC<PowerSwordLoaderProps> = ({
         tY: 10.0
     });
 
+    const [loadedGlobal, setLoadedGlobal] = useState(false);
+
+    // Cargar configuraciones globales desde el servidor
     useEffect(() => {
+        const fetchGlobalConfigs = async () => {
+            try {
+                const configs = await getSystemSwordConfigs();
+                if (configs && Object.keys(configs).length > 0) {
+                    if (configs.vintage_sword_coords) {
+                        setVintageCoords(configs.vintage_sword_coords);
+                    }
+                    if (configs.skeletor_sword_coords) {
+                        setSkeletorCoords(configs.skeletor_sword_coords);
+                    }
+                    setLoadedGlobal(true);
+                }
+            } catch (e) {
+                console.log("No se pudieron cargar las configuraciones de espadas globales o no hay sesión activa.", e);
+            }
+        };
+        fetchGlobalConfigs();
+    }, []);
+
+    useEffect(() => {
+        if (loadedGlobal) return;
         if (activeIsVintage) {
             const stored = localStorage.getItem('vintage_sword_coords');
             if (stored) {
@@ -95,20 +120,21 @@ const PowerSwordLoader: React.FC<PowerSwordLoaderProps> = ({
                 }
             }
         }
-    }, [activeIsVintage]);
+    }, [activeIsVintage, loadedGlobal]);
 
     useEffect(() => {
+        if (loadedGlobal) return;
         if (activeIsSkeletor) {
             const stored = localStorage.getItem('skeletor_sword_coords');
             if (stored) {
                 try {
                     setSkeletorCoords(JSON.parse(stored));
                 } catch (e) {
-                    console.error("Failed to parse skeletor sword coords", e);
+                    console.error("Failed to parse skeletor staff coords", e);
                 }
             }
         }
-    }, [activeIsSkeletor]);
+    }, [activeIsSkeletor, loadedGlobal]);
 
     useEffect(() => {
         if (!activeIsVintage && !activeIsSkeletor) {
