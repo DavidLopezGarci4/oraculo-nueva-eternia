@@ -174,11 +174,6 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
             }
 
             // Quick-Chips filter applications in Collection
-            const cond = (product.condition || 'MOC').toUpperCase();
-            const gradingVal = product.grading !== undefined ? product.grading : 10.0;
-            if (selectedChips.includes('moc') && cond !== 'MOC') return false;
-            if (selectedChips.includes('loose') && cond !== 'LOOSE') return false;
-            if (selectedChips.includes('graded') && !(gradingVal > 0 && product.grading !== null)) return false;
             if (selectedChips.includes('vintage') && !product.is_vintage) return false;
             if (selectedChips.includes('manual_price') && !(product.purchase_price && product.purchase_price > 0)) return false;
             if (selectedChips.includes('no_manual_price') && (product.purchase_price && product.purchase_price > 0)) return false;
@@ -380,32 +375,14 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                 <span className="text-[10px] font-black uppercase tracking-widest text-white/50 mr-2 ml-1">Filtros Rápidos:</span>
                 <button
                     onClick={() => setSelectedChips([])}
-                    className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedChips.length === 0 ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/20' : 'text-white/60 bg-white/5 hover:bg-white/10 hover:text-white'}`}
+                    className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedChips.length === 0 ? (isVintageOnly ? 'bg-amber-500 text-black shadow-md shadow-amber-500/20' : 'bg-brand-primary text-white shadow-md shadow-brand-primary/20') : 'text-white/60 bg-white/5 hover:bg-white/10 hover:text-white'}`}
                 >
                     Todos
-                </button>
-                <button
-                    onClick={() => setSelectedChips(prev => prev.includes('moc') ? prev.filter(c => c !== 'moc') : [...prev, 'moc'])}
-                    className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedChips.includes('moc') ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/20' : 'text-white/60 bg-white/5 hover:bg-white/10 hover:text-white'}`}
-                >
-                    📦 MOC
-                </button>
-                <button
-                    onClick={() => setSelectedChips(prev => prev.includes('loose') ? prev.filter(c => c !== 'loose') : [...prev, 'loose'])}
-                    className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedChips.includes('loose') ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/20' : 'text-white/60 bg-white/5 hover:bg-white/10 hover:text-white'}`}
-                >
-                    🎒 Loose
-                </button>
-                <button
-                    onClick={() => setSelectedChips(prev => prev.includes('graded') ? prev.filter(c => c !== 'graded') : [...prev, 'graded'])}
-                    className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedChips.includes('graded') ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/20' : 'text-white/60 bg-white/5 hover:bg-white/10 hover:text-white'}`}
-                >
-                    🎖️ Graded
                 </button>
                 {!isVintageOnly && (
                     <button
                         onClick={() => setSelectedChips(prev => prev.includes('vintage') ? prev.filter(c => c !== 'vintage') : [...prev, 'vintage'])}
-                        className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedChips.includes('vintage') ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/20' : 'text-white/60 bg-white/5 hover:bg-white/10 hover:text-white'}`}
+                        className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedChips.includes('vintage') ? (isVintageOnly ? 'bg-amber-500 text-black shadow-md shadow-amber-500/20' : 'bg-brand-primary text-white shadow-md shadow-brand-primary/20') : 'text-white/60 bg-white/5 hover:bg-white/10 hover:text-white'}`}
                     >
                         🕰️ Vintage
                     </button>
@@ -415,7 +392,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                         const next = prev.includes('manual_price') ? prev.filter(c => c !== 'manual_price') : [...prev.filter(c => c !== 'no_manual_price'), 'manual_price'];
                         return next;
                     })}
-                    className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedChips.includes('manual_price') ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/20' : 'text-white/60 bg-white/5 hover:bg-white/10 hover:text-white'}`}
+                    className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedChips.includes('manual_price') ? (isVintageOnly ? 'bg-amber-500 text-black shadow-md shadow-amber-500/20' : 'bg-brand-primary text-white shadow-md shadow-brand-primary/20') : 'text-white/60 bg-white/5 hover:bg-white/10 hover:text-white'}`}
                     title="Mostrar figuras con inversión asignada manualmente"
                 >
                     ✍️ Man
@@ -425,7 +402,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                         const next = prev.includes('no_manual_price') ? prev.filter(c => c !== 'no_manual_price') : [...prev.filter(c => c !== 'manual_price'), 'no_manual_price'];
                         return next;
                     })}
-                    className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedChips.includes('no_manual_price') ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/20' : 'text-white/60 bg-white/5 hover:bg-white/10 hover:text-white'}`}
+                    className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedChips.includes('no_manual_price') ? (isVintageOnly ? 'bg-amber-500 text-black shadow-md shadow-amber-500/20' : 'bg-brand-primary text-white shadow-md shadow-brand-primary/20') : 'text-white/60 bg-white/5 hover:bg-white/10 hover:text-white'}`}
                     title="Mostrar figuras sin inversión manual"
                 >
                     🤖 Auto
