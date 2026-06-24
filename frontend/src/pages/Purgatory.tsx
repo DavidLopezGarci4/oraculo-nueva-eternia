@@ -1045,7 +1045,7 @@ const Purgatory: React.FC = React.memo(() => {
                 <div className="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div className="relative z-10 flex flex-col gap-1">
                         <div className="flex items-center gap-2 text-brand-primary">
-                            <Flame className="h-3 w-3 md:h-4 md:w-4 fill-brand-primary" />
+                            <Flame className="h-3 w-3 md:h-4 md:w-4" />
                             <h2 className="text-sm md:text-base font-black uppercase tracking-[0.2em] text-white">
                                 <span className="text-brand-primary">Purgatorio</span>
                             </h2>

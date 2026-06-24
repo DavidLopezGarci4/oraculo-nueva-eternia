@@ -251,7 +251,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                 <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-2 text-brand-primary">
-                            <Zap className="h-3 w-3 fill-brand-primary" />
+                            <Zap className="h-3 w-3" />
                             <h2 className="text-sm md:text-base font-black uppercase tracking-[0.2em] text-white">
                                 Orbe de <span className="text-brand-primary">Grayskull</span>
                             </h2>

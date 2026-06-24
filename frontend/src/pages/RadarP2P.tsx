@@ -34,7 +34,7 @@ const RadarP2P: React.FC = () => {
                 <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="relative z-10 flex flex-col gap-1">
                         <div className="flex items-center gap-2 text-brand-primary">
-                            <Radar className="h-3 w-3 md:h-4 md:w-4 fill-brand-primary" />
+                            <Radar className="h-3 w-3 md:h-4 md:w-4" />
                             <h2 className="text-sm md:text-base font-black uppercase tracking-[0.2em] text-white">
                                 Radar de <span className="text-brand-primary">Oportunidades</span>
                             </h2>

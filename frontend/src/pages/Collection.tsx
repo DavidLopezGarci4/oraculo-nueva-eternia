@@ -224,7 +224,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                 <div className="relative z-10 flex flex-col gap-2">
                     <div className="flex flex-col gap-1">
                         <div className={`flex items-center gap-2 ${isVintageOnly ? 'text-amber-500' : 'text-brand-primary'}`}>
-                            <Box className={`h-3 w-3 md:h-4 md:w-4 ${isVintageOnly ? 'fill-amber-500' : 'fill-brand-primary'}`} />
+                            <Box className="h-3 w-3 md:h-4 md:w-4" />
                             <h2 className="text-sm md:text-base font-black uppercase tracking-[0.2em] text-white">
                                 {isVintageOnly ? (
                                     <>
