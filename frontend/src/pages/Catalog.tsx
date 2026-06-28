@@ -49,6 +49,7 @@ import { es } from 'date-fns/locale';
 import { getProductPriceHistory, getUniqueShops } from '../api/products';
 import type { Hero } from '../api/admin';
 import PowerSwordLoader from '../components/ui/PowerSwordLoader';
+import { parseUtcDate } from '../utils/dateUtils';
 
 
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -1526,7 +1527,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                                                             )}
                                                         </div>
                                                         <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-[9px] font-bold uppercase text-white/20">
-                                                            <span>Última vez: {formatDistanceToNow(new Date(offer.last_seen), { locale: es })}</span>
+                                                            <span>Última vez: {formatDistanceToNow(parseUtcDate(offer.last_seen), { locale: es })}</span>
                                                             <span className="flex items-center gap-1">
                                                                 <span className={`h-1.5 w-1.5 rounded-full ${offer.is_available ? 'bg-green-500' : 'bg-red-500 shadow-[0_0_5px_rgba(239,68,68,0.5)]'}`}></span>
                                                                 <span className={offer.is_available ? '' : 'text-red-400 font-black'}>

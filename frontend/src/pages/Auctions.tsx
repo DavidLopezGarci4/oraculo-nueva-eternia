@@ -13,6 +13,7 @@ import { getProductPriceHistory } from '../api/products';
 import PriceHistoryChart from '../components/products/PriceHistoryChart';
 import { unlinkOffer, type Hero } from '../api/admin';
 import { getOptimizedImageUrl } from '../utils/imageUtils';
+import { parseUtcDate } from '../utils/dateUtils';
 import { MOTUImage } from '../components/ui/MOTUImage';
 
 const MarketStatCard: React.FC<{ title: string, value: number, type: 'retail' | 'p2p' }> = ({ title, value, type }) => {
@@ -491,10 +492,10 @@ const Auctions: React.FC<AuctionsProps> = ({ user }) => {
                                                                 )}
                                                             </div>
                                                             <div className="flex flex-col gap-0.5">
-                                                                <div className="text-[9px] font-bold uppercase text-white/20">Visto hace: {formatDistanceToNow(new Date(offer.last_seen), { addSuffix: true, locale: es })}</div>
+                                                                <div className="text-[9px] font-bold uppercase text-white/20">Visto hace: {formatDistanceToNow(parseUtcDate(offer.last_seen), { addSuffix: true, locale: es })}</div>
                                                                 {offer.expiry_at && (
                                                                     <div className="text-[9px] font-black uppercase text-orange-400">
-                                                                        Expira: {formatDistanceToNow(new Date(offer.expiry_at), { addSuffix: true, locale: es })}
+                                                                        Expira: {formatDistanceToNow(parseUtcDate(offer.expiry_at), { addSuffix: true, locale: es })}
                                                                     </div>
                                                                 )}
                                                                 {offer.time_left_raw && !offer.expiry_at && (

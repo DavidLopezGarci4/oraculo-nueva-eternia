@@ -7,6 +7,7 @@ import { resetSmartMatches, runScrapers, stopScrapers, getScraperLogs, type Scra
 import PowerSwordLoader from '../components/ui/PowerSwordLoader';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { parseUtcDate } from '../utils/dateUtils';
 import WallapopImporter from '../components/admin/WallapopImporter';
 import { getDashboardMatchStats } from '../api/dashboard';
 import {
@@ -870,7 +871,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                                         <span className="flex items-center gap-1.5"><Database className="h-3 w-3" /> {log.items_found} items</span>
                                                         <span className="flex items-center gap-1 text-brand-primary/60"><Zap className="h-3 w-3" /> {log.new_items || 0} nuevos</span>
                                                     </div>
-                                                    <span>{formatDistanceToNow(new Date(log.start_time), { addSuffix: true, locale: es })}</span>
+                                                    <span>{formatDistanceToNow(parseUtcDate(log.start_time), { addSuffix: true, locale: es })}</span>
                                                 </div>
                                             </button>
                                         ))}

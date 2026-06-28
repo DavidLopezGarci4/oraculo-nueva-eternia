@@ -44,7 +44,7 @@ class WallapopScraper(BaseScraper):
         # 1. Intentar Geonode
         try:
             url_geonode = "https://proxylist.geonode.com/api/proxy-list?limit=40&page=1&sort_by=lastChecked&sort_type=desc&protocols=http%2Chttps"
-            response = await session.get(url_geonode, timeout=8)
+            response = await session.get(url_geonode, timeout=3)
             if response.status_code == 200:
                 data = response.json()
                 for item in data.get("data", []):

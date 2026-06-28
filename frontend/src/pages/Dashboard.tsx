@@ -23,6 +23,7 @@ import axios from 'axios';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { parseUtcDate } from '../utils/dateUtils';
 import masterRoleImg from '../assets/role-master.png';
 import guardianRoleImg from '../assets/role-guardian.png';
 import { MOTUImage } from '../components/ui/MOTUImage';
@@ -667,7 +668,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                                         </div>
                                         <div className="flex items-center justify-between text-[8px] font-black text-white/60 uppercase">
                                             <span>{entry.shop_name}</span>
-                                            <span>{formatDistanceToNow(new Date(entry.timestamp), { addSuffix: true, locale: es })}</span>
+                                            <span>{formatDistanceToNow(parseUtcDate(entry.timestamp), { addSuffix: true, locale: es })}</span>
                                         </div>
                                     </div>
                                 ))}
