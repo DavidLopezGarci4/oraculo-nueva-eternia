@@ -1202,3 +1202,13 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
   - **Corrección de Warnings en Compilación de Frontend**: Unificadas las importaciones dinámicas de `admin.ts` en `Catalog.tsx` y `Collection.tsx` as static imports to optimize production build chunks.
   - **Remoción de Parches en Dashboard**: Eliminado el condicional redundante de reemplazo de strings de WWE en `Dashboard.tsx` tras verificar la correcta integridad de nombres de waves en base de datos.
 
+### 🛡️ Fase 76: Simulación de App Móvil y Refuerzo Stealth en Playwright (28/06/2026)
+
+- **Hitos**: Simulación de firmas oficiales de la App móvil de Wallapop en peticiones de API directe y evasión avanzada de huellas en modo headless de Playwright.
+- **Estado**: ✅ COMPLETADO Y VERIFICADO
+- **Logros Técnicos**:
+  - **Simulación de App Móvil**: Inyectadas las cabeceras móviles `DeviceOS: "0"` y `X-DeviceOS: "0"` en las llamadas de API directa ruteadas por proxies públicos en `wallapop_scraper.py`. Esto permite hacerse pasar por el tráfico oficial de la aplicación móvil de Wallapop, cuyas reglas de filtrado WAF en CloudFront son sustancialmente más permisivas.
+  - **Refuerzo de Ocultación en Playwright Headless**:
+    - Agregados flags adicionales de Chromium para optimizar el rendimiento y desactivar barras de información de automatización (`--disable-infobars`, `--disable-dev-shm-usage`, `--disable-gpu`).
+    - Parcheado el objeto `navigator` en el script de inicialización de la página para falsificar firmas de detección comunes (sobrescritura de `navigator.webdriver`, normalización de `navigator.languages` y `navigator.plugins`, simulación de `window.chrome` y neutralización de la detección de `navigator.permissions.query`).
+  - **Verificación Completa**: Ejecutada la suite de pruebas unitarias backend con 35 tests pasando con éxito y compilación del frontend validada.

@@ -95,6 +95,8 @@ class WallapopScraper(BaseScraper):
                 "User-Agent": user_agent,
                 "Origin": "https://es.wallapop.com",
                 "Referer": "https://es.wallapop.com/",
+                "DeviceOS": "0",
+                "X-DeviceOS": "0",
             }
             
             params = {
@@ -362,7 +364,11 @@ class WallapopScraper(BaseScraper):
                         args=[
                             '--disable-blink-features=AutomationControlled',
                             '--no-sandbox',
-                            '--disable-setuid-sandbox'
+                            '--disable-setuid-sandbox',
+                            '--disable-infobars',
+                            '--disable-dev-shm-usage',
+                            '--disable-browser-side-navigation',
+                            '--disable-gpu'
                         ],
                         viewport={'width': 1280, 'height': 800},
                         user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -372,8 +378,25 @@ class WallapopScraper(BaseScraper):
                     page = context.pages[0] if context.pages else await context.new_page()
                     
                     await page.add_init_script("""
+                        // Ocultar automatización de webdriver
                         Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+                        
+                        // Ocultar idiomas
                         Object.defineProperty(navigator, 'languages', { get: () => ['es-ES', 'es', 'en'] });
+                        
+                        // Simular plugins reales
+                        Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+                        
+                        // Parchear permisos query
+                        const originalQuery = window.navigator.permissions.query;
+                        window.navigator.permissions.query = (parameters) => (
+                            parameters.name === 'notifications' ?
+                            Promise.resolve({ state: Notification.permission }) :
+                            originalQuery(parameters)
+                        );
+                        
+                        // Simular objeto chrome
+                        window.chrome = { runtime: {} };
                     """)
                     
                     current_ip = "Desconocida"
