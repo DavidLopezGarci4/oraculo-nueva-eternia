@@ -25,18 +25,20 @@ class WallapopScraper(BaseScraper):
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
     ]
     
+    # Class-level variables to persist across scraper instances/runs in the uvicorn process
+    global_failed_proxies = set()
+    global_free_proxies = []
+
     def __init__(self):
         super().__init__(shop_name="Wallapop", base_url="https://es.wallapop.com")
         self.is_auction_source = True # Peer-to-Peer
-        self.free_proxies = []
-        self.failed_proxies = set()
         
     async def _fetch_free_proxies(self, session: AsyncSession) -> List[str]:
         """
         Cosecha proxies públicos y frescos de Geonode y ProxyScrape de forma aleatorizada.
         """
-        if self.free_proxies:
-            return self.free_proxies
+        if WallapopScraper.global_free_proxies:
+            return WallapopScraper.global_free_proxies
 
         self._log("📡 Cosechando proxies públicos para rotación...")
         proxies = []
@@ -73,9 +75,9 @@ class WallapopScraper(BaseScraper):
                 
         # Randomizar para evitar sobrecargar los mismos servidores
         random.shuffle(proxies)
-        self.free_proxies = proxies
-        self._log(f"✅ Cosecha finalizada. {len(self.free_proxies)} proxies listos para rotación.")
-        return self.free_proxies
+        WallapopScraper.global_free_proxies = proxies
+        self._log(f"✅ Cosecha finalizada. {len(WallapopScraper.global_free_proxies)} proxies listos para rotación.")
+        return WallapopScraper.global_free_proxies
 
     async def search_via_api(self, query: str) -> List[ScrapedOffer]:
         """
@@ -162,9 +164,14 @@ class WallapopScraper(BaseScraper):
                     self._log("🌩️ Iniciando rotador dinámico de proxies públicos para Wallapop API...")
                     free_proxies = await self._fetch_free_proxies(session)
                     
-                    # Filter out failed proxies
-                    available_proxies = [p for p in free_proxies if p not in self.failed_proxies]
-                    self._log(f"🌩️ {len(available_proxies)} proxies disponibles para probar (excluyendo {len(self.failed_proxies)} fallidos).")
+                    # Prevent memory leaks by resetting global failed list if it exceeds 3000
+                    if len(WallapopScraper.global_failed_proxies) > 3000:
+                        self._log("🧹 Limpiando historial de proxies fallidos por exceso de tamaño.")
+                        WallapopScraper.global_failed_proxies.clear()
+                        
+                    # Filter out failed proxies globally
+                    available_proxies = [p for p in free_proxies if p not in WallapopScraper.global_failed_proxies]
+                    self._log(f"🌩️ {len(available_proxies)} proxies disponibles para probar (excluyendo {len(WallapopScraper.global_failed_proxies)} fallidos históricamente).")
                     
                     for proxy in available_proxies[:25]:  # Probar máximo 25 proxies
                         try:
@@ -182,10 +189,10 @@ class WallapopScraper(BaseScraper):
                                 break
                             else:
                                 self._log(f"❌ Proxy devolvió código: {proxy_response.status_code}")
-                                self.failed_proxies.add(proxy)
+                                WallapopScraper.global_failed_proxies.add(proxy)
                         except Exception as e:
                             self._log(f"❌ Proxy inalcanzable / lento (Error: {type(e).__name__})")
-                            self.failed_proxies.add(proxy)
+                            WallapopScraper.global_failed_proxies.add(proxy)
                 
                 if response and response.status_code == 200:
                     data = response.json()
