@@ -120,14 +120,23 @@ class WallapopScraper(BaseScraper):
             image_url = None
             images = obj.get("images", [])
             if images and isinstance(images, list):
-                if isinstance(images[0], dict):
-                    image_url = images[0].get("original") or images[0].get("medium")
+                first_img = images[0]
+                if isinstance(first_img, dict):
+                    if "urls" in first_img and isinstance(first_img["urls"], dict):
+                        urls = first_img["urls"]
+                        image_url = urls.get("big") or urls.get("medium") or urls.get("small")
+                    else:
+                        image_url = first_img.get("original") or first_img.get("medium")
                 else:
-                    image_url = images[0]
+                    image_url = first_img
             elif obj.get("image"):
                 img_obj = obj.get("image")
                 if isinstance(img_obj, dict):
-                    image_url = img_obj.get("original") or img_obj.get("medium")
+                    if "urls" in img_obj and isinstance(img_obj["urls"], dict):
+                        urls = img_obj["urls"]
+                        image_url = urls.get("big") or urls.get("medium") or urls.get("small")
+                    else:
+                        image_url = img_obj.get("original") or img_obj.get("medium")
                 else:
                     image_url = img_obj
                     
