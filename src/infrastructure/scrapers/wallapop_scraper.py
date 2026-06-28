@@ -91,14 +91,14 @@ class WallapopScraper(BaseScraper):
                         "url": target_url,
                         "country_code": "es",
                         "premium": "true",
-                        "keep_headers": "true"
+                        "render": "true"
                     }
                     scraperapi_url = f"http://api.scraperapi.com?{urllib.parse.urlencode(params_sa)}"
-                    self._log("📡 Ruteando Wallapop API a través de ScraperAPI (Premium ES)...")
+                    self._log("📡 Ruteando Wallapop API a través de ScraperAPI (Premium ES + Render)...")
                     response = await session.get(
                         scraperapi_url,
                         headers=headers,
-                        timeout=60
+                        timeout=90
                     )
                 
                 if response and response.status_code == 200:

@@ -1,62 +1,73 @@
-# 🕵️ Guía Técnica: Wallapop Playwright Nexus (Phase 44)
+# 🕵️ Guía Técnica: Wallapop Hybrid Nexus (Scraper API & Playwright)
 
-Este documento detalla la arquitectura de infiltración y el motor de extracción profunda desarrollado para Wallapop, diseñado para superar bloqueos CDN (403) y limitaciones de carga dinámica.
-
-## 🏗️ 1. Arquitectura del Motor
-
-El scraper utiliza **Playwright** como motor de renderizado, actuando como un navegador real para evadir las protecciones de CloudFront que bloquean peticiones HTTP directas.
-
-| Componente | Función |
-| :--- | :--- |
-| **Playwright Context** | Genera una sesión con User-Agent de Chrome 120 y `locale: es-ES`. |
-| **Sirius Stealth UI** | Simula desplazamientos de ratón y tiempos de espera humanos. |
-| **Hybrid Expansion** | Combina disparadores de click con eventos de scroll infinito. |
-| **P2P Router** | Etiqueta automáticamente los hallazgos para su visibilidad en "El Pabellón". |
+Este documento detalla la arquitectura de infiltración y el motor de extracción híbrida desarrollado para Wallapop, diseñado para superar los estrictos bloqueos de CloudFront WAF (HTTP 403 / 500) y obtener las ofertas del mercado P2P.
 
 ---
 
-## 🚀 2. Protocolo de Infiltración (Flujo de Ejecución)
+## 🏗️ 1. Arquitectura del Motor Híbrido
 
-### Fase A: Salto de Perímetro (Cookie Bypass)
-Wallapop despliega un banner de OneTrust que bloquea todas las interacciones del DOM. El script utiliza un sistema de detección multivariante:
-- **Prioridad 1**: ID del botón OneTrust (`#onetrust-accept-btn-handler`).
-- **Prioridad 2**: Búsqueda por rol ARIA (`name="Aceptar todo"`).
-- **Prioridad 3**: Selector semántico de texto (`button:has-text('Aceptar')`).
+Para maximizar la velocidad y evadir las penalizaciones por comportamiento automatizado, el sistema cuenta con un flujo secuencial inteligente de dos fases:
 
-### Fase B: El Click Maestro
-A diferencia de otros sitios, Wallapop requiere un **trigger manual** para activar el scroll infinito.
-1. El script navega hasta el final de la primera carga.
-2. Localiza el botón turquesa **"Cargar más"**.
-3. Ejecuta el click. Sin este paso, el scroll infinito permanece inactivo a nivel de JavaScript en la página.
+```mermaid
+graph TD
+    A[Inicio Búsqueda] --> B{Intento 1: API v3 Directa}
+    B -- Exito (200) --> C[Parsear JSON y Retornar]
+    B -- Bloqueo WAF (403) --> D{¿Hay SCRAPERAPI_KEY?}
+    D -- Sí --> E[Ruteo API por ScraperAPI + Render JS]
+    D -- No --> F[Fase 2: Playwright Browser]
+    E -- Éxito (200) --> C
+    E -- Error (500) / Fallo --> F
+    F --> G{Playwright Directo}
+    G -- WAF Blocked --> H{Playwright con Proxy ScraperAPI}
+    G -- Éxito --> I[Parsear DOM y Retornar]
+    H -- Éxito --> I
+    H -- Fallo --> J[Retornar Vacío]
+```
 
-### Fase C: Descenso Profundo (Infinite Scroll)
-Tras el click, se inicia un bucle de 8 niveles de descenso.
-- **Micro-ajustes**: Se usa `page.mouse.wheel(0, 1500)` para simular scrolls rápidos.
-- **Delay Humano**: Pequeños `asyncio.sleep` para permitir que el motor de reactividad de Wallapop cargue nuevos fragmentos del DOM.
+| Capa / Estrategia | Componente / Método | Función y Evasión WAF |
+| :--- | :--- | :--- |
+| **API Directa** | `curl_cffi` (Chrome 120) | Mimetiza el TLS fingerprint (JA3/JA4) de un navegador moderno para engañar a las comprobaciones iniciales de Cloudflare. |
+| **API Cloud Proxy** | ScraperAPI (Premium ES) | Si la API directa falla (403), se delega el endpoint `api.wallapop.com/api/v3/general/search` con `"render": "true"` y `"premium": "true"`. La renderización de JS en la nube resuelve el desafío matemático sin alertar al WAF local, y se descarta `keep_headers` para prevenir colisiones de proxy. |
+| **Browser Fallback** | Playwright Persistent Context | Si el consumo de la API falla, se levanta una instancia local en segundo plano reutilizando cookies en carpetas temporales (`playwright_wallapop_profile_direct`). |
+| **Browser Proxy** | Tunnel ScraperAPI HTTP | Si el navegador directo es interceptado por WAF, se reinicia el contexto web encapsulándolo en el proxy residencial de España (`proxy-server.scraperapi.com:8001`). |
+
+---
+
+## 🚀 2. Protocolo de Infiltración y Evasión de Bloqueos
+
+### A. Evasión de `navigator.webdriver`
+Playwright inyecta por defecto la propiedad `navigator.webdriver = true`, la cual es leída inmediatamente por scripts de protección de bot. El scraper sanitiza la sesión al vuelo agregando un script de inicialización del DOM:
+```javascript
+Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+Object.defineProperty(navigator, 'languages', { get: () => ['es-ES', 'es', 'en'] });
+```
+
+### B. Evitar el error de cabeceras en Proxy
+Cuando se rutean consultas de API a través de proxies premium en la nube, se debe evitar el parámetro `keep_headers: true`. Las cabeceras `Origin` y `Referer` locales entran en conflicto con la rotación de IPs residenciales de ScraperAPI, provocando que Cloudflare de Wallapop retorne códigos de estado `500` (Internal Server Error) o peticiones truncadas.
+
+### C. Navegación e Interacción Humana (Fallback)
+Cuando se ejecuta la extracción vía Web:
+1. **Salto de Banner**: Se detecta y hace clic en el botón de cookies de OneTrust (`#onetrust-accept-btn-handler` o `"Aceptar todo"`).
+2. **El Click Maestro**: Wallapop desactiva el scroll infinito inicial. El scraper hace scroll hacia abajo, localiza el botón **"Cargar más"**, ejecuta el click para despertar el Javascript de hidratación y recién inicia las llamadas dinámicas.
+3. **Simulación de Rodamiento**: Se implementa `page.mouse.wheel(0, 1500)` con retardos aleatorios para evitar patrones de barrido fijos.
 
 ---
 
 ## 🔎 3. Extracción y Normalización
 
-### Selectores de Datos
-Debido a la ofuscación de clases, el script utiliza selectores basados en estructura de URL:
-- **Items**: `a[href*='/item/']` (Captura todos los productos cargados, incluso los nuevos).
-- **Precios/Títulos**: Se extraen mediante navegación relativa dentro del contenedor del item.
-
-### Atribución de Datos
-Cada oferta se inyecta con metadatos de auditoría:
-- `source_type = "Peer-to-Peer"`: Identificador crítico para la UI del Oráculo.
-- `shop_name = "Wallapop"`.
-- `receipt_id`: Hash SHA256 para evitar duplicidad forense.
+### Selectores Web (HTML)
+Debido a la ofuscación aleatoria de clases CSS en la web de Wallapop, la extracción utiliza selectores basados en estructuras semánticas y enlaces del DOM:
+* **Tarjeta de Item**: `a[href*='/item/']` (Captura todos los productos cargados en el feed).
+* **Precio**: `span[class*='Price'], [class*='price']` (Filtra caracteres monetarios y convierte coma decimal).
+* **Título**: `p[class*='Title'], [class*='title']`.
+* **Imagen**: `img` (Selecciona el atributo `src`).
 
 ---
 
-## 🛠️ 4. Verificación de Éxito
+## 🛠️ 4. Auditoría IP y Monitoreo de Red
+El sistema audita cada intento de evasión guardando logs detallados de la IP de origen y el estado en la base de datos Supabase a través del modelo `WallapopIpLogModel`:
+* `status = "allowed"`: La IP local/directa navegó sin inconvenientes.
+* `status = "blocked"`: Se detectó el bloqueo WAF de CloudFront.
+* `status = "proxy_bypass"`: Bypass exitoso ruteado por canal en la nube.
 
-La efectividad del motor se mide por la profundidad del "Abismo":
-- **Pre-Optimización**: ~19-20 items (Superficie).
-- **Post-Optimización (Nexus)**: **170+ items** (Descenso Profundo).
-
----
-
-*Desarrollado bajo el estándar de seguridad 3OX para el Oráculo de Nueva Eternia.*
+*Desarrollado bajo el estándar de seguridad y resiliencia 3OX para el Oráculo de Nueva Eternia.*

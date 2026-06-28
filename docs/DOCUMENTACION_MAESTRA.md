@@ -157,26 +157,24 @@ Para aÃ±adir un nuevo motor de bÃºsqueda (por ejemplo, Triguetech):
 
 #### Troubleshootings Comunes de Scrapers
 
-- **Scraper no aparece en el Panel Admin:** AsegÃºrate de haberlo aÃ±adido en `spiders_map` de `routers/scrapers.py`.
+- **Scraper no aparece en el Panel Admin:** Asegúrate de haberlo añadido en `spiders_map` de `routers/scrapers.py`.
 - **Scraper de WooCommerce (ej. Triguetech) no detecta precios/stock:** WooCommerce puede variar las clases de CSS (`ins` vs `del`, `.instock` vs `.outofstock`). Si hay errores en las lecturas, inspecciona la estructura devuelta (`_parse_listing`) con BeautifulSoup y ajusta los selectores.
 
 ### 6.3 Seguridad y Permisos
 
 - El sistema utiliza `create_access_token` basado en PyJWT para generar tokens que expiran en 24h.
-- Los endpoints crÃ­ticos (`/api/admin/`, `/api/scrapers/run`) requieren validaciÃ³n de JWT y, adicionalmente, verificaciÃ³n de rol `admin` inyectado mediante dependencias de FastAPI (`get_current_user`).
+- Los endpoints críticos (`/api/admin/`, `/api/scrapers/run`) requieren validación de JWT y, adicionalmente, verificación de rol `admin` inyectado mediante dependencias de FastAPI (`get_current_user`).
 
 ---
 
 ## 7. Notas para el Futuro
 
-- **Escalabilidad de BÃºsqueda**: Las bÃºsquedas de FastAPI actualmente tiran contra SQLite y Postgres indistintamente gracias al ORM SQLAlchemy.
-- **SincronizaciÃ³n de ImÃ¡genes**: Existe un proceso secundario en GitHub Actions que sincroniza las fotos locales y genera URLs pÃºblicas (`src/application/services/storage_service.py`), evitando colapsar la base de datos con BLOBs pesados.
-- **CancelaciÃ³n Cooperativa**: En `main.py` hay un `scraper_cancel_event` de tipo `threading.Event()`. Cuando un usuario hace un `POST /api/scrapers/stop`, esta bandera se levanta. El pipeline lee esta bandera entre cada iteraciÃ³n de tienda y se detiene limpiamente. No se matan procesos bruscamente.
+- **Escalabilidad de Búsqueda**: Las búsquedas de FastAPI actualmente tiran contra SQLite y Postgres indistintamente gracias al ORM SQLAlchemy.
+- **Sincronización de Imágenes**: Existe un proceso secundario en GitHub Actions que sincroniza las fotos locales y genera URLs públicas (`src/application/services/storage_service.py`), evitando colapsar la base de datos con BLOBs pesados.
+- **Cancelación Cooperativa**: En `main.py` hay un `scraper_cancel_event` de tipo `threading.Event()`. Cuando un usuario hace un `POST /api/scrapers/stop`, esta bandera se levanta. El pipeline lee esta bandera entre cada iteración de tienda y se detiene limpiamente. No se matan procesos bruscamente.
 - **Módulo Radar P2P**: El módulo Radar P2P ha sido desactivado del menú principal del frontend ya que actuaba como un visor independiente de oportunidades P2P (Teoría de Cuarentena P25) y no se le estaba dando uso continuo. El código subyacente (`RadarP2P.tsx` y endpoint `/api/radar/p2p-opportunities`) permanece en el proyecto por si se desea reactivar en el futuro, pero no interfiere con el flujo principal ni el enrutado de React.
-- **Caché Local de Imágenes**: Para mejorar el rendimiento, el sistema cuenta con un caché local de imágenes (Phase 68) que se sirve a través de FastAPI en `/api/static/images`. Si se activa `use_local_images` en el frontend, se cargan estas imágenes locales con fallback automático en error al hotlink de origen.
-
----
-*Este documento invalida cualquier anotaciÃ³n antigua que hable de Streamlit, ejecuciÃ³n en paralelo de araÃ±as (asyncio.gather), o matching automÃ¡tico a Ciegas. La realidad del sistema es la aquÃ­ plasmada.*
+- **Caché Local de Imágenes (Cliente)**: Para erradicar la descarga de imágenes externas y posibilitar el uso offline, el sistema cuenta con un caché local de imágenes. Las imágenes locales se sirven a través de FastAPI en la montura `/api/static/images` apuntando a `data/image_cache/`. Adicionalmente, el descargador masivo en lote ha sido migrado al cliente del navegador en el frontend, el cual interactúa directamente con Cache API (`motu-image-cache`) e invalidaciones en IndexedDB. Esto eliminó la necesidad de definir rutas de carpetas locales en base de datos o endpoints del lado del servidor (los endpoints `/api/vault/download-images` en `vault.py` han sido saneados y eliminados).
+- **Conexión Supabase PostgreSQL**: La sincronización de configuraciones y calibraciones globales requiere la activación de la cadena de conexión cloud mediante la variable `SUPABASE_DATABASE_URL` en el archivo `.env` en la raíz del proyecto. En su ausencia, el backend operará de forma transparente en modo offline tirando únicamente del archivo local de SQLite `oraculo.db`.
 
 ---
 

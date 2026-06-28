@@ -84,10 +84,15 @@ Esto te permite saber con precisión matemática si tus decisiones de compra te 
 
 ## Mejoras de Usabilidad Financiera (Inversión Personalizada)
 
-Para agilizar el registro y edición de tus costos de adquisición, se han implementado las siguientes optimizaciones en el modal de detalle:
+Para agilizar el registro y edición de tus costos de adquisición, se han implementado las siguientes optimizaciones en el modal de detalle y la barra de filtros:
 1.  **Campos de Entrada Vacíos (Blank inputs)**: Si no has introducido una inversión para una figura, el campo de precio de compra se mostrará totalmente vacío (en blanco) en lugar de mostrar un `0` por defecto. Esto evita tener que borrar manualmente el cero antes de escribir tu precio.
 2.  **Teclado Decimal e Idiomas**: El campo ahora es compatible con la escritura móvil mediante `inputMode="decimal"` (despliega el teclado numérico de inmediato) y admite tanto puntos (`.`) como comas (`,`) como separador decimal.
-3.  **Distintivo de Compra Personalizada**: En la rejilla de la colección, aquellas figuras que posean un precio de compra manual configurado por ti se marcarán con una pequeña etiqueta visual (icono de carrito de compra) para distinguirlas rápidamente de aquellas que utilizan los valores estimados del sistema.
+3.  **Botonera Compacta de Filtros Rápidos (Estilo Outline)**: La barra superior de filtros se ha depurado para eliminar duplicidades (eliminados botones directos de MOC, Loose y Graded, que ya se gestionan de forma atómica en los desplegables de filtrado del catálogo). Se han simplificado las etiquetas eliminando emojis coloridos y acortando los chips de inversión a:
+    *   `Todos`: Muestra la totalidad de figuras.
+    *   `Man` (Manual): Filtra para ver las reliquias con coste/inversión asignado manualmente por ti.
+    *   `Auto` (Automático): Filtra para ver los artículos que no cuentan con un coste manual.
+    *   *Nota: El chip de filtrado rápido "Vintage" se ha ocultado del panel principal de Mi Fortaleza ya que la colección actual moderna no posee ítems vintage, previniendo opciones de filtrado vacías.*
+4.  **Distintivo de Compra Personalizada**: En la rejilla de la colección, aquellas figuras que posean un precio de compra manual configurado por ti se marcarán con una pequeña etiqueta visual (icono de carrito de compra) para distinguirlas rápidamente de aquellas que utilizan los valores estimados del sistema.
 
 ---
 

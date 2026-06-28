@@ -10,19 +10,18 @@ El panel de **Configuración** es la cabina de control técnico del Oráculo. De
 
 En esta pestaña se listan todos los usuarios ("Héroes") registrados en el Oráculo. Los administradores pueden:
 *   **Crear Nuevos Usuarios**: Registrar a un coleccionista asignándole un nombre de usuario, correo electrónico, rol (`Guardián` o `Master`) y una contraseña inicial.
-*   **Modificar Roles**: Ascender a un Guardián a Master en caso de que necesite acceso al Purgatorio o a la configuración, o rebajar sus privilegios.
+*   **Modificar Roles (Estilo Outline)**: Ascender o degradar roles directamente. La interfaz visualiza el rango de forma homogeneizada usando los iconos outline monocromáticos `Swords` (Maestro) y `Shield` (Guardián) en lugar de emojis coloridos para encajar con el diseño premium de la aplicación.
 *   **Eliminar Cuentas**: Revocar el acceso de forma definitiva a cualquier usuario del sistema.
 
 ---
 
-## 2. Panel de Control de Scrapers (Incursiones)
-
 El Oráculo extrae información comercial mediante un conjunto de arañas web automatizadas (`scrapers`) que simulan navegación humana para evitar baneos de IPs.
 
 Desde este panel, los administradores pueden gestionar el ciclo de recolección de forma interactiva:
-*   **Listado de Arañas**: Visualiza todas las tiendas y portales soportados por el sistema (ej. Wallapop, eBay, Vinted, El Corte Inglés, etc.) junto con el estado del portal.
-*   **Incursión Manual**: Dispara un escaneo en caliente para una tienda concreta o inicia una **Incursión Total** que ejecutará secuencialmente todos los scrapers del sistema.
-*   **Cancelación Cooperativa**: Si una incursión está tardando demasiado o deseas detener el tráfico de scraping, puedes pulsar el botón **"Detener Incursión"**. Esto enviará una señal cooperativa de parada en el backend que detendrá ordenadamente las arañas al terminar su ciclo de tienda actual, sin corromper la base de datos ni dejar procesos colgados.
+*   **Listado de Arañas**: Visualiza las tiendas y portales soportados por el sistema (como Wallapop, eBay, Vinted, Amazon.es -habiéndose limpiado la versión duplicada de Amazon-, etc.).
+*   **Incursión Manual**: Dispara un escaneo en caliente para una tienda concreta o inicia una **Incursión Total**.
+*   **Consola de Telemetría Homogeneizada**: Visualiza la telemetría en tiempo real. Para conservar la atmósfera premium y el tono oscuro monocromático, cualquier emoji producido por los logs del backend es parseado dinámicamente al vuelo en el cliente y presentado como un icono vectorial de contorno limpio (Lucide icons).
+*   **Cancelación Cooperativa**: Si una incursión está tardando demasiado, puedes pulsar **"Detener Incursión"** para detener ordenadamente las arañas al terminar su ciclo de tienda actual, sin dejar procesos colgados.
 
 ---
 
@@ -50,12 +49,11 @@ La pestaña de **Ajustes de Sistema** está abierta tanto a Guardianes como a Ad
 ### 4.2 Ubicación del Guardián (Cálculo de Envíos)
 *   Permite seleccionar el país de residencia (ej. España, Francia). El sistema cruzará esta ubicación con las reglas logísticas para calcular de forma dinámica y precisa el costo real de envío consolidado (Landed Price) de cada oferta de subasta o tienda.
 
-### 4.3 Caché Local de Imágenes (Acelerador de Carga)
-El Oráculo cuenta con un sistema híbrido e inteligente de almacenamiento local de imágenes para erradicar los tiempos de espera causados por la descarga de imágenes externas:
-*   **Preferencia en Local (`use_local_images`)**: Si se activa, la aplicación cargará las imágenes de las figuras directamente desde el almacenamiento local del PC/servidor (`/api/static/images/[id].jpg`), logrando transiciones instantáneas y fluidas.
-*   **Gestión de Descargas en Lote**: Un botón para iniciar la descarga en segundo plano de todas las imágenes de productos a la caché local.
-*   **Barra de Progreso y Control**: Muestra el progreso de descargas en tiempo real (conteo total, descargados, errores). Incluye un botón para **cancelar la descarga** en cualquier momento de forma segura.
-*   **Fallback Automático**: Si una imagen local no existe (error 404) o falla la carga, el componente React (`MOTUImage`) realiza un fallback transparente e instantáneo al hotlink de internet original, garantizando que el usuario nunca vea imágenes rotas.
+### 4.3 Caché Local de Imágenes (Acelerador de Carga en Cliente)
+El Oráculo cuenta con un sistema de almacenamiento en caché en el navegador (utilizando Cache API / IndexedDB) para erradicar por completo los tiempos de carga:
+*   **Preferencia en Local (`use_local_images`)**: Al activarse, el frontend lee y cachea de forma local en el navegador (`motu-image-cache`) las imágenes de las figuras al visualizarlas. Esto elimina la necesidad de configurar rutas de directorios físicos en el servidor o PC del usuario.
+*   **Descarga Reactiva en Lote**: Un botón que descarga secuencialmente todas las imágenes de productos (modernos y vintage combinados) directamente a la caché del navegador del cliente, con una barra de progreso exacta y soporte de cancelación interactiva.
+*   **Fallback Híbrido**: Cualquier componente de imagen (`MOTUImage`) resolverá la foto contra la caché local del navegador o de estáticos del servidor y, ante cualquier error 404, caerá inmediatamente al hotlink web original.
 
 ### 4.4 Vinculación con el Guardián de Telegram (Alertas Bidireccionales)
 Para recibir alertas personalizadas directamente en tu móvil:

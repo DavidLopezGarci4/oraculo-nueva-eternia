@@ -1162,5 +1162,14 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
     - Añadir soporte de scroll automático (`scrollTop = scrollHeight` en `consoleRef`) cuando se anexan nuevas líneas de log de telemetría.
 
 
+### 🛡️ Fase 74: Calibración Violeta, Atmósfera Inmersiva, Estandarización de Iconos y Enlace Global Supabase (28/06/2026)
 
-
+- **Hitos**: Homogenización estética de la interfaz de usuario libre de emojis coloridos en selectores y logs de telemetría, adición de banda sonora atmosférica interactiva, rediseño analítico de cuota de mercado, e integración y re-activación del enlace PostgreSQL global de Supabase.
+- **Estado**: ✅ COMPLETADO Y VERIFICADO
+- **Logros Técnicos**:
+  - **Estandarización Estética de Rango de Héroes**: Eliminados por completo los emojis coloridos en la Gestión de Héroes y el modal de reclutamiento. La interfaz ahora visualiza las jerarquías de forma homogeneizada usando los iconos outline de Lucide (`Swords` para Maestro y `Shield` para Guardián).
+  - **Parseador Dinámico en Consola de Telemetría**: Diseñado un mapeador reactivo en el frontend (`Config.tsx`) que intercepta emojis crudos (como `🚀`, `⚔️`, `🔎`, `🔮`, `⚡`, `⚠️`, `🌐`, `🏠`, `🛡️`, `⚙️`, `📥`, `📦`) devueltos por la telemetría del backend y los convierte al vuelo en iconos vectoriales outline monocromáticos de Lucide, preservando el tono oscuro premium del panel.
+  - **Limpieza de Filtros en Fortaleza**: Depurada la barra de filtros en `Collection.tsx` (Mi Fortaleza). Se eliminaron duplicidades de chips (`MOC`, `Loose`), se removió el filtro obsoleto `Graded`, y se quitó el filtro rápido `Vintage` al no existir reliquias de esa época en el inventario activo del usuario. Los filtros manuales/automáticos fueron renombrados a `Man` y `Auto` con tipografía limpia en contorno.
+  - **Reproductor de Audio Ambiental Integrado**: Añadido reproductor de música de fondo en la barra de navegación del frontend. Carga el archivo `/theme.mp3` localmente y proporciona botones de control silencioso (`Volume2` y `VolumeX`) con persistencia en `localStorage`.
+  - **Gráfico Doughnut de Cuota de Mercado e Interacción**: Implementado gráfico interactivo Doughnut en la sección de Conquistas de Mercado con ordenación descendente dinámica de marketplaces, tooltips de alto contraste legibles sobre fondos oscuros, y redirección directa con precarga de filtros al hacer clic sobre cualquier tarjeta de portal.
+  - **Re-activación de Enlace Supabase Global**: Descomentada y re-activada la variable `SUPABASE_DATABASE_URL` en el entorno `.env` en local, restaurando la persistencia de calibración y configuraciones del Oráculo al servidor cloud Supabase PostgreSQL de producción.

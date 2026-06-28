@@ -380,8 +380,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                                             <div className="flex-1 min-w-0">
                                                 <h5 className="truncate text-[11px] font-bold text-white/95 group-hover:text-brand-primary transition-colors">{item.name}</h5>
                                                 <div className="flex items-center justify-between text-[9px] font-black text-white/60">
-                                                    <span>PVP: <span>{item.invested_value || item.purchase_price || 0}€</span></span>
-                                                    <span className="text-white font-black">{item.market_value}€</span>
+                                                    <span>PVP: <span className="blur-incognito">{item.invested_value || item.purchase_price || 0}€</span></span>
+                                                    <span className="text-white font-black blur-incognito">{item.market_value}€</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -404,8 +404,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                                             <div className="flex-1 min-w-0">
                                                 <h5 className="truncate text-[11px] font-bold text-white/95 group-hover:text-brand-primary transition-colors">{item.name}</h5>
                                                 <div className="flex items-center justify-between text-[9px] font-black text-white/60">
-                                                    <span>ROI: <span className="text-green-500 font-black">+{item.roi_percentage || item.roi || 0}%</span></span>
-                                                    <span className="text-white font-black">{item.market_value}€</span>
+                                                    <span>ROI: <span className="text-green-500 font-black blur-incognito">+{item.roi_percentage || item.roi || 0}%</span></span>
+                                                    <span className="text-white font-black blur-incognito">{item.market_value}€</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -442,8 +442,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                                             <div className="flex-1 min-w-0">
                                                 <h5 className="truncate text-[11px] font-bold text-white/95 group-hover:text-amber-500 transition-colors">{item.name}</h5>
                                                 <div className="flex items-center justify-between text-[9px] font-black text-white/60">
-                                                    <span>Original: <span>{item.invested_value || item.purchase_price || 0}€</span></span>
-                                                    <span className="text-amber-500 font-extrabold">{item.market_value}€</span>
+                                                    <span>Original: <span className="blur-incognito">{item.invested_value || item.purchase_price || 0}€</span></span>
+                                                    <span className="text-amber-500 font-extrabold blur-incognito">{item.market_value}€</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -466,8 +466,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                                             <div className="flex-1 min-w-0">
                                                 <h5 className="truncate text-[11px] font-bold text-white/95 group-hover:text-amber-500 transition-colors">{item.name}</h5>
                                                 <div className="flex items-center justify-between text-[9px] font-black text-white/60">
-                                                    <span>ROI: <span className="text-green-500 font-black">+{item.roi_percentage || item.roi || 0}%</span></span>
-                                                    <span className="text-amber-500 font-extrabold">{(item.market_value)}€</span>
+                                                    <span>ROI: <span className="text-green-500 font-black blur-incognito">+{item.roi_percentage || item.roi || 0}%</span></span>
+                                                    <span className="text-amber-500 font-extrabold blur-incognito">{(item.market_value)}€</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -528,8 +528,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                                                         return (
                                                             <div className="glass p-2.5 rounded-xl border border-white/10 text-[10px] bg-black/95">
                                                                 <p className="font-black text-white uppercase tracking-wider mb-1">{data.name}</p>
-                                                                <p className="text-white/60">Cantidad: <span className="font-black text-brand-primary">{data.value}</span></p>
-                                                                <p className="text-white/60">Valor Est.: <span className="font-black text-emerald-400">{data.estimatedValue.toFixed(2)}€</span></p>
+                                                                <p className="text-white/60">Cantidad: <span className="font-black text-brand-primary blur-incognito">{data.value}</span></p>
+                                                                <p className="text-white/60">Valor Est.: <span className="font-black text-emerald-400 blur-incognito">{data.estimatedValue.toFixed(2)}€</span></p>
                                                             </div>
                                                         );
                                                     }
@@ -540,7 +540,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                                     </ResponsiveContainer>
                                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                                         <span className="text-[9px] font-black uppercase text-white/35 tracking-wider leading-none">Total</span>
-                                        <span className="text-xl font-black text-white">
+                                        <span className="text-xl font-black text-white blur-incognito">
                                             {conditionData.reduce((acc, curr) => acc + curr.value, 0)}
                                         </span>
                                     </div>
@@ -560,8 +560,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                                                     <span className="text-[10px] font-black uppercase tracking-wider text-white/70">{entry.name}</span>
                                                 </div>
                                                 <div className="text-right">
-                                                    <div className="text-[10px] font-black text-white">{entry.value} uds. ({pct.toFixed(0)}%)</div>
-                                                    <div className="text-[9px] font-medium text-emerald-400">{entry.estimatedValue.toFixed(2)}€</div>
+                                                    <div className="text-[10px] font-black text-white blur-incognito">{entry.value} uds. ({pct.toFixed(0)}%)</div>
+                                                    <div className="text-[9px] font-medium text-emerald-400 blur-incognito">{entry.estimatedValue.toFixed(2)}€</div>
                                                 </div>
                                             </div>
                                         );
@@ -595,7 +595,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                                             <span className="text-[10px] font-black uppercase tracking-wider text-white/80">
                                                 {group.name.toUpperCase() === 'MASTERS OF THE WWE UNIVERSE RIN' ? 'MASTERS OF THE WWE UNIVERSE RING' : group.name}
                                             </span>
-                                            <span className={`text-[9px] font-black uppercase tracking-widest ${group.isVintage ? 'text-amber-500' : 'text-brand-primary'}`}>
+                                            <span className={`text-[9px] font-black uppercase tracking-widest blur-incognito ${group.isVintage ? 'text-amber-500' : 'text-brand-primary'}`}>
                                                 {group.owned} / {group.total} ({group.percentage.toFixed(0)}%)
                                             </span>
                                         </div>

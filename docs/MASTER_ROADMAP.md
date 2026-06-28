@@ -498,6 +498,14 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
   - [x] **Corrección de Violación SQL NOT NULL**: Modificados los retornos tempranos de `update_database` en `pipeline.py` para devolver `0` en vez de `None` en lotes vacíos (como bloqueos de CloudFront WAF en Wallapop), evitando errores de base de datos en `scraper_execution_logs.new_items`.
   - [x] **Auto-scroll y Seguimiento de Telemetría**: Implementada la creación síncrona de `log_id` en el backend para poder auto-seleccionar y seguir instantáneamente en el frontend (`targetLogId`) la telemetría del scraper lanzado. Añadido auto-scroll automático vertical en la consola de logs de `Config.tsx`.
 
+- [x] **Phase 75: Calibración Violeta, Atmósfera Inmersiva, Estandarización de Iconos y Enlace Global Supabase (28/06/2026)**
+  - [x] **Estandarización de Iconos y Estilo Outline**: Reemplazo de emojis coloridos en la Gestión de Héroes y el modal de reclutamiento por iconos vectoriales outline monocromáticos (Swords, Shield y ChevronDown).
+  - [x] **Dynamic Logs Parser en Telemetría**: Conversión de caracteres emoji a componentes Lucide outline vectoriales (Play, Swords, Search, etc.) al vuelo dentro de la consola del frontend.
+  - [x] **Limpieza y Saneamiento de Filtros**: Eliminación de chips de filtros rápidos redundantes (`MOC`, `Loose`, `Graded`, `Vintage` en Mi Fortaleza) y renombrado de filtros manuales/automáticos a `Man` y `Auto` en contorno sin emojis.
+  - [x] **Reproductor de Audio Ambiental**: Creación de reproductor de banda sonora con controles de encendido/apagado en el Navbar (`Volume2` y `VolumeX`) y persistencia en localStorage de la preferencia.
+  - [x] **Cuota de Mercado y Doughnut Chart**: Incorporado gráfico interactivo Doughnut en el panel de Conquistas de Mercado con ordenación descendente dinámica, tooltips optimizados en contraste y redirección directa al Catálogo con filtros pre-cargados al pulsar sobre cualquier marketplace.
+  - [x] **Conexión Supabase Activa**: Uncommenting de `SUPABASE_DATABASE_URL` en el fichero `.env` para garantizar la persistencia e inyección de datos de configuración global directamente al servidor Supabase.
+
 ---
 
 ## ✅ Plan de Verificación
