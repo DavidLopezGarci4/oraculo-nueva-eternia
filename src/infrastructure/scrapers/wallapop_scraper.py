@@ -105,8 +105,12 @@ class WallapopScraper(BaseScraper):
                 
                 # Pareto Self-Healing Strategy: Direct connection first, fallback to ScraperAPI if direct connection fails
                 use_proxy = False
+                is_production = os.environ.get("ENV") == "production"
                 if os.environ.get("GITHUB_ACTIONS") == "true":
                     use_proxy = True  # Always use proxy on GitHub Actions since Azure IPs are blocked
+                elif is_production:
+                    self._log("📡 Entorno de Producción (OCI/Docker) detectado. Saltando conexión directa (IP de Datacenter bloqueada por WAF por defecto).")
+                    use_proxy = True
                 
                 response = None
                 if not use_proxy:
@@ -159,7 +163,7 @@ class WallapopScraper(BaseScraper):
                                 headers=headers,
                                 impersonate="chrome120",
                                 proxy=proxy,
-                                timeout=10
+                                timeout=4
                             )
                             if proxy_response.status_code == 200:
                                 self._log(f"🎉 ¡Éxito con proxy público: {proxy}!")
@@ -168,8 +172,7 @@ class WallapopScraper(BaseScraper):
                             else:
                                 self._log(f"❌ Proxy devolvió código: {proxy_response.status_code}")
                         except Exception as e:
-                            # Ignorar fallos de conexión de proxies caídos
-                            pass
+                            self._log(f"❌ Proxy inalcanzable / lento (Error: {type(e).__name__})")
                 
                 if response and response.status_code == 200:
                     data = response.json()
