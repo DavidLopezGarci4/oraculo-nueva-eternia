@@ -168,6 +168,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
     const [isResetting, setIsResetting] = useState(false);
     const [selectedLog, setSelectedLog] = useState<ScraperExecutionLog | null>(null);
     const [advancedLogs, setAdvancedLogs] = useState<ScraperExecutionLog[]>([]);
+    const [logFilter, setLogFilter] = useState<'all' | 'error'>('all');
     const [targetLogId, setTargetLogId] = useState<number | null>(null);
 
     const [showIpLogsModal, setShowIpLogsModal] = useState(false);
@@ -817,8 +818,22 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                         <History className="h-5 w-5 text-brand-primary" />
                                         <h3 className="text-sm font-black uppercase tracking-widest text-white">Historial Operativo</h3>
                                     </div>
-                                    <div className="max-h-[500px] overflow-y-auto space-y-2 rounded-[2.5rem] border border-white/5 bg-black/40 p-3 scrollbar-none custom-scrollbar shadow-inner">
-                                        {advancedLogs.map((log) => (
+                                    <div className="flex gap-2 px-2 text-[9px] font-black uppercase tracking-widest">
+                                        <button 
+                                            onClick={() => setLogFilter('all')} 
+                                            className={`px-3 py-1 rounded-full border transition-all ${logFilter === 'all' ? 'bg-brand-primary/10 border-brand-primary/30 text-white' : 'border-white/5 text-white/40 hover:text-white/80'}`}
+                                        >
+                                            Todos
+                                        </button>
+                                        <button 
+                                            onClick={() => setLogFilter('error')} 
+                                            className={`px-3 py-1 rounded-full border transition-all ${logFilter === 'error' ? 'bg-red-500/10 border-red-500/30 text-red-400' : 'border-white/5 text-white/40 hover:text-white/80'}`}
+                                        >
+                                            Fallidos
+                                        </button>
+                                    </div>
+                                    <div className="max-h-[460px] overflow-y-auto space-y-2 rounded-[2.5rem] border border-white/5 bg-black/40 p-3 scrollbar-none custom-scrollbar shadow-inner">
+                                        {advancedLogs.filter(log => logFilter === 'all' || log.status === 'error').map((log) => (
                                             <button
                                                 key={log.id}
                                                 onClick={() => { setSelectedLog(log); setTargetLogId(null); }}

@@ -29,6 +29,48 @@ class WallapopScraper(BaseScraper):
         super().__init__(shop_name="Wallapop", base_url="https://es.wallapop.com")
         self.is_auction_source = True # Peer-to-Peer
         
+    async def _fetch_free_proxies(self, session: AsyncSession) -> List[str]:
+        """
+        Cosecha proxies públicos y frescos de Geonode y ProxyScrape de forma aleatorizada.
+        """
+        self._log("📡 Cosechando proxies públicos para rotación...")
+        proxies = []
+        
+        # 1. Intentar Geonode
+        try:
+            url_geonode = "https://proxylist.geonode.com/api/proxy-list?limit=40&page=1&sort_by=lastChecked&sort_type=desc&protocols=http%2Chttps"
+            response = await session.get(url_geonode, timeout=8)
+            if response.status_code == 200:
+                data = response.json()
+                for item in data.get("data", []):
+                    ip = item.get("ip")
+                    port = item.get("port")
+                    protocols = item.get("protocols", ["http"])
+                    protocol = protocols[0] if protocols else "http"
+                    proxies.append(f"{protocol}://{ip}:{port}")
+        except Exception as e:
+            self._log(f"⚠️ Error al obtener proxies de Geonode: {e}")
+            
+        # 2. Intentar ProxyScrape (como complemento)
+        if len(proxies) < 15:
+            try:
+                url_ps = "https://api.proxyscrape.com/v2/?request=displayproxies&protocol=http&timeout=8000&country=all&ssl=all&anonymity=all"
+                response = await session.get(url_ps, timeout=8)
+                if response.status_code == 200:
+                    text = response.text
+                    lines = text.strip().split("\n")
+                    for line in lines:
+                        line = line.strip()
+                        if line and ":" in line:
+                            proxies.append(f"http://{line}")
+            except Exception as e:
+                self._log(f"⚠️ Error al obtener proxies de ProxyScrape: {e}")
+                
+        # Randomizar para evitar sobrecargar los mismos servidores
+        random.shuffle(proxies)
+        self._log(f"✅ Cosecha finalizada. {len(proxies)} proxies listos para rotación.")
+        return proxies
+
     async def search_via_api(self, query: str) -> List[ScrapedOffer]:
         """
         Intenta obtener las ofertas de Wallapop de forma directa y ultra-rápida
@@ -78,28 +120,56 @@ class WallapopScraper(BaseScraper):
                         )
                         if response.status_code in [403, 429]:
                             self._log(f"⚠️ Conexión directa bloqueada (HTTP {response.status_code}).")
-                            if api_key:
-                                use_proxy = True
+                            use_proxy = True
                     except Exception as e:
                         self._log(f"⚠️ Falló conexión directa a Wallapop API: {e}")
-                        if api_key:
-                            use_proxy = True
+                        use_proxy = True
 
+                # Fase 2: ScraperAPI Proxy (si está configurada y directa falló)
                 if use_proxy and api_key:
-                    params_sa = {
-                        "api_key": api_key,
-                        "url": target_url,
-                        "country_code": "es",
-                        "premium": "true",
-                        "render": "true"
-                    }
-                    scraperapi_url = f"http://api.scraperapi.com?{urllib.parse.urlencode(params_sa)}"
-                    self._log("📡 Ruteando Wallapop API a través de ScraperAPI (Premium ES + Render)...")
-                    response = await session.get(
-                        scraperapi_url,
-                        headers=headers,
-                        timeout=90
-                    )
+                    try:
+                        params_sa = {
+                            "api_key": api_key,
+                            "url": target_url,
+                            "country_code": "es",
+                            "premium": "true",
+                            "render": "true"
+                        }
+                        scraperapi_url = f"http://api.scraperapi.com?{urllib.parse.urlencode(params_sa)}"
+                        self._log("📡 Ruteando Wallapop API a través de ScraperAPI (Premium ES + Render)...")
+                        response = await session.get(
+                            scraperapi_url,
+                            headers=headers,
+                            timeout=90
+                        )
+                        if response.status_code in [403, 429, 500]:
+                            self._log(f"⚠️ ScraperAPI falló o se agotaron los créditos (HTTP {response.status_code}).")
+                    except Exception as e:
+                        self._log(f"⚠️ Error al conectar a ScraperAPI: {e}")
+
+                # Fase 3: Rotación Dinámica de Proxies Públicos (si no hay key de ScraperAPI o ScraperAPI falló/agotada)
+                if use_proxy and (not response or response.status_code != 200):
+                    self._log("🌩️ Iniciando rotador dinámico de proxies públicos para Wallapop API...")
+                    free_proxies = await self._fetch_free_proxies(session)
+                    for proxy in free_proxies[:25]:  # Probar máximo 25 proxies
+                        try:
+                            self._log(f"📡 Probando proxy público: {proxy}...")
+                            proxy_response = await session.get(
+                                target_url,
+                                headers=headers,
+                                impersonate="chrome120",
+                                proxy=proxy,
+                                timeout=10
+                            )
+                            if proxy_response.status_code == 200:
+                                self._log(f"🎉 ¡Éxito con proxy público: {proxy}!")
+                                response = proxy_response
+                                break
+                            else:
+                                self._log(f"❌ Proxy devolvió código: {proxy_response.status_code}")
+                        except Exception as e:
+                            # Ignorar fallos de conexión de proxies caídos
+                            pass
                 
                 if response and response.status_code == 200:
                     data = response.json()
