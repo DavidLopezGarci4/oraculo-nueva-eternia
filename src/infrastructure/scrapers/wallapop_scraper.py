@@ -153,7 +153,7 @@ class WallapopScraper(BaseScraper):
             
         return offers
 
-    async def search_via_api(self, query: str) -> List[ScrapedOffer]:
+    async def search_via_api(self, query: str, max_items: int = 40) -> List[ScrapedOffer]:
         """
         Intenta obtener las ofertas de Wallapop de forma directa y ultra-rápida.
         Utiliza una cascada inteligente de APIs con cuota gratuita (Apify -> ScraperAPI -> Directa/Proxies).
@@ -169,8 +169,9 @@ class WallapopScraper(BaseScraper):
                         apify_url,
                         json={
                             "query": query, 
-                            "maxItems": 40,
-                            "postalCode": "28001"
+                            "maxItems": max_items,
+                            "postalCode": "28001",
+                            "orderBy": "newest"
                         },
                         headers={"Content-Type": "application/json"},
                         timeout=120
@@ -342,10 +343,11 @@ class WallapopScraper(BaseScraper):
         # --- INTENTO 1: API DIRECTA CON IMPERSONACIÓN ---
         api_success = True
         api_offers: List[ScrapedOffer] = []
+        max_items = 15 if query == "auto" else 40
         
         for search_query, _, _ in queries_config:
             try:
-                res = await self.search_via_api(search_query)
+                res = await self.search_via_api(search_query, max_items=max_items)
                 if res:
                     api_offers.extend(res)
                 else:
