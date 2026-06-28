@@ -343,7 +343,7 @@ class WallapopScraper(BaseScraper):
         # --- INTENTO 1: API DIRECTA CON IMPERSONACIÓN ---
         api_success = True
         api_offers: List[ScrapedOffer] = []
-        max_items = 15 if query == "auto" else 40
+        max_items = 30 if query == "auto" else 40
         
         for search_query, _, _ in queries_config:
             try:
