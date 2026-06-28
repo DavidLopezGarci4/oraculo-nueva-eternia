@@ -103,7 +103,8 @@ def ensure_scrapers_registered():
         "Fantasia Personajes", "Frikiverso", "Frikimaz", "Electropolis",
         "Pixelatoy", "Amazon.es", "DeToyboys", "Ebay.es",
         "Vinted", "Wallapop", "ToymiEU", "Time4ActionToysDE",
-        "BigBadToyStore", "Tradeinn", "DVDStoreSpain",
+        "BigBadToyStore", "DVDStoreSpain", "Triguetech",
+        "LaMansionDelTerror",
     ]
 
     with SessionCloud() as db:

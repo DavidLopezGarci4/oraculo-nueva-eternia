@@ -43,7 +43,7 @@ import { useCart } from '../context/CartContext';
 import { motion } from 'framer-motion';
 import { getCollection, toggleCollection } from '../api/collection';
 import type { Product } from '../api/collection';
-import { updateProduct, unlinkOffer, deleteProduct, mergeProducts } from '../api/admin';
+import { updateProduct, unlinkOffer, deleteProduct, mergeProducts, syncNexusVintage, getScrapersLogs } from '../api/admin';
 import { format, formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { getProductPriceHistory, getUniqueShops } from '../api/products';
@@ -165,7 +165,6 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
         setVintageSyncStatus("running");
         setVintageSyncLogs("🚀 Iniciando conexión con el Oráculo Vintage...\n⌛ Esperando respuesta del servidor...");
         try {
-            const { syncNexusVintage } = await import('../api/admin');
             await syncNexusVintage();
         } catch (err: any) {
             console.error(err);
@@ -179,7 +178,6 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
 
         let intervalId = setInterval(async () => {
             try {
-                const { getScrapersLogs } = await import('../api/admin');
                 const logs = await getScrapersLogs() as any[];
                 const vintageLog = logs.find(log => log.spider_name === "NexusVintage");
                 if (vintageLog) {

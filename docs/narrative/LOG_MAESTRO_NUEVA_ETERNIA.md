@@ -1173,3 +1173,17 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
   - **Reproductor de Audio Ambiental Integrado**: Añadido reproductor de música de fondo en la barra de navegación del frontend. Carga el archivo `/theme.mp3` localmente y proporciona botones de control silencioso (`Volume2` y `VolumeX`) con persistencia en `localStorage`.
   - **Gráfico Doughnut de Cuota de Mercado e Interacción**: Implementado gráfico interactivo Doughnut en la sección de Conquistas de Mercado con ordenación descendente dinámica de marketplaces, tooltips de alto contraste legibles sobre fondos oscuros, y redirección directa con precarga de filtros al hacer clic sobre cualquier tarjeta de portal.
   - **Re-activación de Enlace Supabase Global**: Descomentada y re-activada la variable `SUPABASE_DATABASE_URL` en el entorno `.env` en local, restaurando la persistencia de calibración y configuraciones del Oráculo al servidor cloud Supabase PostgreSQL de producción.
+  - **Consistencia de Privacidad de Incógnito**: Se inyectó soporte de la clase `blur-incognito` a todos los contadores de la colección en el Dashboard (Salón de la Fama, centro y leyendas del Doughnut Chart, tooltips dinámicos y completitud de waves) para difuminar uniformemente la información de valor y cantidad ante terceros.
+
+
+### 🛡️ Fase 75: Evasión de WAF en Wallapop y Resolución de Inconsistencias (28/06/2026)
+
+- **Hitos**: Bypass exitoso de los bloqueos HTTP 403 (CloudFront WAF) en el scraper de Wallapop y resolución de inconsistencias sintácticas y de warnings en backend/frontend detectadas mediante la skill `code-error-analyzer`.
+- **Estado**: ✅ COMPLETADO Y VERIFICADO
+- **Logros Técnicos**:
+  - **Bypass de CloudFront WAF en Wallapop**: Configurada la llamada premium a ScraperAPI para activar `"render": "true"` y eliminar el envío de cabeceras locales conflictivas (`keep_headers`), logrando obtener ofertas en formato JSON con código de estado 200 OK y evadiendo de forma resiliente la detección del proxy de Wallapop.
+  - **Limpieza de Inconsistencias en Scrapers**: Añadidos los recolectores `Triguetech` y `LaMansionDelTerror` al escaneo de inicio del servidor (`ensure_scrapers_registered` en `deps.py`) y retirado el scraper inactivo `Tradeinn`.
+  - **Eliminación de Warnings de Deprecación**: Reemplazadas las llamadas a `datetime.utcnow()` en el repositorio `product.py` por `datetime.now(UTC).replace(tzinfo=None)`, logrando ejecutar la suite de pruebas unitarias (`pytest`) con cero advertencias de deprecación.
+  - **Corrección de Warnings en Compilación de Frontend**: Unificadas las importaciones dinámicas de `admin.ts` en `Catalog.tsx` y `Collection.tsx` como importaciones estáticas simples. Esto eliminó la advertencia de Rollup en el build de producción de Vite.
+  - **Remoción de Parches en Dashboard**: Eliminado el condicional redundante de reemplazo de strings de WWE en `Dashboard.tsx` tras verificar la correcta integridad de nombres de waves en base de datos.
+

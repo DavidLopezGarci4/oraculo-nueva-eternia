@@ -593,7 +593,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                                     <div key={group.name} className="space-y-1.5">
                                         <div className="flex justify-between items-baseline">
                                             <span className="text-[10px] font-black uppercase tracking-wider text-white/80">
-                                                {group.name.toUpperCase() === 'MASTERS OF THE WWE UNIVERSE RIN' ? 'MASTERS OF THE WWE UNIVERSE RING' : group.name}
+                                                {group.name}
                                             </span>
                                             <span className={`text-[9px] font-black uppercase tracking-widest blur-incognito ${group.isVintage ? 'text-amber-500' : 'text-brand-primary'}`}>
                                                 {group.owned} / {group.total} ({group.percentage.toFixed(0)}%)

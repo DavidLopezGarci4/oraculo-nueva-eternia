@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import datetime, UTC
 from typing import Optional, List
 from src.infrastructure.repositories.base import BaseRepository
 from src.domain.models import ProductModel, OfferModel, PendingMatchModel, OfferHistoryModel
@@ -48,7 +48,7 @@ class ProductRepository(BaseRepository[ProductModel]):
                     PriceHistoryModel.offer_id == existing_offer.id
                 ).order_by(PriceHistoryModel.recorded_at.desc()).first()
                 
-                if not last_snapshot or (datetime.utcnow() - last_snapshot.recorded_at).total_seconds() > 86400:
+                if not last_snapshot or (datetime.now(UTC).replace(tzinfo=None) - last_snapshot.recorded_at).total_seconds() > 86400:
                     ph = PriceHistoryModel(offer_id=existing_offer.id, price=current_price, is_snapshot=True)
                     self.db.add(ph)
 
@@ -68,7 +68,7 @@ class ProductRepository(BaseRepository[ProductModel]):
                 
             existing_offer.price = current_price
             existing_offer.is_available = offer_data.get("is_available", True)
-            existing_offer.last_seen = datetime.utcnow()
+            existing_offer.last_seen = datetime.now(UTC).replace(tzinfo=None)
             
             if "source_type" in offer_data:
                 existing_offer.source_type = offer_data["source_type"]
@@ -131,11 +131,11 @@ class ProductRepository(BaseRepository[ProductModel]):
                 # Phase 39 Fields
                 time_left_raw=offer_data.get("time_left_raw"),
                 # Phase 41: Market Intelligence
-                first_seen_at=offer_data.get("first_seen_at", datetime.utcnow()),
+                first_seen_at=offer_data.get("first_seen_at", datetime.now(UTC).replace(tzinfo=None)),
                 sold_at=offer_data.get("sold_at"),
                 is_sold=offer_data.get("is_sold", False),
                 original_listing_date=offer_data.get("original_listing_date"),
-                last_price_update=offer_data.get("last_price_update", datetime.utcnow())
+                last_price_update=offer_data.get("last_price_update", datetime.now(UTC).replace(tzinfo=None))
             )
             self.db.add(new_offer)
             self.db.flush() 

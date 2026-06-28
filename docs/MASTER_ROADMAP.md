@@ -505,6 +505,12 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
   - [x] **Reproductor de Audio Ambiental**: Creación de reproductor de banda sonora con controles de encendido/apagado en el Navbar (`Volume2` y `VolumeX`) y persistencia en localStorage de la preferencia.
   - [x] **Cuota de Mercado y Doughnut Chart**: Incorporado gráfico interactivo Doughnut en el panel de Conquistas de Mercado con ordenación descendente dinámica, tooltips optimizados en contraste y redirección directa al Catálogo con filtros pre-cargados al pulsar sobre cualquier marketplace.
   - [x] **Conexión Supabase Activa**: Uncommenting de `SUPABASE_DATABASE_URL` en el fichero `.env` para garantizar la persistencia e inyección de datos de configuración global directamente al servidor Supabase.
+  - [x] **Resolución de Inconsistencias de Código (Auditoría code-error-analyzer)**:
+    *   Eliminados warnings de compilación en Vite/Rollup al unificar y estrucutrar las importaciones estáticas de `admin.ts` en `Catalog.tsx` y `Collection.tsx` (descartados los dynamic imports redundantes).
+    *   Sustituido el uso obsoleto de `datetime.utcnow()` en `product.py` por `datetime.now(UTC).replace(tzinfo=None)` para erradicar las alertas de deprecación en la suite de pruebas unitarias (`pytest`).
+    *   Alineados los scrapers registrados en `ensure_scrapers_registered()` (`deps.py`) añadiendo `Triguetech` y `LaMansionDelTerror` y removiendo el obsoleto `Tradeinn`.
+    *   Removido el parche estático de strings en `Dashboard.tsx` dado que el nombre de la wave de WWE ya se almacena correctamente en la base de datos.
+    *   Consistencia total en el escudo de Grayskull (incógnito) para ocultar y difuminar todos los contadores de la colección, leyendas del Doughnut Chart, tooltips y Regimientos de Completitud en el Dashboard.
 
 ---
 

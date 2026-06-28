@@ -32,7 +32,7 @@ import { getOptimizedImageUrl } from '../utils/imageUtils';
 import { MOTUImage } from '../components/ui/MOTUImage';
 import CollectionItemDetailModal from '../components/CollectionItemDetailModal';
 import { FoilTiltCard } from '../components/ui/FoilTiltCard';
-import { updateProduct, deleteProduct } from '../api/admin';
+import { updateProduct, deleteProduct, exportCollectionExcel, exportCollectionExcelVintage, exportCollectionSqlite } from '../api/admin';
 import type { Hero } from '../api/admin';
 
 const getAdjustedStats = (product: Product, isOwned: boolean) => {
@@ -252,7 +252,6 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                         <button
                             onClick={async () => {
                                 try {
-                                    const { exportCollectionExcel, exportCollectionExcelVintage } = await import('../api/admin');
                                     if (isVintageOnly) {
                                         await exportCollectionExcelVintage(activeUserId);
                                     } else {
@@ -272,7 +271,6 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                         <button
                             onClick={async () => {
                                 try {
-                                    const { exportCollectionSqlite } = await import('../api/admin');
                                     await exportCollectionSqlite(activeUserId);
                                     alert('🗄️ SQLite: Bóveda portátil generada con éxito.');
                                 } catch (error) {
