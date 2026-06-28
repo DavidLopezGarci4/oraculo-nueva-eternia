@@ -55,7 +55,7 @@ async def get_all_heroes():
         counts = db.query(
             CollectionItemModel.owner_id,
             func.count(CollectionItemModel.id).label("item_count"),
-        ).group_by(CollectionItemModel.owner_id).subquery()
+        ).filter(CollectionItemModel.acquired == True).group_by(CollectionItemModel.owner_id).subquery()
 
         users = db.query(
             UserModel,

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Play, Activity, Clock, AlertCircle, CheckCircle2, RefreshCw, Terminal, Target, Settings, Users, ShieldAlert, Trash2, Zap, History, Database, Download, FileSpreadsheet, Repeat, Globe, Package, ChevronDown, Lock, Swords, Shield, Search, Sparkles, Home, Wifi, CloudLightning, Cookie, Copy } from 'lucide-react';
+import { Play, Activity, Clock, AlertCircle, CheckCircle2, RefreshCw, Terminal, Target, Settings, Users, ShieldAlert, Trash2, Zap, History, Database, Download, FileSpreadsheet, Repeat, Globe, Package, ChevronDown, Lock, Swords, Shield, Search, Sparkles, Home, Wifi, CloudLightning, Cookie, Copy, Gift } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { resetSmartMatches, runScrapers, stopScrapers, getScraperLogs, type ScraperExecutionLog, getWallapopIpLogs, downloadWallapopIpLogs, type WallapopIpLog } from '../api/purgatory';
@@ -1020,10 +1020,11 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                                             '💾': <Database className="inline h-3 w-3 mr-1 text-indigo-400 align-middle" />,
                                                             '✅': <CheckCircle2 className="inline h-3 w-3 mr-1 text-green-500 align-middle" />,
                                                             '⌛': <Clock className="inline h-3 w-3 mr-1 text-cyan-400 align-middle" />,
-                                                            '🎉': <Sparkles className="inline h-3 w-3 mr-1 text-pink-400 align-middle" />
+                                                            '🎉': <Sparkles className="inline h-3 w-3 mr-1 text-pink-400 align-middle" />,
+                                                            '🎁': <Gift className="inline h-3 w-3 mr-1 text-pink-400 align-middle" />
                                                         };
                                                         
-                                                        const regex = /(🚀|⚔️|🔎|🔍|🔮|⚡|⚠️|🌐|🏠|🛡️|⚙️|📥|📦|📡|🌩️|🕵️|🍪|💾|✅|⌛|🎉)/g;
+                                                        const regex = /(🚀|⚔️|🔎|🔍|🔮|⚡|⚠️|🌐|🏠|🛡️|⚙️|📥|📦|📡|🌩️|🕵️|🍪|💾|✅|⌛|🎉|🎁)/g;
                                                         const parts = line.split(regex);
 
                                                         return (
