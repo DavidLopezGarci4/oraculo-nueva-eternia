@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Play, Activity, Clock, AlertCircle, CheckCircle2, RefreshCw, Terminal, Target, Settings, Users, ShieldAlert, Trash2, Zap, History, Database, Download, FileSpreadsheet, Repeat, Globe, Package, ChevronDown, Lock, Swords, Shield, Search, Sparkles, Home, Wifi, CloudLightning, Cookie } from 'lucide-react';
+import { Play, Activity, Clock, AlertCircle, CheckCircle2, RefreshCw, Terminal, Target, Settings, Users, ShieldAlert, Trash2, Zap, History, Database, Download, FileSpreadsheet, Repeat, Globe, Package, ChevronDown, Lock, Swords, Shield, Search, Sparkles, Home, Wifi, CloudLightning, Cookie, Copy } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { resetSmartMatches, runScrapers, stopScrapers, getScraperLogs, type ScraperExecutionLog, getWallapopIpLogs, downloadWallapopIpLogs, type WallapopIpLog } from '../api/purgatory';
@@ -170,6 +170,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
     const [advancedLogs, setAdvancedLogs] = useState<ScraperExecutionLog[]>([]);
     const [logFilter, setLogFilter] = useState<'all' | 'error'>('all');
     const [targetLogId, setTargetLogId] = useState<number | null>(null);
+    const [copied, setCopied] = useState(false);
 
     const [showIpLogsModal, setShowIpLogsModal] = useState(false);
     const [ipLogs, setIpLogs] = useState<WallapopIpLog[]>([]);
@@ -455,6 +456,19 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
             console.error('Error fetching admin data:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleCopyLogs = () => {
+        const textToCopy = [
+            selectedLog?.error_message ? `ERROR CRÍTICO DETECTADO:\n${selectedLog.error_message}\n\n=== LOG COMPLETO ===\n` : '',
+            selectedLog?.logs || ''
+        ].join('');
+        
+        if (textToCopy) {
+            navigator.clipboard.writeText(textToCopy);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
         }
     };
 
@@ -872,6 +886,22 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                         </div>
                                         {selectedLog && (
                                             <div className="flex items-center gap-4">
+                                                <button
+                                                    onClick={handleCopyLogs}
+                                                    className="flex items-center gap-1.5 px-3 py-1 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-brand-primary/10 hover:border-brand-primary/20 text-white/60 hover:text-white transition-all text-[9px] font-black uppercase tracking-wider"
+                                                >
+                                                    {copied ? (
+                                                        <>
+                                                            <CheckCircle2 className="h-3.5 w-3.5 text-green-400" />
+                                                            ¡Copiado!
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Copy className="h-3.5 w-3.5" />
+                                                            Copiar Logs
+                                                        </>
+                                                    )}
+                                                </button>
                                                 <span className="text-[10px] font-bold text-white/60 uppercase tracking-[0.2em] font-mono">
                                                     {selectedLog.spider_name} #0x{selectedLog.id.toString(16)}
                                                 </span>
