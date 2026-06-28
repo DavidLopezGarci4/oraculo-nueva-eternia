@@ -248,13 +248,17 @@ class WallapopScraper(BaseScraper):
                 }
                 self._log("📡 Re-intentando Playwright con proxy de ScraperAPI (Premium ES)...")
 
+            is_headless = True
+            if not use_proxy and os.environ.get("GITHUB_ACTIONS") != "true":
+                is_headless = False
+
             try:
-                self._log(f"🌐 Iniciando navegador Playwright ({profile_suffix})...")
+                self._log(f"🌐 Iniciando navegador Playwright ({profile_suffix}, headless={is_headless})...")
                 async with async_playwright() as p:
                     # Lanzar con perfil persistente para mantener cookies
                     context = await p.chromium.launch_persistent_context(
                         user_data_dir,
-                        headless=True,
+                        headless=is_headless,
                         proxy=proxy_config,
                         ignore_https_errors=True,
                         args=[
@@ -302,6 +306,19 @@ class WallapopScraper(BaseScraper):
                             cover_content = await page.content()
                             page_title = await page.title()
                             
+                            if "request could not be satisfied" in cover_content.lower() or "403 error" in cover_content.lower() or "request blocked" in cover_content.lower() or ("cloudflare" in cover_content.lower() and ("blocked" in cover_content.lower() or "security" in cover_content.lower())):
+                                if not is_headless:
+                                    self._log("⚠️ Cloudflare WAF detectado. Por favor, resuelve el Captcha en la ventana del navegador...")
+                                    for _ in range(20):
+                                        await asyncio.sleep(1)
+                                        cover_content = await page.content()
+                                        if not ("cloudflare" in cover_content.lower() and ("blocked" in cover_content.lower() or "security" in cover_content.lower())):
+                                            self._log("🎉 Captcha resuelto manualmente o redirigido con éxito!")
+                                            break
+                                    
+                                    cover_content = await page.content()
+                                    page_title = await page.title()
+                                    
                             if "request could not be satisfied" in cover_content.lower() or "403 error" in cover_content.lower() or "request blocked" in cover_content.lower() or ("cloudflare" in cover_content.lower() and ("blocked" in cover_content.lower() or "security" in cover_content.lower())):
                                 probe_status = "blocked"
                                 details_str = f"Blocked page title: {page_title}. Content starts with: {cover_content[:500]}"

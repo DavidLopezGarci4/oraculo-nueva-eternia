@@ -12,7 +12,7 @@ from pathlib import Path
 # Load environment variables from absolute project root .env
 project_root = Path(__file__).resolve().parent.parent.parent.parent
 env_path = project_root / ".env"
-load_dotenv(dotenv_path=env_path)
+load_dotenv(dotenv_path=env_path, override=True)
 
 from abc import ABC, abstractmethod
 from typing import List, Optional

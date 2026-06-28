@@ -511,6 +511,10 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
     *   Alineados los scrapers registrados en `ensure_scrapers_registered()` (`deps.py`) añadiendo `Triguetech` y `LaMansionDelTerror` y removiendo el obsoleto `Tradeinn`.
     *   Removido el parche estático de strings en `Dashboard.tsx` dado que el nombre de la wave de WWE ya se almacena correctamente en la base de datos.
     *   Consistencia total en el escudo de Grayskull (incógnito) para ocultar y difuminar todos los contadores de la colección, leyendas del Doughnut Chart, tooltips y Regimientos de Completitud en el Dashboard.
+  - [x] **Bypass de CloudFront WAF y Robustez de Entorno en Wallapop**:
+    *   Forzada la carga absoluta de `.env` con `override=True` en `config.py` y `base.py` para asegurar que `SCRAPERAPI_KEY` se inyecte de forma íntegra sin fallas de entorno en subprocesos.
+    *   Implementado el **Bypass Interactivo local**: el scraper abre el navegador en modo visible (`headless=False`) temporalmente al topar con Cloudflare y espera hasta 20 segundos para que el usuario resuelva el Captcha en pantalla. Al completarse, prosigue la extracción gratis.
+    *   Homogeneizada al 100% la consola de telemetría del frontend (`Config.tsx`), mapeando los emojis restantes de logs (`📡`, `🌩️`, `🕵️`, `🍪`, `💾`, `✅`, `⌛`, `🎉`) a iconos outline de Lucide (`Wifi`, `CloudLightning`, `Search`, `Cookie`, `Database`, `CheckCircle2`, `Clock`, `Sparkles`).
 
 ---
 
