@@ -250,7 +250,12 @@ class WallapopScraper(BaseScraper):
 
             is_headless = True
             if not use_proxy and os.environ.get("GITHUB_ACTIONS") != "true":
-                is_headless = False
+                # Ensure we don't launch headed browser in a headless Linux environment (like Docker/WSL without XServer)
+                import sys
+                if sys.platform.startswith("linux") and not os.environ.get("DISPLAY"):
+                    is_headless = True
+                else:
+                    is_headless = False
 
             try:
                 self._log(f"🌐 Iniciando navegador Playwright ({profile_suffix}, headless={is_headless})...")
