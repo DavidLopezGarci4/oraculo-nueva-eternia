@@ -1,0 +1,8 @@
+2026-06-28T17:51:34.890Z ACTOR: Pulling container image of build TU6hI9Grh8uVomnGe from registry.
+2026-06-28T17:51:35.441Z ACTOR: Creating container.
+2026-06-28T17:51:35.551Z ACTOR: Starting container.
+2026-06-28T17:51:35.552Z ACTOR: Running under "LIMITED_PERMISSIONS".
+2026-06-28T17:51:35.992Z 2026/06/28 17:51:35 INFO 🚀 Starting Wallapop Scraper
+2026-06-28T17:51:35.993Z 2026/06/28 17:51:35 INFO This actor is running in pay-per-event (PPE) mode
+2026-06-28T17:51:36.076Z 2026/06/28 17:51:36 ERROR latitude and longitude are not set, and postalCode is empty
+2026-06-28T17:51:36.077Z 2026/06/28 17:51:36 INFO 👋 Finishing Wallapop Scraper

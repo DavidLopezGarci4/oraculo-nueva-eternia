@@ -1212,3 +1212,15 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
     - Agregados flags adicionales de Chromium para optimizar el rendimiento y desactivar barras de información de automatización (`--disable-infobars`, `--disable-dev-shm-usage`, `--disable-gpu`).
     - Parcheado el objeto `navigator` en el script de inicialización de la página para falsificar firmas de detección comunes (sobrescritura de `navigator.webdriver`, normalización de `navigator.languages` y `navigator.plugins`, simulación de `window.chrome` y neutralización de la detección de `navigator.permissions.query`).
   - **Verificación Completa**: Ejecutada la suite de pruebas unitarias backend con 35 tests pasando con éxito y compilación del frontend validada.
+
+
+### 🛡️ Fase 77: Cascada Inteligente de Scrapers Gratuitos y Remoción de nodriver (28/06/2026)
+
+- **Hitos**: Arquitectura en cascada inteligente para el scraper de Wallapop priorizando APIs con capas gratuitas (Apify -> ScraperAPI -> Fallbacks de Proxies) y remoción del navegador local nodriver.
+- **Estado**: ✅ COMPLETADO Y VERIFICADO
+- **Logros Técnicos**:
+  - **Priorización de Apify (Capa Gratuita ~20k/mes)**: Añadida la integración síncrona con el Actor de Apify `igolaizola/wallapop-scraper` como primera opción de bypass WAF, configurando el parámetro `postalCode: "28001"` (Madrid) para satisfacer la validación del actor. Si se detecta que las cuotas mensuales están agotadas (HTTP 402/429), se marca Apify como "agotado" y el scraper pasa limpiamente al siguiente nivel.
+  - **Soporte de ScraperAPI (Respaldo Gratis ~5k/mes)**: Integrada como segundo eslabón de la cascada. En caso de error de créditos agotados (HTTP 403), se registra como agotado y se activa el fallback final.
+  - **Exclusión de nodriver**: Descartado y desinstalado por completo el paquete `nodriver` para mantener el código uniforme en producción (Docker/nube) sin disparar ejecuciones locales headed conflictivas.
+  - **Unificación de Parseo JSON**: Creada la utilidad `_parse_wallapop_json_objects` para homogeneizar el filtrado de ruido y mapeo de `ScrapedOffer` de todas las respuestas de API (Apify y directas).
+  - **Validación Unitiva**: Las 35 pruebas unitarias continúan pasando exitosamente y sin warnings en pytest.

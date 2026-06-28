@@ -16,8 +16,9 @@ logger = logging.getLogger(__name__)
 
 class WallapopScraper(BaseScraper):
     """
-    Scraper de Wallapop Híbrido (API Directa + Playwright Fallback) (Phase 43/Pareto).
-    Bypassa bloqueos 403 de CloudFront mediante curl_cffi impersonation.
+    Scraper de Wallapop Híbrido (API Directa / Apify / ScraperAPI / Playwright Fallback).
+    Bypassa bloqueos WAF de CloudFront mediante una cascada inteligente de APIs gratuitas,
+    rotación de proxies y automatización como último recurso.
     """
     
     USER_AGENTS = [
@@ -28,6 +29,8 @@ class WallapopScraper(BaseScraper):
     # Class-level variables to persist across scraper instances/runs in the uvicorn process
     global_failed_proxies = set()
     global_free_proxies = []
+    global_apify_exhausted = False
+    global_scraperapi_exhausted = False
 
     def __init__(self):
         super().__init__(shop_name="Wallapop", base_url="https://es.wallapop.com")
@@ -79,14 +82,106 @@ class WallapopScraper(BaseScraper):
         self._log(f"✅ Cosecha finalizada. {len(WallapopScraper.global_free_proxies)} proxies listos para rotación.")
         return WallapopScraper.global_free_proxies
 
+    def _parse_wallapop_json_objects(self, items: List[dict]) -> List[ScrapedOffer]:
+        offers: List[ScrapedOffer] = []
+        junk_keywords = ["camiseta", "t-shirt", "poster", "taza", "mug", "revista", "dvd", "llavero", "keyring", "reproduccion", "repro", "sticker", "pegatina"]
+        
+        for obj in items:
+            title = obj.get("title")
+            price = obj.get("price")
+            
+            if not title or price is None:
+                continue
+                
+            # Parse price
+            if isinstance(price, dict):
+                price_val = float(price.get("amount", 0))
+            else:
+                try:
+                    price_val = float(price)
+                except ValueError:
+                    continue
+                    
+            if price_val <= 0:
+                continue
+                
+            # Filtro de ruido
+            title_lower = title.lower()
+            if any(kw in title_lower for kw in junk_keywords):
+                continue
+                
+            slug = obj.get("web_slug")
+            if not slug:
+                continue
+                
+            full_url = f"https://es.wallapop.com/item/{slug}"
+            
+            # Image URL
+            image_url = None
+            images = obj.get("images", [])
+            if images and isinstance(images, list):
+                if isinstance(images[0], dict):
+                    image_url = images[0].get("original") or images[0].get("medium")
+                else:
+                    image_url = images[0]
+            elif obj.get("image"):
+                img_obj = obj.get("image")
+                if isinstance(img_obj, dict):
+                    image_url = img_obj.get("original") or img_obj.get("medium")
+                else:
+                    image_url = img_obj
+                    
+            offer = ScrapedOffer(
+                product_name=title,
+                price=price_val,
+                url=full_url,
+                shop_name=self.shop_name,
+                image_url=image_url,
+                source_type="Peer-to-Peer",
+                sale_type="Fixed_P2P"
+            )
+            offers.append(offer)
+            
+        return offers
+
     async def search_via_api(self, query: str) -> List[ScrapedOffer]:
         """
-        Intenta obtener las ofertas de Wallapop de forma directa y ultra-rápida
-        usando curl_cffi impersonation contra su endpoint general de búsqueda v3.
+        Intenta obtener las ofertas de Wallapop de forma directa y ultra-rápida.
+        Utiliza una cascada inteligente de APIs con cuota gratuita (Apify -> ScraperAPI -> Directa/Proxies).
         """
-        offers: List[ScrapedOffer] = []
-        self._log(f"⚡ Wallapop API: Buscando '{query}' de forma directa...")
-        
+        # --- FASE 1: APIFY (Créditos Gratuitos ~20,000 reqs/mes) ---
+        apify_token = os.environ.get("APIFY_TOKEN")
+        if apify_token and not WallapopScraper.global_apify_exhausted:
+            self._log("📡 Cascading Scraper: Intentando con Apify Actor (Prioridad 1, Capa Gratuita)...")
+            try:
+                apify_url = f"https://api.apify.com/v2/acts/igolaizola~wallapop-scraper/run-sync-get-dataset-items?token={apify_token}"
+                async with AsyncSession() as session:
+                    apify_response = await session.post(
+                        apify_url,
+                        json={
+                            "query": query, 
+                            "maxItems": 40,
+                            "postalCode": "28001"
+                        },
+                        headers={"Content-Type": "application/json"},
+                        timeout=120
+                    )
+                    
+                    if apify_response.status_code in [200, 201]:
+                        items = apify_response.json()
+                        offers = self._parse_wallapop_json_objects(items)
+                        self._log(f"🎉 Apify: ¡Éxito! Encontrados {len(offers)} objetos para '{query}'.")
+                        return offers
+                    elif apify_response.status_code in [402, 429]:
+                        self._log("⚠️ Apify: Límite de cuota gratuita superado (HTTP 402/429). Marcando Apify como agotado.", level="warning")
+                        WallapopScraper.global_apify_exhausted = True
+                    else:
+                        self._log(f"⚠️ Apify falló con código HTTP: {apify_response.status_code}", level="warning")
+            except Exception as e:
+                self._log(f"⚠️ Error al conectar con Apify: {e}", level="warning")
+                
+        # --- FASE 2: CONEXIÓN DIRECTA CON IMPERSONACIÓN O PROXIES ---
+        self._log(f"⚡ Wallapop API: Iniciando secuencia de extracción para '{query}'...")
         async with AsyncSession() as session:
             user_agent = random.choice(self.USER_AGENTS)
             headers = {
@@ -111,18 +206,18 @@ class WallapopScraper(BaseScraper):
                 import urllib.parse
                 target_url = "https://api.wallapop.com/api/v3/general/search?" + urllib.parse.urlencode(params)
                 
-                api_key = os.environ.get("SCRAPERAPI_KEY")
-                
-                # Pareto Self-Healing Strategy: Direct connection first, fallback to ScraperAPI if direct connection fails
+                scraperapi_key = os.environ.get("SCRAPERAPI_KEY")
                 use_proxy = False
                 is_production = os.environ.get("ENV") == "production"
                 if os.environ.get("GITHUB_ACTIONS") == "true":
-                    use_proxy = True  # Always use proxy on GitHub Actions since Azure IPs are blocked
+                    use_proxy = True
                 elif is_production:
                     self._log("📡 Entorno de Producción (OCI/Docker) detectado. Saltando conexión directa (IP de Datacenter bloqueada por WAF por defecto).")
                     use_proxy = True
-                
+                    
                 response = None
+                
+                # Intentar conexión directa primero (solo si no estamos obligados a usar proxy)
                 if not use_proxy:
                     try:
                         self._log("⚡ Wallapop API: Intentando conexión directa...")
@@ -138,12 +233,12 @@ class WallapopScraper(BaseScraper):
                     except Exception as e:
                         self._log(f"⚠️ Falló conexión directa a Wallapop API: {e}")
                         use_proxy = True
-
-                # Fase 2: ScraperAPI Proxy (si está configurada y directa falló)
-                if use_proxy and api_key:
+                        
+                # --- FASE 3: SCRAPERAPI PROXY (Prioridad 2, Capa Gratuita ~5,000 reqs/mes) ---
+                if use_proxy and scraperapi_key and not WallapopScraper.global_scraperapi_exhausted:
                     try:
                         params_sa = {
-                            "api_key": api_key,
+                            "api_key": scraperapi_key,
                             "url": target_url,
                             "country_code": "es",
                             "premium": "true",
@@ -156,26 +251,27 @@ class WallapopScraper(BaseScraper):
                             headers=headers,
                             timeout=90
                         )
-                        if response.status_code in [403, 429, 500]:
-                            self._log(f"⚠️ ScraperAPI falló o se agotaron los créditos (HTTP {response.status_code}).")
+                        if response.status_code in [403, 429]:
+                            self._log(f"⚠️ ScraperAPI: Créditos agotados (HTTP {response.status_code}). Marcando ScraperAPI como agotado.", level="warning")
+                            WallapopScraper.global_scraperapi_exhausted = True
+                        elif response.status_code == 500:
+                            self._log("⚠️ ScraperAPI falló con error HTTP 500.", level="warning")
                     except Exception as e:
                         self._log(f"⚠️ Error al conectar a ScraperAPI: {e}")
-
-                # Fase 3: Rotación Dinámica de Proxies Públicos (si no hay key de ScraperAPI o ScraperAPI falló/agotada)
+                        
+                # --- FASE 4: ROTACIÓN DINÁMICA DE PROXIES PÚBLICOS (Último recurso API) ---
                 if use_proxy and (not response or response.status_code != 200):
                     self._log("🌩️ Iniciando rotador dinámico de proxies públicos para Wallapop API...")
                     free_proxies = await self._fetch_free_proxies(session)
                     
-                    # Prevent memory leaks by resetting global failed list if it exceeds 3000
                     if len(WallapopScraper.global_failed_proxies) > 3000:
                         self._log("🧹 Limpiando historial de proxies fallidos por exceso de tamaño.")
                         WallapopScraper.global_failed_proxies.clear()
                         
-                    # Filter out failed proxies globally
                     available_proxies = [p for p in free_proxies if p not in WallapopScraper.global_failed_proxies]
                     self._log(f"🌩️ {len(available_proxies)} proxies disponibles para probar (excluyendo {len(WallapopScraper.global_failed_proxies)} fallidos históricamente).")
                     
-                    for proxy in available_proxies[:25]:  # Probar máximo 25 proxies
+                    for proxy in available_proxies[:25]:
                         try:
                             self._log(f"📡 Probando proxy público: {proxy}...")
                             proxy_response = await session.get(
@@ -195,72 +291,21 @@ class WallapopScraper(BaseScraper):
                         except Exception as e:
                             self._log(f"❌ Proxy inalcanzable / lento (Error: {type(e).__name__})")
                             WallapopScraper.global_failed_proxies.add(proxy)
-                
+                            
+                # Mapear respuesta
                 if response and response.status_code == 200:
                     data = response.json()
                     search_objects = data.get("search_objects", [])
-                    self._log(f"🎉 Wallapop API: Encontrados {len(search_objects)} objetos en API para '{query}'.")
-                    
-                    for obj in search_objects:
-                        title = obj.get("title")
-                        price = obj.get("price")
-                        
-                        if not title or price is None:
-                            continue
-                            
-                        # Parse price
-                        if isinstance(price, dict):
-                            price_val = float(price.get("amount", 0))
-                        else:
-                            try:
-                                price_val = float(price)
-                            except ValueError:
-                                continue
-                                
-                        if price_val <= 0:
-                            continue
-                            
-                        # Filtro de ruido
-                        title_lower = title.lower()
-                        junk_keywords = ["camiseta", "t-shirt", "poster", "taza", "mug", "revista", "dvd", "llavero", "keyring", "reproduccion", "repro", "sticker", "pegatina"]
-                        if any(kw in title_lower for kw in junk_keywords):
-                            continue
-                            
-                        slug = obj.get("web_slug")
-                        if not slug:
-                            continue
-                            
-                        full_url = f"https://es.wallapop.com/item/{slug}"
-                        
-                        # Image URL
-                        image_url = None
-                        images = obj.get("images", [])
-                        if images and isinstance(images, list):
-                            image_url = images[0].get("original") or images[0].get("medium")
-                        elif obj.get("image"):
-                            img_obj = obj.get("image")
-                            if isinstance(img_obj, dict):
-                                image_url = img_obj.get("original") or img_obj.get("medium")
-                            else:
-                                image_url = img_obj
-                                
-                        offer = ScrapedOffer(
-                            product_name=title,
-                            price=price_val,
-                            url=full_url,
-                            shop_name=self.shop_name,
-                            image_url=image_url,
-                            source_type="Peer-to-Peer",
-                            sale_type="Fixed_P2P"
-                        )
-                        offers.append(offer)
+                    offers = self._parse_wallapop_json_objects(search_objects)
+                    self._log(f"🎉 Wallapop API: Encontrados {len(offers)} objetos para '{query}'.")
+                    return offers
                 else:
                     status_code = response.status_code if response else "No Response"
                     self._log(f"⚠️ Wallapop API ha devuelto código de estado no-exitoso: {status_code}", level="warning")
             except Exception as e:
                 self._log(f"⚠️ Error llamando a la API de Wallapop: {e}", level="warning")
                 
-        return offers
+        return []
 
     async def search(self, query: str) -> List[ScrapedOffer]:
         offers: List[ScrapedOffer] = []
@@ -274,7 +319,10 @@ class WallapopScraper(BaseScraper):
         # 1. Configuración inteligente de palabras clave
         if query == "auto":
             queries_config = [
-                ("masters del universo", 6, True),   # (query, scroll_cycles, click_load_more)
+                ("masters del universo origins", 4, True),   # (query, scroll_cycles, click_load_more)
+                ("masters of the universe origins", 4, True),
+                ("motu origins", 4, True),
+                ("masters del universo", 6, True),
                 ("masters of the universe", 4, True)
             ]
         else:
@@ -308,7 +356,7 @@ class WallapopScraper(BaseScraper):
             self.items_scraped = len(unique_offers)
             self._log(f"🚀 Wallapop API: Búsqueda completada con éxito. {self.items_scraped} reliquias encontradas sin levantar navegador.")
             return unique_offers
-            
+
         # --- INTENTO 2: FALLBACK CON PLAYWRIGHT Y PERFIL PERSISTENTE (Solo local) ---
         if os.environ.get("GITHUB_ACTIONS") == "true":
             self._log("⚠️ Wallapop: API directa fallida en GitHub Actions. Saltando fallback de Playwright para evitar bloqueos CloudWAF.")
