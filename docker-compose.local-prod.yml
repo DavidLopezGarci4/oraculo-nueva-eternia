@@ -15,6 +15,7 @@ services:
       # Supabase Cloud (Nexo Central) — same for local and OCI
       - SUPABASE_DATABASE_URL=${SUPABASE_DATABASE_URL}
       - SCRAPERAPI_KEY=${SCRAPERAPI_KEY}
+      - APIFY_TOKEN=${APIFY_TOKEN}
       - DATABASE_URL=${DATABASE_URL:-sqlite:///./oraculo.db}
       - PYTHONUNBUFFERED=1
       - ENV=production

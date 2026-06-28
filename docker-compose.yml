@@ -18,6 +18,7 @@ services:
       - DATABASE_URL=sqlite:///./oraculo.db
       - SUPABASE_DATABASE_URL=
       - SCRAPERAPI_KEY=${SCRAPERAPI_KEY}
+      - APIFY_TOKEN=${APIFY_TOKEN}
       - PYTHONUNBUFFERED=1
     # Reload flag ensures changes in host trigger restart
     command: uvicorn src.interfaces.api.main:app --host 0.0.0.0 --port 8000 --reload
