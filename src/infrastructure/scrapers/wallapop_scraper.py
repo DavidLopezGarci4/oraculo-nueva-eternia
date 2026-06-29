@@ -320,10 +320,11 @@ class WallapopScraper(BaseScraper):
     async def search(self, query: str) -> List[ScrapedOffer]:
         offers: List[ScrapedOffer] = []
         
-        # CloudFront blocks GitHub Actions Azure IP ranges completely.
-        # To avoid constant false block alerts and WAF log clutter, we skip Wallapop in GitHub Actions if no ScraperAPI key is set.
-        if os.environ.get("GITHUB_ACTIONS") == "true" and not os.environ.get("SCRAPERAPI_KEY"):
-            self._log("⚠️ Wallapop: Detectado entorno GitHub Actions sin SCRAPERAPI_KEY (Azure IP bloqueado por CloudFront). Saltando búsqueda.")
+        # CloudFront blocks GitHub Actions / OCI Datacenter IPs by default.
+        # To avoid wasting proxy credits and API calls, we skip Wallapop during scheduled automated daily scans (DAILY_SCAN_RUN) and GitHub Actions.
+        # Apify and ScraperAPI are reserved exclusively for manual triggered searches from the admin panel.
+        if os.environ.get("DAILY_SCAN_RUN") == "true" or os.environ.get("GITHUB_ACTIONS") == "true":
+            self._log("⚠️ Wallapop: Detectado entorno automatizado programado (daily_scan / GitHub Actions). Saltando búsqueda para preservar créditos (reservado para llamada manual).")
             return []
             
         # 1. Configuración inteligente de palabras clave
@@ -331,9 +332,7 @@ class WallapopScraper(BaseScraper):
             queries_config = [
                 ("masters del universo origins", 4, True),   # (query, scroll_cycles, click_load_more)
                 ("masters of the universe origins", 4, True),
-                ("motu origins", 4, True),
-                ("masters del universo", 6, True),
-                ("masters of the universe", 4, True)
+                ("motu origins", 4, True)
             ]
         else:
             queries_config = [(query, 8, True)]

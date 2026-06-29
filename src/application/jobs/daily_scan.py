@@ -48,6 +48,7 @@ from src.application.services.deal_scorer import DealScorer
 from src.application.services.logistics_service import LogisticsService
 
 async def run_daily_scan(progress_callback=None):
+    os.environ["DAILY_SCAN_RUN"] = "true"
     # Ensure logging is set up
     # setup_logging() # Already called at module level or by importer
     logger.info("🚀 Starting Daily Oracle Scan (Refactored Loop)...")

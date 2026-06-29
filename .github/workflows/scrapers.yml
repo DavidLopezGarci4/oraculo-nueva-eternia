@@ -69,7 +69,6 @@ jobs:
             git pull --rebase origin main
             git push
           fi
-
       - name: Run Scrapers (Market Incursion)
         env:
           SUPABASE_DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
@@ -81,3 +80,15 @@ jobs:
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then DELAY=0; fi
           
           python src/application/jobs/daily_scan.py --shops "${{ github.event.inputs.shops }}" --random-delay $DELAY --no-nexus
+      - name: Send Telegram Reminder
+        if: always()
+        run: |
+          if [ -n "$TELEGRAM_BOT_TOKEN" ] && [ -n "$TELEGRAM_CHAT_ID" ]; then
+            TEXT=$'🤖 <b>Oráculo de Nueva Eternia</b>\n\nEl proceso de importación y scrapers de GitHub Actions ha finalizado.\n\n⚠️ <b>Recordatorio:</b> No olvides lanzar el scraper de <b>Wallapop</b> desde la app para capturar las últimas ofertas.'
+            curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+              --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
+              --data-urlencode "text=${TEXT}" \
+              --data-urlencode "parse_mode=HTML" > /dev/null
+          else
+            echo "Telegram credentials not found. Skipping notification."
+          fi

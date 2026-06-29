@@ -1219,9 +1219,18 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
 - **Hitos**: Arquitectura en cascada inteligente para el scraper de Wallapop priorizando APIs con capas gratuitas (Apify -> ScraperAPI -> Fallbacks de Proxies) y remoción del navegador local nodriver.
 - **Estado**: ✅ COMPLETADO Y VERIFICADO
 - **Logros Técnicos**:
-  - **Priorización de Apify (Capa Gratuita ~20k/mes)**: Añadida la integración síncrona con el Actor de Apify `igolaizola/wallapop-scraper` como primera opción de bypass WAF, configurando el parámetro `postalCode: "28001"` (Madrid) para satisfacer la validación del actor. Si se detecta que las cuotas mensuales están agotadas (HTTP 402/429), se marca Apify como "agotado" y el scraper pasa limpiamente al siguiente nivel.
-  - **Optimización de Créditos y Fecha**: Añadido `"orderBy": "newest"` en la carga de Apify para priorizar anuncios recientes de Wallapop. Para búsquedas en segundo plano (query `"auto"`), se calibró el recuento de resultados de dataset a `max_items=30` por término, maximizando el uso de la cuota mensual gratuita de $5 (equivalente a un consumo teórico de $4.50/mes).
-  - **Soporte de ScraperAPI (Respaldo Gratis ~5k/mes)**: Integrada como segundo eslabón de la cascada. En caso de error de créditos agotados (HTTP 403), se registra como agotado y se activa el fallback final.
+  - **Priorización de Apify y ScraperAPI (Exclusivo para Llamada Manual)**: Se configuró el scraper de Wallapop para omitirse por completo durante las ejecuciones automáticas programadas (detectando `DAILY_SCAN_RUN` en cron y `GITHUB_ACTIONS`). Esto evita el consumo de créditos y peticiones de forma automatizada en segundo plano. Apify y ScraperAPI están reservados al 100% para llamadas manuales del usuario.
+  - **Calibración de Presupuesto para Llamada Manual**: Configurado Apify con `"orderBy": "newest"` y `maxItems=30` para 3 queries de alto impacto (`"masters del universo origins"`, `"masters of the universe origins"`, `"motu origins"`). Al lanzarse bajo demanda manual una o dos veces al día, el coste se sitúa exactamente en torno al objetivo de **cerca de $5.00 al mes** de la capa gratuita, sin riesgos de sobrecostes automáticos.
   - **Exclusión de nodriver**: Descartado y desinstalado por completo el paquete `nodriver` para mantener el código uniforme en producción (Docker/nube) sin disparar ejecuciones locales headed conflictivas.
   - **Unificación de Parseo JSON e Imágenes**: Creada la utilidad `_parse_wallapop_json_objects` para homogeneizar el filtrado de ruido y mapeo de `ScrapedOffer` de todas las respuestas de API (Apify y directas). Se corrigió la extracción de imágenes para dar soporte adaptativo tanto al formato plano `original` como al formato estructurado `urls.big/medium/small` devuelto por el actor de Apify, evitando que se muestren marcadores "NO IMG" en el Purgatorio.
   - **Validación Unitiva**: Las 35 pruebas unitarias continúan pasando exitosamente y sin warnings en pytest.
+
+
+### 🛡️ Fase 78: Z-Index del Menú Lateral Abierto y Alertas de GitHub Actions (29/06/2026)
+
+- **Hitos**: Solución de solapamiento de tarjetas en el Purgatorio y adición de alertas de Telegram al terminar el workflow de GitHub Actions.
+- **Estado**: ✅ COMPLETADO Y VERIFICADO
+- **Logros Técnicos**:
+  - **Corrección de Z-Index en Sidebar**: Elevados los índices de apilamiento en [Sidebar.tsx](file:///c:/Users/dace8/OneDrive/Documentos/Antigravity/oraculo-nueva-eternia/frontend/src/components/layout/Sidebar.tsx) para evitar que las tarjetas de Purgatorio (que escalan dinámicamente hasta `z-index: 50`) se rendericen encima del menú móvil. Se fijó el panel lateral en `z-[100]` y el backdrop difuminado en `z-[90]`.
+  - **Notificación Fin de Workflow**: Añadido el step `Send Telegram Reminder` en [.github/workflows/scrapers.yml](file:///c:/Users/dace8/OneDrive/Documentos/Antigravity/oraculo-nueva-eternia/.github/workflows/scrapers.yml) usando `if: always()`. Envía un mensaje push con formato HTML recordando ejecutar la incursion manual de Wallapop cada vez que finaliza el escaneo diario de tiendas tradicionales.
+  - **Pruebas de Compilación**: Validada la compilación total del frontend (`tsc -b && vite build`) y tests de backend sin errores.

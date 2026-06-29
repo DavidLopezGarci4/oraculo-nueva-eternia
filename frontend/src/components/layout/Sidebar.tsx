@@ -36,7 +36,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen
 
     // Clases base para el sidebar
     const sidebarClasses = `
-        fixed inset-y-0 left-0 z-50 flex h-full w-72 flex-col border-r border-glass-border
+        fixed inset-y-0 left-0 z-[100] flex h-full w-72 flex-col border-r border-glass-border
         bg-[#0d0d12]/80 backdrop-blur-xl md:glass
         transition-transform duration-300 ease-in-out md:relative md:translate-x-0 md:w-64
         ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'}
@@ -47,7 +47,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen
             {/* Mobile Overlay Backdrop */}
             {isMobileOpen && (
                 <div
-                    className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden animate-in fade-in duration-300"
+                    className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm md:hidden animate-in fade-in duration-300"
                     onClick={onCloseMobile}
                 />
             )}
