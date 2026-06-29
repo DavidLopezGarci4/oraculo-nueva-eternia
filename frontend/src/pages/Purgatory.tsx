@@ -427,6 +427,9 @@ const Purgatory: React.FC = React.memo(() => {
         return saved ? JSON.parse(saved) : [];
     });
 
+    // Locally processed/synced IDs that should remain hidden until the server refetch completes
+    const [locallyProcessedIds, setLocallyProcessedIds] = useState<Set<number>>(new Set());
+
     // UX/UI Custom States
     const [viewLayout, setViewLayout] = useState<'mazo' | 'lista'>('mazo');
     const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'highest_match' | 'lowest_match'>('highest_match');
@@ -503,6 +506,25 @@ const Purgatory: React.FC = React.memo(() => {
         queryFn: getPurgatory,
         refetchInterval: 300000 // 5 min — evita refrescos constantes que estropean la UX
     });
+
+    // Clean up locallyProcessedIds once the server data updates (confirming deletion/archive)
+    useEffect(() => {
+        if (pendingItems) {
+            const currentItemIds = new Set(pendingItems.map((item: any) => item.id));
+            setLocallyProcessedIds(prev => {
+                const next = new Set<number>();
+                prev.forEach((id: number) => {
+                    if (currentItemIds.has(id)) {
+                        next.add(id);
+                    }
+                });
+                if (next.size !== prev.size) {
+                    return next;
+                }
+                return prev;
+            });
+        }
+    }, [pendingItems]);
 
     const { data: products } = useQuery({
         queryKey: ['products-purgatory'],
@@ -729,6 +751,13 @@ const Purgatory: React.FC = React.memo(() => {
                     }));
                     await matchItemsBulk(matchesPayload);
 
+                    // Add processed IDs to locallyProcessedIds
+                    setLocallyProcessedIds(prev => {
+                        const next = new Set(prev);
+                        batch.flatMap(a => a.pendingIds).forEach((id: number) => next.add(id));
+                        return next;
+                    });
+
                     // Remove from pendingActions
                     setPendingActions(prev => prev.filter(a => !batchIds.includes(a.id)));
                     queryClient.invalidateQueries({ queryKey: ['purgatory'] });
@@ -770,6 +799,13 @@ const Purgatory: React.FC = React.memo(() => {
                 } else if (otherAction.type === 'match-misc') {
                     await matchMiscellaneousItem(otherAction.pendingIds[0]);
                 }
+
+                // Add processed IDs to locallyProcessedIds
+                setLocallyProcessedIds(prev => {
+                    const next = new Set(prev);
+                    otherAction.pendingIds.forEach((id: number) => next.add(id));
+                    return next;
+                });
 
                 // Remove from pendingActions
                 setPendingActions(prev => prev.filter(a => a.id !== otherAction.id));
@@ -844,7 +880,10 @@ const Purgatory: React.FC = React.memo(() => {
         );
 
     // Dynamic Filter for Pending Items (Main List)
-    const pendingIdsToHide = new Set(pendingActions.flatMap(a => a.pendingIds));
+    const pendingIdsToHide = new Set([
+        ...pendingActions.flatMap(a => a.pendingIds),
+        ...Array.from(locallyProcessedIds)
+    ]);
 
     const filteredPendingItems = (pendingItems || []).filter((item: any) => {
         // Persistence Ghost Mode: Filter out locally hidden items
@@ -1079,6 +1118,7 @@ const Purgatory: React.FC = React.memo(() => {
                                         onClick={() => {
                                             if (confirm('¿Limpiar el búfer local? Esto cancelará las acciones no sincronizadas.')) {
                                                 setPendingActions([]);
+                                                setLocallyProcessedIds(new Set());
                                                 setFailedActions([]);
                                                 localStorage.removeItem(PERSISTENCE_KEY);
                                                 localStorage.removeItem('purgatory_sync_failures');
@@ -1785,6 +1825,11 @@ const Purgatory: React.FC = React.memo(() => {
                                                                 // Forced return to abyss: Remove from failedActions AND pendingActions
                                                                 setFailedActions(prev => prev.filter(fail => fail.action.id !== f.action.id));
                                                                 setPendingActions(prev => prev.filter(a => a.id !== f.action.id));
+                                                                setLocallyProcessedIds(prev => {
+                                                                    const next = new Set(prev);
+                                                                    f.action.pendingIds.forEach((id: number) => next.delete(id));
+                                                                    return next;
+                                                                });
                                                             }}
                                                             className="flex-1 md:w-32 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white/60 text-[10px] font-black uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all"
                                                         >
