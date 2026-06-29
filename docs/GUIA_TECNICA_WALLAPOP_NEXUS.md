@@ -4,36 +4,44 @@ Este documento detalla la arquitectura de infiltración y el motor de extracció
 
 ---
 
-## 🏗️ 1. Arquitectura del Motor Híbrido
+## 🏗️ 1. Arquitectura del Motor Híbrido y Cascada de Evasión
 
-Para maximizar la velocidad y evadir las penalizaciones por comportamiento automatizado, el sistema cuenta con un flujo secuencial inteligente de dos fases:
+Para maximizar la velocidad y evadir las penalizaciones por comportamiento automatizado (WAF de CloudFront), el sistema cuenta con un flujo secuencial inteligente (cascada) diseñado **exclusivamente para llamadas manuales** (las rondas automáticas de fondo se omiten para preservar cuotas):
 
 ```mermaid
 graph TD
-    A[Inicio Búsqueda] --> B{Intento 1: API v3 Directa}
-    B -- Exito (200) --> C[Parsear JSON y Retornar]
-    B -- Bloqueo WAF (403) --> D{¿Hay SCRAPERAPI_KEY?}
-    D -- Sí --> E[Ruteo API por ScraperAPI + Render JS]
-    D -- No --> F[Fase 2: Playwright Browser]
-    E -- Éxito (200) --> C
-    E -- Error (500) / Fallo --> F
-    F --> G{Playwright Directo}
-    G -- WAF Blocked --> H{Playwright con Proxy ScraperAPI}
-    G -- Éxito --> I[Parsear DOM y Retornar]
-    H -- Éxito --> I
-    H -- Fallo --> J[Retornar Vacío]
+    A[Inicio Búsqueda Manual] --> B{¿Apify Token 1 o 2 activos?}
+    B -- Sí --> C[Intentar Apify Actor]
+    C -- Éxito (200) --> D[Parsear JSON y Retornar]
+    C -- Cuota Agotada (402/429) --> E{¿Probar siguiente token Apify?}
+    E -- Sí --> C
+    E -- No / Todos Agotados --> F{¿Hay SCRAPERAPI_KEY?}
+    B -- No --> F
+    F -- Sí --> G[Ruteo API por ScraperAPI + Render JS]
+    G -- Éxito (200) --> D
+    G -- Fallo / Agotado (403) --> H{¿Hay Apify Token 3 de Reserva?}
+    F -- No --> H
+    H -- Sí --> I[Intentar Apify Actor Token 3]
+    I -- Éxito (200) --> D
+    I -- Fallo / Agotado --> J[Fase 4: Rotación de Proxies Públicos]
+    H -- No --> J
+    J -- Éxito (200) --> D
+    J -- Fallo --> K[Fase 5: Playwright Browser Fallback]
+    K -- Éxito --> D
+    K -- Fallo --> L[Retornar Vacío]
 ```
 
-| Capa / Estrategia | Componente / Método | Función y Evasión WAF |
+| Nivel / Fase | Componente / API | Función y Evasión WAF |
 | :--- | :--- | :--- |
-| **API Directa** | `curl_cffi` (Chrome 120) | Mimetiza el TLS fingerprint (JA3/JA4) de un navegador moderno para engañar a las comprobaciones iniciales de Cloudflare. |
-| **API Cloud Proxy** | ScraperAPI (Premium ES) | Si la API directa falla (403), se delega el endpoint `api.wallapop.com/api/v3/general/search` con `"render": "true"` y `"premium": "true"`. La renderización de JS en la nube resuelve el desafío matemático sin alertar al WAF local, y se descarta `keep_headers` para prevenir colisiones de proxy. |
-| **Browser Fallback** | Playwright Persistent Context | Si el consumo de la API falla, se levanta una instancia local en segundo plano reutilizando cookies en carpetas temporales (`playwright_wallapop_profile_direct`). |
-| **Browser Proxy** | Tunnel ScraperAPI HTTP | Si el navegador directo es interceptado por WAF, se reinicia el contexto web encapsulándolo en el proxy residencial de España (`proxy-server.scraperapi.com:8001`). |
+| **Nivel 1 (Apify Principal)** | `APIFY_TOKEN` y `APIFY_TOKEN2` | Bypass síncrono gratuito de CloudFront delegando al actor `igolaizola/wallapop-scraper` en la nube. Si el primer token se agota, conmuta en caliente al segundo token automáticamente. |
+| **Nivel 2 (Proxy Cloud)** | ScraperAPI (Premium ES + Render) | Rutea la llamada directa a `api.wallapop.com` resolviendo Javascript en la nube para saltar retos de CloudFront. |
+| **Nivel 2.5 (Apify Reserva)** | `APIFY_TOKEN3` | Cuenta secundaria de Apify que actúa como última línea de defensa rápida en caso de que ScraperAPI y los dos primeros tokens de Apify se queden sin créditos. |
+| **Nivel 3 (Rotación de Proxies)** | Proxies públicos dinámicos | Cosecha proxies de Geonode/ProxyScrape y realiza reintentos dinámicos en paralelo. |
+| **Nivel 4 (Navegador Local)** | Playwright persistent profile | Levantado de instancia local de navegador emulando clicks e interacciones humanas si todas las APIs previas fallan. |
 
 ---
 
-## 🚀 2. Protocolo de Infiltración y Evasión de Bloqueos
+## 🚀 2. Protocolo de Infiltración y Evasión de Bloqueos (Playwright Fallback)
 
 ### A. Evasión de `navigator.webdriver`
 Playwright inyecta por defecto la propiedad `navigator.webdriver = true`, la cual es leída inmediatamente por scripts de protección de bot. El scraper sanitiza la sesión al vuelo agregando un script de inicialización del DOM:
