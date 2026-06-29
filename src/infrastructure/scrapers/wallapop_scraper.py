@@ -29,7 +29,7 @@ class WallapopScraper(BaseScraper):
     # Class-level variables to persist across scraper instances/runs in the uvicorn process
     global_failed_proxies = set()
     global_free_proxies = []
-    global_apify_exhausted = False
+    global_apify_exhausted_tokens = set()
     global_scraperapi_exhausted = False
 
     def __init__(self):
@@ -159,11 +159,17 @@ class WallapopScraper(BaseScraper):
         Utiliza una cascada inteligente de APIs con cuota gratuita (Apify -> ScraperAPI -> Directa/Proxies).
         """
         # --- FASE 1: APIFY (Créditos Gratuitos ~20,000 reqs/mes) ---
-        apify_token = os.environ.get("APIFY_TOKEN")
-        if apify_token and not WallapopScraper.global_apify_exhausted:
-            self._log("📡 Cascading Scraper: Intentando con Apify Actor (Prioridad 1, Capa Gratuita)...")
+        tokens = [t for t in [os.environ.get("APIFY_TOKEN"), os.environ.get("APIFY_TOKEN2")] if t]
+        apify_success = False
+        apify_offers = []
+        
+        for idx, token in enumerate(tokens):
+            if token in WallapopScraper.global_apify_exhausted_tokens:
+                continue
+                
+            self._log(f"📡 Cascading Scraper: Intentando con Apify Actor (Prioridad 1, Token {idx+1})...")
             try:
-                apify_url = f"https://api.apify.com/v2/acts/igolaizola~wallapop-scraper/run-sync-get-dataset-items?token={apify_token}"
+                apify_url = f"https://api.apify.com/v2/acts/igolaizola~wallapop-scraper/run-sync-get-dataset-items?token={token}"
                 async with AsyncSession() as session:
                     apify_response = await session.post(
                         apify_url,
@@ -179,16 +185,21 @@ class WallapopScraper(BaseScraper):
                     
                     if apify_response.status_code in [200, 201]:
                         items = apify_response.json()
-                        offers = self._parse_wallapop_json_objects(items)
-                        self._log(f"🎉 Apify: ¡Éxito! Encontrados {len(offers)} objetos para '{query}'.")
-                        return offers
+                        apify_offers = self._parse_wallapop_json_objects(items)
+                        self._log(f"🎉 Apify Token {idx+1}: ¡Éxito! Encontrados {len(apify_offers)} objetos para '{query}'.")
+                        apify_success = True
+                        break # Éxito, salir del bucle de tokens
                     elif apify_response.status_code in [402, 429]:
-                        self._log("⚠️ Apify: Límite de cuota gratuita superado (HTTP 402/429). Marcando Apify como agotado.", level="warning")
-                        WallapopScraper.global_apify_exhausted = True
+                        self._log(f"⚠️ Apify Token {idx+1}: Límite de cuota gratuita superado (HTTP {apify_response.status_code}). Marcando token como agotado.", level="warning")
+                        WallapopScraper.global_apify_exhausted_tokens.add(token)
+                        # Sigue al siguiente token si existe
                     else:
-                        self._log(f"⚠️ Apify falló con código HTTP: {apify_response.status_code}", level="warning")
+                        self._log(f"⚠️ Apify Token {idx+1} falló con código HTTP: {apify_response.status_code}", level="warning")
             except Exception as e:
-                self._log(f"⚠️ Error al conectar con Apify: {e}", level="warning")
+                self._log(f"⚠️ Error al conectar con Apify usando Token {idx+1}: {e}", level="warning")
+                
+        if apify_success:
+            return apify_offers
                 
         # --- FASE 2: CONEXIÓN DIRECTA CON IMPERSONACIÓN O PROXIES ---
         self._log(f"⚡ Wallapop API: Iniciando secuencia de extracción para '{query}'...")
@@ -268,6 +279,37 @@ class WallapopScraper(BaseScraper):
                             self._log("⚠️ ScraperAPI falló con error HTTP 500.", level="warning")
                     except Exception as e:
                         self._log(f"⚠️ Error al conectar a ScraperAPI: {e}")
+                        
+                # --- FASE 3.5: APIFY TOKEN 3 (Token 3 de Reserva) ---
+                apify_token3 = os.environ.get("APIFY_TOKEN3")
+                if (not response or response.status_code != 200) and apify_token3 and apify_token3 not in WallapopScraper.global_apify_exhausted_tokens:
+                    self._log("📡 Cascading Scraper: Intentando con Apify Actor (Prioridad 3, Token 3 de Reserva)...")
+                    try:
+                        apify_url = f"https://api.apify.com/v2/acts/igolaizola~wallapop-scraper/run-sync-get-dataset-items?token={apify_token3}"
+                        apify_response = await session.post(
+                            apify_url,
+                            json={
+                                "query": query, 
+                                "maxItems": max_items,
+                                "postalCode": "28001",
+                                "orderBy": "newest"
+                            },
+                            headers={"Content-Type": "application/json"},
+                            timeout=120
+                        )
+                        
+                        if apify_response.status_code in [200, 201]:
+                            items = apify_response.json()
+                            offers = self._parse_wallapop_json_objects(items)
+                            self._log(f"🎉 Apify Token 3: ¡Éxito! Encontrados {len(offers)} objetos para '{query}'.")
+                            return offers
+                        elif apify_response.status_code in [402, 429]:
+                            self._log(f"⚠️ Apify Token 3: Límite de cuota gratuita superado (HTTP {apify_response.status_code}). Marcando token 3 como agotado.", level="warning")
+                            WallapopScraper.global_apify_exhausted_tokens.add(apify_token3)
+                        else:
+                            self._log(f"⚠️ Apify Token 3 falló con código HTTP: {apify_response.status_code}", level="warning")
+                    except Exception as e:
+                        self._log(f"⚠️ Error al conectar con Apify usando Token 3: {e}", level="warning")
                         
                 # --- FASE 4: ROTACIÓN DINÁMICA DE PROXIES PÚBLICOS (Último recurso API) ---
                 if use_proxy and (not response or response.status_code != 200):

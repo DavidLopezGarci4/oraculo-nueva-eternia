@@ -16,6 +16,8 @@ services:
       - SUPABASE_DATABASE_URL=${SUPABASE_DATABASE_URL}
       - SCRAPERAPI_KEY=${SCRAPERAPI_KEY}
       - APIFY_TOKEN=${APIFY_TOKEN}
+      - APIFY_TOKEN2=${APIFY_TOKEN2}
+      - APIFY_TOKEN3=${APIFY_TOKEN3}
       - DATABASE_URL=${DATABASE_URL:-sqlite:///./oraculo.db}
       - PYTHONUNBUFFERED=1
       - ENV=production
