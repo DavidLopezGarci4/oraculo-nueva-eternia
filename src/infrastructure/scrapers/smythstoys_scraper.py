@@ -57,13 +57,57 @@ class SmythsToysScraper(BaseScraper):
         """
         from playwright.async_api import async_playwright
         
-        self._log("🛡️ Ejecutando OPCIÓN 1: Playwright con perfil persistente y referer home")
+        # Determinar si se ejecuta de forma oculta o visible.
+        # En incursiones manuales locales, ejecutamos en modo visible (headless=False)
+        # para usar el motor gráfico real y evadir Imperva al 100% de forma segura.
+        is_headless = True
+        if os.environ.get("DAILY_SCAN_RUN") != "true" and os.environ.get("GITHUB_ACTIONS") != "true":
+            is_headless = False
+            self._log("👁️ Modo visible (headful) activo para incursion manual local.")
+        else:
+            self._log("🛡️ Ejecutando OPCIÓN 1: Playwright con perfil persistente en modo oculto (headless)")
+            
         products: List[ScrapedOffer] = []
         seen_urls = set()
+        
+        # Intento de conexión CDP asistida (si el usuario tiene su Chrome de depuración abierto)
+        if os.environ.get("DAILY_SCAN_RUN") != "true" and os.environ.get("GITHUB_ACTIONS") != "true":
+            try:
+                import urllib.request
+                # Timeout de 0.5s para continuar sin retrasos si el puerto está cerrado
+                urllib.request.urlopen("http://localhost:9222/json/version", timeout=0.5)
+                self._log("🔌 Puerto de depuracion 9222 abierto detectado. Conectando via CDP...")
+                
+                async with async_playwright() as p:
+                    browser = await p.chromium.connect_over_cdp("http://localhost:9222")
+                    target_page = None
+                    for context in browser.contexts:
+                        for page in context.pages:
+                            if "smythstoys.com" in page.url:
+                                target_page = page
+                                break
+                        if target_page:
+                            break
+                            
+                    if target_page:
+                        self._log(f"🎯 Pestaña activa de Smyths Toys hallada: {target_page.url}")
+                        html = await target_page.content()
+                        soup = BeautifulSoup(html, "html.parser")
+                        products = self._parse_html(soup, seen_urls)
+                        self._log(f"✅ Extracción completada exitosamente vía CDP. Encontrados {len(products)} artículos.")
+                        return products
+                    else:
+                        self._log("⚠️ Conectado a CDP, pero no se encontró pestaña abierta de Smyths Toys. Iniciando flujo estándar...", level="warning")
+            except Exception:
+                # Si el puerto está cerrado, continúa de forma transparente con el lanzamiento del navegador
+                pass
+                
         user_agent = random.choice(self.USER_AGENTS)
         
-        # Crear directorio temporal para el perfil de usuario persistente
-        user_data_dir = tempfile.mkdtemp(prefix="playwright_smyths_profile_")
+        # Usar un directorio de perfil persistente en el proyecto para acumular cookies y confianza.
+        # De esta forma, una vez resuelto el reto, las cookies e historial se guardan para futuras ejecuciones.
+        user_data_dir = os.path.join(os.getcwd(), "data", "smyths_chrome_profile")
+        os.makedirs(os.path.dirname(user_data_dir), exist_ok=True)
         
         async with async_playwright() as p:
             browser_context = None
@@ -73,12 +117,10 @@ class SmythsToysScraper(BaseScraper):
                     self._log("🌐 Lanzando Google Chrome (Canal Persistente)...")
                     browser_context = await p.chromium.launch_persistent_context(
                         user_data_dir=user_data_dir,
-                        headless=True,
+                        headless=is_headless,
                         channel="chrome",
+                        ignore_default_args=['--enable-automation', '--no-sandbox'],
                         args=[
-                            '--disable-blink-features=AutomationControlled',
-                            '--no-sandbox',
-                            '--disable-web-security',
                             '--disable-features=IsolateOrigins,site-per-process',
                         ],
                         viewport={'width': 1366, 'height': 768},
@@ -90,11 +132,9 @@ class SmythsToysScraper(BaseScraper):
                     self._log(f"⚠️ No se pudo lanzar canal 'chrome' ({e}). Usando Chromium por defecto...")
                     browser_context = await p.chromium.launch_persistent_context(
                         user_data_dir=user_data_dir,
-                        headless=True,
+                        headless=is_headless,
+                        ignore_default_args=['--enable-automation', '--no-sandbox'],
                         args=[
-                            '--disable-blink-features=AutomationControlled',
-                            '--no-sandbox',
-                            '--disable-web-security',
                             '--disable-features=IsolateOrigins,site-per-process',
                         ],
                         viewport={'width': 1366, 'height': 768},
@@ -151,14 +191,16 @@ class SmythsToysScraper(BaseScraper):
                 await page.goto("https://www.smythstoys.com/de/de-de", wait_until="commit", timeout=45000)
                 
                 # Monitorear si aparece desafío e intentar darle tiempo para resolver
-                for i in range(10):
-                    await asyncio.sleep(1)
+                for i in range(30):
                     try:
                         title = await page.title()
-                        if title and "Pardon Our Interruption" not in title:
+                        if title and "Pardon Our Interruption" in title:
+                            self._log(f"⏳ [WAF] Desafío de Imperva detectado. Esperando resolución automática (segundo {i+1}/30)...")
+                            await asyncio.sleep(1)
+                        else:
                             break
                     except Exception:
-                        pass
+                        await asyncio.sleep(1)
                 
                 # Espera aleatoria para asentamiento de cookies
                 await asyncio.sleep(random.uniform(2.5, 4.5))
@@ -173,14 +215,16 @@ class SmythsToysScraper(BaseScraper):
                 )
                 
                 # Esperar resolución de reto si existiera en la navegación secundaria
-                for i in range(10):
-                    await asyncio.sleep(1)
+                for i in range(30):
                     try:
                         title = await page.title()
-                        if title and "Pardon Our Interruption" not in title:
+                        if title and "Pardon Our Interruption" in title:
+                            self._log(f"⏳ [WAF Category] Esperando resolución de WAF (segundo {i+1}/30)...")
+                            await asyncio.sleep(1)
+                        else:
                             break
                     except Exception:
-                        pass
+                        await asyncio.sleep(1)
                 
                 # --- EMULACIÓN DE COMPORTAMIENTO HUMANO ---
                 self._log("🖱️ Simulando lectura de usuario (scroll y movimientos)")
@@ -293,6 +337,28 @@ class SmythsToysScraper(BaseScraper):
             if not href:
                 continue
                 
+            # Evitar enlaces promocionales o de navegación en cabeceras/menús/pie de página
+            is_navigation_or_promo = False
+            p_check = link_tag.parent
+            for _ in range(8):
+                if not p_check:
+                    break
+                cls_list = p_check.get("class", [])
+                cls_str_check = " ".join(cls_list).lower() if isinstance(cls_list, list) else str(cls_list).lower()
+                id_str_check = str(p_check.get("id", "")).lower()
+                tag_name = p_check.name.lower()
+                
+                if any(w in cls_str_check or w in id_str_check for w in ["menu", "navigation", "header", "nav", "promo", "footer", "mega"]):
+                    is_navigation_or_promo = True
+                    break
+                if tag_name in ["header", "nav", "footer"]:
+                    is_navigation_or_promo = True
+                    break
+                p_check = p_check.parent
+                
+            if is_navigation_or_promo:
+                continue
+                
             # Construir URL absoluta
             if not href.startswith("http"):
                 full_url = f"https://www.smythstoys.com{href}"
@@ -303,13 +369,6 @@ class SmythsToysScraper(BaseScraper):
                 continue
             seen_urls.add(full_url)
             
-            # 1. Nombre del Producto (Traversing headings/links)
-            name = link_tag.get_text(strip=True)
-            if not name or len(name) < 5:
-                title_el = link_tag.select_one("h2, h3, p, span")
-                if title_el:
-                    name = title_el.get_text(strip=True)
-            
             # Buscar el contenedor del producto (card/grid item) subiendo hasta 4 niveles
             parent = link_tag.parent
             card_container = None
@@ -317,25 +376,55 @@ class SmythsToysScraper(BaseScraper):
                 if not parent:
                     break
                 cls_str = " ".join(parent.get("class", []))
-                if any(w in cls_str.lower() for w in ["product", "item", "tile", "grid", "card"]):
+                # Evitamos subir hasta contenedores anchos generales de rejilla (ej. grid, row, container, grow, pb-8)
+                if any(w in cls_str.lower() for w in ["grid", "list-container", "row", "container", "grow", "pb-8"]):
+                    break
+                if any(w in cls_str.lower() for w in ["product", "item", "tile", "card", "rounded-lg", "border-grey-200"]):
                     card_container = parent
                     break
+                card_container = parent
                 parent = parent.parent
                 
             if not card_container:
                 card_container = link_tag.parent
                 
-            # Si el nombre sigue vacío, buscar una cabecera en el contenedor
+            # 1. Nombre del Producto (Intentar primero con alt de la imagen o tags de título para evitar precios acoplados)
+            name = ""
+            img_tag = card_container.select_one("img")
+            if img_tag and img_tag.get("alt"):
+                name = img_tag.get("alt").strip()
+                
             if not name or len(name) < 5:
-                heading = card_container.select_one("h2, h3, h4, .title, .name")
-                if heading:
-                    name = heading.get_text(strip=True)
+                # Buscar encabezados dentro del contenedor
+                title_el = card_container.select_one("h2, h3, h4, .title, .name")
+                if title_el:
+                    name = title_el.get_text(strip=True)
                     
+            if not name or len(name) < 5:
+                name = link_tag.get_text(strip=True)
+                
             if not name or len(name) < 5:
                 continue
                 
-            # Limpieza del título
+            # Limpieza y saneamiento del título del producto
             name = name.replace("\n", " ").strip()
+            
+            # Remover precios residuales pegados al final del texto (ej: 21,99€, 17.99 EUR, 99.99€, etc.)
+            name = re.sub(r'\d+[.,]\d{2}\s*(?:€|EUR|\$)', '', name)
+            
+            # Remover textos promocionales alemanes colados (ej: 27% OFF, 27%, Vorheriger Verkaufspreis)
+            name = re.sub(r'(?i)\d+%\s*off\b', '', name)
+            name = re.sub(r'(?i)\d+%\b', '', name)
+            name = re.sub(r'(?i)\bvorheriger\s+verkaufspreis\b', '', name)
+            
+            # Remover palabras "Exklusiv" y "Masters of the Universe" para facilitar la asociación en la Fortaleza
+            # (Limpieza insensiva a mayúsculas/minúsculas y que actúe incluso si están unidas como "ExklusivMasters")
+            name = re.sub(r'(?i)exklusiv', '', name)
+            name = re.sub(r'(?i)masters\s+of\s+the\s+universe', '', name)
+            
+            # Limpiar espacios múltiples y caracteres sueltos residuales resultantes
+            name = re.sub(r'\s+', ' ', name).strip()
+            name = name.strip("-,. ")
             
             # 2. Búsqueda de Precio
             price_val = 0.0

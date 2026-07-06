@@ -56,6 +56,17 @@ async def main():
             print(f"    URL: {offer.url}")
         if len(offers) > 15:
             print(f"... y {len(offers) - 15} ofertas más.")
+            
+        # Persistir resultados en base de datos si existen ofertas y la conexión está configurada
+        if offers:
+            try:
+                from src.infrastructure.scrapers.pipeline import ScrapingPipeline
+                print("\n💾 Guardando resultados directamente en Supabase (Producción)...")
+                pipeline = ScrapingPipeline([])
+                new_count = pipeline.update_database(offers, shop_names=[scraper.shop_name])
+                print(f"✅ ¡Guardado completado! {new_count} nuevas ofertas añadidas/actualizadas en Supabase.")
+            except Exception as dbe:
+                print(f"⚠️ No se pudieron persistir los datos en la base de datos: {dbe}")
     except Exception as e:
         print(f"❌ Error durante la ejecucion: {e}")
         import traceback

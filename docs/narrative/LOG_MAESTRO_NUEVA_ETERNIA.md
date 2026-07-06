@@ -1242,7 +1242,7 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
 - **Estado**: ✅ COMPLETADO Y VERIFICADO
 - **Logros Técnicos**:
   - **Clase SmythsToysScraper**: Implementada en `src/infrastructure/scrapers/smythstoys_scraper.py` heredando de `BaseScraper` con dos modos de evasión de Imperva (Incapsula):
-    * **OPCIÓN 1 (Local por defecto)**: Emplea Playwright Chromium headless con inyecciones profundas de antidetect (ocultación de `navigator.webdriver`, mock de plugins y firma de Chrome) combinados con emulación de comportamiento humano (scrolls simulados y retrasos de lectura aleatorios) para ejecutarse de forma gratuita sobre IPs residenciales locales.
+    * **OPCIÓN 1 (Local por defecto)**: Emplea Playwright Chromium. En entornos de ejecución automatizados (GitHub Actions / VPS) se ejecuta en modo oculto (headless=True). En incursiones manuales locales (WSL / Windows PowerShell), inicia en **modo visible (headful, headless=False)** cargando el navegador real Chrome de Windows con aceleración GPU para garantizar el bypass al 100% de forma segura y gratuita.
     * **OPCIÓN 2 (API Gestionada)**: Estructurada y preparada como fallback en el código (`use_managed_api = False`), enrutando solicitudes con renderizado JS y proxies residenciales a través de ScraperAPI.
   - **Estrategia de Parseo Ultra-Resiliente**: Diseñado un algoritmo tolerante a fallos que extrae enlaces `/p/` y deduce dinámicamente precios, nombres, imágenes y estado de stock recorriendo el DOM de forma adaptativa. Es inmune a cambios menores en clases CSS o nombres dinámicos de componentes.
   - **Registro Integral de Orquestación**: Registrado el nuevo spider `"SmythsToys"` en los listados y mapas centrales de ejecución de la Fortaleza:
