@@ -265,7 +265,7 @@ class TelegramListener:
 
     async def cmd_run(self, chat_id: int, scraper_name: str, query: Optional[str]):
         # Validar tienda
-        valid_spiders = ["fantasia", "frikiverso", "frikimaz", "electropolis", "pixelatoy", "amazon", "detoyboys", "ebay", "vinted", "wallapop", "toymieu", "time4actiontoysde", "bigbadtoystore", "dvdstorespain", "triguetech", "all"]
+        valid_spiders = ["fantasia", "frikiverso", "frikimaz", "electropolis", "pixelatoy", "amazon", "detoyboys", "ebay", "vinted", "wallapop", "toymieu", "time4actiontoysde", "bigbadtoystore", "smythstoys", "dvdstorespain", "triguetech", "all"]
         
         if scraper_name.lower() not in valid_spiders:
             await telegram_service.send_message(f"❌ Tienda <b>'{scraper_name}'</b> no válida.\nOpciones: {', '.join(valid_spiders)}", chat_id=chat_id)

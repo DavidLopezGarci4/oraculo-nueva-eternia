@@ -102,6 +102,7 @@ def run_scraper_task(
         from src.infrastructure.scrapers.pixelatoy_scraper import PixelatoyScraper
         from src.infrastructure.scrapers.time4actiontoys_scraper import Time4ActionToysDEScraper
         from src.infrastructure.scrapers.toymi_scraper import ToymiEUScraper
+        from src.infrastructure.scrapers.smythstoys_scraper import SmythsToysScraper
         # from src.infrastructure.scrapers.tradeinn_scraper import TradeinnScraper
         from src.infrastructure.scrapers.vinted_scraper import VintedScraper
         from src.infrastructure.scrapers.wallapop_scraper import WallapopScraper
@@ -121,6 +122,7 @@ def run_scraper_task(
             "ToymiEU": ToymiEUScraper(),
             "Time4ActionToysDE": Time4ActionToysDEScraper(),
             "BigBadToyStore": BigBadToyStoreScraper(),
+            "SmythsToys": SmythsToysScraper(),
             # "Tradeinn": TradeinnScraper(),
             "DVDStoreSpain": DVDStoreSpainScraper(),
             "Triguetech": TriguetechScraper(),

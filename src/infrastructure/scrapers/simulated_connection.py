@@ -8,6 +8,7 @@ from typing import Dict, List
 from src.infrastructure.scrapers.bbts_scraper import BigBadToyStoreScraper
 from src.infrastructure.scrapers.detoyboys_scraper import DeToyboysNLScraper
 from src.infrastructure.scrapers.toymi_scraper import ToymiEUScraper
+from src.infrastructure.scrapers.smythstoys_scraper import SmythsToysScraper
 
 # Configure logging
 logging.basicConfig(
@@ -58,7 +59,8 @@ async def run_simulation():
     scrapers_to_test = [
         BigBadToyStoreScraper,
         DeToyboysNLScraper,
-        ToymiEUScraper
+        ToymiEUScraper,
+        SmythsToysScraper
     ]
     
     logger.info("Starting Simulated Background Connection Check...")

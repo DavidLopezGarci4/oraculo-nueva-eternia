@@ -32,6 +32,7 @@ from src.infrastructure.scrapers.detoyboys_scraper import DeToyboysNLScraper
 from src.infrastructure.scrapers.toymi_scraper import ToymiEUScraper
 from src.infrastructure.scrapers.time4actiontoys_scraper import Time4ActionToysDEScraper
 from src.infrastructure.scrapers.bbts_scraper import BigBadToyStoreScraper
+from src.infrastructure.scrapers.smythstoys_scraper import SmythsToysScraper
 from src.infrastructure.scrapers.amazon_scraper import AmazonScraper
 from src.infrastructure.scrapers.ebay_scraper import EbayScraper
 from src.infrastructure.scrapers.vinted_scraper import VintedScraper
@@ -130,6 +131,7 @@ async def run_daily_scan(progress_callback=None):
             ToymiEUScraper(),
             Time4ActionToysDEScraper(),
             BigBadToyStoreScraper(),
+            SmythsToysScraper(),
             AmazonScraper(),
             EbayScraper(),
             VintedScraper(),
