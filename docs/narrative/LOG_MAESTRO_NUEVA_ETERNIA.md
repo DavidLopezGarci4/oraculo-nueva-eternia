@@ -1238,17 +1238,19 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
 
 ### 🛡️ Fase 79: Integración de Smyths Toys Alemania (06/07/2026)
 
-- **Hitos**: Creación del scraper Smyths Toys (Alemania - DE) integrado en el flujo diario automatizado y panel de administración, sin requerir servicios de pago ni tokens de ScraperAPI.
+- **Hitos**: Creación del scraper Smyths Toys (Alemania - DE) integrado en el orquestador diario y panel de administración, con soporte dual-mode de evasión (local con sigilo vs. API gestionada).
 - **Estado**: ✅ COMPLETADO Y VERIFICADO
 - **Logros Técnicos**:
-  - **Clase SmythsToysScraper**: Implementada en `src/infrastructure/scrapers/smythstoys_scraper.py` heredando de `BaseScraper` para escanear de forma autónoma el catálogo de Masters of the Universe en Smyths Toys Alemania.
-  - **Evasión de Huellas Digitales en Playwright**: Configurada con directivas avanzadas de sigilo en Playwright Chromium (agregados flags `--disable-blink-features=AutomationControlled`, eliminación de la propiedad `navigator.webdriver`, normalización de locales/idiomas y headers simulando peticiones humanas tradicionales).
+  - **Clase SmythsToysScraper**: Implementada en `src/infrastructure/scrapers/smythstoys_scraper.py` heredando de `BaseScraper` con dos modos de evasión de Imperva (Incapsula):
+    * **OPCIÓN 1 (Local por defecto)**: Emplea Playwright Chromium headless con inyecciones profundas de antidetect (ocultación de `navigator.webdriver`, mock de plugins y firma de Chrome) combinados con emulación de comportamiento humano (scrolls simulados y retrasos de lectura aleatorios) para ejecutarse de forma gratuita sobre IPs residenciales locales.
+    * **OPCIÓN 2 (API Gestionada)**: Estructurada y preparada como fallback en el código (`use_managed_api = False`), enrutando solicitudes con renderizado JS y proxies residenciales a través de ScraperAPI.
   - **Estrategia de Parseo Ultra-Resiliente**: Diseñado un algoritmo tolerante a fallos que extrae enlaces `/p/` y deduce dinámicamente precios, nombres, imágenes y estado de stock recorriendo el DOM de forma adaptativa. Es inmune a cambios menores en clases CSS o nombres dinámicos de componentes.
   - **Registro Integral de Orquestación**: Registrado el nuevo spider `"SmythsToys"` en los listados y mapas centrales de ejecución de la Fortaleza:
     * `ensure_scrapers_registered` en `src/interfaces/api/deps.py` para auto-registro e inicialización en la base de datos Supabase/PostgreSQL.
     * `daily_scan.py` para inclusión automática en las ejecuciones nocturnas recurrentes de GitHub Actions y el orquestador.
     * `spiders_map` en `src/interfaces/api/routers/scrapers.py` permitiendo la monitorización y arranque directo desde la consola del administrador.
     * `valid_spiders` en `src/infrastructure/services/telegram_listener.py` para permitir consultas e incursiones manuales vía Telegram.
-    * `scrapers_to_test` en `src/infrastructure/scrapers/simulated_connection.py` para simulación de latencias y estado de conexión.
+    * `scrapers_to_test` in `src/infrastructure/scrapers/simulated_connection.py` para simulación de latencias y estado de conexión.
   - **Soporte Logístico y Reglas de Importación**: Insertada una nueva regla logística en la tabla `logistic_rules` a través de `scripts/seed_logistics.py` para SmythsToys con tarifa plana base de 15.00€ de envío a España y multiplicador fiscal del 1.02 (compensación IVA OSS).
+
 
