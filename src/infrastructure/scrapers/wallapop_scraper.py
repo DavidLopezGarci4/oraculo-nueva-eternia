@@ -158,6 +158,17 @@ class WallapopScraper(BaseScraper):
         Intenta obtener las ofertas de Wallapop de forma directa y ultra-rápida.
         Utiliza una cascada inteligente de APIs con cuota gratuita (Apify -> ScraperAPI -> Directa/Proxies).
         """
+        # Determinar si es el primer escaneo mediante un archivo de bloqueo persistente (lock file)
+        lock_file_path = os.path.join("data", "wallapop_first_run.lock")
+        is_first_run = not os.path.exists(lock_file_path)
+        
+        if is_first_run:
+            self._log("📡 Apify: Primer escaneo detectado (ejecución completa). Solicitando 120 ofertas.")
+            apify_max_items = 120
+        else:
+            self._log("📡 Apify: Escaneo recurrente detectado. Solicitando 60 ofertas para ciclo alterno.")
+            apify_max_items = 60
+
         # --- FASE 1: APIFY (Créditos Gratuitos ~20,000 reqs/mes) ---
         tokens = [t for t in [os.environ.get("APIFY_TOKEN"), os.environ.get("APIFY_TOKEN2")] if t]
         apify_success = False
@@ -175,7 +186,7 @@ class WallapopScraper(BaseScraper):
                         apify_url,
                         json={
                             "query": query, 
-                            "maxItems": max_items,
+                            "maxItems": apify_max_items,
                             "postalCode": "28001",
                             "orderBy": "newest"
                         },
@@ -185,8 +196,30 @@ class WallapopScraper(BaseScraper):
                     
                     if apify_response.status_code in [200, 201]:
                         items = apify_response.json()
+                        
+                        # Aplicar lógica de ciclo alterno si no es la primera ejecución
+                        if not is_first_run:
+                            yday = datetime.now().timetuple().tm_yday
+                            if yday % 2 == 0:
+                                self._log(f"📡 Apify Token {idx+1}: Ciclo PAR ({yday}). Filtrando los primeros 30 artículos.")
+                                items = items[:30]
+                            else:
+                                self._log(f"📡 Apify Token {idx+1}: Ciclo IMPAR ({yday}). Filtrando los últimos 30 artículos.")
+                                items = items[-30:]
+                                
                         apify_offers = self._parse_wallapop_json_objects(items)
                         self._log(f"🎉 Apify Token {idx+1}: ¡Éxito! Encontrados {len(apify_offers)} objetos para '{query}'.")
+                        
+                        # Escribir el archivo de bloqueo si fue exitoso el primer escaneo
+                        if is_first_run and len(apify_offers) > 0:
+                            self._log("📡 Apify: Guardando marca de primer escaneo completado.")
+                            try:
+                                os.makedirs("data", exist_ok=True)
+                                with open(lock_file_path, "w") as f:
+                                    f.write(f"First run completed at {datetime.now().isoformat()}\n")
+                            except Exception as ex:
+                                self._log(f"⚠️ No se pudo guardar lock file: {ex}", level="warning")
+                                
                         apify_success = True
                         break # Éxito, salir del bucle de tokens
                     elif apify_response.status_code in [402, 429]:
@@ -290,7 +323,7 @@ class WallapopScraper(BaseScraper):
                             apify_url,
                             json={
                                 "query": query, 
-                                "maxItems": max_items,
+                                "maxItems": apify_max_items,
                                 "postalCode": "28001",
                                 "orderBy": "newest"
                             },
@@ -300,8 +333,30 @@ class WallapopScraper(BaseScraper):
                         
                         if apify_response.status_code in [200, 201]:
                             items = apify_response.json()
+                            
+                            # Aplicar lógica de ciclo alterno si no es la primera ejecución
+                            if not is_first_run:
+                                yday = datetime.now().timetuple().tm_yday
+                                if yday % 2 == 0:
+                                    self._log(f"📡 Apify Token 3: Ciclo PAR ({yday}). Filtrando los primeros 30 artículos.")
+                                    items = items[:30]
+                                else:
+                                    self._log(f"📡 Apify Token 3: Ciclo IMPAR ({yday}). Filtrando los últimos 30 artículos.")
+                                    items = items[-30:]
+                                    
                             offers = self._parse_wallapop_json_objects(items)
                             self._log(f"🎉 Apify Token 3: ¡Éxito! Encontrados {len(offers)} objetos para '{query}'.")
+                            
+                            # Escribir el archivo de bloqueo si fue exitoso el primer escaneo
+                            if is_first_run and len(offers) > 0:
+                                self._log("📡 Apify Token 3: Guardando marca de primer escaneo completado.")
+                                try:
+                                    os.makedirs("data", exist_ok=True)
+                                    with open(lock_file_path, "w") as f:
+                                        f.write(f"First run completed at {datetime.now().isoformat()}\n")
+                                except Exception as ex:
+                                    self._log(f"⚠️ No se pudo guardar lock file: {ex}", level="warning")
+                                    
                             return offers
                         elif apify_response.status_code in [402, 429]:
                             self._log(f"⚠️ Apify Token 3: Límite de cuota gratuita superado (HTTP {apify_response.status_code}). Marcando token 3 como agotado.", level="warning")
