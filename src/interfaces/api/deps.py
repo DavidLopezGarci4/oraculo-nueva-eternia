@@ -78,7 +78,21 @@ def create_access_token(user_id: int, role: str) -> str:
     return jwt.encode(payload, settings.JWT_SECRET, algorithm="HS256")
 
 
-def get_current_user(token: str = Depends(_oauth2_scheme)) -> UserModel:
+def get_current_user(
+    request: Request,
+    token: str = Depends(_oauth2_scheme),
+    x_api_key: str = Header(None, alias="X-API-Key")
+) -> UserModel:
+    # 1. Intentar validar por API Key (Bypass de administración para peticiones de panel)
+    if x_api_key and x_api_key == settings.ORACULO_API_KEY:
+        with SessionCloud() as db:
+            user = db.query(UserModel).filter(UserModel.role == "admin").first()
+            if not user:
+                user = db.query(UserModel).filter(UserModel.id == 2).first()
+            if user:
+                return user
+
+    # 2. Si no hay API Key válida, forzar la autenticación tradicional por Token JWT
     if not token:
         raise HTTPException(status_code=401, detail="Not authenticated.")
     try:
