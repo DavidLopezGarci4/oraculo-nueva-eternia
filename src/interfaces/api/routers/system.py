@@ -135,3 +135,28 @@ async def save_sword_configs(configs: dict, current_user: UserModel = Depends(ge
         cfg.value = json.dumps(configs)
         db.commit()
     return {"status": "success", "message": "Configuración de espadas guardada exitosamente."}
+
+@router.post("/api/system/maintenance")
+async def run_maintenance(current_user: UserModel = Depends(get_current_user)):
+    """Ejecuta la compactación de historial de precios y mantenimiento FinOps a demanda."""
+    if current_user.role != "admin" and current_user.id != 2:
+        raise HTTPException(
+            status_code=403, 
+            detail="No tienes los privilegios del Arquitecto necesarios para purificar el Oráculo."
+        )
+        
+    try:
+        from src.application.services.maintenance_service import MaintenanceService
+        with SessionCloud() as db:
+            stats = MaintenanceService.compact_database(db)
+            return {
+                "status": "success",
+                "message": "Mantenimiento y compactación FinOps del Oráculo completados con éxito.",
+                "stats": stats
+            }
+    except Exception as e:
+        logger.error(f"Error durante el mantenimiento de base de datos a demanda: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Fallo en la incursion de mantenimiento: {str(e)}"
+        )

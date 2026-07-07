@@ -30,6 +30,7 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def init_db():
     """Initializes the database tables and runs migrations."""
+    from src.domain.models import Base
     Base.metadata.create_all(bind=engine)
     try:
         from src.infrastructure.universal_migrator import migrate

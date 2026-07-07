@@ -172,6 +172,16 @@ async def run_daily_scan(progress_callback=None):
             logger.info(f"🧹 Purged {result} stale execution records. Systems optimized.")
     except Exception as e:
         logger.warning(f"⚠️ Failed to purge old logs: {e}")
+        
+    # --- FINOPS DATABASE COMPACTATION & MAINTENANCE ---
+    try:
+        from src.application.services.maintenance_service import MaintenanceService
+        with SessionLocal() as db_maint:
+            logger.info("🧹 Iniciando compactación y mantenimiento de base de datos FinOps...")
+            stats = MaintenanceService.compact_database(db_maint)
+            logger.info(f"🧹 Mantenimiento FinOps completado. Estadísticas: {stats}")
+    except Exception as e:
+        logger.warning(f"⚠️ Fallo en el mantenimiento de base de datos FinOps: {e}")
     
     results = {}
     total_stats = {"found": 0, "new": 0, "errors": 0}

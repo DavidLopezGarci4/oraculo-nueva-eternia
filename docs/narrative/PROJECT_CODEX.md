@@ -157,5 +157,13 @@ El panel de Configuración y sus opciones de sincronización operan ahora con vi
 - **Excel Bridge Seguro (Role-Based)**: Restringida la visibilidad de la sección de sincronización local del Excel (`Excel Bridge`) a administradores/David (`isAdmin`), previniendo escrituras locales erróneas de usuarios externos.
 - **Ajustes de Perfil Activos**: Los Guardianes mantienen el control de su configuración personal de Ubicación Geográfica, Santuario Público y Caché de Imágenes Local.
 
-*Última actualización: 09/06/2026 - Fase 69: Apertura Controlada de Ajustes y Excel Bridge Selectivo.*
+### 15. Compactación Estadística FinOps e Incursión Universal CDP (Fase 80)
+
+Se ha implementado una arquitectura de optimización de espacio y captura universal asistida:
+- **Modelo `ProductMonthlyStatsModel`**: Una tabla agregada que consolida el historial detallado de precios en promedios, medianas, percentiles 25/75 y desviación estándar mensuales, eliminando la necesidad de guardar URLs inactivas.
+- **Servicio `MaintenanceService`**: Coordina las purgas inteligentes (eliminando ofertas de productos sin stock y reduciendo el historial a 60 días en activos) y la limpieza periódica de logs antiguos de scrapers y lista negra obsoleta.
+- **Daily Scan & Mantenimiento a Demanda**: Integrado de forma automática al inicio de `daily_scan.py` y expuesto visualmente en la sección de Configuración (`Config.tsx`) mediante una tarjeta con estilo glassmorphism.
+- **Incursión Universal CDP**: Un motor de captura unificado (`scrape_multi_via_cdp.py`) y un script de PowerShell (`run_assisted_incursion.ps1`) para extraer ofertas directamente del navegador de depuración Chrome (puerto 9222) en Amazon, eBay, Smyths Toys y BBTS de forma sigilosa.
+
+*Última actualización: 07/07/2026 - Fase 80: Compactación Estadística FinOps e Incursión Universal CDP.*
 

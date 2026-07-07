@@ -230,3 +230,8 @@ export const saveSystemSwordConfigs = async (configs: any): Promise<{ status: st
     return response.data;
 };
 
+export const runSystemMaintenance = async (): Promise<{ status: string; message: string; stats: any }> => {
+    const response = await adminAxios.post('/system/maintenance');
+    return response.data;
+};
+

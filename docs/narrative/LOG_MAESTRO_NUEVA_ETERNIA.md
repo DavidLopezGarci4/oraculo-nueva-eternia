@@ -1254,3 +1254,16 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
   - **Soporte Logístico y Reglas de Importación**: Insertada una nueva regla logística en la tabla `logistic_rules` a través de `scripts/seed_logistics.py` para SmythsToys con tarifa plana base de 15.00€ de envío a España y multiplicador fiscal del 1.02 (compensación IVA OSS).
 
 
+### 🛡️ Fase 80: Compactación Estadística FinOps e Incursión Universal CDP (07/07/2026)
+
+- **Hitos**: Diseño de la compactación mensual de historial de precios FinOps con analíticas avanzadas, e incursión asistida por CDP de forma universal para múltiples marketplaces a través de PowerShell.
+- **Estado**: ✅ COMPLETADO Y VERIFICADO
+- **Logros Técnicos**:
+  - **Tabla `product_monthly_stats`**: Añadido el modelo de base de datos `ProductMonthlyStatsModel` en `models.py` para almacenar las estadísticas mensuales agregadas de precios por producto, con soporte para media, mediana (P50), percentil 25 (oportunidad), percentil 75, desviación estándar (volatilidad) y volumen de ofertas.
+  - **Servicio `MaintenanceService`**: Creado en `src/application/services/maintenance_service.py` para gestionar la lógica de compactación por base de datos, purgas de productos muertos y limpieza de histórico de más de 60 días para vivos.
+  - **Mantenimiento en el Daily Scan**: Integrada la compactación de forma automática al inicio de `daily_scan.py` para mantener Supabase equilibrado de forma diaria.
+  - **Endpoint y Botón en Frontend**: Creado el endpoint `POST /api/system/maintenance` y agregada la tarjeta de "Purificación FinOps" en `Config.tsx` con un botón de mantenimiento a demanda y toast de reporte detallado.
+  - **Scraping Universal CDP**: Creado `scripts/scrape_multi_via_cdp.py` y `run_assisted_incursion.ps1` en la raíz para permitir el scraping asistido de cualquier tienda abierta en la pestaña de Chrome en el puerto 9222.
+
+
+

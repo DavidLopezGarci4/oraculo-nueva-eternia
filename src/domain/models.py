@@ -486,6 +486,32 @@ class SystemConfigModel(Base):
     key: Mapped[str] = mapped_column(String, primary_key=True, index=True)
     value: Mapped[str] = mapped_column(String)
 
+class ProductMonthlyStatsModel(Base):
+    """
+    Estadísticas consolidadas mensuales por producto (Fase de Optimización FinOps y Analítica Avanzada).
+    Almacena datos históricos agrupados, eliminando la necesidad de URLs y ofertas individuales inactivas.
+    """
+    __tablename__ = "product_monthly_stats"
+    
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    product_id: Mapped[int] = mapped_column(ForeignKey("products.id", ondelete="CASCADE"), index=True)
+    year: Mapped[int] = mapped_column(Integer)
+    month: Mapped[int] = mapped_column(Integer)
+    
+    source_type: Mapped[str] = mapped_column(String, default="Retail")
+    
+    avg_price: Mapped[float] = mapped_column(Float)
+    median_price: Mapped[float] = mapped_column(Float)
+    min_price: Mapped[float] = mapped_column(Float)
+    max_price: Mapped[float] = mapped_column(Float)
+    std_dev_price: Mapped[float] = mapped_column(Float)
+    p25_price: Mapped[float] = mapped_column(Float)
+    p75_price: Mapped[float] = mapped_column(Float)
+    
+    offers_count: Mapped[int] = mapped_column(Integer)
+    
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
 __all__ = [
     "Base", 
     "ProductModel", 
@@ -508,6 +534,8 @@ __all__ = [
     "WallapopIpLogModel",
     "VintageProductModel",
     "VintageMiscellaneousModel",
+    "ProductMonthlyStatsModel",
     "DOMAIN_VERSION"
 ]
+
 

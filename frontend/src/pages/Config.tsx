@@ -34,6 +34,7 @@ import {
     updateUserPublicShowcase,
     getSystemSwordConfigs,
     saveSystemSwordConfigs,
+    runSystemMaintenance,
     type ScraperStatus,
     type Hero
 } from '../api/admin';
@@ -181,6 +182,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
     const [downloadStatus, setDownloadStatus] = useState({ active: false, total: 0, current: 0, errors: 0, last_error: null as string | null });
     const [cachedImagesCount, setCachedImagesCount] = useState(0);
     const [syncingExcel, setSyncingExcel] = useState(false);
+    const [runningMaintenance, setRunningMaintenance] = useState(false);
     const cancelDownloadRef = React.useRef(false);
 
     // Vintage Sword Light Ray Calibrator States
@@ -641,6 +643,23 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
             alert(`❌ Error en Excel Bridge: ${detail} `);
         } finally {
             setSyncingExcel(false);
+        }
+    };
+
+    const handleRunMaintenance = async () => {
+        if (!confirm('🧹 MANTENIMIENTO DEL ORÁCULO:\\n\\nEsta acción ejecutará la consolidación de precios históricos por mes, y purgará los registros y logs redundantes de la base de datos de producción.\\n\\n¿Deseas iniciar la incursión de mantenimiento FinOps?')) return;
+        
+        setRunningMaintenance(true);
+        try {
+            const res = await runSystemMaintenance();
+            const stats = res.stats || {};
+            alert(`🧹 Mantenimiento Completado!\\n\\n${res.message}\\n\\nResumen de optimización:\\n• Productos Procesados: ${stats.products_processed || 0}\\n• Historiales Compactados: ${stats.monthly_stats_saved || 0}\\n• Ofertas Inactivas Purgadas: ${stats.offers_purged || 0}\\n• Precios Detallados Limpiados: ${stats.price_history_purged || 0}\\n• Logs de Scraper Truncados: ${stats.logs_truncated || 0}\\n• Lista Negra Limpiada: ${stats.blacklist_purged || 0}\\n\\n¡La base de datos en Supabase ha sido equilibrada de forma profesional!`);
+        } catch (error: any) {
+            console.error('Error running database maintenance:', error);
+            const detail = error.response?.data?.detail || "Fallo en la comunicación con el servidor.";
+            alert(`❌ Error en Mantenimiento: ${detail}`);
+        } finally {
+            setRunningMaintenance(false);
         }
     };
 
@@ -1678,6 +1697,43 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                         >
                                             <RefreshCw className={`h-3 w-3 ${syncingExcel ? 'animate-spin' : ''}`} />
                                             {syncingExcel ? 'Sincronizando...' : '📊 Sincronizar Excel'}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* --- DATABASE MAINTENANCE: FINOPS --- */}
+                            {isAdmin && (
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-3 px-2">
+                                        <Database className="h-6 w-6 text-brand-primary" />
+                                        <h3 className="text-xl font-black uppercase tracking-[0.2em] text-white">Base de Datos</h3>
+                                    </div>
+                                    <div className="glass border border-white/10 p-6 rounded-3xl group hover:bg-white/5 transition-all max-w-md">
+                                        <div className="flex items-start justify-between mb-4">
+                                            <div className="flex items-center gap-4">
+                                                <div className="bg-brand-primary/10 p-3 rounded-lg group-hover:bg-brand-primary/20 transition-all">
+                                                    <Database className="h-5 w-5 text-brand-primary" />
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-white font-bold text-sm">Purificación FinOps</h4>
+                                                    <p className="text-[10px] text-white/60 font-mono">Optimización de Supabase</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-col items-end">
+                                                <span className="text-[8px] font-black text-brand-primary uppercase tracking-widest bg-brand-primary/10 px-2 py-0.5 rounded">FinOps Layer 1</span>
+                                            </div>
+                                        </div>
+                                        <p className="text-[11px] text-white/50 mb-6 leading-relaxed">
+                                            Compacta el historial de precios en resúmenes mensuales y purga registros y logs redundantes de la nube.
+                                        </p>
+                                        <button
+                                            onClick={handleRunMaintenance}
+                                            disabled={runningMaintenance}
+                                            className={`w-full bg-brand-primary/10 hover:bg-brand-primary text-brand-primary hover:text-white border border-brand-primary/20 px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg shadow-brand-primary/0 hover:shadow-brand-primary/20 ${runningMaintenance ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        >
+                                            <RefreshCw className={`h-3 w-3 ${runningMaintenance ? 'animate-spin' : ''}`} />
+                                            {runningMaintenance ? 'Purificando...' : '🧹 Limpieza y Compactación'}
                                         </button>
                                     </div>
                                 </div>
