@@ -1263,7 +1263,7 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
   - **Servicio `MaintenanceService`**: Creado en `src/application/services/maintenance_service.py` para gestionar la lógica de compactación por base de datos, purgas de productos muertos y limpieza de histórico de más de 60 días para vivos.
   - **Corrección de Clave Foránea (`ForeignKeyViolation`)**: Solucionado el fallo al purgar productos muertos donde el delete directo en `OfferModel` violaba la restricción `price_history_offer_id_fkey` en Supabase PostgreSQL. Se fuerza ahora el borrado previo de los registros detallados hijos en `PriceHistoryModel`. Adicionalmente, se activó `PRAGMA foreign_keys=ON` en el entorno de pruebas SQLite para consistencia total en testings.
   - **Mantenimiento en el Daily Scan**: Integrada la compactación de forma automática al inicio de `daily_scan.py` para mantener Supabase equilibrado de forma diaria.
-  - **Endpoint y Botón en Frontend**: Creado el endpoint `POST /api/system/maintenance` y agregada la tarjeta de "Purificación FinOps" en `Config.tsx` con un botón de mantenimiento a demanda y toast de reporte detallado.
+  - **Endpoint y Botón en Frontend (Asincronía & Telegram)**: Creado el endpoint `POST /api/system/maintenance` bajo `BackgroundTasks` para ejecutarse en segundo plano, evitando timeouts HTTP. Al terminar, se notifica automáticamente a David vía Telegram con el desglose de filas compactadas.
   - **Scraping Universal CDP**: Creado `scripts/scrape_multi_via_cdp.py` y `run_assisted_incursion.ps1` en la raíz para permitir el scraping asistido de cualquier tienda abierta en la pestaña de Chrome en el puerto 9222.
 
 

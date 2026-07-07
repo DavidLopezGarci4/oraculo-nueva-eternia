@@ -647,13 +647,12 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
     };
 
     const handleRunMaintenance = async () => {
-        if (!confirm('🧹 MANTENIMIENTO DEL ORÁCULO:\\n\\nEsta acción ejecutará la consolidación de precios históricos por mes, y purgará los registros y logs redundantes de la base de datos de producción.\\n\\n¿Deseas iniciar la incursión de mantenimiento FinOps?')) return;
+        if (!confirm('🧹 MANTENIMIENTO DEL ORÁCULO:\n\nEsta acción ejecutará la consolidación de precios históricos por mes, y purgará los registros y logs redundantes de la base de datos de producción.\n\n¿Deseas iniciar la incursión de mantenimiento FinOps?')) return;
         
         setRunningMaintenance(true);
         try {
             const res = await runSystemMaintenance();
-            const stats = res.stats || {};
-            alert(`🧹 Mantenimiento Completado!\\n\\n${res.message}\\n\\nResumen de optimización:\\n• Productos Procesados: ${stats.products_processed || 0}\\n• Historiales Compactados: ${stats.monthly_stats_saved || 0}\\n• Ofertas Inactivas Purgadas: ${stats.offers_purged || 0}\\n• Precios Detallados Limpiados: ${stats.price_history_purged || 0}\\n• Logs de Scraper Truncados: ${stats.logs_truncated || 0}\\n• Lista Negra Limpiada: ${stats.blacklist_purged || 0}\\n\\n¡La base de datos en Supabase ha sido equilibrada de forma profesional!`);
+            alert(`🧹 Purificación FinOps Iniciada:\n\n${res.message}`);
         } catch (error: any) {
             console.error('Error running database maintenance:', error);
             const detail = error.response?.data?.detail || "Fallo en la comunicación con el servidor.";

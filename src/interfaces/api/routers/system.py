@@ -1,6 +1,6 @@
 import sys
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from loguru import logger
 
 from src.infrastructure.database_cloud import SessionCloud
@@ -136,27 +136,47 @@ async def save_sword_configs(configs: dict, current_user: UserModel = Depends(ge
         db.commit()
     return {"status": "success", "message": "Configuración de espadas guardada exitosamente."}
 
+async def run_maintenance_task():
+    from src.application.services.maintenance_service import MaintenanceService
+    from src.core.security import SecurityShield
+    
+    logger.info("🧹 [TASK] Iniciando purificación FinOps de base de datos en segundo plano...")
+    try:
+        with SessionCloud() as db:
+            stats = MaintenanceService.compact_database(db)
+            
+            # Formatear el reporte de Telegram
+            msg = (
+                "🧹 <b>[FinOps] Purificación del Oráculo Completada</b>\n\n"
+                f"• Productos procesados: <b>{stats.get('products_processed', 0)}</b>\n"
+                f"• Resúmenes mensuales guardados: <b>{stats.get('monthly_stats_saved', 0)}</b>\n"
+                f"• Ofertas inactivas purgadas: <b>{stats.get('offers_purged', 0)}</b>\n"
+                f"• Historial detallado purgado: <b>{stats.get('price_history_purged', 0)}</b>\n"
+                f"• Logs de scrapers truncados: <b>{stats.get('logs_truncated', 0)}</b>\n"
+                f"• Registros de lista negra purgados: <b>{stats.get('blacklist_purged', 0)}</b>\n\n"
+                "✨ <i>¡Base de datos de Supabase saneada con éxito!</i>"
+            )
+            await SecurityShield.send_telegram_alert(msg)
+            logger.info("🧹 [TASK] Purificación en segundo plano completada y alerta de Telegram enviada.")
+    except Exception as e:
+        err_msg = f"❌ <b>[FinOps] Fallo en la Purificación</b>\n\nError: <code>{str(e)}</code>"
+        await SecurityShield.send_telegram_alert(err_msg)
+        logger.error(f"❌ Error en la tarea de mantenimiento en segundo plano: {e}")
+
 @router.post("/api/system/maintenance")
-async def run_maintenance(current_user: UserModel = Depends(get_current_user)):
-    """Ejecuta la compactación de historial de precios y mantenimiento FinOps a demanda."""
+async def run_maintenance(
+    background_tasks: BackgroundTasks,
+    current_user: UserModel = Depends(get_current_user)
+):
+    """Ejecuta la compactación de historial de precios y mantenimiento FinOps en segundo plano."""
     if current_user.role != "admin" and current_user.id != 2:
         raise HTTPException(
             status_code=403, 
             detail="No tienes los privilegios del Arquitecto necesarios para purificar el Oráculo."
         )
         
-    try:
-        from src.application.services.maintenance_service import MaintenanceService
-        with SessionCloud() as db:
-            stats = MaintenanceService.compact_database(db)
-            return {
-                "status": "success",
-                "message": "Mantenimiento y compactación FinOps del Oráculo completados con éxito.",
-                "stats": stats
-            }
-    except Exception as e:
-        logger.error(f"Error durante el mantenimiento de base de datos a demanda: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Fallo en la incursion de mantenimiento: {str(e)}"
-        )
+    background_tasks.add_task(run_maintenance_task)
+    return {
+        "status": "success",
+        "message": "Purificación FinOps del Oráculo iniciada con éxito en segundo plano. Recibirás una alerta en Telegram con el desglose del espacio liberado al finalizar."
+    }
