@@ -655,7 +655,9 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
             alert(`🧹 Purificación FinOps Iniciada:\n\n${res.message}`);
         } catch (error: any) {
             console.error('Error running database maintenance:', error);
-            const detail = error.response?.data?.detail || "Fallo en la comunicación con el servidor.";
+            const detail = error.response?.data?.detail 
+                || error.message 
+                || "Fallo en la comunicación con el servidor.";
             alert(`❌ Error en Mantenimiento: ${detail}`);
         } finally {
             setRunningMaintenance(false);
