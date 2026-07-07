@@ -7,9 +7,17 @@ from src.domain.models import Base, ProductModel, OfferModel, PriceHistoryModel,
 from src.application.services.maintenance_service import MaintenanceService
 
 class TestDatabaseCompactation(unittest.TestCase):
-    def setUp(self):
         # Crear base de datos en memoria para pruebas
         self.engine = create_engine("sqlite:///:memory:")
+        
+        # Forzar activación de claves foráneas en SQLite para consistencia con Postgres
+        from sqlalchemy import event
+        @event.listens_for(self.engine, "connect")
+        def set_sqlite_pragma(dbapi_connection, connection_record):
+            cursor = dbapi_connection.cursor()
+            cursor.execute("PRAGMA foreign_keys=ON")
+            cursor.close()
+            
         Base.metadata.create_all(self.engine)
         self.Session = sessionmaker(bind=self.engine)
         self.db = self.Session()

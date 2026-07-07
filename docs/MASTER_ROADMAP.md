@@ -518,7 +518,7 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
 
 - [x] **Phase 76: Compactación Estadística FinOps e Incursión Universal CDP (07/07/2026)**
   - [x] **Compactación de Precios**: Implementado el modelo `ProductMonthlyStatsModel` y el servicio `MaintenanceService.compact_database` para consolidar el historial detallado de precios en resúmenes mensuales que incluyen promedio, mediana, percentil 25, percentil 75, desviación estándar y volumen.
-  - [x] **Purgas Inteligentes**: Configurado el purgado de ofertas detalladas inactivas para productos muertos e historial antiguo para productos vivos.
+  - [x] **Purgas Inteligentes**: Configurado el purgado de ofertas detalladas inactivas para productos muertos e historial antiguo para productos vivos (solventando un error de `ForeignKeyViolation` en Postgres limpiando el historial hijo `PriceHistoryModel` en primera instancia).
   - [x] **Mantenimiento en Daily Scan**: Enganchado el mantenimiento al inicio del job automático diario `daily_scan.py` para prevenir cuotas llenas en Supabase de forma recurrente.
   - [x] **Mantenimiento a Demanda**: Integrado el endpoint API `POST /api/system/maintenance` y una tarjeta de control premium "Purificación FinOps" en la pestaña de configuración del frontend (`Config.tsx`) con un alert de reporte del espacio liberado.
   - [x] **Scraping Universal CDP**: Creado el script `scripts/scrape_multi_via_cdp.py` y `run_assisted_incursion.ps1` en la raíz para permitir el scraping asistido de cualquier tienda abierta en la pestaña de Chrome (Amazon, eBay, Smyths Toys, BBTS) conectada al puerto 9222.

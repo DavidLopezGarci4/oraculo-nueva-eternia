@@ -152,7 +152,19 @@ class MaintenanceService:
                 
                 if active_offers == 0:
                     # PRODUCTO MUERTO: Ya no hay ofertas activas.
-                    # Purgamos todas sus ofertas obsoletas e historiales (por cascada delete-orphan).
+                    # Primero borramos todos los registros de historial de precios asociados
+                    deleted_history_count = (
+                        db.query(PriceHistoryModel)
+                        .filter(
+                            PriceHistoryModel.offer_id.in_(
+                                db.query(OfferModel.id).filter(OfferModel.product_id == product.id)
+                            )
+                        )
+                        .delete(synchronize_session=False)
+                    )
+                    stats["price_history_purged"] += deleted_history_count
+
+                    # Ahora borramos las ofertas inactivas de forma segura
                     deleted_offers_count = (
                         db.query(OfferModel)
                         .filter(OfferModel.product_id == product.id)
