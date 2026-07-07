@@ -415,6 +415,30 @@ async def run_daily_scan(progress_callback=None):
     duration = datetime.now() - start_time
     logger.info(f"🏁 Daily Scan Complete in {duration}. Total: {total_stats}")
     
+    # Notificación final por Telegram al administrador
+    try:
+        from src.core.security import SecurityShield
+        from src.domain.models import PendingMatchModel
+        
+        with SessionLocal() as db_purg:
+            purg_count = db_purg.query(PendingMatchModel).filter(
+                PendingMatchModel.created_at >= start_time
+            ).count()
+            
+            tg_msg = (
+                "🏁 <b>Daily Scan Completado</b>\n\n"
+                f"⏱️ Duración: <b>{str(duration).split('.')[0]}</b>\n"
+                f"🔍 Ofertas Procesadas: <b>{total_stats['found']}</b>\n"
+                f"🆕 Nuevas Ofertas Inyectadas: <b>{total_stats['new']}</b>\n"
+                f"⚖️ Enviados al Purgatorio: <b>{purg_count}</b>\n"
+                f"❌ Errores en Scrapers: <b>{total_stats['errors']}</b>\n\n"
+                "🛡️ <i>¡El Oráculo de Nueva Eternia sigue vigilando!</i>"
+            )
+            await SecurityShield.send_telegram_alert(tg_msg)
+            logger.info("📡 Reporte final del Daily Scan enviado a Telegram.")
+    except Exception as tg_ex:
+        logger.error(f"⚠️ No se pudo enviar el reporte del Daily Scan a Telegram: {tg_ex}")
+        
     # 3OX Reporting
     # save_json_report(results, filename_prefix="daily_scan")
         
