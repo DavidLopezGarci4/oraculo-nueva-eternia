@@ -14,6 +14,8 @@ PROCESSING_IDS = set()
 class VintageMatchRequest(BaseModel):
     custom_name: Optional[str] = None
     product_id: Optional[int] = None
+    is_vintage: Optional[bool] = True
+    sub_category: Optional[str] = None
 
 
 from src.application.services.deal_scorer import DealScorer
@@ -541,7 +543,7 @@ async def relink_offer(offer_id: int, request: RelinkOfferRequest):
         return {"status": "success", "message": f"Decreto del Arquitecto: Oferta reasignada a '{new_product.name}'"}
 
 
-def run_match_vintage_task(pending_id: int, custom_name: Optional[str], product_id: Optional[int]):
+def run_match_vintage_task(pending_id: int, custom_name: Optional[str], product_id: Optional[int], is_vintage: bool = True, sub_category: Optional[str] = None):
     try:
         with SessionCloud() as db:
             item = db.query(PendingMatchModel).filter(PendingMatchModel.id == pending_id).first()
@@ -554,66 +556,104 @@ def run_match_vintage_task(pending_id: int, custom_name: Optional[str], product_
 
             if not product and custom_name:
                 clean_name = custom_name.strip()
-                if not clean_name.lower().endswith(" vintage"):
-                    clean_name = f"{clean_name} Vintage"
+                if is_vintage:
+                    if not clean_name.lower().endswith(" vintage"):
+                        clean_name = f"{clean_name} Vintage"
 
-                product = db.query(ProductModel).filter(
-                    func.lower(ProductModel.name) == func.lower(clean_name),
-                    ProductModel.is_vintage == True
-                ).first()
+                    product = db.query(ProductModel).filter(
+                        func.lower(ProductModel.name) == func.lower(clean_name),
+                        ProductModel.is_vintage == True
+                    ).first()
+                else:
+                    product = db.query(ProductModel).filter(
+                        func.lower(ProductModel.name) == func.lower(clean_name),
+                        ProductModel.is_vintage.is_not(True)
+                    ).first()
 
                 if not product:
                     import random
-                    rand_id = f"VINT-{random.randint(1000, 9999)}"
-                    product = ProductModel(
-                        name=clean_name,
-                        ean=item.ean,
-                        image_url=item.image_url,
-                        category="Masters of the Universe",
-                        sub_category="Vintage",
-                        is_vintage=True,
-                        figure_id=rand_id
-                    )
+                    if is_vintage:
+                        rand_id = f"VINT-{random.randint(1000, 9999)}"
+                        product = ProductModel(
+                            name=clean_name,
+                            ean=item.ean,
+                            image_url=item.image_url,
+                            category="Masters of the Universe",
+                            sub_category="Vintage",
+                            is_vintage=True,
+                            figure_id=rand_id
+                        )
+                    else:
+                        rand_id = f"ORIG-{random.randint(1000, 9999)}"
+                        product = ProductModel(
+                            name=clean_name,
+                            ean=item.ean,
+                            image_url=item.image_url,
+                            category="Masters of the Universe",
+                            sub_category=sub_category or "Origins",
+                            is_vintage=False,
+                            figure_id=rand_id
+                        )
                     db.add(product)
                     db.flush()
 
             # Fallback
             if not product:
                 clean_scraped = item.scraped_name.strip()
-                if not clean_scraped.lower().endswith(" vintage"):
-                    clean_scraped = f"{clean_scraped} Vintage"
+                if is_vintage:
+                    if not clean_scraped.lower().endswith(" vintage"):
+                        clean_scraped = f"{clean_scraped} Vintage"
 
-                product = db.query(ProductModel).filter(
-                    func.lower(ProductModel.name) == func.lower(clean_scraped),
-                    ProductModel.is_vintage == True
-                ).first()
+                    product = db.query(ProductModel).filter(
+                        func.lower(ProductModel.name) == func.lower(clean_scraped),
+                        ProductModel.is_vintage == True
+                    ).first()
+                else:
+                    product = db.query(ProductModel).filter(
+                        func.lower(ProductModel.name) == func.lower(clean_scraped),
+                        ProductModel.is_vintage.is_not(True)
+                    ).first()
 
                 if not product:
                     import random
-                    rand_id = f"VINT-{random.randint(1000, 9999)}"
-                    product = ProductModel(
-                        name=clean_scraped,
-                        ean=item.ean,
-                        image_url=item.image_url,
-                        category="Masters of the Universe",
-                        sub_category="Vintage",
-                        is_vintage=True,
-                        figure_id=rand_id
-                    )
+                    if is_vintage:
+                        rand_id = f"VINT-{random.randint(1000, 9999)}"
+                        product = ProductModel(
+                            name=clean_scraped,
+                            ean=item.ean,
+                            image_url=item.image_url,
+                            category="Masters of the Universe",
+                            sub_category="Vintage",
+                            is_vintage=True,
+                            figure_id=rand_id
+                        )
+                    else:
+                        rand_id = f"ORIG-{random.randint(1000, 9999)}"
+                        product = ProductModel(
+                            name=clean_scraped,
+                            ean=item.ean,
+                            image_url=item.image_url,
+                            category="Masters of the Universe",
+                            sub_category=sub_category or "Origins",
+                            is_vintage=False,
+                            figure_id=rand_id
+                        )
                     db.add(product)
                     db.flush()
             else:
-                product.is_vintage = True
+                if is_vintage:
+                    product.is_vintage = True
 
-            # Register in the vintage_products table
-            from src.domain.models import VintageProductModel
-            exists_v = db.query(VintageProductModel).filter(VintageProductModel.product_id == product.id).first()
-            if not exists_v:
-                v_prod = VintageProductModel(
-                    product_id=product.id,
-                    notes=f"Clasificado manualmente como Vintage desde Purgatorio para {item.shop_name}"
-                )
-                db.add(v_prod)
+            if is_vintage:
+                # Register in the vintage_products table
+                from src.domain.models import VintageProductModel
+                exists_v = db.query(VintageProductModel).filter(VintageProductModel.product_id == product.id).first()
+                if not exists_v:
+                    v_prod = VintageProductModel(
+                        product_id=product.id,
+                        notes=f"Clasificado manualmente como Vintage desde Purgatorio para {item.shop_name}"
+                    )
+                    db.add(v_prod)
 
             # Create individual offer marked as vintage
             from src.infrastructure.repositories.product import ProductRepository
@@ -643,7 +683,7 @@ def run_match_vintage_task(pending_id: int, custom_name: Optional[str], product_
                 "opportunity_score": fresh_score,
                 "first_seen_at": item.found_at,
                 "last_price_update": datetime.now(timezone.utc),
-                "is_vintage": True,
+                "is_vintage": is_vintage,
                 "condition": cond,
                 "grading": grad,
                 "image_url": item.image_url,
@@ -658,7 +698,7 @@ def run_match_vintage_task(pending_id: int, custom_name: Optional[str], product_
                 product_name=product.name,
                 shop_name=item.shop_name,
                 price=item.price,
-                action_type="LINKED_VINTAGE",
+                action_type="LINKED_VINTAGE" if is_vintage else "LINKED_MANUAL",
                 details=json.dumps({"product_id": product.id, "receipt_id": item.receipt_id, "condition": cond, "grading": grad}),
             )
             db.add(history)
@@ -679,7 +719,7 @@ def run_match_vintage_task(pending_id: int, custom_name: Optional[str], product_
 @router.post("/api/purgatory/{pending_id}/vintage", dependencies=[Depends(verify_api_key)])
 async def match_purgatory_vintage(pending_id: int, background_tasks: BackgroundTasks, request: Optional[VintageMatchRequest] = None):
     if pending_id in PROCESSING_IDS:
-        return {"status": "success", "message": "La clasificación vintage ya se está procesando en segundo plano"}
+        return {"status": "success", "message": "La clasificación ya se está procesando en segundo plano"}
 
     with SessionCloud() as db:
         item = db.query(PendingMatchModel).filter(PendingMatchModel.id == pending_id).first()
@@ -688,10 +728,12 @@ async def match_purgatory_vintage(pending_id: int, background_tasks: BackgroundT
 
     custom_name = request.custom_name if request else None
     product_id = request.product_id if request else None
+    is_vintage = request.is_vintage if (request and request.is_vintage is not None) else True
+    sub_category = request.sub_category if request else None
 
     PROCESSING_IDS.add(pending_id)
-    background_tasks.add_task(run_match_vintage_task, pending_id, custom_name, product_id)
-    return {"status": "success", "message": "Clasificación vintage programada en segundo plano."}
+    background_tasks.add_task(run_match_vintage_task, pending_id, custom_name, product_id, is_vintage, sub_category)
+    return {"status": "success", "message": "Clasificación programada en segundo plano."}
 
 
 @router.post("/api/vintage/revert-offer/{offer_id}", dependencies=[Depends(verify_api_key)])
