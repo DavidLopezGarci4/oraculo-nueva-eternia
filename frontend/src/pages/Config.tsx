@@ -3,7 +3,7 @@ import axios from 'axios';
 import { Play, Activity, Clock, AlertCircle, CheckCircle2, RefreshCw, Terminal, Target, Settings, Users, ShieldAlert, Trash2, Zap, History, Database, Download, FileSpreadsheet, Repeat, Globe, Package, ChevronDown, Lock, Swords, Shield, Search, Sparkles, Home, Wifi, CloudLightning, Cookie, Copy, Gift, Compass, MousePointer } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { resetSmartMatches, runScrapers, stopScrapers, getScraperLogs, type ScraperExecutionLog, getWallapopIpLogs, downloadWallapopIpLogs, type WallapopIpLog } from '../api/purgatory';
+import { resetSmartMatches, runScrapers, stopScrapers, getScraperLogs, type ScraperExecutionLog, getWallapopIpLogs, downloadWallapopIpLogs, type WallapopIpLog, runWallaManualHtml } from '../api/purgatory';
 import PowerSwordLoader from '../components/ui/PowerSwordLoader';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -173,6 +173,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
     const [logFilter, setLogFilter] = useState<'all' | 'error'>('all');
     const [targetLogId, setTargetLogId] = useState<number | null>(null);
     const [copied, setCopied] = useState(false);
+    const [wallaManualLoading, setWallaManualLoading] = useState(false);
 
     const [showIpLogsModal, setShowIpLogsModal] = useState(false);
     const [ipLogs, setIpLogs] = useState<WallapopIpLog[]>([]);
@@ -508,6 +509,25 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
         }
     });
 
+    const runWallaManualHtmlMutation = useMutation({
+        mutationFn: runWallaManualHtml,
+        onMutate: () => {
+            setWallaManualLoading(true);
+        },
+        onSuccess: (data: any) => {
+            alert(`🎉 WallaManual: Sincronización HTML exitosa.\n\n- Ofertas encontradas: ${data.total_found}\n- Ofertas omitidas (ya catalogadas/descartadas): ${data.total_skipped}\n- Ofertas insertadas en Purgatorio: ${data.total_inserted}`);
+            queryClient.invalidateQueries({ queryKey: ['scrapers-status'] });
+            fetchData();
+        },
+        onError: (error: any) => {
+            const detail = error.response?.data?.detail || error.message || String(error);
+            alert(`❌ WallaManual: Error al procesar el HTML.\nDetalle: ${detail}`);
+        },
+        onSettled: () => {
+            setWallaManualLoading(false);
+        }
+    });
+
     // Adaptive polling: 5s when scrapers running, 60s when idle
     const hasRunning = statuses.some(s => s.status === 'running');
     useEffect(() => {
@@ -808,6 +828,21 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                         >
                                             <Globe className="h-4 w-4 text-brand-primary" />
                                             <span className="uppercase tracking-wider">Auditoría IP</span>
+                                        </button>
+                                        
+                                        <button
+                                            onClick={() => runWallaManualHtmlMutation.mutate()}
+                                            disabled={wallaManualLoading || statuses.some(s => s.status === 'running')}
+                                            className="bg-white/5 hover:bg-white/10 border border-white/10 text-white px-4 py-2 rounded-xl font-bold text-[11px] transition-all flex items-center justify-center gap-2 hover:scale-105 active:scale-95 w-full sm:w-auto disabled:opacity-50"
+                                        >
+                                            {wallaManualLoading ? (
+                                                <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: "linear" }}>
+                                                    <Activity className="h-4 w-4 text-cyan-400" />
+                                                </motion.div>
+                                            ) : (
+                                                <Database className="h-4 w-4 text-cyan-400" />
+                                            )}
+                                            <span className="uppercase tracking-wider">WallaManual</span>
                                         </button>
                                     </div>
                                 </div>

@@ -191,3 +191,8 @@ export const downloadWallapopIpLogs = async (): Promise<void> => {
     link.click();
     link.parentNode?.removeChild(link);
 };
+
+export const runWallaManualHtml = async () => {
+    const response = await axios.post(`${API_BASE}/scrapers/wallapop/import-manual-html`, {}, adminHeaders);
+    return response.data;
+};

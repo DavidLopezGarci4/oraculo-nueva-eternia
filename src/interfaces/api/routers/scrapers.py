@@ -417,3 +417,149 @@ async def download_wallapop_ip_logs():
                 "Content-Disposition": 'attachment; filename="wallapop_ip_logs.txt"'
             }
         )
+
+
+@router.post("/wallapop/import-manual-html", dependencies=[Depends(verify_api_key)])
+async def import_wallapop_manual_html():
+    """Parsea el archivo local data/wallapop_search.html e inserta los artículos nuevos en el Purgatorio."""
+    import os
+    import re
+    from bs4 import BeautifulSoup
+    from src.domain.models import (
+        PendingMatchModel,
+        OfferModel,
+        BlackcludedItemModel,
+        VintageMiscellaneousModel
+    )
+
+    # 1. Definir rutas y verificar existencia del archivo
+    project_root = os.getcwd()
+    file_path = os.path.join(project_root, "data", "wallapop_search.html")
+
+    if not os.path.exists(file_path):
+        raise HTTPException(
+            status_code=404,
+            detail="Archivo 'data/wallapop_search.html' no encontrado en el servidor. Asegúrate de guardarlo primero."
+        )
+
+    # 2. Leer archivo HTML
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            content = f.read()
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al leer el archivo HTML: {str(e)}"
+        )
+
+    # 3. Parsear con BeautifulSoup
+    soup = BeautifulSoup(content, 'html.parser')
+    cards = soup.select("a[href*='/item/']")
+    
+    offers_to_process = []
+    seen_urls = set()
+    junk_keywords = ["camiseta", "t-shirt", "poster", "taza", "mug", "revista", "dvd", "llavero", "keyring", "reproduccion", "repro", "sticker", "pegatina"]
+
+    for card in cards:
+        try:
+            price_node = card.select_one("span[class*='Price'], [class*='price']")
+            title_node = card.select_one("p[class*='Title'], [class*='title']")
+            img_node = card.select_one("img")
+
+            if not price_node or not title_node:
+                continue
+
+            title = title_node.get_text(strip=True)
+            title_lower = title.lower()
+            
+            # Ignorar palabras basura
+            if any(kw in title_lower for kw in junk_keywords):
+                continue
+
+            # Limpiar precio
+            price_text = price_node.get_text(strip=True)
+            price_val = float(re.sub(r'[^\d.,]', '', price_text).replace(',', '.'))
+            if price_val <= 0:
+                continue
+
+            # Obtener URL
+            href = card.get("href", "")
+            clean_href = href.split("?")[0]
+            full_url = clean_href if clean_href.startswith("http") else f"https://es.wallapop.com{clean_href}"
+
+            if full_url in seen_urls:
+                continue
+
+            seen_urls.add(full_url)
+            image_url = img_node.get("src") if img_node else None
+
+            offers_to_process.append({
+                "product_name": f"[Wallapop HTML] {title}",
+                "price": price_val,
+                "url": full_url,
+                "image_url": image_url
+            })
+        except Exception:
+            continue
+
+    total_found = len(offers_to_process)
+    if total_found == 0:
+        return {
+            "status": "success",
+            "total_found": 0,
+            "total_skipped": 0,
+            "total_inserted": 0,
+            "message": "No se encontraron ofertas válidas de Wallapop en el HTML."
+        }
+
+    # 4. Obtener URLs existentes para filtrado masivo
+    incoming_urls = [o["url"] for o in offers_to_process]
+    saved_count = 0
+    skipped_count = 0
+
+    with SessionCloud() as db:
+        # A. Obtener conjuntos de URLs ya catalogadas/descartadas/purgatorio
+        blocked_urls = set(
+            x[0] for x in db.query(BlackcludedItemModel.url).filter(BlackcludedItemModel.url.in_(incoming_urls)).all()
+        )
+        existing_pending_urls = set(
+            x[0] for x in db.query(PendingMatchModel.url).filter(PendingMatchModel.url.in_(incoming_urls)).all()
+        )
+        existing_offers_urls = set(
+            x[0] for x in db.query(OfferModel.url).filter(OfferModel.url.in_(incoming_urls)).all()
+        )
+        existing_misc_urls = set(
+            x[0] for x in db.query(VintageMiscellaneousModel.url).filter(VintageMiscellaneousModel.url.in_(incoming_urls)).all()
+        )
+
+        # Conjunto consolidado de exclusión
+        exclusion_set = blocked_urls.union(existing_pending_urls).union(existing_offers_urls).union(existing_misc_urls)
+
+        # B. Insertar solo los nuevos no excluidos
+        for offer in offers_to_process:
+            if offer["url"] in exclusion_set:
+                skipped_count += 1
+                continue
+
+            pending = PendingMatchModel(
+                scraped_name=offer["product_name"],
+                price=offer["price"],
+                currency="EUR",
+                url=offer["url"],
+                shop_name="Wallapop",
+                image_url=offer["image_url"],
+                source_type="Peer-to-Peer",
+                found_at=datetime.utcnow()
+            )
+            db.add(pending)
+            saved_count += 1
+
+        db.commit()
+
+    return {
+        "status": "success",
+        "total_found": total_found,
+        "total_skipped": skipped_count,
+        "total_inserted": saved_count,
+        "message": f"Se procesaron {total_found} ofertas. Insertadas: {saved_count}, Omitidas: {skipped_count} (duplicadas/asignadas/descartadas)."
+    }
