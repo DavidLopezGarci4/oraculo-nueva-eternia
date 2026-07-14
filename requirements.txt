@@ -22,6 +22,8 @@ supabase==2.27.2
 psutil==7.2.1
 Pillow==12.2.0
 
+python-multipart
+
 # Auth
 PyJWT==2.10.1
 
