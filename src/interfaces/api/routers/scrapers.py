@@ -106,6 +106,7 @@ def run_scraper_task(
         # from src.infrastructure.scrapers.tradeinn_scraper import TradeinnScraper
         from src.infrastructure.scrapers.vinted_scraper import VintedScraper
         from src.infrastructure.scrapers.wallapop_scraper import WallapopScraper
+        from src.infrastructure.scrapers.wallapop_manual_scraper import WallapopManualScraper
         from src.infrastructure.scrapers.triguetech_scraper import TriguetechScraper
 
         spiders_map = {
@@ -119,6 +120,7 @@ def run_scraper_task(
             "Ebay.es": EbayScraper(),
             "Vinted": VintedScraper(),
             "Wallapop": WallapopScraper(), # CON PROBE LOG PROTEGIDO
+            "WallapopManual": WallapopManualScraper(), # ALTERNATIVO: API v3 firmada + proxy residencial (anti-bloqueo)
             "ToymiEU": ToymiEUScraper(),
             "Time4ActionToysDE": Time4ActionToysDEScraper(),
             "BigBadToyStore": BigBadToyStoreScraper(),

@@ -15,8 +15,10 @@ graph TD
     C -- Éxito (200) --> D[Parsear JSON y Retornar]
     C -- Cuota Agotada (402/429) --> E{¿Probar siguiente token Apify?}
     E -- Sí --> C
-    E -- No / Todos Agotados --> F{¿Hay SCRAPERAPI_KEY?}
-    B -- No --> F
+    E -- No / Todos Agotados --> AA[API v3 Firmada X-Signature]
+    AA -- Éxito (200, ofertas) --> D
+    AA -- Bloqueada/Vacía --> F{¿Hay SCRAPERAPI_KEY?}
+    B -- No --> AA
     F -- Sí --> G[Ruteo API por ScraperAPI + Render JS]
     G -- Éxito (200) --> D
     G -- Fallo / Agotado (403) --> H{¿Hay Apify Token 3 de Reserva?}
@@ -34,6 +36,7 @@ graph TD
 | Nivel / Fase | Componente / API | Función y Evasión WAF |
 | :--- | :--- | :--- |
 | **Nivel 1 (Apify Principal)** | `APIFY_TOKEN` y `APIFY_TOKEN2` | Bypass síncrono gratuito de CloudFront delegando al actor `igolaizola/wallapop-scraper` en la nube. Si el primer token se agota, conmuta en caliente al segundo token automáticamente. |
+| **Nivel 1.5 (API v3 Firmada)** | `wallapop_signed_api.py` (`X-Signature` HMAC + `curl_cffi`) | Cuando Apify se agota, intenta la API v3 real firmada (`/api/v3/search`) **antes** de gastar créditos de ScraperAPI. Con IP no vetada (proxy residencial vía `WALLAPOP_RESIDENTIAL_PROXY`, o IP local) devuelve resultados a coste cero. Sin proxy y desde IP de datacenter, sigue bloqueada (403) y el cascade continúa con normalidad. Compartido también por el spider manual `WallapopManual`. Ver `docs/technical/PLAN_WALLAPOP_NEXUS_LOCAL.md`. |
 | **Nivel 2 (Proxy Cloud)** | ScraperAPI (Premium ES + Render) | Rutea la llamada directa a `api.wallapop.com` resolviendo Javascript en la nube para saltar retos de CloudFront. |
 | **Nivel 2.5 (Apify Reserva)** | `APIFY_TOKEN3` | Cuenta secundaria de Apify que actúa como última línea de defensa rápida en caso de que ScraperAPI y los dos primeros tokens de Apify se queden sin créditos. |
 | **Nivel 3 (Rotación de Proxies)** | Proxies públicos dinámicos | Cosecha proxies de Geonode/ProxyScrape y realiza reintentos dinámicos en paralelo. |
@@ -62,6 +65,10 @@ Cuando se ejecuta la extracción vía Web:
 ---
 
 ## 🔎 3. Extracción y Normalización
+
+Los niveles 1, 1.5, 2 y 2.5 (Apify, API Firmada, ScraperAPI) consumen **JSON** directamente
+(`_parse_wallapop_json_objects`, compartido entre `WallapopScraper` y `WallapopManualScraper`).
+Solo el Nivel 4 (Playwright) necesita parsear HTML, descrito a continuación.
 
 ### Selectores Web (HTML)
 Debido a la ofuscación aleatoria de clases CSS en la web de Wallapop, la extracción utiliza selectores basados en estructuras semánticas y enlaces del DOM:

@@ -228,7 +228,32 @@ class WallapopScraper(BaseScraper):
                 
         if apify_success:
             return apify_offers
-                
+
+        # --- FASE 1.5: API v3 FIRMADA (X-Signature) — antes de gastar ScraperAPI ---
+        # Si Apify se agotó (créditos gratis exhaustos) pero la IP de salida es válida
+        # (proxy residencial configurado, o entorno local/no-datacenter), la firma real
+        # de la API v3 puede devolver resultados sin gastar ni un crédito de ScraperAPI.
+        self._log("🔐 Apify agotado/fallido. Intentando API v3 firmada (X-Signature) antes de ScraperAPI...")
+        try:
+            from src.infrastructure.scrapers.wallapop_signed_api import search_wallapop_v3_signed
+            signed_proxy = os.environ.get("WALLAPOP_RESIDENTIAL_PROXY") or None
+            async with AsyncSession() as signed_session:
+                signed_result = await search_wallapop_v3_signed(
+                    signed_session,
+                    query,
+                    proxy=signed_proxy,
+                    max_items=max_items,
+                    log_callback=self._log,
+                    shop_name_override=self.shop_name,
+                )
+            if signed_result.offers:
+                self._log(f"🎉 API v3 firmada: {len(signed_result.offers)} ofertas para '{query}' sin gastar ScraperAPI.")
+                return signed_result.offers
+            elif signed_result.blocked:
+                self._log("🛡️ API v3 firmada bloqueada (IP vetada o sin proxy). Continuando con el cascade habitual...", level="warning")
+        except Exception as e:
+            self._log(f"⚠️ Error inesperado en API v3 firmada: {e}", level="warning")
+
         # --- FASE 2: CONEXIÓN DIRECTA CON IMPERSONACIÓN O PROXIES ---
         self._log(f"⚡ Wallapop API: Iniciando secuencia de extracción para '{query}'...")
         async with AsyncSession() as session:

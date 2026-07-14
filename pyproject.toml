@@ -24,6 +24,9 @@ include = ["src*", "vec3*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_api_*.py"]
+markers = [
+    "network: requires live network access (not run by default; use -m network)",
+]
 
 [tool.pyright]
 include = ["src", "vec3", "scripts"]

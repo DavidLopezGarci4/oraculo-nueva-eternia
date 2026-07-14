@@ -1,6 +1,7 @@
 import hashlib
 import hmac
 import base64
+import os
 import time
 from urllib.parse import urlparse
 
@@ -9,19 +10,23 @@ class WallapopSigner:
     Generador de firmas X-Signature para la API v3 de Wallapop.
     Basado en ingenieria inversa del cliente web React.
     """
-    
+
     # Esta clave suele ser estática en el bundle JS de Wallapop
-    # Nota: Si cambia, hay que extraerla del bundle JS (mangling logic)
+    # Nota: Si cambia, hay que extraerla del bundle JS (mangling logic).
+    # Override sin tocar código: variable de entorno WALLAPOP_SIGN_SECRET.
     DEFAULT_SECRET = "Tm93IHRoYXQgeW91J3ZlIGZvdW5kIHRoaXMsIGFyZSB5b3UcmVhZHkgdG8gam9pbiB1cz8gam9ic0B3YWxsYXBvcC5jb20==" # Updated React secret
-    
+
     @staticmethod
-    def generate_signature(method: str, path: str, timestamp: int = None, secret: str = DEFAULT_SECRET) -> str:
+    def generate_signature(method: str, path: str, timestamp: int = None, secret: str = None) -> str:
         """
         Genera la firma X-Signature.
         Payload: method|path|timestamp
         """
         if timestamp is None:
             timestamp = int(time.time() * 1000)
+
+        if secret is None:
+            secret = os.environ.get("WALLAPOP_SIGN_SECRET") or WallapopSigner.DEFAULT_SECRET
             
         # El path debe ser solo la parte del endpoint (ej: /api/v3/general/search)
         # O el path completo con params si se desea (según versión de la API)
