@@ -197,15 +197,10 @@ class WallapopScraper(BaseScraper):
                     if apify_response.status_code in [200, 201]:
                         items = apify_response.json()
                         
-                        # Aplicar lógica de ciclo alterno si no es la primera ejecución
+                        # Mantener siempre los artículos más recientes
                         if not is_first_run:
-                            yday = datetime.now().timetuple().tm_yday
-                            if yday % 2 == 0:
-                                self._log(f"📡 Apify Token {idx+1}: Ciclo PAR ({yday}). Filtrando los primeros 30 artículos.")
-                                items = items[:30]
-                            else:
-                                self._log(f"📡 Apify Token {idx+1}: Ciclo IMPAR ({yday}). Filtrando los últimos 30 artículos.")
-                                items = items[-30:]
+                            self._log(f"📡 Apify Token {idx+1}: Escaneo recurrente. Tomando los {max_items} artículos más recientes.")
+                            items = items[:max_items]
                                 
                         apify_offers = self._parse_wallapop_json_objects(items)
                         self._log(f"🎉 Apify Token {idx+1}: ¡Éxito! Encontrados {len(apify_offers)} objetos para '{query}'.")
@@ -334,15 +329,10 @@ class WallapopScraper(BaseScraper):
                         if apify_response.status_code in [200, 201]:
                             items = apify_response.json()
                             
-                            # Aplicar lógica de ciclo alterno si no es la primera ejecución
+                            # Mantener siempre los artículos más recientes
                             if not is_first_run:
-                                yday = datetime.now().timetuple().tm_yday
-                                if yday % 2 == 0:
-                                    self._log(f"📡 Apify Token 3: Ciclo PAR ({yday}). Filtrando los primeros 30 artículos.")
-                                    items = items[:30]
-                                else:
-                                    self._log(f"📡 Apify Token 3: Ciclo IMPAR ({yday}). Filtrando los últimos 30 artículos.")
-                                    items = items[-30:]
+                                self._log(f"📡 Apify Token 3: Escaneo recurrente. Tomando los {max_items} artículos más recientes.")
+                                items = items[:max_items]
                                     
                             offers = self._parse_wallapop_json_objects(items)
                             self._log(f"🎉 Apify Token 3: ¡Éxito! Encontrados {len(offers)} objetos para '{query}'.")
@@ -656,8 +646,8 @@ class WallapopScraper(BaseScraper):
                             self._log(f"🕵️ Wallapop Browser: Navegando directamente a resultados de '{search_query}'...")
                             
                             try:
-                                # Navegar directamente por parámetros de URL (Stealth & Veloz)
-                                search_url = f"https://es.wallapop.com/app/search?keywords={search_query}"
+                                # Navegar directamente por parámetros de URL (Stealth & Veloz, ordenado por novedades)
+                                search_url = f"https://es.wallapop.com/app/search?keywords={search_query}&order_by=newest"
                                 await page.goto(search_url, wait_until="domcontentloaded", timeout=45000)
                                 await asyncio.sleep(2.5)
                                 
