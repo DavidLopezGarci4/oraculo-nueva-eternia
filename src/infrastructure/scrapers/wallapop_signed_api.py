@@ -35,6 +35,41 @@ WALLAPOP_API_HOST = "https://api.wallapop.com"
 WALLAPOP_SEARCH_PATH = "/api/v3/search"
 
 
+def _audit_ip_log(status: str, proxy: Optional[str], response_code: Optional[int], details: str) -> None:
+    """
+    Fase 4 (observabilidad): registra el resultado de cada intento en
+    WallapopIpLogModel, reutilizando el mismo modelo que ya audita el resto de
+    canales de Wallapop. Best-effort: nunca lanza excepción ni añade latencia
+    perceptible (no hace sondeo de IP pública, para no penalizar el camino feliz).
+    """
+    try:
+        from src.infrastructure.database_cloud import SessionCloud
+        from src.domain.models import WallapopIpLogModel
+
+        if proxy:
+            masked_proxy = urllib.parse.urlparse(proxy).hostname or "proxy-desconocido"
+            ip_label = f"proxy:{masked_proxy}"
+            environment = "Proxy Residencial (WALLAPOP_RESIDENTIAL_PROXY)"
+        else:
+            ip_label = "N/A (API firmada, sin proxy)"
+            environment = "Datacenter/Local (sin proxy)"
+
+        with SessionCloud() as db:
+            db.add(
+                WallapopIpLogModel(
+                    ip_address=ip_label,
+                    status=status,
+                    environment=environment,
+                    response_code=response_code,
+                    details=details,
+                )
+            )
+            db.commit()
+    except Exception:
+        # La auditoría nunca debe romper el flujo de extracción.
+        pass
+
+
 def _build_signed_headers(path_with_query: str) -> dict:
     """Cabeceras de un cliente web real de Wallapop, con X-Signature válida."""
     signature, timestamp = WallapopSigner.generate_signature("GET", path_with_query)
@@ -97,24 +132,28 @@ async def search_wallapop_v3_signed(
         resp = await session.get(target_url, **kwargs)
     except Exception as e:
         _log(f"⚠️ Error de red al consultar '{query}': {e}", level="warning")
+        _audit_ip_log("error", proxy, None, f"Error de red: {e}")
         return SignedSearchResult(offers=[], blocked=False)
 
     if resp.status_code in (403, 429):
-        _log(
-            f"🛡️ Bloqueo WAF (HTTP {resp.status_code}) para '{query}' vía API firmada. "
-            f"{'Proxy residencial agotado/invalidado.' if proxy else 'IP de datacenter vetada: configura WALLAPOP_RESIDENTIAL_PROXY o usa el Nexus Local Bridge.'}",
-            level="warning",
+        nexus_tip = "Proxy residencial agotado/invalidado." if proxy else (
+            "IP de datacenter vetada: configura WALLAPOP_RESIDENTIAL_PROXY o "
+            "usa el Nexus Local Bridge (scripts/nexus_local_worker.py) para resolverlo desde una IP residencial."
         )
+        _log(f"🛡️ Bloqueo WAF (HTTP {resp.status_code}) para '{query}' vía API firmada. {nexus_tip}", level="warning")
+        _audit_ip_log("blocked", proxy, resp.status_code, f"Bloqueo WAF en /api/v3/search para '{query}'. {nexus_tip}")
         return SignedSearchResult(offers=[], blocked=True)
 
     if resp.status_code != 200:
         _log(f"⚠️ Respuesta no exitosa (HTTP {resp.status_code}) para '{query}' vía API firmada.", level="warning")
+        _audit_ip_log("error", proxy, resp.status_code, f"Respuesta no-200 para '{query}'.")
         return SignedSearchResult(offers=[], blocked=False)
 
     try:
         data = resp.json()
     except Exception:
         _log(f"⚠️ Respuesta no-JSON para '{query}' vía API firmada (posible reto WAF HTML).", level="warning")
+        _audit_ip_log("blocked", proxy, resp.status_code, f"Respuesta no-JSON (reto WAF HTML) para '{query}'.")
         return SignedSearchResult(offers=[], blocked=True)
 
     # La v3 devuelve las tarjetas en distintas rutas según versión: normalizamos.
@@ -136,4 +175,10 @@ async def search_wallapop_v3_signed(
         for o in offers:
             o.shop_name = shop_name_override
     _log(f"🎉 '{query}': {len(offers)} reliquias extraídas vía API firmada.")
+    _audit_ip_log(
+        "proxy_bypass" if proxy else "allowed",
+        proxy,
+        resp.status_code,
+        f"{len(offers)} ofertas extraídas vía API firmada para '{query}'.",
+    )
     return SignedSearchResult(offers=offers, blocked=False)

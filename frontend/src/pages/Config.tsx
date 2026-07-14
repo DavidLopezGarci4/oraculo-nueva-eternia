@@ -9,6 +9,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { parseUtcDate } from '../utils/dateUtils';
 import WallapopImporter from '../components/admin/WallapopImporter';
+import WallapopNexusBridge from '../components/admin/WallapopNexusBridge';
 import { getDashboardMatchStats } from '../api/dashboard';
 import {
     PieChart,
@@ -1966,6 +1967,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                         exit={{ opacity: 0, y: -10 }}
                     >
                         <WallapopImporter />
+                        <WallapopNexusBridge />
                     </motion.div>
                 ) : null}
             </AnimatePresence>

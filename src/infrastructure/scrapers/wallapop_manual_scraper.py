@@ -84,7 +84,15 @@ class WallapopManualScraper(BaseScraper):
                 unique.append(o)
 
         self.items_scraped = len(unique)
-        self._log(f"✅ WallapopManual: {self.items_scraped} reliquias únicas hacia el Purgatorio.")
+        if self.blocked and not unique:
+            self._log(
+                "🛡️ WallapopManual: bloqueado por WAF en todas las búsquedas y sin resultados. "
+                "Ejecuta el Nexus Local Bridge (.\\run_nexus_bridge.ps1) desde tu PC para resolverlo con IP residencial, "
+                "o configura WALLAPOP_RESIDENTIAL_PROXY.",
+                level="warning",
+            )
+        else:
+            self._log(f"✅ WallapopManual: {self.items_scraped} reliquias únicas hacia el Purgatorio.")
         return unique
 
 

@@ -23,6 +23,7 @@ from src.interfaces.api.routers import (
     system as system_router,
     users as users_router,
     vault as vault_router,
+    wallapop_jobs as wallapop_jobs_router,
 )
 
 import asyncio
@@ -131,6 +132,7 @@ app.include_router(users_router.router)
 app.include_router(system_router.router)
 app.include_router(vault_router.router)
 app.include_router(logistics_router.router)
+app.include_router(wallapop_jobs_router.router)
 
 from src.interfaces.api.routers import showcase as showcase_router
 app.include_router(showcase_router.router)

@@ -1,9 +1,9 @@
 # 🗺️ Plan: Scraper Alternativo de Wallapop (Anti-Bloqueo) + Nexus Local Bridge
 
-> Estado: **Fases 0, 1 y 1.5 COMPLETADAS Y VALIDADAS EN REAL.** Núcleo firmado, fallback
-> automático en el cascade (sin gastar ScraperAPI cuando Apify se agota), secreto de firma
-> configurable, y tests unitarios + smoke. Pendientes: Fase 2 (Nexus Local Bridge), Fase 3
-> (frontend) y Fase 4 (observabilidad).
+> Estado: **TODAS LAS FASES (0 a 4) COMPLETADAS Y VALIDADAS EN REAL.** Núcleo firmado, fallback
+> automático en el cascade, secreto de firma configurable, tests, Nexus Local Bridge (cola de
+> trabajos + worker + UI en el panel de Configuración) y observabilidad vía `WallapopIpLogModel`.
+> No queda trabajo pendiente en este plan.
 
 ---
 
@@ -143,36 +143,70 @@ firma sola seguirá dando 403 (IP vetada) — es el comportamiento esperado; est
 resuelve "Apify agotado pero la IP es válida", no el veto de IP. Para eso sigue haciendo
 falta la Fase 2 (Nexus Local Bridge) o un proxy residencial.
 
-### Fase 2 — Nexus Local Bridge (vía gratuita recomendada)
-- [ ] Modelo `WallapopJobModel` (id, query, status[pending|running|done|error], created_at, result_count).
-- [ ] Endpoints en `routers/scrapers.py` (o nuevo `routers/wallapop_jobs.py`), protegidos con `verify_api_key`:
-  - `POST /api/wallapop/jobs` — encola (query).
-  - `GET  /api/wallapop/jobs/pending` — worker toma trabajos.
-  - `POST /api/wallapop/jobs/{id}/results` — recibe ofertas y llama `pipeline.update_database`.
-  - `GET  /api/wallapop/jobs` — listado/estado para la UI.
-- [ ] Worker local `scripts/nexus_local_worker.py` + `run_nexus_bridge.ps1`:
-      loop de polling → `WallapopManualScraper().search(query)` local → POST resultados.
-- [ ] Alternativa sin worker persistente: reutilizar el `scrape_wallapop_via_cdp.py` ya creado.
+### Fase 2 — Nexus Local Bridge (vía gratuita recomendada) — ✅ COMPLETADA
 
-### Fase 3 — Frontend (panel de Configuración)
-- [ ] Botón "Búsqueda Wallapop (Alternativo)" que dispare `run` con `spider_name="WallapopManual"`
-      y campo de `query` (por defecto `auto`).
-- [ ] Sección de estado de jobs del Nexus Bridge (si se implementa Fase 2).
-- [ ] Documentar `WALLAPOP_RESIDENTIAL_PROXY` en el panel para la vía B.
+- [x] **`WallapopJobModel`** (`src/domain/models.py`): `id, query, status[pending|running|done|error],
+      result_count, error_message, worker_id, created_at, claimed_at, completed_at`. Se crea
+      automáticamente vía `Base.metadata.create_all()` al arrancar (mismo mecanismo que
+      `WallapopIpLogModel`; no requiere migración Alembic).
+- [x] **Endpoints** en `src/interfaces/api/routers/wallapop_jobs.py` (nuevo router, registrado en
+      `main.py`), todos protegidos con `verify_api_key`:
+  - `POST /api/wallapop/jobs` — encola `{query}`.
+  - `GET  /api/wallapop/jobs/pending` — reclama (pending→running) el job más antiguo; `null` si no hay.
+  - `POST /api/wallapop/jobs/{id}/results` — recibe ofertas, llama `pipeline.update_database`
+    (shop_name forzado a `"WallapopManual"` server-side), marca `done`/`error`.
+  - `GET  /api/wallapop/jobs` — listado reciente para la UI.
+- [x] **Worker local** `scripts/nexus_local_worker.py` + `run_nexus_bridge.ps1`: loop de polling
+      (`NEXUS_BRIDGE_POLL_INTERVAL`, por defecto 20s) → `WallapopManualScraper().search(query)`
+      en la máquina local → `POST` resultados. Maneja errores sin dejar jobs colgados en `running`
+      (los reporta como `error` al servidor).
 
-### Fase 4 — Observabilidad
-- [ ] Reutilizar `WallapopIpLogModel` para registrar status (allowed/blocked/proxy_bypass) por ejecución.
-- [ ] Mensaje claro en el log en vivo cuando se detecte bloqueo, apuntando al Nexus Local Bridge.
+**Validado en real, end-to-end:** servidor FastAPI local levantado, job encolado vía API,
+reclamado (`pending→running`), procesado con `WallapopManualScraper` contra la Wallapop real
+(9 ofertas), resultados enviados y persistidos, job marcado `done`. Confirmado que un segundo
+`GET /pending` inmediatamente después devuelve `null` (no hay doble reclamo).
+
+### Fase 3 — Frontend (panel de Configuración) — ✅ COMPLETADA
+
+- [x] **`WallapopNexusBridge.tsx`** (nuevo componente, `frontend/src/components/admin/`), montado
+      en la pestaña "Wallapop" de `Config.tsx` junto al `WallapopImporter` existente:
+  - Campo de `query` (por defecto `auto`) + botón **"Incursión Directa"** que dispara
+    `runScrapers('WallapopManual', 'manual_ui', query)` (ejecución inmediata server-side).
+  - Botón **"Encolar en Nexus Bridge"** que llama `POST /api/wallapop/jobs`.
+  - Lista de trabajos recientes con badge de estado (pending/running/done/error), auto-refresco
+    (6s si hay trabajos activos, 20s en reposo).
+  - Nota informativa in-panel explicando cuándo usar cada vía y mencionando
+    `WALLAPOP_RESIDENTIAL_PROXY`.
+- [x] `runScrapers` (`frontend/src/api/purgatory.ts`) extendido con parámetro `query` opcional.
+- [x] Nuevas funciones API `createWallapopJob` / `getWallapopJobs` + tipo `WallapopJob`.
+
+**Validado:** `tsc -b` sin errores; `npm run build` completo sin errores (solo el warning
+preexistente de chunk size, no relacionado).
+
+### Fase 4 — Observabilidad — ✅ COMPLETADA
+
+- [x] **`WallapopIpLogModel` reutilizado** desde `wallapop_signed_api.py` (`_audit_ip_log`,
+      best-effort, nunca rompe el flujo si falla): registra `status` (`allowed` / `proxy_bypass` /
+      `blocked` / `error`), `environment`, `response_code` y `details` en cada intento de la API
+      firmada — tanto desde el cascade automático como desde `WallapopManualScraper` y el worker
+      del Nexus Bridge. Sin sondeo extra de IP pública (para no penalizar de latencia el camino feliz).
+- [x] **Mensajes de log mejorados** apuntando al Nexus Local Bridge cuando se detecta bloqueo:
+      en `search_wallapop_v3_signed` (bloqueo WAF) y en el resumen final de
+      `WallapopManualScraper.search()` (cuando termina bloqueado y sin resultados).
+
+**Validado en real:** ejecución real de `WallapopManualScraper` seguida de consulta a
+`WallapopIpLogModel` → fila `status=allowed, ip=N/A (API firmada, sin proxy),
+details="5 ofertas extraídas..."` confirmada en base de datos.
 
 ---
 
 ## 5. Criterios de aceptación
-- Desde el panel, "WallapopManual" devuelve ofertas al Purgatorio **sin 403** cuando:
+- [x] Desde el panel, "WallapopManual" devuelve ofertas al Purgatorio **sin 403** cuando:
   (a) se ejecuta vía Nexus Local Bridge, o (b) hay `WALLAPOP_RESIDENTIAL_PROXY` válido.
-- **(Fase 1.5)** En el spider automático `Wallapop`, al agotarse Apify se intenta la API v3 firmada
+- [x] **(Fase 1.5)** En el spider automático `Wallapop`, al agotarse Apify se intenta la API v3 firmada
   (X-Signature) **antes** de gastar ScraperAPI; con IP válida devuelve ofertas sin 403.
-- Deduplicación correcta y enrutado P2P al Purgatorio.
-- Sin regresiones en el resto de spiders del orquestador.
+- [x] Deduplicación correcta y enrutado P2P al Purgatorio.
+- [x] Sin regresiones en el resto de spiders del orquestador (imports y router de FastAPI verificados).
 
 ---
 

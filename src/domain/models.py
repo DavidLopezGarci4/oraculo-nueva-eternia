@@ -477,6 +477,29 @@ class WallapopIpLogModel(Base):
     details: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     recorded_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
 
+class WallapopJobModel(Base):
+    """
+    Nexus Local Bridge (Fase 2): cola de trabajos para que un worker ejecutado en
+    el PC del usuario (IP residencial) resuelva búsquedas de Wallapop que el
+    servidor (IP de datacenter) no puede completar por bloqueo WAF.
+
+    Flujo: Config Panel -> POST /api/wallapop/jobs (pending) -> worker local hace
+    polling de GET /api/wallapop/jobs/pending (pasa a running) -> el worker busca
+    con WallapopManualScraper desde su propia IP -> POST resultados a
+    /api/wallapop/jobs/{id}/results (pasa a done/error, enruta al Purgatorio).
+    """
+    __tablename__ = "wallapop_jobs"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    query: Mapped[str] = mapped_column(String, default="auto")
+    status: Mapped[str] = mapped_column(String, default="pending", index=True) # pending, running, done, error
+    result_count: Mapped[int] = mapped_column(Integer, default=0)
+    error_message: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    worker_id: Mapped[Optional[str]] = mapped_column(String, nullable=True) # hostname del worker que reclamó el job
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    claimed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
 class SystemConfigModel(Base):
     """
     Configuraciones globales del sistema (Fase 62)
@@ -532,6 +555,7 @@ __all__ = [
     "AuthorizedDeviceModel",
     "StagedImportModel",
     "WallapopIpLogModel",
+    "WallapopJobModel",
     "VintageProductModel",
     "VintageMiscellaneousModel",
     "ProductMonthlyStatsModel",

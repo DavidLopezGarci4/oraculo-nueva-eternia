@@ -90,10 +90,11 @@ export const getScrapersStatus = async (): Promise<ScraperStatus[]> => {
     return response.data;
 };
 
-export const runScrapers = async (spiderName: string = 'all', triggerType: string = 'manual') => {
+export const runScrapers = async (spiderName: string = 'all', triggerType: string = 'manual', query?: string) => {
     const response = await axios.post(`${API_BASE}/scrapers/run`, {
         spider_name: spiderName,
-        trigger_type: triggerType
+        trigger_type: triggerType,
+        query: query || null
     }, adminHeaders);
     return response.data;
 };
@@ -194,5 +195,29 @@ export const downloadWallapopIpLogs = async (): Promise<void> => {
 
 export const runWallaManualHtml = async () => {
     const response = await axios.post(`${API_BASE}/scrapers/wallapop/import-manual-html`, {}, adminHeaders);
+    return response.data;
+};
+
+// --- Nexus Local Bridge (Fase 2) ---
+
+export interface WallapopJob {
+    id: number;
+    query: string;
+    status: 'pending' | 'running' | 'done' | 'error';
+    result_count: number;
+    error_message?: string | null;
+    worker_id?: string | null;
+    created_at: string;
+    claimed_at?: string | null;
+    completed_at?: string | null;
+}
+
+export const createWallapopJob = async (query: string = 'auto'): Promise<{ status: string; job_id: number; message: string }> => {
+    const response = await axios.post(`${API_BASE}/wallapop/jobs`, { query }, adminHeaders);
+    return response.data;
+};
+
+export const getWallapopJobs = async (limit: number = 20): Promise<WallapopJob[]> => {
+    const response = await axios.get(`${API_BASE}/wallapop/jobs`, { ...adminHeaders, params: { limit } });
     return response.data;
 };

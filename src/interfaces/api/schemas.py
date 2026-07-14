@@ -199,6 +199,29 @@ class WallapopImportRequest(BaseModel):
     products: List[WallapopProduct]
 
 
+# --- Wallapop Nexus Local Bridge (Fase 2) ---
+
+class WallapopJobCreateRequest(BaseModel):
+    query: str | None = None  # None/omitido -> "auto"
+
+
+class WallapopJobResultOffer(BaseModel):
+    product_name: str
+    price: float
+    currency: str = "EUR"
+    url: str
+    image_url: str | None = None
+    source_type: str = "Peer-to-Peer"
+    sale_type: str = "Fixed_P2P"
+
+
+class WallapopJobResultsRequest(BaseModel):
+    offers: List[WallapopJobResultOffer] = []
+    blocked: bool = False
+    error_message: str | None = None
+    worker_id: str | None = None
+
+
 # --- JWT ---
 
 class Token(BaseModel):
