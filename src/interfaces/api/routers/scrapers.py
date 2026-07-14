@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 import psutil
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response, File, UploadFile
 from loguru import logger
 from sqlalchemy import desc
 
@@ -421,9 +421,11 @@ async def download_wallapop_ip_logs():
         )
 
 
+from typing import Optional
+
 @router.post("/wallapop/import-manual-html", dependencies=[Depends(verify_api_key)])
-async def import_wallapop_manual_html():
-    """Parsea el archivo local data/wallapop_search.html e inserta los artículos nuevos en el Purgatorio."""
+async def import_wallapop_manual_html(file: Optional[UploadFile] = File(None)):
+    """Parsea el archivo local o subido data/wallapop_search.html e inserta los artículos nuevos en el Purgatorio."""
     import os
     import re
     from bs4 import BeautifulSoup
@@ -434,25 +436,40 @@ async def import_wallapop_manual_html():
         VintageMiscellaneousModel
     )
 
-    # 1. Definir rutas y verificar existencia del archivo
+    # 1. Definir rutas
     project_root = os.getcwd()
     file_path = os.path.join(project_root, "data", "wallapop_search.html")
+    content = ""
 
-    if not os.path.exists(file_path):
-        raise HTTPException(
-            status_code=404,
-            detail="Archivo 'data/wallapop_search.html' no encontrado en el servidor. Asegúrate de guardarlo primero."
-        )
-
-    # 2. Leer archivo HTML
-    try:
-        with open(file_path, "r", encoding="utf-8") as f:
-            content = f.read()
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error al leer el archivo HTML: {str(e)}"
-        )
+    # 2. Obtener contenido del HTML (subido o local)
+    if file is not None:
+        try:
+            content_bytes = await file.read()
+            content = content_bytes.decode("utf-8", errors="ignore")
+            # Guardamos copia local en data/ para retrocompatibilidad
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write(content)
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error al procesar el archivo HTML subido: {str(e)}"
+            )
+    else:
+        # Fallback al archivo local
+        if not os.path.exists(file_path):
+            raise HTTPException(
+                status_code=404,
+                detail="Archivo 'data/wallapop_search.html' no encontrado en el servidor. Asegúrate de subir el archivo o guardarlo en local."
+            )
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                content = f.read()
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error al leer el archivo HTML local: {str(e)}"
+            )
 
     # 3. Parsear con BeautifulSoup
     soup = BeautifulSoup(content, 'html.parser')

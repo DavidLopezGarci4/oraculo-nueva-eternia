@@ -193,9 +193,20 @@ export const downloadWallapopIpLogs = async (): Promise<void> => {
     link.parentNode?.removeChild(link);
 };
 
-export const runWallaManualHtml = async () => {
-    const response = await axios.post(`${API_BASE}/scrapers/wallapop/import-manual-html`, {}, adminHeaders);
-    return response.data;
+export const runWallaManualHtml = async (file?: File) => {
+    if (file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        const headers = {
+            ...adminHeaders.headers,
+            'Content-Type': 'multipart/form-data',
+        };
+        const response = await axios.post(`${API_BASE}/scrapers/wallapop/import-manual-html`, formData, { headers });
+        return response.data;
+    } else {
+        const response = await axios.post(`${API_BASE}/scrapers/wallapop/import-manual-html`, {}, adminHeaders);
+        return response.data;
+    }
 };
 
 // --- Nexus Local Bridge (Fase 2) ---

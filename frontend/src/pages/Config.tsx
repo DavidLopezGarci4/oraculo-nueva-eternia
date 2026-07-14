@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Play, Activity, Clock, AlertCircle, CheckCircle2, RefreshCw, Terminal, Target, Settings, Users, ShieldAlert, Trash2, Zap, History, Database, Download, FileSpreadsheet, Repeat, Globe, Package, ChevronDown, Lock, Swords, Shield, Search, Sparkles, Home, Wifi, CloudLightning, Cookie, Copy, Gift, Compass, MousePointer } from 'lucide-react';
+import { Play, Activity, Clock, AlertCircle, CheckCircle2, RefreshCw, Terminal, Target, Settings, Users, ShieldAlert, Trash2, Zap, History, Database, Download, FileSpreadsheet, Repeat, Globe, Package, ChevronDown, Lock, Swords, Shield, Search, Sparkles, Home, Wifi, CloudLightning, Cookie, Copy, Gift, Compass, MousePointer, ArrowDown, BarChart2, FileText, XCircle, Keyboard, ChevronsDown, Flag, Hexagon, Network, Archive, CornerDownRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { resetSmartMatches, runScrapers, stopScrapers, getScraperLogs, type ScraperExecutionLog, getWallapopIpLogs, downloadWallapopIpLogs, type WallapopIpLog, runWallaManualHtml } from '../api/purgatory';
@@ -832,9 +832,22 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                         </button>
                                         
                                         <button
-                                            onClick={() => runWallaManualHtmlMutation.mutate()}
+                                            onClick={() => {
+                                                if (statuses.some(s => s.status === 'running')) return;
+                                                const fileInput = document.createElement('input');
+                                                fileInput.type = 'file';
+                                                fileInput.accept = '.html';
+                                                fileInput.onchange = (e: any) => {
+                                                    const file = e.target.files?.[0];
+                                                    if (file) {
+                                                        runWallaManualHtmlMutation.mutate(file);
+                                                    }
+                                                };
+                                                fileInput.click();
+                                            }}
                                             disabled={wallaManualLoading || statuses.some(s => s.status === 'running')}
                                             className="bg-white/5 hover:bg-white/10 border border-white/10 text-white px-4 py-2 rounded-xl font-bold text-[11px] transition-all flex items-center justify-center gap-2 hover:scale-105 active:scale-95 w-full sm:w-auto disabled:opacity-50"
+                                            title="Procesar archivo HTML guardado de Wallapop"
                                         >
                                             {wallaManualLoading ? (
                                                 <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: "linear" }}>
@@ -1081,10 +1094,27 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                                             '✅': <CheckCircle2 className="inline h-3 w-3 mr-1 text-green-500 align-middle" />,
                                                             '⌛': <Clock className="inline h-3 w-3 mr-1 text-cyan-400 align-middle" />,
                                                             '🎉': <Sparkles className="inline h-3 w-3 mr-1 text-pink-400 align-middle" />,
-                                                            '🎁': <Gift className="inline h-3 w-3 mr-1 text-pink-400 align-middle" />
+                                                            '🎁': <Gift className="inline h-3 w-3 mr-1 text-pink-400 align-middle" />,
+                                                            '🕸️': <Network className="inline h-3 w-3 mr-1 text-slate-500 align-middle" />,
+                                                            '🧹': <Trash2 className="inline h-3 w-3 mr-1 text-red-400 align-middle" />,
+                                                            '❌': <XCircle className="inline h-3 w-3 mr-1 text-red-500 align-middle" />,
+                                                            '🚫': <XCircle className="inline h-3 w-3 mr-1 text-red-500 align-middle" />,
+                                                            '⌨️': <Keyboard className="inline h-3 w-3 mr-1 text-slate-400 align-middle" />,
+                                                            '📄': <FileText className="inline h-3 w-3 mr-1 text-slate-300 align-middle" />,
+                                                            '⏬': <ChevronsDown className="inline h-3 w-3 mr-1 text-cyan-400 align-middle" />,
+                                                            '⬇️': <ArrowDown className="inline h-3 w-3 mr-1 text-cyan-400 align-middle" />,
+                                                            '📊': <BarChart2 className="inline h-3 w-3 mr-1 text-indigo-400 align-middle" />,
+                                                            '↪️': <CornerDownRight className="inline h-3 w-3 mr-1 text-cyan-500 align-middle" />,
+                                                            '🏁': <Flag className="inline h-3 w-3 mr-1 text-green-400 align-middle" />,
+                                                            '🔄': <RefreshCw className="inline h-3 w-3 mr-1 text-cyan-400 align-middle" />,
+                                                            '🟢': <CheckCircle2 className="inline h-3 w-3 mr-1 text-green-500 align-middle" />,
+                                                            '🗄️': <Archive className="inline h-3 w-3 mr-1 text-indigo-400 align-middle" />,
+                                                            '⎔': <Hexagon className="inline h-3 w-3 mr-1 text-brand-primary align-middle" />,
+                                                            '⏣': <Hexagon className="inline h-3 w-3 mr-1 text-brand-primary align-middle" />,
+                                                            '⚡️': <Zap className="inline h-3 w-3 mr-1 text-yellow-400 align-middle" />
                                                         };
                                                         
-                                                        const regex = /(🚀|⚔️|🔎|🔍|🔮|⚡|⚠️|🌐|🏠|🛡️|⚙️|📥|📦|📡|🌩️|🕵️‍♂️|🕵️|🧭|🖱️|🍪|💾|✅|⌛|🎉|🎁)/g;
+                                                        const regex = /(🚀|⚔️|🔎|🔍|🔮|⚡|⚠️|🌐|🏠|🛡️|⚙️|📥|📦|📡|🌩️|🕵️‍♂️|🕵️|🧭|🖱️|🍪|💾|✅|⌛|🎉|🎁|🕸️|🧹|❌|🚫|⌨️|📄|⏬|⬇️|📊|↪️|🏁|🔄|🟢|🗄️|⎔|⏣|⚡️)/g;
                                                         const parts = line.split(regex);
 
                                                         return (
