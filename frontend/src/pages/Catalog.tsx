@@ -1067,6 +1067,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                     
                     const idNum = parseInt(product.figure_id?.replace(/[^0-9]/g, '') || '0');
                     const itemIsGrail = isGrail(product.id);
+                    const isOriginsManual = product.figure_id?.startsWith('ORIG-');
                     
                     let cardBorderClass = '';
                     if (isVintageOnly) {
@@ -1079,6 +1080,8 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                         cardBorderClass = 'border-cyan-500/20 bg-black/25 shadow-[0_15px_30px_-10px_rgba(6,182,212,0.08)] hover:shadow-[0_40px_80px_-10px_rgba(6,182,212,0.22)]';
                         if (itemIsGrail) {
                             cardBorderClass = 'border-orange-500/30 bg-orange-500/[0.02] shadow-[0_15px_30px_-10px_rgba(249,115,22,0.15)] hover:shadow-[0_40px_80px_-10px_rgba(249,115,22,0.35)]';
+                        } else if (isOriginsManual) {
+                            cardBorderClass = 'border-cyan-500/20 bg-cyan-500/[0.02] shadow-[0_15px_30px_-10px_rgba(6,182,212,0.08)] hover:shadow-[0_40px_80px_-10px_rgba(6,182,212,0.22)]';
                         } else if (idNum > 0 && idNum < 4500) {
                             cardBorderClass = 'border-amber-500/25 bg-amber-500/[0.01] shadow-[0_15px_30px_-10px_rgba(245,158,11,0.1)] hover:shadow-[0_40px_80px_-10px_rgba(245,158,11,0.25)]';
                         } else if (idNum >= 4500 && idNum <= 9500) {
@@ -1166,6 +1169,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                                 {(() => {
                                     const idNum = parseInt(product.figure_id?.replace(/[^0-9]/g, '') || '0');
                                     const itemIsGrail = isGrail(product.id);
+                                    const isOriginsManual = product.figure_id?.startsWith('ORIG-');
                                     
                                     let colorClass = '';
                                     if (isVintageOnly) {
@@ -1178,6 +1182,8 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                                         colorClass = 'text-cyan-400 border-cyan-500/30 bg-black/65'; // Recent/Blue
                                         if (itemIsGrail) {
                                             colorClass = 'text-orange-400 border-orange-500/35 bg-black/65 shadow-[0_0_15px_rgba(249,115,22,0.15)]'; // Grail/Orange
+                                        } else if (isOriginsManual) {
+                                            colorClass = 'text-cyan-400 border-cyan-500/30 bg-black/65'; // Origins Manual/Blue
                                         } else if (idNum > 0 && idNum < 4500) {
                                             colorClass = 'text-amber-400 border-amber-500/30 bg-black/65'; // Vintage/Amber
                                         } else if (idNum >= 4500 && idNum <= 9500) {
@@ -1747,7 +1753,8 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                     onClick={() => setExpandedImage(null)}
                 >
                     <div className="relative max-w-full max-h-full group">
-                        <img
+                        <MOTUImage
+                            productId={selectedProduct?.id}
                             src={expandedImage}
                             alt="Expanded Relic"
                             className="max-w-full max-h-[90vh] rounded-[2rem] sm:rounded-[3rem] border border-white/10 shadow-[0_0_100px_rgba(0,0,0,0.8)] object-contain"

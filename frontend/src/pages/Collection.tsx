@@ -446,6 +446,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                             const isSpecial = !!product.is_vintage || condition === 'MOC' || grading > 0 || !!isGrail;
 
                             const idNum = parseInt(product.figure_id?.replace(/[^0-9]/g, '') || '0');
+                            const isOriginsManual = product.figure_id?.startsWith('ORIG-');
                             
                             let cardBorderClass = '';
                             let colorClass = '';
@@ -462,6 +463,9 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                                 if (isGrail) {
                                     cardBorderClass = 'border-orange-500/30 bg-orange-500/[0.02] shadow-[0_15px_30px_-10px_rgba(249,115,22,0.15)] hover:shadow-[0_40px_80px_-10px_rgba(249,115,22,0.35)]';
                                     colorClass = 'text-orange-400 border-orange-500/35 bg-black/65 shadow-[0_0_15px_rgba(249,115,22,0.15)]'; // Grail/Orange
+                                } else if (isOriginsManual) {
+                                    cardBorderClass = 'border-cyan-500/20 bg-cyan-500/[0.02] shadow-[0_15px_30px_-10px_rgba(6,182,212,0.08)] hover:shadow-[0_40px_80px_-10px_rgba(6,182,212,0.22)]';
+                                    colorClass = 'text-cyan-400 border-cyan-500/30 bg-black/65'; // Origins Manual/Blue
                                 } else if (idNum > 0 && idNum < 4500) {
                                     cardBorderClass = 'border-amber-500/25 bg-amber-500/[0.01] shadow-[0_15px_30px_-10px_rgba(245,158,11,0.1)] hover:shadow-[0_40px_80px_-10px_rgba(245,158,11,0.25)]';
                                     colorClass = 'text-amber-400 border-amber-500/30 bg-black/65'; // Vintage/Amber
