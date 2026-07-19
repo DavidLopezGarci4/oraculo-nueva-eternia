@@ -165,5 +165,14 @@ Se ha implementado una arquitectura de optimización de espacio y captura univer
 - **Daily Scan & Mantenimiento a Demanda (Asincronía & Telegram)**: Integrado de forma automática al inicio de `daily_scan.py` y expuesto visualmente en la sección de Configuración (`Config.tsx`). El endpoint de mantenimiento se ejecuta asíncronamente en segundo plano a través de `BackgroundTasks` de FastAPI para eludir timeouts de red HTTP de Axios o proxies Nginx, y envía una notificación final detallada a David por Telegram con el desglose exacto de optimización. Adicionalmente, al finalizar el Daily Scan completo, se genera un reporte resumido en Telegram que detalla la duración, el total de ofertas procesadas, nuevas inyectadas, el total de ítems enviados al Purgatorio y los errores registrados.
 - **Incursión Universal CDP**: Un motor de captura unificado (`scrape_multi_via_cdp.py`) y un script de PowerShell (`run_assisted_incursion.ps1`) para extraer ofertas directamente del navegador de depuración Chrome (puerto 9222) en Amazon, eBay, Smyths Toys y BBTS de forma sigilosa.
 
-*Última actualización: 07/07/2026 - Fase 80: Compactación Estadística FinOps e Incursión Universal CDP.*
+### 16. Nexo de Fusión Divina, Scroll Infinito y Optimización de Rendimiento Extremo (Fase 81)
+
+Se ha implementado una arquitectura de optimización y consolidación de datos extrema para garantizar la fluidez de la app:
+- **Consolidación en el Inventario**: El nexo permite realizar fusiones atómicas de productos temporales con definitivos. Al fusionar, el backend propaga y mantiene la coherencia del flag `is_vintage` en todas las ofertas transferidas y elimina el producto duplicado.
+- **Paginación Dinámica y Scroll Infinito**: Los endpoints de la API aceptan `limit` y `offset`. En el frontend se utiliza `useInfiniteQuery` de React Query acoplado a un `IntersectionObserver` que detecta la cercanía al pie de página para desencadenar de forma progresiva y elegante la carga de lotes de 24 figuras.
+- **Compresión Masiva y Code Splitting**: Conversión automatizada de todos los assets a WebP (ahorro del 94% en volumen de datos: 7.5 MB a 650 KB) e importación dinámica con `React.lazy` y `Suspense`, disminuyendo el JavaScript inicial de arranque a <200 KB.
+- **Modo Rendimiento Adaptativo**: Permite silenciar los cálculos vectoriales 3D interactivos del mouse y los halos de iluminación reactiva sobre las tarjetas en móviles lentos al seleccionar efectos "Clásicos".
+- **Activación del Radar**: El recálculo masivo e indexación de base de datos local y Supabase de 519 productos puebla el percentil 25 de 159 de ellos, proveyendo al Radar de Oportunidades de la telemetría histórica necesaria para su despliegue comercial.
+
+*Última actualización: 19/07/2026 - Fase 81: Nexo de Fusión Divina, Scroll Infinito y Optimización de Rendimiento Extremo.*
 

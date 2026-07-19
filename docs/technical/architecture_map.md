@@ -208,4 +208,13 @@ Ejecutar: `.venv\Scripts\python -m pytest` (33 tests, 0 fallos)
   - Intensificación del resplandor de color en las tarjetas de figuras del Catálogo que tengan ofertas activas (celeste para Moderno, dorado para Vintage) sin badges flotantes.
   - Incorporación de filtro de tránsito experimental con switch "On/Off" en el frontend del Purgatorio para separar ofertas de tipo Retail de ofertas P2P (Wallapop/eBay).
 
-*Última actualización: 2026-06-20 - Phase 72: Bypass de Amazon, Purgatorio Asíncrono y Resalto de Ofertas.*
+- **Phase 81**: Nexo de Fusión Divina, Scroll Infinito y Optimización de Rendimiento Extremo (19/07/2026):
+  - Fusión de productos centralizada en Configuración > Inventario, con reasignación y persistencia coherente de is_vintage en ofertas y borrado atómico de ítems duplicados.
+  - Ordenación responsiva en Mi Fortaleza por fecha de agregado (`acquired_at`) con selector de 3 columnas de bajo perfil.
+  - Reducción del 94% en transferencia de assets mediante conversión y compresión masiva de imágenes a formato WebP.
+  - Reducción del JS de arranque del frontend a <200KB mediante Code Splitting estructurado en App.tsx.
+  - Paginación de base de datos e Infinite Scroll con Intersection Observer en Catalog.tsx y Collection.tsx.
+  - Conmutador manual de rendimiento ("Efectos Clásicos" vs "Activados") para conmutar los cálculos de cursor 3D en la GPU.
+  - Índices de rendimiento en base de datos local y recálculo masivo de estadísticas para 519 productos, reactivando el Radar de Oportunidades.
+
+*Última actualización: 2026-07-19 - Phase 81: Nexo de Fusión Divina, Scroll Infinito y Optimización de Rendimiento Extremo.*

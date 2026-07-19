@@ -2,7 +2,7 @@
 
 **Centro de Inteligencia de Mercado y Gestión de Colecciones MOTU Origins**
 
-![Oráculo Dashboard](https://img.shields.io/badge/Version-2.1.0-gold?style=for-the-badge)
+![Oráculo Dashboard](https://img.shields.io/badge/Version-2.2.0-gold?style=for-the-badge)
 ![Status](https://img.shields.io/badge/Status-Operating-green?style=for-the-badge)
 ![Tech](https://img.shields.io/badge/Stack-React_19_|_FastAPI_|_Docker-blue?style=for-the-badge)
 

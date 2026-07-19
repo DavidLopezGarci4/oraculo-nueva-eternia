@@ -1,9 +1,9 @@
-# ðŸ“– El OrÃ¡culo de Nueva Eternia: DocumentaciÃ³n Maestra
+# 📜 El Oráculo de Nueva Eternia: Documentación Maestra
 
-**VersiÃ³n:** 2.1.0-RECOVERY (Basado en la Fase 62)
-**Ãšltima RevisiÃ³n:** Abril 2026
+**Versión:** 2.3.0-OPTIMIZED (Divine Merge, WebP, Code Splitting & Infinite Scroll)
+**Última Revisión:** Julio 2026
 
-Este documento es la **Fuente de Verdad Absoluta** del proyecto "El OrÃ¡culo de Nueva Eternia". Se ha redactado tras una auditorÃ­a profunda del código fuente (`src/`, `frontend/`, `docker-compose.yml`), asegurando que describe **exactamente cÃ³mo funciona la aplicaciÃ³n hoy en dÃ­a**, sin suposiciones ni elementos obsoletos.
+Este documento es la **Fuente de Verdad Absoluta** del proyecto "El Oráculo de Nueva Eternia". Se ha redactado tras una auditoría profunda del código fuente (`src/`, `frontend/`, `docker-compose.yml`), asegurando que describe **exactamente cómo funciona la aplicación hoy en día**, sin suposiciones ni elementos obsoletos.
 
 Cualquier desarrollador, arquitecto o auditor que necesite entender el proyecto, debe empezar por aquÃ­.
 
@@ -373,22 +373,51 @@ ormalize_url(url: str):
 ### 12.2 Filtro de Relevancia MOTU (Inteligencia del Purgatorio)
 El pipeline incorpora un filtro autom�tico de relevancia (alidate_motu_relevance) que analiza t�tulos y descripciones de las ofertas extra�das:
 * **Lista de Exclusi�n (Blacklist)**: Se descartan autom�ticamente ofertas de marcas ajenas al foco de la aplicaci�n como unko, pop (palabra completa), ig jim, masterverse, gi joe, star wars, ction man, madelman, geyperman, max steel y arbie.
-* **Excepciones para Crossovers Oficiales**: Marcas que tienen crossovers oficiales con la línea Origins (ej. 	ransformers, 	hundercats, stranger things, 	mnt, 	urtles) no son excluidas de forma fulminante si vienen acompa�adas de t�rminos de He-Man/MOTU (ej. motu, origins, grayskull, he-man). Si no los contienen, se descartan de forma est�ndar.
-* **Soporte Multiling�e**: Incluye soporte para traducciones europeas como la francesa maitres de l\'univers (y variantes sin ap�strofe).
-* **Descarte Autom�tico a Lista Negra**: Los �tems descartados se guardan directamente en la lista negra (lackcluded_items) con el motivo correspondiente, impidiendo que vuelvan a saturar la cola del Purgatorio.
+El pipeline incorpora un filtro automático de relevancia (validate_motu_relevance) que analiza títulos y descripciones de las ofertas extraídas:
+* **Lista de Exclusión (Blacklist)**: Se descartan automáticamente ofertas de marcas ajenas al foco de la aplicación como Funko, pop (palabra completa), Big jim, masterverse, gi joe, star wars, Action man, madelman, geyperman, max steel y Barbie.
+* **Excepciones para Crossovers Oficiales**: Marcas que tienen crossovers oficiales con la línea Origins (ej. Transformers, Thundercats, stranger things, TMNT, Turtles) no son excluidas de forma fulminante si vienen acompañadas de términos de He-Man/MOTU (ej. motu, origins, grayskull, he-man). Si no los contienen, se descartan de forma estándar.
+* **Soporte Multilingüe**: Incluye soporte para traducciones europeas como la francesa maitres de l'univers (y variantes sin apóstrofe).
+* **Descarte Automático a Lista Negra**: Los ítems descartados se guardan directamente en la lista negra (blackcluded_items) con el motivo correspondiente, impidiendo que vuelvan a saturar la cola del Purgatorio.
 
 ### 12.3 Limpieza Proactiva Global del Purgatorio
-Al iniciar y finalizar las incursiones de scraping o las importaciones manuales, el worker ejecuta la rutina clean_purgatory_globally(). Esta rutina elimina del buffer de pendientes (PendingMatchModel) cualquier oferta cuya URL ya figure en el cat�logo principal (offers), en la lista negra (lackcluded_items) o en la secci�n del Bazar del Oráculo (intage_miscellaneous), manteniendo la base de datos libre de residuos.
+Al iniciar y finalizar las incursiones de scraping o las importaciones manuales, el worker ejecuta la rutina clean_purgatory_globally(). Esta rutina elimina del buffer de pendientes (PendingMatchModel) cualquier oferta cuya URL ya figure en el catálogo principal (offers), en la lista negra (blackcluded_items) o en la sección del Bazar del Oráculo (vintage_miscellaneous), manteniendo la base de datos libre de residuos.
 
-### 12.4 Calibración Din�mica de Haces de Luz Vintage
-El componente de carga interactiva PowerSwordLoader.tsx se ha redise�ado para admitir coordenadas din�micas para la animaci�n de haces de luz vectoriales:
-* **Proyecci�n Vectorial**: A partir de la posici�n de la empu�adura (GuardX, GuardY) y la punta de la espada (TipX, TipY), el cargador calcula vectorialmente la inclinaci�n y longitud de los haces en tiempo real.
-* **Calibrador Interactivo**: Se ha a�adido un calibrador en la secci�n de Ajustes (Config.tsx) con deslizadores para ajustar los ejes X e Y de guard y tip de forma visual con gu�as de depuraci�n superpuestas. Los valores calibrados se persisten en el localStorage del cliente.
-* **Carga de Secci�n Vintage**: Se pre-configuraron las coordenadas �ptimas para el asset de He-Man ddg-heman.png utilizado en las pantallas de carga de las páginas Vintage: empu�adura en (79.5, 66.5) y punta en (73.0, 20.5).
+### 12.4 Calibración Dinámica de Haces de Luz Vintage
+El componente de carga interactiva PowerSwordLoader.tsx se ha rediseñado para admitir coordenadas dinámicas para la animación de haces de luz vectoriales:
+* **Proyección Vectorial**: A partir de la posición de la empuñadura (GuardX, GuardY) y la punta de la espada (TipX, TipY), el cargador calcula vectorialmente la inclinación y longitud de los haces en tiempo real.
+* **Calibrador Interactivo**: Se ha añadido un calibrador en la sección de Ajustes (Config.tsx) con deslizadores para ajustar los ejes X e Y de guard y tip de forma visual con guías de depuración superpuestas. Los valores calibrados se persisten en el localStorage del cliente.
+* **Carga de Sección Vintage**: Se pre-configuraron las coordenadas óptimas para el asset de He-Man ddg-heman.png utilizado en las pantallas de carga de las páginas Vintage: empuñadura en (79.5, 66.5) y punta en (73.0, 20.5).
 
-### 12.5 Compactaci�n Visual de la Interfaz Core
-Para optimizar el espacio en pantallas de ordenadores y dispositivos móviles y reducir el desplazamiento vertical, se ha redise�ado la rejilla de tarjetas en **Cat�logo**, **Mi Fortaleza** y **Mercader de Eternos**:
-* **Tarjetas y Dock**: Compactaci�n general de m�rgenes, rellenos y tipograf�as. El dock de botones inferiores se unific� a un tama�o de h-7 w-7 con iconos de h-3.5 w-3.5.
-* **Bot�n A�adir (+)**: Se increment� el contraste del bot�n de agregar en figuras no deseadas/poseídas usando el color temático de la secci�n (celeste/azul en moderno, �mbar/dorado en vintage) al 60% de opacidad en reposo y 100% al pasar el cursor (hover).
-* **Cabeceras de Ordenaci�n y Contadores**: Unificaci�n de las cabeceras del panel con selector de tipo de ordenamiento, indicador de direcci�n de ordenación reactivo (ArrowUp / ArrowDown), y contador del total de �tems con iconograf�a tem�tica de color.
-* **Limpieza**: Remoci�n del icono de la campana de notificaciones de la barra superior (Navbar.tsx) y eliminaci�n de su código muerto.
+### 12.5 Compactación Visual de la Interfaz Core
+Para optimizar el espacio en pantallas de ordenadores y dispositivos móviles y reducir el desplazamiento vertical, se ha rediseñado la rejilla de tarjetas en **Catálogo**, **Mi Fortaleza** y **Mercader de Eternos**:
+* **Tarjetas y Dock**: Compactación general de márgenes, rellenos y tipografías. El dock de botones inferiores se unificó a un tamaño de h-7 w-7 con iconos de h-3.5 w-3.5.
+* **Botón Añadir (+)**: Se incrementó el contraste del botón de agregar en figuras no deseadas/poseídas usando el color temático de la sección (celeste/azul en moderno, ámbar/dorado en vintage) al 60% de opacidad en reposo y 100% al pasar el cursor (hover).
+* **Cabeceras de Ordenación y Contadores**: Unificación de las cabeceras del panel con selector de tipo de ordenamiento, indicador de dirección de ordenación reactivo (ArrowUp / ArrowDown), y contador del total de ítems con iconografía temática de color.
+* **Limpieza**: Remoción del icono de la campana de notificaciones de la barra superior (Navbar.tsx) y eliminación de su código muerto.
+
+---
+
+## 13. Nexo de Fusión Divina, Scroll Infinito y Optimización de Rendimiento Extremo
+
+La versión 2.3.0 consolida el rendimiento y la consistencia de datos de la plataforma bajo incursiones y colecciones densas:
+
+### 13.1 Nexo de Fusión Divina (Consolidación de Identidad)
+Implementado en Configuración > Inventario, permite a David y administradores fusionar ítems del catálogo que se duplicaron con nombres temporales (ej. `VINT-` o `ORIG-` creados en búsquedas manuales) con sus figuras definitivas:
+* **Transferencia de Ofertas**: Reasocia automáticamente todas las ofertas registradas bajo el ítem de origen hacia el de destino.
+* **Coherencia is_vintage**: Actualiza dinámicamente la propiedad `is_vintage` de todas las ofertas que se transfieren en base al flag del producto destino.
+* **Eliminación Atómica**: El producto temporal original de origen se elimina de forma segura de la base de datos tras confirmar la transferencia en una transacción SQL única.
+
+### 13.2 Ordenación por Fecha de Agregado en Fortaleza
+* **acquired_at Sorting**: Añadida la opción en Mi Fortaleza (Vintage y Origins) de ordenar figuras según el momento exacto en el que fueron capturadas, usando la fecha de creación en la tabla.
+* **UI de Bajo Perfil Responsiva**: Se actualizó la barra de herramientas del grid expandiendo a 3 columnas ("NOMBRE", "ID", "FECHA") con paddings compactos adaptados a dispositivos de hasta 320px de ancho.
+
+### 13.3 Optimización de Assets y Carga (Compresión WebP & Code Splitting)
+* **WebP Asset Optimization**: Conversión del fondo de He-Man y pantallas de carga a formato `.webp` de compresión sin pérdidas, reduciendo el peso de assets visuales de **7.5 MB a menos de 650 KB** (un ahorro de red del **94%**).
+* **Vite Code Splitting**: Lazificación de los componentes de página principales en `App.tsx` usando `React.lazy` y envoltorios `<React.Suspense>`. El bundle de carga JavaScript inicial disminuye de **1.25 MB a menos de 200 KB**.
+
+### 13.4 Paginación y Scroll Infinito
+* **limit & offset Backend**: Modificados los endpoints `/api/products` y `/api/collection` para rebanar la base de datos local y remota en bloques fijos de 24 elementos.
+* **React Query useInfiniteQuery**: Reemplazados los fetches estáticos del frontend por consultas infinitas acopladas a un Intersection Observer (`loadMoreRef`) al pie del grid para disparar de forma transparente la carga progresiva.
+
+### 13.5 Conmutador de Rendimiento
+Para salvaguardar la batería y procesador en dispositivos móviles de gama baja, se inyectó una tarjeta de "Rendimiento y Efectos Visuales" en Configuración. Persiste un flag en `localStorage` que deshabilita los cálculos vectoriales 3D e iluminación holográfica neón en reposo de las tarjetas `FoilTiltCard` en modo clásico.

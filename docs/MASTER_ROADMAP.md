@@ -523,6 +523,15 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
   - [x] **Mantenimiento a Demanda (Asincronía, Telegram & Diagnóstico)**: Integrado el endpoint API `POST /api/system/maintenance` bajo `BackgroundTasks` y una tarjeta de control premium "Purificación FinOps" en `Config.tsx`. Responde de inmediato para evitar timeouts y notifica el resultado por Telegram. Se robusteció el catch en el frontend para mostrar `error.message` real de Axios en la alerta del navegador.
   - [x] **Scraping Universal CDP**: Creado el script `scripts/scrape_multi_via_cdp.py` y `run_assisted_incursion.ps1` en la raíz para permitir el scraping asistido de cualquier tienda abierta en la pestaña de Chrome (Amazon, eBay, Smyths Toys, BBTS) conectada al puerto 9222.
 
+- [x] **Phase 81: Nexo de Fusión Divina, Scroll Infinito y Optimización de Rendimiento Extremo (19/07/2026)**
+  - [x] **Fusión Divina**: Centralizado en Configuración > Inventario. Permite fusionar ítems temporales (`VINT-` y `ORIG-`) con definitivos en la base de datos local y Supabase, propagando `is_vintage` a las ofertas.
+  - [x] **Ordenación por Fecha de Agregado**: Añadida la opción en Mi Fortaleza (Vintage y Origins) de ordenar por `acquired_at` en una cabecera responsiva de 3 columnas de bajo perfil.
+  - [x] **Compresión WebP**: Creado `convert_assets.py` y convertidos todos los PNG pesados a WebP, reduciendo la transferencia de assets en un 94% (7.5 MB a 650 KB).
+  - [x] **Code Splitting**: Configurado `React.lazy` y `Suspense` en [App.tsx], reduciendo el bundle JavaScript inicial de arranque a <200 KB.
+  - [x] **Paginación y Scroll Infinito**: Añadida paginación (limit y offset) en el backend y `useInfiniteQuery` de React Query con Intersection Observer (`loadMoreRef`) en el frontend de Catálogo y Colección.
+  - [x] **Toggle de Rendimiento**: Añadido conmutador de efectos en Configuración que deshabilita los eventos del ratón 3D y brillo holográfico de las tarjetas para liberar GPU en móviles.
+  - [x] **Inteligencia y Radar**: Indexados los campos críticos en la DB local y ejecutado el script `scratch/recalculate_stats.py` para recalcular el percentil 25 de 519 productos, reactivando la inteligencia de oportunidades del Radar.
+
 ---
 
 ## ✅ Plan de Verificación
