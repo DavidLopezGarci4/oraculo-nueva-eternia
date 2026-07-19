@@ -300,8 +300,11 @@ async def merge_products(request: ProductMergeRequest):
         if not source or not target:
             raise HTTPException(status_code=404, detail="Producto(s) no encontrado")
 
-        # 1. Transfer offers
-        db.query(OfferModel).filter(OfferModel.product_id == source.id).update({"product_id": target.id})
+        # 1. Transfer offers & align division alignment (is_vintage)
+        db.query(OfferModel).filter(OfferModel.product_id == source.id).update({
+            "product_id": target.id,
+            "is_vintage": target.is_vintage
+        })
 
         # 2. Transfer collection items (preventing duplicates)
         source_items = db.query(CollectionItemModel).filter(CollectionItemModel.product_id == source.id).all()

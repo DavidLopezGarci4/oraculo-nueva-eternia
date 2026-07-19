@@ -73,6 +73,22 @@ export const mergeProducts = async (sourceId: number, targetId: number): Promise
     return response.data;
 };
 
+export interface TemporaryProduct {
+    id: number;
+    name: string;
+    figure_id: string;
+    sub_category: string | null;
+    image_url: string | null;
+    is_vintage: boolean;
+    offer_count: number;
+    collection_count: number;
+}
+
+export const getTemporaryProducts = async (): Promise<TemporaryProduct[]> => {
+    const response = await adminAxios.get('/admin/temporary-products');
+    return response.data;
+};
+
 export const syncNexus = async (): Promise<{ status: string; message: string }> => {
     const response = await adminAxios.post('/admin/nexus/sync');
     return response.data;

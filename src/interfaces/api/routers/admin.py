@@ -13,6 +13,7 @@ from src.domain.models import (
     OfferModel,
     PendingMatchModel,
     UserModel,
+    ProductModel,
 )
 from src.infrastructure.database_cloud import SessionCloud
 from src.interfaces.api.deps import verify_api_key
@@ -262,3 +263,31 @@ async def revoke_device(device_id: str):
         db.delete(device)
         db.commit()
         return {"status": "success", "message": f"Acceso revocado para {device_id}."}
+
+
+@router.get("/temporary-products", dependencies=[Depends(verify_api_key)])
+async def get_temporary_products():
+    with SessionCloud() as db:
+        query = db.query(ProductModel).filter(
+            or_(
+                ProductModel.figure_id.like("VINT-%"),
+                ProductModel.figure_id.like("ORIG-%")
+            )
+        ).all()
+        
+        results = []
+        for p in query:
+            offer_count = db.query(func.count(OfferModel.id)).filter(OfferModel.product_id == p.id).scalar()
+            collection_count = db.query(func.count(CollectionItemModel.id)).filter(CollectionItemModel.product_id == p.id).scalar()
+            results.append({
+                "id": p.id,
+                "name": p.name,
+                "figure_id": p.figure_id,
+                "sub_category": p.sub_category,
+                "image_url": p.image_url,
+                "is_vintage": p.is_vintage,
+                "offer_count": offer_count,
+                "collection_count": collection_count
+            })
+        return results
+

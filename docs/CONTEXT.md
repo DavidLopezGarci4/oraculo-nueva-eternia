@@ -32,6 +32,22 @@ El catálogo del Oráculo se divide conceptualmente en dos secciones:
    * Las ofertas deben heredar el estado de división del producto al que se vinculan. Si el producto es Vintage, la oferta debe tener `is_vintage = True`. Si es Nueva Eternia, `is_vintage = False`.
 
 3. **Historial de Ofertas (`OfferHistoryModel`)**:
-   * El registro en el historial de ofertas debe auditar la acción correctamente:
-     * Para Vintage: `action_type = "LINKED_VINTAGE"`.
-     * Para Nueva Eternia: `action_type = "LINKED_MANUAL"`.
+    * El registro en el historial de ofertas debe auditar la acción correctamente:
+      * Para Vintage: `action_type = "LINKED_VINTAGE"`.
+      * Para Nueva Eternia: `action_type = "LINKED_MANUAL"`.
+
+---
+
+## 3. Reglas de Fusión y Consolidación (Merge Rules)
+
+Cuando se realiza la fusión de dos productos (un producto origen `source` absorbido por un producto destino `target`):
+
+1. **Propagación de `is_vintage` en Ofertas**:
+   * Las ofertas del producto origen se transfieren al producto destino.
+   * Si el producto destino tiene `is_vintage = True` (Eternia Vintage), todas las ofertas transferidas deben actualizarse a `is_vintage = True`.
+   * Si el producto destino tiene `is_vintage = False` o `None` (Nueva Eternia / Origins), todas las ofertas transferidas deben actualizarse a `is_vintage = False`.
+
+2. **Área de Gestión Centralizada**:
+   * El panel de administración para la gestión de fusiones se ubicará en la sección de **Configuración > Inventario** (`Config.tsx` bajo la pestaña `inventory`), accesible exclusivamente para usuarios con rol `admin` o usuario `David`.
+   * Ofrecerá un listado directo de ítems temporales (con prefijo de `figure_id` `VINT-` u `ORIG-`) con sus correspondientes conteos de ofertas y pertenencias de colección para facilitar la consolidación.
+   * Dispondrá de una herramienta de fusión libre que permita asociar de manera manual cualquier par de ítems del catálogo mediante buscadores interactivos de Origen y Destino.
