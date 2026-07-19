@@ -1,6 +1,0 @@
-<USER_REQUEST>
-Mi idea es no tener que utilizar un scraper premium de pago, ni en su versión gratuita. Busco que entre en el flujo normal, ya que dispongo de pocas peticiones premium
-</USER_REQUEST>
-<ADDITIONAL_METADATA>
-The current local time is: 2026-07-06T20:48:14+02:00.
-</ADDITIONAL_METADATA>

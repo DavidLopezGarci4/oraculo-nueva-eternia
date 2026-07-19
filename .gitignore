@@ -86,3 +86,6 @@ dist/
 backups/cloud/*.json
 # Local Pi runtime state
 .atl/
+
+# Diagnostic/Debug scratch folder
+scratch/
