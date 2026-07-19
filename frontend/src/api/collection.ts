@@ -17,6 +17,7 @@ export interface Product {
     avg_p2p_price?: number;
     p25_p2p_price?: number;
     is_vintage?: boolean;
+    variant_name?: string | null;
 
     // Financial Intelligence
     purchase_price?: number;
