@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import swordAsset from '../../assets/HemanGlassmorphSword.png';
-import vintageSwordAsset from '../../assets/GlassmorphSwordHeMan.png';
+import swordAsset from '../../assets/HemanGlassmorphSword.webp';
+import vintageSwordAsset from '../../assets/GlassmorphSwordHeMan.webp';
 import { getSystemSwordConfigs } from '../../api/admin';
 
 interface PowerSwordLoaderProps {

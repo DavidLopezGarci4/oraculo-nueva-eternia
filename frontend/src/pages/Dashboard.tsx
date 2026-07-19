@@ -24,8 +24,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { parseUtcDate } from '../utils/dateUtils';
-import masterRoleImg from '../assets/role-master.png';
-import guardianRoleImg from '../assets/role-guardian.png';
+import masterRoleImg from '../assets/role-master.webp';
+import guardianRoleImg from '../assets/role-guardian.webp';
 import { MOTUImage } from '../components/ui/MOTUImage';
 
 // Recharts & Collection API Imports for Arsenal Analytics & Completitud

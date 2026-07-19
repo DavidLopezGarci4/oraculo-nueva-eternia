@@ -1,5 +1,5 @@
 import React from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import {
     Package,
@@ -50,6 +50,7 @@ import { getProductPriceHistory, getUniqueShops } from '../api/products';
 import type { Hero } from '../api/admin';
 import PowerSwordLoader from '../components/ui/PowerSwordLoader';
 import { parseUtcDate } from '../utils/dateUtils';
+import { FoilTiltCard } from '../components/ui/FoilTiltCard';
 
 
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -201,18 +202,60 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
     }, [showVintageSyncModal, vintageSyncStatus, queryClient, isVintageOnly]);
 
 
-    // 1. Fetch de todos los productos
-    const { data: products, isLoading: isLoadingProducts, isError: isErrorProducts } = useQuery<Product[]>({
-        queryKey: ['products', isVintageOnly, selectedShopFilter],
-        queryFn: async () => {
-            let url = `/api/products?is_vintage=${isVintageOnly ? 'true' : 'false'}`;
+    // 1. Fetch de todos los productos con scroll infinito (Infinite Scroll)
+    const {
+        data: infiniteData,
+        fetchNextPage,
+        hasNextPage,
+        isFetchingNextPage,
+        isLoading: isLoadingProducts,
+        isError: isErrorProducts
+    } = useInfiniteQuery<Product[]>({
+        queryKey: ['products-infinite', isVintageOnly, selectedShopFilter],
+        queryFn: async ({ pageParam = 0 }) => {
+            let url = `/api/products?is_vintage=${isVintageOnly ? 'true' : 'false'}&limit=24&offset=${pageParam}`;
             if (selectedShopFilter) {
                 url += `&shop=${encodeURIComponent(selectedShopFilter)}`;
             }
             const response = await axios.get(url);
             return response.data;
+        },
+        initialPageParam: 0,
+        getNextPageParam: (lastPage, allPages) => {
+            if (lastPage.length < 24) return undefined;
+            return allPages.length * 24;
         }
     });
+
+    const products = React.useMemo(() => {
+        return infiniteData ? infiniteData.pages.flat() : [];
+    }, [infiniteData]);
+
+    const loadMoreRef = React.useRef<HTMLDivElement | null>(null);
+
+    React.useEffect(() => {
+        if (!hasNextPage || isFetchingNextPage) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting) {
+                    fetchNextPage();
+                }
+            },
+            { threshold: 0.1 }
+        );
+
+        const currentSensor = loadMoreRef.current;
+        if (currentSensor) {
+            observer.observe(currentSensor);
+        }
+
+        return () => {
+            if (currentSensor) {
+                observer.unobserve(currentSensor);
+            }
+        };
+    }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
     // 2. Fetch de la colección (basada en el ID activo)
     const { data: collection, isLoading: isLoadingCollection } = useQuery<Product[]>({
@@ -1060,7 +1103,8 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                     </p>
                 </div>
             ) : (
-                <div className="grid grid-cols-2 gap-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4 landscape:grid-cols-3">
+                <>
+                    <div className="grid grid-cols-2 gap-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4 landscape:grid-cols-3">
                  {sortedProducts?.map((product) => {
                     const owned = isOwned(product.id);
                     const wished = isWished(product.id);
@@ -1089,9 +1133,12 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                         }
                     }
                     
+                    const isSpecial = !!product.is_vintage || itemIsGrail || isOriginsManual;
+
                     return (
-                        <div
+                        <FoilTiltCard
                             key={product.id}
+                            isSpecial={isSpecial}
                             className={`group relative flex flex-col gap-1 sm:gap-1.5 md:gap-3 rounded-2xl sm:rounded-[1.5rem] md:rounded-3xl border p-1.5 sm:p-2 md:p-3.5 transition-all duration-500 hover:translate-y-[-8px] backdrop-blur-md ${cardBorderClass}`}
                         >
                             {/* Owned/Wish Badge */}
@@ -1303,10 +1350,18 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        </FoilTiltCard>
                     );
                 })}
             </div>
+
+            {/* Sensor y Spinner de Carga de Scroll Infinito */}
+            {hasNextPage && (
+                <div ref={loadMoreRef} className="flex justify-center p-8 mt-6 w-full">
+                    <PowerSwordLoader size={32} text="Invocando siguientes reliquias..." isVintage={isVintageOnly} />
+                </div>
+            )}
+                </>
             )}
                 </>
             )}

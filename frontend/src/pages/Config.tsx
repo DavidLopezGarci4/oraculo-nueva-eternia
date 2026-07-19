@@ -189,6 +189,12 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
     const [syncingExcel, setSyncingExcel] = useState(false);
     const [runningMaintenance, setRunningMaintenance] = useState(false);
     const cancelDownloadRef = React.useRef(false);
+    const [forceRender, setForceRender] = useState(0);
+
+    useEffect(() => {
+        // Lectura defensiva para TypeScript
+        void forceRender;
+    }, [forceRender]);
 
     // Vintage Sword Light Ray Calibrator States
     const [showCalibrator, setShowCalibrator] = useState(false);
@@ -2118,7 +2124,41 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                 </div>
                             </div>
 
-                            {/* Calibradores de Haces de Luz */}
+                             {/* Rendimiento e Inteligencia Visual */}
+                             <div className="glass border border-white/10 p-6 rounded-3xl space-y-4 bg-white/5" data-render={forceRender}>
+                                 <div className="flex items-center gap-3 text-brand-secondary font-bold uppercase tracking-widest text-xs mb-2">
+                                     <Sparkles className="h-4 w-4" />
+                                     Rendimiento y Efectos Visuales
+                                 </div>
+                                 <div className="space-y-4">
+                                     <p className="text-[10px] text-white/65 font-bold uppercase leading-tight">
+                                         Activa o desactiva las animaciones avanzadas y efectos 3D de las tarjetas de figuras para optimizar el rendimiento en dispositivos móviles.
+                                     </p>
+                                     <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5">
+                                         <span className="text-xs text-white/70">
+                                             Efectos Hover 3D e Iluminación Neón
+                                         </span>
+                                         <button
+                                             type="button"
+                                             onClick={() => {
+                                                 const current = localStorage.getItem('motu_premium_effects') !== 'false';
+                                                 localStorage.setItem('motu_premium_effects', current ? 'false' : 'true');
+                                                 window.dispatchEvent(new Event('storage'));
+                                                 setForceRender(prev => prev + 1);
+                                             }}
+                                             className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                                                 localStorage.getItem('motu_premium_effects') !== 'false'
+                                                     ? 'bg-brand-secondary text-white shadow-lg'
+                                                     : 'bg-white/5 text-white/60 hover:text-white'
+                                             }`}
+                                         >
+                                             {localStorage.getItem('motu_premium_effects') !== 'false' ? 'Activados' : 'Clásicos'}
+                                         </button>
+                                     </div>
+                                 </div>
+                             </div>
+
+                             {/* Calibradores de Haces de Luz */}
                             {isAdmin && (
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {/* Calibrador de Haces de Luz Moderno (Visualmente Skeletor) */}

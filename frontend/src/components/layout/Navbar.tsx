@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Search, Menu, Repeat, Eye, EyeOff, Volume2, VolumeX } from 'lucide-react';
-import masterRoleImg from '../../assets/role-master.png';
-import guardianRoleImg from '../../assets/role-guardian.png';
+import masterRoleImg from '../../assets/role-master.webp';
+import guardianRoleImg from '../../assets/role-guardian.webp';
 
 import { type Hero } from '../../api/admin';
 

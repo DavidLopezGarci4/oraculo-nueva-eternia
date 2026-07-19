@@ -14,7 +14,10 @@ export const FoilTiltCard: React.FC<FoilTiltCardProps> = ({ children, className 
     const [foilY, setFoilY] = useState(50);
     const [isHovered, setIsHovered] = useState(false);
 
+    const premiumEffects = localStorage.getItem('motu_premium_effects') !== 'false';
+
     const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (!premiumEffects) return;
         if (!cardRef.current) return;
         const card = cardRef.current;
         const rect = card.getBoundingClientRect();
@@ -43,12 +46,12 @@ export const FoilTiltCard: React.FC<FoilTiltCardProps> = ({ children, className 
     };
 
     // 3D Tilt perspective transform style
-    const transformStyle = {
+    const transformStyle = premiumEffects ? {
         transform: isHovered 
             ? `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)` 
             : 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)',
         transition: isHovered ? 'none' : 'transform 0.5s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.5s ease',
-    };
+    } : {};
 
     return (
         <div
@@ -62,7 +65,7 @@ export const FoilTiltCard: React.FC<FoilTiltCardProps> = ({ children, className 
             {children}
             
             {/* Holographic shimmer effect layer */}
-            {isSpecial && isHovered && (
+            {isSpecial && isHovered && premiumEffects && (
                 <div 
                     className="absolute inset-0 pointer-events-none mix-blend-color-dodge z-30 opacity-30 transition-opacity duration-300"
                     style={{

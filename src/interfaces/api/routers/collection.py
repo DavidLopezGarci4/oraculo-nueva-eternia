@@ -53,7 +53,12 @@ router = APIRouter(tags=["collection"])
 
 
 @router.get("/api/collection", response_model=List[ProductOutput])
-async def get_collection(user_id: int, is_vintage: bool = False):
+async def get_collection(
+    user_id: int, 
+    is_vintage: bool = False,
+    limit: Optional[int] = None,
+    offset: Optional[int] = None
+):
     from src.application.services.valuation_service import ValuationService
 
     with SessionCloud() as db:
@@ -117,6 +122,11 @@ async def get_collection(user_id: int, is_vintage: bool = False):
                     is_vintage=product.is_vintage or False,
                 )
             )
+
+        if offset is not None or limit is not None:
+            start = offset or 0
+            end = start + limit if limit is not None else len(output_list)
+            return output_list[start:end]
 
         return output_list
 

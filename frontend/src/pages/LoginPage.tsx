@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { User, Lock, ArrowRight, RefreshCw } from 'lucide-react';
-import entranceBg from '../assets/Entrance_prod.png';
+import entranceBg from '../assets/Entrance_prod.webp';
 import axios from 'axios';
 
 interface LoginPageProps {

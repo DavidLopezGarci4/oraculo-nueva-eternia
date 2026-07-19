@@ -43,9 +43,19 @@ export interface Product {
     purgatory_match_count?: number;
 }
 
-export const getCollection = async (userId: number, isVintage?: boolean): Promise<Product[]> => {
+export const getCollection = async (
+    userId: number, 
+    isVintage?: boolean,
+    limit?: number,
+    offset?: number
+): Promise<Product[]> => {
     const response = await axios.get(`${API_BASE_URL}/collection`, {
-        params: { user_id: userId, is_vintage: isVintage }
+        params: { 
+            user_id: userId, 
+            is_vintage: isVintage,
+            limit,
+            offset
+        }
     });
     return response.data;
 };

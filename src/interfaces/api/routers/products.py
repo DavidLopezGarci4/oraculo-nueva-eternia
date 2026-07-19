@@ -88,7 +88,12 @@ def get_purgatory_counts(db) -> dict[int, int]:
 
 
 @router.get("/api/products", response_model=List[ProductOutput])
-async def get_products(is_vintage: bool = False, shop: Optional[str] = None):
+async def get_products(
+    is_vintage: bool = False, 
+    shop: Optional[str] = None,
+    limit: Optional[int] = None,
+    offset: Optional[int] = None
+):
     with SessionCloud() as db:
         subq = (
             select(OfferModel.product_id, func.min(OfferModel.price).label("min_price"))
@@ -140,6 +145,11 @@ async def get_products(is_vintage: bool = False, shop: Optional[str] = None):
                 po.best_p2p_price = best_offer.price
                 po.best_p2p_source = best_offer.shop_name
             final_products.append(po)
+
+        if offset is not None or limit is not None:
+            start = offset or 0
+            end = start + limit if limit is not None else len(final_products)
+            return final_products[start:end]
 
         return final_products
 

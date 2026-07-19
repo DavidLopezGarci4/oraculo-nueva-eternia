@@ -50,7 +50,7 @@ class ProductModel(Base):
     image_hash: Mapped[Optional[str]] = mapped_column(String, index=True, nullable=True) # Perceptual Hash for visual dedupe
     master_image_hash: Mapped[Optional[str]] = mapped_column(String, nullable=True) # ActionFigure411 reference hash
     
-    is_vintage: Mapped[Optional[bool]] = mapped_column(Boolean, default=False, nullable=True)
+    is_vintage: Mapped[Optional[bool]] = mapped_column(Boolean, default=False, nullable=True, index=True)
     
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
@@ -84,7 +84,7 @@ class OfferModel(Base):
     price: Mapped[float] = mapped_column(Float)
     currency: Mapped[str] = mapped_column(String, default="EUR")
     url: Mapped[str] = mapped_column(String, index=True)
-    is_available: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_available: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
     last_seen: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
     
     is_vintage: Mapped[Optional[bool]] = mapped_column(Boolean, default=False, nullable=True)
@@ -98,7 +98,7 @@ class OfferModel(Base):
     # Analytics
     min_price: Mapped[float] = mapped_column(Float, default=0.0)
     max_price: Mapped[float] = mapped_column(Float, default=0.0)
-    source_type: Mapped[str] = mapped_column(String, default="Retail") # Retail, Peer-to-Peer
+    source_type: Mapped[str] = mapped_column(String, default="Retail", index=True) # Retail, Peer-to-Peer
     
     # Validation flags
     validation_status: Mapped[str] = mapped_column(String, default="VALIDATED")

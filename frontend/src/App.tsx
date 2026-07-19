@@ -1,23 +1,25 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import Sidebar from './components/layout/Sidebar';
 import Navbar from './components/layout/Navbar';
 import ErrorBoundary from './components/ErrorBoundary';
-import Catalog from './pages/Catalog';
-import Collection from './pages/Collection';
-import Purgatory from './pages/Purgatory';
-import Dashboard from './pages/Dashboard';
-import Config from './pages/Config';
-import Auctions from './pages/Auctions';
-import VintageMiscellaneous from './pages/VintageMiscellaneous';
 import ShieldBypass from './components/ShieldBypass';
 import MasterLogin from './components/auth/MasterLogin';
-import LoginPage from './pages/LoginPage';
 import { getUserSettings, type Hero } from './api/admin';
 import PowerSwordLoader from './components/ui/PowerSwordLoader';
-import Showcase from './pages/Showcase';
 import axios from 'axios';
 import CacheWelcomeModal from './components/ui/CacheWelcomeModal';
+
+// Lazy-Loaded Page Components for Code Splitting
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Catalog = lazy(() => import('./pages/Catalog'));
+const Collection = lazy(() => import('./pages/Collection'));
+const Purgatory = lazy(() => import('./pages/Purgatory'));
+const Config = lazy(() => import('./pages/Config'));
+const Auctions = lazy(() => import('./pages/Auctions'));
+const VintageMiscellaneous = lazy(() => import('./pages/VintageMiscellaneous'));
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const Showcase = lazy(() => import('./pages/Showcase'));
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -255,7 +257,9 @@ function App() {
   if (showcaseUsername) {
     return (
       <ErrorBoundary>
-        <Showcase username={showcaseUsername} />
+        <Suspense fallback={<PowerSwordLoader variant="fullScreen" text="Cargando Exhibición..." />}>
+          <Showcase username={showcaseUsername} />
+        </Suspense>
       </ErrorBoundary>
     );
   }
@@ -331,57 +335,59 @@ function App() {
           <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-24 md:pb-6 scroll-smooth">
             <div className="max-w-7xl mx-auto w-full">
               <ErrorBoundary>
-                {visitedTabs['dashboard'] && (
-                  <div className={activeTab === 'dashboard' ? '' : 'hidden'}>
-                    <Dashboard 
-                      user={currentUser} 
-                    />
-                  </div>
-                )}
-                {visitedTabs['catalog'] && (
-                  <div className={activeTab === 'catalog' ? '' : 'hidden'}>
-                    <Catalog user={currentUser} searchQuery={searchQuery} isIncognito={isIncognito} />
-                  </div>
-                )}
-                {visitedTabs['eternia'] && (
-                  <div className={activeTab === 'eternia' ? '' : 'hidden'}>
-                    <Catalog user={currentUser} isVintageOnly={true} searchQuery={searchQuery} isIncognito={isIncognito} />
-                  </div>
-                )}
-                {visitedTabs['auctions'] && (
-                  <div className={activeTab === 'auctions' ? '' : 'hidden'}>
-                    <Auctions user={currentUser} />
-                  </div>
-                )}
-                {visitedTabs['collection'] && (
-                  <div className={activeTab === 'collection' ? '' : 'hidden'}>
-                    <Collection user={currentUser} searchQuery={searchQuery} isIncognito={isIncognito} />
-                  </div>
-                )}
-                {visitedTabs['fortaleza_vintage'] && (
-                  <div className={activeTab === 'fortaleza_vintage' ? '' : 'hidden'}>
-                    <Collection user={currentUser} isVintageOnly={true} searchQuery={searchQuery} isIncognito={isIncognito} />
-                  </div>
-                )}
-                {visitedTabs['vintage_miscellaneous'] && (
-                  <div className={activeTab === 'vintage_miscellaneous' ? '' : 'hidden'}>
-                    <VintageMiscellaneous user={currentUser} />
-                  </div>
-                )}
-                {visitedTabs['purgatory'] && (
-                  <div className={activeTab === 'purgatory' ? '' : 'hidden'}>
-                    <Purgatory />
-                  </div>
-                )}
-                {visitedTabs['settings'] && (
-                  <div className={activeTab === 'settings' ? '' : 'hidden'}>
-                    <Config
-                      user={currentUser}
-                      onUserUpdate={() => fetchUser(activeUserId)}
-                      onIdentityChange={handleIdentityChange}
-                    />
-                  </div>
-                )}
+                <Suspense fallback={<PowerSwordLoader variant="fullScreen" text="Canalizando Poder..." />}>
+                  {visitedTabs['dashboard'] && (
+                    <div className={activeTab === 'dashboard' ? '' : 'hidden'}>
+                      <Dashboard 
+                        user={currentUser} 
+                      />
+                    </div>
+                  )}
+                  {visitedTabs['catalog'] && (
+                    <div className={activeTab === 'catalog' ? '' : 'hidden'}>
+                      <Catalog user={currentUser} searchQuery={searchQuery} isIncognito={isIncognito} />
+                    </div>
+                  )}
+                  {visitedTabs['eternia'] && (
+                    <div className={activeTab === 'eternia' ? '' : 'hidden'}>
+                      <Catalog user={currentUser} isVintageOnly={true} searchQuery={searchQuery} isIncognito={isIncognito} />
+                    </div>
+                  )}
+                  {visitedTabs['auctions'] && (
+                    <div className={activeTab === 'auctions' ? '' : 'hidden'}>
+                      <Auctions user={currentUser} />
+                    </div>
+                  )}
+                  {visitedTabs['collection'] && (
+                    <div className={activeTab === 'collection' ? '' : 'hidden'}>
+                      <Collection user={currentUser} searchQuery={searchQuery} isIncognito={isIncognito} />
+                    </div>
+                  )}
+                  {visitedTabs['fortaleza_vintage'] && (
+                    <div className={activeTab === 'fortaleza_vintage' ? '' : 'hidden'}>
+                      <Collection user={currentUser} isVintageOnly={true} searchQuery={searchQuery} isIncognito={isIncognito} />
+                    </div>
+                  )}
+                  {visitedTabs['vintage_miscellaneous'] && (
+                    <div className={activeTab === 'vintage_miscellaneous' ? '' : 'hidden'}>
+                      <VintageMiscellaneous user={currentUser} />
+                    </div>
+                  )}
+                  {visitedTabs['purgatory'] && (
+                    <div className={activeTab === 'purgatory' ? '' : 'hidden'}>
+                      <Purgatory />
+                    </div>
+                  )}
+                  {visitedTabs['settings'] && (
+                    <div className={activeTab === 'settings' ? '' : 'hidden'}>
+                      <Config
+                        user={currentUser}
+                        onUserUpdate={() => fetchUser(activeUserId)}
+                        onIdentityChange={handleIdentityChange}
+                      />
+                    </div>
+                  )}
+                </Suspense>
               </ErrorBoundary>
             </div>
           </main>
