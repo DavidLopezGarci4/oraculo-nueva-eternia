@@ -29,10 +29,25 @@ if ($null -eq $ChromePath) {
 }
 
 Write-Host "✨ Google Chrome encontrado en: $ChromePath" -ForegroundColor Green
-Write-Host "🚀 Iniciando Chrome en el puerto 9222 (perfil depurador en C:\temp\chrome_dev)..." -ForegroundColor Yellow
+# Definir directorio temporal dentro de scratch en el espacio de trabajo para evitar fallos de permisos en C:\
+$UserDataDir = Join-Path $PSScriptRoot "scratch\chrome_dev"
+if (!(Test-Path $UserDataDir)) {
+    New-Item -ItemType Directory -Path $UserDataDir -Force | Out-Null
+}
 
-# Lanzar Chrome como un proceso independiente
-Start-Process -FilePath $ChromePath -ArgumentList "--remote-debugging-port=9222", "--user-data-dir=C:\temp\chrome_dev"
+Write-Host "🚀 Iniciando Chrome en el puerto 9222 (perfil depurador en $UserDataDir)..." -ForegroundColor Yellow
+
+# Lanzar Chrome con flags de evasión de WAF (CloudFront/Cloudflare) y automatización controlada
+$ArgList = @(
+    "--remote-debugging-port=9222",
+    "--user-data-dir=$UserDataDir",
+    "--disable-blink-features=AutomationControlled",
+    "--no-first-run",
+    "--no-default-browser-check",
+    "--start-maximized"
+)
+
+Start-Process -FilePath $ChromePath -ArgumentList $ArgList
 
 Write-Host ""
 Write-Host "¡Chrome abierto con éxito!" -ForegroundColor Green

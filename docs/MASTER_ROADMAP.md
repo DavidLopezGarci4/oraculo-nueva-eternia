@@ -531,6 +531,7 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
   - [x] **Paginación y Scroll Infinito**: Añadida paginación (limit y offset) en el backend y `useInfiniteQuery` de React Query con Intersection Observer (`loadMoreRef`) en el frontend de Catálogo y Colección.
   - [x] **Búsqueda en Servidor**: Migrado el filtrado por término de búsqueda (`searchQuery`) al backend (FastAPI y SQLAlchemy) en el catálogo y colección, eliminando cuellos de botella de renderizado y asegurando búsquedas de precisión instantáneas.
   - [x] **Toggle de Rendimiento**: Añadido conmutador de efectos en Configuración que deshabilita los eventos del ratón 3D y brillo holográfico de las tarjetas para liberar GPU en móviles.
+  - [x] **Bypass de Evasión CDP**: Actualizado `launch_chrome_debug.ps1` incorporando flags de desactivación de automatización y reubicando el perfil de depuración a `scratch/` para erradicar bloqueos 403 de CloudFront y permisos en disco C:\.
   - [x] **Inteligencia y Radar**: Indexados los campos críticos en la DB local y ejecutado el script `scratch/recalculate_stats.py` para recalcular el percentil 25 de 519 productos, reactivando la inteligencia de oportunidades del Radar.
 
 ---
