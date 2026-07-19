@@ -410,14 +410,208 @@ Implementado en Configuración > Inventario, permite a David y administradores f
 ### 13.2 Ordenación por Fecha de Agregado en Fortaleza
 * **acquired_at Sorting**: Añadida la opción en Mi Fortaleza (Vintage y Origins) de ordenar figuras según el momento exacto en el que fueron capturadas, usando la fecha de creación en la tabla.
 * **UI de Bajo Perfil Responsiva**: Se actualizó la barra de herramientas del grid expandiendo a 3 columnas ("NOMBRE", "ID", "FECHA") con paddings compactos adaptados a dispositivos de hasta 320px de ancho.
+4. **Alimentación**: A las 02:00 AM, GitHub despierta por su cuenta, busca ofertas, actualiza Supabase, descarga el backup en Excel y lo sube de vuelta al código fuente.
+5. **Consumo**: Al despertar, abres `oraculo-eternia.duckdns.org` en tu móvil. Nginx verifica el SSL, el Frontend carga la UI desde caché y pide datos a FastAPI. FastAPI conecta con Supabase (donde GitHub dejó los datos nuevos de la noche) y te muestra las nuevas gangas, listas para ser validadas en el Purgatorio.
+
+---
+
+## 9. Ecosistema de Actores y Dependencias Externas
+
+Para que la aplicación viva, se requiere la colaboración de diferentes actores en dos entornos diferenciados: Local y Producción. A continuación, se detalla qué "fichas" intervienen en cada tablero y de qué aplicaciones web externas dependemos para no colapsar.
+
+### 9.1 Actores en Entorno Local (Modo Arca / Desarrollo)
+
+Cuando el arquitecto programa en su PC (Windows), este es el ecosistema activo:
+
+- **Tú (El Desarrollador/IA):** Edita código en VSCode o cursor.
+- **SQLite Local (`oraculo.db`):** El motor de base de datos de escritorio. Permite trabajar ultrarrápido y offline sin gastar cuota de la nube.
+- **Docker Compose Local (`docker-compose.yml`):**
+  - Contenedor *Frontend* (React con Vite exponiendo localhost:3001).
+  - Contenedor *Backend* (FastAPI en modo `--reload`, escuchando cambios en el código para reiniciarse en tiempo real).
+
+### 9.2 Actores y Servicios Activos en Producción (Dependencias Críticas)
+
+Para que el entorno en producción funcione de forma autónoma (mientras tú duermes o tu PC está apagado), **TODOS** estos servicios web/aplicaciones deben estar activos y sanos:
+
+1. **Oracle Cloud (OCI):**
+   - *Rol:* El músculo físico. Es el servidor ARM A1 que ejecuta el Docker de producción. Si tu tarjeta de crédito o cuenta de Oracle se suspende, la web se cae por completo.
+2. **Supabase (PostgreSQL Cloud):**
+   - *Rol:* La Fuente de Verdad. Almacena todos los usuarios, sesiones (RLS) y ofertas. Si el proyecto de Supabase se pausa (por inactividad o límites del plan Free), FastAPI lanzará errores 500 y no se podrá hacer login ni ver el catálogo.
+3. **DuckDNS:**
+   - *Rol:* Enrutamiento. Mantiene el nombre `oraculo-eternia.duckdns.org` apuntando a la IP pública de Oracle. Si la web de DuckDNS cae, el dominio no resolverá y los navegadores dirán "Sitio no encontrado".
+4. **GitHub (Repositorio y Actions):**
+   - *Rol:* Automatización e Historia. Alberga el código. Si los Runners gratuitos de GitHub se agotan, los "Daily Scans" nocturnos no se ejecutarán.
+5. **Telegram Bot API:**
+   - *Rol:* Comunicador. Los servidores de Telegram reciben los mensajes HTTP de FastAPI para enviarte alertas al móvil de *Mandatory Buy*.
+6. **Certbot (Let's Encrypt):**
+   - *Rol:* Identidad Segura. Otorga los candados verdes HTTPS gratis. Debe poder validar el puerto 80 cada 3 meses para renovarse automáticamente.
+
+### 9.3 Flujos de Actualización a Producción (Las 3 Vías)
+
+¿Cómo hago que un cambio en local aparezca en el móvil cuando entro a la web? Depende del tipo de cambio:
+
+#### Vía 1: Cambios en el Código (Nuevos Scrapers, Cambios Visuales en UI)
+
+1. Modificas el código en tu PC (VSCode/Local).
+2. Haces un `git commit` y `git push origin main` para enviarlo a GitHub.
+3. Te conectas por SSH al servidor de Oracle (`ssh opc@...`).
+4. Bajas el código nuevo: `git pull origin main`.
+5. Obligas a Docker a tragarse los cambios y reiniciar:
+
+   ```bash
+   sudo docker compose -f docker-compose.prod.yml up -d --build
+   ```
+
+#### Vía 2: Cambios en el Catálogo de Origen (Nuevas figuras anunciadas por Mattel)
+
+1. Actualizas tus listados / el scraper base lee `actionfigure411`.
+2. Desde la interfaz web en Producción, pulsas el botón **"Sincro Nexo Maestro"** en Configuración.
+3. El backend actualiza la nube (Supabase) al instante. Todos los móviles/PCs conectados a la web en producción verán las nuevas figuras inmediatamente sin tocar código.
+
+#### Vía 3: Modificaciones Automáticas (Scraping de Ofertas Diarias)
+
+1. No haces nada.
+2. A las 02:00 AM, GitHub ejecuta el código.
+3. Encuentra nuevos precios en Wallapop, y hace `INSERT` directamente a la base de datos de Supabase.
+4. Cuando entras en producción al día siguiente, el Frontend pide los datos a FastAPI, y FastAPI lee Supabase, mostrando los ítems en el Purgatorio. ¡Producción se ha actualizado de forma invisible y autónoma!
+
+### 9.4 Troubleshootings Críticos (Emergencias)
+
+#### A) Pérdida de Acceso SSH a Oracle Cloud (Firewall/Llaves rotas)
+
+Si pierdes el acceso a tu servidor OCI a través de tu terminal de Windows por problemas con las llaves SSH o el firewall, **no reinstales la máquina**. Usa la consola de emergencia del navegador:
+
+1. Entra en `cloud.oracle.com` y ve a la página de tu instancia `nueva_eternia_produccion` (o `oraculo-eternia`).
+2. Baja haciendo scroll hasta el apartado **"Recursos"** (en la columna inferior izquierda de la página de la instancia, no en el menú global).
+3. Haz clic en **"Conexiones de consola"**.
+4. Haz clic en **"Iniciar conexión de consola en Cloud Shell"**.
+5. Se abrirá una terminal negra en la parte inferior de tu navegador web conectada directamente al corazón del servidor, saltándose las reglas SSH. Desde ahí podrás arreglar los permisos, hacer `git pull` o relanzar Docker.
+
+#### B) Advertencia Crítica sobre el Despliegue Docker (Prod vs Local-Prod)
+
+En la raíz del proyecto existen dos archivos de orquestación de producción. Es vital **no confundirlos** al ejecutar comandos en la terminal del servidor:
+
+- ❌ **`docker-compose.local-prod.yml`**: Esta versión está mutilada a propósito. **NO TIENE SSL (HTTPS)**. Está diseñada únicamente para que puedas probar la compilación de la imagen de producción en tu ordenador local de Windows sin que Nginx se queje por no encontrar los certificados de Let's Encrypt.
+- ✅ **`docker-compose.prod.yml`**: Este es el **ÚNICO** archivo que debe ejecutarse en Oracle Cloud. Incluye los volúmenes de *Certbot* para encriptar la web y garantizar su seguridad pública.
+Si por error levantas el `local-prod.yml` en la nube, la web cargará, pero los navegadores la bloquearán por insegura al carecer de certificados SSL.
+
+## 9.5 Protocolo de Actualización Rápida (PowerShell)
+
+Para actualizar la web desde tu ordenador de forma efectiva, sigue estos pasos:
+
+### 1. Acceso al Servidor
+
+Ejecuta esto en tu PowerShell sustituyendo tu IP:
+
+ssh -i "C:\Users\dace8\OneDrive\Documentos\Antigravity\oraculo-nueva-eternia\tu_llave.key" opc@TU_IP_PUBLICA
+2. Actualización Estándar (Si no hay conflictos)
+Una vez dentro del servidor:
+
+cd ~/oraculo-nueva-eternia && git pull origin main && sudo docker compose -f docker-compose.prod.yml up -d --build
+3. Actualización Forzada (Si hay errores de Git o archivos modificados)
+Usa este comando si el git pull falla o quieres limpiar el servidor y forzar la versión de GitHub:
+
+cd ~/oraculo-nueva-eternia && git reset --hard origin/main && git pull origin main && sudo docker compose -f docker-compose.prod.yml up -d --build
+
+---
+
+## 10. Segregación de Catálogos e Inteligencia Retro (Eternia Vintage)
+
+El Oráculo ahora cuenta con una arquitectura de catálogos e inventario estrictamente segregados mediante la bandera lógica `is_vintage` a nivel de base de datos y API:
+
+### 10.1 Estructura Relacional y Aislamiento de Datos
+* **Segregación Física/Lógica:** Las figuras y ofertas de **Eternia Vintage (Clásicos de los 80)** se diferencian estrictamente de **Nueva Eternia (Origins/Moderna)** mediante la bandera `is_vintage` en la tabla `products` y `offers`.
+* **Aislamiento en Posesiones:** Las posesiones de colección del usuario se dividen entre "Mi Fortaleza" (Nueva Eternia) y "Mi Fortaleza Vintage" (Eternia). Cualquier cambio en la catalogación de una figura (por ejemplo, correcciones de catalogaciones erróneas) migra de forma atómica e instantánea las posesiones de los usuarios al santuario correcto.
+
+### 10.2 Flujos del Purgatorio Blindados (Anti-Regresión)
+* **Match Estándar (Moderna):** Se eliminó la auto-promoción a vintage basada en análisis de texto sobre productos existentes. Al vincular ofertas en el drawer moderno de Nueva Eternia, el backend respeta de forma inmutable el estado `is_vintage` pre-definido en el catálogo por el Arquitecto, erradicando falsos positivos en figuras con palabras descriptivas como `"Skeletor (Vintage Sculpt)"`.
+* **Segregación de Buscadores en Caliente:**
+  * *Vincular de Nueva Eternia:* Tanto el buscador manual como el motor de coincidencia del Oráculo filtran estrictamente por `!is_vintage`.
+  * *Vincular de Eternia:* Se implementó un algoritmo inteligente de sugerencias vintage (`vintageOracleSuggestions`) que filtra sugerencias por `is_vintage === true`, con un fallback reactivo al catálogo general vintage consultado desde `/api/products?is_vintage=true`.
+
+### 10.3 Algoritmo de Ordenación Híbrida Retro (Eternia)
+El catálogo de **Eternia Vintage** utiliza un ordenamiento diferencial jerarquizado en dos reglas que prevalecen secuencialmente:
+1. **Regla Prevalente (Ofertas Activas Primero):** Se prioriza y coloca delante de todo cualquier muñeco que disponga de al menos una oferta activa en el catálogo (`best_p2p_price > 0` o detectadas por `hasMarketIntel(product.id)`). Esto garantiza que las figuras con oportunidades inmediatas de compra lideren la interfaz.
+2. **Regla Secundaria (Acumulación en Purgatorio y ID Fallback):** El resto de ítems sin ofertas activas se muestran a continuación, ordenados de **mayor a menor** según el conteo de coincidencias pendientes esperando en el Purgatorio (`purgatory_match_count`). Si persisten empates (por ejemplo, muñecos con 0 ofertas y 0 coincidencias), se ordenan de **menor a mayor por su número de ID interno de la base de datos (`a.id - b.id`)** dentro de la colección.
+
+---
+
+## 11. Bazar del Oráculo (Lotes y Varios Retro)
+
+Para gestionar adecuadamente ofertas que no corresponden a una única figura (como lotes de juguetes clásicos, packs variados o accesorios sueltos de Masters of the Universe), el sistema incorpora un circuito especializado:
+
+### 11.1 Modelo y Base de Datos
+* **Tabla `vintage_miscellaneous`**: Almacena ofertas de lotes con título, precio, procedencia, URL del anuncio original, imagen y notas.
+* **Migración Automática**: El motor migrador de base de datos detecta y crea la tabla en el próximo arranque.
+
+### 11.2 Flujo Operativo en el Purgatorio
+1. **Desvío**: El administrador Master puede presionar "Enviar a Miscelánea (Lote / Varios)" desde el modal de emparejamiento.
+2. **Registro**: El backend extrae la oferta de la cola del Purgatorio, la inyecta en la tabla de miscelánea y registra la acción `LINKED_MISCELLANEOUS` en `OfferHistoryModel`.
+3. **Bazar del Oráculo**: Los lotes se presentan en una galería glassmorphic exclusiva en la pestaña **Miscelánea** de Eternia Vintage.
+4. **Reversión**: Los administradores Master disponen de un botón para devolver el lote a la cola del Purgatorio (`revert_miscellaneous_item`), registrando el evento `REVERTED_MISCELLANEOUS`.
+
+
+---
+
+## 12. Normalización de URLs, Filtros de Relevancia MOTU y Calibración de Haces de Luz
+
+La versión 2.2.0 del Oráculo implementa un blindaje de calidad de datos en el Purgatorio y una experiencia visual altamente calibrable en el Frontend:
+
+### 12.1 Normalización Universal de URLs (Deduplicación)
+Para evitar la duplicación de ofertas en el Purgatorio debido a parámetros de tracking o barras diagonales finales, se ha implementado la normalización universal mediante la función 
+ormalize_url(url: str):
+* **Remoción de parámetros**: Elimina todos los query parameters de tracking (ej. ?utm_source=..., ?utm_medium=...).
+* **Sanación de barras**: Asegura que las URLs terminen sin barras diagonales / redundantes.
+* **Integridad de Datos**: Tanto los scrapers en segundo plano (pipeline.py) como la extensión de navegador para importaciones manuales normalizan la URL antes de intentar la inserción en base de datos.
+* **Manejo de Colisiones**: El backend intercepta colisiones de clave única en base de datos (IntegrityError) y actualiza o de-duplica los registros correspondientes sin perturbar el flujo de usuario.
+
+### 12.2 Filtro de Relevancia MOTU (Inteligencia del Purgatorio)
+El pipeline incorpora un filtro automático de relevancia (validate_motu_relevance) que analiza títulos y descripciones de las ofertas extraídas:
+* **Lista de Exclusión (Blacklist)**: Se descartan automáticamente ofertas de marcas ajenas al foco de la aplicación como Funko, pop (palabra completa), Big jim, masterverse, gi joe, star wars, Action man, madelman, geyperman, max steel y Barbie.
+* **Excepciones para Crossovers Oficiales**: Marcas que tienen crossovers oficiales con la línea Origins (ej. Transformers, Thundercats, stranger things, TMNT, Turtles) no son excluidas de forma fulminante si vienen acompañadas de términos de He-Man/MOTU (ej. motu, origins, grayskull, he-man). Si no los contienen, se descartan de forma estándar.
+* **Soporte Multilingüe**: Incluye soporte para traducciones europeas como la francesa maitres de l'univers (y variantes sin apóstrofe).
+* **Descarte Automático a Lista Negra**: Los ítems descartados se guardan directamente en la lista negra (blackcluded_items) con el motivo correspondiente, impidiendo que vuelvan a saturar la cola del Purgatorio.
+
+### 12.3 Limpieza Proactiva Global del Purgatorio
+Al iniciar y finalizar las incursiones de scraping o las importaciones manuales, el worker ejecuta la rutina clean_purgatory_globally(). Esta rutina elimina del buffer de pendientes (PendingMatchModel) cualquier oferta cuya URL ya figure en el catálogo principal (offers), en la lista negra (blackcluded_items) o en la sección del Bazar del Oráculo (vintage_miscellaneous), manteniendo la base de datos libre de residuos.
+
+### 12.4 Calibración Dinámica de Haces de Luz Vintage
+El componente de carga interactiva PowerSwordLoader.tsx se ha rediseñado para admitir coordenadas dinámicas para la animación de haces de luz vectoriales:
+* **Proyección Vectorial**: A partir de la posición de la empuñadura (GuardX, GuardY) y la punta de la espada (TipX, TipY), el cargador calcula vectorialmente la inclinación y longitud de los haces en tiempo real.
+* **Calibrador Interactivo**: Se ha añadido un calibrador en la sección de Ajustes (Config.tsx) con deslizadores para ajustar los ejes X e Y de guard y tip de forma visual con guías de depuración superpuestas. Los valores calibrados se persisten en el localStorage del cliente.
+* **Carga de Sección Vintage**: Se pre-configuraron las coordenadas óptimas para el asset de He-Man ddg-heman.png utilizado en las pantallas de carga de las páginas Vintage: empuñadura en (79.5, 66.5) y punta en (73.0, 20.5).
+
+### 12.5 Compactación Visual de la Interfaz Core
+Para optimizar el espacio en pantallas de ordenadores y dispositivos móviles y reducir el desplazamiento vertical, se ha rediseñado la rejilla de tarjetas en **Catálogo**, **Mi Fortaleza** y **Mercader de Eternos**:
+* **Tarjetas y Dock**: Compactación general de márgenes, rellenos y tipografías. El dock de botones inferiores se unificó a un tamaño de h-7 w-7 con iconos de h-3.5 w-3.5.
+* **Botón Añadir (+)**: Se incrementó el contraste del botón de agregar en figuras no deseadas/poseídas usando el color temático de la sección (celeste/azul en moderno, ámbar/dorado en vintage) al 60% de opacidad en reposo y 100% al pasar el cursor (hover).
+* **Cabeceras de Ordenación y Contadores**: Unificación de las cabeceras del panel con selector de tipo de ordenamiento, indicador de dirección de ordenación reactivo (ArrowUp / ArrowDown), y contador del total de ítems con iconografía temática de color.
+* **Limpieza**: Remoción del icono de la campana de notificaciones de la barra superior (Navbar.tsx) y eliminación de su código muerto.
+
+---
+
+## 13. Nexo de Fusión Divina, Scroll Infinito y Optimización de Rendimiento Extremo
+
+La versión 2.3.0 consolida el rendimiento y la consistencia de datos de la plataforma bajo incursiones y colecciones densas:
+
+### 13.1 Nexo de Fusión Divina (Consolidación de Identidad)
+Implementado en Configuración > Inventario, permite a David y administradores fusionar ítems del catálogo que se duplicaron con nombres temporales (ej. `VINT-` o `ORIG-` creadas en búsquedas manuales) con sus figuras definitivas:
+* **Transferencia de Ofertas**: Reasocia automáticamente todas las ofertas registradas bajo el ítem de origen hacia el de destino.
+* **Coherencia is_vintage**: Actualiza dinámicamente la propiedad `is_vintage` de todas las ofertas que se transfieren en base al flag del producto destino.
+* **Eliminación Atómica**: El producto temporal original de origen se elimina de forma segura de la base de datos tras confirmar la transferencia en una transacción SQL única.
+
+### 13.2 Ordenación por Fecha de Agregado en Fortaleza
+* **acquired_at Sorting**: Añadida la opción en Mi Fortaleza (Vintage y Origins) de ordenar figuras según el momento exacto en el que fueron capturadas, usando la fecha de creación en la tabla.
+* **UI de Bajo Perfil Responsiva**: Se actualizó la barra de herramientas del grid expandiendo a 3 columnas ("NOMBRE", "ID", "FECHA") con paddings compactos adaptados a dispositivos de hasta 320px de ancho.
 
 ### 13.3 Optimización de Assets y Carga (Compresión WebP & Code Splitting)
 * **WebP Asset Optimization**: Conversión del fondo de He-Man y pantallas de carga a formato `.webp` de compresión sin pérdidas, reduciendo el peso de assets visuales de **7.5 MB a menos de 650 KB** (un ahorro de red del **94%**).
 * **Vite Code Splitting**: Lazificación de los componentes de página principales en `App.tsx` usando `React.lazy` y envoltorios `<React.Suspense>`. El bundle de carga JavaScript inicial disminuye de **1.25 MB a menos de 200 KB**.
 
-### 13.4 Paginación y Scroll Infinito
+### 13.4 Paginación, Scroll Infinito y Búsqueda en Servidor
 * **limit & offset Backend**: Modificados los endpoints `/api/products` y `/api/collection` para rebanar la base de datos local y remota en bloques fijos de 24 elementos.
 * **React Query useInfiniteQuery**: Reemplazados los fetches estáticos del frontend por consultas infinitas acopladas a un Intersection Observer (`loadMoreRef`) al pie del grid para disparar de forma transparente la carga progresiva.
+* **Búsqueda en Servidor**: Añadido el parámetro de búsqueda opcional `search` a los endpoints `/api/products` y `/api/collection` de FastAPI. El backend realiza un filtrado directo en la base de datos (mediante cláusulas `ilike` en SQLAlchemy) comparando contra el nombre, identificador de figura, UPC y ASIN, garantizando que cualquier búsqueda devuelva resultados precisos e instantáneos de todo el catálogo sin requerir cargas de scroll previas.
 
 ### 13.5 Conmutador de Rendimiento
 Para salvaguardar la batería y procesador en dispositivos móviles de gama baja, se inyectó una tarjeta de "Rendimiento y Efectos Visuales" en Configuración. Persiste un flag en `localStorage` que deshabilita los cálculos vectoriales 3D e iluminación holográfica neón en reposo de las tarjetas `FoilTiltCard` en modo clásico.

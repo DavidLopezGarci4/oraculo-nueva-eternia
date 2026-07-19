@@ -211,11 +211,14 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
         isLoading: isLoadingProducts,
         isError: isErrorProducts
     } = useInfiniteQuery<Product[]>({
-        queryKey: ['products-infinite', isVintageOnly, selectedShopFilter],
+        queryKey: ['products-infinite', isVintageOnly, selectedShopFilter, searchQuery],
         queryFn: async ({ pageParam = 0 }) => {
             let url = `/api/products?is_vintage=${isVintageOnly ? 'true' : 'false'}&limit=24&offset=${pageParam}`;
             if (selectedShopFilter) {
                 url += `&shop=${encodeURIComponent(selectedShopFilter)}`;
+            }
+            if (searchQuery) {
+                url += `&search=${encodeURIComponent(searchQuery)}`;
             }
             const response = await axios.get(url);
             return response.data;

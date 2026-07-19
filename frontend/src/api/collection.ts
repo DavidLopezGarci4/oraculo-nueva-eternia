@@ -47,14 +47,16 @@ export const getCollection = async (
     userId: number, 
     isVintage?: boolean,
     limit?: number,
-    offset?: number
+    offset?: number,
+    search?: string
 ): Promise<Product[]> => {
     const response = await axios.get(`${API_BASE_URL}/collection`, {
         params: { 
             user_id: userId, 
             is_vintage: isVintage,
             limit,
-            offset
+            offset,
+            search
         }
     });
     return response.data;

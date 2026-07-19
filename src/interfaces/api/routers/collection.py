@@ -57,7 +57,8 @@ async def get_collection(
     user_id: int, 
     is_vintage: bool = False,
     limit: Optional[int] = None,
-    offset: Optional[int] = None
+    offset: Optional[int] = None,
+    search: Optional[str] = None
 ):
     from src.application.services.valuation_service import ValuationService
 
@@ -78,6 +79,15 @@ async def get_collection(
             query = query.where(ProductModel.is_vintage == True)
         else:
             query = query.where(ProductModel.is_vintage.is_not(True))
+
+        if search:
+            search_term = f"%{search}%"
+            query = query.where(
+                ProductModel.name.ilike(search_term) |
+                ProductModel.figure_id.ilike(search_term) |
+                ProductModel.upc.ilike(search_term) |
+                ProductModel.asin.ilike(search_term)
+            )
 
         results = db.execute(query).all()
 

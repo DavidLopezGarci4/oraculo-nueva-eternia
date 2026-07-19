@@ -151,9 +151,9 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
         isLoading,
         isError
     } = useInfiniteQuery<Product[]>({
-        queryKey: ['collection-infinite', activeUserId, isVintageOnly],
+        queryKey: ['collection-infinite', activeUserId, isVintageOnly, searchQuery],
         queryFn: async ({ pageParam = 0 }) => {
-            return getCollection(activeUserId, isVintageOnly, 24, pageParam as number);
+            return getCollection(activeUserId, isVintageOnly, 24, pageParam as number, searchQuery);
         },
         initialPageParam: 0,
         getNextPageParam: (lastPage, allPages) => {

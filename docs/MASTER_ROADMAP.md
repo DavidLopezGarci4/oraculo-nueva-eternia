@@ -529,6 +529,7 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
   - [x] **Compresión WebP**: Creado `convert_assets.py` y convertidos todos los PNG pesados a WebP, reduciendo la transferencia de assets en un 94% (7.5 MB a 650 KB).
   - [x] **Code Splitting**: Configurado `React.lazy` y `Suspense` en [App.tsx], reduciendo el bundle JavaScript inicial de arranque a <200 KB.
   - [x] **Paginación y Scroll Infinito**: Añadida paginación (limit y offset) en el backend y `useInfiniteQuery` de React Query con Intersection Observer (`loadMoreRef`) en el frontend de Catálogo y Colección.
+  - [x] **Búsqueda en Servidor**: Migrado el filtrado por término de búsqueda (`searchQuery`) al backend (FastAPI y SQLAlchemy) en el catálogo y colección, eliminando cuellos de botella de renderizado y asegurando búsquedas de precisión instantáneas.
   - [x] **Toggle de Rendimiento**: Añadido conmutador de efectos en Configuración que deshabilita los eventos del ratón 3D y brillo holográfico de las tarjetas para liberar GPU en móviles.
   - [x] **Inteligencia y Radar**: Indexados los campos críticos en la DB local y ejecutado el script `scratch/recalculate_stats.py` para recalcular el percentil 25 de 519 productos, reactivando la inteligencia de oportunidades del Radar.
 
