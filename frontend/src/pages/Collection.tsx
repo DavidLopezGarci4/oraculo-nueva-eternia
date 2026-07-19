@@ -87,7 +87,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-    const [sortBy, setSortBy] = useState<'name' | 'id'>('name');
+    const [sortBy, setSortBy] = useState<'name' | 'id' | 'acquired_at'>('name');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
     const [conditionFilter, setConditionFilter] = useState<string>('all');
     const [selectedChips, setSelectedChips] = useState<string[]>([]);
@@ -190,6 +190,13 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                 comparison = a.name.localeCompare(b.name);
             } else if (sortBy === 'id') {
                 comparison = a.id - b.id;
+            } else if (sortBy === 'acquired_at') {
+                const dateA = a.acquired_at ? new Date(a.acquired_at).getTime() : 0;
+                const dateB = b.acquired_at ? new Date(b.acquired_at).getTime() : 0;
+                comparison = dateA - dateB;
+                if (comparison === 0) {
+                    comparison = a.name.localeCompare(b.name);
+                }
             }
 
             return sortOrder === 'asc' ? comparison : -comparison;
@@ -301,26 +308,37 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                             <option value="LOOSE" className="bg-[#121212] text-white">Loose</option>
                         </select>
 
-                        <div className="grid grid-cols-2 gap-1 sm:gap-2 p-1 rounded-xl bg-white/[0.03] border border-white/5 flex-1 sm:flex-initial">
+                        <div className="grid grid-cols-3 gap-1 sm:gap-2 p-1 rounded-xl bg-white/[0.03] border border-white/5 flex-1 sm:flex-initial">
                             <button
                                 onClick={() => setSortBy('name')}
-                                className={`py-1.5 px-4 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-[0.05em] transition-all ${
+                                className={`py-1.5 px-2.5 sm:px-4 rounded-lg text-[8px] sm:text-[10px] font-black uppercase tracking-[0.05em] transition-all ${
                                     sortBy === 'name' 
                                         ? (isVintageOnly ? 'bg-amber-500 text-white shadow-[0_0_15px_rgba(245,158,11,0.3)]' : 'bg-brand-primary text-white shadow-[0_0_15px_rgba(14,165,233,0.3)]') 
-                                        : 'text-white/20 hover:text-white/40'
+                                        : 'text-white/20 hover:text-white/45'
                                 }`}
                             >
                                 Nombre
                             </button>
                             <button
                                 onClick={() => setSortBy('id')}
-                                className={`py-1.5 px-4 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-[0.05em] transition-all ${
+                                className={`py-1.5 px-2.5 sm:px-4 rounded-lg text-[8px] sm:text-[10px] font-black uppercase tracking-[0.05em] transition-all ${
                                     sortBy === 'id' 
                                         ? (isVintageOnly ? 'bg-amber-500 text-white shadow-[0_0_15px_rgba(245,158,11,0.3)]' : 'bg-brand-primary text-white shadow-[0_0_15px_rgba(14,165,233,0.3)]') 
-                                        : 'text-white/20 hover:text-white/40'
+                                        : 'text-white/20 hover:text-white/45'
                                 }`}
                             >
                                 ID
+                            </button>
+                            <button
+                                onClick={() => setSortBy('acquired_at')}
+                                className={`py-1.5 px-2.5 sm:px-4 rounded-lg text-[8px] sm:text-[10px] font-black uppercase tracking-[0.05em] transition-all ${
+                                    sortBy === 'acquired_at' 
+                                        ? (isVintageOnly ? 'bg-amber-500 text-white shadow-[0_0_15px_rgba(245,158,11,0.3)]' : 'bg-brand-primary text-white shadow-[0_0_15px_rgba(14,165,233,0.3)]') 
+                                        : 'text-white/20 hover:text-white/45'
+                                }`}
+                                title="Ordenar por Fecha de Agregado"
+                            >
+                                Fecha
                             </button>
                         </div>
 
