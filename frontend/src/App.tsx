@@ -43,11 +43,35 @@ const PATH_TO_TAB: Record<string, string> = Object.fromEntries(
   Object.entries(TAB_PATHS).map(([tab, path]) => [path, tab])
 );
 
+// Fase AAA-4.4: al pasar el ratón por un enlace del sidebar, se dispara el
+// mismo import() dinámico que usa lazy() para esa página — el navegador ya
+// tiene el chunk descargado y parseado para cuando el usuario hace clic.
+const TAB_PREFETCH: Record<string, () => Promise<unknown>> = {
+  dashboard: () => import('./pages/Dashboard'),
+  catalog: () => import('./pages/Catalog'),
+  eternia: () => import('./pages/Catalog'),
+  auctions: () => import('./pages/Auctions'),
+  collection: () => import('./pages/Collection'),
+  fortaleza_vintage: () => import('./pages/Collection'),
+  vintage_miscellaneous: () => import('./pages/VintageMiscellaneous'),
+  purgatory: () => import('./pages/Purgatory'),
+  settings: () => import('./pages/Config'),
+};
+const _prefetched = new Set<string>();
+
 function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const activeTab = PATH_TO_TAB[location.pathname] ?? 'dashboard';
   const setActiveTab = (tab: string) => navigate(TAB_PATHS[tab] ?? '/');
+  const handlePrefetch = (tab: string) => {
+    if (_prefetched.has(tab)) return;
+    _prefetched.add(tab);
+    TAB_PREFETCH[tab]?.().catch(() => {
+      // Si falla (p.ej. sin red), lo intentamos de nuevo en el próximo hover.
+      _prefetched.delete(tab);
+    });
+  };
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentUser, setCurrentUser] = useState<Hero | null>(null);
@@ -335,6 +359,7 @@ function App() {
           onCloseMobile={() => setIsMobileMenuOpen(false)}
           user={currentUser}
           onLogout={handleLogout}
+          onPrefetch={handlePrefetch}
         />
 
         <div className="flex flex-1 flex-col overflow-hidden relative">
