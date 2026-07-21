@@ -19,7 +19,9 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     # Deployment environment: "development" | "production".
     # In "production", insecure default secrets abort startup (see guard below).
-    ENVIRONMENT: str = "development"
+    # Nombre "ENV" (no "ENVIRONMENT") para coincidir con la variable que ya
+    # usan docker-compose.prod.yml y docker-compose.local-prod.yml.
+    ENV: str = "development"
 
     # CORS allowed origins (comma-separated in .env, e.g. "https://oraculo-eternia.duckdns.org").
     CORS_ORIGINS: str = "http://localhost:3001,http://127.0.0.1:3001"
@@ -95,13 +97,13 @@ if settings.SCRAPERAPI_KEY:
 
 # ─── Production secret guard (Phase AAA-1.5) ──────────────────────────────────
 # Insecure default secrets are tolerated in development but MUST NOT reach
-# production. If ENVIRONMENT=production and any critical secret still holds its
+# production. If ENV=production and any critical secret still holds its
 # example value, abort startup instead of silently exposing a known key.
 _INSECURE_DEFAULTS = {
     "JWT_SECRET": "oraculo-jwt-secret-CHANGE-IN-PRODUCTION",
     "ORACULO_API_KEY": "eternia-shield-2026",
 }
-if settings.ENVIRONMENT.strip().lower() == "production":
+if settings.ENV.strip().lower() == "production":
     _leaked = [k for k, v in _INSECURE_DEFAULTS.items() if getattr(settings, k) == v]
     if _leaked:
         logger.critical(
