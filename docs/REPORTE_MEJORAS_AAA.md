@@ -6,6 +6,36 @@
 
 ---
 
+## Estado de ejecución (actualizado 2026-07-21)
+
+> Trabajado en la rama `refactor/aaa-uplift`, commit por commit, con `pytest` + `npm run build` + un security-review independiente verificando cada paso antes de avanzar. Si retomas este trabajo en otra máquina/sesión: `git log --oneline` en esa rama es la fuente de verdad, esto es solo un resumen de alto nivel.
+
+- ✅ **Fase 0 — Preparación:** hecha. Línea base de métricas en [BASELINE_METRICS.md](BASELINE_METRICS.md), `local_collection_dump.json` desindexado.
+- ✅ **Fase 1 — Seguridad crítica:** hecha por completo (1.1–1.9). Clave de admin fuera del bundle, JWT real en el frontend, IDOR cerrado en `collection.py`/`vault.py`/`logistics.py`, path traversal corregido, CORS restringido, guardián de secretos de producción, bypass de login eliminado, rate limiting en auth, cabeceras de seguridad en nginx.
+- ✅ **Fase 2 — Backend hardening:** hecha por completo.
+  - 2.1: auditoría de los 89 endpoints — encontró y cerró un IDOR grave adicional en `users.py` (activación no autenticada del escaparate público de cualquier usuario).
+  - 2.2: `response_model` estricto, alcance acotado a `users.py`/`dashboard.py` (los routers tocados en 2.1, verificables con certeza). El resto de routers queda pendiente, ver checklist abajo.
+  - 2.3: adopción real de Alembic preparada y probada localmente (migración idempotente + `docker-entrypoint.sh` + guía paso a paso en [ALEMBIC_ADOPTION.md](ALEMBIC_ADOPTION.md)) — **pendiente de que ejecutes tú los pasos en la máquina con Docker**, no se ha tocado ninguna base de datos real de producción.
+  - 2.4: errores de arranque silenciosos eliminados (`config.py`, `database_cloud.py`).
+  - 2.5: supervisión con reintentos del listener de Telegram.
+  - 2.6: dependencias fijadas en `requirements.txt`.
+  - **Bonus/fix crítico encontrado en el camino:** el guardián de secretos de producción de la Fase 1.5 no se activaba nunca en el despliegue real (`docker-compose.prod.yml` usa `ENV=production`, el código comprobaba `ENVIRONMENT`) — corregido.
+
+### Pendiente para ti (fuera de lo que yo puedo hacer)
+
+- [ ] Rotar `JWT_SECRET` / `ORACULO_API_KEY` en tu `.env` real y desplegar (ver `CREDENCIALES_LOCAL.md`, gitignored).
+- [ ] Ejecutar la guía de [ALEMBIC_ADOPTION.md](ALEMBIC_ADOPTION.md) en tu máquina con Docker.
+
+### Checklist de continuidad (2.2 — response_model pendiente en el resto de routers)
+
+`admin.py`, `products.py`, `purgatory.py`, `scrapers.py`, `collection.py` (parcial), `vault.py`, `wallapop_jobs.py`, `system.py`, `logistics.py`, `showcase.py`, `auth.py`. Mismo patrón que en `users.py`/`dashboard.py`: cross-referenciar el dict devuelto contra `domain/models.py` antes de declarar el schema, y verificar con la suite completa (no solo el endpoint aislado — el estado compartido de la BD de test puede revelar mismatches que el camino vacío no muestra).
+
+### Próxima fase sugerida: Fase 3 (arquitectura del frontend)
+
+Router real (`react-router-dom`) en lugar de `activeTab` + keep-alive, troceo de `Config.tsx`/`Purgatory.tsx`/`Catalog.tsx`. Es la que habilita el "baño de cara" de rendimiento de la Fase 4.
+
+---
+
 ## Resumen ejecutivo — dónde está la aplicación hoy
 
 **Stack (moderno y correcto en su base):** FastAPI + SQLAlchemy 2 + Pydantic v2 · React 19 + Vite 7 + Tailwind 4 + React Query + framer-motion + recharts · arquitectura por capas (`domain/application/infrastructure/interfaces`) · Docker + nginx + Supabase/Postgres en prod, SQLite en local.
