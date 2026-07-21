@@ -51,15 +51,17 @@ La rama `refactor/aaa-uplift` corrige todo, pero **no protege nada hasta que se 
 
 Esto es lo de **mayor retorno de todo el backlog**: hay ~19 commits de seguridad ya escritos y probados que no protegen nada hasta desplegarse. Sigue `Apuntes a llevar a cabo.txt` Parte A (backups → rama → rotar secretos → migración Alembic → `docker compose up -d --build` → verificar login). Guía de BD en [ALEMBIC_ADOPTION.md](ALEMBIC_ADOPTION.md).
 
-### 🟢 OLA 2 — Quick wins de código (bajo riesgo, cabe en una sesión corta)
+### ✅ OLA 2 — Quick wins de código — COMPLETA (2026-07-21)
 
-| # | Tarea | Por qué | Archivos | Esf. |
-|---|-------|---------|----------|------|
-| 2a | **CI que de verdad corra la suite** | `ci.yml` usa `python -m unittest discover` que **NO ejecuta los 49 tests pytest** (tienen fixtures). Tenemos red de seguridad desenchufada. Cambiar a `pytest` + añadir `npm run build`/`tsc`/`npm audit`. | `.github/workflows/ci.yml` | 🟢 |
-| 2b | **`lang="es"` + meta description + Open Graph** | `index.html` dice `lang="en"` en una app en español; sin meta/OG para la vista pública `/santuario/:user`. (Fase 5.6) | `frontend/index.html` | 🟢 |
-| 2c | **Fix `backup_db.ps1` (modo WAL)** | Una copia simple del `.db` en modo WAL pierde datos recientes. Usar `sqlite3 .backup` o `VACUUM INTO`. (B.1) | `backup_db.ps1` | 🟢 |
-| 2d | **`prefers-reduced-motion`** | framer-motion muy presente; respetar la preferencia mejora accesibilidad y rendimiento. (Fase 5.3) | `frontend/src/index.css` + wrappers motion | 🟢 |
-| 2e | **(solo tu máquina) columna `offers.image_url` en `oraculo.db` local** | Tu BD SQLite de desarrollo está desfasada del modelo → 500 en `/api/products` local. Trivial: `ALTER TABLE offers ADD COLUMN image_url VARCHAR;`. No afecta a producción. (B.6) | tu `oraculo.db` local | 🟢 |
+| # | Tarea | Estado |
+|---|-------|--------|
+| 2a | CI que de verdad corra la suite | ✅ `ci.yml`: job `backend` (`pytest tests/ -v`) + job `frontend` (`npm ci && npm run build && npm audit --audit-level=high`), en paralelo. Verificados los 3 comandos localmente antes de comitear. |
+| 2b | `lang="es"` + meta description + Open Graph | ✅ `frontend/index.html`. Verificado en navegador: `document.documentElement.lang === "es"`, meta/OG presentes. |
+| 2c | Fix `backup_db.ps1` (modo WAL) | ✅ Sustituido `Copy-Item` por `sqlite3.backup()` vía Python (API de backup online, consistente en modo WAL). Ejecutado de verdad contra la BD real: backup válido con 23 tablas y datos reales. |
+| 2d | `prefers-reduced-motion` | ✅ `<MotionConfig reducedMotion="user">` global en `main.tsx` — respeta la preferencia del SO en todos los componentes `motion.*` sin tocar cada animación. |
+| 2e | (solo máquina local) columna `offers.image_url` en `oraculo.db` | ✅ Aplicado con `ALTER TABLE`. Verificado: `/api/products` pasó de 500 a 200. No aplica a producción (dato de runtime, no versionado). |
+
+Commits: `b6b6d49` (2a), `9a2d95a` (2b+2c+2d). pytest 49/49 en verde en cada paso.
 
 ### 🟡 OLA 3 — Valor medio, esfuerzo medio
 
