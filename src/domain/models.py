@@ -16,7 +16,7 @@ class ProductModel(Base):
     name: Mapped[str] = mapped_column(String, index=True) # Removed unique=True to allow variants with same name
     ean: Mapped[Optional[str]] = mapped_column(String, index=True, nullable=True)
     image_url: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    category: Mapped[str] = mapped_column(String, default="Masters of the Universe")
+    category: Mapped[str] = mapped_column(String, default="Masters of the Universe", index=True)
     sub_category: Mapped[Optional[str]] = mapped_column(String, index=True, nullable=True) # e.g. "Origins", "Turtles of Grayskull"
     
     # Financial & Meta Data (Phase 6 & 16)
@@ -85,13 +85,13 @@ class OfferModel(Base):
     currency: Mapped[str] = mapped_column(String, default="EUR")
     url: Mapped[str] = mapped_column(String, index=True)
     is_available: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
-    last_seen: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
-    
+    last_seen: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+
     is_vintage: Mapped[Optional[bool]] = mapped_column(Boolean, default=False, nullable=True)
     condition: Mapped[Optional[str]] = mapped_column(String, nullable=True) # e.g. "MOC", "Loose", "New"
     grading: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     image_url: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    
+
     # 3OX Audit Trail
     receipt_id: Mapped[Optional[str]] = mapped_column(String, nullable=True, index=True)
 
@@ -99,12 +99,12 @@ class OfferModel(Base):
     min_price: Mapped[float] = mapped_column(Float, default=0.0)
     max_price: Mapped[float] = mapped_column(Float, default=0.0)
     source_type: Mapped[str] = mapped_column(String, default="Retail", index=True) # Retail, Peer-to-Peer
-    
+
     # Validation flags
     validation_status: Mapped[str] = mapped_column(String, default="VALIDATED")
-    anomaly_flags: Mapped[Optional[str]] = mapped_column(String, nullable=True) 
+    anomaly_flags: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     is_blocked: Mapped[bool] = mapped_column(Boolean, default=False)
-    opportunity_score: Mapped[int] = mapped_column(Integer, default=0)
+    opportunity_score: Mapped[int] = mapped_column(Integer, default=0, index=True)
     
     # Phase 39: Auction Intelligence
     sale_type: Mapped[str] = mapped_column(String, default="Retail") # Retail, Auction, Fixed_P2P
@@ -134,7 +134,7 @@ class CollectionItemModel(Base):
     product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), unique=False, index=True) # Allow multiple users to own same product
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True) # Link to User
     
-    acquired: Mapped[bool] = mapped_column(Boolean, default=False)
+    acquired: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     condition: Mapped[str] = mapped_column(String, default="MOC")
     grading: Mapped[Optional[float]] = mapped_column(Float, nullable=True, default=10.0) # Condition Grade (1-10)
     purchase_price: Mapped[Optional[float]] = mapped_column(Float, nullable=True, default=0.0) # Financial Investment
@@ -181,7 +181,7 @@ class PendingMatchModel(Base):
     receipt_id: Mapped[Optional[str]] = mapped_column(String, nullable=True, index=True)
     
     # Validation flags
-    validation_status: Mapped[str] = mapped_column(String, default="PENDING") # PENDING, VALIDATED, REJECTED
+    validation_status: Mapped[str] = mapped_column(String, default="PENDING", index=True) # PENDING, VALIDATED, REJECTED
     anomaly_flags: Mapped[Optional[str]] = mapped_column(String, nullable=True) # JSON string with detected anomalies
     is_blocked: Mapped[bool] = mapped_column(Boolean, default=False) # Manually blocked by admin/user
     opportunity_score: Mapped[int] = mapped_column(Integer, default=0)
@@ -199,7 +199,7 @@ class PendingMatchModel(Base):
     original_listing_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     last_price_update: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     
-    found_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    found_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
 
 class VintageProductModel(Base):
     """
@@ -270,7 +270,7 @@ class OfferHistoryModel(Base):
     action_type: Mapped[str] = mapped_column(String) # NEW, LINKED, UNLINKED, PURGED
     details: Mapped[Optional[str]] = mapped_column(String, nullable=True) # JSON or descriptive text
     
-    timestamp: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    timestamp: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
 
 # PriceAlertModel promoted to top (moved here for coherence)
 class PriceAlertModel(Base):
@@ -355,9 +355,9 @@ class PriceHistoryModel(Base):
     __tablename__ = "price_history"
     
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    offer_id: Mapped[int] = mapped_column(ForeignKey("offers.id"))
+    offer_id: Mapped[int] = mapped_column(ForeignKey("offers.id"), index=True)
     price: Mapped[float] = mapped_column(Float)
-    recorded_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    recorded_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
     is_snapshot: Mapped[bool] = mapped_column(Boolean, default=False) # True if price didn't change but we recorded the state
     
     offer: Mapped["OfferModel"] = relationship("OfferModel", back_populates="price_history")
