@@ -139,6 +139,43 @@ def test_scrapers_status_logs_ip_logs_match_schema(client):
     assert any(l["ip_address"] == "127.0.0.1" and l["status"] == "allowed" for l in ip_logs_resp.json())
 
 
+def test_purgatory_list_matches_schema(client):
+    """get_purgatory (purgatory.py) devuelve una lista anidada
+    (PurgatoryItemOutput -> suggestions: List[PurgatorySuggestionOutput]) sin
+    cobertura previa - el schema con mayor riesgo del router por su anidacion.
+    Siembra un ProductModel con el mismo EAN que un PendingMatchModel para
+    forzar un match score de 1.0 (EAN Match) y verificar que la lista de
+    sugerencias anidada serializa correctamente contra datos reales."""
+    from src.domain.models import ProductModel, PendingMatchModel
+    from src.interfaces.api.routers.purgatory import SessionCloud
+
+    with SessionCloud() as db:
+        db.add(ProductModel(
+            name="Schema Purgatory Figure", category="MOTU",
+            figure_id="PURG-01", ean="1112223334445",
+        ))
+        db.add(PendingMatchModel(
+            scraped_name="Schema Purgatory Figure", ean="1112223334445",
+            price=25.0, currency="EUR", url="https://example.com/purgatory-schema-test",
+            shop_name="TiendaSchema", source_type="Retail",
+        ))
+        db.commit()
+
+    headers = {"X-API-Key": API_KEY}
+
+    resp = client.get("/api/purgatory", headers=headers)
+    assert resp.status_code == 200, resp.text
+    items = resp.json()
+    match = next(i for i in items if i["url"] == "https://example.com/purgatory-schema-test")
+    assert match["scraped_name"] == "Schema Purgatory Figure"
+    assert match["anomaly_flags"] == []
+    assert len(match["suggestions"]) >= 1
+    best = match["suggestions"][0]
+    assert best["product_id"]
+    assert best["match_score"] == 100.0
+    assert best["reason"] == "EAN Match"
+
+
 def test_admin_duplicates_devices_temporary_products_match_schema(client):
     """get_duplicates (lista anidada), get_all_devices (ORM
     AuthorizedDeviceModel via from_attributes) y get_temporary_products (lista

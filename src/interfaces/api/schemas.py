@@ -688,3 +688,42 @@ class WallapopManualHtmlImportOutput(BaseModel):
     total_skipped: int
     total_inserted: int
     message: str
+
+
+# --- Purgatory Output (Fase AAA-Ola3, 3b) ---
+# 11 de los 12 endpoints de este router devuelven {status, message} ->
+# StatusMessageOutput (ya definido arriba). Solo get_purgatory tiene forma
+# propia: la lista principal de items pendientes con sus sugerencias de
+# match anidadas (calculadas en tiempo real contra el catalogo).
+
+class PurgatorySuggestionOutput(BaseModel):
+    product_id: int
+    name: str
+    figure_id: str | None
+    sub_category: str | None
+    is_vintage: bool | None
+    release_year: int | None
+    variant_name: str | None
+    match_score: float
+    reason: str
+
+
+class PurgatoryItemOutput(BaseModel):
+    id: int
+    scraped_name: str
+    ean: str | None
+    price: float
+    currency: str
+    url: str
+    shop_name: str
+    image_url: str | None
+    found_at: datetime
+    source_type: str
+    validation_status: str
+    is_blocked: bool
+    opportunity_score: int
+    # JSON almacenado como texto libre (lista de anomalias detectadas); su
+    # forma interna varia segun el detector que la genero, se deja sin tipar
+    # a nivel de elemento para no sobre-restringir un formato no garantizado.
+    anomaly_flags: list
+    suggestions: List[PurgatorySuggestionOutput]
