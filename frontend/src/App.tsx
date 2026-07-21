@@ -1,5 +1,6 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from './components/layout/Sidebar';
 import Navbar from './components/layout/Navbar';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -22,8 +23,31 @@ const VintageMiscellaneous = lazy(() => import('./pages/VintageMiscellaneous'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const Showcase = lazy(() => import('./pages/Showcase'));
 
+// Fase AAA-3.1: router real en vez de activeTab + "visitedTabs" mantenidos
+// vivos para siempre. Cada tab-id sigue existiendo (Sidebar/Navbar no se
+// tocan) pero ahora mapea a una ruta real; cada página monta/desmonta al
+// navegar, en vez de acumularse oculta en el DOM con sus queries activas.
+const TAB_PATHS: Record<string, string> = {
+  dashboard: '/',
+  catalog: '/catalog',
+  eternia: '/eternia',
+  auctions: '/auctions',
+  collection: '/collection',
+  fortaleza_vintage: '/fortaleza_vintage',
+  vintage_miscellaneous: '/vintage_miscellaneous',
+  purgatory: '/purgatory',
+  settings: '/settings',
+};
+
+const PATH_TO_TAB: Record<string, string> = Object.fromEntries(
+  Object.entries(TAB_PATHS).map(([tab, path]) => [path, tab])
+);
+
 function App() {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const navigate = useNavigate();
+  const location = useLocation();
+  const activeTab = PATH_TO_TAB[location.pathname] ?? 'dashboard';
+  const setActiveTab = (tab: string) => navigate(TAB_PATHS[tab] ?? '/');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentUser, setCurrentUser] = useState<Hero | null>(null);
@@ -33,7 +57,6 @@ function App() {
   const [isSovereign, setIsSovereign] = useState<boolean>(localStorage.getItem('is_sovereign') === 'true');
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(localStorage.getItem('is_logged_in') === 'true');
   const [activeUserId, setActiveUserId] = useState<number>(parseInt(localStorage.getItem('active_user_id') || '2'));
-  const [visitedTabs, setVisitedTabs] = useState<Record<string, boolean>>({ dashboard: true });
   const [isIncognito, setIsIncognito] = useState<boolean>(() => localStorage.getItem('motu_incognito') === 'true');
   const [useLocalImages, setUseLocalImages] = useState<boolean>(() => localStorage.getItem('use_local_images') === 'true');
   const [bgDownloadEnabled, setBgDownloadEnabled] = useState<boolean>(() => localStorage.getItem('motu_background_download_enabled') === 'true');
@@ -76,18 +99,12 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (isLoggedIn || isSovereign) {
-      setVisitedTabs(prev => ({ ...prev, [activeTab]: true }));
-    }
-  }, [activeTab, isLoggedIn, isSovereign]);
-
-  useEffect(() => {
     const handleNavigate = () => {
-      setActiveTab('catalog');
+      navigate(TAB_PATHS.catalog);
     };
     window.addEventListener('navigate-to-catalog', handleNavigate);
     return () => window.removeEventListener('navigate-to-catalog', handleNavigate);
-  }, []);
+  }, [navigate]);
 
 
   const fetchUser = async (userId: number) => {
@@ -235,8 +252,7 @@ function App() {
     setCurrentUser(null);
     setIsSovereign(false);
     setActiveUserId(2);
-    setVisitedTabs({ dashboard: true });
-    setActiveTab('dashboard');
+    navigate(TAB_PATHS.dashboard);
   };
 
   const handleIdentityChange = async (targetId?: number) => {
@@ -244,23 +260,15 @@ function App() {
     const newId = targetId || (activeUserId === 1 ? 2 : 1);
     localStorage.setItem('active_user_id', newId.toString());
     setActiveUserId(newId);
-    setVisitedTabs({ dashboard: true });
-    setActiveTab('dashboard');
+    navigate(TAB_PATHS.dashboard);
     queryClient.resetQueries();
     await fetchUser(newId);
   };
 
-  useEffect(() => {
-    if (currentUser) {
-      const isAdmin = currentUser.role === 'admin' || currentUser.username === 'David';
-      if (!isAdmin) {
-        const restrictedTabs = ['purgatory'];
-        if (restrictedTabs.includes(activeTab)) {
-          setActiveTab('dashboard');
-        }
-      }
-    }
-  }, [currentUser, activeTab]);
+  // Fase AAA-3.1: antes esto forzaba el tab de vuelta a 'dashboard' con un
+  // efecto reactivo; ahora es un guard declarativo directamente en la ruta
+  // /purgatory (ver <Routes> más abajo), sin necesidad de useEffect.
+  const isAdminUser = currentUser?.role === 'admin' || currentUser?.username === 'David';
 
   const [showMasterLogin, setShowMasterLogin] = useState(false);
 
@@ -350,57 +358,30 @@ function App() {
             <div className="max-w-7xl mx-auto w-full">
               <ErrorBoundary>
                 <Suspense fallback={<PowerSwordLoader variant="fullScreen" text="Canalizando Poder..." />}>
-                  {visitedTabs['dashboard'] && (
-                    <div className={activeTab === 'dashboard' ? '' : 'hidden'}>
-                      <Dashboard 
-                        user={currentUser} 
-                      />
-                    </div>
-                  )}
-                  {visitedTabs['catalog'] && (
-                    <div className={activeTab === 'catalog' ? '' : 'hidden'}>
-                      <Catalog user={currentUser} searchQuery={searchQuery} isIncognito={isIncognito} />
-                    </div>
-                  )}
-                  {visitedTabs['eternia'] && (
-                    <div className={activeTab === 'eternia' ? '' : 'hidden'}>
-                      <Catalog user={currentUser} isVintageOnly={true} searchQuery={searchQuery} isIncognito={isIncognito} />
-                    </div>
-                  )}
-                  {visitedTabs['auctions'] && (
-                    <div className={activeTab === 'auctions' ? '' : 'hidden'}>
-                      <Auctions user={currentUser} />
-                    </div>
-                  )}
-                  {visitedTabs['collection'] && (
-                    <div className={activeTab === 'collection' ? '' : 'hidden'}>
-                      <Collection user={currentUser} searchQuery={searchQuery} isIncognito={isIncognito} />
-                    </div>
-                  )}
-                  {visitedTabs['fortaleza_vintage'] && (
-                    <div className={activeTab === 'fortaleza_vintage' ? '' : 'hidden'}>
-                      <Collection user={currentUser} isVintageOnly={true} searchQuery={searchQuery} isIncognito={isIncognito} />
-                    </div>
-                  )}
-                  {visitedTabs['vintage_miscellaneous'] && (
-                    <div className={activeTab === 'vintage_miscellaneous' ? '' : 'hidden'}>
-                      <VintageMiscellaneous user={currentUser} />
-                    </div>
-                  )}
-                  {visitedTabs['purgatory'] && (
-                    <div className={activeTab === 'purgatory' ? '' : 'hidden'}>
-                      <Purgatory />
-                    </div>
-                  )}
-                  {visitedTabs['settings'] && (
-                    <div className={activeTab === 'settings' ? '' : 'hidden'}>
-                      <Config
-                        user={currentUser}
-                        onUserUpdate={() => fetchUser(activeUserId)}
-                        onIdentityChange={handleIdentityChange}
-                      />
-                    </div>
-                  )}
+                  <Routes>
+                    <Route path={TAB_PATHS.dashboard} element={<Dashboard user={currentUser} />} />
+                    <Route path={TAB_PATHS.catalog} element={<Catalog user={currentUser} searchQuery={searchQuery} isIncognito={isIncognito} />} />
+                    <Route path={TAB_PATHS.eternia} element={<Catalog user={currentUser} isVintageOnly={true} searchQuery={searchQuery} isIncognito={isIncognito} />} />
+                    <Route path={TAB_PATHS.auctions} element={<Auctions user={currentUser} />} />
+                    <Route path={TAB_PATHS.collection} element={<Collection user={currentUser} searchQuery={searchQuery} isIncognito={isIncognito} />} />
+                    <Route path={TAB_PATHS.fortaleza_vintage} element={<Collection user={currentUser} isVintageOnly={true} searchQuery={searchQuery} isIncognito={isIncognito} />} />
+                    <Route path={TAB_PATHS.vintage_miscellaneous} element={<VintageMiscellaneous user={currentUser} />} />
+                    <Route
+                      path={TAB_PATHS.purgatory}
+                      element={isAdminUser ? <Purgatory /> : <Navigate to={TAB_PATHS.dashboard} replace />}
+                    />
+                    <Route
+                      path={TAB_PATHS.settings}
+                      element={(
+                        <Config
+                          user={currentUser}
+                          onUserUpdate={() => fetchUser(activeUserId)}
+                          onIdentityChange={handleIdentityChange}
+                        />
+                      )}
+                    />
+                    <Route path="*" element={<Navigate to={TAB_PATHS.dashboard} replace />} />
+                  </Routes>
                 </Suspense>
               </ErrorBoundary>
             </div>

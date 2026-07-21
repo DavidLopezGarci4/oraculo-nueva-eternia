@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { BrowserRouter } from 'react-router-dom'
 import './index.css'
 import './api/client' // Registra los interceptores de auth (JWT) sobre axios global antes de cualquier petición
 import App from './App.tsx'
@@ -19,10 +20,12 @@ import { CartProvider } from './context/CartContext.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <CartProvider>
-        <App />
-      </CartProvider>
-    </QueryClientProvider>
+    <BrowserRouter>
+      <QueryClientProvider client={queryClient}>
+        <CartProvider>
+          <App />
+        </CartProvider>
+      </QueryClientProvider>
+    </BrowserRouter>
   </StrictMode>,
 )
