@@ -99,3 +99,54 @@ def test_collection_non_admin_cannot_read_other_users(client, bearer, test_user)
     # Se ignora el user_id=999 solicitado; se sirve la colección del propio
     # usuario autenticado (vacía en este test), nunca la de otro.
     assert resp.json() == []
+
+
+# ─── Fase AAA-2.1: cierre de IDOR en /api/users/* ─────────────────────────────
+
+def test_public_showcase_rejects_unauthenticated(client):
+    """Antes de la Fase 2.1, esto activaba el escaparate público de CUALQUIER
+    usuario sin ninguna autenticación — el hallazgo más grave de esta ronda."""
+    resp = client.post("/api/users/999999/public-showcase", params={"is_public": True})
+    assert resp.status_code == 401
+
+
+def test_public_showcase_non_admin_cannot_target_other_user(client, authorized_device_headers):
+    """Un viewer no puede activar el escaparate público de OTRO usuario (una
+    víctima registrada aparte); la escritura queda forzada a su propia cuenta,
+    y la víctima permanece intacta.
+
+    Usa cuentas de atacante/víctima creadas localmente (no los fixtures
+    session-scoped `bearer`/`test_user`) para no contaminar su estado y
+    afectar a otros tests que dependen de su showcase por defecto (privado).
+    """
+    attacker = {"username": "showcase_attacker", "email": "attacker@test.com", "password": "attacker-pass-000"}
+    victim = {"username": "showcase_victim", "email": "victim@test.com", "password": "victim-pass-000"}
+    for account in (attacker, victim):
+        reg = client.post("/api/auth/register", json=account)
+        assert reg.status_code == 200, reg.text
+
+    attacker_login = client.post("/api/auth/login", json={"email": attacker["email"], "password": attacker["password"]})
+    attacker_bearer = {"Authorization": f"Bearer {attacker_login.json()['access_token']}"}
+
+    victim_login = client.post("/api/auth/login", json={"email": victim["email"], "password": victim["password"]})
+    victim_id = victim_login.json()["user"]["id"]
+    victim_bearer = {"Authorization": f"Bearer {victim_login.json()['access_token']}"}
+
+    # El atacante intenta activar el escaparate de la víctima.
+    resp = client.post(
+        f"/api/users/{victim_id}/public-showcase", params={"is_public": True}, headers=attacker_bearer
+    )
+    assert resp.status_code == 200  # queda silenciosamente redirigido a su propia cuenta (la del atacante)
+
+    # Confirma, como la propia víctima, que su escaparate NO fue afectado.
+    check = client.get(f"/api/users/{victim_id}", headers={**authorized_device_headers, **victim_bearer})
+    assert check.status_code == 200
+    assert check.json()["is_public_showcase"] is False
+
+
+def test_user_settings_non_admin_scoped_to_self(client, bearer, test_user, authorized_device_headers):
+    """GET /api/users/{id} con id ajeno debe devolver los datos propios, no los del id pedido."""
+    headers = {**authorized_device_headers, **bearer}
+    resp = client.get("/api/users/999999", headers=headers)
+    assert resp.status_code == 200
+    assert resp.json()["email"] == test_user["email"]

@@ -33,7 +33,9 @@ def test_http_403_still_works(client):
     assert "detail" in resp.json()
 
 
-def test_http_404_still_works(client, bearer, authorized_device_headers):
-    headers = {**authorized_device_headers, "Authorization": bearer["Authorization"]}
+def test_http_404_still_works(client, admin_bearer, authorized_device_headers):
+    # Uses an admin token: a non-admin would be silently scoped to their own
+    # user_id (Fase AAA-2.1 IDOR fix) and never see this 404 for another id.
+    headers = {**authorized_device_headers, **admin_bearer}
     resp = client.get("/api/users/999999", headers=headers)
     assert resp.status_code == 404

@@ -7,14 +7,15 @@ from loguru import logger
 from src.application.services.logistics_service import LogisticsService
 from src.domain.models import OfferModel, PendingMatchModel, ProductModel, UserModel, BlackcludedItemModel, VintageMiscellaneousModel, OfferHistoryModel
 from src.infrastructure.database_cloud import SessionCloud
-from src.interfaces.api.deps import verify_device
+from src.interfaces.api.deps import get_current_user, scope_user_id, verify_device
 from src.interfaces.api.schemas import WallapopImportRequest, UserImagePathsUpdateRequest
 
 router = APIRouter(tags=["users"])
 
 
 @router.get("/api/users/{user_id}", dependencies=[Depends(verify_device)])
-async def get_user_settings(user_id: int):
+async def get_user_settings(user_id: int, current_user: UserModel = Depends(get_current_user)):
+    user_id = scope_user_id(current_user, user_id)
     with SessionCloud() as db:
         user = db.query(UserModel).filter(UserModel.id == user_id).first()
         if not user:
@@ -32,7 +33,16 @@ async def get_user_settings(user_id: int):
 
 
 @router.post("/api/users/{user_id}/image-paths")
-async def update_user_image_paths(user_id: int, request: UserImagePathsUpdateRequest):
+async def update_user_image_paths(
+    user_id: int,
+    request: UserImagePathsUpdateRequest,
+    current_user: UserModel = Depends(get_current_user),
+):
+    # Fase AAA-2.1: antes cualquiera (sin auth) podía fijar la ruta de imágenes
+    # personalizada de OTRO usuario, con impacto directo en qué ficheros sirve
+    # /api/static/images (main.py). Ahora exige sesión y queda limitado a la
+    # propia cuenta (salvo admin).
+    user_id = scope_user_id(current_user, user_id)
     with SessionCloud() as db:
         user = db.query(UserModel).filter(UserModel.id == user_id).first()
         if not user:
@@ -48,7 +58,12 @@ async def update_user_image_paths(user_id: int, request: UserImagePathsUpdateReq
 
 
 @router.post("/api/users/{user_id}/location")
-async def update_user_location(user_id: int, location: str):
+async def update_user_location(
+    user_id: int,
+    location: str,
+    current_user: UserModel = Depends(get_current_user),
+):
+    user_id = scope_user_id(current_user, user_id)
     with SessionCloud() as db:
         user = db.query(UserModel).filter(UserModel.id == user_id).first()
         if not user:
@@ -59,7 +74,16 @@ async def update_user_location(user_id: int, location: str):
 
 
 @router.post("/api/users/{user_id}/public-showcase")
-async def update_user_showcase(user_id: int, is_public: bool):
+async def update_user_showcase(
+    user_id: int,
+    is_public: bool,
+    current_user: UserModel = Depends(get_current_user),
+):
+    # Fase AAA-2.1: este era el hallazgo más grave del router — sin auth,
+    # cualquiera podía activar el escaparate PÚBLICO de otra persona
+    # (/santuario/{username}, sin login) y exponer su colección privada sin
+    # consentimiento. Ahora exige sesión y queda limitado a la propia cuenta.
+    user_id = scope_user_id(current_user, user_id)
     with SessionCloud() as db:
         user = db.query(UserModel).filter(UserModel.id == user_id).first()
         if not user:
@@ -71,6 +95,12 @@ async def update_user_showcase(user_id: int, is_public: bool):
 
 @router.post("/api/wallapop/import")
 async def import_wallapop_products(request: WallapopImportRequest):
+    # Nota (Fase AAA-2.1): la extensión de Chrome (chrome-extension/content.js)
+    # llama a este endpoint SIN ninguna cabecera de auth. Queda intencionalmente
+    # sin proteger por ahora para no romperla; el impacto de un abuso anónimo es
+    # bajo (solo encola candidatos en el Purgatorio, que ya está gateado por
+    # verify_api_key para su revisión/aprobación). Pendiente: dar a la extensión
+    # una API key propia y exigirla aquí (ver reporte, Fase 2 — trabajo futuro).
     imported = 0
     from src.core.url_utils import normalize_url
     from src.core.vintage_utils import validate_motu_relevance
@@ -161,7 +191,8 @@ async def import_wallapop_products(request: WallapopImportRequest):
 
 
 @router.get("/api/radar/p2p-opportunities")
-async def get_p2p_opportunities(user_id: int = 2):
+async def get_p2p_opportunities(user_id: int = 2, current_user: UserModel = Depends(get_current_user)):
+    user_id = scope_user_id(current_user, user_id)
     with SessionCloud() as db:
         user_location = "ES"
         user = db.query(UserModel).filter(UserModel.id == user_id).first()

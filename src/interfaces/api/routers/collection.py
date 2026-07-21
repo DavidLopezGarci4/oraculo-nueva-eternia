@@ -9,24 +9,7 @@ from sqlalchemy import select
 
 from src.domain.models import CollectionItemModel, OfferModel, ProductModel, UserModel
 from src.infrastructure.database_cloud import SessionCloud
-from src.interfaces.api.deps import get_current_user
-
-
-def _is_admin(user: UserModel) -> bool:
-    return user.role == "admin" or user.username == "David"
-
-
-def _scope_user_id(current_user: UserModel, requested_user_id: int) -> int:
-    """
-    Fase AAA-1.2: cierra el IDOR de /api/collection.
-    Los admins pueden seguir consultando/actuando sobre cualquier user_id
-    (soporta el cambio de identidad entre 'héroes' que ya usa el panel).
-    Cualquier otro usuario queda forzado a su propio id, sin importar lo que
-    pida el parámetro — así ya no se puede leer la colección de otra persona.
-    """
-    if _is_admin(current_user):
-        return requested_user_id
-    return current_user.id
+from src.interfaces.api.deps import get_current_user, scope_user_id as _scope_user_id
 
 def trigger_excel_sync_background(user_id: int, product_id: int):
     try:

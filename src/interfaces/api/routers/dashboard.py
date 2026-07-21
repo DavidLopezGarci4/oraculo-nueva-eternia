@@ -17,7 +17,7 @@ from src.domain.models import (
     UserModel,
 )
 from src.infrastructure.database_cloud import SessionCloud
-from src.interfaces.api.deps import verify_device
+from src.interfaces.api.deps import verify_api_key, verify_device
 
 router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 
@@ -295,7 +295,7 @@ async def get_top_deals(user_id: int = 2):
         return final_deals[:20]
 
 
-@router.get("/match-stats")
+@router.get("/match-stats", dependencies=[Depends(verify_device)])
 async def get_dashboard_match_stats():
     with SessionCloud() as db:
         stats = (
@@ -308,7 +308,7 @@ async def get_dashboard_match_stats():
         return [{"shop": s.shop, "count": s.count} for s in stats]
 
 
-@router.get("/history")
+@router.get("/history", dependencies=[Depends(verify_device)])
 async def get_dashboard_history():
     with SessionCloud() as db:
         history = (
@@ -332,8 +332,12 @@ async def get_dashboard_history():
         ]
 
 
-@router.post("/revert")
+@router.post("/revert", dependencies=[Depends(verify_api_key)])
 async def revert_action(request: dict):
+    # Fase AAA-2.1: esta acción borra/reconstruye entradas de OfferModel,
+    # BlackcludedItemModel e historial — no tenía NINGUNA protección. Se alinea
+    # con el resto de herramientas de curación (purgatory.py), que exigen
+    # admin.
     history_id = request.get("history_id")
     if not history_id:
         raise HTTPException(status_code=400, detail="ID de historial requerido")

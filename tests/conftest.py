@@ -112,6 +112,23 @@ def bearer(viewer_token):
 
 
 @pytest.fixture(scope="session")
+def admin_user(client):
+    """Create an admin-role user via the service-to-service admin endpoint."""
+    payload = {"username": "testadmin", "email": "admin@test.com", "password": "admin-pass-789", "role": "admin"}
+    resp = client.post("/api/admin/users/create", headers={"X-API-Key": API_KEY}, json=payload)
+    assert resp.status_code == 200, resp.text
+    return payload
+
+
+@pytest.fixture(scope="session")
+def admin_bearer(client, admin_user):
+    """Authorization header with an admin JWT (real login, not the API-key bypass)."""
+    resp = client.post("/api/auth/login", json={"email": admin_user["email"], "password": admin_user["password"]})
+    assert resp.status_code == 200, resp.text
+    return {"Authorization": f"Bearer {resp.json()['access_token']}"}
+
+
+@pytest.fixture(scope="session")
 def authorized_device_headers(client):
     """
     Headers for a device that has gone through the REAL approval flow:

@@ -128,6 +128,25 @@ def require_admin(user: UserModel = Depends(get_current_user)) -> UserModel:
     return user
 
 
+# ─── Identity scoping (Fase AAA-2.1) ──────────────────────────────────────────
+# Helper compartido por todos los routers que exponen un `user_id` de query o
+# de body (colección, ajustes de usuario, logística...). Antes de la Fase AAA-1
+# esos endpoints confiaban ciegamente en el user_id recibido del cliente
+# (IDOR). Ahora cualquier usuario autenticado solo puede actuar sobre su
+# propio id; solo un admin puede seguir operando sobre cualquier user_id
+# (necesario para el cambio de identidad entre 'héroes' del panel).
+
+def is_admin(user: UserModel) -> bool:
+    return user.role == "admin" or user.username == "David"
+
+
+def scope_user_id(current_user: UserModel, requested_user_id: int) -> int:
+    """Devuelve requested_user_id tal cual si el usuario es admin; si no, fuerza current_user.id."""
+    if is_admin(current_user):
+        return requested_user_id
+    return current_user.id
+
+
 # ─── Startup ──────────────────────────────────────────────────────────────────
 
 def ensure_scrapers_registered():
