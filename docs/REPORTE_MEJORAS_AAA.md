@@ -20,19 +20,28 @@
   - 2.5: supervisión con reintentos del listener de Telegram.
   - 2.6: dependencias fijadas en `requirements.txt`.
   - **Bonus/fix crítico encontrado en el camino:** el guardián de secretos de producción de la Fase 1.5 no se activaba nunca en el despliegue real (`docker-compose.prod.yml` usa `ENV=production`, el código comprobaba `ENVIRONMENT`) — corregido.
+- ✅ **Fase 3.1 — Router real (frontend):** hecha y verificada en navegador real (no solo build). `react-router-dom` sustituye `activeTab` + *keep-alive*; cada página monta/desmonta de verdad al navegar (confirmado por JS que el DOM de una página anterior desaparece por completo). `Sidebar.tsx`/`Navbar.tsx` no se tocaron (adaptador de compatibilidad). Guard de `/purgatory` ahora declarativo en la ruta.
+  - ⏸️ **Fase 3.2 — pendiente:** trocear `Config.tsx` (3072 líneas), `Purgatory.tsx` (2253) y `Catalog.tsx` (1965). Es el ítem más grande y de mayor riesgo de todo el plan; se dejó deliberadamente para el final/una sesión dedicada.
+- 🟡 **Fase 4 — Rendimiento: parcial, lo de mayor impacto/menor riesgo ya hecho.**
+  - 4.1 ✅ `manualChunks` en `vite.config.ts` — el chunk de entrada bajó de 154.94 KB a 88.70 KB gzip.
+  - 4.2 ✅ (parcial) 16 imágenes sin usar eliminadas de `frontend/src/assets` (18 MB → 412 KB, verificado sin imágenes rotas en navegador). ✅ Cerrado el hueco por el que las imágenes nuevas de los scrapers de tienda nunca se convertían a WebP (`main.py::_fetch_and_cache_product_image`, probado con 4 tests). Pendiente: favicon/audio en `public/` (bajo impacto).
+  - 4.3 — revisado; los tiempos de caché de React Query ya están bien ajustados donde importa (p.ej. `Purgatory.tsx` tiene un `staleTime`/`refetchInterval` deliberado con comentario explícito para no romper la UX de curación). No se encontró un problema concreto que justifique tocarlo.
+  - 4.4 ✅ Precarga de página al pasar el ratón por el sidebar (verificado con la Performance API del navegador: el chunk se descarga antes del clic).
+  - 4.5 ⏸️ pendiente — virtualización de listas largas en Catálogo/Colección.
+  - 4.6 ✅ ya estaba hecho (colado en la Fase 1: `Cache-Control: immutable` en nginx para assets con hash).
 
 ### Pendiente para ti (fuera de lo que yo puedo hacer)
 
 - [ ] Rotar `JWT_SECRET` / `ORACULO_API_KEY` en tu `.env` real y desplegar (ver `CREDENCIALES_LOCAL.md`, gitignored).
 - [ ] Ejecutar la guía de [ALEMBIC_ADOPTION.md](ALEMBIC_ADOPTION.md) en tu máquina con Docker.
+- [ ] Ver `Apuntes a llevar a cabo.txt` (raíz del repo, fuera de git) para el detalle paso a paso completo.
 
-### Checklist de continuidad (2.2 — response_model pendiente en el resto de routers)
+### Checklist de continuidad (trabajo de código pendiente para una futura sesión)
 
-`admin.py`, `products.py`, `purgatory.py`, `scrapers.py`, `collection.py` (parcial), `vault.py`, `wallapop_jobs.py`, `system.py`, `logistics.py`, `showcase.py`, `auth.py`. Mismo patrón que en `users.py`/`dashboard.py`: cross-referenciar el dict devuelto contra `domain/models.py` antes de declarar el schema, y verificar con la suite completa (no solo el endpoint aislado — el estado compartido de la BD de test puede revelar mismatches que el camino vacío no muestra).
-
-### Próxima fase sugerida: Fase 3 (arquitectura del frontend)
-
-Router real (`react-router-dom`) en lugar de `activeTab` + keep-alive, troceo de `Config.tsx`/`Purgatory.tsx`/`Catalog.tsx`. Es la que habilita el "baño de cara" de rendimiento de la Fase 4.
+- **2.2** — `response_model` pendiente en: `admin.py`, `products.py`, `purgatory.py`, `scrapers.py`, `collection.py` (parcial), `vault.py`, `wallapop_jobs.py`, `system.py`, `logistics.py`, `showcase.py`, `auth.py`. Mismo patrón que en `users.py`/`dashboard.py`: cross-referenciar el dict devuelto contra `domain/models.py` antes de declarar el schema, y verificar con la suite completa (no solo el endpoint aislado — el estado compartido de la BD de test puede revelar mismatches que el camino vacío no muestra).
+- **3.2** — trocear `Config.tsx`/`Purgatory.tsx`/`Catalog.tsx`.
+- **4.5** — virtualizar listas largas de Catálogo/Colección.
+- **B.8 (nuevo hallazgo)** — más de 40 usos de `datetime.utcnow()` (obsoleto en Python) repartidos por scrapers/pipeline/notificador. Requiere revisión caso por caso para no mezclar datetimes "naive" y "aware" en comparaciones — no es un arreglo de una línea.
 
 ---
 
