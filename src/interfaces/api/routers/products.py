@@ -12,7 +12,18 @@ from src.application.services.logistics_service import LogisticsService
 from src.domain.models import CollectionItemModel, OfferModel, ProductModel, UserModel, PendingMatchModel
 from src.infrastructure.database_cloud import SessionCloud
 from src.interfaces.api.deps import verify_api_key, verify_device
-from src.interfaces.api.schemas import ProductEditRequest, ProductMergeRequest, ProductOutput
+from src.interfaces.api.schemas import (
+    ProductEditRequest,
+    ProductMergeRequest,
+    ProductOutput,
+    ProductSearchResultOutput,
+    StatusMessageOutput,
+    ProductOfferOutput,
+    MarketAnalyticsOutput,
+    ProductPriceHistoryOutput,
+    VintageProductListingOutput,
+    VintageMiscellaneousItemOutput,
+)
 
 router = APIRouter(tags=["products"])
 
@@ -164,7 +175,7 @@ async def get_products(
         return final_products
 
 
-@router.get("/api/products/search")
+@router.get("/api/products/search", response_model=List[ProductSearchResultOutput])
 async def search_products(q: str = ""):
     if len(q) < 2:
         return []
@@ -268,7 +279,7 @@ async def get_wallapop_preview(url: str):
     return details
 
 
-@router.put("/api/products/{product_id}", dependencies=[Depends(verify_api_key)])
+@router.put("/api/products/{product_id}", response_model=StatusMessageOutput, dependencies=[Depends(verify_api_key)])
 async def edit_product(product_id: int, request: ProductEditRequest):
     from src.domain.models import VintageProductModel
     with SessionCloud() as db:
@@ -310,7 +321,7 @@ async def edit_product(product_id: int, request: ProductEditRequest):
         return {"status": "success", "message": f"Reliquia '{product.name}' actualizada con éxito"}
 
 
-@router.post("/api/products/merge", dependencies=[Depends(verify_api_key)])
+@router.post("/api/products/merge", response_model=StatusMessageOutput, dependencies=[Depends(verify_api_key)])
 async def merge_products(request: ProductMergeRequest):
     from src.domain.models import ProductAliasModel, VintageProductModel, PriceAlertModel
 
@@ -378,7 +389,7 @@ async def merge_products(request: ProductMergeRequest):
         return {"status": "success", "message": f"Fusión divina: '{source_name}' ha sido absorbido por '{target.name}'"}
 
 
-@router.get("/api/products/with-offers", dependencies=[Depends(verify_device)])
+@router.get("/api/products/with-offers", response_model=List[int], dependencies=[Depends(verify_device)])
 async def get_products_with_offers():
     with SessionCloud() as db:
         product_ids = (
@@ -390,7 +401,7 @@ async def get_products_with_offers():
         return [p[0] for p in product_ids]
 
 
-@router.get("/api/products/{product_id}/offers", dependencies=[Depends(verify_device)])
+@router.get("/api/products/{product_id}/offers", response_model=List[ProductOfferOutput], dependencies=[Depends(verify_device)])
 async def get_product_offers(product_id: int):
     with SessionCloud() as db:
         all_offers = (
@@ -435,7 +446,7 @@ async def get_product_offers(product_id: int):
         return results
 
 
-@router.get("/api/market/analytics/{product_id}")
+@router.get("/api/market/analytics/{product_id}", response_model=MarketAnalyticsOutput)
 async def get_market_analytics(product_id: int):
     with SessionCloud() as db:
         offers = db.query(OfferModel).filter(
@@ -462,7 +473,7 @@ async def get_market_analytics(product_id: int):
         }
 
 
-@router.get("/api/products/{product_id}/price-history")
+@router.get("/api/products/{product_id}/price-history", response_model=List[ProductPriceHistoryOutput])
 async def get_product_price_history(product_id: int):
     from src.domain.models import PriceHistoryModel
 
@@ -503,7 +514,7 @@ async def get_product_price_history(product_id: int):
         return results
 
 
-@router.get("/api/products/shops")
+@router.get("/api/products/shops", response_model=List[str])
 async def get_unique_shops():
     with SessionCloud() as db:
         query = select(OfferModel.shop_name).distinct()
@@ -512,7 +523,7 @@ async def get_unique_shops():
         return shops
 
 
-@router.get("/api/vintage/products")
+@router.get("/api/vintage/products", response_model=List[VintageProductListingOutput])
 async def get_vintage_products():
     with SessionCloud() as db:
         # Fetch all offers marked as is_vintage to list them individually
@@ -553,7 +564,7 @@ async def get_vintage_products():
         return output
 
 
-@router.delete("/api/products/{product_id}", dependencies=[Depends(verify_api_key)])
+@router.delete("/api/products/{product_id}", response_model=StatusMessageOutput, dependencies=[Depends(verify_api_key)])
 async def delete_product(product_id: int):
     from src.domain.models import OfferModel, PendingMatchModel, ProductAliasModel, ProductModel, VintageProductModel, PriceAlertModel
     
@@ -610,7 +621,7 @@ async def delete_product(product_id: int):
         }
 
 
-@router.get("/api/vintage/miscellaneous")
+@router.get("/api/vintage/miscellaneous", response_model=List[VintageMiscellaneousItemOutput])
 async def get_vintage_miscellaneous():
     with SessionCloud() as db:
         from src.domain.models import VintageMiscellaneousModel

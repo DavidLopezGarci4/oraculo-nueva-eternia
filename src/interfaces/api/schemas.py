@@ -532,3 +532,93 @@ class TemporaryProductOutput(BaseModel):
     is_vintage: bool | None
     offer_count: int
     collection_count: int
+
+
+# --- Products Output (Fase AAA-Ola3, 3b) ---
+# get_market_intelligence (forma anidada dinamica, con evolucion mensual y
+# estrategia de puja calculadas por servicios distintos) y get_wallapop_preview
+# (JSON crudo re-emitido tal cual desde la API externa de Wallapop) se dejan
+# sin response_model a proposito: son datos genuinamente dinamicos/externos,
+# igual que system_audit/get_sword_configs en system.py.
+
+class ProductSearchResultOutput(BaseModel):
+    id: int
+    name: str
+    figure_id: str | None
+    sub_category: str | None
+    image_url: str | None
+
+
+class ProductOfferOutput(BaseModel):
+    id: int
+    shop_name: str
+    price: float
+    landing_price: float
+    url: str
+    last_seen: str
+    min_historical: float
+    opportunity_score: int
+    source_type: str
+    is_best: bool
+    is_available: bool
+    sale_type: str
+    expiry_at: str | None
+    bids_count: int
+    time_left_raw: str | None
+
+
+class MarketStatsOutput(BaseModel):
+    avg: float
+    min: float
+    max: float
+    count: int
+
+
+class MarketAnalyticsOutput(BaseModel):
+    retail: MarketStatsOutput
+    p2p: MarketStatsOutput
+    global_avg: float
+
+
+class PriceHistoryPointOutput(BaseModel):
+    date: str
+    price: float
+
+
+class ProductPriceHistoryOutput(BaseModel):
+    shop_name: str
+    history: List[PriceHistoryPointOutput]
+
+
+class VintageProductListingOutput(BaseModel):
+    id: int
+    name: str
+    ean: str | None
+    image_url: str | None
+    category: str
+    sub_category: str | None
+    figure_id: str | None
+    release_year: int | None
+    offer_id: int
+    best_p2p_price: float
+    best_p2p_source: str
+    url: str
+    condition: str
+    grading: float
+    bids_count: int
+    time_left_raw: str | None
+    sale_type: str
+
+
+class VintageMiscellaneousItemOutput(BaseModel):
+    id: int
+    title: str
+    url: str
+    price: float
+    currency: str
+    shop_name: str
+    image_url: str | None
+    condition: str
+    grading: float
+    notes: str | None
+    added_at: str | None

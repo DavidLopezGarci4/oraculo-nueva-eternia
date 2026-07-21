@@ -13,6 +13,97 @@ schema didn't match that real data, FastAPI would return 500
 from tests.conftest import API_KEY
 
 
+def test_products_offers_analytics_history_vintage_match_schema(client, authorized_device_headers):
+    """products.py: 6 endpoints sin cobertura previa, incluyendo los de mayor
+    riesgo del router (ProductOfferOutput, MarketAnalyticsOutput anidado,
+    ProductPriceHistoryOutput anidado, VintageProductListingOutput). Siembra
+    un producto con una oferta retail + P2P vintage y su historial de precios,
+    y verifica cada shape contra datos reales."""
+    from src.domain.models import ProductModel, OfferModel, PriceHistoryModel
+    from src.interfaces.api.routers.products import SessionCloud
+
+    with SessionCloud() as db:
+        product = ProductModel(name="Schema Test Figure", category="MOTU", figure_id="SCH01", ean="9998887776665")
+        db.add(product)
+        db.commit()
+        db.refresh(product)
+
+        retail_offer = OfferModel(
+            product_id=product.id, shop_name="TiendaRetail", price=45.0,
+            currency="EUR", url="https://tienda.example.com/x", is_available=True,
+            source_type="Retail",
+        )
+        vintage_offer = OfferModel(
+            product_id=product.id, shop_name="TiendaVintage", price=30.0,
+            currency="EUR", url="https://vintage.example.com/x", is_available=True,
+            source_type="Peer-to-Peer", is_vintage=True, condition="Loose", grading=7.0,
+        )
+        db.add(retail_offer)
+        db.add(vintage_offer)
+        db.commit()
+        db.refresh(retail_offer)
+
+        db.add(PriceHistoryModel(offer_id=retail_offer.id, price=50.0))
+        db.add(PriceHistoryModel(offer_id=retail_offer.id, price=45.0))
+        db.commit()
+        product_id = product.id
+
+    headers = {"X-API-Key": API_KEY, **authorized_device_headers}
+
+    offers_resp = client.get(f"/api/products/{product_id}/offers", headers=headers)
+    assert offers_resp.status_code == 200, offers_resp.text
+    offers = offers_resp.json()
+    assert len(offers) == 2
+    assert any(o["is_best"] for o in offers)
+
+    analytics_resp = client.get(f"/api/market/analytics/{product_id}")
+    assert analytics_resp.status_code == 200, analytics_resp.text
+    analytics = analytics_resp.json()
+    assert analytics["retail"]["count"] == 1
+    assert analytics["p2p"]["count"] == 1
+
+    history_resp = client.get(f"/api/products/{product_id}/price-history")
+    assert history_resp.status_code == 200, history_resp.text
+    history = history_resp.json()
+    assert any(h["shop_name"] == "TiendaRetail" and len(h["history"]) >= 1 for h in history)
+
+    with_offers_resp = client.get("/api/products/with-offers", headers=headers)
+    assert with_offers_resp.status_code == 200
+    assert product_id in with_offers_resp.json()
+
+    shops_resp = client.get("/api/products/shops")
+    assert shops_resp.status_code == 200
+    assert "TiendaRetail" in shops_resp.json()
+
+    vintage_resp = client.get("/api/vintage/products")
+    assert vintage_resp.status_code == 200, vintage_resp.text
+    assert any(v["figure_id"] == "SCH01" and v["condition"] == "Loose" for v in vintage_resp.json())
+
+    search_resp = client.get("/api/products/search", params={"q": "Schema Test"})
+    assert search_resp.status_code == 200
+    assert any(p["figure_id"] == "SCH01" for p in search_resp.json())
+
+
+def test_vintage_miscellaneous_matches_schema(client):
+    """get_vintage_miscellaneous (products.py) sin cobertura previa."""
+    from src.domain.models import VintageMiscellaneousModel
+    from src.interfaces.api.routers.products import SessionCloud
+
+    with SessionCloud() as db:
+        db.add(VintageMiscellaneousModel(
+            title="Lote Vintage Test", url="https://example.com/lote-schema-test",
+            price=99.0, shop_name="TiendaLotes",
+        ))
+        db.commit()
+
+    resp = client.get("/api/vintage/miscellaneous")
+    assert resp.status_code == 200, resp.text
+    items = resp.json()
+    match = next(i for i in items if i["title"] == "Lote Vintage Test")
+    assert match["condition"] == "Loose"  # fallback aplicado por el router
+    assert match["grading"] == 7.5
+
+
 def test_admin_duplicates_devices_temporary_products_match_schema(client):
     """get_duplicates (lista anidada), get_all_devices (ORM
     AuthorizedDeviceModel via from_attributes) y get_temporary_products (lista
