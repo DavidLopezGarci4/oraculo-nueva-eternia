@@ -13,6 +13,39 @@ schema didn't match that real data, FastAPI would return 500
 from tests.conftest import API_KEY
 
 
+def test_admin_duplicates_devices_temporary_products_match_schema(client):
+    """get_duplicates (lista anidada), get_all_devices (ORM
+    AuthorizedDeviceModel via from_attributes) y get_temporary_products (lista
+    con conteos calculados) no tenian cobertura previa - los 3 con mayor
+    riesgo de admin.py por devolver listas anidadas/objetos ORM."""
+    from src.domain.models import ProductModel, AuthorizedDeviceModel
+    from src.interfaces.api.routers.admin import SessionCloud
+
+    with SessionCloud() as db:
+        db.add(ProductModel(name="Duplicado A", category="MOTU", ean="1234567890123", figure_id="DUP-A"))
+        db.add(ProductModel(name="Duplicado B", category="MOTU", ean="1234567890123", figure_id="DUP-B"))
+        db.add(ProductModel(name="Vintage Temporal", category="MOTU", figure_id="VINT-9999", is_vintage=True))
+        db.add(AuthorizedDeviceModel(device_id="schema-test-device", device_name="Schema Test", is_authorized=True))
+        db.commit()
+
+    headers = {"X-API-Key": API_KEY}
+
+    dup_resp = client.get("/api/admin/duplicates", headers=headers)
+    assert dup_resp.status_code == 200, dup_resp.text
+    dup_groups = dup_resp.json()
+    assert any(g["reason"] == "EAN compartido: 1234567890123" and len(g["products"]) == 2 for g in dup_groups)
+
+    devices_resp = client.get("/api/admin/devices", headers=headers)
+    assert devices_resp.status_code == 200, devices_resp.text
+    devices = devices_resp.json()
+    assert any(d["device_id"] == "schema-test-device" and d["is_authorized"] is True for d in devices)
+
+    temp_resp = client.get("/api/admin/temporary-products", headers=headers)
+    assert temp_resp.status_code == 200, temp_resp.text
+    temp_products = temp_resp.json()
+    assert any(p["figure_id"] == "VINT-9999" and p["offer_count"] == 0 for p in temp_products)
+
+
 def test_collection_toggle_and_update_match_schema(client, bearer):
     """toggle_collection y update_collection_item no tenian ninguna cobertura
     previa; verifica CollectionToggleOutput/StatusMessageOutput contra el

@@ -495,3 +495,40 @@ class CollectionToggleOutput(BaseModel):
     status: str
     action: str
     product_id: int
+
+
+# --- Admin Output (Fase AAA-Ola3, 3b) ---
+
+class DuplicateProductOutput(BaseModel):
+    id: int
+    name: str
+    image_url: str | None
+    sub_category: str | None
+    figure_id: str | None
+
+
+class DuplicateGroupOutput(BaseModel):
+    reason: str
+    products: List[DuplicateProductOutput]
+
+
+class AuthorizedDeviceOutput(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    device_id: str
+    device_name: str | None
+    is_authorized: bool
+    last_access_at: datetime
+    created_at: datetime
+
+
+class TemporaryProductOutput(BaseModel):
+    id: int
+    name: str
+    figure_id: str | None
+    sub_category: str | None
+    image_url: str | None
+    is_vintage: bool | None
+    offer_count: int
+    collection_count: int
