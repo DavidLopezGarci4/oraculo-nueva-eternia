@@ -90,12 +90,14 @@ image_cache_dir = settings.IMAGE_CACHE_DIR
 os.makedirs(image_cache_dir, exist_ok=True)
 app.mount("/api/static/images", StaticFiles(directory=image_cache_dir), name="static_images")
 
+from src.core.config import get_cors_origins
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=get_cors_origins(),
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-API-Key", "X-Device-ID", "X-Device-Name"],
 )
 
 # ─── Global exception handlers ────────────────────────────────────────────────

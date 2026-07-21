@@ -17,6 +17,12 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "El Oráculo de Nueva Eternia"
     VERSION: str = "2.1.0-RECOVERY"
     DEBUG: bool = False
+    # Deployment environment: "development" | "production".
+    # In "production", insecure default secrets abort startup (see guard below).
+    ENVIRONMENT: str = "development"
+
+    # CORS allowed origins (comma-separated in .env, e.g. "https://oraculo-eternia.duckdns.org").
+    CORS_ORIGINS: str = "http://localhost:3001,http://127.0.0.1:3001"
 
     # Database
     DATABASE_URL: str = "sqlite:///./oraculo.db"
@@ -94,3 +100,26 @@ else:
 
 if settings.SCRAPERAPI_KEY:
     os.environ["SCRAPERAPI_KEY"] = settings.SCRAPERAPI_KEY
+
+# ─── Production secret guard (Phase AAA-1.5) ──────────────────────────────────
+# Insecure default secrets are tolerated in development but MUST NOT reach
+# production. If ENVIRONMENT=production and any critical secret still holds its
+# example value, abort startup instead of silently exposing a known key.
+_INSECURE_DEFAULTS = {
+    "JWT_SECRET": "oraculo-jwt-secret-CHANGE-IN-PRODUCTION",
+    "ORACULO_API_KEY": "eternia-shield-2026",
+}
+if settings.ENVIRONMENT.strip().lower() == "production":
+    _leaked = [k for k, v in _INSECURE_DEFAULTS.items() if getattr(settings, k) == v]
+    if _leaked:
+        logger.critical(
+            "FATAL: Insecure default value(s) in production for: "
+            f"{', '.join(_leaked)}. Set strong secrets in .env "
+            "(e.g. `python -c \"import secrets; print(secrets.token_urlsafe(48))\"`)."
+        )
+        sys.exit(1)
+
+
+def get_cors_origins() -> list[str]:
+    """Parse CORS_ORIGINS into a clean list of allowed origins."""
+    return [o.strip() for o in settings.CORS_ORIGINS.split(",") if o.strip()]

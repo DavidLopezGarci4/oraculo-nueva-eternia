@@ -92,3 +92,6 @@ scratch/
 
 # Personal data dump (Phase 0 hardening)
 local_collection_dump.json
+
+# Allow the env template (no real secrets)
+!.env.example
