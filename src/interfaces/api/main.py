@@ -91,15 +91,66 @@ import os
 
 app = FastAPI(title="Oráculo API Broker", version="1.0.0", lifespan=lifespan)
 
+async def _fetch_and_cache_product_image(product_id: int) -> "str | None":
+    """
+    Fase AAA-4.2 (B.7): rellena la caché local de imágenes bajo demanda.
+
+    Hasta ahora, la conversión a WebP solo pasaba por el importador antiguo
+    de Excel (storage_service.py, vía GitHub Actions) o por un script de
+    migración puntual (scripts/phase0_migration.py) que nadie vuelve a
+    ejecutar — las imágenes descubiertas por los ~17 scrapers de tiendas
+    nunca se descargaban ni convertían, solo se servía la URL remota tal
+    cual. Esta función descarga la imagen remota del producto, la convierte
+    a WebP (mismo patrón que storage_service.py/phase0_migration.py) y la
+    guarda en IMAGE_CACHE_DIR, para que la siguiente petición ya la sirva
+    desde caché local sin volver a descargarla.
+    """
+    from src.infrastructure.database_cloud import SessionCloud
+    from src.domain.models import ProductModel
+
+    with SessionCloud() as db:
+        product = db.query(ProductModel).filter(ProductModel.id == product_id).first()
+        image_url = product.image_url if product else None
+
+    if not image_url or not image_url.startswith("http"):
+        return None
+
+    dest_path = os.path.join(settings.IMAGE_CACHE_DIR, f"{product_id}.webp")
+    try:
+        import io
+
+        import httpx
+        from PIL import Image
+
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(image_url)
+            resp.raise_for_status()
+
+        with Image.open(io.BytesIO(resp.content)) as img:
+            if img.mode in ("RGBA", "LA"):
+                background = Image.new("RGB", img.size, (255, 255, 255))
+                background.paste(img, mask=img.split()[-1])  # último canal = alfa (RGBA o LA)
+                img = background
+            elif img.mode != "RGB":
+                img = img.convert("RGB")
+            img.save(dest_path, "WEBP", quality=85)
+
+        logger.info(f"📸 Imagen del producto {product_id} descargada y cacheada en WebP.")
+        return dest_path
+    except Exception as e:
+        logger.warning(f"⚠️ No se pudo descargar/cachear la imagen del producto {product_id}: {e}")
+        return None
+
+
 @app.get("/api/static/images/{product_id}.webp")
 async def get_static_image_override(product_id: int, source: str = None, user_id: int = 2):
     from fastapi.responses import FileResponse
     from fastapi import HTTPException
     from src.infrastructure.database_cloud import SessionCloud
     from src.domain.models import UserModel
-    
+
     extensions = [".webp", ".jpg", ".jpeg", ".png"]
-    
+
     # 1. Try custom path if not explicitly cache-only
     if source != "cache":
         with SessionCloud() as db:
@@ -111,14 +162,19 @@ async def get_static_image_override(product_id: int, source: str = None, user_id
                             file_path = os.path.join(custom_dir, f"{product_id}{ext}")
                             if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
                                 return FileResponse(file_path)
-                                
+
     # 2. Try server cache if not explicitly custom-only
     if source != "custom":
         for ext in extensions:
             server_cache_file = os.path.join(settings.IMAGE_CACHE_DIR, f"{product_id}{ext}")
             if os.path.exists(server_cache_file) and os.path.getsize(server_cache_file) > 0:
                 return FileResponse(server_cache_file)
-                
+
+        # 3. Cache miss: descarga + convierte + cachea automáticamente.
+        cached_path = await _fetch_and_cache_product_image(product_id)
+        if cached_path:
+            return FileResponse(cached_path)
+
     raise HTTPException(status_code=404, detail="Imagen no encontrada")
 
 # Mount local image cache directory
