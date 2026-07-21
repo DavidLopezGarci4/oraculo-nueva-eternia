@@ -1,0 +1,194 @@
+# Reporte-Prompt · Elevación a Triple-A — El Oráculo de Nueva Eternia
+
+> **Propósito de este documento.** No es un simple listado de bugs: es un **plan de trabajo ejecutable**, ordenado por el flujo en el que deben abordarse las tareas. Cada acción está redactada como un "prompt" autónomo (con archivos y contexto) que puedes entregar a una IA o a un desarrollador para ejecutarla directamente. Las fases están ordenadas por dependencia y riesgo: **seguridad primero (bloqueante), luego arquitectura, después rendimiento y por último diseño/pulido AAA.**
+>
+> Fecha de análisis: 2026-07-21 · Rama: `main` · Alcance: backend (FastAPI), frontend (React 19 + Vite 7), despliegue (Docker/nginx), datos (SQLite/Supabase).
+
+---
+
+## Resumen ejecutivo — dónde está la aplicación hoy
+
+**Stack (moderno y correcto en su base):** FastAPI + SQLAlchemy 2 + Pydantic v2 · React 19 + Vite 7 + Tailwind 4 + React Query + framer-motion + recharts · arquitectura por capas (`domain/application/infrastructure/interfaces`) · Docker + nginx + Supabase/Postgres en prod, SQLite en local.
+
+**Diagnóstico global:** la base tecnológica es buena, pero el proyecto arrastra deuda que hoy **impide el nivel AAA en tres ejes**:
+
+| Eje | Estado actual | Bloqueante para AAA |
+|-----|---------------|---------------------|
+| 🔴 **Seguridad** | Modelo de autenticación efectivamente inexistente en el borde real. Clave maestra hardcodeada en el bundle del navegador. IDOR generalizado. CORS abierto. Sin cabeceras de seguridad. | **SÍ — crítico** |
+| 🟠 **Arquitectura** | Páginas monolíticas (`Config.tsx` 3072 líneas, `Purgatory.tsx` 2253, `Catalog.tsx` 1965). Sin router real; navegación por `activeTab` + *keep-alive* que mantiene todas las secciones montadas. Auth 100% client-side. | Parcial |
+| 🟡 **Rendimiento** | Bundle principal único de **1.23 MB**, `dist` de **18 MB**, **17 MB de PNG** sin optimizar (con duplicados). Todas las secciones visitadas quedan vivas en memoria y siguen refetcheando. | Sí (métricas AAA) |
+
+**Prioridad de ejecución:** Fase 1 (seguridad) es **no negociable y debe ir primero**. Fases 2–4 (arquitectura + rendimiento) dan el "baño de cara". Fase 5 (diseño/UX) es el pulido final AAA.
+
+---
+
+## FASE 0 · Preparación y línea base (antes de tocar nada)
+
+**Objetivo:** poder medir la mejora y trabajar sin romper.
+
+- **0.1 — Congelar métricas de partida.** Ejecuta `npm run build` en `frontend/` y anota: tamaño de cada chunk, tamaño total de `dist`, y una traza Lighthouse (Performance, Accessibility, Best-Practices, SEO) de las rutas principales (`dashboard`, `catalog`, `collection`). Guárdalas en `docs/BASELINE_METRICS.md`. Sin línea base no se puede demostrar "AAA".
+- **0.2 — Rama de trabajo.** Crea `git checkout -b refactor/aaa-uplift`. Todo el trabajo de este reporte vive aquí hasta validación.
+- **0.3 — Inventario de secretos.** Verifica que `.env` NO está en git (`git ls-files | grep .env`). Rota **ya** cualquier secreto que haya podido llegar a un commit: `JWT_SECRET`, `ORACULO_API_KEY`, `TELEGRAM_BOT_TOKEN`, `SUPABASE_SERVICE_ROLE_KEY`, `SMTP_PASS`, `CLOUDINARY_API_SECRET`, `SCRAPERAPI_KEY`. Nota: el commit `5390811` ya tuvo que desindexar `scratch/` por fuga de secretos de caché de Chrome → asume que hay exposición histórica y rota.
+
+---
+
+## FASE 1 · Seguridad crítica (BLOQUEANTE — hacer primero)
+
+> Esta fase corrige fallos que hoy hacen que **cualquier persona con acceso a la URL tenga control total de la aplicación**. Nada de lo demás importa hasta cerrar esto.
+
+### 1.1 — 🔴 CRÍTICO: clave maestra de administración hardcodeada en el frontend
+- **Dónde:** `frontend/src/api/admin.ts:5` y `frontend/src/api/purgatory.ts:5` → `const API_KEY = import.meta.env.VITE_ORACULO_API_KEY || 'eternia-shield-2026'`.
+- **Problema:** ese valor por defecto se **compila dentro del bundle JS** que se envía a todos los navegadores. Cualquiera puede abrir DevTools, leer `eternia-shield-2026` y usarlo. Y esa misma clave, en el backend (`auth.py:146`), otorga **bypass soberano de login** (`request.password == settings.ORACULO_API_KEY` → acceso admin) y en `deps.py:87` **suplanta al usuario admin**. Es decir: la clave de dios está publicada.
+- **Acción (prompt):** *"Elimina el fallback `'eternia-shield-2026'` de `admin.ts` y `purgatory.ts`. El frontend NO debe enviar nunca la API key de administración. Reemplaza el modelo por: el frontend hace login → recibe un JWT → envía `Authorization: Bearer <jwt>` en un interceptor de axios central. La `ORACULO_API_KEY` pasa a ser un secreto exclusivamente servidor-a-servidor (scrapers/workers), nunca navegador. Rota el valor de la clave tras el cambio."*
+
+### 1.2 — 🔴 CRÍTICO: autenticación real ausente en routers de datos
+- **Dónde:** `collection.py` (6 endpoints, **0 `Depends`**), `vault.py` (4 endpoints, **0 `Depends`**), `auth.py`, `logistics.py`, `showcase.py`.
+- **Problema:** endpoints como `GET /api/collection?user_id=<n>` reciben el `user_id` **como parámetro de query sin verificar identidad** (`collection.py:57`). Cualquiera puede leer/exportar la colección de cualquier usuario cambiando el número → **IDOR** (Broken Object Level Authorization, OWASP API #1). El *keep-alive* del front no protege nada; la API está desnuda.
+- **Acción (prompt):** *"Añade `current_user: UserModel = Depends(get_current_user)` a TODOS los endpoints de `collection.py`, `vault.py`, `logistics.py`. Deriva el `user_id` del token (`current_user.id`), nunca del query param. Donde un admin necesite actuar sobre otro usuario, exige rol admin explícito (`Depends(require_admin)`). Elimina los parámetros `user_id: int` de la firma pública."*
+
+### 1.3 — 🔴 CRÍTICO: acceso arbitrario a ficheros vía `file_path`
+- **Dónde:** `vault.py:35` → `api_stage_vault(user_id: int = 2, file_path: str = None)`.
+- **Problema:** un `file_path` controlado por el cliente que llega a operaciones de fichero es **path traversal / lectura-escritura arbitraria**. Igual, el endpoint de imágenes `main.py:58` (`get_static_image_override`) acepta `user_id=2` por defecto y arma rutas con `os.path.join(custom_dir, ...)` desde datos de BD.
+- **Acción (prompt):** *"Elimina `file_path` como parámetro de entrada del cliente en `vault.py`; el servidor debe resolver la ruta internamente contra un directorio permitido (allowlist) y validar con `Path.resolve()` que queda dentro de la carpeta base. Aplica la misma validación anti-traversal en `main.py:get_static_image_override` y protégelo con autenticación."*
+
+### 1.4 — 🟠 ALTO: CORS totalmente abierto con credenciales
+- **Dónde:** `main.py:93-99` → `allow_origins=["*"]` + `allow_credentials=True` + `allow_methods=["*"]` + `allow_headers=["*"]`.
+- **Problema:** combinación inválida/insegura; expone la API a cualquier origen. Con credenciales, es un vector de robo de sesión.
+- **Acción (prompt):** *"Sustituye `allow_origins=['*']` por una lista blanca desde settings (`settings.CORS_ORIGINS`), p. ej. `['https://oraculo-eternia.duckdns.org']` en prod y `http://localhost:3001` en dev. Restringe `allow_methods`/`allow_headers` a los realmente usados."*
+
+### 1.5 — 🟠 ALTO: secretos con valores por defecto inseguros en código
+- **Dónde:** `config.py:33` (`ORACULO_API_KEY = "eternia-shield-2026"`), `config.py:50` (`JWT_SECRET = "...CHANGE-IN-PRODUCTION"`). `main.py:9` solo *loguea* la advertencia, no impide arrancar.
+- **Acción (prompt):** *"Haz que `JWT_SECRET` y `ORACULO_API_KEY` NO tengan default utilizable: si en modo no-DEBUG están vacíos o son el valor de ejemplo, la app debe abortar el arranque (`sys.exit`), no solo advertir. Documenta su generación con `secrets.token_urlsafe(48)`."*
+
+### 1.6 — 🟠 ALTO: "identidad soberana" y bypass de login por API key
+- **Dónde:** `auth.py:127-185` (login con `is_sovereign_bypass = request.password == settings.ORACULO_API_KEY` y transferencia silenciosa a admin) y `deps.py:81-93` (API key → devuelve el primer usuario admin).
+- **Problema:** múltiples puertas traseras que colapsan el modelo de roles. Un password igual a la API key = admin en cualquier cuenta.
+- **Acción (prompt):** *"Elimina el mecanismo de 'sovereign bypass' por password. Autenticación = contraseña verificada con PBKDF2 y punto. Si se requiere un canal admin de servicio, que sea un endpoint separado protegido por API key server-side y por IP allowlist, jamás mezclado con el login de usuarios."*
+
+### 1.7 — 🟠 ALTO: sin cabeceras de seguridad ni rate-limiting
+- **Dónde:** `frontend/nginx.conf` no define `Content-Security-Policy`, `Strict-Transport-Security`, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`. No hay throttling en `/api/auth/*`.
+- **Acción (prompt):** *"Añade en el bloque `server 443` de nginx.conf las cabeceras HSTS, X-Content-Type-Options=nosniff, X-Frame-Options=DENY, Referrer-Policy=strict-origin-when-cross-origin, Permissions-Policy y una CSP acorde. En el backend, añade rate-limiting (p. ej. `slowapi`) a login/forgot-password/reset-password para frenar fuerza bruta y enumeración."*
+
+### 1.8 — 🟡 MEDIO: dispositivos auto-autorizados y endpoint que lista usuarios
+- **Dónde:** `deps.py:36-52` (una API key válida **auto-registra y auto-autoriza** cualquier `X-Device-ID` → el "Escudo 3OX" no protege si la key está publicada) y `auth.py:188` (`GET /api/auth/users` devuelve toda la lista de usuarios sin auth → enumeración).
+- **Acción (prompt):** *"Tras cerrar 1.1, revisa que el auto-autorizado de dispositivos ya no sea explotable. Protege o elimina `GET /api/auth/users` (fuga de usuarios/roles). Si es solo para el selector de test, gcategóriza detrás de rol admin."*
+
+### 1.9 — Verificación de la fase
+- **Acción (prompt):** *"Ejecuta la skill `/security-review` sobre la rama y corre `pip-audit`/`npm audit`. Añade un test de integración que confirme que `GET /api/collection?user_id=<otro>` devuelve 401/403 sin token válido."*
+
+---
+
+## FASE 2 · Endurecimiento del backend y contrato de API
+
+> Con la seguridad cerrada, se estabiliza el backend para que soporte crecimiento y sea mantenible.
+
+- **2.1 — Centralizar dependencias de auth.** Crea `require_admin` y `require_user` en `deps.py` y aplícalos de forma consistente (hoy la protección es dispar: `admin.py` 14/14, pero `collection.py` 0/6). *Prompt: "Audita los 89 endpoints y documenta en una tabla qué rol exige cada uno; aplica el `Depends` correspondiente."*
+- **2.2 — Esquemas de respuesta estrictos.** Varios endpoints devuelven `dict` crudos con campos internos. *Prompt: "Define `response_model` Pydantic en todos los endpoints para evitar fugas de campos (hashes, tokens, rutas de disco) y estabilizar el contrato."*
+- **2.3 — Migraciones en vez de `ALTER TABLE` en runtime.** `database_cloud.py:34-61` ejecuta `ALTER TABLE ... ADD COLUMN` en cada arranque con `except: pass`. Es frágil y oculta errores. *Prompt: "Mueve todo cambio de esquema a migraciones Alembic (ya existe `alembic.ini` y `migrations/`). Elimina los ALTER en `init_cloud_db` y los `except: pass` que tragan errores."*
+- **2.4 — Manejo de errores sin tragar excepciones.** El `except Exception: pass` de `config.py:79` y `database_cloud.py:59` enmascara fallos de configuración. *Prompt: "Reemplaza los `except: pass` silenciosos por logging con nivel y re-raise donde el fallo sea de arranque."*
+- **2.5 — Trabajo en segundo plano robusto.** El `telegram_listener` se lanza con `asyncio.create_task` en `lifespan` (`main.py:41`); si falla, el `except` global solo loguea. *Prompt: "Aísla los background tasks con supervisión/reintentos y health-check; que un fallo del listener no deje el estado a medias."*
+- **2.6 — Reproducibilidad de dependencias.** `requirements.txt` mezcla versiones fijadas y sin fijar (`requests`, `alembic`, `beautifulsoup4`, `xlsxwriter`, `python-dotenv` sin versión). *Prompt: "Fija todas las versiones y migra a `pyproject.toml` + lockfile (uv/pip-tools). Corre `pip-audit` y actualiza lo vulnerable."*
+
+---
+
+## FASE 3 · Reestructuración del frontend (arquitectura)
+
+> Aquí está el "baño de cara" estructural. El objetivo es romper los monolitos y establecer navegación real, lo que a su vez habilita el rendimiento de la Fase 4.
+
+- **3.1 — 🔴 Router real en lugar de `activeTab` + keep-alive.** Hoy `App.tsx:298-395` mantiene **todas las secciones visitadas montadas** a la vez con `className="hidden"` (`visitedTabs`). Cada sección visitada sigue viva: sus `useQuery`/`useInfiniteQuery`, timers y listeners siguen en memoria. Con Catalog/Collection/Purgatory abiertos, hay miles de nodos ocultos y consultas activas simultáneas. *Prompt: "Introduce `react-router-dom` con rutas reales (`/dashboard`, `/catalog`, `/collection`, …). Cada ruta monta y desmonta su página. Sustituye el patrón `visitedTabs`/`hidden`. Usa `<Suspense>` por ruta con el `PowerSwordLoader` como fallback (ya existe el lazy-loading en `App.tsx:14-22`)."*
+- **3.2 — 🔴 Trocear los monolitos.** `Config.tsx` (3072 líneas), `Purgatory.tsx` (2253), `Catalog.tsx` (1965), `Collection.tsx` (874), `Dashboard.tsx` (860). Estos ficheros son difíciles de mantener y penalizan el bundle. *Prompt: "Descompón `Config.tsx` en subcomponentes por sección (perfil, imágenes, scrapers, sistema, integraciones) y hooks (`useUserSettings`, etc.). Igual para `Purgatory` y `Catalog`: extrae tarjetas, modales, barras de filtro y la lógica de datos a hooks reutilizables. Meta: ningún componente > ~400 líneas."*
+- **3.3 — Autenticación no confiable en cliente.** Todo el gating vive en `localStorage` (`is_logged_in`, `is_sovereign`, `active_user_id` — `App.tsx:32-34`). Es UX, no seguridad (la seguridad real la da la Fase 1). *Prompt: "Deja claro que el gating de cliente es solo UX. Guarda el JWT de forma segura y añade un interceptor axios que, ante 401, limpie sesión y redirija a login. Elimina `active_user_id` como fuente de verdad de identidad."*
+- **3.4 — Cliente HTTP unificado.** Hoy cada archivo `api/*.ts` crea su propio axios con headers duplicados y la API key repetida. *Prompt: "Crea `src/api/client.ts` con una única instancia axios: baseURL, interceptor de `Authorization`, manejo global de errores y de 401. Todos los `api/*.ts` la importan."*
+- **3.5 — Limpieza de assets duplicados.** En `src/assets` conviven `.png` + `.webp` + versiones `old.*` (`old.Entrance_prod.png`, `old.bg-heman (2).png`, `olldHemanGlassmorphSword.png`…). *Prompt: "Elimina los `old.*` y los `.png` cuando exista `.webp` equivalente ya referenciado. Confirma referencias con grep antes de borrar."*
+
+---
+
+## FASE 4 · Rendimiento de carga entre secciones (el corazón del pedido)
+
+> Objetivo declarado del usuario: **carga fluida entre secciones y valor AAA**. Métricas objetivo: LCP < 2.5 s, bundle inicial < 250 KB gzip, transición entre secciones < 200 ms percibidos.
+
+### 4.1 — 🔴 Code-splitting real de vendors
+- **Evidencia:** `dist/assets/index-*.js` = **1.23 MB en un solo chunk**; `dist` total = 18 MB. `recharts` y `framer-motion` (pesados) van al bundle principal. `vite.config.ts` no define `build.rollupOptions.manualChunks`.
+- **Acción (prompt):** *"En `vite.config.ts` añade `manualChunks` separando `react/react-dom`, `recharts`, `framer-motion`, `@tanstack/react-query` y `lucide-react` en chunks vendor cacheables. Verifica que el lazy-loading de páginas produce un chunk por página (hoy solo se ve un `index` grande → confirma que el split funciona tras la Fase 3.1). Meta: chunk inicial < 250 KB gzip."*
+
+### 4.2 — 🔴 Optimización de imágenes (17 MB de PNG)
+- **Evidencia:** `src/assets` contiene **17.1 MB de PNG**; muchos con `.webp` al lado pero el `.png` sigue empaquetándose, más fondos a resolución completa (`bg-heman.png`, `Entrance_prod.png`).
+- **Acción (prompt):** *"Sirve solo `.webp`/`.avif`. Genera variantes responsive (`srcset`) para fondos y héroes. Añade `loading=\"lazy\"` y `decoding=\"async\"` a imágenes de catálogo. Considera `vite-plugin-image-optimizer`. Elimina PNGs redundantes tras verificar referencias. Meta: reducir peso de imágenes iniciales > 80%."*
+
+### 4.3 — Consultas que no se desmontan
+- **Evidencia:** con el keep-alive de la Fase 3.1, todas las páginas visitadas mantienen sus queries activas. Además `main.tsx` tiene `staleTime` 5 min y `gcTime` 10 min globales; combinado con montaje permanente = memoria y red innecesarias.
+- **Acción (prompt):** *"Tras migrar a router real (3.1), las queries se desmontan solas. Revisa `staleTime`/`gcTime` por tipo de dato (catálogo puede ser más largo; dashboard más corto). Usa `placeholderData: keepPreviousData` en paginación para transiciones sin parpadeo."*
+
+### 4.4 — Prefetch inteligente en hover
+- **Acción (prompt):** *"Al hacer hover sobre un ítem del Sidebar, dispara `queryClient.prefetchQuery` de esa sección y `import()` del chunk lazy. Así la sección ya está lista al hacer clic → transición < 200 ms."*
+
+### 4.5 — Virtualización de listas largas
+- **Evidencia:** `Catalog.tsx` usa `useInfiniteQuery` (bien) pero renderiza todas las tarjetas acumuladas en el DOM.
+- **Acción (prompt):** *"Introduce virtualización (`@tanstack/react-virtual`) en las rejillas de Catálogo/Colección/Purgatorio para que el DOM solo contenga las tarjetas visibles. Crítico con colecciones grandes."*
+
+### 4.6 — Caché de estáticos en nginx
+- **Evidencia:** `nginx.conf` tiene gzip pero **no** cabeceras `Cache-Control`/`immutable` para los assets con hash de Vite.
+- **Acción (prompt):** *"Añade en nginx `location ~* \\.(js|css|woff2|webp|avif|png)$ { expires 1y; add_header Cache-Control \"public, immutable\"; }`. Los assets de Vite ya llevan hash → seguro cachear un año. Añade `brotli` si el módulo está disponible."*
+
+### 4.7 — Background caching menos agresivo
+- **Evidencia:** `App.tsx:117-169` descarga TODO el catálogo de imágenes en segundo plano (1 cada 1.5 s) tras login. Útil pero puede competir con la carga inicial.
+- **Acción (prompt):** *"Convierte el pre-cacheo en un Service Worker con estrategia stale-while-revalidate en vez de un bucle en el hilo principal; respeta `navigator.connection.saveData` y arranca solo tras `requestIdleCallback`."*
+
+---
+
+## FASE 5 · Diseño, UX y accesibilidad (pulido AAA)
+
+> El nivel "AAA" en la web también significa **accesibilidad**. Aquí se convierte una app bonita en una app pulida y accesible.
+
+- **5.1 — Accesibilidad (WCAG).** *Prompt: "Audita con axe/Lighthouse: contraste de texto sobre glassmorphism (los `text-white` sobre fondos translúcidos suelen fallar AA), foco visible en todos los interactivos, roles/aria en modales (`CollectionItemDetailModal`, `QuickPreviewModal`, `MarketIntelligenceModal`), navegación por teclado y `aria-label` en botones-icono de `lucide-react`. Objetivo Lighthouse Accessibility ≥ 95."*
+- **5.2 — Estados de carga y error coherentes.** Ya existe `PowerSwordLoader` y `ErrorBoundary` (bien). *Prompt: "Estandariza skeletons por sección (no spinner a pantalla completa entre tabs) para que la transición sea percibida como instantánea. Asegura que cada `useQuery` renderiza estado de error accionable."*
+- **5.3 — `prefers-reduced-motion`.** framer-motion está muy presente. *Prompt: "Respeta `prefers-reduced-motion` desactivando animaciones no esenciales; mejora rendimiento y accesibilidad."*
+- **5.4 — Sistema de diseño / tokens.** *Prompt: "Consolida colores, sombras y radios de glassmorphism en tokens de Tailwind (`theme.extend`) y componentes UI reutilizables (Button, Card, Modal) para eliminar estilos ad-hoc repetidos en los monolitos."*
+- **5.5 — Responsive y móvil.** *Prompt: "Verifica los breakpoints en Catálogo/Config (rejillas densas) en 360 px; confirma áreas táctiles ≥ 44 px y que el menú móvil (`isMobileMenuOpen`) atrapa foco."*
+- **5.6 — SEO/meta.** `index.html` tiene `lang=\"en\"` pese a ser app en español, sin meta description/OG. *Prompt: "Corrige `lang=\"es\"`, añade meta description y Open Graph para la vista pública `/santuario/:username` (Showcase)."*
+
+---
+
+## FASE 6 · Datos y base de datos
+
+- **6.1 — Índices.** *Prompt: "Revisa consultas de `collection.py`/`products.py` y añade índices en `product_id`, `user_id`, y campos de filtro/orden usados por el catálogo (nombre, fecha de adición, is_vintage). Mide con `EXPLAIN`."*
+- **6.2 — Paridad SQLite/Postgres.** El código bifurca dialecto en runtime (`database_cloud.py`). *Prompt: "Documenta y testea la ruta Postgres (prod) como fuente de verdad; usa SQLite solo para tests con las mismas migraciones Alembic."*
+- **6.3 — Higiene del repo.** Hay `oraculo.db`, `oraculo.db-shm`, `oraculo.db-wal`, `local_collection_dump.json` y `backups/` en el árbol. *Prompt: "Confirma que artefactos de BD y dumps están en `.gitignore` y no versionados (riesgo de fuga de datos personales de la colección)."*
+
+---
+
+## FASE 7 · Observabilidad, testing y CI/CD
+
+- **7.1 — Tests.** Existe `tests/` y pytest. *Prompt: "Añade tests de integración de autorización (cada endpoint sensible rechaza sin token/rol), tests de los servicios de valuación/matching, y un par de tests e2e de frontend (Playwright ya está en deps) para los flujos login → catálogo → colección."*
+- **7.2 — CI.** Los commits recientes muestran auto-sync a Excel vía CI. *Prompt: "Añade a CI: `npm run build` + `lint` + `tsc`, `pytest`, `pip-audit` y `npm audit`, con fallo si el bundle inicial supera el presupuesto (bundlesize budget)."*
+- **7.3 — Logging.** loguru ya está bien usado. *Prompt: "Asegura que ningún log imprime secretos ni PII; añade IDs de correlación por request."*
+
+---
+
+## FASE 8 · Verificación final AAA (criterios de aceptación)
+
+Se considera alcanzado el objetivo "Triple-A" cuando:
+
+- ✅ **Seguridad:** `/security-review` sin hallazgos críticos/altos; sin secretos en el bundle; todos los endpoints de datos exigen auth+rol; CORS restringido; cabeceras de seguridad presentes.
+- ✅ **Rendimiento:** Lighthouse Performance ≥ 90 en `dashboard`/`catalog`; bundle inicial < 250 KB gzip; LCP < 2.5 s; transición entre secciones < 200 ms percibidos; imágenes iniciales reducidas > 80%.
+- ✅ **Accesibilidad:** Lighthouse Accessibility ≥ 95; navegación completa por teclado; `prefers-reduced-motion` respetado.
+- ✅ **Mantenibilidad:** ningún componente > ~400 líneas; router real; cliente API único; migraciones Alembic (sin ALTER en runtime); dependencias fijadas.
+- ✅ **Calidad:** CI en verde con tests de autorización y presupuesto de bundle.
+
+---
+
+## Orden recomendado de ejecución (resumen)
+
+```
+FASE 0  Línea base + rama + rotar secretos        (0.5 día)
+FASE 1  Seguridad crítica  ← BLOQUEANTE           (2-3 días)   ⟵ empezar SÍ o SÍ aquí
+FASE 2  Backend hardening + Alembic + contrato     (2 días)
+FASE 3  Router real + trocear monolitos            (3-4 días)   ⟵ habilita la Fase 4
+FASE 4  Rendimiento: chunks, imágenes, virtual.    (2-3 días)   ⟵ el "baño de cara"
+FASE 5  Accesibilidad + diseño AAA                 (2 días)
+FASE 6  Índices + datos                            (1 día)
+FASE 7  Tests + CI + observabilidad                (2 días)
+FASE 8  Verificación contra criterios AAA          (0.5 día)
+```
+
+> **Regla de oro:** la Fase 1 no se pospone. El resto puede solaparse, pero 3 debe ir antes que 4 (el router habilita el split y el desmontaje de queries).

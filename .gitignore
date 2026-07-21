@@ -89,3 +89,6 @@ backups/cloud/*.json
 
 # Diagnostic/Debug scratch folder
 scratch/
+
+# Personal data dump (Phase 0 hardening)
+local_collection_dump.json
