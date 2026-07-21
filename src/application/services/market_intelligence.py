@@ -1,5 +1,5 @@
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Any
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
@@ -15,8 +15,8 @@ class MarketIntelligenceService:
         segregando por Retail y P2P.
         """
         # Obtenemos datos de los últimos 6 meses
-        six_months_ago = datetime.utcnow() - timedelta(days=180)
-        now = datetime.utcnow()
+        six_months_ago = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=180)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         current_month_key = f"{now.year}-{now.month:02d}"
         
         results = {

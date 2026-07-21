@@ -1,6 +1,6 @@
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from src.infrastructure.repositories.product import ProductRepository
 
@@ -37,14 +37,14 @@ class AuditorService:
         )
 
         receipt = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
             "actor": "AuditorService",
             "action": action_type,
             "offer_url": offer_data["url"],
             "status": "LOGGED"
         }
         
-        filename = f"event_{datetime.utcnow().strftime('%Y%m%d_%H%M%S_%f')}.json"
+        filename = f"event_{datetime.now(timezone.utc).replace(tzinfo=None).strftime('%Y%m%d_%H%M%S_%f')}.json"
         with open(self.receipts_dir / filename, "w", encoding="utf-8") as f:
             json.dump(receipt, f, indent=2)
 

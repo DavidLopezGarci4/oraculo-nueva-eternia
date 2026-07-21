@@ -3,7 +3,7 @@ Operación Rollback Selectivo: Devuelve ofertas de tiendas específicas al Purga
 Mantiene la integridad atómica de la base de datos y registra la acción en el historial.
 """
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import select
 from loguru import logger
 
@@ -64,7 +64,7 @@ def rollback_shops_to_purgatory():
                     url=offer.url,
                     shop_name=offer.shop_name,
                     image_url=None,
-                    found_at=datetime.utcnow()
+                    found_at=datetime.now(timezone.utc).replace(tzinfo=None)
                 )
                 db.add(pending)
                 

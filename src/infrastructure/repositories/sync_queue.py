@@ -2,7 +2,7 @@
 from sqlalchemy.orm import Session
 from src.domain.models import SyncQueueModel
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 
 class SyncQueueRepository:
     def __init__(self, db: Session):
@@ -29,7 +29,7 @@ class SyncQueueRepository:
         item = self.db.query(SyncQueueModel).get(item_id)
         if item:
             item.status = "SYNCED"
-            item.synced_at = datetime.utcnow()
+            item.synced_at = datetime.now(timezone.utc).replace(tzinfo=None)
             self.db.commit()
 
     def mark_failed(self, item_id: int, error: str):

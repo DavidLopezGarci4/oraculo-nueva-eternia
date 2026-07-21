@@ -1,6 +1,6 @@
 from src.infrastructure.database_cloud import SessionCloud
 from src.domain.models import OfferModel, ProductModel, CollectionItemModel
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 def check_deals():
     with SessionCloud() as db:
@@ -8,7 +8,7 @@ def check_deals():
         owned_ids = [p[0] for p in db.query(CollectionItemModel.product_id).filter(CollectionItemModel.owner_id == user_id).all()]
         print(f"User {user_id} owns {len(owned_ids)} items.")
         
-        freshness_threshold = datetime.utcnow() - timedelta(hours=72)
+        freshness_threshold = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=72)
         print(f"Freshness threshold: {freshness_threshold}")
         
         offers = db.query(OfferModel).filter(

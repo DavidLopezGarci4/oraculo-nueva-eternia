@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Dict, List, Tuple
 from src.infrastructure.repositories.product import ProductRepository
 from src.domain.models import PriceAlertModel, ProductModel, OfferModel, PendingMatchModel
@@ -17,7 +17,7 @@ class SentinelService:
 
         triggered = []
         for alert in alerts:
-            alert.last_notified_at = datetime.utcnow()
+            alert.last_notified_at = datetime.now(timezone.utc).replace(tzinfo=None)
             self.repo.db.add(alert)
             triggered.append(alert)
             print(f"[SENTINEL] ALERT TRIGGERED: Product {product_id} at {current_price} EUR (Target: {alert.target_price} EUR)")

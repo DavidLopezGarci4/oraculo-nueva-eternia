@@ -5,7 +5,7 @@ import io
 import sys
 import random
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from playwright.async_api import Page, BrowserContext
 from src.infrastructure.scrapers.base import BaseScraper, ScrapedOffer
 
@@ -188,7 +188,7 @@ class EbayScraper(BaseScraper):
                     image_url=image_url,
                     source_type="Peer-to-Peer",
                     sale_type="Fixed_P2P",
-                    first_seen_at=datetime.utcnow()
+                    first_seen_at=datetime.now(timezone.utc).replace(tzinfo=None)
                 ))
             except:
                 continue
@@ -344,7 +344,7 @@ class EbayScraper(BaseScraper):
                         source_type="Peer-to-Peer",
                         sale_type=sale_type,
                         bids_count=bids_count,
-                        first_seen_at=datetime.utcnow(),
+                        first_seen_at=datetime.now(timezone.utc).replace(tzinfo=None),
                         is_sold=False
                     ))
                 except Exception:

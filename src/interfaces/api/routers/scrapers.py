@@ -1,7 +1,7 @@
 import asyncio
 import os
 import threading
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 import psutil
@@ -61,7 +61,7 @@ def run_scraper_task(
                 status = ScraperStatusModel(spider_name=spider_name)
                 db.add(status)
             status.status = "running"
-            status.start_time = datetime.utcnow()
+            status.start_time = datetime.now(timezone.utc).replace(tzinfo=None)
 
             execution_log = ScraperExecutionLogModel(
                 spider_name=spider_name,
@@ -212,7 +212,7 @@ def run_scraper_task(
             )
             if status:
                 status.status = "completed"
-                status.end_time = datetime.utcnow()
+                status.end_time = datetime.now(timezone.utc).replace(tzinfo=None)
 
             log = (
                 db.query(ScraperExecutionLogModel)
@@ -221,7 +221,7 @@ def run_scraper_task(
             )
             if log:
                 log.status = "success"
-                log.end_time = datetime.utcnow()
+                log.end_time = datetime.now(timezone.utc).replace(tzinfo=None)
                 log.items_found = items_found
                 log.new_items = new_items if new_items is not None else 0
 
@@ -246,7 +246,7 @@ def run_scraper_task(
             )
             if log:
                 log.status = "error"
-                log.end_time = datetime.utcnow()
+                log.end_time = datetime.now(timezone.utc).replace(tzinfo=None)
                 log.error_message = str(e)
 
             db.commit()
@@ -293,7 +293,7 @@ async def run_scrapers(request: ScraperRunRequest, background_tasks: BackgroundT
             status = ScraperStatusModel(spider_name=request.spider_name)
             db.add(status)
         status.status = "running"
-        status.start_time = datetime.utcnow()
+        status.start_time = datetime.now(timezone.utc).replace(tzinfo=None)
 
         execution_log = ScraperExecutionLogModel(
             spider_name=request.spider_name,
@@ -350,14 +350,14 @@ async def stop_scrapers():
         with SessionCloud() as db:
             db.query(ScraperStatusModel).filter(
                 ScraperStatusModel.status == "running"
-            ).update({"status": "stopped", "end_time": datetime.utcnow()})
+            ).update({"status": "stopped", "end_time": datetime.now(timezone.utc).replace(tzinfo=None)})
 
             db.query(ScraperExecutionLogModel).filter(
                 ScraperExecutionLogModel.status == "running"
             ).update(
                 {
                     "status": "stopped",
-                    "end_time": datetime.utcnow(),
+                    "end_time": datetime.now(timezone.utc).replace(tzinfo=None),
                     "error_message": "PARADA DE EMERGENCIA: Acción forzada por el Arquitecto",
                 }
             )
@@ -577,7 +577,7 @@ async def import_wallapop_manual_html(file: Optional[UploadFile] = File(None)):
                 shop_name="Wallapop",
                 image_url=offer["image_url"],
                 source_type="Peer-to-Peer",
-                found_at=datetime.utcnow()
+                found_at=datetime.now(timezone.utc).replace(tzinfo=None)
             )
             db.add(pending)
             saved_count += 1

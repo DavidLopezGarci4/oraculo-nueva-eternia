@@ -2,7 +2,7 @@ import hashlib
 import hmac
 import os
 import httpx
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from loguru import logger
 from src.core.config import settings
@@ -88,7 +88,7 @@ class SecurityShield:
             return False
             
         # El dispositivo ya es conocido
-        device.last_access_at = datetime.utcnow()
+        device.last_access_at = datetime.now(timezone.utc).replace(tzinfo=None)
         db.commit()
         
         if not device.is_authorized:

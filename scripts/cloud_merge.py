@@ -5,7 +5,7 @@ import os
 import sys
 from loguru import logger
 from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import datetime, timezone
 
 # Add src to path
 sys.path.append(os.getcwd())
@@ -61,7 +61,7 @@ def cloud_merge():
                     url=item['url'],
                     scraped_name=item['scraped_name'],
                     reason=item.get('reason', 'user_discarded'),
-                    created_at=datetime.fromisoformat(item['created_at']) if item.get('created_at') else datetime.utcnow()
+                    created_at=datetime.fromisoformat(item['created_at']) if item.get('created_at') else datetime.now(timezone.utc).replace(tzinfo=None)
                 )
                 db_cloud.add(new_bl)
                 added_bl += 1
@@ -124,7 +124,7 @@ def cloud_merge():
                         acquired=item.get('acquired', False),
                         condition="MOC" if item.get('condition') in ['New', 'NEW', None] else item.get('condition', 'MOC'),
                         notes=item.get('notes'),
-                        acquired_at=datetime.fromisoformat(item['acquired_at']) if item.get('acquired_at') else datetime.utcnow()
+                        acquired_at=datetime.fromisoformat(item['acquired_at']) if item.get('acquired_at') else datetime.now(timezone.utc).replace(tzinfo=None)
                     )
                     db_cloud.add(new_item)
                     matched += 1
