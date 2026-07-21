@@ -1,5 +1,6 @@
 import json
 from datetime import datetime, timezone
+from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
 from loguru import logger
@@ -8,12 +9,20 @@ from src.application.services.logistics_service import LogisticsService
 from src.domain.models import OfferModel, PendingMatchModel, ProductModel, UserModel, BlackcludedItemModel, VintageMiscellaneousModel, OfferHistoryModel
 from src.infrastructure.database_cloud import SessionCloud
 from src.interfaces.api.deps import get_current_user, scope_user_id, verify_device
-from src.interfaces.api.schemas import WallapopImportRequest, UserImagePathsUpdateRequest
+from src.interfaces.api.schemas import (
+    WallapopImportRequest,
+    UserImagePathsUpdateRequest,
+    UserSettingsOutput,
+    UserImagePathsOutput,
+    UserLocationOutput,
+    UserPublicShowcaseOutput,
+    P2POpportunityOutput,
+)
 
 router = APIRouter(tags=["users"])
 
 
-@router.get("/api/users/{user_id}", dependencies=[Depends(verify_device)])
+@router.get("/api/users/{user_id}", response_model=UserSettingsOutput, dependencies=[Depends(verify_device)])
 async def get_user_settings(user_id: int, current_user: UserModel = Depends(get_current_user)):
     user_id = scope_user_id(current_user, user_id)
     with SessionCloud() as db:
@@ -32,7 +41,7 @@ async def get_user_settings(user_id: int, current_user: UserModel = Depends(get_
         }
 
 
-@router.post("/api/users/{user_id}/image-paths")
+@router.post("/api/users/{user_id}/image-paths", response_model=UserImagePathsOutput)
 async def update_user_image_paths(
     user_id: int,
     request: UserImagePathsUpdateRequest,
@@ -57,7 +66,7 @@ async def update_user_image_paths(
         }
 
 
-@router.post("/api/users/{user_id}/location")
+@router.post("/api/users/{user_id}/location", response_model=UserLocationOutput)
 async def update_user_location(
     user_id: int,
     location: str,
@@ -73,7 +82,7 @@ async def update_user_location(
         return {"status": "success", "location": user.location}
 
 
-@router.post("/api/users/{user_id}/public-showcase")
+@router.post("/api/users/{user_id}/public-showcase", response_model=UserPublicShowcaseOutput)
 async def update_user_showcase(
     user_id: int,
     is_public: bool,
@@ -190,7 +199,7 @@ async def import_wallapop_products(request: WallapopImportRequest):
     return {"status": "success", "imported": imported, "total_received": len(request.products)}
 
 
-@router.get("/api/radar/p2p-opportunities")
+@router.get("/api/radar/p2p-opportunities", response_model=List[P2POpportunityOutput])
 async def get_p2p_opportunities(user_id: int = 2, current_user: UserModel = Depends(get_current_user)):
     user_id = scope_user_id(current_user, user_id)
     with SessionCloud() as db:

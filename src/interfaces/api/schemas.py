@@ -234,3 +234,131 @@ class Token(BaseModel):
 class UserImagePathsUpdateRequest(BaseModel):
     pc_path: Optional[str] = None
     mobile_path: Optional[str] = None
+
+
+# --- Users & Dashboard Output (Fase AAA-2.2) ---
+# response_model explicito para que el contrato de la API quede documentado y
+# no dependa de lo que el handler decida devolver ad-hoc. Los campos y su
+# nulabilidad se han verificado contra los handlers reales (users.py,
+# dashboard.py) y contra UserModel/OfferModel/ProductModel en domain/models.py.
+
+class UserSettingsOutput(BaseModel):
+    id: int
+    username: str
+    email: str
+    location: str
+    role: str
+    is_public_showcase: bool
+    pc_image_path: Optional[str] = None
+    mobile_image_path: Optional[str] = None
+
+
+class UserImagePathsOutput(BaseModel):
+    status: str
+    pc_image_path: Optional[str] = None
+    mobile_image_path: Optional[str] = None
+
+
+class UserLocationOutput(BaseModel):
+    status: str
+    location: str
+
+
+class UserPublicShowcaseOutput(BaseModel):
+    status: str
+    is_public_showcase: bool
+
+
+class P2POpportunityOutput(BaseModel):
+    id: int
+    product_name: str
+    ean: str | None
+    image_url: str | None
+    price: float
+    p25_price: float
+    avg_market_price: float
+    saving: float
+    saving_pct: float
+    shop_name: str
+    url: str
+    opportunity_score: int | None
+    landing_price: float
+
+
+class FinancialHealthOutput(BaseModel):
+    total_invested: float
+    market_value: float
+    profit_loss: float
+    roi: float
+
+
+class ShopDistributionOutput(BaseModel):
+    shop: str | None
+    count: int
+
+
+class DashboardStatsOutput(BaseModel):
+    total_products: int
+    total_products_vintage: int
+    owned_count: int
+    owned_count_vintage: int
+    wish_count: int
+    wish_count_vintage: int
+    financial: FinancialHealthOutput
+    financial_vintage: FinancialHealthOutput
+    match_count: int
+    shop_distribution: List[ShopDistributionOutput]
+
+
+class HallOfFameItemOutput(BaseModel):
+    id: int
+    name: str
+    image_url: str | None
+    figure_id: str | None
+    market_value: float
+    purchase_price: float
+    invested_value: float
+    roi: float
+    roi_percentage: float
+
+
+class HallOfFameGroupOutput(BaseModel):
+    top_value: List[HallOfFameItemOutput]
+    top_roi: List[HallOfFameItemOutput]
+
+
+class HallOfFameOutput(BaseModel):
+    origins: HallOfFameGroupOutput
+    vintage: HallOfFameGroupOutput
+
+
+class TopDealOutput(BaseModel):
+    id: int
+    product_id: int | None
+    product_name: str
+    price: float
+    landing_price: float
+    shop_name: str
+    url: str
+    opportunity_score: int | None
+    image_url: str | None
+
+
+class MatchStatOutput(BaseModel):
+    shop: str | None
+    count: int
+
+
+class MatchHistoryOutput(BaseModel):
+    id: int
+    product_name: str
+    shop_name: str
+    price: float
+    action_type: str
+    timestamp: str
+    offer_url: str
+
+
+class StatusMessageOutput(BaseModel):
+    status: str
+    message: str
