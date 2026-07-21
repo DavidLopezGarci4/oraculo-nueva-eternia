@@ -2,7 +2,7 @@
 Tests for endpoint-level permission enforcement.
 Validates that API key and device-ID guards reject unauthenticated requests.
 """
-from tests.conftest import API_KEY, ADMIN_HEADERS, DEVICE_HEADERS
+from tests.conftest import API_KEY, ADMIN_HEADERS, DEVICE_HEADERS, EXTENSION_KEY
 
 
 # ─── Admin endpoints require X-API-Key ───────────────────────────────────────
@@ -150,3 +150,47 @@ def test_user_settings_non_admin_scoped_to_self(client, bearer, test_user, autho
     resp = client.get("/api/users/999999", headers=headers)
     assert resp.status_code == 200
     assert resp.json()["email"] == test_user["email"]
+
+
+# ─── POST /api/wallapop/import: guardián dual (Fase AAA-3d) ─────────────────
+# Antes sin ninguna auth. Ahora exige la clave propia de la extensión de
+# Chrome (X-Extension-Key) O una sesión de dispositivo aprobada (la SPA ya
+# manda X-Device-ID/JWT vía el interceptor global de axios).
+
+def test_wallapop_import_rejects_no_auth(client):
+    resp = client.post("/api/wallapop/import", json={"products": []})
+    assert resp.status_code == 403
+
+
+def test_wallapop_import_rejects_wrong_extension_key(client):
+    resp = client.post(
+        "/api/wallapop/import",
+        headers={"X-Extension-Key": "not-the-real-key"},
+        json={"products": []},
+    )
+    assert resp.status_code == 403
+
+
+def test_wallapop_import_accepts_extension_key(client):
+    resp = client.post(
+        "/api/wallapop/import",
+        headers={"X-Extension-Key": EXTENSION_KEY},
+        json={"products": []},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "success"
+
+
+def test_wallapop_import_accepts_authorized_device(client, authorized_device_headers):
+    resp = client.post(
+        "/api/wallapop/import",
+        headers=authorized_device_headers,
+        json={"products": []},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "success"
+
+
+def test_wallapop_import_rejects_pending_device(client):
+    resp = client.post("/api/wallapop/import", headers=DEVICE_HEADERS, json={"products": []})
+    assert resp.status_code == 403

@@ -39,6 +39,10 @@ class Settings(BaseSettings):
     SUPABASE_SERVICE_ROLE_KEY: str | None = None
     SUPABASE_DATABASE_URL: str | None = None
     ORACULO_API_KEY: str = "eternia-shield-2026" # Default key for dev
+
+    # Clave propia y de bajo privilegio para la extensión de Chrome (solo
+    # habilita POST /api/wallapop/import — nunca la API key de admin).
+    EXTENSION_API_KEY: str = "eternia-extension-dev-key"
     
     # Sovereign Identity (Bypass Alias)
     SOVEREIGN_EMAIL: str | None = None
@@ -102,6 +106,7 @@ if settings.SCRAPERAPI_KEY:
 _INSECURE_DEFAULTS = {
     "JWT_SECRET": "oraculo-jwt-secret-CHANGE-IN-PRODUCTION",
     "ORACULO_API_KEY": "eternia-shield-2026",
+    "EXTENSION_API_KEY": "eternia-extension-dev-key",
 }
 if settings.ENV.strip().lower() == "production":
     _leaked = [k for k, v in _INSECURE_DEFAULTS.items() if getattr(settings, k) == v]

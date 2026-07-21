@@ -8,7 +8,7 @@ from loguru import logger
 from src.application.services.logistics_service import LogisticsService
 from src.domain.models import OfferModel, PendingMatchModel, ProductModel, UserModel, BlackcludedItemModel, VintageMiscellaneousModel, OfferHistoryModel
 from src.infrastructure.database_cloud import SessionCloud
-from src.interfaces.api.deps import get_current_user, scope_user_id, verify_device
+from src.interfaces.api.deps import get_current_user, scope_user_id, verify_device, verify_wallapop_import
 from src.interfaces.api.schemas import (
     WallapopImportRequest,
     UserImagePathsUpdateRequest,
@@ -102,14 +102,13 @@ async def update_user_showcase(
         return {"status": "success", "is_public_showcase": user.is_public_showcase}
 
 
-@router.post("/api/wallapop/import")
+@router.post("/api/wallapop/import", dependencies=[Depends(verify_wallapop_import)])
 async def import_wallapop_products(request: WallapopImportRequest):
-    # Nota (Fase AAA-2.1): la extensión de Chrome (chrome-extension/content.js)
-    # llama a este endpoint SIN ninguna cabecera de auth. Queda intencionalmente
-    # sin proteger por ahora para no romperla; el impacto de un abuso anónimo es
-    # bajo (solo encola candidatos en el Purgatorio, que ya está gateado por
-    # verify_api_key para su revisión/aprobación). Pendiente: dar a la extensión
-    # una API key propia y exigirla aquí (ver reporte, Fase 2 — trabajo futuro).
+    # Fase AAA-3d: la extensión de Chrome (chrome-extension/content.js) manda
+    # su propia clave de bajo privilegio (X-Extension-Key, distinta de
+    # ORACULO_API_KEY — si se filtra desde el navegador no da acceso
+    # administrativo). La SPA (import manual por texto en Purgatory) sigue
+    # funcionando igual, cae al flujo normal de verify_device.
     imported = 0
     from src.core.url_utils import normalize_url
     from src.core.vintage_utils import validate_motu_relevance

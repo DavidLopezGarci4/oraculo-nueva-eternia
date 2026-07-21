@@ -88,6 +88,24 @@ async def verify_device(
     return x_device_id
 
 
+# ─── Wallapop import guard (Fase AAA-3d) ──────────────────────────────────────
+# POST /api/wallapop/import tiene dos llamantes legítimos con mecanismos de
+# auth distintos: la extensión de Chrome (sin sesión, necesita una clave
+# propia y de bajo privilegio) y la SPA ya logueada (import manual por texto
+# en Purgatory, que ya manda X-Device-ID/JWT vía el interceptor de axios).
+# Dual, igual que verify_api_key: acepta la clave de extensión, o si no,
+# reutiliza el flujo normal de verify_device.
+async def verify_wallapop_import(
+    request: Request,
+    x_extension_key: str = Header(None, alias="X-Extension-Key"),
+    x_device_id: str = Header(None, alias="X-Device-ID"),
+    x_device_name: str = Header("Desconocido", alias="X-Device-Name"),
+):
+    if x_extension_key and x_extension_key == settings.EXTENSION_API_KEY:
+        return "extension"
+    return await verify_device(request=request, x_device_id=x_device_id, x_device_name=x_device_name)
+
+
 # ─── JWT ─────────────────────────────────────────────────────────────────────
 
 def create_access_token(user_id: int, role: str) -> str:

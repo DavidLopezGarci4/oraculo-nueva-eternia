@@ -80,6 +80,8 @@ API_KEY = "eternia-shield-2026"  # default dev key from config.py
 # Fase AAA-1: X-API-Key es EXCLUSIVAMENTE server-to-server (scrapers/admin panel
 # autenticado por JWT). Ya no autoriza dispositivos ni actúa como bypass de login.
 
+EXTENSION_KEY = "eternia-extension-dev-key"  # default dev key from config.py (EXTENSION_API_KEY)
+
 ADMIN_HEADERS = {
     "X-API-Key": API_KEY,
     "X-Device-ID": "test-device-admin",
