@@ -103,6 +103,65 @@ user_id)` (`deps.py`) para que un usuario no-admin solo pueda operar sobre su pr
 fue el hallazgo más grave de la Fase 2.1 (cualquiera podía activar el escaparate público de otro
 usuario sin autenticación) — no lo reintroduzcas al añadir un endpoint nuevo sobre datos de usuario.
 
+### 3.4 Accesibilidad de modales (frontend): un solo hook, no reimplementar por componente
+
+Cada modal de la app es un componente independiente (`CacheWelcomeModal`, `QuickPreviewModal`,
+`MarketIntelligenceModal`, `CollectionItemDetailModal`, los internos de `Config.tsx`/`Purgatory.tsx`
+— no hay un wrapper `<Modal>` compartido, cada uno reimplementa a mano el overlay `fixed inset-0` +
+`AnimatePresence`). Antes de la Fase AAA-3c ninguno tenía foco atrapado, cierre con Escape, ni
+`role="dialog"`. En vez de parchear cada uno con lógica distinta, usa el hook compartido
+`frontend/src/hooks/useModalA11y.ts` (foco atrapado Tab/Shift+Tab, Escape cierra, foco devuelto al
+elemento que abrió el modal al cerrar) — es aditivo, no cambia el JSX visual de cada modal:
+
+```tsx
+const containerRef = useRef<HTMLDivElement>(null);
+useModalA11y(isOpen, onClose, containerRef);
+// ...
+<motion.div ref={containerRef} role="dialog" aria-modal="true" aria-labelledby="mi-titulo-id" tabIndex={-1} className="... outline-none">
+  <h2 id="mi-titulo-id">Título</h2>
+  <button onClick={onClose} aria-label="Cerrar">...</button>
+</motion.div>
+```
+
+Reglas asociadas encontradas de verdad en esta auditoría, aplícalas a cualquier componente nuevo:
+- Todo botón/enlace que solo contiene un icono (`lucide-react` sin texto visible) necesita
+  `aria-label` explícito — `title` solo NO basta (falla la regla `label-title-only` de axe).
+- Todo `<select>`/`<input>` necesita nombre accesible: o un `<label htmlFor="id">` con `id` en el
+  control, o `aria-label`/`aria-labelledby`. Un `<label>` como hermano visual sin `htmlFor` NO
+  cuenta — es el bug más repetido que se encontró (LoginPage, MasterLogin, Config.tsx).
+- Un toggle real (`<button onClick={...}>` que cambia un booleano) necesita `role="switch"` +
+  `aria-checked` + `aria-labelledby`/`aria-label` — no basta con el estilo visual de interruptor.
+- Todo el contenido de una página debe estar dentro de un landmark (`<main>`, `<nav>` con
+  `aria-label` si hay más de uno). Fondos decorativos (`position: fixed`, sin texto) llevan
+  `aria-hidden="true"` para no contar en absoluto.
+- Un `<div onClick=...>` sin `<button>` real necesita `role="button"` + `tabIndex={0}` +
+  `onKeyDown` para Enter/Espacio — si no, es inalcanzable por teclado aunque el ratón funcione.
+
+### 3.5 Cómo verificar accesibilidad: axe-core inyectado en vivo, no solo lectura de código
+
+El método que encontró TODOS los problemas reales en la Fase 3c fue inyectar `axe-core` (CDN,
+`https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.10.2/axe.min.js`) en la página real con el
+dev server corriendo (`javascript_tool` del navegador embebido), no solo leer el JSX. La lectura de
+código por sí sola se equivoca: un botón con `title` parece etiquetado a simple vista pero falla en
+runtime (`label-title-only`); un `<label>` que visualmente está "junto" al input puede no estar
+asociado en el DOM. Patrón de verificación:
+
+```js
+await new Promise((resolve, reject) => {
+  const s = document.createElement('script');
+  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.10.2/axe.min.js';
+  s.onload = resolve; s.onerror = reject;
+  document.head.appendChild(s);
+});
+const r = await window.axe.run(document, { resultTypes: ['violations'] });
+```
+
+Para páginas que exigen sesión/dispositivo aprobado, la única forma de probar el camino real es
+registrar una cuenta desechable de verdad y aprobar su dispositivo vía la API admin real
+(`POST /api/admin/devices/{device_id}/authorize` con `X-API-Key`) — no asumas que un fixture o un
+mock representa lo que un usuario real ve. Esto también aplica a páginas públicas sin sesión
+(`/santuario/:username`): actívalas de verdad (usa la propia UI ya arreglada) y escanéalas sin login.
+
 ---
 
 ## 4. Convenciones de testing
@@ -214,6 +273,14 @@ forma distinta — el "camino vacío" oculta mismatches que el estado compartido
   `python`/`python3` del PATH del sistema — ese suele apuntar a una instalación distinta sin
   `fastapi` instalado. Verifica con `.venv/Scripts/python.exe -c "from src.interfaces.api.main import
   app"` antes de asumir que un `ModuleNotFoundError` significa un problema real de dependencias.
+- **El clasificador de permisos del entorno bloquea ciertas acciones locales aunque sean seguras**
+  (ej. `sqlite3` leyendo emails de `users` de la BD local, o promover un usuario de prueba a admin
+  vía la API local para verificar una página solo-admin). No es un bug tuyo ni intentes rodearlo con
+  otra herramienta — es una barrera de seguridad intencional. Documenta el hueco de verificación
+  honestamente (qué NO se pudo probar en vivo y por qué) en vez de fingir que sí se comprobó.
+- **Rutas de archivo estilo Git Bash (`/c/Users/...`) no las entiende el `sqlite3`/Python nativo de
+  Windows** al construir una URL `sqlite:///...` para probar una migración contra una copia de la BD.
+  Conviértelas primero con `cygpath -w <ruta>` y sustituye `\` por `/` (ver §5).
 
 ---
 
