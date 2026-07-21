@@ -9,6 +9,7 @@ import { getUserSettings, type Hero } from './api/admin';
 import PowerSwordLoader from './components/ui/PowerSwordLoader';
 import axios from 'axios';
 import CacheWelcomeModal from './components/ui/CacheWelcomeModal';
+import { clearSession, setUnauthorizedHandler } from './api/client';
 
 // Lazy-Loaded Page Components for Code Splitting
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -97,13 +98,29 @@ function App() {
       setCurrentUser(data);
     } catch (err: any) {
       console.error("Failed to fetch current user", err);
-      if (err.response?.status === 403) {
+      const status = err.response?.status;
+      if (status === 403) {
         setIsUnauthorized(true);
+      } else if (status === 401) {
+        // Sesión inexistente o token caducado → volver al login.
+        clearSession();
+        setIsLoggedIn(false);
+        setIsSovereign(false);
+        setCurrentUser(null);
       }
     } finally {
       setLoading(false);
     }
   };
+
+  // Cuando cualquier petición devuelve 401 (token inválido), cerramos sesión de forma global.
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      setIsLoggedIn(false);
+      setIsSovereign(false);
+      setCurrentUser(null);
+    });
+  }, []);
 
   useEffect(() => {
     if (isSovereign || isLoggedIn) {
@@ -213,10 +230,7 @@ function App() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('active_user_id');
-    localStorage.removeItem('is_sovereign');
-    localStorage.removeItem('is_logged_in');
-    localStorage.removeItem('user_email');
+    clearSession();
     setIsLoggedIn(false);
     setCurrentUser(null);
     setIsSovereign(false);

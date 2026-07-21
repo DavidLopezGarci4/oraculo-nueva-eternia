@@ -10,21 +10,63 @@ from src.core.security import SecurityShield
 from src.domain.models import AuthorizedDeviceModel, ScraperStatusModel, UserModel
 from src.infrastructure.database_cloud import SessionCloud
 
-# ─── API Key ─────────────────────────────────────────────────────────────────
+# ─── JWT helpers (compartidos por todos los guardianes) ───────────────────────
 
-def verify_api_key(x_api_key: str = Header(None, alias="X-API-Key")):
-    if x_api_key != settings.ORACULO_API_KEY:
-        raise HTTPException(status_code=403, detail="Invalid API Key. Access Denied.")
-    return x_api_key
+_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
+
+
+def _user_from_token(token: str | None) -> UserModel | None:
+    """Decodifica un JWT y devuelve el usuario activo, o None si es inválido."""
+    if not token:
+        return None
+    try:
+        payload = jwt.decode(token, settings.JWT_SECRET, algorithms=["HS256"])
+        user_id = int(payload["sub"])
+    except (jwt.InvalidTokenError, KeyError, ValueError):
+        return None
+    with SessionCloud() as db:
+        return (
+            db.query(UserModel)
+            .filter(UserModel.id == user_id, UserModel.is_active == True)  # noqa: E712
+            .first()
+        )
+
+
+def _is_service_key(x_api_key: str | None) -> bool:
+    """True solo si la cabecera coincide con la API key servidor-a-servidor."""
+    return bool(x_api_key) and x_api_key == settings.ORACULO_API_KEY
+
+
+# ─── Admin guard (antes: verify_api_key) ──────────────────────────────────────
+
+def verify_api_key(
+    x_api_key: str = Header(None, alias="X-API-Key"),
+    token: str = Depends(_oauth2_scheme),
+):
+    """
+    Guardián de administración (modo dual):
+      - Acepta la API key SERVIDOR-A-SERVIDOR (scrapers/workers), o
+      - un JWT válido cuyo usuario tenga rol 'admin'.
+    La API key ya NO viaja en el navegador; el panel usa JWT de admin.
+    """
+    if _is_service_key(x_api_key):
+        return "service"
+    user = _user_from_token(token)
+    if user and user.role == "admin":
+        return user
+    raise HTTPException(status_code=403, detail="Se requieren privilegios de administrador.")
 
 
 # ─── Device Auth (Ojo de Sauron) ─────────────────────────────────────────────
+# Nota (Fase AAA-1): el auto-registro por API key se eliminó. La API key ya no
+# llega al navegador, así que autorizar dispositivos "porque traen la key" dejó
+# de tener sentido — ahora el dispositivo se autoriza únicamente por el flujo
+# manual de aprobación (SecurityShield.check_access / authorize_device).
 
 async def verify_device(
     request: Request,
     x_device_id: str = Header(None, alias="X-Device-ID"),
     x_device_name: str = Header("Desconocido", alias="X-Device-Name"),
-    x_api_key: str = Header(None, alias="X-API-Key"),
 ):
     if not x_device_id:
         raise HTTPException(
@@ -33,24 +75,6 @@ async def verify_device(
         )
 
     with SessionCloud() as db:
-        if x_api_key == settings.ORACULO_API_KEY:
-            device = (
-                db.query(AuthorizedDeviceModel)
-                .filter(AuthorizedDeviceModel.device_id == x_device_id)
-                .first()
-            )
-            if not device:
-                device = AuthorizedDeviceModel(
-                    device_id=x_device_id,
-                    device_name=x_device_name,
-                    is_authorized=True,
-                )
-                db.add(device)
-            else:
-                device.is_authorized = True
-            db.commit()
-            return x_device_id
-
         ip_address = request.client.host if request.client else "Unknown IP"
         is_authorized = await SecurityShield.check_access(
             x_device_id, x_device_name, ip_address, db
@@ -66,9 +90,6 @@ async def verify_device(
 
 # ─── JWT ─────────────────────────────────────────────────────────────────────
 
-_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
-
-
 def create_access_token(user_id: int, role: str) -> str:
     payload = {
         "sub": str(user_id),
@@ -78,21 +99,11 @@ def create_access_token(user_id: int, role: str) -> str:
     return jwt.encode(payload, settings.JWT_SECRET, algorithm="HS256")
 
 
-def get_current_user(
-    request: Request,
-    token: str = Depends(_oauth2_scheme),
-    x_api_key: str = Header(None, alias="X-API-Key")
-) -> UserModel:
-    # 1. Intentar validar por API Key (Bypass de administración para peticiones de panel)
-    if x_api_key and x_api_key == settings.ORACULO_API_KEY:
-        with SessionCloud() as db:
-            user = db.query(UserModel).filter(UserModel.role == "admin").first()
-            if not user:
-                user = db.query(UserModel).filter(UserModel.id == 2).first()
-            if user:
-                return user
-
-    # 2. Si no hay API Key válida, forzar la autenticación tradicional por Token JWT
+def get_current_user(token: str = Depends(_oauth2_scheme)) -> UserModel:
+    """
+    Autenticación exclusivamente por JWT (Fase AAA-1: se retiró el bypass de
+    administración por API Key — esa key es ahora solo servidor-a-servidor).
+    """
     if not token:
         raise HTTPException(status_code=401, detail="Not authenticated.")
     try:
@@ -104,10 +115,17 @@ def get_current_user(
         raise HTTPException(status_code=401, detail="Token inválido.")
 
     with SessionCloud() as db:
-        user = db.query(UserModel).filter(UserModel.id == user_id, UserModel.is_active == True).first()
+        user = db.query(UserModel).filter(UserModel.id == user_id, UserModel.is_active == True).first()  # noqa: E712
         if not user:
             raise HTTPException(status_code=401, detail="Usuario no encontrado.")
         return user
+
+
+def require_admin(user: UserModel = Depends(get_current_user)) -> UserModel:
+    """Exige que el usuario autenticado por JWT tenga rol admin."""
+    if user.role != "admin":
+        raise HTTPException(status_code=403, detail="Se requieren privilegios de administrador.")
+    return user
 
 
 # ─── Startup ──────────────────────────────────────────────────────────────────

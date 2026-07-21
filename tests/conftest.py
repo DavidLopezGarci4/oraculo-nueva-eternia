@@ -39,6 +39,8 @@ _SESSION_TARGETS = [
 # ─── Shared constants ────────────────────────────────────────────────────────
 
 API_KEY = "eternia-shield-2026"  # default dev key from config.py
+# Fase AAA-1: X-API-Key es EXCLUSIVAMENTE server-to-server (scrapers/admin panel
+# autenticado por JWT). Ya no autoriza dispositivos ni actúa como bypass de login.
 
 ADMIN_HEADERS = {
     "X-API-Key": API_KEY,
@@ -46,10 +48,11 @@ ADMIN_HEADERS = {
     "X-Device-Name": "Test Runner",
 }
 
+# Headers de un dispositivo que TODAVÍA no ha sido aprobado manualmente.
+# Úsalo para probar el camino "pendiente de aprobación" (403).
 DEVICE_HEADERS = {
     "X-Device-ID": "test-device-user",
     "X-Device-Name": "Test Runner",
-    "X-API-Key": API_KEY,  # auto-authorizes the device
 }
 
 
@@ -106,3 +109,28 @@ def viewer_token(client, test_user):
 def bearer(viewer_token):
     """Authorization header with viewer JWT."""
     return {"Authorization": f"Bearer {viewer_token}"}
+
+
+@pytest.fixture(scope="session")
+def authorized_device_headers(client):
+    """
+    Headers for a device that has gone through the REAL approval flow:
+    1. First request registers it as pending (is_authorized=False).
+    2. An admin (service API key) approves it via /api/admin/devices/{id}/authorize.
+    No API key is embedded in the returned headers — device auth alone is enough
+    afterwards, matching what a real browser sends post-approval.
+    """
+    device_id = "test-device-approved"
+    headers = {"X-Device-ID": device_id, "X-Device-Name": "Test Runner"}
+
+    # 1. Trigger registration (expected 403 — pending approval)
+    client.get("/api/dashboard/stats", headers=headers)
+
+    # 2. Approve it as an admin would (service-to-service API key)
+    resp = client.post(
+        f"/api/admin/devices/{device_id}/authorize",
+        headers={"X-API-Key": API_KEY},
+    )
+    assert resp.status_code == 200, resp.text
+
+    return headers

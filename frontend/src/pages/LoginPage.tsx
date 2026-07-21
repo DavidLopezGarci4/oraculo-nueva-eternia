@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { User, Lock, ArrowRight, RefreshCw } from 'lucide-react';
 import entranceBg from '../assets/Entrance_prod.webp';
 import axios from 'axios';
+import { setToken as saveAuthToken } from '../api/client';
 
 interface LoginPageProps {
     onLoginSuccess: (userData: any, isSovereign: boolean) => void;
@@ -38,7 +39,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             if (mode === 'login') {
                 const response = await axios.post('/api/auth/login', { email, password });
                 if (response.data.status === 'success') {
-                    const { user, is_sovereign } = response.data;
+                    const { user, is_sovereign, access_token } = response.data;
+                    if (access_token) saveAuthToken(access_token);
                     localStorage.setItem('active_user_id', user.id.toString());
                     localStorage.setItem('is_sovereign', is_sovereign ? 'true' : 'false');
                     localStorage.setItem('user_email', email);

@@ -1,17 +1,7 @@
-import axios from 'axios';
-import { ShieldIdentity } from './shield-identity';
+import { apiClient as adminAxios } from './client';
 
-const API_BASE = '/api';
-const API_KEY = import.meta.env.VITE_ORACULO_API_KEY || 'eternia-shield-2026';
-
-const adminAxios = axios.create({
-    baseURL: API_BASE,
-    headers: {
-        'X-API-Key': API_KEY,
-        'X-Device-ID': ShieldIdentity.getDeviceId(),
-        'X-Device-Name': ShieldIdentity.getDeviceName()
-    }
-});
+// La autenticación (JWT + huella de dispositivo) la aplica el interceptor central en './client'.
+// La API key de administración ya NO se incluye en el bundle del navegador.
 
 export interface ScraperStatus {
     spider_name: string;
@@ -189,6 +179,22 @@ export const downloadVault = async (userId: number = 2): Promise<void> => {
 export const syncExcel = async (userId: number = 2): Promise<{ status: string; message: string }> => {
     const response = await adminAxios.post(`/excel/sync?user_id=${userId}`);
     return response.data;
+};
+
+export const downloadImagesZip = async (): Promise<void> => {
+    // Fase AAA-1.3: el endpoint ahora exige admin (JWT), así que ya no puede
+    // descargarse con un simple window.open() sin cabeceras de auth.
+    const response = await adminAxios.get('/vault/download-images/zip', {
+        responseType: 'blob'
+    });
+    const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/zip' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'motu_images.zip');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
 };
 
 export const exportCollectionExcel = async (userId: number = 2): Promise<void> => {

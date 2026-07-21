@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Shield, Lock, ArrowRight, Zap, RefreshCw } from 'lucide-react';
+import { Shield, Lock, ArrowRight, Zap, RefreshCw, User } from 'lucide-react';
 import axios from 'axios';
+import { setToken } from '../../api/client';
 
 interface MasterLoginProps {
     onSuccess: (isSovereign: boolean) => void;
@@ -8,7 +9,8 @@ interface MasterLoginProps {
 }
 
 const MasterLogin: React.FC<MasterLoginProps> = ({ onSuccess, onCancel }) => {
-    const [apiKey, setApiKey] = useState('');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
@@ -18,16 +20,24 @@ const MasterLogin: React.FC<MasterLoginProps> = ({ onSuccess, onCancel }) => {
         setError('');
 
         try {
-            const response = await axios.post('/api/auth/login', { api_key: apiKey });
-            if (response.data.is_sovereign) {
-                // Guardar en localStorage para persistencia
-                localStorage.setItem('master_key', apiKey);
+            // Acceso soberano por credenciales reales (email + contraseña de admin).
+            // La antigua "llave maestra" (API key) fue retirada por seguridad.
+            const response = await axios.post('/api/auth/login', { email, password });
+            const { user, access_token } = response.data;
+            if (response.data.status === 'success' && user?.role === 'admin') {
+                if (access_token) setToken(access_token);
+                localStorage.setItem('active_user_id', user.id.toString());
                 localStorage.setItem('is_sovereign', 'true');
+                localStorage.setItem('is_logged_in', 'true');
+                localStorage.setItem('user_email', email);
                 onSuccess(true);
+            } else {
+                setError('Estas credenciales no tienen rango de Arquitecto.');
             }
         } catch (err: any) {
             console.error("Login failed", err);
-            setError('Llave Maestra incorrecta. Acceso Denegado.');
+            const detail = err.response?.data?.detail;
+            setError(detail || 'Credenciales incorrectas. Acceso Denegado.');
         } finally {
             setLoading(false);
         }
@@ -60,18 +70,37 @@ const MasterLogin: React.FC<MasterLoginProps> = ({ onSuccess, onCancel }) => {
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <div className="space-y-2">
                             <label className="text-[10px] font-black uppercase tracking-widest text-white/40 ml-1">
-                                Llave Maestra (API KEY)
+                                Correo del Arquitecto
+                            </label>
+                            <div className="relative group">
+                                <User className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-white/20 group-focus-within:text-brand-primary transition-colors" />
+                                <input
+                                    type="email"
+                                    autoComplete="username"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    placeholder="arquitecto@eternia.com"
+                                    className="w-full rounded-2xl border border-white/10 bg-white/5 py-4 pl-12 pr-4 text-white placeholder:text-white/10 outline-none transition-all focus:border-brand-primary/50 focus:ring-1 focus:ring-brand-primary/20"
+                                    required
+                                    autoFocus
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-white/40 ml-1">
+                                Contraseña Soberana
                             </label>
                             <div className="relative group">
                                 <Lock className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-white/20 group-focus-within:text-brand-primary transition-colors" />
                                 <input
                                     type="password"
-                                    value={apiKey}
-                                    onChange={(e) => setApiKey(e.target.value)}
+                                    autoComplete="current-password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
                                     placeholder="••••••••••••••••"
                                     className="w-full rounded-2xl border border-white/10 bg-white/5 py-4 pl-12 pr-4 text-white placeholder:text-white/10 outline-none transition-all focus:border-brand-primary/50 focus:ring-1 focus:ring-brand-primary/20"
                                     required
-                                    autoFocus
                                 />
                             </div>
                         </div>

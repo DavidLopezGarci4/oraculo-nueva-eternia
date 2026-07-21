@@ -27,8 +27,8 @@ from src.interfaces.api.schemas import (
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
 
-@router.post("/users/create")
-async def create_user(request: CreateUserRequest, x_api_key: str = Depends(verify_api_key)):
+@router.post("/users/create", dependencies=[Depends(verify_api_key)])
+async def create_user(request: CreateUserRequest):
     with SessionCloud() as db:
         exists = db.query(UserModel).filter(
             or_(UserModel.email == request.email, UserModel.username == request.username)

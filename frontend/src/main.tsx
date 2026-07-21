@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import './index.css'
+import './api/client' // Registra los interceptores de auth (JWT) sobre axios global antes de cualquier petición
 import App from './App.tsx'
 
 const queryClient = new QueryClient({

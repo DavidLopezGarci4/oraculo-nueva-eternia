@@ -57,14 +57,13 @@ def test_login_unknown_email(client):
     assert resp.status_code == 401
 
 
-def test_jwt_get_current_user(client, bearer):
+def test_jwt_get_current_user(client, bearer, authorized_device_headers):
     """Token from login must authenticate /api/users/{id} correctly."""
-    from tests.conftest import API_KEY, DEVICE_HEADERS
     resp = client.post("/api/auth/login", json={"email": "viewer@test.com", "password": "viewer-pass-123"})
     user_id = resp.json()["user"]["id"]
 
-    # verify_device auto-authorizes when X-API-Key is present
-    headers = {**DEVICE_HEADERS, "Authorization": bearer["Authorization"]}
+    # Device must be approved through the real flow (Fase AAA-1: no more API-key bypass)
+    headers = {**authorized_device_headers, "Authorization": bearer["Authorization"]}
     resp2 = client.get(f"/api/users/{user_id}", headers=headers)
     assert resp2.status_code == 200
     assert resp2.json()["id"] == user_id

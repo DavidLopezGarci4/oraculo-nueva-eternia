@@ -1,16 +1,17 @@
 import secrets
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from loguru import logger
 from sqlalchemy import or_
 
 from src.core.config import settings
+from src.core.rate_limit import rate_limit
 from src.core.security import SecurityShield
 from src.domain.models import UserModel
 from src.infrastructure.database_cloud import SessionCloud
 from src.infrastructure.email_service import EmailService
-from src.interfaces.api.deps import create_access_token
+from src.interfaces.api.deps import create_access_token, require_admin
 from src.interfaces.api.schemas import (
     ForgotPasswordRequest,
     LoginRequest,
@@ -21,7 +22,7 @@ from src.interfaces.api.schemas import (
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
-@router.post("/register")
+@router.post("/register", dependencies=[Depends(rate_limit(5, 300, "register"))])
 async def register(request: RegisterRequest):
     """
     Fase de Reclutamiento: Permite a nuevos usuarios unirse como Guardianes con nombre propio.
@@ -60,7 +61,7 @@ async def register(request: RegisterRequest):
         }
 
 
-@router.post("/forgot-password")
+@router.post("/forgot-password", dependencies=[Depends(rate_limit(3, 300, "forgot-password"))])
 async def forgot_password(
     request: ForgotPasswordRequest, background_tasks: BackgroundTasks
 ):
@@ -92,7 +93,7 @@ async def forgot_password(
         }
 
 
-@router.post("/reset-password")
+@router.post("/reset-password", dependencies=[Depends(rate_limit(5, 300, "reset-password"))])
 async def reset_password(request: ResetPasswordRequest):
     """
     Fase 15: Valida el token y cambia la contraseña.
@@ -124,7 +125,7 @@ async def reset_password(request: ResetPasswordRequest):
         }
 
 
-@router.post("/login")
+@router.post("/login", dependencies=[Depends(rate_limit(10, 300, "login"))])
 async def login(request: LoginRequest):
     """
     Autenticación de Héroes y Guardianes.
@@ -143,22 +144,16 @@ async def login(request: LoginRequest):
 
         user = db.query(UserModel).filter(UserModel.email == request.email).first()
 
-        is_sovereign_bypass = request.password == settings.ORACULO_API_KEY
-
         if not user:
             raise HTTPException(
                 status_code=401, detail="Email no registrado en el Oráculo."
             )
 
-        if is_sovereign_bypass:
-            is_valid = True
-            logger.info(
-                f"🛡️ Acceso SOBERANO detectado por API KEY para {user.username}"
-            )
-        else:
-            is_valid = SecurityShield.verify_password(
-                request.password, user.hashed_password
-            )
+        # Fase AAA-1.6: se eliminó el bypass "password == ORACULO_API_KEY".
+        # Autenticación única vía hash de contraseña (PBKDF2).
+        is_valid = SecurityShield.verify_password(
+            request.password, user.hashed_password
+        )
 
         if not is_valid:
             raise HTTPException(status_code=401, detail="Credenciales incorrectas.")
@@ -174,20 +169,19 @@ async def login(request: LoginRequest):
                     f"👑 Alias Activado: {user.username} asume el control del Arquitecto ({master_admin.username})"
                 )
                 user = master_admin
-                is_sovereign_bypass = True
 
         return {
             "status": "success",
             "user": {"id": user.id, "username": user.username, "email": user.email, "role": user.role},
             "access_token": create_access_token(user.id, user.role),
             "token_type": "bearer",
-            "is_sovereign": user.role == "admin" or is_sovereign_bypass,
+            "is_sovereign": user.role == "admin",
         }
 
 
 @router.get("/users")
-async def get_users_minimal():
-    """Retorna la lista de usuarios para el selector rápido (Modo Legacy/Test)"""
+async def get_users_minimal(_admin: UserModel = Depends(require_admin)):
+    """Retorna la lista de usuarios para el selector rápido. Solo administradores (Fase AAA-1.8)."""
     with SessionCloud() as db:
         users = db.query(UserModel).all()
         return [{"id": u.id, "username": u.username, "role": u.role} for u in users]

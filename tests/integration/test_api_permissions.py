@@ -67,17 +67,35 @@ def test_dashboard_stats_rejects_no_device(client):
     assert resp.status_code == 403
 
 
-def test_dashboard_stats_accepts_api_key_as_device_bypass(client):
-    """X-API-Key present → device is auto-authorized by verify_device."""
-    resp = client.get("/api/dashboard/stats", headers=DEVICE_HEADERS)
+def test_dashboard_stats_accepts_approved_device(client, authorized_device_headers):
+    """A device that went through the real approval flow can access device-gated endpoints."""
+    resp = client.get("/api/dashboard/stats", headers=authorized_device_headers)
     assert resp.status_code == 200
     data = resp.json()
     assert "total_products" in data
     assert "financial" in data
 
 
-def test_collection_public_no_device(client):
-    """GET /api/collection requires user_id param but no device auth."""
+def test_dashboard_stats_rejects_pending_device(client):
+    """A brand-new, unapproved device must be rejected — API key no longer bypasses this (Fase AAA-1)."""
+    resp = client.get("/api/dashboard/stats", headers=DEVICE_HEADERS)
+    assert resp.status_code == 403
+
+
+def test_collection_rejects_unauthenticated(client):
+    """Fase AAA-1.2: /api/collection ya no es de lectura anónima (era un IDOR)."""
     resp = client.get("/api/collection", params={"user_id": 999})
+    assert resp.status_code == 401
+
+
+def test_collection_non_admin_cannot_read_other_users(client, bearer, test_user):
+    """
+    Un viewer autenticado que pide el user_id de OTRA persona debe quedar
+    forzado a su propio id (nunca leer la colección ajena) — cierra el IDOR
+    original donde cualquiera podía leer cualquier user_id.
+    """
+    resp = client.get("/api/collection", params={"user_id": 999}, headers=bearer)
     assert resp.status_code == 200
-    assert resp.json() == []  # user 999 has no items
+    # Se ignora el user_id=999 solicitado; se sirve la colección del propio
+    # usuario autenticado (vacía en este test), nunca la de otro.
+    assert resp.json() == []

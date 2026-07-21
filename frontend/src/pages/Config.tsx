@@ -40,6 +40,7 @@ import {
     type Hero,
     getTemporaryProducts,
     mergeProducts,
+    downloadImagesZip,
     type TemporaryProduct
 } from '../api/admin';
 
@@ -2092,7 +2093,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                                     Descargar todas las imágenes a la caché
                                                 </button>
                                                 <button
-                                                    onClick={() => window.open('/api/vault/download-images/zip', '_blank')}
+                                                    onClick={() => downloadImagesZip()}
                                                     className="w-full bg-emerald-500/15 hover:bg-emerald-500 text-emerald-400 hover:text-white border border-emerald-500/30 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2"
                                                 >
                                                     <Package className="h-3 w-3" />
