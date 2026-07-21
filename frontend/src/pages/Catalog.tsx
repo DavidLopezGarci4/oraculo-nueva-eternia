@@ -8,40 +8,37 @@ import {
     Plus,
     Check,
     ShoppingCart,
-    ShoppingBasket,
     Settings,
-    Save,
     X,
     RefreshCw,
     Star,
-    ExternalLink,
     Flame,
     ArrowUpRight,
     Gem,
     Search,
     Box,
-    Trash2,
     ArrowUp,
     ArrowDown,
-    GitMerge,
     Store
 } from 'lucide-react';
 import { getOptimizedImageUrl } from '../utils/imageUtils';
 import { MOTUImage } from '../components/ui/MOTUImage';
 import { useCart } from '../context/CartContext';
-import { motion } from 'framer-motion';
 import { getCollection, toggleCollection } from '../api/collection';
 import type { Product } from '../api/collection';
-import { updateProduct, unlinkOffer, deleteProduct, mergeProducts, syncNexusVintage, getScrapersLogs } from '../api/admin';
-import { format, formatDistanceToNow } from 'date-fns';
+import { updateProduct, unlinkOffer, deleteProduct, syncNexusVintage, getScrapersLogs } from '../api/admin';
+import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { getProductPriceHistory, getUniqueShops } from '../api/products';
 import type { Hero } from '../api/admin';
 import PowerSwordLoader from '../components/ui/PowerSwordLoader';
-import { parseUtcDate } from '../utils/dateUtils';
 import { FoilTiltCard } from '../components/ui/FoilTiltCard';
 import { buildSearchQuery } from '../components/catalog/catalogHelpers';
 import CronosView from '../components/catalog/CronosView';
+import ProductDetailModal from '../components/catalog/ProductDetailModal';
+import EditProductModal from '../components/catalog/EditProductModal';
+import FullscreenImageModal from '../components/catalog/FullscreenImageModal';
+import VintageSyncModal from '../components/catalog/VintageSyncModal';
 
 
 // Para desarrollo, usamos el ID de David
@@ -1117,533 +1114,50 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                 </>
             )}
 
-            {/* PRODUCT DETAIL MODAL (OFFERS) */}
-            {selectedProduct && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl animate-in fade-in duration-300">
-                    <div
-                        className={`relative w-full max-w-4xl max-h-[90vh] overflow-hidden rounded-[3rem] border bg-[#0A0A0B] shadow-[0_50px_100px_-20px_rgba(0,0,0,1)] flex flex-col ${isVintageOnly ? 'border-amber-500/20' : 'border-white/10'}`}
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        {/* Glow background for vintage */}
-                        {isVintageOnly && (
-                            <div className="absolute -right-20 -top-20 h-80 w-80 rounded-full bg-amber-500/5 blur-[100px] pointer-events-none"></div>
-                        )}
+            <ProductDetailModal
+                selectedProduct={selectedProduct}
+                setSelectedProduct={setSelectedProduct}
+                isVintageOnly={isVintageOnly}
+                setExpandedImage={setExpandedImage}
+                isAdmin={isAdmin}
+                deleteProductMutation={deleteProductMutation}
+                showMergePanel={showMergePanel}
+                setShowMergePanel={setShowMergePanel}
+                mergeSearchQuery={mergeSearchQuery}
+                setMergeSearchQuery={setMergeSearchQuery}
+                mergeTargetProduct={mergeTargetProduct}
+                setMergeTargetProduct={setMergeTargetProduct}
+                products={products}
+                isMerging={isMerging}
+                setIsMerging={setIsMerging}
+                queryClient={queryClient}
+                isLoadingOffers={isLoadingOffers}
+                productOffers={productOffers}
+                unlinkMutation={unlinkMutation}
+                addToCart={addToCart}
+            />
 
-                        {/* Modal Header */}
-                        <div className="p-8 pb-4 flex items-start justify-between relative z-10">
-                            <div className="flex gap-6 items-center">
-                                <div
-                                    className={`h-24 w-24 shrink-0 overflow-hidden rounded-3xl bg-black/40 cursor-zoom-in hover:scale-105 transition-transform border ${isVintageOnly ? 'border-amber-500/25' : 'border-white/10'}`}
-                                    onClick={() => setExpandedImage(selectedProduct.image_url)}
-                                    title="Expandir Reliquia"
-                                >
-                                    <MOTUImage 
-                                        productId={selectedProduct.id}
-                                        src={getOptimizedImageUrl(selectedProduct.image_url, 600)} 
-                                        className="h-full w-full object-cover" 
-                                        loading="lazy"
-                                        alt={selectedProduct.name}
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <h4 className="text-3xl font-black tracking-tighter text-white leading-none">
-                                        Analítica de <span className={isVintageOnly ? 'text-amber-500' : 'text-brand-primary'}>Precios</span>
-                                    </h4>
-                                    <p className="text-sm font-bold text-white/60 uppercase tracking-widest">{selectedProduct.name}</p>
-                                </div>
-                            </div>
-                            <div className="flex flex-col items-center gap-2">
-                                <button
-                                    onClick={() => setSelectedProduct(null)}
-                                    className={`h-10 w-10 flex items-center justify-center rounded-xl bg-white/5 text-white/65 hover:text-white transition-all ${isVintageOnly ? 'hover:bg-amber-500/20 hover:text-amber-400' : 'hover:bg-red-500/20 hover:text-red-400'}`}
-                                >
-                                    <span className="text-2xl">&times;</span>
-                                </button>
-                                {isAdmin && (
-                                    <button
-                                        onClick={() => {
-                                            if (confirm(`¿Arquitecto, está seguro de ELIMINAR por completo el producto genérico '${selectedProduct.name}' de Eternia? Todas las ofertas vinculadas serán devueltas de inmediato al Purgatorio.`)) {
-                                                deleteProductMutation.mutate(selectedProduct.id);
-                                            }
-                                        }}
-                                        disabled={deleteProductMutation.isPending}
-                                        className="h-10 w-10 flex items-center justify-center rounded-xl bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500 hover:text-white transition-all shadow-lg"
-                                        title="Eliminar producto de Eternia (Devolver ofertas al Purgatorio)"
-                                    >
-                                        {deleteProductMutation.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                                    </button>
-                                )}
-                                {isAdmin && (
-                                    <button
-                                        onClick={() => setShowMergePanel(!showMergePanel)}
-                                        className={`h-10 w-10 flex items-center justify-center rounded-xl transition-all shadow-lg border ${
-                                            showMergePanel 
-                                                ? 'bg-brand-primary text-white border-brand-primary shadow-brand-primary/20' 
-                                                : 'bg-brand-primary/10 text-brand-primary border-brand-primary/20 hover:bg-brand-primary hover:text-white'
-                                        }`}
-                                        title="Fusionar con otra figura (Arquitecto)"
-                                    >
-                                        <GitMerge className="h-4 w-4" />
-                                    </button>
-                                )}
-                            </div>
-                        </div>
+            <EditProductModal
+                isAdmin={isAdmin}
+                editingProduct={editingProduct}
+                setEditingProduct={setEditingProduct}
+                handleSaveEdit={handleSaveEdit}
+                isIncognito={isIncognito}
+                updateMutation={updateMutation}
+            />
 
-                        <div className="flex-1 overflow-y-auto p-8 pt-4 custom-scrollbar relative z-10">
-                            <div className="space-y-4">
-                                {showMergePanel && (
-                                    <div className="p-6 bg-white/[0.02] border border-white/5 rounded-3xl space-y-4 mb-4 relative z-50">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-xs font-black uppercase text-brand-primary tracking-wider">Fusionar Reliquia (Arquitecto)</span>
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    setShowMergePanel(false);
-                                                    setMergeSearchQuery('');
-                                                    setMergeTargetProduct(null);
-                                                }}
-                                                className="text-[10px] font-black uppercase text-white/50 hover:text-white"
-                                            >
-                                                Cerrar
-                                            </button>
-                                        </div>
-                                        <p className="text-[10px] text-white/60 font-bold uppercase leading-tight">
-                                            Transfiere todas las ofertas y vinculaciones de la colección de esta figura '{selectedProduct.name}' a otra figura existente en el catálogo, eliminando el registro duplicado.
-                                        </p>
+            <FullscreenImageModal
+                expandedImage={expandedImage}
+                setExpandedImage={setExpandedImage}
+                productId={selectedProduct?.id}
+            />
 
-                                        <div className="space-y-2 relative">
-                                            <label className="text-[9px] font-black uppercase tracking-wider text-white/40">Buscar Reliquia Destino</label>
-                                            <div className="relative">
-                                                <input
-                                                    type="text"
-                                                    value={mergeSearchQuery}
-                                                    onChange={(e) => {
-                                                        setMergeSearchQuery(e.target.value);
-                                                        if (mergeTargetProduct) setMergeTargetProduct(null);
-                                                    }}
-                                                    placeholder="Escribe el nombre de la figura destino..."
-                                                    className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-2.5 text-xs text-white placeholder-white/20 focus:outline-none focus:border-brand-primary transition-all"
-                                                />
-                                                {mergeTargetProduct && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            setMergeTargetProduct(null);
-                                                            setMergeSearchQuery('');
-                                                        }}
-                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white font-bold"
-                                                    >
-                                                        &times;
-                                                    </button>
-                                                )}
-                                            </div>
-                                            
-                                            {/* Dropdown Suggestions */}
-                                            {!mergeTargetProduct && mergeSearchQuery.trim().length > 1 && (
-                                                <div className="absolute z-50 w-full mt-1 bg-black/95 border border-white/10 rounded-2xl max-h-48 overflow-y-auto shadow-2xl custom-scrollbar">
-                                                    {products
-                                                        ?.filter(p => 
-                                                            p.id !== selectedProduct.id && 
-                                                            p.name.toLowerCase().includes(mergeSearchQuery.toLowerCase())
-                                                        )
-                                                        .map(p => (
-                                                            <div
-                                                                key={p.id}
-                                                                onClick={() => {
-                                                                    setMergeTargetProduct(p);
-                                                                    setMergeSearchQuery(p.name);
-                                                                }}
-                                                                className="px-4 py-2.5 hover:bg-white/5 text-xs text-white/70 hover:text-white cursor-pointer font-bold transition-colors border-b border-white/5 last:border-0"
-                                                            >
-                                                                {p.name} <span className="opacity-40 ml-2">#{p.figure_id}</span>
-                                                            </div>
-                                                        ))
-                                                    }
-                                                    {products?.filter(p => 
-                                                        p.id !== selectedProduct.id && 
-                                                        p.name.toLowerCase().includes(mergeSearchQuery.toLowerCase())
-                                                    ).length === 0 && (
-                                                        <div className="px-4 py-3 text-xs text-white/40 uppercase font-black">No se encontraron figuras</div>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {mergeTargetProduct && (
-                                            <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/25 space-y-3">
-                                                <p className="text-[10px] text-red-400 font-bold uppercase leading-normal">
-                                                    ⚠️ ATENCIÓN: Al proceder, todas las ofertas y registros de '{selectedProduct.name}' se transferirán permanentemente a '{mergeTargetProduct.name}' y la figura original será destruida del catálogo.
-                                                </p>
-                                                <button
-                                                    type="button"
-                                                    onClick={async () => {
-                                                        if (confirm(`¿Confirmar fusión definitiva de '${selectedProduct.name}' dentro de '${mergeTargetProduct.name}'?`)) {
-                                                            setIsMerging(true);
-                                                            try {
-                                                                await mergeProducts(selectedProduct.id, mergeTargetProduct.id);
-                                                                alert(`Fusión divina completada. ${selectedProduct.name} absorbida por ${mergeTargetProduct.name}`);
-                                                                setShowMergePanel(false);
-                                                                setMergeSearchQuery('');
-                                                                setMergeTargetProduct(null);
-                                                                setSelectedProduct(null);
-                                                                queryClient.invalidateQueries({ queryKey: ['products'] });
-                                                            } catch (e: any) {
-                                                                console.error(e);
-                                                                alert("Error al realizar la fusión: " + (e.response?.data?.detail || e.message));
-                                                            } finally {
-                                                                setIsMerging(false);
-                                                            }
-                                                        }
-                                                    }}
-                                                    disabled={isMerging}
-                                                    className="w-full bg-red-500 hover:bg-red-600 text-white py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
-                                                >
-                                                    {isMerging ? <RefreshCw className="h-3 w-3 animate-spin" /> : <GitMerge className="h-3 w-3" />}
-                                                    {isMerging ? 'Fusionando...' : 'Confirmar Fusión Divina'}
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                                <div className="flex items-center justify-between px-4">
-                                    <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20">La Verdad del Mercado</h5>
-                                    <span className={`text-[10px] font-black uppercase ${isVintageOnly ? 'text-amber-500' : 'text-brand-primary'}`}>Mejor Oferta Disponible</span>
-                                </div>
-
-                                {isLoadingOffers ? (
-                                    <div className="flex h-40 flex-col items-center justify-center gap-3">
-                                        <RefreshCw className={`h-10 w-10 animate-spin ${isVintageOnly ? 'text-amber-500/50' : 'text-brand-primary/50'}`} />
-                                        <span className={`text-xs font-black uppercase tracking-widest ${isVintageOnly ? 'text-amber-500/50' : 'text-brand-primary/50'}`}>Escudriñando el Abismo...</span>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-3">
-                                        {productOffers?.map((offer) => (
-                                            <div
-                                                key={offer.id}
-                                                className={`group flex flex-col md:flex-row md:items-center justify-between gap-4 rounded-3xl p-5 transition-all border ${
-                                                    offer.is_best 
-                                                        ? (isVintageOnly 
-                                                            ? 'bg-amber-500/5 border-amber-500/35 shadow-[0_0_30px_rgba(245,158,11,0.15)]'
-                                                            : 'bg-brand-primary/5 border-brand-primary/30 shadow-[0_0_30px_rgba(14,165,233,0.1)]')
-                                                        : 'bg-white/[0.03] border-white/5 hover:bg-white/[0.05]'
-                                                }`}
-                                            >
-                                                <div className="flex items-center gap-4 flex-1">
-                                                    <div className="space-y-1">
-                                                        <div className="flex items-center flex-wrap gap-2">
-                                                            <span className="text-xs font-black uppercase tracking-widest text-white/80">{offer.shop_name}</span>
-                                                            {offer.is_best && (
-                                                                <span className={`rounded-full px-2 py-0.5 text-[8px] font-black uppercase border ${isVintageOnly ? 'bg-amber-500/20 text-amber-400 border-amber-500/20' : 'bg-brand-primary/20 text-brand-primary border-brand-primary/20'}`}>
-                                                                    Mejor Precio
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                        <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-[9px] font-bold uppercase text-white/20">
-                                                            <span>Última vez: {formatDistanceToNow(parseUtcDate(offer.last_seen), { locale: es })}</span>
-                                                            <span className="flex items-center gap-1">
-                                                                <span className={`h-1.5 w-1.5 rounded-full ${offer.is_available ? 'bg-green-500' : 'bg-red-500 shadow-[0_0_5px_rgba(239,68,68,0.5)]'}`}></span>
-                                                                <span className={offer.is_available ? '' : 'text-red-400 font-black'}>
-                                                                    {offer.is_available ? 'STOCK OK' : 'SIN STOCK'}
-                                                                </span>
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                <div className="flex flex-row items-center justify-between w-full md:w-auto md:justify-end gap-5">
-                                                    <div className="text-left md:text-right space-y-0.5">
-                                                        <div className={`text-xl font-black ${offer.is_best ? (isVintageOnly ? 'text-amber-500' : 'text-brand-primary') : 'text-white'}`}>{offer.price} €</div>
-                                                        {offer.landing_price && offer.landing_price !== offer.price && (
-                                                            <div className="text-[10px] font-black text-brand-secondary/80 flex flex-col items-start md:items-end">
-                                                                <span className="flex items-center gap-1">
-                                                                    <Package className="h-2.5 w-2.5" />
-                                                                    <span>{offer.landing_price} €</span>
-                                                                </span>
-                                                            </div>
-                                                        )}
-                                                        <div className="text-[9px] font-black uppercase tracking-tighter text-white/10">Mín: <span>{offer.min_historical}€</span></div>
-                                                    </div>
-
-                                                    <div className="flex items-center gap-2 shrinks-0">
-                                                        {isAdmin && (
-                                                            <button
-                                                                onClick={() => {
-                                                                    if (confirm(`¿Arquitecto, está seguro de desterrar esta oferta de '${selectedProduct?.name}' al Purgatorio?`)) {
-                                                                        unlinkMutation.mutate(offer.id);
-                                                                    }
-                                                                }}
-                                                                disabled={unlinkMutation.isPending}
-                                                                className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-all shadow-lg"
-                                                                title="Desvincular y enviar al Purgatorio"
-                                                            >
-                                                                {unlinkMutation.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-                                                            </button>
-                                                        )}
-
-                                                        <div className="flex items-center gap-2">
-                                                            <button
-                                                                onClick={() => addToCart({
-                                                                    id: offer.id.toString(),
-                                                                    product_name: selectedProduct?.name || 'Reliquia',
-                                                                    shop_name: offer.shop_name,
-                                                                    price: offer.price,
-                                                                    image_url: selectedProduct?.image_url || undefined
-                                                                })}
-                                                                className={`flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 text-white/65 border border-white/10 transition-all shadow-lg ${isVintageOnly ? 'hover:bg-amber-500/20 hover:text-amber-400' : 'hover:bg-brand-primary/20 hover:text-brand-primary'}`}
-                                                                title="Simular en Oracle Cart"
-                                                            >
-                                                                <ShoppingBasket className="h-4 w-4" />
-                                                            </button>
-                                                            <a
-                                                                href={offer.url}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                className={`flex h-10 w-10 items-center justify-center rounded-xl transition-all border shadow-lg ${offer.is_best ? 'bg-orange-500 text-white border-orange-500 shadow-orange-500/20' : 'bg-white/5 text-white/65 border-white/10 hover:bg-white/10 hover:text-white'}`}
-                                                                title="Ver en Tienda"
-                                                            >
-                                                                <ExternalLink className="h-4 w-4" />
-                                                            </a>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-
-                                        {(!productOffers || productOffers.length === 0) && (
-                                            <div className="flex h-40 flex-col items-center justify-center rounded-[2rem] border border-dashed border-white/5 text-white/10">
-                                                <Package className="mb-3 h-8 w-8" />
-                                                <p className="text-[10px] font-black uppercase tracking-widest">Aún no hay ofertas registradas para este item</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Modal Footer */}
-                        <div className="p-8 pt-4 border-t border-white/5 bg-white/[0.02]">
-                            <p className="text-[9px] font-bold text-white/20 uppercase text-center tracking-[0.3em]">
-                                Datos procesados por la Red de Inteligencia del Oráculo — Actualización en Tiempo Real
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            )}
-            {/* EDIT PRODUCT MODAL (ADMIN ONLY) */}
-            {isAdmin && editingProduct && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-2xl animate-in fade-in duration-300">
-                    <motion.div
-                        initial={{ scale: 0.9, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        className="relative w-full max-w-2xl overflow-hidden rounded-[2.5rem] border border-brand-primary/30 bg-[#0A0A0B] shadow-[0_0_50px_rgba(14,165,233,0.2)] flex flex-col"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <form onSubmit={handleSaveEdit}>
-                            <div className="p-8 pb-4 flex items-center justify-between border-b border-white/5">
-                                <div className="flex items-center gap-4">
-                                    <div className="p-3 bg-brand-primary/10 rounded-xl">
-                                        <Settings className="h-6 w-6 text-brand-primary" />
-                                    </div>
-                                    <h4 className="text-2xl font-black text-white">Editor de <span className="text-brand-primary">La Verdad</span></h4>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={() => setEditingProduct(null)}
-                                    className="h-10 w-10 flex items-center justify-center rounded-xl bg-white/5 text-white/65 hover:bg-red-500/20 hover:text-red-400 transition-all"
-                                >
-                                    <X className="h-5 w-5" />
-                                </button>
-                            </div>
-
-                            <div className="p-8 space-y-6 overflow-y-auto max-h-[60vh] custom-scrollbar">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    {/* Name */}
-                                    <div className="col-span-1 md:col-span-2 space-y-2">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-white/60 ml-1">Nombre de la Reliquia</label>
-                                        <input
-                                            value={editingProduct.name}
-                                            onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
-                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-white focus:outline-none focus:border-brand-primary/50 transition-all"
-                                        />
-                                    </div>
-
-                                    {/* EAN */}
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-white/60 ml-1">EAN (Código Sagrado)</label>
-                                        <input
-                                            value={editingProduct.ean || ''}
-                                            onChange={(e) => setEditingProduct({ ...editingProduct, ean: e.target.value })}
-                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-white focus:outline-none focus:border-brand-primary/50 transition-all"
-                                            placeholder="Desconocido"
-                                        />
-                                    </div>
-
-                                    {/* Retail Price */}
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-white/60 ml-1">Precio de Lanzamiento (€)</label>
-                                        <input
-                                            type="number"
-                                            value={editingProduct.retail_price || 0}
-                                            onChange={(e) => setEditingProduct({ ...editingProduct, retail_price: parseFloat(e.target.value) })}
-                                            className={`w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-white focus:outline-none focus:border-brand-primary/50 transition-all ${isIncognito ? 'blur-incognito' : ''}`}
-                                            title={isIncognito ? "Precio manual: •••" : undefined}
-                                        />
-                                    </div>
-
-                                    {/* Subcategory */}
-                                    <div className="col-span-1 md:col-span-2 space-y-2">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-white/60 ml-1">Línea temporal (Subcategoría)</label>
-                                        <input
-                                            value={editingProduct.sub_category || ''}
-                                            onChange={(e) => setEditingProduct({ ...editingProduct, sub_category: e.target.value })}
-                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-white focus:outline-none focus:border-brand-primary/50 transition-all"
-                                        />
-                                    </div>
-
-                                    {/* Image URL */}
-                                    <div className="col-span-1 md:col-span-2 space-y-2">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-white/60 ml-1">Pocion Visual (URL Imagen)</label>
-                                        <input
-                                            value={editingProduct.image_url || ''}
-                                            onChange={(e) => setEditingProduct({ ...editingProduct, image_url: e.target.value })}
-                                            className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-white/50 text-xs focus:outline-none focus:border-brand-primary/50 transition-all"
-                                        />
-                                    </div>
-
-                                    {/* Linea Vintage (is_vintage) toggle */}
-                                    <div className="col-span-1 md:col-span-2 flex items-center justify-between p-4 rounded-2xl bg-white/[0.02] border border-white/5 mt-2">
-                                        <div className="space-y-1">
-                                            <label className="text-[10px] font-black uppercase tracking-widest text-white/80 block">Línea Vintage (Eternia)</label>
-                                            <span className="text-[8px] text-white/60 font-bold uppercase tracking-wider block">Activar para transferir este producto a la línea retro vintage</span>
-                                        </div>
-                                        <label className="relative inline-flex items-center cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                checked={!!editingProduct.is_vintage}
-                                                onChange={(e) => setEditingProduct({ ...editingProduct, is_vintage: e.target.checked })}
-                                                className="sr-only peer"
-                                            />
-                                            <div className="w-11 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white/40 peer-checked:after:bg-amber-500 after:border-none after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500/20 border border-white/10 peer-checked:border-amber-500/30"></div>
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="p-6 sm:p-8 border-t border-white/5 bg-white/[0.02] flex flex-col sm:flex-row items-center justify-end gap-3 sm:gap-4">
-                                <button
-                                    type="button"
-                                    onClick={() => setEditingProduct(null)}
-                                    className="w-full sm:w-auto px-6 h-12 rounded-2xl text-sm font-black uppercase tracking-widest text-white/60 hover:text-white transition-all flex items-center justify-center whitespace-nowrap order-2 sm:order-1"
-                                >
-                                    Cancelar
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={updateMutation.isPending}
-                                    className="w-full sm:w-auto bg-brand-primary hover:bg-brand-secondary text-white px-8 h-12 rounded-2xl font-black uppercase tracking-widest transition-all shadow-[0_0_30px_rgba(14,165,233,0.3)] flex items-center justify-center gap-2 disabled:opacity-50 whitespace-nowrap order-1 sm:order-2"
-                                >
-                                    {updateMutation.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                                    Preservar Cambios
-                                </button>
-                            </div>
-                        </form>
-                    </motion.div>
-                </div>
-            )}
-
-
-            {/* FULLSCREEN IMAGE EXPANSION */}
-            {expandedImage && (
-                <div
-                    className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-20 bg-black/95 backdrop-blur-3xl animate-in zoom-in duration-300 shadow-2xl"
-                    onClick={() => setExpandedImage(null)}
-                >
-                    <div className="relative max-w-full max-h-full group">
-                        <MOTUImage
-                            productId={selectedProduct?.id}
-                            src={expandedImage}
-                            alt="Expanded Relic"
-                            className="max-w-full max-h-[90vh] rounded-[2rem] sm:rounded-[3rem] border border-white/10 shadow-[0_0_100px_rgba(0,0,0,0.8)] object-contain"
-                            onClick={(e) => e.stopPropagation()}
-                        />
-                        <button
-                            onClick={() => setExpandedImage(null)}
-                            className="absolute -top-4 -right-4 sm:-top-8 sm:-right-8 h-10 w-10 sm:h-14 sm:w-14 flex items-center justify-center rounded-2xl bg-white/10 text-white hover:bg-red-500 hover:scale-110 transition-all border border-white/10 backdrop-blur-md shadow-2xl z-50"
-                        >
-                            <X className="h-6 w-6 sm:h-8 sm:w-8" />
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            {/* VINTAGE SYNC TELEMETRY MODAL */}
-            {showVintageSyncModal && (
-                <div className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        className="w-full max-w-2xl overflow-hidden rounded-3xl border border-amber-500/25 bg-[#0f0e0c]/95 backdrop-blur-2xl shadow-[0_0_50px_rgba(245,158,11,0.2)]"
-                    >
-                        <div className="p-6 border-b border-white/5 bg-gradient-to-r from-amber-500/10 to-transparent flex items-center justify-between">
-                            <div className="flex items-center gap-2 text-amber-500">
-                                <RefreshCw className={`h-5 w-5 ${vintageSyncStatus === 'running' ? 'animate-spin' : ''}`} />
-                                <h3 className="font-black uppercase tracking-widest text-white text-sm md:text-base">
-                                    Nexo Maestro Vintage: Telemetría
-                                </h3>
-                            </div>
-                            {vintageSyncStatus !== 'running' && (
-                                <button
-                                    onClick={() => setShowVintageSyncModal(false)}
-                                    className="rounded-xl bg-white/5 p-2 text-white/50 hover:bg-white/10 hover:text-white transition-all border border-white/5 cursor-pointer"
-                                >
-                                    <X className="h-4 w-4" />
-                                </button>
-                            )}
-                        </div>
-
-                        <div className="p-6 space-y-4">
-                            <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-white/65">
-                                <span>Estado de la Incursión</span>
-                                <span className={`px-2.5 py-0.5 rounded-full border text-[8px] font-black uppercase tracking-widest ${
-                                    vintageSyncStatus === 'running' ? 'bg-amber-500/10 border-amber-500/20 text-amber-400 animate-pulse' :
-                                    vintageSyncStatus === 'completed' ? 'bg-green-500/10 border-green-500/20 text-green-400' :
-                                    vintageSyncStatus === 'error' ? 'bg-red-500/10 border-red-500/20 text-red-400' :
-                                    'bg-white/5 border-white/10 text-white/50'
-                                }`}>
-                                    {vintageSyncStatus === 'running' ? 'Sincronizando...' :
-                                     vintageSyncStatus === 'completed' ? 'Completado' :
-                                     vintageSyncStatus === 'error' ? 'Fallo Crítico' :
-                                     'Inactivo'}
-                                </span>
-                            </div>
-
-                            {/* Terminal window */}
-                            <div className="h-64 overflow-y-auto rounded-2xl bg-black/80 p-5 border border-white/5 font-mono text-[10px] md:text-xs text-amber-400/90 space-y-1.5 shadow-inner scrollbar-thin">
-                                {vintageSyncLogs.split('\n').map((line, i) => (
-                                    <div key={i} className={line.startsWith('❌') ? 'text-red-400' : line.startsWith('✅') ? 'text-green-400' : ''}>
-                                        {line}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className="p-6 border-t border-white/5 bg-white/[0.01] flex items-center justify-end gap-3">
-                            {vintageSyncStatus !== 'running' ? (
-                                <button
-                                    onClick={() => setShowVintageSyncModal(false)}
-                                    className="bg-amber-500 hover:bg-amber-600 text-black px-6 py-2.5 rounded-xl font-black uppercase tracking-widest text-xs transition-all shadow-[0_0_20px_rgba(245,158,11,0.2)] cursor-pointer"
-                                >
-                                    Cerrar Telemetría
-                                </button>
-                            ) : (
-                                <span className="text-[10px] font-bold uppercase tracking-wider text-white/60 animate-pulse">
-                                    Ejecutando Secuencia en Segundo Plano...
-                                </span>
-                            )}
-                        </div>
-                    </motion.div>
-                </div>
-            )}
+            <VintageSyncModal
+                showVintageSyncModal={showVintageSyncModal}
+                setShowVintageSyncModal={setShowVintageSyncModal}
+                vintageSyncStatus={vintageSyncStatus}
+                vintageSyncLogs={vintageSyncLogs}
+            />
         </div>
 
     );
