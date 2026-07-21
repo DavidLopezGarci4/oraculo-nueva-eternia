@@ -30,18 +30,64 @@
   - 4.5 ⏸️ pendiente — virtualización de listas largas en Catálogo/Colección.
   - 4.6 ✅ ya estaba hecho (colado en la Fase 1: `Cache-Control: immutable` en nginx para assets con hash).
 
-### Pendiente para ti (fuera de lo que yo puedo hacer)
+---
 
-- [ ] Rotar `JWT_SECRET` / `ORACULO_API_KEY` en tu `.env` real y desplegar (ver `CREDENCIALES_LOCAL.md`, gitignored).
-- [ ] Ejecutar la guía de [ALEMBIC_ADOPTION.md](ALEMBIC_ADOPTION.md) en tu máquina con Docker.
-- [ ] Ver `Apuntes a llevar a cabo.txt` (raíz del repo, fuera de git) para el detalle paso a paso completo.
+## 🎯 BACKLOG CONSOLIDADO Y PRIORIZADO (fuente única de verdad — actualizado 2026-07-21)
 
-### Checklist de continuidad (trabajo de código pendiente para una futura sesión)
+> **Por qué esta sección.** El trabajo pendiente estaba disperso en tres sitios que se solapaban y contradecían (`Apuntes a llevar a cabo.txt` B.1–B.9, el antiguo "checklist de continuidad", y las Fases 5–8 de más abajo). Además, **tres fases enteras (5 accesibilidad/UX, 6 datos, 7 tests/CI) no aparecían en ningún checklist de pendientes** — parecía que quedaban 4 cosas cuando en realidad quedan bastantes más. Esto lo unifica todo, verificado contra el código real, y lo ordena por **olas de ejecución** (impacto ÷ esfuerzo ÷ riesgo). **Ejecuta de arriba a abajo.**
+>
+> Leyenda: 🟢 bajo · 🟡 medio · 🔴 alto (esfuerzo/riesgo).
 
-- **2.2** — `response_model` pendiente en: `admin.py`, `products.py`, `purgatory.py`, `scrapers.py`, `collection.py` (parcial), `vault.py`, `wallapop_jobs.py`, `system.py`, `logistics.py`, `showcase.py`, `auth.py`. Mismo patrón que en `users.py`/`dashboard.py`: cross-referenciar el dict devuelto contra `domain/models.py` antes de declarar el schema, y verificar con la suite completa (no solo el endpoint aislado — el estado compartido de la BD de test puede revelar mismatches que el camino vacío no muestra).
-- **3.2** — trocear `Config.tsx`/`Purgatory.tsx`/`Catalog.tsx`.
-- **4.5** — virtualizar listas largas de Catálogo/Colección.
-- **B.8 (nuevo hallazgo)** — más de 40 usos de `datetime.utcnow()` (obsoleto en Python) repartidos por scrapers/pipeline/notificador. Requiere revisión caso por caso para no mezclar datetimes "naive" y "aware" en comparaciones — no es un arreglo de una línea.
+### 🚨 OLA 0 — Emergencia de seguridad (HOY, acción del usuario) — reordenada tras el intento de acceso del 2026-07-21
+
+La rama `refactor/aaa-uplift` corrige todo, pero **no protege nada hasta que se despliegue Y se roten los secretos**. Hoy `main` (lo desplegado) todavía lleva `eternia-shield-2026` embebida en el bundle (`admin.ts:5`, `purgatory.ts:5`) y esa clave está también en el historial de git.
+
+- [ ] **0.A — Rotar `ORACULO_API_KEY` en el `.env` de producción y reiniciar el backend.** Es "cambiar la cerradura": la clave pública deja de funcionar al instante incluso con el código viejo. No necesita Docker ni desplegar la rama. Genera valor: `python -c "import secrets; print(secrets.token_urlsafe(48))"`.
+- [ ] **0.B — Rotar `JWT_SECRET` igual** (invalida sesiones que un atacante hubiera podido crear).
+- [ ] **0.C — Si el repo de GitHub es PÚBLICO:** ponlo privado, o purga la clave del historial (`git filter-repo`). Mientras sea público, la clave vieja es legible aunque se borre del código. (Da igual una vez rotada en 0.A, pero conviene no dejar rastro.)
+- [ ] **0.D — Revisar `WallapopIpLogModel` / alertas de Telegram** para ver el ID/IP del intento y confirmar si el "Escudo" (device shield) lo bloqueó o si hubo acceso real.
+
+### 🚀 OLA 1 — Desplegar lo ya construido (activa TODO el blindaje) — usuario, en la máquina con Docker
+
+Esto es lo de **mayor retorno de todo el backlog**: hay ~19 commits de seguridad ya escritos y probados que no protegen nada hasta desplegarse. Sigue `Apuntes a llevar a cabo.txt` Parte A (backups → rama → rotar secretos → migración Alembic → `docker compose up -d --build` → verificar login). Guía de BD en [ALEMBIC_ADOPTION.md](ALEMBIC_ADOPTION.md).
+
+### 🟢 OLA 2 — Quick wins de código (bajo riesgo, cabe en una sesión corta)
+
+| # | Tarea | Por qué | Archivos | Esf. |
+|---|-------|---------|----------|------|
+| 2a | **CI que de verdad corra la suite** | `ci.yml` usa `python -m unittest discover` que **NO ejecuta los 49 tests pytest** (tienen fixtures). Tenemos red de seguridad desenchufada. Cambiar a `pytest` + añadir `npm run build`/`tsc`/`npm audit`. | `.github/workflows/ci.yml` | 🟢 |
+| 2b | **`lang="es"` + meta description + Open Graph** | `index.html` dice `lang="en"` en una app en español; sin meta/OG para la vista pública `/santuario/:user`. (Fase 5.6) | `frontend/index.html` | 🟢 |
+| 2c | **Fix `backup_db.ps1` (modo WAL)** | Una copia simple del `.db` en modo WAL pierde datos recientes. Usar `sqlite3 .backup` o `VACUUM INTO`. (B.1) | `backup_db.ps1` | 🟢 |
+| 2d | **`prefers-reduced-motion`** | framer-motion muy presente; respetar la preferencia mejora accesibilidad y rendimiento. (Fase 5.3) | `frontend/src/index.css` + wrappers motion | 🟢 |
+| 2e | **(solo tu máquina) columna `offers.image_url` en `oraculo.db` local** | Tu BD SQLite de desarrollo está desfasada del modelo → 500 en `/api/products` local. Trivial: `ALTER TABLE offers ADD COLUMN image_url VARCHAR;`. No afecta a producción. (B.6) | tu `oraculo.db` local | 🟢 |
+
+### 🟡 OLA 3 — Valor medio, esfuerzo medio
+
+| # | Tarea | Por qué | Archivos | Esf./Riesgo |
+|---|-------|---------|----------|-------------|
+| 3a | **`datetime.utcnow()` → `datetime.now(timezone.utc)`** | >40 usos; **obsoleto, Python lo eliminará** (rotura dura futura). Revisar caso por caso para no mezclar naive/aware en comparaciones. (B.8) | scrapers, `pipeline.py`, `notifier.py`, `security.py`, routers… | 🟡 / 🟡 |
+| 3b | **`response_model` en el resto de routers** | Contrato de API estricto = no fuga de campos internos + docs OpenAPI. Hecho en `users`/`dashboard`; falta en `admin`(1/14), `products`(2/15), `purgatory`(0/12), `scrapers`, `vault`, `wallapop_jobs`, `system`, `logistics`, `showcase`, `auth`, `collection`(1/6). Verificar con la suite COMPLETA (el estado compartido de la BD de test revela mismatches que el camino vacío oculta). (2.2 / B.3) | `src/interfaces/api/routers/*.py`, `schemas.py` | 🟡 / 🟡 |
+| 3c | **Accesibilidad WCAG (auditoría axe/Lighthouse)** | El sello "AAA" incluye accesibilidad: contraste sobre glassmorphism (`text-white` sobre translúcido suele fallar), foco visible, `aria` en modales, navegación por teclado, `aria-label` en botones-icono. Objetivo Lighthouse Accessibility ≥ 95. (Fase 5.1) | modales, botones-icono, tokens de color | 🟡 / 🟢 |
+| 3d | **Auth en `/api/wallapop/import`** | Sigue sin autenticación (la extensión de Chrome no manda clave). Riesgo bajo (solo encola en Purgatorio) pero conviene darle una API key propia a la extensión. (B.2) | `users.py`, `chrome-extension/content.js` | 🟡 / 🟡 |
+| 3e | **Revisar índices de BD** | Ya hay 46 `index=True` en `models.py`; verificar con `EXPLAIN` que las consultas de catálogo/colección (nombre, fecha, `is_vintage`, `owner_id`) están cubiertas y rellenar huecos vía migración Alembic. (Fase 6.1) | `src/domain/models.py` + migración | 🟡 / 🟢 |
+
+### 🔴 OLA 4 — Refactor grande (sesión dedicada, alto riesgo de regresión)
+
+- **4a — Trocear `Config.tsx` (3073 líneas), `Purgatory.tsx` (2253), `Catalog.tsx` (1965)** en subcomponentes + hooks. Es mantenibilidad, NO rendimiento (el router real de la Fase 3.1 ya resolvió el problema de memoria). Hacer archivo por archivo, verificando en navegador cada paso. (3.2 / B.4)
+- **4b — Virtualizar listas largas** (`@tanstack/react-virtual`) en Catálogo/Colección/Purgatorio para no renderizar cientos de tarjetas de golpe. Toca `Catalog.tsx`, encaja con 4a. (4.5 / B.5)
+
+### 🏁 OLA 5 — Verificación final AAA (Fase 8, tras desplegar)
+
+- Lighthouse (Performance ≥ 90, Accessibility ≥ 95) en `dashboard`/`catalog`/`collection`; LCP < 2.5 s; `/security-review` sin críticos/altos; `pip-audit` + `npm audit` limpios. Registrar el "después" en [BASELINE_METRICS.md](BASELINE_METRICS.md).
+
+### ⚪ Descartado / no merece la pena ahora
+
+- Compresión de `public/oraculo-logo.png` (favicon, se mantiene PNG por compatibilidad) y `public/theme.mp3` (8.2 MB de audio; recomprimir solo si molesta el peso). — Bajo impacto.
+- Ajuste de `staleTime`/`gcTime` de React Query (4.3): revisado, ya está bien donde importa; no hay problema concreto que arreglar.
+
+### 📋 Revisión de documentación pendiente
+
+- **B.9** — Leer completos `docs/DOCUMENTACION_MAESTRA.md` (617 líneas) y `docs/MASTER_ROADMAP.md` (549) por si quedan afirmaciones desfasadas sin descubrir (hoy solo se revisaron por búsqueda dirigida).
 
 ---
 
