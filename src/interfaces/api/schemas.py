@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict
@@ -362,3 +363,66 @@ class MatchHistoryOutput(BaseModel):
 class StatusMessageOutput(BaseModel):
     status: str
     message: str
+
+
+# --- Logistics, Showcase & System Output (Fase AAA-Ola3, 3b) ---
+
+class CartBreakdownItemOutput(BaseModel):
+    name: str
+    unit_price: float
+    unit_price_eur: float
+    quantity: int
+    subtotal_eur: float
+
+
+class CartShopBreakdownOutput(BaseModel):
+    shop: str
+    status: str
+    items: List[CartBreakdownItemOutput]
+    # Solo presentes cuando status == "CALCULATED" (LogisticsService.calculate_cart
+    # devuelve menos campos para tiendas sin reglas configuradas, status == "PENDING_RULES").
+    total_items_qty: Optional[int] = None
+    fees_eur: Optional[float] = None
+    shipping_eur: float
+    tax_eur: float
+    total_eur: float
+
+
+class CartCalculationOutput(BaseModel):
+    breakdown: List[CartShopBreakdownOutput]
+    grand_total_eur: float
+    user_location: str
+    timestamp: str
+
+
+class ShowcaseProductOutput(BaseModel):
+    id: int
+    name: str
+    category: str
+    sub_category: str | None
+    image_url: str | None
+    release_year: int | None
+    figure_id: str | None
+    variant_name: str | None
+    is_vintage: bool | None
+    avg_market_price: float | None
+    p25_price: float | None
+
+
+class ShowcaseItemOutput(BaseModel):
+    id: int
+    product_id: int
+    condition: str
+    grading: float | None
+    notes: str | None
+    # El router pasa item.acquired_at (datetime de SQLAlchemy) sin .isoformat();
+    # FastAPI/Pydantic lo serializa a ISO-8601 en el JSON de salida.
+    acquired_at: datetime | None
+    product: ShowcaseProductOutput
+
+
+class PublicShowcaseOutput(BaseModel):
+    username: str
+    location: str
+    items: List[ShowcaseItemOutput]
+    total_items: int

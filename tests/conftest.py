@@ -1,23 +1,44 @@
 """
 Test infrastructure for the Oráculo API.
 
-Uses an in-memory SQLite database (StaticPool) so tests are hermetic and fast.
-All routers import SessionCloud at module level, so we patch each namespace.
+Uses an in-memory SQLite database (shared-cache, ver nota mas abajo) so tests
+son herméticos y rápidos. All routers/servicios import SessionCloud at module
+level, so we patch each namespace.
 """
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
+from sqlalchemy.pool import NullPool
 from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 # ─── In-memory test database ────────────────────────────────────────────────
+#
+# Fase AAA-Ola3 (3b): "sqlite:///:memory:" + StaticPool fuerza a que TODAS las
+# Session (sin importar cuántas SessionCloud() distintas se abran) compartan
+# la MISMA conexión DBAPI física. Eso rompe cualquier código real que abra una
+# sesión anidada mientras otra tiene un SAVEPOINT activo (ej.
+# purgatory.py::run_match_bulk_task hace db.begin_nested() y, dentro,
+# LogisticsService.get_landing_price abre su propio "with SessionCloud()") -
+# provoca "OperationalError: no such savepoint" solo en el entorno de test,
+# nunca en producción (Postgres da una conexión física real por sesión).
+#
+# El fix estándar de SQLAlchemy/SQLite para esto: modo "shared cache" con URI,
+# que da a cada Session su PROPIA conexión física real (como en producción)
+# mientras todas siguen viendo los mismos datos en memoria. Se usa NullPool
+# (nunca reutiliza/una sola conexión) + una conexión "keepalive" mantenida
+# abierta durante toda la sesión de tests, porque una DB en memoria con
+# shared-cache se destruye en cuanto se cierra su ÚLTIMA conexión — sin la
+# keepalive, cualquier hueco entre checkouts de conexión borraría los datos.
 
+TEST_DB_URI = "file:oraculo_test_db?mode=memory&cache=shared&uri=true"
 TEST_ENGINE = create_engine(
-    "sqlite:///:memory:",
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
+    f"sqlite:///{TEST_DB_URI}",
+    connect_args={"check_same_thread": False, "uri": True},
+    poolclass=NullPool,
 )
+_TEST_DB_KEEPALIVE_CONN = TEST_ENGINE.connect()  # nunca se cierra hasta el fin de la suite
+
 _TestSession = sessionmaker(bind=TEST_ENGINE, autocommit=False, autoflush=False)
 
 # Every router namespace that calls SessionCloud() directly
@@ -34,6 +55,23 @@ _SESSION_TARGETS = [
     "src.interfaces.api.routers.auth.SessionCloud",
     "src.interfaces.api.routers.showcase.SessionCloud",
     "src.interfaces.api.deps.SessionCloud",
+    # Fase AAA-Ola3 (3b): descubierto al escribir un test real para
+    # /api/logistics/calculate-cart — LogisticsService.calculate_cart (y estos
+    # otros servicios) importan SessionCloud a NIVEL DE MODULO, con su propia
+    # referencia independiente de la del router que los invoca. Sin parchear
+    # aqui tambien, cualquier test que ejercite estos servicios toca
+    # SILENCIOSAMENTE la BD real (oraculo.db local o Supabase) en vez de la
+    # BD hermetica en memoria, dando resultados incorrectos/inconsistentes
+    # sin ningun error visible.
+    "src.application.services.logistics_service.SessionCloud",
+    "src.application.services.vault_service.SessionCloud",
+    "src.application.services.nexus_service.SessionCloud",
+    "src.application.services.nexus_vintage_service.SessionCloud",
+    "src.application.services.excel_manager.SessionCloud",
+    # NOTA: backfill_intelligence.py importa SessionCloud DENTRO de una
+    # funcion (no a nivel de modulo) - no hay nada que parchear ahi hasta
+    # que esa funcion se ejecute; si algun dia se usa en un test, revisar
+    # la misma situacion en ese momento.
 ]
 
 # ─── Shared constants ────────────────────────────────────────────────────────

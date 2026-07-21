@@ -5,12 +5,12 @@ from src.application.services.logistics_service import LogisticsService
 from src.domain.models import UserModel
 from src.infrastructure.database_cloud import SessionCloud
 from src.interfaces.api.deps import get_current_user, scope_user_id
-from src.interfaces.api.schemas import CartRequest
+from src.interfaces.api.schemas import CartRequest, CartCalculationOutput
 
 router = APIRouter(tags=["logistics"])
 
 
-@router.post("/api/logistics/calculate-cart")
+@router.post("/api/logistics/calculate-cart", response_model=CartCalculationOutput)
 async def api_calculate_cart(request: CartRequest, current_user: UserModel = Depends(get_current_user)):
     try:
         # Fase AAA-1: exige sesión válida. La ubicación se resuelve sobre el

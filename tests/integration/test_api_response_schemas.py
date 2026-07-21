@@ -13,6 +13,53 @@ schema didn't match that real data, FastAPI would return 500
 from tests.conftest import API_KEY
 
 
+def test_logistics_cart_pending_rules_branch_matches_schema(client, bearer):
+    """LogisticsService.calculate_cart devuelve MENOS campos (sin
+    total_items_qty/fees_eur) cuando la tienda no tiene LogisticRuleModel
+    configurado (status == "PENDING_RULES") — esta rama no tenia cobertura
+    previa; valida que CartCalculationOutput acepta el shape reducido real."""
+    resp = client.post(
+        "/api/logistics/calculate-cart",
+        json={"items": [{"product_name": "Figura sin regla", "shop_name": "TiendaSinReglas", "price": 25.0, "quantity": 2}]},
+        headers=bearer,
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data["breakdown"]) == 1
+    shop = data["breakdown"][0]
+    assert shop["status"] == "PENDING_RULES"
+    assert shop["total_items_qty"] is None
+    assert shop["fees_eur"] is None
+    assert shop["total_eur"] == 50.0
+
+
+def test_logistics_cart_calculated_branch_matches_schema(client, bearer):
+    """Con una LogisticRuleModel real, la rama "CALCULATED" rellena TODOS
+    los campos (total_items_qty, fees_eur incluidos) — valida el shape
+    completo del schema contra datos reales, no solo el camino reducido."""
+    from src.domain.models import LogisticRuleModel
+    from src.interfaces.api.routers.logistics import SessionCloud
+
+    with SessionCloud() as db:
+        db.add(LogisticRuleModel(
+            shop_name="TiendaConReglas", country_code="ES",
+            base_shipping=5.0, free_shipping_threshold=0.0,
+            vat_multiplier=1.21, custom_fees=1.5,
+        ))
+        db.commit()
+
+    resp = client.post(
+        "/api/logistics/calculate-cart",
+        json={"items": [{"product_name": "Figura con regla", "shop_name": "TiendaConReglas", "price": 30.0, "quantity": 1}]},
+        headers=bearer,
+    )
+    assert resp.status_code == 200
+    shop = resp.json()["breakdown"][0]
+    assert shop["status"] == "CALCULATED"
+    assert shop["total_items_qty"] == 1
+    assert shop["fees_eur"] == 1.5
+
+
 def test_dashboard_hall_of_fame_matches_schema(client, authorized_device_headers):
     resp = client.get("/api/dashboard/hall-of-fame", headers=authorized_device_headers)
     assert resp.status_code == 200

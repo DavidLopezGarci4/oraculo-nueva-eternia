@@ -4,10 +4,11 @@ from typing import List, Dict, Any
 
 from src.domain.models import UserModel, CollectionItemModel, ProductModel
 from src.infrastructure.database_cloud import SessionCloud
+from src.interfaces.api.schemas import PublicShowcaseOutput
 
 router = APIRouter(tags=["showcase"])
 
-@router.get("/api/public/showcase/{username}")
+@router.get("/api/public/showcase/{username}", response_model=PublicShowcaseOutput)
 async def get_public_showcase(username: str):
     """
     Retorna la colección de un usuario de forma pública si la tiene configurada como pública.
