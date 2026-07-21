@@ -146,7 +146,41 @@ Reglas asociadas encontradas de verdad en esta auditoría, aplícalas a cualquie
 - Un `<div onClick=...>` sin `<button>` real necesita `role="button"` + `tabIndex={0}` +
   `onKeyDown` para Enter/Espacio — si no, es inalcanzable por teclado aunque el ratón funcione.
 
-### 3.5 Cómo verificar accesibilidad: axe-core inyectado en vivo, no solo lectura de código
+### 3.5 Cómo trocear un "God Component" de frontend (patrón probado 3 veces: Config/Purgatory/Catalog)
+
+En la Ola 4a se trocearon `Config.tsx` (3101→886 líneas), `Purgatory.tsx` (2276→923) y
+`Catalog.tsx` (1965→887) con el mismo patrón mecánico, sin una sola regresión. Si te toca aplicarlo
+a `Collection.tsx` (874 líneas) o `Dashboard.tsx` (860), o a cualquier otra página que crezca
+demasiado, sigue esto en vez de reinventar el enfoque:
+
+1. **Mapea antes de tocar nada**: `grep -n "^const \w\+.*=\|^interface \w\+\|return (" archivo.tsx`
+   para localizar helpers ya aislados a nivel de módulo (extráelos primero, son gratis — cero
+   riesgo, no dependen de estado del componente padre) y los límites de cada bloque JSX grande
+   (modales, pestañas, vistas condicionales). Los bloques con `{condición && (<div className="fixed
+   inset-0 z-50 ...">...)}` casi siempre son un modal extraíble.
+2. **Extracción mecánica 1:1, nunca "aprovecha y mejora"**: copia el JSX literal (no lo retipees),
+   crea el componente nuevo en `frontend/src/components/<pagina>/NombreDelBloque.tsx` con una
+   interfaz de props que sea el estado/handlers exactos que ese bloque ya usaba (mismo nombre de
+   prop que el nombre de la variable en el padre — así el prop-threading es mecánico). Las
+   mutaciones de React Query (`useMutation`) que comparte más de una vista se quedan en el
+   componente padre y se pasan como prop tipada con `UseMutationResult<TData, TError, TVariables,
+   TContext>` — no dupliques la mutación en cada hijo.
+3. **Tras cada extracción, en este orden**: `npx tsc -b --noEmit` (pilla imports no usados que
+   quedaron en el padre — `TS6133`, bórralos uno a uno, nunca una línea de import entera si solo
+   una parte de sus símbolos quedó sin usar) → `npm run build` (pilla errores de bundler que `tsc`
+   solo no ve) → si la página es alcanzable sin admin, verificación en navegador real (ver §3.7);
+   si es solo-admin y no puedes promover la cuenta de prueba (§7), documenta el hueco honestamente
+   en vez de fingir que se probó.
+4. **Commit por bloque extraído, no al final**: cada extracción es un commit propio
+   (`refactor(aaa-olaN-4x): extrae NombreDelBloque de archivo.tsx`) con el `tsc`/build ya en verde.
+   Así una regresión se acota a un commit pequeño y reversible, no a un diff gigante de una sesión
+   entera.
+5. **El tamaño de bundle no baja apreciablemente y es lo esperado**: es el mismo código, solo
+   repartido en más ficheros. El objetivo es mantenibilidad (ningún componente > ~400 líneas,
+   criterio de Fase 8), no rendimiento — eso ya lo resolvió el router real de la Fase 3.1. No
+   reportes esto como un fallo ni intentes optimizar el tamaño como parte de esta tarea.
+
+### 3.6 Cómo verificar accesibilidad: axe-core inyectado en vivo, no solo lectura de código
 
 El método que encontró TODOS los problemas reales en la Fase 3c fue inyectar `axe-core` (CDN,
 `https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.10.2/axe.min.js`) en la página real con el
@@ -170,6 +204,62 @@ registrar una cuenta desechable de verdad y aprobar su dispositivo vía la API a
 (`POST /api/admin/devices/{device_id}/authorize` con `X-API-Key`) — no asumas que un fixture o un
 mock representa lo que un usuario real ve. Esto también aplica a páginas públicas sin sesión
 (`/santuario/:username`): actívalas de verdad (usa la propia UI ya arreglada) y escanéalas sin login.
+
+### 3.7 Verificar cambios de frontend en el navegador embebido cuando la BD de dev está vacía
+
+La BD local de desarrollo suele estar vacía (`El Oráculo está vacío...` en Catálogo/Purgatorio). Eso
+NO es excusa para saltarte la verificación en navegador — solo cambia qué puedes comprobar:
+
+- **Sí puedes verificar siempre**: que la página carga sin que el `ErrorBoundary` la capture, que no
+  hay errores nuevos en consola, que los formularios/inputs actualizan su estado (escribe en un
+  campo y confirma con una captura o `read_page` que el valor cambió — no hace falta que haya datos
+  reales detrás para probar que el `onChange`/prop-threading funciona).
+- **No puedes verificar sin datos reales**: layouts de grid con muchos ítems, virtualización,
+  paginación con más de una página, nada que dependa del *contenido* real de un producto/oferta.
+  Documenta esto como hueco honesto en vez de fingir que se probó — es la misma disciplina que ya
+  se aplica al hueco de "solo-admin" (§7).
+- **Gotcha de HMR con ediciones por `sed`/multi-tool-call**: si troceas un archivo con varias
+  llamadas de herramienta seguidas (`sed` para borrar un bloque + `Edit` para añadir el import),
+  Vite puede disparar un HMR update sobre un estado intermedio inconsistente (import añadido antes
+  de que el JSX que lo usa exista, o viceversa) y el navegador queda con un `ReferenceError` en
+  pantalla aunque el fichero guardado en disco esté bien. Antes de darlo por roto: comprueba
+  `tsc -b --noEmit` + `npm run build` en el estado FINAL del fichero (no el intermedio), y si están
+  limpios, fuerza un hard-reload real (`navigate` a la misma URL, o
+  `javascript_tool: window.location.reload()`) antes de concluir que hay un bug — puede que solo
+  sea un HMR desincronizado con el estado final ya correcto.
+- **Gotcha de `preview_logs`/`read_console_messages`**: estas herramientas devuelven el búfer
+  histórico completo, no solo lo más reciente. Un error viejo (de una edición ya corregida) puede
+  seguir apareciendo con un timestamp o `t=...` idéntico en lecturas sucesivas — compara timestamps
+  antes de asumir que un error "sigue pasando"; si el timestamp no cambia entre dos lecturas después
+  de una acción nueva, es caché del log, no un error nuevo.
+
+### 3.8 Cómo auditar y actualizar dependencias con CVEs conocidos (`pip-audit`)
+
+`pip-audit` no estaba instalado en el venv la primera vez que se corrió de verdad (Ola 5,
+2026-07-21) — instálalo con `.venv/Scripts/python.exe -m pip install pip-audit` si falta.
+
+- **Gotcha de Windows con rutas no-ASCII**: si la ruta del proyecto contiene un carácter no-ASCII
+  (este repo vive bajo `Lerøy Seafood Group ASA`), `pip-audit` falla con
+  `UnicodeDecodeError: 'utf-8' codec can't decode byte...` al intentar leer la versión de `pip`
+  desde la consola de Windows. Antepón `PYTHONUTF8=1 PYTHONIOENCODING=utf-8` al comando:
+  `PYTHONUTF8=1 PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe -m pip_audit -r requirements.txt`.
+- **Antes de subir ninguna versión**, comprueba la restricción real que impone el paquete que la
+  fija (no asumas que "última versión" es libre de instalar): `.venv/Scripts/python.exe -c
+  "import importlib.metadata as m; print(m.metadata('paquete').get_all('Requires-Dist'))"` para ver
+  si algo en el árbol de dependencias capa la versión objetivo (pasó de verdad: `fastapi==0.128.0`
+  capaba `starlette<0.51.0`, así que arreglar el CVE de `starlette` exigió subir también `fastapi`
+  a una versión sin ese tope).
+- **Verificación obligatoria tras cada bump**: suite completa (`pytest tests/ -q`) en verde antes Y
+  después del cambio — no solo después, para distinguir un fallo pre-existente de uno que introduces
+  tú. Además, arranca el backend de verdad en un puerto de scratch y confirma que responde
+  (`uvicorn ... --port 8001` en background, luego `curl -s -o /dev/null -w "%{http_code}" .../docs`
+  y `.../openapi.json`, después mata el proceso) — un bump de major/minor grande (ej. FastAPI 11
+  versiones, Starlette de 0.x a 1.x) puede pasar la suite de tests y aun así romper algo que ningún
+  test cubre; el arranque real es la última red de seguridad barata.
+- **Registra el resultado en tres sitios**: `requirements.txt` (el cambio en sí),
+  `docs/REPORTE_MEJORAS_AAA.md` Ola 5 (qué CVEs, qué versiones, cómo se verificó), y
+  `docs/BASELINE_METRICS.md` (tabla antes/después) — es el mismo patrón de "un cambio, tres
+  documentos" que ya rige el resto del backlog, no un caso especial.
 
 ---
 
@@ -215,6 +305,22 @@ simple** — ya se demostró que rompe con el patrón de sesiones anidadas que u
 es compartida entre módulos de test (session-scoped), así que un schema mal definido en un router
 puede pasar limpio en un test aislado y romper cuando otro test anterior ya insertó datos con una
 forma distinta — el "camino vacío" oculta mismatches que el estado compartido revela.
+
+### 4.5 `pytest tests/ -q` NO recoge todos los `test_*.py` que existen en el repo — verifica con `--collect-only`
+
+`pyproject.toml` fija `python_files = ["test_api_*.py"]`. Cualquier archivo de test cuyo nombre no
+empiece literalmente por `test_api_` (aunque esté dentro de `tests/integration/` o `tests/unit/`)
+**no lo recoge pytest por defecto, ni en local ni en CI** (`ci.yml` corre exactamente `pytest
+tests/ -v`) — no da error, simplemente no lo ve. Hallazgo real de la revisión de 2026-07-21:
+`test_phase0_migration.py`, `test_matcher_precision.py`, `test_specific_purgatory_cases.py` y
+`test_wallapop_signed_api.py` llevan tiempo sin ejecutarse por este motivo (y uno de ellos,
+`test_phase0_migration.py::test_migration_logic`, está roto — ver
+[architecture_map.md](../../docs/technical/architecture_map.md) §8). Antes de fiarte de "la suite
+está en verde" para un cambio que toca algo cubierto por uno de esos archivos, ejecútalo explícito
+por ruta (`pytest tests/unit/test_matcher_precision.py`) — pasar la ruta exacta bypasea el filtro de
+nombre. Si creas un test nuevo, o bien nómbralo `test_api_*.py` (aunque no sea sobre la API — es lo
+que hace que se recoja) o amplía el filtro en `pyproject.toml` y confirma que la suite completa
+sigue en verde antes de asumir que ahora cubre más.
 
 ---
 
@@ -268,7 +374,7 @@ forma distinta — el "camino vacío" oculta mismatches que el estado compartido
 
 ---
 
-## 7. Gotchas de plataforma aprendidos en esta sesión
+## 7. Gotchas de plataforma (acumulados sesión a sesión — añade aquí lo que descubras, no lo borres)
 
 - **El interceptor de axios es GLOBAL, no por instancia.** `frontend/src/api/client.ts` registra
   `axios.interceptors.request.use(attachAuth)` sobre el objeto `axios` importado por defecto — así

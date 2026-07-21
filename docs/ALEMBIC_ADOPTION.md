@@ -14,7 +14,12 @@
 
 ## Qué se preparó ya (código, verificado localmente)
 
-- **Nueva migración** [`migrations/versions/d4283e0fbed1_add_missing_user_showcase_columns.py`](../migrations/versions/d4283e0fbed1_add_missing_user_showcase_columns.py):
+> **Actualizado 2026-07-21**: desde que se escribió esta guía se añadió una segunda migración
+> (`feac3ac24f77`, Ola 3e). No cambia ningún paso de esta guía — `alembic upgrade head` siempre
+> aplica toda la cadena pendiente — pero si ves dos migraciones en vez de una en el output del
+> paso 5, es lo esperado, no un error.
+
+- **Migración** [`migrations/versions/d4283e0fbed1_add_missing_user_showcase_columns.py`](../migrations/versions/d4283e0fbed1_add_missing_user_showcase_columns.py):
   añade las 4 columnas de `users` (`is_public_showcase`, `telegram_chat_id`,
   `pc_image_path`, `mobile_image_path`) que hasta ahora solo se creaban en
   caliente. **Es idempotente**: comprueba si cada columna ya existe antes de
@@ -22,6 +27,15 @@
   tiene (lo más probable) como si no. Probado en local con dos escenarios
   (columnas ya presentes / columnas ausentes) y con el downgrade — los tres
   casos funcionan correctamente.
+- **Migración** [`migrations/versions/feac3ac24f77_add_missing_query_indexes.py`](../migrations/versions/feac3ac24f77_add_missing_query_indexes.py)
+  (Ola 3e, añadida después de esta guía): 9 índices nuevos en `products.category`,
+  `offers.last_seen`/`opportunity_score`, `collection_items.acquired`,
+  `pending_matches.validation_status`/`found_at`, `offer_history.timestamp`,
+  `price_history.offer_id`/`recorded_at` — cierran huecos reales encontrados con
+  `EXPLAIN QUERY PLAN` (`SCAN` de tabla completa o `TEMP B-TREE` para `ORDER BY`).
+  **También idempotente** (comprueba índices existentes antes de crear cada uno, mismo patrón que
+  la migración anterior). Verificada aplicando/revirtiendo/reaplicando contra una copia real de
+  `oraculo.db`.
 - **`docker-entrypoint.sh`**: ejecuta `alembic upgrade head` antes de arrancar
   el servidor. Si la migración fallara por cualquier motivo, **no bloquea el
   arranque** — `init_cloud_db()` sigue funcionando como red de seguridad
@@ -83,9 +97,10 @@ y anota en qué punto del historial está tu base.
 docker compose -f docker-compose.prod.yml run --rm backend alembic upgrade head
 ```
 
-Deberías ver `Running upgrade f48b00d4a369 -> d4283e0fbed1`. Si las columnas
-ya existían (lo más probable), la migración las detecta y no hace nada —
-no debería dar error.
+Deberías ver dos líneas: `Running upgrade f48b00d4a369 -> d4283e0fbed1` y luego
+`Running upgrade d4283e0fbed1 -> feac3ac24f77`. Si las columnas de la primera
+ya existían (lo más probable) o los índices de la segunda ya existían, cada
+migración lo detecta y no hace nada — no debería dar error en ningún caso.
 
 ### 6. Despliega normalmente
 
@@ -104,7 +119,9 @@ que añadamos en el futuro se aplicará sola.
 - Entra a la app con tu email+contraseña y confirma que todo funciona
   (login, colección, configuración).
 - Opcional: repite la consulta SQL del paso 3 — ahora debería devolver `true`,
-  y `SELECT version_num FROM alembic_version;` debería mostrar `d4283e0fbed1`.
+  y `SELECT version_num FROM alembic_version;` debería mostrar `feac3ac24f77`
+  (el head actual — si en el futuro se añaden más migraciones, será otro hash;
+  compáralo contra `alembic history` en la rama que hayas desplegado).
 
 ## Qué queda pendiente tras esto (no lo hagas todavía)
 

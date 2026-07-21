@@ -73,3 +73,44 @@ Entry inicial: **140.86 KB → 88.70 KB gzip** (-37%). Objetivo de <250 KB gz ya
 - `ORACULO_API_KEY` ya no viaja al navegador; el modelo de auth del frontend es JWT real via login.
 - `pip-audit`: no ejecutado formalmente esta sesión (dependencias fijadas en 2.6, sin CVEs conocidos evaluados manualmente). `npm audit`: 5 vulnerabilidades → **0** (`npm audit fix`, sin `--force`).
 - 46+ tests de integración nuevos/actualizados cubriendo IDOR, scoping de identidad, response_model y la cache de imágenes; suite completa en verde en cada commit de esta sesión.
+
+---
+
+## Métricas finales (tras Ola 4a y Ola 5 — pip-audit) — 2026-07-21
+
+### Troceo de monolitos (Ola 4a — mantenibilidad, NO tamaño de bundle)
+
+| Archivo | Antes | Ahora | Reducción |
+|---------|-------|-------|-----------|
+| `Config.tsx` | 3101 líneas | 886 líneas | -71% |
+| `Purgatory.tsx` | 2276 líneas | 923 líneas | -59% |
+| `Catalog.tsx` | 1965 líneas | 887 líneas | -55% |
+
+24 componentes nuevos en `frontend/src/components/{config,purgatory,catalog}/` (ver [architecture_map.md](technical/architecture_map.md) §4 para el listado completo). **El tamaño de los chunks de build apenas cambia** (esperado — es el mismo código, solo repartido en más ficheros; el objetivo era mantenibilidad, no peso):
+
+| Chunk | Antes del troceo (raw / gzip) | Después (raw / gzip) |
+|-------|-------------------------------|------------------------|
+| `Config` | 123.86 KB / 27.47 KB | 122.74 KB / 27.15 KB |
+| `Purgatory` | 80.76 KB / 18.45 KB | 81.65 KB / 18.44 KB |
+| `Catalog` | 61.72 KB / 15.08 KB | 63.12 KB / 15.51 KB |
+
+### `pip-audit` (Ola 5)
+
+Ejecutado por primera vez de verdad esta sesión (`pip-audit -r requirements.txt`, con `PYTHONUTF8=1` porque la ruta del proyecto tiene un carácter no-ASCII que rompe la detección de versión de `pip` en Windows). Encontró **20 vulnerabilidades conocidas en 3 paquetes**:
+
+| Paquete | Antes | Ahora | CVEs |
+|---------|-------|-------|------|
+| `PyJWT` | 2.10.1 | 2.13.0 | múltiples (librería de auth) |
+| `pydantic-settings` | 2.12.0 | 2.14.2 | GHSA-4xgf-cpjx-pc3j |
+| `starlette` (transitiva de `fastapi`) | 0.50.0 | 1.3.1 | múltiples, requirió subir `fastapi` 0.128.0 → 0.139.2 (capaba `starlette<0.51.0`) |
+
+Verificado con la suite completa (63 tests en verde antes/después de cada bump) y arranque real de `uvicorn` sirviendo `/docs` + `/openapi.json` con 200 OK. `pip-audit` re-ejecutado tras el cambio: **0 vulnerabilidades**. `npm audit` en `frontend/`: sigue en 0.
+
+### 4b (virtualización de listas) — deliberadamente pospuesto
+
+No incluido en esta pasada: requiere verificación visual con datos reales (la BD de desarrollo está vacía) y es un cambio de arquitectura de renderizado, no una extracción mecánica. Ver [REPORTE_MEJORAS_AAA.md](REPORTE_MEJORAS_AAA.md) Ola 4 para la recomendación técnica de cómo abordarlo.
+
+### Pendiente real (necesita despliegue)
+
+- Lighthouse (Performance/Accessibility/Best-Practices/SEO), LCP/TBT/CLS reales: siguen sin poder capturarse desde el entorno de desarrollo local (BD vacía, sin dominio público). Requieren que despliegues (Ola 1) y corras Lighthouse contra la URL real.
+- `/security-review`: skill de Claude Code disparada por el usuario, no ejecutable por el agente de forma autónoma.
