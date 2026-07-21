@@ -64,6 +64,15 @@ sin que nadie se dé cuenta hasta mucho después.
   deliberadamente un secreto DISTINTO de `ORACULO_API_KEY` (admin, server-to-server). Si añades un
   nuevo cliente no confiable (otra extensión, un webhook externo, un script de terceros), dale su
   propia clave de alcance mínimo — nunca reutilices la clave de admin "para no complicarlo".
+- **Nunca borres ni muevas carpetas de la raíz "para limpiar" sin confirmación explícita del
+  usuario, aunque tu propia investigación te diga que no tienen ninguna referencia en el código.**
+  El usuario alterna con otras herramientas de IA (3OX.Ai, Gemini/Antigravity, y otras) que pueden
+  usar esas carpetas como su propio workspace aunque esta app no las toque — un `git rm` es
+  potencialmente no recuperable si esa herramienta guardaba ahí estado que no está en ningún otro
+  sitio. Antes de proponer nada, lee
+  **[docs/technical/AUDITORIA_CARPETAS_RAIZ.md](../../docs/technical/AUDITORIA_CARPETAS_RAIZ.md)**
+  — ya tiene el veredicto por carpeta (usada / operación manual / otra herramienta confirmada en
+  uso / sin ninguna referencia detectada) para no repetir la investigación desde cero.
 
 ---
 
