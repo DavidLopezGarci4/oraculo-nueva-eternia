@@ -104,6 +104,7 @@ const WallapopNexusBridge: React.FC = () => {
                     type="text"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
+                    aria-label="Consulta de búsqueda para Wallapop"
                     placeholder="auto (masters del universo origins, motu origins...)"
                     className="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-cyan-500"
                 />
@@ -147,7 +148,7 @@ const WallapopNexusBridge: React.FC = () => {
             <div>
                 <div className="flex items-center justify-between mb-2">
                     <p className="text-xs font-bold uppercase tracking-widest text-white/60">Cola del Nexus Bridge</p>
-                    <button onClick={fetchJobs} className="text-white/40 hover:text-cyan-400 transition-colors">
+                    <button onClick={fetchJobs} aria-label="Actualizar cola de trabajos" className="text-white/40 hover:text-cyan-400 transition-colors">
                         <RefreshCw className="w-3.5 h-3.5" />
                     </button>
                 </div>

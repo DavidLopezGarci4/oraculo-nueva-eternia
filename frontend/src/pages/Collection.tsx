@@ -345,6 +345,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                             onChange={(e) => setConditionFilter(e.target.value)}
                             className="h-[38px] sm:h-[42px] px-3 sm:px-4 rounded-xl bg-white/[0.03] border border-white/5 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.05em] text-white/70 hover:text-white transition-all outline-none cursor-pointer focus:border-white/20"
                             title="Filtrar por Estado de Conservación"
+                            aria-label="Filtrar por Estado de Conservación"
                         >
                             <option value="all" className="bg-[#121212] text-white">Estado: Todos</option>
                             <option value="MOC" className="bg-[#121212] text-white">MOC</option>

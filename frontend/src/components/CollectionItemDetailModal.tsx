@@ -17,6 +17,7 @@ import { updateCollectionItem, toggleCollection } from '../api/collection';
 import type { Product } from '../api/collection';
 import { getOptimizedImageUrl } from '../utils/imageUtils';
 import { MOTUImage } from './ui/MOTUImage';
+import { useModalA11y } from '../hooks/useModalA11y';
 
 
 interface CollectionItemDetailModalProps {
@@ -28,6 +29,8 @@ interface CollectionItemDetailModalProps {
 
 const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ product, userId, isIncognito = false, onClose }) => {
     void isIncognito;
+    const containerRef = React.useRef<HTMLDivElement>(null);
+    useModalA11y(true, onClose, containerRef);
     const queryClient = useQueryClient();
     const [price, setPrice] = useState<string>(
         product.purchase_price && product.purchase_price > 0 ? String(product.purchase_price) : ''
@@ -84,14 +87,30 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
 
     return (
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/90 backdrop-blur-xl p-2 md:p-10 animate-in fade-in duration-300">
-            <div className="relative w-full max-w-4xl rounded-[3rem] border border-white/10 bg-gradient-to-br from-white/[0.05] to-transparent overflow-hidden shadow-2xl flex flex-col md:flex-row max-h-[90vh]">
+            <div
+                ref={containerRef}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="collection-item-title"
+                tabIndex={-1}
+                className="relative w-full max-w-4xl rounded-[3rem] border border-white/10 bg-gradient-to-br from-white/[0.05] to-transparent overflow-hidden shadow-2xl flex flex-col md:flex-row max-h-[90vh] outline-none"
+            >
 
                 {/* Left Side: Product Preview */}
                 <div className="w-full md:w-1/3 bg-black/40 border-b md:border-b-0 md:border-r border-white/5 p-3 md:p-8 flex flex-col gap-2 md:gap-4 items-center text-center">
-                    <div 
-                        className="relative w-full max-w-[120px] md:max-w-full aspect-square md:aspect-auto md:h-64 rounded-2xl md:rounded-[2rem] overflow-hidden border border-white/10 shadow-2xl mx-auto cursor-zoom-in hover:scale-105 transition-transform"
+                    <div
+                        role="button"
+                        tabIndex={0}
+                        className="relative w-full max-w-[120px] md:max-w-full aspect-square md:aspect-auto md:h-64 rounded-2xl md:rounded-[2rem] overflow-hidden border border-white/10 shadow-2xl mx-auto cursor-zoom-in hover:scale-105 transition-transform focus:outline-none focus:ring-2 focus:ring-brand-primary"
                         onClick={() => setExpandedImage(product.image_url || null)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                setExpandedImage(product.image_url || null);
+                            }
+                        }}
                         title="Expandir Reliquia"
+                        aria-label="Expandir imagen de la reliquia"
                     >
                         <MOTUImage 
                             productId={product.id}
@@ -109,7 +128,7 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
 
                     <div className="space-y-1 md:space-y-2">
                         <p className="text-[8px] md:text-[10px] font-black text-brand-primary uppercase tracking-[0.2em]">{product.sub_category}</p>
-                        <h2 className="text-sm md:text-xl font-black text-white leading-tight">{product.name}</h2>
+                        <h2 id="collection-item-title" className="text-sm md:text-xl font-black text-white leading-tight">{product.name}</h2>
                     </div>
                 </div>
 
@@ -121,7 +140,7 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
                             <Shield className="h-4 w-4 md:h-5 md:w-5 text-brand-primary" />
                             <h3 className="text-white font-black text-xs md:text-lg uppercase tracking-wider">Tu Legado Personal</h3>
                         </div>
-                        <button onClick={onClose} className="h-8 w-8 md:h-10 md:w-10 flex items-center justify-center rounded-xl bg-white/5 hover:bg-white/10 transition-colors">
+                        <button onClick={onClose} aria-label="Cerrar" className="h-8 w-8 md:h-10 md:w-10 flex items-center justify-center rounded-xl bg-white/5 hover:bg-white/10 transition-colors">
                             <X className="h-5 w-5 text-white/70" />
                         </button>
                     </div>
@@ -340,6 +359,9 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
             {/* FULLSCREEN IMAGE EXPANSION */}
             {expandedImage && (
                 <div
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label="Imagen ampliada de la reliquia"
                     className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-20 bg-black/95 backdrop-blur-3xl animate-in zoom-in duration-300 shadow-2xl"
                     onClick={() => setExpandedImage(null)}
                 >
@@ -353,6 +375,7 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
                         />
                         <button
                             onClick={() => setExpandedImage(null)}
+                            aria-label="Cerrar imagen ampliada"
                             className="absolute -top-4 -right-4 sm:-top-8 sm:-right-8 h-10 w-10 sm:h-14 sm:w-14 flex items-center justify-center rounded-2xl bg-white/10 text-white hover:bg-red-500 hover:scale-110 transition-all border border-white/10 backdrop-blur-md shadow-2xl z-[210]"
                         >
                             <X className="h-6 w-6 sm:h-8 sm:w-8" />

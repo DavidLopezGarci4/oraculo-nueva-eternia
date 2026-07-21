@@ -78,6 +78,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen
                     {/* Botón de cierre solo en móvil */}
                     <button
                         onClick={onCloseMobile}
+                        aria-label="Cerrar menú de navegación"
                         className="rounded-lg p-1 text-white/50 hover:bg-white/10 hover:text-white md:hidden"
                     >
                         <X className="h-6 w-6" />
@@ -85,7 +86,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen
                 </div>
 
                 {/* Navigation */}
-                <nav className="flex-1 space-y-5 p-4 pt-6 overflow-y-auto custom-scrollbar">
+                <nav aria-label="Navegación principal" className="flex-1 space-y-5 p-4 pt-6 overflow-y-auto custom-scrollbar">
                     {/* Sección Global */}
                     <div className="space-y-1">
                         {globalItems.map((item) => {

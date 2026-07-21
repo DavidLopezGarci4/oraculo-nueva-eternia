@@ -1,5 +1,7 @@
+import { useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Download, Zap, Cloud, Database, AlertCircle, Sparkles, X } from 'lucide-react';
+import { useModalA11y } from '../../hooks/useModalA11y';
 
 interface CacheWelcomeModalProps {
   isOpen: boolean;
@@ -8,6 +10,9 @@ interface CacheWelcomeModalProps {
 }
 
 export default function CacheWelcomeModal({ isOpen, onClose, onSelect }: CacheWelcomeModalProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  useModalA11y(isOpen, onClose, containerRef);
+
   const handleSelect = (mode: 'download_all' | 'on_demand' | 'none') => {
     onSelect(mode);
     onClose();
@@ -28,11 +33,16 @@ export default function CacheWelcomeModal({ isOpen, onClose, onSelect }: CacheWe
 
           {/* Modal Card */}
           <motion.div
+            ref={containerRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="cache-welcome-title"
+            tabIndex={-1}
             initial={{ scale: 0.9, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.9, opacity: 0, y: 20 }}
             transition={{ type: 'spring', damping: 25, stiffness: 180 }}
-            className="relative w-full max-w-lg overflow-hidden rounded-[2.5rem] border border-white/10 bg-gradient-to-b from-slate-900/90 to-black/95 p-6 md:p-8 text-white shadow-2xl backdrop-blur-3xl"
+            className="relative w-full max-w-lg overflow-hidden rounded-[2.5rem] border border-white/10 bg-gradient-to-b from-slate-900/90 to-black/95 p-6 md:p-8 text-white shadow-2xl backdrop-blur-3xl outline-none"
           >
             {/* Ambient glows */}
             <div className="absolute -right-16 -top-16 h-32 w-32 rounded-full bg-brand-primary/10 blur-3xl pointer-events-none" />
@@ -49,13 +59,14 @@ export default function CacheWelcomeModal({ isOpen, onClose, onSelect }: CacheWe
                     <Sparkles className="h-4 w-4 text-brand-primary" />
                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-primary">OPTIMIZACIÓN TÁCTICA</span>
                   </div>
-                  <h3 className="text-xl font-bold uppercase tracking-wide text-white">
+                  <h3 id="cache-welcome-title" className="text-xl font-bold uppercase tracking-wide text-white">
                     Bóveda de Imágenes Local
                   </h3>
                 </div>
               </div>
               <button
                 onClick={onClose}
+                aria-label="Cerrar"
                 className="rounded-lg p-1.5 text-white/40 hover:bg-white/5 hover:text-white transition-colors"
               >
                 <X className="h-4 w-4" />

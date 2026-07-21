@@ -46,12 +46,12 @@ const MasterLogin: React.FC<MasterLoginProps> = ({ onSuccess, onCancel }) => {
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black p-4">
             {/* Background Effects */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
                 <div className="absolute top-[-10%] left-[-10%] h-[40%] w-[40%] rounded-full bg-brand-primary/10 blur-[120px]" />
                 <div className="absolute bottom-[-10%] right-[-10%] h-[40%] w-[40%] rounded-full bg-blue-500/10 blur-[120px]" />
             </div>
 
-            <div className="relative w-full max-w-md animate-in fade-in zoom-in-95 duration-700">
+            <main className="relative w-full max-w-md animate-in fade-in zoom-in-95 duration-700">
                 <div className="relative overflow-hidden rounded-[2.5rem] border border-white/10 bg-white/[0.02] p-8 md:p-12 backdrop-blur-3xl">
                     {/* Header */}
                     <div className="mb-10 flex flex-col items-center text-center">
@@ -69,12 +69,13 @@ const MasterLogin: React.FC<MasterLoginProps> = ({ onSuccess, onCancel }) => {
                     {/* Form */}
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-white/40 ml-1">
+                            <label htmlFor="master-login-email" className="text-[10px] font-black uppercase tracking-widest text-white/40 ml-1">
                                 Correo del Arquitecto
                             </label>
                             <div className="relative group">
                                 <User className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-white/20 group-focus-within:text-brand-primary transition-colors" />
                                 <input
+                                    id="master-login-email"
                                     type="email"
                                     autoComplete="username"
                                     value={email}
@@ -88,12 +89,13 @@ const MasterLogin: React.FC<MasterLoginProps> = ({ onSuccess, onCancel }) => {
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-white/40 ml-1">
+                            <label htmlFor="master-login-password" className="text-[10px] font-black uppercase tracking-widest text-white/40 ml-1">
                                 Contraseña Soberana
                             </label>
                             <div className="relative group">
                                 <Lock className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-white/20 group-focus-within:text-brand-primary transition-colors" />
                                 <input
+                                    id="master-login-password"
                                     type="password"
                                     autoComplete="current-password"
                                     value={password}
@@ -151,7 +153,7 @@ const MasterLogin: React.FC<MasterLoginProps> = ({ onSuccess, onCancel }) => {
                 <p className="mt-8 text-center text-[9px] font-black uppercase tracking-[0.2em] text-white/20">
                     Soberanía Digital 3OX &copy; {new Date().getFullYear()}
                 </p>
-            </div>
+            </main>
         </div>
     );
 };

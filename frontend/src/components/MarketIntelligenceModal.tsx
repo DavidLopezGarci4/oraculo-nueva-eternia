@@ -25,6 +25,7 @@ import {
     ResponsiveContainer
 } from 'recharts';
 import axios from 'axios';
+import { useModalA11y } from '../hooks/useModalA11y';
 
 interface MarketIntelligenceModalProps {
     productId: number;
@@ -32,6 +33,9 @@ interface MarketIntelligenceModalProps {
 }
 
 const MarketIntelligenceModal: React.FC<MarketIntelligenceModalProps> = ({ productId, onClose }) => {
+    const containerRef = React.useRef<HTMLDivElement>(null);
+    useModalA11y(true, onClose, containerRef);
+
     const { data: marketData, isLoading, error } = useQuery({
         queryKey: ['market-intelligence', productId],
         queryFn: async () => {
@@ -42,7 +46,7 @@ const MarketIntelligenceModal: React.FC<MarketIntelligenceModalProps> = ({ produ
 
     if (isLoading) {
         return (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md">
+            <div ref={containerRef} role="dialog" aria-modal="true" aria-label="Cargando inteligencia de mercado" tabIndex={-1} className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md outline-none">
                 <div className="flex flex-col items-center gap-4">
                     <RefreshCw className="h-12 w-12 animate-spin text-brand-primary" />
                     <p className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-primary animate-pulse">Infiltrando base de datos...</p>
@@ -57,14 +61,14 @@ const MarketIntelligenceModal: React.FC<MarketIntelligenceModalProps> = ({ produ
 
     if (isError || !hasData) {
         return (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md">
+            <div ref={containerRef} role="alertdialog" aria-modal="true" aria-labelledby="market-empty-title" tabIndex={-1} className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md outline-none">
                 <div className="bg-white/[0.03] border border-white/10 p-10 rounded-[2.5rem] text-center space-y-6 max-w-sm backdrop-blur-2xl shadow-2xl">
                     <div className="relative mx-auto h-16 w-16">
                         <AlertCircle className="h-16 w-16 text-brand-primary/40" />
                         <div className="absolute inset-0 animate-ping rounded-full bg-brand-primary/20"></div>
                     </div>
                     <div className="space-y-2">
-                        <h3 className="text-white font-black text-2xl uppercase italic tracking-tighter">Sabiduría en Acumulación</h3>
+                        <h3 id="market-empty-title" className="text-white font-black text-2xl uppercase italic tracking-tighter">Sabiduría en Acumulación</h3>
                         <p className="text-white/40 text-[10px] font-bold uppercase leading-relaxed tracking-widest">
                             El Oráculo aún no ha recolectado suficientes reliquias de este tipo para generar un informe industrial fidedigno.
                         </p>
@@ -98,7 +102,14 @@ const MarketIntelligenceModal: React.FC<MarketIntelligenceModalProps> = ({ produ
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-xl p-4 md:p-10 animate-in fade-in zoom-in duration-300">
-            <div className="relative w-full max-w-5xl rounded-[2.5rem] border border-white/10 bg-gradient-to-br from-white/[0.05] to-transparent overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+            <div
+                ref={containerRef}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="market-modal-title"
+                tabIndex={-1}
+                className="relative w-full max-w-5xl rounded-[2.5rem] border border-white/10 bg-gradient-to-br from-white/[0.05] to-transparent overflow-hidden shadow-2xl flex flex-col max-h-[90vh] outline-none"
+            >
 
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 md:p-8 border-b border-white/5 bg-white/[0.02]">
@@ -107,9 +118,9 @@ const MarketIntelligenceModal: React.FC<MarketIntelligenceModalProps> = ({ produ
                             <Target className="h-4 w-4" />
                             <span className="text-[10px] font-black uppercase tracking-[0.3em]">Estudio de Mercado Industrial</span>
                         </div>
-                        <h2 className="text-xl md:text-3xl font-black text-white">{marketData.product_name}</h2>
+                        <h2 id="market-modal-title" className="text-xl md:text-3xl font-black text-white">{marketData.product_name}</h2>
                     </div>
-                    <button onClick={onClose} className="h-12 w-12 flex items-center justify-center rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">
+                    <button onClick={onClose} aria-label="Cerrar" className="h-12 w-12 flex items-center justify-center rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">
                         <X className="h-6 w-6 text-white" />
                     </button>
                 </div>
@@ -206,7 +217,7 @@ const MarketIntelligenceModal: React.FC<MarketIntelligenceModalProps> = ({ produ
                                 <div className="flex items-center justify-between">
                                     <p className="text-[10px] font-black text-white/60">{marketData.asin || 'N/A'}</p>
                                     {marketData.asin && (
-                                        <a href={`https://www.amazon.es/dp/${marketData.asin}`} target="_blank" rel="noopener noreferrer" className="text-brand-primary hover:text-white transition-colors">
+                                        <a href={`https://www.amazon.es/dp/${marketData.asin}`} target="_blank" rel="noopener noreferrer" aria-label="Ver en Amazon" className="text-brand-primary hover:text-white transition-colors">
                                             <Zap className="h-3 w-3 fill-current" />
                                         </a>
                                     )}

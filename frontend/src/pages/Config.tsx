@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { Play, Activity, Clock, AlertCircle, CheckCircle2, RefreshCw, Terminal, Target, Settings, Users, ShieldAlert, Trash2, Zap, History, Database, Download, FileSpreadsheet, Repeat, Globe, Package, ChevronDown, Lock, Swords, Shield, Search, Sparkles, Home, Wifi, CloudLightning, Cookie, Copy, Gift, Compass, MousePointer, ArrowDown, BarChart2, FileText, XCircle, Keyboard, ChevronsDown, Flag, Hexagon, Network, Archive, CornerDownRight, GitMerge, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -11,6 +11,7 @@ import { parseUtcDate } from '../utils/dateUtils';
 import WallapopImporter from '../components/admin/WallapopImporter';
 import WallapopNexusBridge from '../components/admin/WallapopNexusBridge';
 import { getDashboardMatchStats } from '../api/dashboard';
+import { useModalA11y } from '../hooks/useModalA11y';
 import {
     PieChart,
     Pie,
@@ -183,6 +184,14 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
     const [showIpLogsModal, setShowIpLogsModal] = useState(false);
     const [ipLogs, setIpLogs] = useState<WallapopIpLog[]>([]);
     const [loadingIpLogs, setLoadingIpLogs] = useState(false);
+
+    // Fase AAA-3c: foco/Escape/role=dialog accesibles para los 3 modales de esta pagina.
+    const addUserModalRef = useRef<HTMLDivElement>(null);
+    useModalA11y(showAddUserModal, () => setShowAddUserModal(false), addUserModalRef);
+    const resetModalRef = useRef<HTMLDivElement>(null);
+    useModalA11y(resetStep > 0, () => { if (!isResetting) setResetStep(0); }, resetModalRef);
+    const ipLogsModalRef = useRef<HTMLDivElement>(null);
+    useModalA11y(showIpLogsModal, () => setShowIpLogsModal(false), ipLogsModalRef);
 
     const [, setLocalImagesEnabled] = useState(() => localStorage.getItem('use_local_images') === 'true');
     const [downloadStatus, setDownloadStatus] = useState({ active: false, total: 0, current: 0, errors: 0, last_error: null as string | null });
@@ -1817,8 +1826,8 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                 </div>
                                 <div className="space-y-4">
                                     <div className="space-y-2">
-                                        <label className="text-xs text-white/50 block font-medium">Umbral de Alerta de Precio (%)</label>
-                                        <input type="range" disabled className="w-full accent-brand-primary" value="15" />
+                                        <label htmlFor="sentinel-price-threshold" className="text-xs text-white/50 block font-medium">Umbral de Alerta de Precio (%)</label>
+                                        <input id="sentinel-price-threshold" type="range" disabled className="w-full accent-brand-primary" value="15" />
                                         <div className="flex justify-between text-[10px] text-white/60 font-bold">
                                             <span>5%</span>
                                             <span className="text-brand-primary">15%</span>
@@ -1848,16 +1857,16 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                 </div>
                                 <div className="space-y-4">
                                     <div className="space-y-2">
-                                        <label className="text-xs text-white/50 block font-medium">ROI Mínimo para Grial (%)</label>
+                                        <label htmlFor="grail-min-roi" className="text-xs text-white/50 block font-medium">ROI Mínimo para Grial (%)</label>
                                         <div className="flex items-center gap-3">
-                                            <input type="number" disabled className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white/50 w-full" value="50" />
+                                            <input id="grail-min-roi" type="number" disabled className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white/50 w-full" value="50" />
                                             <span className="text-white/60 text-xs">%</span>
                                         </div>
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-xs text-white/50 block font-medium">Valor Umbral Grial (€)</label>
+                                        <label htmlFor="grail-value-threshold" className="text-xs text-white/50 block font-medium">Valor Umbral Grial (€)</label>
                                         <div className="flex items-center gap-3">
-                                            <input type="number" disabled className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white/50 w-full" value="150" />
+                                            <input id="grail-value-threshold" type="number" disabled className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white/50 w-full" value="150" />
                                             <span className="text-white/60 text-xs">€</span>
                                         </div>
                                     </div>
@@ -1878,8 +1887,8 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                 </div>
                                 <div className="space-y-4">
                                     <div className="space-y-2">
-                                        <label className="text-xs text-white/50 block font-medium">Delay entre Páginas (seg)</label>
-                                        <input type="range" disabled className="w-full accent-blue-400" value="10" />
+                                        <label htmlFor="scraper-page-delay" className="text-xs text-white/50 block font-medium">Delay entre Páginas (seg)</label>
+                                        <input id="scraper-page-delay" type="range" disabled className="w-full accent-blue-400" value="10" />
                                         <div className="flex justify-between text-[10px] text-white/60 font-bold">
                                             <span>1s</span>
                                             <span className="text-blue-400">10s (Auto)</span>
@@ -1910,9 +1919,12 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                     </p>
 
                                     <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl">
-                                        <span className="text-xs text-white/70">Santuario Público</span>
+                                        <span id="public-showcase-label" className="text-xs text-white/70">Santuario Público</span>
                                         <button
                                             onClick={handleToggleShowcase}
+                                            role="switch"
+                                            aria-checked={!!userSettings?.is_public_showcase}
+                                            aria-labelledby="public-showcase-label"
                                             className={`relative h-5 w-10 rounded-full transition-all ${userSettings?.is_public_showcase ? 'bg-brand-primary' : 'bg-white/10'}`}
                                         >
                                             <div className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${userSettings?.is_public_showcase ? 'right-0.5' : 'left-0.5'}`} />
@@ -2367,6 +2379,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                                         <select
                                                             value={hero.role}
                                                             onChange={(e) => handleUpdateRole(hero.id, e.target.value)}
+                                                            aria-label={`Rol de ${hero.username}`}
                                                             className="bg-brand-primary/10 text-brand-primary text-[9px] uppercase font-black border border-brand-primary/20 rounded pl-6 pr-5 py-1.5 outline-none cursor-pointer hover:bg-brand-primary/30 appearance-none text-left"
                                                         >
                                                             <option value="viewer" className="bg-black text-white">Guardián</option>
@@ -2486,41 +2499,46 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                             className="absolute inset-0 bg-black/80 backdrop-blur-md"
                         />
                         <motion.div
+                            ref={addUserModalRef}
+                            role="dialog"
+                            aria-modal="true"
+                            aria-labelledby="add-user-modal-title"
+                            tabIndex={-1}
                             initial={{ scale: 0.9, opacity: 0, y: 20 }}
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                            className="relative w-full max-w-lg glass border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl"
+                            className="relative w-full max-w-lg glass border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl outline-none"
                         >
                             <div className="p-8 space-y-6">
                                 <div className="flex items-center justify-between">
-                                    <h3 className="text-2xl font-black text-white uppercase tracking-tighter">Reclutar <span className="text-brand-primary">Héroe</span></h3>
+                                    <h3 id="add-user-modal-title" className="text-2xl font-black text-white uppercase tracking-tighter">Reclutar <span className="text-brand-primary">Héroe</span></h3>
                                     <div className="bg-brand-primary/20 p-2 rounded-lg text-brand-primary"><Users className="h-5 w-5" /></div>
                                 </div>
 
                                 <div className="space-y-4 opacity-50">
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-white/65 uppercase tracking-widest pl-1">Nombre de Usuario</label>
-                                        <input type="text" disabled placeholder="Ej: He-Man" className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white focus:outline-none" />
+                                        <label htmlFor="mock-add-user-username" className="text-[10px] font-black text-white/65 uppercase tracking-widest pl-1">Nombre de Usuario</label>
+                                        <input id="mock-add-user-username" type="text" disabled placeholder="Ej: He-Man" className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white focus:outline-none" />
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-white/65 uppercase tracking-widest pl-1">Correo Electrónico</label>
-                                        <input type="email" disabled placeholder="defensor@eternia.com" className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white focus:outline-none" />
+                                        <label htmlFor="mock-add-user-email" className="text-[10px] font-black text-white/65 uppercase tracking-widest pl-1">Correo Electrónico</label>
+                                        <input id="mock-add-user-email" type="email" disabled placeholder="defensor@eternia.com" className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white focus:outline-none" />
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-black text-white/65 uppercase tracking-widest pl-1">Contraseña</label>
-                                            <input type="password" disabled value="********" className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white focus:outline-none" />
+                                            <label htmlFor="mock-add-user-password" className="text-[10px] font-black text-white/65 uppercase tracking-widest pl-1">Contraseña</label>
+                                            <input id="mock-add-user-password" type="password" disabled value="********" className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white focus:outline-none" />
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-black text-white/65 uppercase tracking-widest pl-1">Confirmar</label>
-                                            <input type="password" disabled value="********" className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white focus:outline-none" />
+                                            <label htmlFor="mock-add-user-password-confirm" className="text-[10px] font-black text-white/65 uppercase tracking-widest pl-1">Confirmar</label>
+                                            <input id="mock-add-user-password-confirm" type="password" disabled value="********" className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white focus:outline-none" />
                                         </div>
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-white/65 uppercase tracking-widest pl-1">Rango del Héroe (Rol)</label>
+                                        <label htmlFor="mock-add-user-role" className="text-[10px] font-black text-white/65 uppercase tracking-widest pl-1">Rango del Héroe (Rol)</label>
                                         <div className="relative flex items-center">
                                             <Shield className="absolute left-4 h-4 w-4 text-brand-primary pointer-events-none" />
-                                            <select disabled className="w-full bg-white/5 border border-white/10 rounded-2xl pl-11 pr-10 py-3 text-white/50 focus:outline-none appearance-none font-bold">
+                                            <select id="mock-add-user-role" disabled className="w-full bg-white/5 border border-white/10 rounded-2xl pl-11 pr-10 py-3 text-white/50 focus:outline-none appearance-none font-bold">
                                                 <option>Guardián de Eternia (Viewer)</option>
                                                 <option>Master del Universo (Admin)</option>
                                             </select>
@@ -2565,10 +2583,15 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                             className="absolute inset-0 bg-black/95 backdrop-blur-xl"
                         />
                         <motion.div
+                            ref={resetModalRef}
+                            role="alertdialog"
+                            aria-modal="true"
+                            aria-labelledby="reset-modal-title"
+                            tabIndex={-1}
                             initial={{ scale: 0.9, opacity: 0, y: 20 }}
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                            className={`relative w-full max-w-md overflow-hidden rounded-[2.5rem] border p-8 shadow-2xl ${resetStep === 1 ? 'border-orange-500/30 bg-orange-950/20' : 'border-red-500/50 bg-red-950/30'}`}
+                            className={`relative w-full max-w-md overflow-hidden rounded-[2.5rem] border p-8 shadow-2xl outline-none ${resetStep === 1 ? 'border-orange-500/30 bg-orange-950/20' : 'border-red-500/50 bg-red-950/30'}`}
                         >
                             <div className="flex flex-col items-center gap-6 text-center">
                                 <div className={`h-20 w-20 rounded-full flex items-center justify-center border animate-pulse ${resetStep === 1 ? 'bg-orange-500/20 border-orange-500/50' : 'bg-red-500/20 border-red-500/80'}`}>
@@ -2576,7 +2599,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                 </div>
 
                                 <div className="space-y-2">
-                                    <h3 className="text-3xl font-black text-white uppercase tracking-tighter">
+                                    <h3 id="reset-modal-title" className="text-3xl font-black text-white uppercase tracking-tighter">
                                         {resetStep === 1 ? '¿ESTÁS SEGURO?' : '¡ÚLTIMO AVISO!'}
                                     </h3>
                                     <p className="text-sm text-white/60 leading-relaxed font-bold">
@@ -2620,10 +2643,15 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                             className="absolute inset-0 bg-black/80 backdrop-blur-md"
                         />
                         <motion.div
+                            ref={ipLogsModalRef}
+                            role="dialog"
+                            aria-modal="true"
+                            aria-labelledby="ip-logs-modal-title"
+                            tabIndex={-1}
                             initial={{ scale: 0.9, opacity: 0, y: 20 }}
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                            className="relative w-full max-w-4xl max-h-[85vh] overflow-hidden rounded-[2.5rem] border border-white/10 bg-black/90 p-6 md:p-8 shadow-2xl backdrop-blur-3xl ring-1 ring-white/5 flex flex-col gap-6 text-white"
+                            className="relative w-full max-w-4xl max-h-[85vh] overflow-hidden rounded-[2.5rem] border border-white/10 bg-black/90 p-6 md:p-8 shadow-2xl backdrop-blur-3xl ring-1 ring-white/5 flex flex-col gap-6 text-white outline-none"
                         >
                             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                                 <div className="flex items-center gap-3">
@@ -2631,7 +2659,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                                         <Globe className="h-6 w-6 text-brand-primary" />
                                     </div>
                                     <div>
-                                        <h3 className="text-lg font-black uppercase tracking-widest text-white">Auditoría de Conectividad IP</h3>
+                                        <h3 id="ip-logs-modal-title" className="text-lg font-black uppercase tracking-widest text-white">Auditoría de Conectividad IP</h3>
                                         <p className="text-xs text-white/65 font-bold uppercase tracking-wider">Historial de WAF checks y bloqueos de Wallapop</p>
                                     </div>
                                 </div>

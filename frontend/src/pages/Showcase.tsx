@@ -110,11 +110,11 @@ const Showcase: React.FC<ShowcaseProps> = ({ username }) => {
         
         return (
             <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-[#08080c] text-white">
-                <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+                <div className="fixed inset-0 pointer-events-none overflow-hidden z-0" aria-hidden="true">
                     <div className="absolute top-[20%] left-[20%] h-[50%] w-[50%] rounded-full bg-red-950/15 blur-[120px]" />
                 </div>
-                
-                <div className="relative z-10 glass border border-red-500/20 p-8 rounded-3xl max-w-md w-full text-center space-y-6 bg-red-950/5">
+
+                <main className="relative z-10 glass border border-red-500/20 p-8 rounded-3xl max-w-md w-full text-center space-y-6 bg-red-950/5">
                     <div className="inline-flex p-4 bg-red-500/10 rounded-full text-red-500 border border-red-500/20">
                         <Lock className="h-10 w-10 animate-pulse" />
                     </div>
@@ -132,7 +132,7 @@ const Showcase: React.FC<ShowcaseProps> = ({ username }) => {
                     >
                         Volver al Oráculo
                     </a>
-                </div>
+                </main>
             </div>
         );
     }
@@ -140,13 +140,13 @@ const Showcase: React.FC<ShowcaseProps> = ({ username }) => {
     return (
         <div className="min-h-screen bg-[#08080c] text-white font-inter pb-20 p-4 md:p-8 relative overflow-hidden">
             {/* Ambient Lighting Background */}
-            <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+            <div className="fixed inset-0 pointer-events-none overflow-hidden z-0" aria-hidden="true">
                 <div className="absolute top-[-10%] right-[-5%] h-[60%] w-[60%] rounded-full bg-brand-primary/5 blur-[120px]" />
                 <div className="absolute bottom-[-10%] left-[-5%] h-[60%] w-[60%] rounded-full bg-amber-500/5 blur-[120px]" />
                 <div className="absolute inset-0 bg-gradient-to-b from-black/0 via-black/10 to-black/40" />
             </div>
 
-            <div className="relative z-10 max-w-7xl mx-auto space-y-6">
+            <main className="relative z-10 max-w-7xl mx-auto space-y-6">
                 
                 {/* Header Showcase Banner */}
                 <div className="relative overflow-hidden flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between rounded-3xl border border-white/5 bg-black/25 p-6 md:p-8 backdrop-blur-2xl shadow-2xl">
@@ -236,6 +236,7 @@ const Showcase: React.FC<ShowcaseProps> = ({ username }) => {
                         <select
                             value={subCategoryFilter}
                             onChange={(e) => setSubCategoryFilter(e.target.value)}
+                            aria-label="Filtrar por sub-línea"
                             className="bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 text-[9px] font-black uppercase tracking-widest text-white/70 focus:outline-none cursor-pointer"
                         >
                             <option value="all" className="bg-[#121214]">Sub-líneas (Todas)</option>
@@ -343,7 +344,7 @@ const Showcase: React.FC<ShowcaseProps> = ({ username }) => {
                         })}
                     </div>
                 )}
-            </div>
+            </main>
         </div>
     );
 };

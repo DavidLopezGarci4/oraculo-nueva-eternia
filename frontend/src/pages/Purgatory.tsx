@@ -24,6 +24,7 @@ import {
 import { getPurgatory, discardItem, discardItemsBulk, matchVintageItem, matchMiscellaneousItem, matchItemsBulk } from '../api/purgatory';
 
 import QuickPreviewModal from '../components/QuickPreviewModal';
+import { useModalA11y } from '../hooks/useModalA11y';
 import PowerSwordLoader from '../components/ui/PowerSwordLoader';
 import axios from 'axios';
 import { useEffect, useRef, useMemo } from 'react';
@@ -400,6 +401,9 @@ const Purgatory: React.FC = React.memo(() => {
     const [manualSearchTerm, setManualSearchTerm] = useState('');
     const [selectedPendingId, setSelectedPendingId] = useState<number | null>(null);
     const [isVintageModalOpen, setIsVintageModalOpen] = useState(false);
+    // Fase AAA-3c: foco/Escape/role=dialog accesibles para el modal de clasificacion.
+    const vintageModalRef = useRef<HTMLDivElement>(null);
+    useModalA11y(isVintageModalOpen, () => setIsVintageModalOpen(false), vintageModalRef);
     const [selectedDivision, setSelectedDivision] = useState<'vintage' | 'modern'>('vintage');
     const [customSubCategory, setCustomSubCategory] = useState('Origins');
     const [showCustomSubCategoryInput, setShowCustomSubCategoryInput] = useState(false);
@@ -432,6 +436,9 @@ const Purgatory: React.FC = React.memo(() => {
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 15;
     const [showForensic, setShowForensic] = useState(false);
+    // Fase AAA-3c: foco/Escape/role=dialog accesibles para el modal forense.
+    const forensicModalRef = useRef<HTMLDivElement>(null);
+    useModalA11y(showForensic, () => setShowForensic(false), forensicModalRef);
 
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
@@ -1222,10 +1229,11 @@ const Purgatory: React.FC = React.memo(() => {
 
                     {/* 2. Ordenación del Mazo */}
                     <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-white/50 mr-2">Ordenar por:</span>
+                        <span id="purgatory-sort-label" className="text-[10px] font-black uppercase tracking-widest text-white/50 mr-2">Ordenar por:</span>
                         <select
                             value={sortBy}
                             onChange={(e: any) => setSortBy(e.target.value)}
+                            aria-labelledby="purgatory-sort-label"
                             className="bg-black/60 border border-white/10 rounded-xl px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-white outline-none focus:border-brand-primary/50 transition-all cursor-pointer"
                         >
                             <option value="highest_match">Mayor Probabilidad</option>
@@ -1740,12 +1748,19 @@ const Purgatory: React.FC = React.memo(() => {
             {
                 showForensic && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/90 backdrop-blur-xl animate-in fade-in duration-300">
-                        <div className="relative w-full max-w-5xl h-[80vh] flex flex-col overflow-hidden rounded-[2.5rem] border border-white/10 bg-gradient-to-br from-white/5 to-black shadow-2xl">
+                        <div
+                            ref={forensicModalRef}
+                            role="dialog"
+                            aria-modal="true"
+                            aria-labelledby="forensic-modal-title"
+                            tabIndex={-1}
+                            className="relative w-full max-w-5xl h-[80vh] flex flex-col overflow-hidden rounded-[2.5rem] border border-white/10 bg-gradient-to-br from-white/5 to-black shadow-2xl outline-none"
+                        >
                             <div className="p-8 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
                                 <div className="space-y-1">
                                     <div className="flex items-center gap-3">
                                         <ShieldAlert className="h-6 w-6 text-red-400" />
-                                        <h3 className="text-2xl font-black text-white uppercase tracking-tight">Sala de Autopsia Forense</h3>
+                                        <h3 id="forensic-modal-title" className="text-2xl font-black text-white uppercase tracking-tight">Sala de Autopsia Forense</h3>
                                     </div>
                                     <p className="text-xs text-white/65 uppercase tracking-widest font-bold">Inspección de acciones estancadas en el búfer ({failedActions.length} items)</p>
                                 </div>
@@ -1763,6 +1778,7 @@ const Purgatory: React.FC = React.memo(() => {
                                     )}
                                     <button
                                         onClick={() => setShowForensic(false)}
+                                        aria-label="Cerrar"
                                         className="h-12 w-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/65 hover:text-white transition-all"
                                     >
                                         <X className="h-6 w-6" />
@@ -1876,7 +1892,13 @@ const Purgatory: React.FC = React.memo(() => {
                 const isVintageStyle = selectedDivision === 'vintage';
                 return (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl animate-in fade-in duration-300" onClick={() => setIsVintageModalOpen(false)}>
-                        <div className={`relative w-full max-w-lg overflow-hidden rounded-[2.5rem] border bg-gradient-to-b flex flex-col animate-in zoom-in-95 duration-300 transition-all duration-500 ${
+                        <div
+                            ref={vintageModalRef}
+                            role="dialog"
+                            aria-modal="true"
+                            aria-labelledby="vintage-classify-modal-title"
+                            tabIndex={-1}
+                            className={`relative w-full max-w-lg overflow-hidden rounded-[2.5rem] border bg-gradient-to-b flex flex-col animate-in zoom-in-95 duration-300 transition-all duration-500 outline-none ${
                             isVintageStyle
                                 ? 'from-[#1C1405] via-[#0C0903] to-[#050301] border-amber-500/30 shadow-[0_0_80px_rgba(245,158,11,0.15)]'
                                 : 'from-[#081824] via-[#040C12] to-[#020609] border-brand-primary/30 shadow-[0_0_80px_rgba(14,165,233,0.15)]'
@@ -1902,7 +1924,7 @@ const Purgatory: React.FC = React.memo(() => {
                                         )}
                                     </div>
                                     <div className="space-y-0.5">
-                                        <h4 className="text-lg font-black tracking-tighter text-white uppercase transition-all duration-500">
+                                        <h4 id="vintage-classify-modal-title" className="text-lg font-black tracking-tighter text-white uppercase transition-all duration-500">
                                             {isVintageStyle ? (
                                                 <>Oráculo <span className="text-amber-500">Vintage</span></>
                                             ) : (
@@ -1914,7 +1936,7 @@ const Purgatory: React.FC = React.memo(() => {
                                         </p>
                                     </div>
                                 </div>
-                                <button onClick={() => setIsVintageModalOpen(false)} className={`h-8 w-8 flex items-center justify-center rounded-xl bg-white/5 text-white/65 transition-all font-black ${
+                                <button onClick={() => setIsVintageModalOpen(false)} aria-label="Cerrar" className={`h-8 w-8 flex items-center justify-center rounded-xl bg-white/5 text-white/65 transition-all font-black ${
                                     isVintageStyle ? 'hover:bg-amber-500/20 hover:text-amber-400' : 'hover:bg-brand-primary/20 hover:text-brand-primary'
                                 }`}>&times;</button>
                             </div>
@@ -1987,10 +2009,11 @@ const Purgatory: React.FC = React.memo(() => {
                                 {/* Subcategory selector for modern items */}
                                 {selectedDivision === 'modern' && (
                                     <div className="space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
-                                        <label className="text-[10px] font-black text-brand-primary uppercase tracking-widest block">Línea del Artículo / Subcategoría:</label>
+                                        <label htmlFor="purgatory-subcategory-select" className="text-[10px] font-black text-brand-primary uppercase tracking-widest block">Línea del Artículo / Subcategoría:</label>
                                         <div className="flex gap-2">
                                             {!showCustomSubCategoryInput ? (
                                                 <select
+                                                    id="purgatory-subcategory-select"
                                                     value={customSubCategory}
                                                     onChange={(e) => {
                                                         if (e.target.value === 'custom') {
