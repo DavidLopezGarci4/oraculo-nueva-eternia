@@ -29,16 +29,52 @@ from src.interfaces.api.routers import (
 import asyncio
 from contextlib import asynccontextmanager
 
+# Fase AAA-2.5: antes, el listener de Telegram se lanzaba con un
+# asyncio.create_task() sin supervisión — si moría por una excepción que
+# escapara a su propio bucle interno, quedaba muerto en silencio hasta el
+# siguiente reinicio del servidor, sin ningún rastro en logs. Este wrapper lo
+# reinicia con backoff ante fallos inesperados, y se rinde (dejando un
+# CRITICAL bien visible) tras varios intentos consecutivos fallidos en vez de
+# reintentar para siempre.
+_TELEGRAM_MAX_CONSECUTIVE_FAILURES = 5
+_TELEGRAM_RESTART_BACKOFF_SECONDS = 15
+
+
+async def _supervised_telegram_listener():
+    from src.infrastructure.services.telegram_listener import telegram_listener
+
+    consecutive_failures = 0
+    while True:
+        try:
+            await telegram_listener.start_polling()
+            # Retorno limpio (stop_polling() llamado deliberadamente): no reiniciar.
+            return
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            consecutive_failures += 1
+            logger.error(
+                f"📡 Telegram Listener murió inesperadamente (fallo {consecutive_failures}/"
+                f"{_TELEGRAM_MAX_CONSECUTIVE_FAILURES}): {e}"
+            )
+            if consecutive_failures >= _TELEGRAM_MAX_CONSECUTIVE_FAILURES:
+                logger.critical(
+                    "📡 Telegram Listener: demasiados fallos consecutivos. "
+                    "Dejando de reintentar hasta el próximo reinicio del servidor."
+                )
+                return
+            await asyncio.sleep(_TELEGRAM_RESTART_BACKOFF_SECONDS)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
         from src.infrastructure.database_cloud import init_cloud_db
         init_cloud_db()
         ensure_scrapers_registered()
-        
-        # Iniciar escucha de comandos de Telegram en segundo plano
-        from src.infrastructure.services.telegram_listener import telegram_listener
-        app.state.telegram_task = asyncio.create_task(telegram_listener.start_polling())
+
+        # Iniciar escucha de comandos de Telegram en segundo plano (supervisada)
+        app.state.telegram_task = asyncio.create_task(_supervised_telegram_listener())
     except Exception as e:
         logger.error(f"Startup initialization failed: {e}")
     yield
