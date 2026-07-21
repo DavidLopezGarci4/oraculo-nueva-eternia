@@ -622,3 +622,69 @@ class VintageMiscellaneousItemOutput(BaseModel):
     grading: float
     notes: str | None
     added_at: str | None
+
+
+# --- Scrapers Output (Fase AAA-Ola3, 3b) ---
+# download_wallapop_ip_logs devuelve un Response de texto plano (fichero
+# descargable) - response_model no aplica, se omite a proposito.
+
+class ScraperStatusOutput(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    spider_name: str
+    status: str
+    items_scraped: int
+    progress: int
+    total_items_estimated: int
+    start_time: datetime
+    end_time: datetime | None
+    last_update: datetime
+
+
+class ScraperExecutionLogOutput(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    spider_name: str
+    status: str
+    items_found: int
+    new_items: int
+    errors: int
+    start_time: datetime
+    end_time: datetime | None
+    trigger_type: str
+    error_message: str | None
+    logs: str | None
+
+
+class WallapopIpLogOutput(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    ip_address: str
+    status: str
+    environment: str | None
+    response_code: int | None
+    details: str | None
+    recorded_at: datetime
+
+
+class RunScraperOutput(BaseModel):
+    status: str
+    log_id: int
+    message: str
+
+
+class StopScrapersOutput(BaseModel):
+    status: str
+    message: str
+    killed_processes: int
+
+
+class WallapopManualHtmlImportOutput(BaseModel):
+    status: str
+    total_found: int
+    total_skipped: int
+    total_inserted: int
+    message: str

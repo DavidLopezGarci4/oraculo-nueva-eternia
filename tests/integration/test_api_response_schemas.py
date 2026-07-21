@@ -104,6 +104,41 @@ def test_vintage_miscellaneous_matches_schema(client):
     assert match["grading"] == 7.5
 
 
+def test_scrapers_status_logs_ip_logs_match_schema(client):
+    """get_scrapers_status/get_scrapers_logs/get_wallapop_ip_logs (scrapers.py)
+    devuelven listas de objetos ORM directamente (mismo patron de riesgo que
+    WallapopJobOutput/AuthorizedDeviceOutput) y no tenian cobertura previa.
+
+    Nota deliberada: NO se testean aqui /scrapers/run ni /scrapers/stop -
+    ejecutarian codigo real (scrapers con red, hasta 30 min de timeout, y
+    stop_scrapers mata procesos reales del sistema via psutil) - demasiado
+    arriesgado/lento para un test. Sus response_model (RunScraperOutput,
+    StopScrapersOutput) quedan verificados solo por construccion del schema,
+    no por ejecucion real."""
+    from src.domain.models import ScraperStatusModel, ScraperExecutionLogModel, WallapopIpLogModel
+    from src.interfaces.api.routers.scrapers import SessionCloud
+
+    with SessionCloud() as db:
+        db.add(ScraperStatusModel(spider_name="SchemaTestSpider", status="completed"))
+        db.add(ScraperExecutionLogModel(spider_name="SchemaTestSpider", status="success", trigger_type="manual"))
+        db.add(WallapopIpLogModel(ip_address="127.0.0.1", status="allowed", environment="Test"))
+        db.commit()
+
+    headers = {"X-API-Key": API_KEY}
+
+    status_resp = client.get("/api/scrapers/status", headers=headers)
+    assert status_resp.status_code == 200, status_resp.text
+    assert any(s["spider_name"] == "SchemaTestSpider" for s in status_resp.json())
+
+    logs_resp = client.get("/api/scrapers/logs", headers=headers)
+    assert logs_resp.status_code == 200, logs_resp.text
+    assert any(l["spider_name"] == "SchemaTestSpider" and l["trigger_type"] == "manual" for l in logs_resp.json())
+
+    ip_logs_resp = client.get("/api/scrapers/wallapop/ip-logs", headers=headers)
+    assert ip_logs_resp.status_code == 200, ip_logs_resp.text
+    assert any(l["ip_address"] == "127.0.0.1" and l["status"] == "allowed" for l in ip_logs_resp.json())
+
+
 def test_admin_duplicates_devices_temporary_products_match_schema(client):
     """get_duplicates (lista anidada), get_all_devices (ORM
     AuthorizedDeviceModel via from_attributes) y get_temporary_products (lista

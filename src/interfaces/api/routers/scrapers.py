@@ -12,7 +12,16 @@ from sqlalchemy import desc
 from src.domain.models import ScraperExecutionLogModel, ScraperStatusModel, WallapopIpLogModel
 from src.infrastructure.database_cloud import SessionCloud
 from src.interfaces.api.deps import verify_api_key
-from src.interfaces.api.schemas import ScraperRunRequest
+from src.interfaces.api.schemas import (
+    ScraperRunRequest,
+    ScraperStatusOutput,
+    ScraperExecutionLogOutput,
+    RunScraperOutput,
+    StopScrapersOutput,
+    WallapopIpLogOutput,
+    WallapopManualHtmlImportOutput,
+)
+from typing import List
 
 router = APIRouter(prefix="/api/scrapers", tags=["scrapers"])
 
@@ -243,7 +252,7 @@ def run_scraper_task(
             db.commit()
 
 
-@router.get("/status", dependencies=[Depends(verify_api_key)])
+@router.get("/status", response_model=List[ScraperStatusOutput], dependencies=[Depends(verify_api_key)])
 async def get_scrapers_status():
     """Retorna el estado actual de los recolectores (Admin Only)"""
     with SessionCloud() as db:
@@ -258,7 +267,7 @@ async def get_scrapers_status():
         )
 
 
-@router.get("/logs", dependencies=[Depends(verify_api_key)])
+@router.get("/logs", response_model=List[ScraperExecutionLogOutput], dependencies=[Depends(verify_api_key)])
 async def get_scrapers_logs():
     """Retorna el historial de ejecuciones (Admin Only)"""
     with SessionCloud() as db:
@@ -270,7 +279,7 @@ async def get_scrapers_logs():
         )
 
 
-@router.post("/run", dependencies=[Depends(verify_api_key)])
+@router.post("/run", response_model=RunScraperOutput, dependencies=[Depends(verify_api_key)])
 async def run_scrapers(request: ScraperRunRequest, background_tasks: BackgroundTasks):
     """Inicia la recolección de reliquias en segundo plano (Admin Only)"""
     # 1. Marcar inicio en la base de datos y crear Log
@@ -307,7 +316,7 @@ async def run_scrapers(request: ScraperRunRequest, background_tasks: BackgroundT
     }
 
 
-@router.post("/stop", dependencies=[Depends(verify_api_key)])
+@router.post("/stop", response_model=StopScrapersOutput, dependencies=[Depends(verify_api_key)])
 async def stop_scrapers():
     """
     Protocolo de Emergencia: Mata procesos de scrapers activos y resetea estados en BD.
@@ -371,7 +380,7 @@ async def stop_scrapers():
         )
 
 
-@router.get("/wallapop/ip-logs", dependencies=[Depends(verify_api_key)])
+@router.get("/wallapop/ip-logs", response_model=List[WallapopIpLogOutput], dependencies=[Depends(verify_api_key)])
 async def get_wallapop_ip_logs():
     """Retorna el historial de logs de IP de Wallapop (Admin Only)"""
     with SessionCloud() as db:
@@ -423,7 +432,7 @@ async def download_wallapop_ip_logs():
 
 from typing import Optional
 
-@router.post("/wallapop/import-manual-html", dependencies=[Depends(verify_api_key)])
+@router.post("/wallapop/import-manual-html", response_model=WallapopManualHtmlImportOutput, dependencies=[Depends(verify_api_key)])
 async def import_wallapop_manual_html(file: Optional[UploadFile] = File(None)):
     """Parsea el archivo local o subido data/wallapop_search.html e inserta los artículos nuevos en el Purgatorio."""
     import os
