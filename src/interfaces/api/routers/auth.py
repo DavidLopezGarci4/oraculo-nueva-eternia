@@ -17,12 +17,17 @@ from src.interfaces.api.schemas import (
     LoginRequest,
     RegisterRequest,
     ResetPasswordRequest,
+    StatusMessageOutput,
+    ForgotPasswordOutput,
+    LoginOutput,
+    UserMinimalOutput,
 )
+from typing import List
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
-@router.post("/register", dependencies=[Depends(rate_limit(5, 300, "register"))])
+@router.post("/register", response_model=StatusMessageOutput, dependencies=[Depends(rate_limit(5, 300, "register"))])
 async def register(request: RegisterRequest):
     """
     Fase de Reclutamiento: Permite a nuevos usuarios unirse como Guardianes con nombre propio.
@@ -61,7 +66,7 @@ async def register(request: RegisterRequest):
         }
 
 
-@router.post("/forgot-password", dependencies=[Depends(rate_limit(3, 300, "forgot-password"))])
+@router.post("/forgot-password", response_model=ForgotPasswordOutput, dependencies=[Depends(rate_limit(3, 300, "forgot-password"))])
 async def forgot_password(
     request: ForgotPasswordRequest, background_tasks: BackgroundTasks
 ):
@@ -93,7 +98,7 @@ async def forgot_password(
         }
 
 
-@router.post("/reset-password", dependencies=[Depends(rate_limit(5, 300, "reset-password"))])
+@router.post("/reset-password", response_model=StatusMessageOutput, dependencies=[Depends(rate_limit(5, 300, "reset-password"))])
 async def reset_password(request: ResetPasswordRequest):
     """
     Fase 15: Valida el token y cambia la contraseña.
@@ -125,11 +130,13 @@ async def reset_password(request: ResetPasswordRequest):
         }
 
 
-@router.post("/login", dependencies=[Depends(rate_limit(10, 300, "login"))])
+@router.post("/login", response_model=LoginOutput, dependencies=[Depends(rate_limit(10, 300, "login"))])
 async def login(request: LoginRequest):
     """
-    Autenticación de Héroes y Guardianes.
-    Valida Email y Contraseña. Soporta X-API-Key como bypass soberano.
+    Autenticación de Héroes y Guardianes. Valida email y contraseña (PBKDF2).
+    El antiguo bypass "password == ORACULO_API_KEY" se eliminó en la Fase
+    AAA-1.6 — la única vía de entrada es la contraseña real, incluso para
+    la identidad soberana (ver más abajo).
     """
     with SessionCloud() as db:
         # Phase 51: Sovereign Identity Bypass
@@ -179,7 +186,7 @@ async def login(request: LoginRequest):
         }
 
 
-@router.get("/users")
+@router.get("/users", response_model=List[UserMinimalOutput])
 async def get_users_minimal(_admin: UserModel = Depends(require_admin)):
     """Retorna la lista de usuarios para el selector rápido. Solo administradores (Fase AAA-1.8)."""
     with SessionCloud() as db:

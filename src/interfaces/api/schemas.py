@@ -426,3 +426,62 @@ class PublicShowcaseOutput(BaseModel):
     location: str
     items: List[ShowcaseItemOutput]
     total_items: int
+
+
+# --- Vault & Wallapop Jobs Output (Fase AAA-Ola3, 3b) ---
+# vault.py::api_generate_vault y download_images_zip devuelven FileResponse/
+# StreamingResponse (binarios) - response_model no aplica ahi, se omiten.
+
+class WallapopJobCreatedOutput(BaseModel):
+    status: str
+    job_id: int
+    message: str
+
+
+class WallapopJobOutput(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    query: str
+    status: str
+    result_count: int
+    error_message: str | None
+    worker_id: str | None
+    created_at: datetime
+    claimed_at: datetime | None
+    completed_at: datetime | None
+
+
+class WallapopJobResultsOutput(BaseModel):
+    status: str
+    job_status: str
+    new_items: int
+
+
+# --- Auth Output (Fase AAA-Ola3, 3b) ---
+
+class ForgotPasswordOutput(BaseModel):
+    status: str
+    message: str
+    debug_token: str | None = None
+
+
+class LoginUserOutput(BaseModel):
+    id: int
+    username: str
+    email: str
+    role: str
+
+
+class LoginOutput(BaseModel):
+    status: str
+    user: LoginUserOutput
+    access_token: str
+    token_type: str
+    is_sovereign: bool
+
+
+class UserMinimalOutput(BaseModel):
+    id: int
+    username: str
+    role: str

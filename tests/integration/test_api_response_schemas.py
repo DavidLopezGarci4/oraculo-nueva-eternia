@@ -13,6 +13,39 @@ schema didn't match that real data, FastAPI would return 500
 from tests.conftest import API_KEY
 
 
+def test_wallapop_jobs_full_lifecycle_matches_schema(client):
+    """create/pending/list de wallapop_jobs.py no tenian NINGUNA cobertura
+    previa. Estos 3 endpoints devuelven el ORM WallapopJobModel directamente
+    (via WallapopJobOutput con from_attributes=True) - el patron con mas
+    riesgo de que un nombre de campo mal escrito pase desapercibido en un
+    simple chequeo de import. Verifica el ciclo real: crear -> reclamar -> listar."""
+    headers = {"X-API-Key": API_KEY}
+
+    create_resp = client.post("/api/wallapop/jobs", json={"query": "skeletor"}, headers=headers)
+    assert create_resp.status_code == 200, create_resp.text
+    created = create_resp.json()
+    assert created["status"] == "success"
+    assert isinstance(created["job_id"], int)
+
+    claim_resp = client.get("/api/wallapop/jobs/pending", params={"worker_id": "test-worker"}, headers=headers)
+    assert claim_resp.status_code == 200, claim_resp.text
+    claimed = claim_resp.json()
+    assert claimed is not None
+    assert claimed["id"] == created["job_id"]
+    assert claimed["status"] == "running"
+    assert claimed["worker_id"] == "test-worker"
+
+    # Sin más jobs pendientes, debe devolver null (no un error de schema con Optional).
+    empty_resp = client.get("/api/wallapop/jobs/pending", headers=headers)
+    assert empty_resp.status_code == 200
+    assert empty_resp.json() is None
+
+    list_resp = client.get("/api/wallapop/jobs", headers=headers)
+    assert list_resp.status_code == 200, list_resp.text
+    jobs = list_resp.json()
+    assert any(j["id"] == created["job_id"] for j in jobs)
+
+
 def test_logistics_cart_pending_rules_branch_matches_schema(client, bearer):
     """LogisticsService.calculate_cart devuelve MENOS campos (sin
     total_items_qty/fees_eur) cuando la tienda no tiene LogisticRuleModel

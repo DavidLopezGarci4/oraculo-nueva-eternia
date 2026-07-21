@@ -11,6 +11,7 @@ from loguru import logger
 from src.infrastructure.database_cloud import SessionCloud
 from src.core.config import settings
 from src.interfaces.api.deps import require_admin
+from src.interfaces.api.schemas import StatusMessageOutput
 
 router = APIRouter(tags=["vault"], dependencies=[Depends(require_admin)])
 
@@ -51,7 +52,7 @@ async def api_generate_vault(user_id: int = 2):
             raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/api/vault/stage")
+@router.post("/api/vault/stage", response_model=StatusMessageOutput)
 async def api_stage_vault(user_id: int = 2, filename: str = None):
     from src.application.services.vault_service import VaultService
     from src.domain.models import StagedImportModel
@@ -76,7 +77,7 @@ async def api_stage_vault(user_id: int = 2, filename: str = None):
         raise HTTPException(status_code=403, detail=f"Shield Protocol Bloqueó Infección: {str(e)}")
 
 
-@router.post("/api/excel/sync")
+@router.post("/api/excel/sync", response_model=StatusMessageOutput)
 async def api_sync_excel(user_id: int = 2):
     from src.application.services.excel_manager import ExcelManager
     from src.domain.models import UserModel
