@@ -485,3 +485,13 @@ class UserMinimalOutput(BaseModel):
     id: int
     username: str
     role: str
+
+
+# --- Collection Output (Fase AAA-Ola3, 3b) ---
+# Los 3 endpoints de exportacion (excel/excel-vintage/sqlite) devuelven
+# FileResponse (binario) - response_model no aplica, se omiten a proposito.
+
+class CollectionToggleOutput(BaseModel):
+    status: str
+    action: str
+    product_id: int

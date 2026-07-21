@@ -48,6 +48,8 @@ from src.interfaces.api.schemas import (
     CollectionItemUpdateRequest,
     CollectionToggleRequest,
     ProductOutput,
+    CollectionToggleOutput,
+    StatusMessageOutput,
 )
 
 router = APIRouter(tags=["collection"])
@@ -211,7 +213,7 @@ async def export_sqlite(user_id: int = 1, current_user: UserModel = Depends(get_
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/api/collection/toggle")
+@router.post("/api/collection/toggle", response_model=CollectionToggleOutput)
 async def toggle_collection(
     request: CollectionToggleRequest,
     background_tasks: BackgroundTasks,
@@ -245,7 +247,7 @@ async def toggle_collection(
         return {"status": "success", "action": action, "product_id": request.product_id}
 
 
-@router.patch("/api/collection/{product_id}")
+@router.patch("/api/collection/{product_id}", response_model=StatusMessageOutput)
 async def update_collection_item(
     product_id: int,
     request: CollectionItemUpdateRequest,

@@ -13,6 +13,46 @@ schema didn't match that real data, FastAPI would return 500
 from tests.conftest import API_KEY
 
 
+def test_collection_toggle_and_update_match_schema(client, bearer):
+    """toggle_collection y update_collection_item no tenian ninguna cobertura
+    previa; verifica CollectionToggleOutput/StatusMessageOutput contra el
+    ciclo real: crear (wish) -> actualizar detalles -> quitar."""
+    from src.domain.models import ProductModel
+    from src.interfaces.api.routers.collection import SessionCloud
+
+    with SessionCloud() as db:
+        product = ProductModel(name="Toggle Test Figure", category="MOTU", figure_id="TGL01")
+        db.add(product)
+        db.commit()
+        db.refresh(product)
+        product_id = product.id
+
+    add_resp = client.post(
+        "/api/collection/toggle",
+        json={"product_id": product_id, "user_id": 999, "wish": True},
+        headers=bearer,
+    )
+    assert add_resp.status_code == 200, add_resp.text
+    assert add_resp.json()["action"] == "added_wish"
+    assert add_resp.json()["product_id"] == product_id
+
+    update_resp = client.patch(
+        f"/api/collection/{product_id}",
+        json={"user_id": 999, "condition": "Loose", "grading": 8.5, "notes": "test"},
+        headers=bearer,
+    )
+    assert update_resp.status_code == 200, update_resp.text
+    assert update_resp.json()["status"] == "success"
+
+    remove_resp = client.post(
+        "/api/collection/toggle",
+        json={"product_id": product_id, "user_id": 999, "wish": True},
+        headers=bearer,
+    )
+    assert remove_resp.status_code == 200
+    assert remove_resp.json()["action"] == "removed"
+
+
 def test_wallapop_jobs_full_lifecycle_matches_schema(client):
     """create/pending/list de wallapop_jobs.py no tenian NINGUNA cobertura
     previa. Estos 3 endpoints devuelven el ORM WallapopJobModel directamente
