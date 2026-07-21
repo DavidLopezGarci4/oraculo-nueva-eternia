@@ -25,6 +25,20 @@ sys.path.insert(0, os.getcwd())
 from src.domain.models import Base
 target_metadata = Base.metadata
 
+# Fase AAA-2.3: alembic.ini traía una URL fija (sqlite:///oraculo.db) que NO
+# coincide con la base de datos real que usa la app en producción
+# (SUPABASE_DATABASE_URL, ver src/infrastructure/database_cloud.py). Sin este
+# override, `alembic upgrade head` migraría un SQLite local vacío dentro del
+# contenedor en vez de la Supabase real. Resolvemos la URL exactamente igual
+# que lo hace la app.
+from src.core.config import settings
+
+_db_url = settings.SUPABASE_DATABASE_URL or settings.DATABASE_URL
+if isinstance(_db_url, str):
+    _db_url = _db_url.strip().strip("'\"")
+if _db_url:
+    config.set_main_option("sqlalchemy.url", _db_url)
+
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
