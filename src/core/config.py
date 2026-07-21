@@ -68,22 +68,14 @@ class Settings(BaseSettings):
         extra="ignore"
     )
 
-# Streamlit Secrets Support (Priority)
+# Fase AAA-2.4: se eliminó el soporte de "Streamlit Secrets" — streamlit no es
+# una dependencia del proyecto (no está en requirements.txt ni se usa en
+# ningún otro módulo), así que ese bloque SIEMPRE tomaba la rama de
+# ImportError y caía al fallback. De paso, el `except Exception` genérico que
+# lo envolvía dejaba inalcanzable el `except ValidationError` que debía hacer
+# `sys.exit(1)` ante una configuración inválida: un error real de validación
+# quedaba silenciado en vez de detener el arranque.
 try:
-    import streamlit as st
-    if st.secrets:
-        # Override default env loading if secrets found in st.secrets
-        # We can pass them to Settings as init arguments
-        secrets_dict = {}
-        for key in Settings.__annotations__.keys():
-            if key in st.secrets:
-                secrets_dict[key] = st.secrets[key]
-        
-        settings = Settings(**secrets_dict)
-    else:
-        settings = Settings()
-except Exception:
-    # Fallback to standard .env if not in streamlit context
     settings = Settings()
 except ValidationError as e:
     logger.error(f"Configuration Error: {e}")
