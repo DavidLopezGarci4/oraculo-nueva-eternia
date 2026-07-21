@@ -9,6 +9,8 @@
 ## Estado de ejecución (actualizado 2026-07-21)
 
 > Trabajado en la rama `refactor/aaa-uplift`, commit por commit, con `pytest` + `npm run build` + un security-review independiente verificando cada paso antes de avanzar. Si retomas este trabajo en otra máquina/sesión: `git log --oneline` en esa rama es la fuente de verdad, esto es solo un resumen de alto nivel.
+>
+> **Antes de tocar nada**, lee **[.claude/skills/aaa-buenas-practicas/SKILL.md](../.claude/skills/aaa-buenas-practicas/SKILL.md)** — protocolo de arranque de sesión, límites de seguridad no negociables y las convenciones de código/testing/migraciones/documentación que rigen todo el trabajo de este backlog. Viaja versionado con el repo, así que está disponible en cualquier máquina.
 
 - ✅ **Fase 0 — Preparación:** hecha. Línea base de métricas en [BASELINE_METRICS.md](BASELINE_METRICS.md), `local_collection_dump.json` desindexado.
 - ✅ **Fase 1 — Seguridad crítica:** hecha por completo (1.1–1.9). Clave de admin fuera del bundle, JWT real en el frontend, IDOR cerrado en `collection.py`/`vault.py`/`logistics.py`, path traversal corregido, CORS restringido, guardián de secretos de producción, bypass de login eliminado, rate limiting en auth, cabeceras de seguridad en nginx.
