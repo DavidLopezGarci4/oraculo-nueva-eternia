@@ -9,12 +9,15 @@
 # del primer despliegue con este cambio).
 set -u
 
-echo "🗃️  Aplicando migraciones de Alembic..."
-if alembic upgrade head; then
-    echo "✅ Migraciones aplicadas correctamente."
-else
-    echo "⚠️  Alembic fallo o no pudo aplicar migraciones. Continuando arranque:" \
-         "init_cloud_db() cubre el esquema minimo necesario como red de seguridad." >&2
+# Solo ejecutar upgrade automatico si el comando es arrancar el servidor uvicorn
+if [ "$#" -gt 0 ] && [ "$1" = "uvicorn" ]; then
+    echo "🗃️  Aplicando migraciones de Alembic..."
+    if alembic upgrade head; then
+        echo "✅ Migraciones aplicadas correctamente."
+    else
+        echo "⚠️  Alembic fallo o no pudo aplicar migraciones. Continuando arranque:" \
+             "init_cloud_db() cubre el esquema minimo necesario como red de seguridad." >&2
+    fi
 fi
 
 exec "$@"
