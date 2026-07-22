@@ -76,11 +76,10 @@ _SESSION_TARGETS = [
 
 # ─── Shared constants ────────────────────────────────────────────────────────
 
-API_KEY = "eternia-shield-2026"  # default dev key from config.py
-# Fase AAA-1: X-API-Key es EXCLUSIVAMENTE server-to-server (scrapers/admin panel
-# autenticado por JWT). Ya no autoriza dispositivos ni actúa como bypass de login.
+from src.core.config import settings
 
-EXTENSION_KEY = "eternia-extension-dev-key"  # default dev key from config.py (EXTENSION_API_KEY)
+API_KEY = settings.ORACULO_API_KEY
+EXTENSION_KEY = settings.EXTENSION_API_KEY
 
 ADMIN_HEADERS = {
     "X-API-Key": API_KEY,
