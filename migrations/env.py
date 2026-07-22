@@ -33,17 +33,19 @@ target_metadata = Base.metadata
 # que lo hace la app.
 from src.core.config import settings
 
-_db_url = (
-    os.environ.get("SUPABASE_DATABASE_URL")
-    or getattr(settings, "SUPABASE_DATABASE_URL", None)
-    or getattr(settings, "DATABASE_URL", None)
-)
+_env_supabase = os.environ.get("SUPABASE_DATABASE_URL")
+_settings_supabase = getattr(settings, "SUPABASE_DATABASE_URL", None)
+_db_url = _env_supabase or _settings_supabase or getattr(settings, "DATABASE_URL", None)
+
+print(f"🔍 DEBUG os.environ SUPABASE_DATABASE_URL: {_env_supabase}", flush=True)
+print(f"🔍 DEBUG settings SUPABASE_DATABASE_URL: {_settings_supabase}", flush=True)
+
 if isinstance(_db_url, str):
     _db_url = _db_url.strip().strip("'\"")
 if _db_url and _db_url.startswith("postgres://"):
     _db_url = _db_url.replace("postgres://", "postgresql://", 1)
 if _db_url:
-    print(f"🔍 Alembic target URL: {_db_url[:30]}...")
+    print(f"🔍 Alembic target URL: {_db_url[:35]}...", flush=True)
     config.set_main_option("sqlalchemy.url", _db_url)
 
 # other values from the config, defined by the needs of env.py,

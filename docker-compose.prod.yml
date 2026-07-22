@@ -11,6 +11,7 @@ services:
       # Persistent data: images, Excel, logs
       - ./data:/app/data
       - ./logs:/app/logs
+      - ./.env:/app/.env:ro
     env_file:
       - .env
     environment:
