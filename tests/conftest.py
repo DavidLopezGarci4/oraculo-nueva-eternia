@@ -104,6 +104,7 @@ def client():
     Patches are started before the app is imported so that startup code
     (ensure_scrapers_registered) already uses the test DB.
     """
+    import src.domain.models
     from src.domain.models import Base
     Base.metadata.create_all(bind=TEST_ENGINE)
 
