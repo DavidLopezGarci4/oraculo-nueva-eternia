@@ -1,0 +1,5 @@
+# Fase AAA-2.3: fuerza LF (nunca CRLF) en scripts que se ejecutan dentro de
+# contenedores Linux. Un checkout en Windows con core.autocrlf activo puede
+# reintroducir CRLF y romper el shebang ("/bin/sh: bad interpreter").
+*.sh text eol=lf
+docker-entrypoint.sh text eol=lf

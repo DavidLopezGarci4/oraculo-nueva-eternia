@@ -1,5 +1,6 @@
 import json
 from datetime import datetime, timezone
+from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
 from loguru import logger
@@ -7,14 +8,23 @@ from loguru import logger
 from src.application.services.logistics_service import LogisticsService
 from src.domain.models import OfferModel, PendingMatchModel, ProductModel, UserModel, BlackcludedItemModel, VintageMiscellaneousModel, OfferHistoryModel
 from src.infrastructure.database_cloud import SessionCloud
-from src.interfaces.api.deps import verify_device
-from src.interfaces.api.schemas import WallapopImportRequest, UserImagePathsUpdateRequest
+from src.interfaces.api.deps import get_current_user, scope_user_id, verify_device, verify_wallapop_import
+from src.interfaces.api.schemas import (
+    WallapopImportRequest,
+    UserImagePathsUpdateRequest,
+    UserSettingsOutput,
+    UserImagePathsOutput,
+    UserLocationOutput,
+    UserPublicShowcaseOutput,
+    P2POpportunityOutput,
+)
 
 router = APIRouter(tags=["users"])
 
 
-@router.get("/api/users/{user_id}", dependencies=[Depends(verify_device)])
-async def get_user_settings(user_id: int):
+@router.get("/api/users/{user_id}", response_model=UserSettingsOutput, dependencies=[Depends(verify_device)])
+async def get_user_settings(user_id: int, current_user: UserModel = Depends(get_current_user)):
+    user_id = scope_user_id(current_user, user_id)
     with SessionCloud() as db:
         user = db.query(UserModel).filter(UserModel.id == user_id).first()
         if not user:
@@ -31,8 +41,17 @@ async def get_user_settings(user_id: int):
         }
 
 
-@router.post("/api/users/{user_id}/image-paths")
-async def update_user_image_paths(user_id: int, request: UserImagePathsUpdateRequest):
+@router.post("/api/users/{user_id}/image-paths", response_model=UserImagePathsOutput)
+async def update_user_image_paths(
+    user_id: int,
+    request: UserImagePathsUpdateRequest,
+    current_user: UserModel = Depends(get_current_user),
+):
+    # Fase AAA-2.1: antes cualquiera (sin auth) podía fijar la ruta de imágenes
+    # personalizada de OTRO usuario, con impacto directo en qué ficheros sirve
+    # /api/static/images (main.py). Ahora exige sesión y queda limitado a la
+    # propia cuenta (salvo admin).
+    user_id = scope_user_id(current_user, user_id)
     with SessionCloud() as db:
         user = db.query(UserModel).filter(UserModel.id == user_id).first()
         if not user:
@@ -47,8 +66,13 @@ async def update_user_image_paths(user_id: int, request: UserImagePathsUpdateReq
         }
 
 
-@router.post("/api/users/{user_id}/location")
-async def update_user_location(user_id: int, location: str):
+@router.post("/api/users/{user_id}/location", response_model=UserLocationOutput)
+async def update_user_location(
+    user_id: int,
+    location: str,
+    current_user: UserModel = Depends(get_current_user),
+):
+    user_id = scope_user_id(current_user, user_id)
     with SessionCloud() as db:
         user = db.query(UserModel).filter(UserModel.id == user_id).first()
         if not user:
@@ -58,8 +82,17 @@ async def update_user_location(user_id: int, location: str):
         return {"status": "success", "location": user.location}
 
 
-@router.post("/api/users/{user_id}/public-showcase")
-async def update_user_showcase(user_id: int, is_public: bool):
+@router.post("/api/users/{user_id}/public-showcase", response_model=UserPublicShowcaseOutput)
+async def update_user_showcase(
+    user_id: int,
+    is_public: bool,
+    current_user: UserModel = Depends(get_current_user),
+):
+    # Fase AAA-2.1: este era el hallazgo más grave del router — sin auth,
+    # cualquiera podía activar el escaparate PÚBLICO de otra persona
+    # (/santuario/{username}, sin login) y exponer su colección privada sin
+    # consentimiento. Ahora exige sesión y queda limitado a la propia cuenta.
+    user_id = scope_user_id(current_user, user_id)
     with SessionCloud() as db:
         user = db.query(UserModel).filter(UserModel.id == user_id).first()
         if not user:
@@ -69,8 +102,13 @@ async def update_user_showcase(user_id: int, is_public: bool):
         return {"status": "success", "is_public_showcase": user.is_public_showcase}
 
 
-@router.post("/api/wallapop/import")
+@router.post("/api/wallapop/import", dependencies=[Depends(verify_wallapop_import)])
 async def import_wallapop_products(request: WallapopImportRequest):
+    # Fase AAA-3d: la extensión de Chrome (chrome-extension/content.js) manda
+    # su propia clave de bajo privilegio (X-Extension-Key, distinta de
+    # ORACULO_API_KEY — si se filtra desde el navegador no da acceso
+    # administrativo). La SPA (import manual por texto en Purgatory) sigue
+    # funcionando igual, cae al flujo normal de verify_device.
     imported = 0
     from src.core.url_utils import normalize_url
     from src.core.vintage_utils import validate_motu_relevance
@@ -160,8 +198,9 @@ async def import_wallapop_products(request: WallapopImportRequest):
     return {"status": "success", "imported": imported, "total_received": len(request.products)}
 
 
-@router.get("/api/radar/p2p-opportunities")
-async def get_p2p_opportunities(user_id: int = 2):
+@router.get("/api/radar/p2p-opportunities", response_model=List[P2POpportunityOutput])
+async def get_p2p_opportunities(user_id: int = 2, current_user: UserModel = Depends(get_current_user)):
+    user_id = scope_user_id(current_user, user_id)
     with SessionCloud() as db:
         user_location = "ES"
         user = db.query(UserModel).filter(UserModel.id == user_id).first()

@@ -15,6 +15,7 @@ import {
     RefreshCw
 } from 'lucide-react';
 import axios from 'axios';
+import { useModalA11y } from '../hooks/useModalA11y';
 
 interface QuickPreviewModalProps {
     url: number | string; // Accept object id or just url
@@ -23,6 +24,8 @@ interface QuickPreviewModalProps {
 
 const QuickPreviewModal: React.FC<QuickPreviewModalProps> = ({ url, onClose }) => {
     const [currentImageIndex, setCurrentImageIndex] = React.useState(0);
+    const containerRef = React.useRef<HTMLDivElement>(null);
+    useModalA11y(true, onClose, containerRef);
 
     const { data: item, isLoading, error } = useQuery({
         queryKey: ['wallapop-preview', url],
@@ -34,7 +37,7 @@ const QuickPreviewModal: React.FC<QuickPreviewModalProps> = ({ url, onClose }) =
 
     if (isLoading) {
         return (
-            <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 backdrop-blur-md">
+            <div ref={containerRef} role="dialog" aria-modal="true" aria-label="Cargando vista previa" tabIndex={-1} className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 backdrop-blur-md outline-none">
                 <RefreshCw className="h-8 w-8 animate-spin text-brand-primary" />
             </div>
         );
@@ -42,10 +45,10 @@ const QuickPreviewModal: React.FC<QuickPreviewModalProps> = ({ url, onClose }) =
 
     if (error || !item) {
         return (
-            <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 backdrop-blur-md">
+            <div ref={containerRef} role="alertdialog" aria-modal="true" aria-labelledby="preview-error-title" tabIndex={-1} className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 backdrop-blur-md outline-none">
                 <div className="bg-red-500/10 border border-red-500/20 p-8 rounded-3xl text-center space-y-4 max-w-sm">
                     <AlertCircle className="h-12 w-12 text-red-500 mx-auto" />
-                    <h3 className="text-white font-black text-xl uppercase italic">Fallo de Visión</h3>
+                    <h3 id="preview-error-title" className="text-white font-black text-xl uppercase italic">Fallo de Visión</h3>
                     <p className="text-white/60 text-xs">No se ha podido conectar con la fuente original. Es posible que el anuncio ya no exista o Wallapop haya reforzado sus muros.</p>
                     <button onClick={onClose} className="w-full bg-white text-black py-3 rounded-xl font-bold uppercase transition-transform hover:scale-95 text-xs">Cerrar</button>
                 </div>
@@ -67,11 +70,19 @@ const QuickPreviewModal: React.FC<QuickPreviewModalProps> = ({ url, onClose }) =
 
     return (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/95 backdrop-blur-2xl p-4 md:p-10 animate-in fade-in zoom-in duration-300">
-            <div className="relative w-full max-w-6xl h-full max-h-[85vh] rounded-[2.5rem] border border-white/10 bg-black/40 overflow-hidden shadow-2xl flex flex-col md:flex-row">
+            <div
+                ref={containerRef}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="preview-item-title"
+                tabIndex={-1}
+                className="relative w-full max-w-6xl h-full max-h-[85vh] rounded-[2.5rem] border border-white/10 bg-black/40 overflow-hidden shadow-2xl flex flex-col md:flex-row outline-none"
+            >
 
                 {/* Close Button Mobile */}
                 <button
                     onClick={onClose}
+                    aria-label="Cerrar vista previa"
                     className="absolute top-4 right-4 z-50 h-10 w-10 md:hidden flex items-center justify-center rounded-full bg-black/50 backdrop-blur-md border border-white/10"
                 >
                     <X className="h-5 w-5 text-white" />
@@ -92,12 +103,14 @@ const QuickPreviewModal: React.FC<QuickPreviewModalProps> = ({ url, onClose }) =
                                 <>
                                     <button
                                         onClick={prevImage}
+                                        aria-label="Imagen anterior"
                                         className="absolute left-4 h-12 w-12 flex items-center justify-center rounded-2xl bg-black/20 backdrop-blur-xl border border-white/5 opacity-0 group-hover:opacity-100 transition-all hover:bg-black/40"
                                     >
                                         <ChevronLeft className="h-6 w-6 text-white" />
                                     </button>
                                     <button
                                         onClick={nextImage}
+                                        aria-label="Imagen siguiente"
                                         className="absolute right-4 h-12 w-12 flex items-center justify-center rounded-2xl bg-black/20 backdrop-blur-xl border border-white/5 opacity-0 group-hover:opacity-100 transition-all hover:bg-black/40"
                                     >
                                         <ChevronRight className="h-6 w-6 text-white" />
@@ -133,12 +146,13 @@ const QuickPreviewModal: React.FC<QuickPreviewModalProps> = ({ url, onClose }) =
                             </div>
                             <button
                                 onClick={onClose}
+                                aria-label="Cerrar vista previa"
                                 className="hidden md:flex h-10 w-10 items-center justify-center rounded-2xl hover:bg-white/5 transition-colors"
                             >
                                 <X className="h-5 w-5 text-white/40 hover:text-white" />
                             </button>
                         </div>
-                        <h2 className="text-2xl md:text-3xl font-black text-white leading-tight">{item.title}</h2>
+                        <h2 id="preview-item-title" className="text-2xl md:text-3xl font-black text-white leading-tight">{item.title}</h2>
                         <div className="flex items-baseline gap-2">
                             <span className="text-4xl font-black text-brand-primary">{item.price}</span>
                             <span className="text-xl font-bold text-brand-primary/40 uppercase">{item.currency}</span>

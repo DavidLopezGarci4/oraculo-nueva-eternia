@@ -3,7 +3,7 @@ import sys
 import os
 import json
 import argparse
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 # Add project root to Python path
@@ -22,7 +22,7 @@ def run_cleanup(dry_run=True, hours=24):
     db = SessionCloud()
     try:
         # 1. Buscar eventos de SMART_MATCH recientes
-        threshold = datetime.utcnow() - timedelta(hours=hours)
+        threshold = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=hours)
         history_events = db.query(OfferHistoryModel).filter(
             OfferHistoryModel.action_type == "SMART_MATCH",
             OfferHistoryModel.timestamp >= threshold

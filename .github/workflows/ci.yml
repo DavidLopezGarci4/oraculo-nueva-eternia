@@ -7,19 +7,16 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build:
+  backend:
     runs-on: ubuntu-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-      ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
     strategy:
       matrix:
         python-version: ["3.10"]
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v4.2.2
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v5.4.0
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
@@ -27,5 +24,29 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
     - name: Run Tests
+      # Fase AAA-Ola2 (2a): antes esto era `python -m unittest discover -s . -p "test_*.py"`,
+      # que recogia scripts exploratorios sueltos de dev_tools/ y scripts/ (no aptos para CI,
+      # muchos requieren red en vivo) en vez de la suite real. pyproject.toml ya scopea pytest
+      # a tests/test_api_*.py (hermetico, sin red, con fixtures de BD en memoria).
       run: |
-        python -m unittest discover -s . -p "test_*.py"
+        python -m pytest tests/ -v
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+    - uses: actions/checkout@v4.2.2
+    - name: Set up Node.js
+      uses: actions/setup-node@v4.2.0
+      with:
+        node-version: "22"
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+    - name: Install dependencies
+      run: npm ci
+    - name: Type-check and build
+      run: npm run build
+    - name: Audit dependencies (fails on high/critical)
+      run: npm audit --audit-level=high

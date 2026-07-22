@@ -17,6 +17,7 @@ Flujo:
      y marca el job como done/error.
 """
 from datetime import datetime, timezone
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import desc
@@ -24,12 +25,18 @@ from sqlalchemy import desc
 from src.domain.models import WallapopJobModel
 from src.infrastructure.database_cloud import SessionCloud
 from src.interfaces.api.deps import verify_api_key
-from src.interfaces.api.schemas import WallapopJobCreateRequest, WallapopJobResultsRequest
+from src.interfaces.api.schemas import (
+    WallapopJobCreateRequest,
+    WallapopJobResultsRequest,
+    WallapopJobCreatedOutput,
+    WallapopJobOutput,
+    WallapopJobResultsOutput,
+)
 
 router = APIRouter(prefix="/api/wallapop/jobs", tags=["wallapop-nexus-bridge"])
 
 
-@router.post("", dependencies=[Depends(verify_api_key)])
+@router.post("", response_model=WallapopJobCreatedOutput, dependencies=[Depends(verify_api_key)])
 async def create_wallapop_job(request: WallapopJobCreateRequest):
     """Encola un nuevo trabajo de búsqueda para el Nexus Local Bridge (Admin Only)."""
     with SessionCloud() as db:
@@ -44,7 +51,7 @@ async def create_wallapop_job(request: WallapopJobCreateRequest):
         }
 
 
-@router.get("/pending", dependencies=[Depends(verify_api_key)])
+@router.get("/pending", response_model=Optional[WallapopJobOutput], dependencies=[Depends(verify_api_key)])
 async def claim_pending_wallapop_job(worker_id: str | None = None):
     """
     Reclama (y marca como 'running') el trabajo pendiente más antiguo, para que
@@ -72,7 +79,7 @@ async def claim_pending_wallapop_job(worker_id: str | None = None):
         return job
 
 
-@router.post("/{job_id}/results", dependencies=[Depends(verify_api_key)])
+@router.post("/{job_id}/results", response_model=WallapopJobResultsOutput, dependencies=[Depends(verify_api_key)])
 async def submit_wallapop_job_results(job_id: int, request: WallapopJobResultsRequest):
     """Recibe los resultados de un worker local y los enruta al Purgatorio (Admin Only)."""
     with SessionCloud() as db:
@@ -121,7 +128,7 @@ async def submit_wallapop_job_results(job_id: int, request: WallapopJobResultsRe
         return {"status": "success", "job_status": job.status, "new_items": new_items}
 
 
-@router.get("", dependencies=[Depends(verify_api_key)])
+@router.get("", response_model=List[WallapopJobOutput], dependencies=[Depends(verify_api_key)])
 async def list_wallapop_jobs(limit: int = 30):
     """Lista los trabajos más recientes del Nexus Local Bridge, para la UI de Configuración."""
     with SessionCloud() as db:

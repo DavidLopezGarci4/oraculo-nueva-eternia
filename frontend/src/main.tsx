@@ -1,7 +1,10 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { BrowserRouter } from 'react-router-dom'
+import { MotionConfig } from 'framer-motion'
 import './index.css'
+import './api/client' // Registra los interceptores de auth (JWT) sobre axios global antes de cualquier petición
 import App from './App.tsx'
 
 const queryClient = new QueryClient({
@@ -18,10 +21,17 @@ import { CartProvider } from './context/CartContext.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <CartProvider>
-        <App />
-      </CartProvider>
-    </QueryClientProvider>
+    {/* Fase AAA-Ola2 (2d): respeta prefers-reduced-motion del sistema
+        operativo para TODOS los componentes motion.* de la app, sin tocar
+        cada animación una por una. */}
+    <MotionConfig reducedMotion="user">
+      <BrowserRouter>
+        <QueryClientProvider client={queryClient}>
+          <CartProvider>
+            <App />
+          </CartProvider>
+        </QueryClientProvider>
+      </BrowserRouter>
+    </MotionConfig>
   </StrictMode>,
 )

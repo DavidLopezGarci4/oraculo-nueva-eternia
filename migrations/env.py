@@ -25,6 +25,29 @@ sys.path.insert(0, os.getcwd())
 from src.domain.models import Base
 target_metadata = Base.metadata
 
+# Fase AAA-2.3: alembic.ini traía una URL fija (sqlite:///oraculo.db) que NO
+# coincide con la base de datos real que usa la app en producción
+# (SUPABASE_DATABASE_URL, ver src/infrastructure/database_cloud.py). Sin este
+# override, `alembic upgrade head` migraría un SQLite local vacío dentro del
+# contenedor en vez de la Supabase real. Resolvemos la URL exactamente igual
+# que lo hace la app.
+from src.core.config import settings
+
+_env_supabase = os.environ.get("SUPABASE_DATABASE_URL")
+_settings_supabase = getattr(settings, "SUPABASE_DATABASE_URL", None)
+_db_url = _env_supabase or _settings_supabase or getattr(settings, "DATABASE_URL", None)
+
+print(f"🔍 DEBUG os.environ SUPABASE_DATABASE_URL: {_env_supabase}", flush=True)
+print(f"🔍 DEBUG settings SUPABASE_DATABASE_URL: {_settings_supabase}", flush=True)
+
+if isinstance(_db_url, str):
+    _db_url = _db_url.strip().strip("'\"")
+if _db_url and _db_url.startswith("postgres://"):
+    _db_url = _db_url.replace("postgres://", "postgresql://", 1)
+if _db_url:
+    print(f"🔍 Alembic target URL: {_db_url[:35]}...", flush=True)
+    config.set_main_option("sqlalchemy.url", _db_url)
+
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
@@ -62,11 +85,9 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
-    )
+    from sqlalchemy import create_engine
+    target_url = config.get_main_option("sqlalchemy.url")
+    connectable = create_engine(target_url, poolclass=pool.NullPool)
 
     with connectable.connect() as connection:
         context.configure(

@@ -33,6 +33,10 @@ RUN playwright install --with-deps chromium
 # Copy application code
 COPY . .
 
+# Fase AAA-2.3: aplica migraciones de Alembic antes de arrancar el servidor.
+RUN chmod +x docker-entrypoint.sh
+ENTRYPOINT ["./docker-entrypoint.sh"]
+
 # Expose port
 EXPOSE 8000
 

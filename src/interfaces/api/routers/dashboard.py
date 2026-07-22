@@ -1,5 +1,6 @@
 import json
 from datetime import datetime, timedelta, timezone
+from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
 from loguru import logger
@@ -17,12 +18,20 @@ from src.domain.models import (
     UserModel,
 )
 from src.infrastructure.database_cloud import SessionCloud
-from src.interfaces.api.deps import verify_device
+from src.interfaces.api.deps import verify_api_key, verify_device
+from src.interfaces.api.schemas import (
+    DashboardStatsOutput,
+    HallOfFameOutput,
+    TopDealOutput,
+    MatchStatOutput,
+    MatchHistoryOutput,
+    StatusMessageOutput,
+)
 
 router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 
 
-@router.get("/stats", dependencies=[Depends(verify_device)])
+@router.get("/stats", response_model=DashboardStatsOutput, dependencies=[Depends(verify_device)])
 async def get_dashboard_stats(user_id: int = 1):
     try:
         with SessionCloud() as db:
@@ -133,7 +142,7 @@ async def get_dashboard_stats(user_id: int = 1):
         raise HTTPException(status_code=500, detail=f"Error al recuperar datos del tablero: {str(e)}")
 
 
-@router.get("/hall-of-fame", dependencies=[Depends(verify_device)])
+@router.get("/hall-of-fame", response_model=HallOfFameOutput, dependencies=[Depends(verify_device)])
 async def get_dashboard_hall_of_fame(user_id: int = 1):
     with SessionCloud() as db:
         items = (
@@ -215,7 +224,7 @@ async def get_dashboard_hall_of_fame(user_id: int = 1):
         }
 
 
-@router.get("/top-deals", dependencies=[Depends(verify_device)])
+@router.get("/top-deals", response_model=List[TopDealOutput], dependencies=[Depends(verify_device)])
 async def get_top_deals(user_id: int = 2):
     with SessionCloud() as db:
         owned_ids = [
@@ -295,7 +304,7 @@ async def get_top_deals(user_id: int = 2):
         return final_deals[:20]
 
 
-@router.get("/match-stats")
+@router.get("/match-stats", response_model=List[MatchStatOutput], dependencies=[Depends(verify_device)])
 async def get_dashboard_match_stats():
     with SessionCloud() as db:
         stats = (
@@ -308,7 +317,7 @@ async def get_dashboard_match_stats():
         return [{"shop": s.shop, "count": s.count} for s in stats]
 
 
-@router.get("/history")
+@router.get("/history", response_model=List[MatchHistoryOutput], dependencies=[Depends(verify_device)])
 async def get_dashboard_history():
     with SessionCloud() as db:
         history = (
@@ -332,8 +341,12 @@ async def get_dashboard_history():
         ]
 
 
-@router.post("/revert")
+@router.post("/revert", response_model=StatusMessageOutput, dependencies=[Depends(verify_api_key)])
 async def revert_action(request: dict):
+    # Fase AAA-2.1: esta acción borra/reconstruye entradas de OfferModel,
+    # BlackcludedItemModel e historial — no tenía NINGUNA protección. Se alinea
+    # con el resto de herramientas de curación (purgatory.py), que exigen
+    # admin.
     history_id = request.get("history_id")
     if not history_id:
         raise HTTPException(status_code=400, detail="ID de historial requerido")

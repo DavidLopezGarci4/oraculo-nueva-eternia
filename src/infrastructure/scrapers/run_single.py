@@ -59,7 +59,7 @@ async def run_scraper(spider_name: str, search_query: str = "auto"):
         db.add(status_row)
     
     status_row.status = "running"
-    status_row.start_time = datetime.datetime.utcnow()
+    status_row.start_time = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
     status_row.items_scraped = 0
     db.commit()
 
@@ -76,7 +76,7 @@ async def run_scraper(spider_name: str, search_query: str = "auto"):
         if is_blocked:
             status_row.status = "blocked"
             status_row.items_scraped = 0
-            status_row.end_time = datetime.datetime.utcnow()
+            status_row.end_time = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
             db.commit()
             
             logger.error(f"🛡️ [BLOCKED] Scraper was blocked by anti-bot measures!")
@@ -92,12 +92,12 @@ async def run_scraper(spider_name: str, search_query: str = "auto"):
         else:
             status_row.status = "completed"
             status_row.items_scraped = len(results)
-            status_row.end_time = datetime.datetime.utcnow()
+            status_row.end_time = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
             db.commit()
             logger.success("✅ Cycle complete.")
     except Exception as e:
         status_row.status = "error"
-        status_row.end_time = datetime.datetime.utcnow()
+        status_row.end_time = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
         db.commit()
         logger.error(f"❌ Scraper failed: {e}")
     finally:

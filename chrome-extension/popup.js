@@ -2,16 +2,19 @@
 
 document.addEventListener('DOMContentLoaded', async () => {
     const serverUrlInput = document.getElementById('serverUrl');
+    const apiKeyInput = document.getElementById('apiKey');
     const saveBtn = document.getElementById('saveBtn');
     const statusDiv = document.getElementById('status');
 
     // Cargar configuración guardada
-    const config = await chrome.storage.sync.get(['serverUrl']);
+    const config = await chrome.storage.sync.get(['serverUrl', 'apiKey']);
     serverUrlInput.value = config.serverUrl || 'http://localhost:8000';
+    apiKeyInput.value = config.apiKey || '';
 
     // Guardar configuración
     saveBtn.addEventListener('click', async () => {
         const serverUrl = serverUrlInput.value.trim();
+        const apiKey = apiKeyInput.value.trim();
 
         if (!serverUrl) {
             showStatus('Por favor, introduce una URL válida', 'error');
@@ -19,7 +22,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         // Guardar en storage
-        await chrome.storage.sync.set({ serverUrl: serverUrl });
+        await chrome.storage.sync.set({ serverUrl: serverUrl, apiKey: apiKey });
 
         // Verificar conexión
         try {

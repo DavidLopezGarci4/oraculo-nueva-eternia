@@ -5,6 +5,7 @@ from loguru import logger
 
 from src.infrastructure.database_cloud import SessionCloud
 from src.interfaces.api.deps import verify_api_key
+from src.interfaces.api.schemas import StatusMessageOutput
 
 router = APIRouter(tags=["system"])
 
@@ -122,7 +123,7 @@ async def get_sword_configs(current_user: UserModel = Depends(get_current_user))
                 return {}
         return {}
 
-@router.post("/api/system/sword-configs")
+@router.post("/api/system/sword-configs", response_model=StatusMessageOutput)
 async def save_sword_configs(configs: dict, current_user: UserModel = Depends(get_current_user)):
     if current_user.role != "admin" and current_user.id != 2:
         raise HTTPException(status_code=403, detail="No autorizado para modificar la configuración de espadas.")
@@ -163,7 +164,7 @@ async def run_maintenance_task():
         await SecurityShield.send_telegram_alert(err_msg)
         logger.error(f"❌ Error en la tarea de mantenimiento en segundo plano: {e}")
 
-@router.post("/api/system/maintenance")
+@router.post("/api/system/maintenance", response_model=StatusMessageOutput)
 async def run_maintenance(
     background_tasks: BackgroundTasks,
     current_user: UserModel = Depends(get_current_user)

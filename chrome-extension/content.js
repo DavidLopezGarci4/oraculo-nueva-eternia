@@ -115,9 +115,14 @@ async function handleSendToOraculo() {
         return;
     }
 
-    // Obtener la URL del servidor guardada
-    const config = await chrome.storage.sync.get(['serverUrl']);
+    // Obtener la URL del servidor y la clave de extensión guardadas
+    const config = await chrome.storage.sync.get(['serverUrl', 'apiKey']);
     const serverUrl = config.serverUrl || 'http://localhost:8000';
+
+    if (!config.apiKey) {
+        showNotification('❌ Configura la Clave de la Extensión en el popup del Oráculo', 'error');
+        return;
+    }
 
     try {
         showNotification(`Enviando ${products.length} productos...`, 'info');
@@ -125,7 +130,8 @@ async function handleSendToOraculo() {
         const response = await fetch(`${serverUrl}/api/wallapop/import`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'X-Extension-Key': config.apiKey
             },
             body: JSON.stringify({ products: products })
         });

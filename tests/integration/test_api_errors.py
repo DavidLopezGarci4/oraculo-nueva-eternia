@@ -4,9 +4,13 @@ Covers validation errors (422) and ensures 403/404 keep working correctly.
 """
 
 
-def test_validation_error_returns_structured_json(client):
+def test_validation_error_returns_structured_json(client, bearer):
     """POSTing bad types should trigger RequestValidationError → structured 422."""
-    resp = client.post("/api/logistics/calculate-cart", json={"items": "not-a-list", "user_id": 1})
+    resp = client.post(
+        "/api/logistics/calculate-cart",
+        json={"items": "not-a-list", "user_id": 1},
+        headers=bearer,
+    )
     assert resp.status_code == 422
     data = resp.json()
     assert data["status"] == "error"
@@ -29,9 +33,9 @@ def test_http_403_still_works(client):
     assert "detail" in resp.json()
 
 
-def test_http_404_still_works(client):
-    resp = client.get("/api/users/999999", headers={
-        "X-Device-ID": "test-device",
-        "X-API-Key": "eternia-shield-2026",
-    })
+def test_http_404_still_works(client, admin_bearer, authorized_device_headers):
+    # Uses an admin token: a non-admin would be silently scoped to their own
+    # user_id (Fase AAA-2.1 IDOR fix) and never see this 404 for another id.
+    headers = {**authorized_device_headers, **admin_bearer}
+    resp = client.get("/api/users/999999", headers=headers)
     assert resp.status_code == 404

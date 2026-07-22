@@ -1,20 +1,26 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from loguru import logger
 
 from src.application.services.logistics_service import LogisticsService
 from src.domain.models import UserModel
 from src.infrastructure.database_cloud import SessionCloud
-from src.interfaces.api.schemas import CartRequest
+from src.interfaces.api.deps import get_current_user, scope_user_id
+from src.interfaces.api.schemas import CartRequest, CartCalculationOutput
 
 router = APIRouter(tags=["logistics"])
 
 
-@router.post("/api/logistics/calculate-cart")
-async def api_calculate_cart(request: CartRequest):
+@router.post("/api/logistics/calculate-cart", response_model=CartCalculationOutput)
+async def api_calculate_cart(request: CartRequest, current_user: UserModel = Depends(get_current_user)):
     try:
+        # Fase AAA-1: exige sesión válida. La ubicación se resuelve sobre el
+        # usuario autenticado (o el user_id solicitado si es admin), nunca de
+        # forma anónima.
+        target_user_id = scope_user_id(current_user, request.user_id)
+
         user_location = "ES"
         with SessionCloud() as db:
-            user = db.query(UserModel).filter(UserModel.id == request.user_id).first()
+            user = db.query(UserModel).filter(UserModel.id == target_user_id).first()
             if user:
                 user_location = user.location
 

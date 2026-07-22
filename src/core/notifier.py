@@ -3,7 +3,7 @@ import logging
 from typing import Optional
 from src.core.config import settings
 from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import datetime, timezone
 
 logger = logging.getLogger("notifier")
 
@@ -19,7 +19,7 @@ class NotifierService:
         """
         Returns True if the message should be throttled.
         """
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         if key in self._last_sent:
             last_time = self._last_sent[key]
             if (now - last_time).total_seconds() < (minutes * 60):
@@ -138,7 +138,7 @@ class NotifierService:
             # Avoid notifying too often (e.g. once per 12h per alert)
             if alert.last_notified_at:
                 from datetime import timedelta
-                if datetime.utcnow() - alert.last_notified_at < timedelta(hours=12):
+                if datetime.now(timezone.utc).replace(tzinfo=None) - alert.last_notified_at < timedelta(hours=12):
                     continue
             
             msg = (
@@ -160,7 +160,7 @@ class NotifierService:
                     with httpx.Client() as client:
                         resp = client.post(self.api_url, json=payload, timeout=10.0)
                         if resp.status_code == 200:
-                            alert.last_notified_at = datetime.utcnow()
+                            alert.last_notified_at = datetime.now(timezone.utc).replace(tzinfo=None)
                             db.commit()
                             logger.info(f"🔔 Price alert sent to user {alert.user_id} for {product.name}")
             except Exception as e:

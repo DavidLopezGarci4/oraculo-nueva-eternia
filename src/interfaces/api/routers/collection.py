@@ -9,6 +9,7 @@ from sqlalchemy import select
 
 from src.domain.models import CollectionItemModel, OfferModel, ProductModel, UserModel
 from src.infrastructure.database_cloud import SessionCloud
+from src.interfaces.api.deps import get_current_user, scope_user_id as _scope_user_id
 
 def trigger_excel_sync_background(user_id: int, product_id: int):
     try:
@@ -47,6 +48,8 @@ from src.interfaces.api.schemas import (
     CollectionItemUpdateRequest,
     CollectionToggleRequest,
     ProductOutput,
+    CollectionToggleOutput,
+    StatusMessageOutput,
 )
 
 router = APIRouter(tags=["collection"])
@@ -54,12 +57,14 @@ router = APIRouter(tags=["collection"])
 
 @router.get("/api/collection", response_model=List[ProductOutput])
 async def get_collection(
-    user_id: int, 
+    user_id: int,
     is_vintage: bool = False,
     limit: Optional[int] = None,
     offset: Optional[int] = None,
-    search: Optional[str] = None
+    search: Optional[str] = None,
+    current_user: UserModel = Depends(get_current_user),
 ):
+    user_id = _scope_user_id(current_user, user_id)
     from src.application.services.valuation_service import ValuationService
 
     with SessionCloud() as db:
@@ -142,7 +147,8 @@ async def get_collection(
 
 
 @router.get("/api/guardian/export/excel")
-async def export_excel(user_id: int = 1):
+async def export_excel(user_id: int = 1, current_user: UserModel = Depends(get_current_user)):
+    user_id = _scope_user_id(current_user, user_id)
     try:
         from src.application.services.guardian_service import GuardianService
 
@@ -163,7 +169,8 @@ async def export_excel(user_id: int = 1):
 
 
 @router.get("/api/guardian/export/excel/vintage")
-async def export_excel_vintage(user_id: int = 1):
+async def export_excel_vintage(user_id: int = 1, current_user: UserModel = Depends(get_current_user)):
+    user_id = _scope_user_id(current_user, user_id)
     try:
         from src.application.services.guardian_service import GuardianService
 
@@ -185,7 +192,8 @@ async def export_excel_vintage(user_id: int = 1):
 
 
 @router.get("/api/guardian/export/sqlite")
-async def export_sqlite(user_id: int = 1):
+async def export_sqlite(user_id: int = 1, current_user: UserModel = Depends(get_current_user)):
+    user_id = _scope_user_id(current_user, user_id)
     try:
         from src.application.services.guardian_service import GuardianService
 
@@ -205,12 +213,17 @@ async def export_sqlite(user_id: int = 1):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/api/collection/toggle")
-async def toggle_collection(request: CollectionToggleRequest, background_tasks: BackgroundTasks):
+@router.post("/api/collection/toggle", response_model=CollectionToggleOutput)
+async def toggle_collection(
+    request: CollectionToggleRequest,
+    background_tasks: BackgroundTasks,
+    current_user: UserModel = Depends(get_current_user),
+):
+    scoped_user_id = _scope_user_id(current_user, request.user_id)
     with SessionCloud() as db:
         item = db.query(CollectionItemModel).filter(
             CollectionItemModel.product_id == request.product_id,
-            CollectionItemModel.owner_id == request.user_id,
+            CollectionItemModel.owner_id == scoped_user_id,
         ).first()
 
         if item:
@@ -223,23 +236,29 @@ async def toggle_collection(request: CollectionToggleRequest, background_tasks: 
         else:
             new_item = CollectionItemModel(
                 product_id=request.product_id,
-                owner_id=request.user_id,
+                owner_id=scoped_user_id,
                 acquired=not request.wish,
             )
             db.add(new_item)
             action = "added_wish" if request.wish else "added_owned"
 
         db.commit()
-        background_tasks.add_task(trigger_excel_sync_background, request.user_id, request.product_id)
+        background_tasks.add_task(trigger_excel_sync_background, scoped_user_id, request.product_id)
         return {"status": "success", "action": action, "product_id": request.product_id}
 
 
-@router.patch("/api/collection/{product_id}")
-async def update_collection_item(product_id: int, request: CollectionItemUpdateRequest, background_tasks: BackgroundTasks):
+@router.patch("/api/collection/{product_id}", response_model=StatusMessageOutput)
+async def update_collection_item(
+    product_id: int,
+    request: CollectionItemUpdateRequest,
+    background_tasks: BackgroundTasks,
+    current_user: UserModel = Depends(get_current_user),
+):
+    scoped_user_id = _scope_user_id(current_user, request.user_id)
     with SessionCloud() as db:
         item = db.query(CollectionItemModel).filter(
             CollectionItemModel.product_id == product_id,
-            CollectionItemModel.owner_id == request.user_id,
+            CollectionItemModel.owner_id == scoped_user_id,
         ).first()
 
         if not item:
@@ -263,5 +282,5 @@ async def update_collection_item(product_id: int, request: CollectionItemUpdateR
                 raise HTTPException(status_code=400, detail="Formato de fecha inválido")
 
         db.commit()
-        background_tasks.add_task(trigger_excel_sync_background, request.user_id, product_id)
+        background_tasks.add_task(trigger_excel_sync_background, scoped_user_id, product_id)
         return {"status": "success", "message": "Detalles del legado actualizados"}

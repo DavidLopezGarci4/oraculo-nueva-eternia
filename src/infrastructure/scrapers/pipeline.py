@@ -2,7 +2,7 @@ import asyncio
 import json
 import threading
 from typing import List
-from datetime import datetime
+from datetime import datetime, timezone
 from loguru import logger
 from src.infrastructure.scrapers.base import BaseScraper, ScrapedOffer
 from src.domain.schemas import ProductSchema
@@ -175,7 +175,7 @@ class ScrapingPipeline:
         se marca como no disponible (is_available = False).
         """
         from src.domain.models import OfferModel
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
         
         db: Session = SessionCloud()
         try:
@@ -194,7 +194,7 @@ class ScrapingPipeline:
             for offer in missing_offers:
                 # Regla eBay: 48h de gracia para evitar falsos negativos por micro-bloqueos
                 if offer.shop_name == "Ebay.es":
-                    if datetime.utcnow() - offer.last_seen < timedelta(hours=48):
+                    if datetime.now(timezone.utc).replace(tzinfo=None) - offer.last_seen < timedelta(hours=48):
                         continue
                 
                 # Regla General (Vinted/Otros): Si desaparece de la búsqueda, ya no está disponible
@@ -436,7 +436,7 @@ class ScrapingPipeline:
                         "sold_at": offer.get('sold_at'),
                         "is_sold": offer.get('is_sold', False),
                         "original_listing_date": offer.get('original_listing_date'),
-                        "last_price_update": datetime.utcnow()
+                        "last_price_update": datetime.now(timezone.utc).replace(tzinfo=None)
                     }, commit=False)
                     continue
 
@@ -446,7 +446,7 @@ class ScrapingPipeline:
                     new_price = offer.get('price', 0.0)
                     if new_price > 0 and abs(misc_item.price - new_price) > 0.01:
                         misc_item.price = new_price
-                        misc_item.added_at = datetime.utcnow()
+                        misc_item.added_at = datetime.now(timezone.utc).replace(tzinfo=None)
                         price_updates_count += 1
                     else:
                         unchanged_count += 1
@@ -489,7 +489,7 @@ class ScrapingPipeline:
                     if new_price > 0 and abs(pending_item.price - new_price) > 0.01:
                         # logger.info(f"📈 Purgatory Price Update: {pending_item.scraped_name} ({pending_item.price} -> {new_price})")
                         pending_item.price = new_price
-                        pending_item.found_at = datetime.utcnow()
+                        pending_item.found_at = datetime.now(timezone.utc).replace(tzinfo=None)
                         # Update source_type if it was missing or different
                         if "source_type" in offer:
                             pending_item.source_type = offer["source_type"]
@@ -510,7 +510,7 @@ class ScrapingPipeline:
                         if "original_listing_date" in offer:
                             pending_item.original_listing_date = offer["original_listing_date"]
                         
-                        pending_item.last_price_update = datetime.utcnow()
+                        pending_item.last_price_update = datetime.now(timezone.utc).replace(tzinfo=None)
                         price_updates_count += 1
                         # Si quisiéramos alertas aquí (antes de vincular), se podrían añadir.
                     else:
@@ -583,7 +583,7 @@ class ScrapingPipeline:
                             "expiry_at": offer.get('expiry_at'),
                             "bids_count": offer.get('bids_count', 0),
                             "time_left_raw": offer.get('time_left_raw'),
-                            "found_at": datetime.utcnow()
+                            "found_at": datetime.now(timezone.utc).replace(tzinfo=None)
                         }
                         
                         # Atomic Upsert to Purgatory (Reusing same logic as below)
@@ -691,12 +691,12 @@ class ScrapingPipeline:
                         "source_type": offer.get('source_type', 'Retail'),
                         "receipt_id": offer.get('receipt_id'),
                         "time_left_raw": offer.get('time_left_raw'),
-                        "first_seen_at": offer.get('first_seen_at') or datetime.utcnow(),
+                        "first_seen_at": offer.get('first_seen_at') or datetime.now(timezone.utc).replace(tzinfo=None),
                         "sold_at": offer.get('sold_at'),
                         "is_sold": offer.get('is_sold', False),
                         "original_listing_date": offer.get('original_listing_date'),
-                        "last_price_update": datetime.utcnow(),
-                        "found_at": datetime.utcnow(),
+                        "last_price_update": datetime.now(timezone.utc).replace(tzinfo=None),
+                        "found_at": datetime.now(timezone.utc).replace(tzinfo=None),
                         "is_vintage": is_v
                     }
                     

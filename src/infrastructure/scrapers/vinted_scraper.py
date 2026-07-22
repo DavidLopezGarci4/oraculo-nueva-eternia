@@ -3,7 +3,7 @@ import logging
 import random
 import time
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from curl_cffi.requests import AsyncSession
 from src.infrastructure.scrapers.base import BaseScraper, ScrapedOffer
 
@@ -144,7 +144,7 @@ class VintedScraper(BaseScraper):
                                     image_url=image_url,
                                     source_type="Peer-to-Peer",
                                     sale_type="Fixed_P2P",
-                                    first_seen_at=datetime.utcnow(),
+                                    first_seen_at=datetime.now(timezone.utc).replace(tzinfo=None),
                                     is_sold=False
                                 ))
                                 self.items_scraped += 1

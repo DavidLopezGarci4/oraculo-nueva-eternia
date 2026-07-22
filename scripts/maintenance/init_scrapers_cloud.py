@@ -1,7 +1,7 @@
 
 from src.infrastructure.database_cloud import SessionCloud
 from src.domain.models import ScraperStatusModel
-from datetime import datetime
+from datetime import datetime, timezone
 
 def initialize_scrapers():
     scrapers = [
@@ -18,7 +18,7 @@ def initialize_scrapers():
                 status = ScraperStatusModel(
                     spider_name=name,
                     status="idle",
-                    last_update=datetime.utcnow()
+                    last_update=datetime.now(timezone.utc).replace(tzinfo=None)
                 )
                 db.add(status)
             else:
@@ -26,7 +26,7 @@ def initialize_scrapers():
                 if "error" in status.status.lower():
                     print(f"Resetting {name} from error to idle...")
                     status.status = "idle"
-                    status.last_update = datetime.utcnow()
+                    status.last_update = datetime.now(timezone.utc).replace(tzinfo=None)
         
         db.commit()
         print("Scrapers initialized/reset successfully.")

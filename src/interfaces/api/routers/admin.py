@@ -22,13 +22,17 @@ from src.interfaces.api.schemas import (
     CreateUserRequest,
     HeroOutput,
     UserRoleUpdateRequest,
+    StatusMessageOutput,
+    DuplicateGroupOutput,
+    AuthorizedDeviceOutput,
+    TemporaryProductOutput,
 )
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
 
-@router.post("/users/create")
-async def create_user(request: CreateUserRequest, x_api_key: str = Depends(verify_api_key)):
+@router.post("/users/create", response_model=StatusMessageOutput, dependencies=[Depends(verify_api_key)])
+async def create_user(request: CreateUserRequest):
     with SessionCloud() as db:
         exists = db.query(UserModel).filter(
             or_(UserModel.email == request.email, UserModel.username == request.username)
@@ -77,7 +81,7 @@ async def get_all_heroes():
         return results
 
 
-@router.patch("/users/{user_id}/role", dependencies=[Depends(verify_api_key)])
+@router.patch("/users/{user_id}/role", response_model=StatusMessageOutput, dependencies=[Depends(verify_api_key)])
 async def update_hero_role(user_id: int, request: UserRoleUpdateRequest):
     with SessionCloud() as db:
         user = db.query(UserModel).filter(UserModel.id == user_id).first()
@@ -89,7 +93,7 @@ async def update_hero_role(user_id: int, request: UserRoleUpdateRequest):
         return {"status": "success", "message": f"Rango de {user.username} actualizado a {request.role}"}
 
 
-@router.post("/users/{user_id}/reset-password", dependencies=[Depends(verify_api_key)])
+@router.post("/users/{user_id}/reset-password", response_model=StatusMessageOutput, dependencies=[Depends(verify_api_key)])
 async def reset_hero_password(user_id: int):
     with SessionCloud() as db:
         user = db.query(UserModel).filter(UserModel.id == user_id).first()
@@ -100,7 +104,7 @@ async def reset_hero_password(user_id: int):
         return {"status": "success", "message": f"Protocolo de reseteo iniciado para {user.email}"}
 
 
-@router.delete("/users/{user_id}", dependencies=[Depends(verify_api_key)])
+@router.delete("/users/{user_id}", response_model=StatusMessageOutput, dependencies=[Depends(verify_api_key)])
 async def delete_hero(user_id: int):
     with SessionCloud() as db:
         user = db.query(UserModel).filter(UserModel.id == user_id).first()
@@ -120,7 +124,7 @@ async def delete_hero(user_id: int):
         return {"status": "success", "message": f"Justicia del Arquitecto: El héroe '{username}' ha sido purgado de los registros."}
 
 
-@router.get("/duplicates", dependencies=[Depends(verify_api_key)])
+@router.get("/duplicates", response_model=List[DuplicateGroupOutput], dependencies=[Depends(verify_api_key)])
 async def get_duplicates():
     from src.domain.models import ProductModel
 
@@ -150,7 +154,7 @@ async def get_duplicates():
         return duplicates
 
 
-@router.post("/nexus/sync", dependencies=[Depends(verify_api_key)])
+@router.post("/nexus/sync", response_model=StatusMessageOutput, dependencies=[Depends(verify_api_key)])
 async def sync_nexus(background_tasks: BackgroundTasks):
     try:
         from src.application.services.nexus_service import NexusService
@@ -164,7 +168,7 @@ async def sync_nexus(background_tasks: BackgroundTasks):
         raise HTTPException(status_code=500, detail=f"No se pudo iniciar Nexus: {str(e)}")
 
 
-@router.post("/nexus/sync/vintage", dependencies=[Depends(verify_api_key)])
+@router.post("/nexus/sync/vintage", response_model=StatusMessageOutput, dependencies=[Depends(verify_api_key)])
 async def sync_nexus_vintage(background_tasks: BackgroundTasks):
     try:
         from src.application.services.nexus_vintage_service import NexusVintageService
@@ -179,7 +183,7 @@ async def sync_nexus_vintage(background_tasks: BackgroundTasks):
 
 
 
-@router.post("/validate-anomaly", dependencies=[Depends(verify_api_key)])
+@router.post("/validate-anomaly", response_model=StatusMessageOutput, dependencies=[Depends(verify_api_key)])
 async def validate_anomaly(request: AnomalyValidationRequest):
     with SessionCloud() as db:
         item = db.query(PendingMatchModel).filter(PendingMatchModel.id == request.id).first()
@@ -200,7 +204,7 @@ async def validate_anomaly(request: AnomalyValidationRequest):
         return {"status": "success", "message": message}
 
 
-@router.post("/reset-smartmatches", dependencies=[Depends(verify_api_key)])
+@router.post("/reset-smartmatches", response_model=StatusMessageOutput, dependencies=[Depends(verify_api_key)])
 async def reset_smartmatches():
     with SessionCloud() as db:
         all_offers = db.query(OfferModel).filter(OfferModel.product_id.isnot(None)).all()
@@ -231,14 +235,14 @@ async def reset_smartmatches():
         }
 
 
-@router.get("/devices", dependencies=[Depends(verify_api_key)])
+@router.get("/devices", response_model=List[AuthorizedDeviceOutput], dependencies=[Depends(verify_api_key)])
 async def get_all_devices():
     with SessionCloud() as db:
         devices = db.query(AuthorizedDeviceModel).order_by(desc(AuthorizedDeviceModel.created_at)).all()
         return devices
 
 
-@router.post("/devices/{device_id}/authorize", dependencies=[Depends(verify_api_key)])
+@router.post("/devices/{device_id}/authorize", response_model=StatusMessageOutput, dependencies=[Depends(verify_api_key)])
 async def authorize_device(device_id: str):
     with SessionCloud() as db:
         success = SecurityShield.authorize_device(device_id, db)
@@ -251,7 +255,7 @@ async def authorize_device(device_id: str):
         return {"status": "success", "message": f"Dispositivo {device_id} autorizado."}
 
 
-@router.delete("/devices/{device_id}", dependencies=[Depends(verify_api_key)])
+@router.delete("/devices/{device_id}", response_model=StatusMessageOutput, dependencies=[Depends(verify_api_key)])
 async def revoke_device(device_id: str):
     with SessionCloud() as db:
         device = db.query(AuthorizedDeviceModel).filter(
@@ -265,7 +269,7 @@ async def revoke_device(device_id: str):
         return {"status": "success", "message": f"Acceso revocado para {device_id}."}
 
 
-@router.get("/temporary-products", dependencies=[Depends(verify_api_key)])
+@router.get("/temporary-products", response_model=List[TemporaryProductOutput], dependencies=[Depends(verify_api_key)])
 async def get_temporary_products():
     with SessionCloud() as db:
         query = db.query(ProductModel).filter(

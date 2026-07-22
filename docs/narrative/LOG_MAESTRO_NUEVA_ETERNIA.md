@@ -210,6 +210,7 @@ Este documento registra la evolución técnica y estratégica del Oráculo. La P
 #### 8.2 Blindaje de Producción (Grado Industrial)
 
 - **Hitos**: Orquestación estable con `docker-compose.prod.yml`, persistencia de datos via volúmenes y creación del sistema "Guardián de Datos" para backups automáticos. Apertura de CORS para acceso universal móvil.
+  - ⚠️ **Corrección (21/07/2026, Fase AAA-1.4)**: ese CORS abierto a `*` era un hallazgo de seguridad — se restringió a una lista blanca de orígenes (`settings.CORS_ORIGINS`). Ver [REPORTE_MEJORAS_AAA.md](../REPORTE_MEJORAS_AAA.md).
 
 - **Estado**: ✅ COMPLETADO
 

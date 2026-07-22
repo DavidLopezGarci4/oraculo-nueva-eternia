@@ -1,7 +1,7 @@
 import os
 import logging
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 from pathlib import Path
 from src.infrastructure.collectors.personal_vintage_collection import main as run_scraper
@@ -87,7 +87,7 @@ class NexusVintageService:
                 db.add(status)
             
             status.status = "running"
-            status.start_time = datetime.utcnow()
+            status.start_time = datetime.now(timezone.utc).replace(tzinfo=None)
             
             exec_log = ScraperExecutionLogModel(
                 spider_name="NexusVintage",
@@ -166,11 +166,11 @@ class NexusVintageService:
             with SessionCloud() as db:
                 db.query(ScraperStatusModel).filter(ScraperStatusModel.spider_name == "NexusVintage").update({
                     "status": "completed",
-                    "end_time": datetime.utcnow()
+                    "end_time": datetime.now(timezone.utc).replace(tzinfo=None)
                 })
                 db.query(ScraperExecutionLogModel).filter(ScraperExecutionLogModel.id == log_id).update({
                     "status": "success",
-                    "end_time": datetime.utcnow()
+                    "end_time": datetime.now(timezone.utc).replace(tzinfo=None)
                 })
                 db.commit()
                 
@@ -183,12 +183,12 @@ class NexusVintageService:
             with SessionCloud() as db:
                 db.query(ScraperStatusModel).filter(ScraperStatusModel.spider_name == "NexusVintage").update({
                     "status": "error",
-                    "end_time": datetime.utcnow()
+                    "end_time": datetime.now(timezone.utc).replace(tzinfo=None)
                 })
                 db.query(ScraperExecutionLogModel).filter(ScraperExecutionLogModel.id == log_id).update({
                     "status": "error",
                     "error_message": error_detail,
-                    "end_time": datetime.utcnow()
+                    "end_time": datetime.now(timezone.utc).replace(tzinfo=None)
                 })
                 db.commit()
             return False

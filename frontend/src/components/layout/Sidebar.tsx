@@ -12,9 +12,12 @@ interface SidebarProps {
     onCloseMobile: () => void;
     user: Hero | null;
     onLogout: () => void;
+    /** Fase AAA-4.4: precarga el chunk de una pagina al pasar el raton por
+     * encima de su enlace, para que la navegacion se sienta instantanea. */
+    onPrefetch?: (tab: string) => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen, onCloseMobile, user, onLogout }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen, onCloseMobile, user, onLogout, onPrefetch }) => {
     const isAdmin = user?.role === 'admin' || user?.username === 'David';
 
     const globalItems = [
@@ -75,6 +78,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen
                     {/* Botón de cierre solo en móvil */}
                     <button
                         onClick={onCloseMobile}
+                        aria-label="Cerrar menú de navegación"
                         className="rounded-lg p-1 text-white/50 hover:bg-white/10 hover:text-white md:hidden"
                     >
                         <X className="h-6 w-6" />
@@ -82,7 +86,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen
                 </div>
 
                 {/* Navigation */}
-                <nav className="flex-1 space-y-5 p-4 pt-6 overflow-y-auto custom-scrollbar">
+                <nav aria-label="Navegación principal" className="flex-1 space-y-5 p-4 pt-6 overflow-y-auto custom-scrollbar">
                     {/* Sección Global */}
                     <div className="space-y-1">
                         {globalItems.map((item) => {
@@ -94,6 +98,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen
                                         setActiveTab(item.id);
                                         onCloseMobile();
                                     }}
+                                    onMouseEnter={() => onPrefetch?.(item.id)}
                                     className={`flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition-all ${isActive
                                         ? 'bg-white/10 text-white border border-white/20 shadow-[0_0_15px_rgba(255,255,255,0.05)]'
                                         : 'text-white/50 hover:bg-white/5 hover:text-white'
@@ -122,6 +127,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen
                                             setActiveTab(item.id);
                                             onCloseMobile();
                                         }}
+                                        onMouseEnter={() => onPrefetch?.(item.id)}
                                         className={`flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition-all ${isActive
                                             ? 'bg-brand-primary/20 text-brand-primary border border-brand-primary/35 shadow-[0_0_15px_rgba(14,165,233,0.1)]'
                                             : 'text-white/50 hover:bg-white/5 hover:text-white'
@@ -151,6 +157,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen
                                             setActiveTab(item.id);
                                             onCloseMobile();
                                         }}
+                                        onMouseEnter={() => onPrefetch?.(item.id)}
                                         className={`flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition-all ${isActive
                                             ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.15)]'
                                             : 'text-white/50 hover:bg-white/5 hover:text-white'
@@ -173,6 +180,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen
                                 setActiveTab('settings');
                                 onCloseMobile();
                             }}
+                            onMouseEnter={() => onPrefetch?.('settings')}
                             className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all ${activeTab === 'settings'
                                 ? 'bg-brand-primary/20 text-brand-primary border border-brand-primary/30 shadow-[0_0_15px_rgba(14,165,233,0.1)]'
                                 : 'text-white/50 hover:bg-white/5 hover:text-white'

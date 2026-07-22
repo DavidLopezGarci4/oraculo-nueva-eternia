@@ -1,0 +1,378 @@
+====================================================================
+APUNTES A LLEVAR A CABO — El Oráculo de Nueva Eternia
+Última actualización: 2026-07-21
+====================================================================
+
+CÓMO USAR ESTE DOCUMENTO
+------------------------
+Está pensado para que lo sigas de arriba a abajo, en orden, sin saltarte
+pasos. Cada paso te dice QUÉ hacer, CÓMO hacerlo (con el comando exacto
+para copiar y pegar) y CÓMO SABER que salió bien.
+
+Todo el trabajo de código ya está hecho y guardado en la rama de git
+llamada "refactor/aaa-uplift". Lo que queda pendiente son cosas que
+SOLO TÚ puedes hacer: manejar contraseñas/secretos reales y usar Docker
+en tu otra máquina (aquí no tuve acceso a ninguna de las dos cosas).
+
+Marca cada casilla [ ] -> [x] a mano según vayas completando pasos, así
+sabrás por dónde ibas si lo retomas otro día.
+
+
+====================================================================
+PARTE A — LO QUE TIENES QUE HACER TÚ (en tu máquina con Docker)
+====================================================================
+
+--------------------------------------------------------------------
+PASO 1 — Haz copias de seguridad ANTES de tocar nada
+--------------------------------------------------------------------
+[ ] 1.1 Backup de tu base de datos LOCAL (si la usas):
+        En PowerShell, dentro de la carpeta del proyecto:
+
+            .\backup_db.ps1
+
+        Esto crea una copia en la carpeta "backups\".
+
+[ ] 1.2 Backup de tu base de datos de PRODUCCIÓN (Supabase):
+        Entra al panel de Supabase (supabase.com) -> tu proyecto ->
+        Database -> Backups, y asegúrate de que hay un backup reciente
+        (o crea uno manual si tu plan lo permite).
+        Esto es importante porque en el Paso 5 vamos a tocar el esquema
+        de esa base de datos por primera vez con una herramienta nueva
+        (Alembic). Con el backup, si algo saliera mal, se puede deshacer.
+
+
+--------------------------------------------------------------------
+PASO 2 — Lleva los cambios a tu máquina con Docker
+--------------------------------------------------------------------
+[ ] 2.1 Abre una terminal en la carpeta del proyecto, en tu máquina con
+        Docker, y ejecuta:
+
+            git fetch origin
+            git checkout refactor/aaa-uplift
+            git pull
+
+[ ] 2.2 Cómo saber que funcionó: ejecuta "git log --oneline -5" y
+        deberías ver commits recientes que empiezan por "docs(aaa)",
+        "feat(aaa-2.2)", "fix(aaa-2.5)", etc.
+
+
+--------------------------------------------------------------------
+PASO 3 — Rota (cambia) los secretos reales
+--------------------------------------------------------------------
+Esto es necesario porque, hasta ahora, la aplicación funcionaba con una
+contraseña de administrador de ejemplo escrita en el propio código
+("eternia-shield-2026"), visible para cualquiera que abriera el
+navegador. Ya se quitó del código, pero mientras no cambies el valor
+real en tu servidor, sigue siendo la misma clave de siempre.
+
+[ ] 3.1 Busca si ya tienes un archivo ".env" en tu servidor de
+        producción (donde corre Docker). Si no lo tienes, créalo
+        copiando la plantilla:
+
+            cp .env.example .env
+
+[ ] 3.2 Genera DOS secretos nuevos y aleatorios (uno para cada cosa,
+        NO uses el mismo valor para los dos). Ejecuta esto dos veces:
+
+            python -c "import secrets; print(secrets.token_urlsafe(48))"
+
+        Copia el primer resultado como valor de JWT_SECRET en tu .env,
+        y el segundo resultado como valor de ORACULO_API_KEY.
+
+        Ejemplo de cómo deben quedar las líneas en el .env:
+
+            JWT_SECRET=el-primer-resultado-que-copiaste-aqui
+            ORACULO_API_KEY=el-segundo-resultado-que-copiaste-aqui
+
+[ ] 3.3 Añade (o revisa que ya esté) esta línea en el .env de producción:
+
+            ENV=production
+
+        IMPORTANTE — esto corrige algo que descubrí después de mi
+        primera nota: el nombre correcto de la variable es "ENV", NO
+        "ENVIRONMENT" (así es como ya la usan tus propios
+        docker-compose.prod.yml y docker-compose.local-prod.yml; si
+        hubiera usado "ENVIRONMENT" la protección de seguridad nunca se
+        habría activado en tu servidor real — ya está corregido en el
+        código, pero confirma que tu .env real también dice "ENV").
+
+        Con esto activo, si algún día el servidor arrancara con un
+        secreto de "ejemplo" en vez de uno real, la aplicación se
+        NIEGA a arrancar en vez de exponerse en silencio.
+
+[ ] 3.4 Ajusta también esta línea a tu dominio real:
+
+            CORS_ORIGINS=https://oraculo-eternia.duckdns.org
+
+[ ] 3.5 Guarda tu email y contraseña de acceso en el archivo
+        "CREDENCIALES_LOCAL.md" que ya está creado en la raíz del
+        proyecto (ese archivo NUNCA se sube a git, es solo para ti).
+        Ya tienes dos cuentas de administrador que puedes usar:
+          - admin@eternia.com
+          - dace81@gmail.com
+        Si no recuerdas la contraseña de ninguna, en el Paso 6 verás
+        cómo resetearla desde la propia app ("He olvidado mi llave").
+
+[ ] 3.6 Si tienes algún scraper, robot o herramienta externa (fuera de
+        esta app) que se conecte usando la antigua clave
+        "eternia-shield-2026" como cabecera X-API-Key, actualízala para
+        que use el nuevo valor de ORACULO_API_KEY que generaste en el
+        paso 3.2. (El navegador/frontend ya NO necesita esta clave para
+        nada — solo la usan procesos automáticos servidor-a-servidor.)
+
+
+--------------------------------------------------------------------
+PASO 4 — Comprueba el estado de la base de datos de producción
+--------------------------------------------------------------------
+[ ] 4.1 Entra al panel de Supabase -> SQL Editor, y ejecuta esta
+        consulta:
+
+            SELECT EXISTS (
+              SELECT FROM information_schema.tables
+              WHERE table_name = 'alembic_version'
+            );
+
+[ ] 4.2 Resultado esperado: "false". Eso confirma que tu base de datos
+        de producción nunca ha usado la herramienta de migraciones
+        (Alembic) — es lo normal y esperado, sigue con el Paso 5.
+
+        Si el resultado fuera "true": PARA AQUÍ y avísame antes de
+        continuar, sería una situación distinta a la que he podido
+        comprobar y preparar.
+
+
+--------------------------------------------------------------------
+PASO 5 — Aplica la migración de base de datos (Alembic)
+--------------------------------------------------------------------
+Nota: cada comando de este paso ya está probado por mí contra copias
+reales de tu base de datos (no la real, copias de prueba), en dos
+situaciones distintas, y funciona correctamente en ambas. Aun así,
+por eso hiciste el backup del Paso 1.
+
+[ ] 5.1 "Baseline" — dile a la herramienta que tu base de datos ya
+        tiene el esquema de siempre, para que no intente recrear nada
+        desde cero:
+
+            docker compose -f docker-compose.prod.yml run --rm backend alembic stamp f48b00d4a369
+
+[ ] 5.2 Aplica la migración nueva (añade 4 columnas a la tabla
+        "users" si no existían ya — si ya existían, no hace nada, es
+        seguro):
+
+            docker compose -f docker-compose.prod.yml run --rm backend alembic upgrade head
+
+[ ] 5.3 Cómo saber que funcionó: en la salida de ese comando deberías
+        ver una línea parecida a:
+
+            Running upgrade f48b00d4a369 -> d4283e0fbed1
+
+        Si no da ningún error, funcionó correctamente.
+
+(Si quieres más detalle sobre por qué se hace así, está todo explicado
+en el archivo docs/ALEMBIC_ADOPTION.md dentro del proyecto — pero con
+seguir los pasos de aquí arriba es suficiente.)
+
+
+--------------------------------------------------------------------
+PASO 6 — Despliega la aplicación
+--------------------------------------------------------------------
+[ ] 6.1 Ejecuta:
+
+            docker compose -f docker-compose.prod.yml up -d --build
+
+[ ] 6.2 Revisa que arrancó bien:
+
+            docker compose -f docker-compose.prod.yml logs -f backend
+
+        Deberías ver, entre otras cosas, la línea:
+
+            Migraciones aplicadas correctamente.
+
+        Pulsa Ctrl+C para salir de los logs (esto no detiene el
+        servidor, solo deja de mostrar el texto en pantalla).
+
+
+--------------------------------------------------------------------
+PASO 7 — Verifica que todo funciona de verdad
+--------------------------------------------------------------------
+[ ] 7.1 Entra a la web (https://oraculo-eternia.duckdns.org) desde tu
+        navegador habitual.
+
+[ ] 7.2 Inicia sesión con tu email y contraseña real (la que guardaste
+        en el Paso 3.5). YA NO existe la opción de entrar con la
+        "Llave Maestra" (clave API) — ahora siempre se entra con
+        email + contraseña, incluso como administrador.
+
+        Si no recuerdas la contraseña: en la pantalla de login, pulsa
+        "He olvidado mi llave de acceso", pon tu email, y sigue las
+        instrucciones que lleguen a tu correo.
+
+[ ] 7.3 Comprueba que ves tu colección, el catálogo, y el panel de
+        Configuración con normalidad.
+
+[ ] 7.4 Si usas el navegador desde un dispositivo NUEVO que nunca
+        había entrado antes, es normal que te salga un aviso de
+        "dispositivo no autorizado" la primera vez — recibirás un
+        aviso en Telegram (si lo tienes configurado) y tendrás que
+        aprobarlo desde el panel de administración, como ya era antes.
+        Tus dispositivos que ya estaban aprobados de antes seguirán
+        funcionando sin pedir nada nuevo.
+
+
+--------------------------------------------------------------------
+PASO 8 — Cuando todo esté verificado y funcionando unos días
+--------------------------------------------------------------------
+[ ] 8.1 Fusiona la rama a tu rama principal, para que quede como la
+        versión oficial del proyecto:
+
+            git checkout main
+            git merge refactor/aaa-uplift
+            git push
+
+        (Solo haz esto cuando ya hayas comprobado que todo funciona
+        bien en producción durante unos días — no hay prisa.)
+
+
+====================================================================
+PARTE B — MEJORAS OPCIONALES PARA MÁS ADELANTE (no urgentes)
+====================================================================
+>>> NOTA (2026-07-21): esta lista B.1–B.9 quedó CONSOLIDADA, priorizada
+>>> por olas de ejecución y verificada contra el código en:
+>>>     docs/REPORTE_MEJORAS_AAA.md  ->  sección "BACKLOG CONSOLIDADO Y
+>>>     PRIORIZADO". Úsala a ella como fuente única; lo de aquí abajo se
+>>>     mantiene solo como referencia histórica.
+>>>
+>>> ⚠️ ADEMÁS: tras el intento de acceso, la ROTACIÓN de secretos +
+>>> DESPLIEGUE (Parte A de arriba) pasó a ser lo MÁS urgente. Ver
+>>> "OLA 0" y "OLA 1" del backlog consolidado.
+
+Esto NO son tareas para ti, sino ideas para pedirle a una futura sesión
+de IA (yo mismo u otra) si en algún momento quieres seguir mejorando
+la aplicación. Las dejo anotadas aquí para no perderlas.
+
+[ ] B.1 El script "backup_db.ps1" (backup local) puede perder datos
+        recientes si la base de datos SQLite local está en modo "WAL"
+        en el momento de hacer la copia (lo descubrí probando la
+        migración: una copia simple del archivo, sin más, perdió
+        datos). Para producción no afecta (usa Supabase, no ese
+        script), pero convendría arreglar el script para que sea
+        siempre seguro.
+
+[ ] B.2 El endpoint que usa la extensión de Chrome para importar
+        productos de Wallapop (/api/wallapop/import) sigue sin pedir
+        ninguna autenticación, porque la extensión no envía ninguna
+        clave. El riesgo es bajo (solo mete candidatos en una cola que
+        un administrador revisa después), pero se podría dar a la
+        extensión su propia clave de acceso en el futuro.
+
+[ ] B.3 Quedan bastantes endpoints del backend (admin.py, products.py,
+        purgatory.py, scrapers.py, entre otros) sin un "contrato"
+        estricto de qué datos exactos devuelven (response_model). Se
+        hizo ya en users.py y dashboard.py; el resto queda pendiente,
+        documentado con más detalle en docs/REPORTE_MEJORAS_AAA.md.
+
+[ ] B.4 Terminar de trocear los 3 archivos gigantes del frontend
+        (Config.tsx 3072 líneas, Purgatory.tsx 2253 líneas, Catalog.tsx
+        1965 líneas) en piezas más pequeñas y manejables. Es la parte
+        más grande y lenta de todo el plan — por eso quedó para el
+        final. NOTA: el router real (que sí quedó terminado, ver abajo)
+        ya soluciona el problema de rendimiento gordo; esto es sobre
+        todo para que el código sea más fácil de mantener a futuro.
+
+[x] B.5 Del bloque de "rendimiento visible" (Fase 4), ya hecho:
+        eliminadas 16 imágenes sin usar de frontend/src/assets (18 MB
+        → 412 KB), separadas las librerías grandes (React, gráficas,
+        animaciones) en sus propios paquetes cacheables, y precarga de
+        cada página al pasar el ratón por el menú lateral (antes de
+        hacer clic). Verificado en navegador real que no quedó ninguna
+        imagen rota.
+
+        Queda pendiente: virtualizar las listas largas del
+        catálogo/colección para que no se rendericen de golpe cientos
+        de tarjetas (toca Catalog.tsx, uno de los archivos grandes, por
+        eso se dejó para más adelante junto con B.4). También quedan
+        sin optimizar dos archivos de public/ (fuera del frontend/src
+        que se limpió): el favicon public/oraculo-logo.png (836 KB —
+        se podría comprimir, pero se mantiene en PNG a propósito
+        porque los favicons en WebP no funcionan bien en todos los
+        navegadores) y el audio public/theme.mp3 (8.2 MB — no es una
+        imagen, pero es el archivo más pesado de toda la app; podría
+        comprimirse a un bitrate menor si el sonido lo permite).
+
+[x] B.7 HECHO — las imágenes NUEVAS que vayan entrando (según los
+        scrapers descubran productos nuevos) ahora sí se convierten a
+        WebP automáticamente, no solo las que ya había en el proyecto:
+
+        Investigado a fondo: SÍ existe conversión automática a WebP en
+        el proyecto (src/application/services/storage_service.py, y sí
+        se ejecuta en GitHub Actions dos veces al día), pero SOLO cubre
+        las imágenes del importador antiguo basado en Excel/"colección
+        personal" — NO cubre el flujo principal de los ~17 scrapers de
+        tiendas (Amazon, eBay, Wallapop, etc.), que guardan la URL de
+        la imagen tal cual viene de la tienda, sin descargarla ni
+        convertirla nunca.
+
+        Implementado (sin tocar los 17 scrapers): el endpoint que ya
+        sirve las imágenes en caché
+        (src/interfaces/api/main.py::get_static_image_override) ahora,
+        si no encuentra la imagen ni en la ruta personalizada ni en la
+        caché local, descarga la imagen remota del producto, la
+        convierte a WebP con Pillow y la guarda en la caché local antes
+        de servirla — así se "rellena sola" la primera vez que se pide
+        cada imagen, ya no depende de relanzar a mano el script de
+        migración antiguo (scripts/phase0_migration.py). Si algo falla
+        (sin image_url, red caída, imagen inválida) cae al mismo 404 de
+        siempre, sin romper nada. Probado con 4 tests que ejercitan la
+        descarga+conversión+cacheo real (con red simulada, ya que la
+        base de datos local de desarrollo está vacía).
+
+[ ] B.6 Se detectó (probando en local, no afecta a lo que hice) que tu
+        base de datos SQLite LOCAL de desarrollo (oraculo.db) tiene una
+        tabla "offers" a la que le falta la columna "image_url" que sí
+        espera el código actual — esto hace que /api/products y
+        /api/dashboard/top-deals fallen con error 500 cuando pruebas en
+        tu propio ordenador. Es una base de datos local desactualizada
+        respecto al código, nada que ver con ninguno de mis cambios ni
+        con tu base de datos de producción (Supabase). Si algún día
+        quieres arreglar tu copia local: añade esa columna a mano con
+        `ALTER TABLE offers ADD COLUMN image_url VARCHAR;` en un
+        cliente SQLite, o simplemente no le des importancia si no usas
+        la copia local para nada serio.
+
+[ ] B.8 Se detectó (revisando warnings de los tests) que la función
+        "datetime.utcnow()" está marcada como obsoleta por Python y se
+        eliminará en una versión futura. El problema: NO es un solo
+        sitio, aparece en más de 40 puntos distintos del backend
+        (scrapers, el "pipeline" que procesa ofertas, notificaciones,
+        etc.). Arreglarlo bien implica revisar caso por caso si esa
+        fecha se compara con otra (para no mezclar fechas "con zona
+        horaria" y "sin zona horaria", que es un error clásico de
+        Python que puede romper comparaciones). Por eso no lo toqué
+        ahora — es un barrido grande, no un arreglo de una línea. No es
+        urgente (sigue funcionando, solo avisa), pero conviene
+        abordarlo en una sesión dedicada antes de que una versión
+        futura de Python lo elimine de verdad.
+
+[ ] B.9 Revisar por completo "docs/DOCUMENTACION_MAESTRA.md" (617
+        líneas) y "docs/MASTER_ROADMAP.md" (549 líneas) — hoy solo se
+        revisaron con búsquedas dirigidas de términos concretos que ya
+        sabía que habían cambiado (clave de API, CORS), no leídos de
+        principio a fin. Es posible que queden otras afirmaciones
+        desactualizadas sin descubrir (arquitectura, flujos de auth,
+        variables de entorno) que solo aparecerían leyendo el documento
+        completo con calma. Necesita una sesión con presupuesto de
+        sobra, ya que son documentos muy largos.
+
+
+====================================================================
+RESUMEN EN UNA FRASE POR CADA PASO (para repasar rápido)
+====================================================================
+1. Haz backups (local y Supabase).
+2. Trae la rama refactor/aaa-uplift a la máquina con Docker.
+3. Cambia las contraseñas/claves reales en el .env de producción.
+4. Comprueba en Supabase que la BD nunca usó Alembic (debe dar "false").
+5. Aplica la migración de base de datos con los 2 comandos de Alembic.
+6. Despliega con docker compose up -d --build.
+7. Entra a la web, haz login con tu contraseña real, comprueba que todo
+   funciona.
+8. Cuando lleves unos días sin problemas, fusiona la rama a main.

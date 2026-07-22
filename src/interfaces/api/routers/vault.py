@@ -4,14 +4,35 @@ import io
 import zipfile
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 from loguru import logger
 
 from src.infrastructure.database_cloud import SessionCloud
 from src.core.config import settings
+from src.interfaces.api.deps import require_admin
+from src.interfaces.api.schemas import StatusMessageOutput
 
-router = APIRouter(tags=["vault"])
+router = APIRouter(tags=["vault"], dependencies=[Depends(require_admin)])
+
+# Fase AAA-1.3: /api/vault/stage aceptaba un `file_path` arbitrario del cliente
+# y lo abría directamente (path traversal / lectura de cualquier fichero legible
+# por el proceso). Ahora solo admite un NOMBRE de fichero, resuelto siempre
+# dentro de este directorio de cuarentena — nunca fuera de él.
+_VAULT_STAGING_DIR = Path("backups/vaults").resolve()
+_VAULT_STAGING_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _resolve_staged_file(filename: str) -> Path:
+    """Resuelve `filename` dentro de _VAULT_STAGING_DIR, rechazando cualquier intento de escapar del directorio."""
+    if not filename or "/" in filename or "\\" in filename or filename in (".", ".."):
+        raise HTTPException(status_code=400, detail="Nombre de archivo inválido.")
+    candidate = (_VAULT_STAGING_DIR / filename).resolve()
+    if _VAULT_STAGING_DIR not in candidate.parents and candidate != _VAULT_STAGING_DIR:
+        raise HTTPException(status_code=400, detail="Ruta fuera del directorio de cuarentena permitido.")
+    if not candidate.exists():
+        raise HTTPException(status_code=400, detail="Archivo no encontrado en cuarentena.")
+    return candidate
 
 
 @router.get("/api/vault/generate")
@@ -31,23 +52,22 @@ async def api_generate_vault(user_id: int = 2):
             raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/api/vault/stage")
-async def api_stage_vault(user_id: int = 2, file_path: str = None):
+@router.post("/api/vault/stage", response_model=StatusMessageOutput)
+async def api_stage_vault(user_id: int = 2, filename: str = None):
     from src.application.services.vault_service import VaultService
     from src.domain.models import StagedImportModel
 
-    if not file_path or not os.path.exists(file_path):
-        raise HTTPException(status_code=400, detail="Archivo no encontrado.")
+    staged_path = _resolve_staged_file(filename)
 
     vault_service = VaultService()
     try:
-        vault_service.stage_vault_import(user_id, file_path)
+        vault_service.stage_vault_import(user_id, str(staged_path))
         with SessionCloud() as db:
             stage = StagedImportModel(
                 user_id=user_id,
                 import_type="VAULT",
                 status="PENDING",
-                data_payload=json.dumps({"source_file": file_path}),
+                data_payload=json.dumps({"source_file": str(staged_path)}),
                 impact_summary="Importación de Bóveda SQLite detectada. Pendiente de auditoría del Arquitecto.",
             )
             db.add(stage)
@@ -57,7 +77,7 @@ async def api_stage_vault(user_id: int = 2, file_path: str = None):
         raise HTTPException(status_code=403, detail=f"Shield Protocol Bloqueó Infección: {str(e)}")
 
 
-@router.post("/api/excel/sync")
+@router.post("/api/excel/sync", response_model=StatusMessageOutput)
 async def api_sync_excel(user_id: int = 2):
     from src.application.services.excel_manager import ExcelManager
     from src.domain.models import UserModel

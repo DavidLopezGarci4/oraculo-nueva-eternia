@@ -59,12 +59,18 @@ Implementación de lógica de negocio siguiendo **Clean Architecture**.
 
 ## 4. Interfaz de Usuario (frontend/)
 
-Ecosistema moderno en React.
+Ecosistema moderno en React 19 + Vite 7, con `react-router-dom` para routing real (Fase AAA 3.1 — cada ruta monta/desmonta su página, ya no hay `activeTab` + keep-alive).
 
-- **src/pages/**: Vistas principales (`Dashboard`, `Catalog`, `Fortress`, `Purgatory`, `VintageMiscellaneous`).
-- **src/components/**: Componentes atómicos y tácticos (`ItemCard`, `ScraperLogs`).
-- **src/api/**: Clientes para la comunicación con el FastAPI Broker.
-- **App.tsx**: Nodo maestro de estado y gestión reactiva de identidad (User State Lifting).
+- **src/pages/**: Vistas principales, montadas por ruta (`Dashboard`, `Catalog`, `Collection`, `Purgatory`, `Config`, `VintageMiscellaneous`, `Auctions`, `Showcase`, `LoginPage`, `MasterLogin`). Tras la Ola 4a de la Fase AAA (2026-07-21) actúan como orquestadores de estado/efectos, no como "God Components": `Config.tsx` (886 líneas, antes 3101), `Purgatory.tsx` (923, antes 2276) y `Catalog.tsx` (887, antes 1965).
+- **src/components/**: Componentes por dominio:
+  - **components/config/** (11 archivos, extraídos de `Config.tsx`): `AddUserModal`, `ResetConfirmModal`, `IpLogsModal`, `VintageCalibratorModal`, `ModernCalibratorModal`, `UsersTab`, `SystemTab`, `InventoryTab`, `ScrapersTab`, `configHelpers.ts`.
+  - **components/purgatory/** (5 archivos, extraídos de `Purgatory.tsx`): `SwipeCard` (modo mazo), `ForensicModal`, `VintageClassifyModal`, `PurgatoryToolbar`, `PurgatoryListView`.
+  - **components/catalog/** (8 archivos, extraídos de `Catalog.tsx`): `CustomTooltip`, `catalogHelpers.ts`, `CronosView`, `ProductDetailModal`, `EditProductModal`, `FullscreenImageModal`, `VintageSyncModal`, `ProductCard`.
+  - **components/admin/**, **components/auth/**, **components/cart/**, **components/layout/**, **components/products/**, **components/ui/**: componentes atómicos y tácticos preexistentes (`ItemCard`, `ScraperLogs`, `PowerSwordLoader`, `MOTUImage`, `FoilTiltCard`, `QuickPreviewModal`, etc.).
+  - Patrón de extracción usado en config/purgatory/catalog: mecánico 1:1 (mismo estado/handlers vía props, sin re-arquitecturar la lógica de negocio de la página padre) — deliberado, para minimizar riesgo de regresión. Detalle completo y gaps de verificación honestos en [REPORTE_MEJORAS_AAA.md](../REPORTE_MEJORAS_AAA.md) Ola 4a.
+- **src/hooks/**: Hooks compartidos, incluye `useModalA11y.ts` (foco atrapado, Escape, `role="dialog"`/`"alertdialog"` — aplicado a los 10 modales de la app en la Fase AAA 3c).
+- **src/api/**: Clientes para la comunicación con el FastAPI Broker. `client.ts` (Fase AAA-1) registra sus interceptores (`Authorization: Bearer <jwt>`, `X-Device-ID`, limpieza de sesión ante 401) sobre el objeto **`axios` global** — `main.tsx` lo importa una vez al arrancar (`import './api/client'`), así que **todo** módulo que haga `import axios from 'axios'` recibe la auth igual, aunque no importe `client.ts` explícitamente. Solo `dashboard.ts` y `wallapop.ts` usan hoy la instancia nombrada `apiClient` (con `baseURL: '/api'` preconfigurada); el resto (`collection.ts`, `products.ts`, `cart.ts`, etc.) siguen redeclarando `const API_BASE_URL = '/api'` y usando el axios plano — funciona igual, es cuestión de consistencia/DRY (Fase 3.4 del backlog AAA), **no un hueco de seguridad ni de autenticación**.
+- **App.tsx**: Nodo maestro de estado y gestión reactiva de identidad (User State Lifting), rutas (`react-router-dom`) y lazy-loading por página.
 
 ---
 
@@ -118,7 +124,9 @@ Audit realizado sobre `frontend/src/api/`. Los siguientes endpoints tienen imple
 
 ## 8. Tests (tests/)
 
-Suite de tests unitarios y de integración ejecutada con **pytest**:
+`pyproject.toml` limita qué recoge `pytest` por defecto: `testpaths = ["tests"]` + `python_files = ["test_api_*.py"]` — **solo se ejecutan los ficheros cuyo nombre empieza literalmente por `test_api_`.** Verificado con `pytest tests/ --collect-only` (2026-07-21): 63 tests en 10 archivos, exactamente los de la tabla de abajo. Cualquier `test_*.py` que no encaje en ese patrón **existe en el repo pero no corre en CI ni en un `pytest` normal**, aunque esté dentro de `tests/integration/` o `tests/unit/` — es una trampa fácil de pisar si añades un test nuevo y le pones un nombre que no empieza por `test_api_`.
+
+### Recogidos por pytest (63 tests, 0 fallos)
 
 | Archivo | Cobertura / Tipo | Propósito |
 | :--- | :--- | :--- |
@@ -129,13 +137,23 @@ Suite de tests unitarios y de integración ejecutada con **pytest**:
 | `tests/integration/test_api_permissions.py` | Integración (API) | API key guard, device guard, endpoints públicos, dashboard stats. |
 | `tests/integration/test_api_showcase.py` | Integración (API) | Control de acceso y privacidad del Santuario (showcase público). |
 | `tests/integration/test_api_image_cache.py` | Integración (API) | Endpoints de descarga, estado y cancelación del caché local de imágenes. |
-| `tests/integration/test_phase0_migration.py` | Integración (DB) | Migraciones de base de datos e integridad estructural. |
+| `tests/integration/test_api_purgatory_bulk.py` | Integración (API) | Match masivo/bulk de items del Purgatorio contra el catálogo real. |
+| `tests/integration/test_api_response_schemas.py` | Integración (API) | Contratos `response_model` (Fase AAA-2.2): confirma que el schema Pydantic declarado coincide de verdad con lo que devuelve cada handler contra datos reales de la sesión de test compartida (no solo BD vacía). |
 | `tests/unit/test_api_motu_relevance.py` | Unitario (Core) | Filtros de relevancia y descarte heurístico para figuras clásicas MOTU. |
 | `tests/unit/test_api_telegram_alerts.py` | Unitario (Alertas) | Envío y coincidencia de alertas multi-usuario (Wishlist, precios, vintage). |
-| `tests/unit/test_matcher_precision.py` | Unitario (Matching) | Precisión de tokens y emparejamiento semántico del vinculador. |
-| `tests/unit/test_specific_purgatory_cases.py` | Unitario (Matching) | Casos extremos y resoluciones conflictivas en Purgatorio. |
 
-Ejecutar: `.venv\Scripts\python -m pytest` (33 tests, 0 fallos)
+### ⚠️ Existen pero NO los recoge `pytest` por defecto (nombre no empieza por `test_api_`)
+
+| Archivo | Motivo | Cómo correrlo si hace falta |
+| :--- | :--- | :--- |
+| `tests/integration/test_phase0_migration.py` | Migraciones de BD e integridad estructural | ⚠️ **`test_migration_logic` FALLA hoy** (`AttributeError: 'NoneType' object has no attribute 'acquired'`) al ejecutarlo explícito — no arreglar el filtro de pytest sin revisar este fallo primero |
+| `tests/unit/test_matcher_precision.py` | Precisión de tokens/emparejamiento semántico del vinculador | `pytest tests/unit/test_matcher_precision.py` explícito |
+| `tests/unit/test_specific_purgatory_cases.py` | Casos extremos y resoluciones conflictivas en Purgatorio | `pytest tests/unit/test_specific_purgatory_cases.py` explícito |
+| `tests/unit/test_wallapop_signed_api.py` | Firma/autenticación de la API interna de Wallapop | `pytest tests/unit/test_wallapop_signed_api.py` explícito |
+| `tests/test_compactation.py` | Script exploratorio | — |
+| `tests/scripts/test_*.py` (4 archivos) | Pruebas manuales contra scrapers reales (Vinted/Wallapop) | Requieren red/credenciales, no pensados para CI |
+
+Ejecutar la suite real: `.venv\Scripts\python -m pytest tests/` (**63 tests, 0 fallos** — verificado 2026-07-21 tras el bump de dependencias de Ola 5). Si quieres correr también los de la segunda tabla, pásalos explícitos por ruta (el filtro de `python_files` no aplica cuando nombras el archivo directamente).
 
 ---
 
@@ -217,4 +235,7 @@ Ejecutar: `.venv\Scripts\python -m pytest` (33 tests, 0 fallos)
   - Conmutador manual de rendimiento ("Efectos Clásicos" vs "Activados") para conmutar los cálculos de cursor 3D en la GPU.
   - Índices de rendimiento en base de datos local y recálculo masivo de estadísticas para 519 productos, reactivando el Radar de Oportunidades.
 
-*Última actualización: 2026-07-19 - Phase 81: Nexo de Fusión Divina, Scroll Infinito y Optimización de Rendimiento Extremo.*
+- **Fase AAA — Ola 4a (2026-07-21)**: troceados `Config.tsx`/`Purgatory.tsx`/`Catalog.tsx` en 24 componentes nuevos (§4). Ver [REPORTE_MEJORAS_AAA.md](../REPORTE_MEJORAS_AAA.md) para el detalle completo y los gaps de verificación.
+- **Fase AAA — Ola 5 (2026-07-21)**: `pip-audit` corrió por primera vez y corrigió 20 CVEs conocidos (`PyJWT`, `pydantic-settings`, `starlette`/`fastapi`). Hallazgo adicional durante la revisión documental: 4 archivos de test existen pero no los recoge `pytest`/CI por el filtro `python_files` de `pyproject.toml` (§8), y uno de ellos (`test_phase0_migration.py::test_migration_logic`) falla al ejecutarlo explícito.
+
+*Última actualización: 2026-07-21 - Fase AAA Ola 4a/5: troceo de monolitos frontend + auditoría de dependencias.*

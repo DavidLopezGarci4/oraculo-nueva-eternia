@@ -29,16 +29,52 @@ from src.interfaces.api.routers import (
 import asyncio
 from contextlib import asynccontextmanager
 
+# Fase AAA-2.5: antes, el listener de Telegram se lanzaba con un
+# asyncio.create_task() sin supervisión — si moría por una excepción que
+# escapara a su propio bucle interno, quedaba muerto en silencio hasta el
+# siguiente reinicio del servidor, sin ningún rastro en logs. Este wrapper lo
+# reinicia con backoff ante fallos inesperados, y se rinde (dejando un
+# CRITICAL bien visible) tras varios intentos consecutivos fallidos en vez de
+# reintentar para siempre.
+_TELEGRAM_MAX_CONSECUTIVE_FAILURES = 5
+_TELEGRAM_RESTART_BACKOFF_SECONDS = 15
+
+
+async def _supervised_telegram_listener():
+    from src.infrastructure.services.telegram_listener import telegram_listener
+
+    consecutive_failures = 0
+    while True:
+        try:
+            await telegram_listener.start_polling()
+            # Retorno limpio (stop_polling() llamado deliberadamente): no reiniciar.
+            return
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            consecutive_failures += 1
+            logger.error(
+                f"📡 Telegram Listener murió inesperadamente (fallo {consecutive_failures}/"
+                f"{_TELEGRAM_MAX_CONSECUTIVE_FAILURES}): {e}"
+            )
+            if consecutive_failures >= _TELEGRAM_MAX_CONSECUTIVE_FAILURES:
+                logger.critical(
+                    "📡 Telegram Listener: demasiados fallos consecutivos. "
+                    "Dejando de reintentar hasta el próximo reinicio del servidor."
+                )
+                return
+            await asyncio.sleep(_TELEGRAM_RESTART_BACKOFF_SECONDS)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
         from src.infrastructure.database_cloud import init_cloud_db
         init_cloud_db()
         ensure_scrapers_registered()
-        
-        # Iniciar escucha de comandos de Telegram en segundo plano
-        from src.infrastructure.services.telegram_listener import telegram_listener
-        app.state.telegram_task = asyncio.create_task(telegram_listener.start_polling())
+
+        # Iniciar escucha de comandos de Telegram en segundo plano (supervisada)
+        app.state.telegram_task = asyncio.create_task(_supervised_telegram_listener())
     except Exception as e:
         logger.error(f"Startup initialization failed: {e}")
     yield
@@ -55,15 +91,66 @@ import os
 
 app = FastAPI(title="Oráculo API Broker", version="1.0.0", lifespan=lifespan)
 
+async def _fetch_and_cache_product_image(product_id: int) -> "str | None":
+    """
+    Fase AAA-4.2 (B.7): rellena la caché local de imágenes bajo demanda.
+
+    Hasta ahora, la conversión a WebP solo pasaba por el importador antiguo
+    de Excel (storage_service.py, vía GitHub Actions) o por un script de
+    migración puntual (scripts/phase0_migration.py) que nadie vuelve a
+    ejecutar — las imágenes descubiertas por los ~17 scrapers de tiendas
+    nunca se descargaban ni convertían, solo se servía la URL remota tal
+    cual. Esta función descarga la imagen remota del producto, la convierte
+    a WebP (mismo patrón que storage_service.py/phase0_migration.py) y la
+    guarda en IMAGE_CACHE_DIR, para que la siguiente petición ya la sirva
+    desde caché local sin volver a descargarla.
+    """
+    from src.infrastructure.database_cloud import SessionCloud
+    from src.domain.models import ProductModel
+
+    with SessionCloud() as db:
+        product = db.query(ProductModel).filter(ProductModel.id == product_id).first()
+        image_url = product.image_url if product else None
+
+    if not image_url or not image_url.startswith("http"):
+        return None
+
+    dest_path = os.path.join(settings.IMAGE_CACHE_DIR, f"{product_id}.webp")
+    try:
+        import io
+
+        import httpx
+        from PIL import Image
+
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(image_url)
+            resp.raise_for_status()
+
+        with Image.open(io.BytesIO(resp.content)) as img:
+            if img.mode in ("RGBA", "LA"):
+                background = Image.new("RGB", img.size, (255, 255, 255))
+                background.paste(img, mask=img.split()[-1])  # último canal = alfa (RGBA o LA)
+                img = background
+            elif img.mode != "RGB":
+                img = img.convert("RGB")
+            img.save(dest_path, "WEBP", quality=85)
+
+        logger.info(f"📸 Imagen del producto {product_id} descargada y cacheada en WebP.")
+        return dest_path
+    except Exception as e:
+        logger.warning(f"⚠️ No se pudo descargar/cachear la imagen del producto {product_id}: {e}")
+        return None
+
+
 @app.get("/api/static/images/{product_id}.webp")
 async def get_static_image_override(product_id: int, source: str = None, user_id: int = 2):
     from fastapi.responses import FileResponse
     from fastapi import HTTPException
     from src.infrastructure.database_cloud import SessionCloud
     from src.domain.models import UserModel
-    
+
     extensions = [".webp", ".jpg", ".jpeg", ".png"]
-    
+
     # 1. Try custom path if not explicitly cache-only
     if source != "cache":
         with SessionCloud() as db:
@@ -75,14 +162,19 @@ async def get_static_image_override(product_id: int, source: str = None, user_id
                             file_path = os.path.join(custom_dir, f"{product_id}{ext}")
                             if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
                                 return FileResponse(file_path)
-                                
+
     # 2. Try server cache if not explicitly custom-only
     if source != "custom":
         for ext in extensions:
             server_cache_file = os.path.join(settings.IMAGE_CACHE_DIR, f"{product_id}{ext}")
             if os.path.exists(server_cache_file) and os.path.getsize(server_cache_file) > 0:
                 return FileResponse(server_cache_file)
-                
+
+        # 3. Cache miss: descarga + convierte + cachea automáticamente.
+        cached_path = await _fetch_and_cache_product_image(product_id)
+        if cached_path:
+            return FileResponse(cached_path)
+
     raise HTTPException(status_code=404, detail="Imagen no encontrada")
 
 # Mount local image cache directory
@@ -90,12 +182,14 @@ image_cache_dir = settings.IMAGE_CACHE_DIR
 os.makedirs(image_cache_dir, exist_ok=True)
 app.mount("/api/static/images", StaticFiles(directory=image_cache_dir), name="static_images")
 
+from src.core.config import get_cors_origins
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=get_cors_origins(),
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-API-Key", "X-Device-ID", "X-Device-Name"],
 )
 
 # ─── Global exception handlers ────────────────────────────────────────────────

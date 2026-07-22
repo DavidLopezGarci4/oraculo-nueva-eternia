@@ -1,17 +1,7 @@
-import axios from 'axios';
-import { ShieldIdentity } from './shield-identity';
+import { apiClient as adminAxios } from './client';
 
-const API_BASE = '/api';
-const API_KEY = import.meta.env.VITE_ORACULO_API_KEY || 'eternia-shield-2026';
-
-const adminAxios = axios.create({
-    baseURL: API_BASE,
-    headers: {
-        'X-API-Key': API_KEY,
-        'X-Device-ID': ShieldIdentity.getDeviceId(),
-        'X-Device-Name': ShieldIdentity.getDeviceName()
-    }
-});
+// La autenticación (JWT + huella de dispositivo) la aplica el interceptor central en './client'.
+// La API key de administración ya NO se incluye en el bundle del navegador.
 
 export interface ScraperStatus {
     spider_name: string;
@@ -191,6 +181,22 @@ export const syncExcel = async (userId: number = 2): Promise<{ status: string; m
     return response.data;
 };
 
+export const downloadImagesZip = async (): Promise<void> => {
+    // Fase AAA-1.3: el endpoint ahora exige admin (JWT), así que ya no puede
+    // descargarse con un simple window.open() sin cabeceras de auth.
+    const response = await adminAxios.get('/vault/download-images/zip', {
+        responseType: 'blob'
+    });
+    const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/zip' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'motu_images.zip');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+};
+
 export const exportCollectionExcel = async (userId: number = 2): Promise<void> => {
     const response = await adminAxios.get(`/guardian/export/excel?user_id=${userId}`, {
         responseType: 'blob'
@@ -248,6 +254,30 @@ export const saveSystemSwordConfigs = async (configs: any): Promise<{ status: st
 
 export const runSystemMaintenance = async (): Promise<{ status: string; message: string; stats: any }> => {
     const response = await adminAxios.post('/system/maintenance');
+    return response.data;
+};
+
+export interface Device {
+    id: number;
+    device_id: string;
+    device_name: string;
+    is_authorized: boolean;
+    created_at: string;
+    last_access_at: string | null;
+}
+
+export const getDevices = async (): Promise<Device[]> => {
+    const response = await adminAxios.get('/admin/devices');
+    return response.data;
+};
+
+export const authorizeDevice = async (deviceId: string): Promise<{ status: string; message: string }> => {
+    const response = await adminAxios.post(`/admin/devices/${encodeURIComponent(deviceId)}/authorize`);
+    return response.data;
+};
+
+export const deleteDevice = async (deviceId: string): Promise<{ status: string; message: string }> => {
+    const response = await adminAxios.delete(`/admin/devices/${encodeURIComponent(deviceId)}`);
     return response.data;
 };
 

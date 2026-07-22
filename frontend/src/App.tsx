@@ -1,5 +1,6 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from './components/layout/Sidebar';
 import Navbar from './components/layout/Navbar';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -9,6 +10,7 @@ import { getUserSettings, type Hero } from './api/admin';
 import PowerSwordLoader from './components/ui/PowerSwordLoader';
 import axios from 'axios';
 import CacheWelcomeModal from './components/ui/CacheWelcomeModal';
+import { clearSession, setUnauthorizedHandler } from './api/client';
 
 // Lazy-Loaded Page Components for Code Splitting
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -21,8 +23,55 @@ const VintageMiscellaneous = lazy(() => import('./pages/VintageMiscellaneous'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const Showcase = lazy(() => import('./pages/Showcase'));
 
+// Fase AAA-3.1: router real en vez de activeTab + "visitedTabs" mantenidos
+// vivos para siempre. Cada tab-id sigue existiendo (Sidebar/Navbar no se
+// tocan) pero ahora mapea a una ruta real; cada página monta/desmonta al
+// navegar, en vez de acumularse oculta en el DOM con sus queries activas.
+const TAB_PATHS: Record<string, string> = {
+  dashboard: '/',
+  catalog: '/catalog',
+  eternia: '/eternia',
+  auctions: '/auctions',
+  collection: '/collection',
+  fortaleza_vintage: '/fortaleza_vintage',
+  vintage_miscellaneous: '/vintage_miscellaneous',
+  purgatory: '/purgatory',
+  settings: '/settings',
+};
+
+const PATH_TO_TAB: Record<string, string> = Object.fromEntries(
+  Object.entries(TAB_PATHS).map(([tab, path]) => [path, tab])
+);
+
+// Fase AAA-4.4: al pasar el ratón por un enlace del sidebar, se dispara el
+// mismo import() dinámico que usa lazy() para esa página — el navegador ya
+// tiene el chunk descargado y parseado para cuando el usuario hace clic.
+const TAB_PREFETCH: Record<string, () => Promise<unknown>> = {
+  dashboard: () => import('./pages/Dashboard'),
+  catalog: () => import('./pages/Catalog'),
+  eternia: () => import('./pages/Catalog'),
+  auctions: () => import('./pages/Auctions'),
+  collection: () => import('./pages/Collection'),
+  fortaleza_vintage: () => import('./pages/Collection'),
+  vintage_miscellaneous: () => import('./pages/VintageMiscellaneous'),
+  purgatory: () => import('./pages/Purgatory'),
+  settings: () => import('./pages/Config'),
+};
+const _prefetched = new Set<string>();
+
 function App() {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const navigate = useNavigate();
+  const location = useLocation();
+  const activeTab = PATH_TO_TAB[location.pathname] ?? 'dashboard';
+  const setActiveTab = (tab: string) => navigate(TAB_PATHS[tab] ?? '/');
+  const handlePrefetch = (tab: string) => {
+    if (_prefetched.has(tab)) return;
+    _prefetched.add(tab);
+    TAB_PREFETCH[tab]?.().catch(() => {
+      // Si falla (p.ej. sin red), lo intentamos de nuevo en el próximo hover.
+      _prefetched.delete(tab);
+    });
+  };
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentUser, setCurrentUser] = useState<Hero | null>(null);
@@ -32,7 +81,6 @@ function App() {
   const [isSovereign, setIsSovereign] = useState<boolean>(localStorage.getItem('is_sovereign') === 'true');
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(localStorage.getItem('is_logged_in') === 'true');
   const [activeUserId, setActiveUserId] = useState<number>(parseInt(localStorage.getItem('active_user_id') || '2'));
-  const [visitedTabs, setVisitedTabs] = useState<Record<string, boolean>>({ dashboard: true });
   const [isIncognito, setIsIncognito] = useState<boolean>(() => localStorage.getItem('motu_incognito') === 'true');
   const [useLocalImages, setUseLocalImages] = useState<boolean>(() => localStorage.getItem('use_local_images') === 'true');
   const [bgDownloadEnabled, setBgDownloadEnabled] = useState<boolean>(() => localStorage.getItem('motu_background_download_enabled') === 'true');
@@ -75,18 +123,12 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (isLoggedIn || isSovereign) {
-      setVisitedTabs(prev => ({ ...prev, [activeTab]: true }));
-    }
-  }, [activeTab, isLoggedIn, isSovereign]);
-
-  useEffect(() => {
     const handleNavigate = () => {
-      setActiveTab('catalog');
+      navigate(TAB_PATHS.catalog);
     };
     window.addEventListener('navigate-to-catalog', handleNavigate);
     return () => window.removeEventListener('navigate-to-catalog', handleNavigate);
-  }, []);
+  }, [navigate]);
 
 
   const fetchUser = async (userId: number) => {
@@ -97,13 +139,29 @@ function App() {
       setCurrentUser(data);
     } catch (err: any) {
       console.error("Failed to fetch current user", err);
-      if (err.response?.status === 403) {
+      const status = err.response?.status;
+      if (status === 403) {
         setIsUnauthorized(true);
+      } else if (status === 401) {
+        // Sesión inexistente o token caducado → volver al login.
+        clearSession();
+        setIsLoggedIn(false);
+        setIsSovereign(false);
+        setCurrentUser(null);
       }
     } finally {
       setLoading(false);
     }
   };
+
+  // Cuando cualquier petición devuelve 401 (token inválido), cerramos sesión de forma global.
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      setIsLoggedIn(false);
+      setIsSovereign(false);
+      setCurrentUser(null);
+    });
+  }, []);
 
   useEffect(() => {
     if (isSovereign || isLoggedIn) {
@@ -213,16 +271,12 @@ function App() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('active_user_id');
-    localStorage.removeItem('is_sovereign');
-    localStorage.removeItem('is_logged_in');
-    localStorage.removeItem('user_email');
+    clearSession();
     setIsLoggedIn(false);
     setCurrentUser(null);
     setIsSovereign(false);
     setActiveUserId(2);
-    setVisitedTabs({ dashboard: true });
-    setActiveTab('dashboard');
+    navigate(TAB_PATHS.dashboard);
   };
 
   const handleIdentityChange = async (targetId?: number) => {
@@ -230,23 +284,15 @@ function App() {
     const newId = targetId || (activeUserId === 1 ? 2 : 1);
     localStorage.setItem('active_user_id', newId.toString());
     setActiveUserId(newId);
-    setVisitedTabs({ dashboard: true });
-    setActiveTab('dashboard');
+    navigate(TAB_PATHS.dashboard);
     queryClient.resetQueries();
     await fetchUser(newId);
   };
 
-  useEffect(() => {
-    if (currentUser) {
-      const isAdmin = currentUser.role === 'admin' || currentUser.username === 'David';
-      if (!isAdmin) {
-        const restrictedTabs = ['purgatory'];
-        if (restrictedTabs.includes(activeTab)) {
-          setActiveTab('dashboard');
-        }
-      }
-    }
-  }, [currentUser, activeTab]);
+  // Fase AAA-3.1: antes esto forzaba el tab de vuelta a 'dashboard' con un
+  // efecto reactivo; ahora es un guard declarativo directamente en la ruta
+  // /purgatory (ver <Routes> más abajo), sin necesidad de useEffect.
+  const isAdminUser = currentUser?.role === 'admin' || currentUser?.username === 'David';
 
   const [showMasterLogin, setShowMasterLogin] = useState(false);
 
@@ -313,6 +359,7 @@ function App() {
           onCloseMobile={() => setIsMobileMenuOpen(false)}
           user={currentUser}
           onLogout={handleLogout}
+          onPrefetch={handlePrefetch}
         />
 
         <div className="flex flex-1 flex-col overflow-hidden relative">
@@ -336,57 +383,30 @@ function App() {
             <div className="max-w-7xl mx-auto w-full">
               <ErrorBoundary>
                 <Suspense fallback={<PowerSwordLoader variant="fullScreen" text="Canalizando Poder..." />}>
-                  {visitedTabs['dashboard'] && (
-                    <div className={activeTab === 'dashboard' ? '' : 'hidden'}>
-                      <Dashboard 
-                        user={currentUser} 
-                      />
-                    </div>
-                  )}
-                  {visitedTabs['catalog'] && (
-                    <div className={activeTab === 'catalog' ? '' : 'hidden'}>
-                      <Catalog user={currentUser} searchQuery={searchQuery} isIncognito={isIncognito} />
-                    </div>
-                  )}
-                  {visitedTabs['eternia'] && (
-                    <div className={activeTab === 'eternia' ? '' : 'hidden'}>
-                      <Catalog user={currentUser} isVintageOnly={true} searchQuery={searchQuery} isIncognito={isIncognito} />
-                    </div>
-                  )}
-                  {visitedTabs['auctions'] && (
-                    <div className={activeTab === 'auctions' ? '' : 'hidden'}>
-                      <Auctions user={currentUser} />
-                    </div>
-                  )}
-                  {visitedTabs['collection'] && (
-                    <div className={activeTab === 'collection' ? '' : 'hidden'}>
-                      <Collection user={currentUser} searchQuery={searchQuery} isIncognito={isIncognito} />
-                    </div>
-                  )}
-                  {visitedTabs['fortaleza_vintage'] && (
-                    <div className={activeTab === 'fortaleza_vintage' ? '' : 'hidden'}>
-                      <Collection user={currentUser} isVintageOnly={true} searchQuery={searchQuery} isIncognito={isIncognito} />
-                    </div>
-                  )}
-                  {visitedTabs['vintage_miscellaneous'] && (
-                    <div className={activeTab === 'vintage_miscellaneous' ? '' : 'hidden'}>
-                      <VintageMiscellaneous user={currentUser} />
-                    </div>
-                  )}
-                  {visitedTabs['purgatory'] && (
-                    <div className={activeTab === 'purgatory' ? '' : 'hidden'}>
-                      <Purgatory />
-                    </div>
-                  )}
-                  {visitedTabs['settings'] && (
-                    <div className={activeTab === 'settings' ? '' : 'hidden'}>
-                      <Config
-                        user={currentUser}
-                        onUserUpdate={() => fetchUser(activeUserId)}
-                        onIdentityChange={handleIdentityChange}
-                      />
-                    </div>
-                  )}
+                  <Routes>
+                    <Route path={TAB_PATHS.dashboard} element={<Dashboard user={currentUser} />} />
+                    <Route path={TAB_PATHS.catalog} element={<Catalog user={currentUser} searchQuery={searchQuery} isIncognito={isIncognito} />} />
+                    <Route path={TAB_PATHS.eternia} element={<Catalog user={currentUser} isVintageOnly={true} searchQuery={searchQuery} isIncognito={isIncognito} />} />
+                    <Route path={TAB_PATHS.auctions} element={<Auctions user={currentUser} />} />
+                    <Route path={TAB_PATHS.collection} element={<Collection user={currentUser} searchQuery={searchQuery} isIncognito={isIncognito} />} />
+                    <Route path={TAB_PATHS.fortaleza_vintage} element={<Collection user={currentUser} isVintageOnly={true} searchQuery={searchQuery} isIncognito={isIncognito} />} />
+                    <Route path={TAB_PATHS.vintage_miscellaneous} element={<VintageMiscellaneous user={currentUser} />} />
+                    <Route
+                      path={TAB_PATHS.purgatory}
+                      element={isAdminUser ? <Purgatory /> : <Navigate to={TAB_PATHS.dashboard} replace />}
+                    />
+                    <Route
+                      path={TAB_PATHS.settings}
+                      element={(
+                        <Config
+                          user={currentUser}
+                          onUserUpdate={() => fetchUser(activeUserId)}
+                          onIdentityChange={handleIdentityChange}
+                        />
+                      )}
+                    />
+                    <Route path="*" element={<Navigate to={TAB_PATHS.dashboard} replace />} />
+                  </Routes>
                 </Suspense>
               </ErrorBoundary>
             </div>

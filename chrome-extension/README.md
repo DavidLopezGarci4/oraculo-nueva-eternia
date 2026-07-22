@@ -25,7 +25,8 @@
 2. **Configura la URL del servidor**:
    - Local: `http://localhost:8000`
    - Docker: `http://tu-ip-local:8000`
-3. **Guarda la configuración**
+3. **Configura la Clave de la Extensión**: el mismo valor que `EXTENSION_API_KEY` en el `.env` del backend (distinta de `ORACULO_API_KEY`, esta es de bajo privilegio y solo habilita el import de Wallapop)
+4. **Guarda la configuración**
 
 ---
 

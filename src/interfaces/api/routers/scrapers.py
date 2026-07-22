@@ -1,7 +1,7 @@
 import asyncio
 import os
 import threading
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 import psutil
@@ -12,7 +12,16 @@ from sqlalchemy import desc
 from src.domain.models import ScraperExecutionLogModel, ScraperStatusModel, WallapopIpLogModel
 from src.infrastructure.database_cloud import SessionCloud
 from src.interfaces.api.deps import verify_api_key
-from src.interfaces.api.schemas import ScraperRunRequest
+from src.interfaces.api.schemas import (
+    ScraperRunRequest,
+    ScraperStatusOutput,
+    ScraperExecutionLogOutput,
+    RunScraperOutput,
+    StopScrapersOutput,
+    WallapopIpLogOutput,
+    WallapopManualHtmlImportOutput,
+)
+from typing import List
 
 router = APIRouter(prefix="/api/scrapers", tags=["scrapers"])
 
@@ -52,7 +61,7 @@ def run_scraper_task(
                 status = ScraperStatusModel(spider_name=spider_name)
                 db.add(status)
             status.status = "running"
-            status.start_time = datetime.utcnow()
+            status.start_time = datetime.now(timezone.utc).replace(tzinfo=None)
 
             execution_log = ScraperExecutionLogModel(
                 spider_name=spider_name,
@@ -203,7 +212,7 @@ def run_scraper_task(
             )
             if status:
                 status.status = "completed"
-                status.end_time = datetime.utcnow()
+                status.end_time = datetime.now(timezone.utc).replace(tzinfo=None)
 
             log = (
                 db.query(ScraperExecutionLogModel)
@@ -212,7 +221,7 @@ def run_scraper_task(
             )
             if log:
                 log.status = "success"
-                log.end_time = datetime.utcnow()
+                log.end_time = datetime.now(timezone.utc).replace(tzinfo=None)
                 log.items_found = items_found
                 log.new_items = new_items if new_items is not None else 0
 
@@ -237,13 +246,13 @@ def run_scraper_task(
             )
             if log:
                 log.status = "error"
-                log.end_time = datetime.utcnow()
+                log.end_time = datetime.now(timezone.utc).replace(tzinfo=None)
                 log.error_message = str(e)
 
             db.commit()
 
 
-@router.get("/status", dependencies=[Depends(verify_api_key)])
+@router.get("/status", response_model=List[ScraperStatusOutput], dependencies=[Depends(verify_api_key)])
 async def get_scrapers_status():
     """Retorna el estado actual de los recolectores (Admin Only)"""
     with SessionCloud() as db:
@@ -258,7 +267,7 @@ async def get_scrapers_status():
         )
 
 
-@router.get("/logs", dependencies=[Depends(verify_api_key)])
+@router.get("/logs", response_model=List[ScraperExecutionLogOutput], dependencies=[Depends(verify_api_key)])
 async def get_scrapers_logs():
     """Retorna el historial de ejecuciones (Admin Only)"""
     with SessionCloud() as db:
@@ -270,7 +279,7 @@ async def get_scrapers_logs():
         )
 
 
-@router.post("/run", dependencies=[Depends(verify_api_key)])
+@router.post("/run", response_model=RunScraperOutput, dependencies=[Depends(verify_api_key)])
 async def run_scrapers(request: ScraperRunRequest, background_tasks: BackgroundTasks):
     """Inicia la recolección de reliquias en segundo plano (Admin Only)"""
     # 1. Marcar inicio en la base de datos y crear Log
@@ -284,7 +293,7 @@ async def run_scrapers(request: ScraperRunRequest, background_tasks: BackgroundT
             status = ScraperStatusModel(spider_name=request.spider_name)
             db.add(status)
         status.status = "running"
-        status.start_time = datetime.utcnow()
+        status.start_time = datetime.now(timezone.utc).replace(tzinfo=None)
 
         execution_log = ScraperExecutionLogModel(
             spider_name=request.spider_name,
@@ -307,7 +316,7 @@ async def run_scrapers(request: ScraperRunRequest, background_tasks: BackgroundT
     }
 
 
-@router.post("/stop", dependencies=[Depends(verify_api_key)])
+@router.post("/stop", response_model=StopScrapersOutput, dependencies=[Depends(verify_api_key)])
 async def stop_scrapers():
     """
     Protocolo de Emergencia: Mata procesos de scrapers activos y resetea estados en BD.
@@ -341,14 +350,14 @@ async def stop_scrapers():
         with SessionCloud() as db:
             db.query(ScraperStatusModel).filter(
                 ScraperStatusModel.status == "running"
-            ).update({"status": "stopped", "end_time": datetime.utcnow()})
+            ).update({"status": "stopped", "end_time": datetime.now(timezone.utc).replace(tzinfo=None)})
 
             db.query(ScraperExecutionLogModel).filter(
                 ScraperExecutionLogModel.status == "running"
             ).update(
                 {
                     "status": "stopped",
-                    "end_time": datetime.utcnow(),
+                    "end_time": datetime.now(timezone.utc).replace(tzinfo=None),
                     "error_message": "PARADA DE EMERGENCIA: Acción forzada por el Arquitecto",
                 }
             )
@@ -371,7 +380,7 @@ async def stop_scrapers():
         )
 
 
-@router.get("/wallapop/ip-logs", dependencies=[Depends(verify_api_key)])
+@router.get("/wallapop/ip-logs", response_model=List[WallapopIpLogOutput], dependencies=[Depends(verify_api_key)])
 async def get_wallapop_ip_logs():
     """Retorna el historial de logs de IP de Wallapop (Admin Only)"""
     with SessionCloud() as db:
@@ -423,7 +432,7 @@ async def download_wallapop_ip_logs():
 
 from typing import Optional
 
-@router.post("/wallapop/import-manual-html", dependencies=[Depends(verify_api_key)])
+@router.post("/wallapop/import-manual-html", response_model=WallapopManualHtmlImportOutput, dependencies=[Depends(verify_api_key)])
 async def import_wallapop_manual_html(file: Optional[UploadFile] = File(None)):
     """Parsea el archivo local o subido data/wallapop_search.html e inserta los artículos nuevos en el Purgatorio."""
     import os
@@ -568,7 +577,7 @@ async def import_wallapop_manual_html(file: Optional[UploadFile] = File(None)):
                 shop_name="Wallapop",
                 image_url=offer["image_url"],
                 source_type="Peer-to-Peer",
-                found_at=datetime.utcnow()
+                found_at=datetime.now(timezone.utc).replace(tzinfo=None)
             )
             db.add(pending)
             saved_count += 1

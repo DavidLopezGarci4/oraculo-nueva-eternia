@@ -1,14 +1,9 @@
-import axios from 'axios';
+import { apiClient } from './client';
 
-const API_BASE = '/api';
-// Nota: En una app real, esto vendría de un estado global o .env
-const ORACULO_API_KEY = import.meta.env.VITE_ORACULO_API_KEY || 'eternia-shield-2026';
-
-const adminHeaders = {
-    headers: {
-        'X-API-Key': ORACULO_API_KEY
-    }
-};
+const API_BASE = '';
+// Autenticación centralizada (JWT) en './client'. Sin API key en el navegador.
+// `adminHeaders` se mantiene como objeto vacío para no romper las llamadas existentes.
+const adminHeaders = {};
 
 export interface PendingItemSuggestion {
     product_id: number;
@@ -52,12 +47,12 @@ export interface ScraperExecutionLog {
 }
 
 export const getPurgatory = async (): Promise<PendingItem[]> => {
-    const response = await axios.get(`${API_BASE}/purgatory`, adminHeaders);
+    const response = await apiClient.get(`${API_BASE}/purgatory`, adminHeaders);
     return response.data;
 };
 
 export const matchItem = async (pendingId: number, productId: number) => {
-    const response = await axios.post(`${API_BASE}/purgatory/match`, {
+    const response = await apiClient.post(`${API_BASE}/purgatory/match`, {
         pending_id: pendingId,
         product_id: productId
     }, adminHeaders);
@@ -65,7 +60,7 @@ export const matchItem = async (pendingId: number, productId: number) => {
 };
 
 export const discardItem = async (pendingId: number, reason: string = 'manual_discard') => {
-    const response = await axios.post(`${API_BASE}/purgatory/discard`, {
+    const response = await apiClient.post(`${API_BASE}/purgatory/discard`, {
         pending_id: pendingId,
         reason
     }, adminHeaders);
@@ -73,7 +68,7 @@ export const discardItem = async (pendingId: number, reason: string = 'manual_di
 };
 
 export const discardItemsBulk = async (pendingIds: number[], reason: string = 'manual_bulk_discard') => {
-    const response = await axios.post(`${API_BASE}/purgatory/discard/bulk`, {
+    const response = await apiClient.post(`${API_BASE}/purgatory/discard/bulk`, {
         pending_ids: pendingIds,
         reason
     }, adminHeaders);
@@ -81,17 +76,17 @@ export const discardItemsBulk = async (pendingIds: number[], reason: string = 'm
 };
 
 export const matchItemsBulk = async (matches: { pending_id: number, product_id: number }[]) => {
-    const response = await axios.post(`${API_BASE}/purgatory/match/bulk`, { matches }, adminHeaders);
+    const response = await apiClient.post(`${API_BASE}/purgatory/match/bulk`, { matches }, adminHeaders);
     return response.data;
 };
 
 export const getScrapersStatus = async (): Promise<ScraperStatus[]> => {
-    const response = await axios.get(`${API_BASE}/scrapers/status`, adminHeaders);
+    const response = await apiClient.get(`${API_BASE}/scrapers/status`, adminHeaders);
     return response.data;
 };
 
 export const runScrapers = async (spiderName: string = 'all', triggerType: string = 'manual', query?: string) => {
-    const response = await axios.post(`${API_BASE}/scrapers/run`, {
+    const response = await apiClient.post(`${API_BASE}/scrapers/run`, {
         spider_name: spiderName,
         trigger_type: triggerType,
         query: query || null
@@ -100,22 +95,22 @@ export const runScrapers = async (spiderName: string = 'all', triggerType: strin
 };
 
 export const getScraperLogs = async (): Promise<ScraperExecutionLog[]> => {
-    const response = await axios.get(`${API_BASE}/scrapers/logs`, adminHeaders);
+    const response = await apiClient.get(`${API_BASE}/scrapers/logs`, adminHeaders);
     return response.data;
 };
 
 export const stopScrapers = async () => {
-    const response = await axios.post(`${API_BASE}/scrapers/stop`, {}, adminHeaders);
+    const response = await apiClient.post(`${API_BASE}/scrapers/stop`, {}, adminHeaders);
     return response.data;
 };
 
 export const resetSmartMatches = async () => {
-    const response = await axios.post(`${API_BASE}/admin/reset-smartmatches`, {}, adminHeaders);
+    const response = await apiClient.post(`${API_BASE}/admin/reset-smartmatches`, {}, adminHeaders);
     return response.data;
 };
 
 export const matchVintageItem = async (pendingId: number, customName?: string, productId?: number, isVintage: boolean = true, subCategory?: string) => {
-    const response = await axios.post(`${API_BASE}/purgatory/${pendingId}/vintage`, {
+    const response = await apiClient.post(`${API_BASE}/purgatory/${pendingId}/vintage`, {
         custom_name: customName,
         product_id: productId,
         is_vintage: isVintage,
@@ -125,7 +120,7 @@ export const matchVintageItem = async (pendingId: number, customName?: string, p
 };
 
 export const revertVintageItem = async (offerId: number) => {
-    const response = await axios.post(`${API_BASE}/vintage/revert-offer/${offerId}`, {}, adminHeaders);
+    const response = await apiClient.post(`${API_BASE}/vintage/revert-offer/${offerId}`, {}, adminHeaders);
     return response.data;
 };
 
@@ -144,22 +139,22 @@ export interface VintageMiscellaneousItem {
 }
 
 export const matchMiscellaneousItem = async (pendingId: number) => {
-    const response = await axios.post(`${API_BASE}/purgatory/${pendingId}/miscellaneous`, {}, adminHeaders);
+    const response = await apiClient.post(`${API_BASE}/purgatory/${pendingId}/miscellaneous`, {}, adminHeaders);
     return response.data;
 };
 
 export const revertMiscellaneousItem = async (itemId: number) => {
-    const response = await axios.post(`${API_BASE}/vintage/miscellaneous/revert/${itemId}`, {}, adminHeaders);
+    const response = await apiClient.post(`${API_BASE}/vintage/miscellaneous/revert/${itemId}`, {}, adminHeaders);
     return response.data;
 };
 
 export const getMiscellaneousItems = async (): Promise<VintageMiscellaneousItem[]> => {
-    const response = await axios.get(`${API_BASE}/vintage/miscellaneous`, adminHeaders);
+    const response = await apiClient.get(`${API_BASE}/vintage/miscellaneous`, adminHeaders);
     return response.data;
 };
 
 export const deleteMiscellaneousItem = async (itemId: number) => {
-    const response = await axios.delete(`${API_BASE}/vintage/miscellaneous/${itemId}`, adminHeaders);
+    const response = await apiClient.delete(`${API_BASE}/vintage/miscellaneous/${itemId}`, adminHeaders);
     return response.data;
 };
 
@@ -175,12 +170,12 @@ export interface WallapopIpLog {
 }
 
 export const getWallapopIpLogs = async (): Promise<WallapopIpLog[]> => {
-    const response = await axios.get(`${API_BASE}/scrapers/wallapop/ip-logs`, adminHeaders);
+    const response = await apiClient.get(`${API_BASE}/scrapers/wallapop/ip-logs`, adminHeaders);
     return response.data;
 };
 
 export const downloadWallapopIpLogs = async (): Promise<void> => {
-    const response = await axios.get(`${API_BASE}/scrapers/wallapop/ip-logs/download`, {
+    const response = await apiClient.get(`${API_BASE}/scrapers/wallapop/ip-logs/download`, {
         ...adminHeaders,
         responseType: 'blob'
     });
@@ -198,13 +193,13 @@ export const runWallaManualHtml = async (file?: File) => {
         const formData = new FormData();
         formData.append('file', file);
         const headers = {
-            ...adminHeaders.headers,
+            ...adminHeaders,
             'Content-Type': 'multipart/form-data',
         };
-        const response = await axios.post(`${API_BASE}/scrapers/wallapop/import-manual-html`, formData, { headers });
+        const response = await apiClient.post(`${API_BASE}/scrapers/wallapop/import-manual-html`, formData, { headers });
         return response.data;
     } else {
-        const response = await axios.post(`${API_BASE}/scrapers/wallapop/import-manual-html`, {}, adminHeaders);
+        const response = await apiClient.post(`${API_BASE}/scrapers/wallapop/import-manual-html`, {}, adminHeaders);
         return response.data;
     }
 };
@@ -224,11 +219,11 @@ export interface WallapopJob {
 }
 
 export const createWallapopJob = async (query: string = 'auto'): Promise<{ status: string; job_id: number; message: string }> => {
-    const response = await axios.post(`${API_BASE}/wallapop/jobs`, { query }, adminHeaders);
+    const response = await apiClient.post(`${API_BASE}/wallapop/jobs`, { query }, adminHeaders);
     return response.data;
 };
 
 export const getWallapopJobs = async (limit: number = 20): Promise<WallapopJob[]> => {
-    const response = await axios.get(`${API_BASE}/wallapop/jobs`, { ...adminHeaders, params: { limit } });
+    const response = await apiClient.get(`${API_BASE}/wallapop/jobs`, { ...adminHeaders, params: { limit } });
     return response.data;
 };

@@ -2,7 +2,7 @@
 Tests for endpoint-level permission enforcement.
 Validates that API key and device-ID guards reject unauthenticated requests.
 """
-from tests.conftest import API_KEY, ADMIN_HEADERS, DEVICE_HEADERS
+from tests.conftest import API_KEY, ADMIN_HEADERS, DEVICE_HEADERS, EXTENSION_KEY
 
 
 # ─── Admin endpoints require X-API-Key ───────────────────────────────────────
@@ -67,17 +67,130 @@ def test_dashboard_stats_rejects_no_device(client):
     assert resp.status_code == 403
 
 
-def test_dashboard_stats_accepts_api_key_as_device_bypass(client):
-    """X-API-Key present → device is auto-authorized by verify_device."""
-    resp = client.get("/api/dashboard/stats", headers=DEVICE_HEADERS)
+def test_dashboard_stats_accepts_approved_device(client, authorized_device_headers):
+    """A device that went through the real approval flow can access device-gated endpoints."""
+    resp = client.get("/api/dashboard/stats", headers=authorized_device_headers)
     assert resp.status_code == 200
     data = resp.json()
     assert "total_products" in data
     assert "financial" in data
 
 
-def test_collection_public_no_device(client):
-    """GET /api/collection requires user_id param but no device auth."""
+def test_dashboard_stats_rejects_pending_device(client):
+    """A brand-new, unapproved device must be rejected — API key no longer bypasses this (Fase AAA-1)."""
+    resp = client.get("/api/dashboard/stats", headers=DEVICE_HEADERS)
+    assert resp.status_code == 403
+
+
+def test_collection_rejects_unauthenticated(client):
+    """Fase AAA-1.2: /api/collection ya no es de lectura anónima (era un IDOR)."""
     resp = client.get("/api/collection", params={"user_id": 999})
+    assert resp.status_code == 401
+
+
+def test_collection_non_admin_cannot_read_other_users(client, bearer, test_user):
+    """
+    Un viewer autenticado que pide el user_id de OTRA persona debe quedar
+    forzado a su propio id (nunca leer la colección ajena) — cierra el IDOR
+    original donde cualquiera podía leer cualquier user_id.
+    """
+    resp = client.get("/api/collection", params={"user_id": 999}, headers=bearer)
     assert resp.status_code == 200
-    assert resp.json() == []  # user 999 has no items
+    # Se ignora el user_id=999 solicitado; se sirve la colección del propio
+    # usuario autenticado (vacía en este test), nunca la de otro.
+    assert resp.json() == []
+
+
+# ─── Fase AAA-2.1: cierre de IDOR en /api/users/* ─────────────────────────────
+
+def test_public_showcase_rejects_unauthenticated(client):
+    """Antes de la Fase 2.1, esto activaba el escaparate público de CUALQUIER
+    usuario sin ninguna autenticación — el hallazgo más grave de esta ronda."""
+    resp = client.post("/api/users/999999/public-showcase", params={"is_public": True})
+    assert resp.status_code == 401
+
+
+def test_public_showcase_non_admin_cannot_target_other_user(client, authorized_device_headers):
+    """Un viewer no puede activar el escaparate público de OTRO usuario (una
+    víctima registrada aparte); la escritura queda forzada a su propia cuenta,
+    y la víctima permanece intacta.
+
+    Usa cuentas de atacante/víctima creadas localmente (no los fixtures
+    session-scoped `bearer`/`test_user`) para no contaminar su estado y
+    afectar a otros tests que dependen de su showcase por defecto (privado).
+    """
+    attacker = {"username": "showcase_attacker", "email": "attacker@test.com", "password": "attacker-pass-000"}
+    victim = {"username": "showcase_victim", "email": "victim@test.com", "password": "victim-pass-000"}
+    for account in (attacker, victim):
+        reg = client.post("/api/auth/register", json=account)
+        assert reg.status_code == 200, reg.text
+
+    attacker_login = client.post("/api/auth/login", json={"email": attacker["email"], "password": attacker["password"]})
+    attacker_bearer = {"Authorization": f"Bearer {attacker_login.json()['access_token']}"}
+
+    victim_login = client.post("/api/auth/login", json={"email": victim["email"], "password": victim["password"]})
+    victim_id = victim_login.json()["user"]["id"]
+    victim_bearer = {"Authorization": f"Bearer {victim_login.json()['access_token']}"}
+
+    # El atacante intenta activar el escaparate de la víctima.
+    resp = client.post(
+        f"/api/users/{victim_id}/public-showcase", params={"is_public": True}, headers=attacker_bearer
+    )
+    assert resp.status_code == 200  # queda silenciosamente redirigido a su propia cuenta (la del atacante)
+
+    # Confirma, como la propia víctima, que su escaparate NO fue afectado.
+    check = client.get(f"/api/users/{victim_id}", headers={**authorized_device_headers, **victim_bearer})
+    assert check.status_code == 200
+    assert check.json()["is_public_showcase"] is False
+
+
+def test_user_settings_non_admin_scoped_to_self(client, bearer, test_user, authorized_device_headers):
+    """GET /api/users/{id} con id ajeno debe devolver los datos propios, no los del id pedido."""
+    headers = {**authorized_device_headers, **bearer}
+    resp = client.get("/api/users/999999", headers=headers)
+    assert resp.status_code == 200
+    assert resp.json()["email"] == test_user["email"]
+
+
+# ─── POST /api/wallapop/import: guardián dual (Fase AAA-3d) ─────────────────
+# Antes sin ninguna auth. Ahora exige la clave propia de la extensión de
+# Chrome (X-Extension-Key) O una sesión de dispositivo aprobada (la SPA ya
+# manda X-Device-ID/JWT vía el interceptor global de axios).
+
+def test_wallapop_import_rejects_no_auth(client):
+    resp = client.post("/api/wallapop/import", json={"products": []})
+    assert resp.status_code == 403
+
+
+def test_wallapop_import_rejects_wrong_extension_key(client):
+    resp = client.post(
+        "/api/wallapop/import",
+        headers={"X-Extension-Key": "not-the-real-key"},
+        json={"products": []},
+    )
+    assert resp.status_code == 403
+
+
+def test_wallapop_import_accepts_extension_key(client):
+    resp = client.post(
+        "/api/wallapop/import",
+        headers={"X-Extension-Key": EXTENSION_KEY},
+        json={"products": []},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "success"
+
+
+def test_wallapop_import_accepts_authorized_device(client, authorized_device_headers):
+    resp = client.post(
+        "/api/wallapop/import",
+        headers=authorized_device_headers,
+        json={"products": []},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "success"
+
+
+def test_wallapop_import_rejects_pending_device(client):
+    resp = client.post("/api/wallapop/import", headers=DEVICE_HEADERS, json={"products": []})
+    assert resp.status_code == 403

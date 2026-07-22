@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Optional, List
 from src.domain.models import LogisticRuleModel
 from src.infrastructure.database_cloud import SessionCloud
@@ -215,5 +215,5 @@ class LogisticsService:
                 "breakdown": breakdown,
                 "grand_total_eur": round(grand_total_eur, 2),
                 "user_location": user_location,
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
             }

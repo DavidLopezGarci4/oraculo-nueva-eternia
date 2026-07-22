@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { User, Lock, ArrowRight, RefreshCw } from 'lucide-react';
 import entranceBg from '../assets/Entrance_prod.webp';
 import axios from 'axios';
+import { setToken as saveAuthToken } from '../api/client';
 
 interface LoginPageProps {
     onLoginSuccess: (userData: any, isSovereign: boolean) => void;
@@ -38,7 +39,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             if (mode === 'login') {
                 const response = await axios.post('/api/auth/login', { email, password });
                 if (response.data.status === 'success') {
-                    const { user, is_sovereign } = response.data;
+                    const { user, is_sovereign, access_token } = response.data;
+                    if (access_token) saveAuthToken(access_token);
                     localStorage.setItem('active_user_id', user.id.toString());
                     localStorage.setItem('is_sovereign', is_sovereign ? 'true' : 'false');
                     localStorage.setItem('user_email', email);
@@ -89,18 +91,18 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#050608]">
             {/* Cinematic Background */}
-            <div className="absolute inset-0 overflow-hidden">
+            <div className="absolute inset-0 overflow-hidden" aria-hidden="true">
                 <img
                     src={entranceBg}
                     className="w-full h-full object-cover opacity-90 scale-100 animate-in fade-in duration-1000"
-                    alt="Entrance Backdrop"
+                    alt=""
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#050608]/80 via-transparent to-[#050608]/20" />
                 <div className="absolute top-[-10%] right-[-5%] h-[50%] w-[50%] rounded-full bg-red-500/5 blur-[120px]" />
                 <div className="absolute bottom-[0%] left-[-5%] h-[40%] w-[40%] rounded-full bg-purple-500/5 blur-[120px]" />
             </div>
 
-            <div className="relative w-full max-w-md mt-[22vh] animate-in fade-in slide-in-from-bottom-12 duration-1000">
+            <main className="relative w-full max-w-md mt-[22vh] animate-in fade-in slide-in-from-bottom-12 duration-1000">
                 {/* The Glass Card Container */}
                 <div className="relative overflow-hidden rounded-[2.5rem] border border-white/10 bg-white/[0.03] pt-6 pb-8 px-8 md:pt-10 md:pb-12 md:px-12 backdrop-blur-3xl shadow-2xl">
                     {/* Glass highlight overlay */}
@@ -114,7 +116,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                         {/* [Existing fields logic is already correct, just keeping the structure] */}
                         {mode === 'register' && (
                             <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-500">
-                                <label className="text-[9px] font-black uppercase tracking-widest text-white/40 ml-1">
+                                <label htmlFor="username" className="text-[9px] font-black uppercase tracking-widest text-white/40 ml-1">
                                     Nombre de Héroe
                                 </label>
                                 <div className="relative group">
@@ -135,7 +137,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
                         {mode !== 'reset' && (
                             <div className="space-y-2">
-                                <label className="text-[9px] font-black uppercase tracking-widest text-white/40 ml-1">
+                                <label htmlFor="email" className="text-[9px] font-black uppercase tracking-widest text-white/40 ml-1">
                                     Correo Electrónico
                                 </label>
                                 <div className="relative group">
@@ -158,7 +160,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
                         {mode !== 'forgot' && (
                             <div className="space-y-2">
-                                <label className="text-[9px] font-black uppercase tracking-widest text-white/40 ml-1">
+                                <label htmlFor="password" className="text-[9px] font-black uppercase tracking-widest text-white/40 ml-1">
                                     {mode === 'reset' ? 'Nueva Contraseña' : 'Contraseña'}
                                 </label>
                                 <div className="relative group">
@@ -180,12 +182,13 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
                         {mode === 'reset' && (
                             <div className="space-y-2">
-                                <label className="text-[9px] font-black uppercase tracking-widest text-white/40 ml-1">
+                                <label htmlFor="confirmPassword" className="text-[9px] font-black uppercase tracking-widest text-white/40 ml-1">
                                     Confirmar Nueva Contraseña
                                 </label>
                                 <div className="relative group">
                                     <Lock className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-white/20 group-focus-within:text-brand-primary transition-colors" />
                                     <input
+                                        id="confirmPassword"
                                         type="password"
                                         value={confirmPassword}
                                         onChange={(e) => setConfirmPassword(e.target.value)}
@@ -260,7 +263,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                     </div>
 
                 </div>
-            </div>
+            </main>
         </div>
     );
 };

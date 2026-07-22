@@ -58,12 +58,13 @@ const Navbar = ({ onMenuClick, showSearch = true, searchValue = "", onSearchChan
         }
     };
     return (
-        <nav className="sticky top-0 z-10 flex flex-col md:flex-row items-center justify-between border-b border-glass-border glass px-4 py-3 md:h-16 md:py-0 md:px-6 backdrop-blur-md gap-3 md:gap-4">
+        <nav aria-label="Barra superior" className="sticky top-0 z-10 flex flex-col md:flex-row items-center justify-between border-b border-glass-border glass px-4 py-3 md:h-16 md:py-0 md:px-6 backdrop-blur-md gap-3 md:gap-4">
             {/* Mobile Top Row: Menu & User Profile */}
             <div className="flex w-full items-center justify-between md:w-auto md:shrink-0">
                 <div className="flex items-center">
                     <button
                         onClick={onMenuClick}
+                        aria-label="Abrir menú de navegación"
                         className="p-2 -ml-2 text-white/60 hover:text-white md:hidden"
                     >
                         <Menu className="h-6 w-6" />
@@ -100,6 +101,7 @@ const Navbar = ({ onMenuClick, showSearch = true, searchValue = "", onSearchChan
                                 }}
                                 className="ml-1 p-1 md:p-2 rounded-lg bg-brand-primary/10 text-brand-primary hover:bg-brand-primary hover:text-white transition-all border border-brand-primary/20"
                                 title="Alternar Identidad (Admin/David)"
+                                aria-label="Alternar Identidad (Admin/David)"
                             >
                                 <Repeat className="h-4 w-4" />
                             </button>
@@ -111,6 +113,8 @@ const Navbar = ({ onMenuClick, showSearch = true, searchValue = "", onSearchChan
                                 onClick={onToggleIncognito}
                                 className={`ml-1.5 p-1 md:p-2 rounded-lg transition-all border ${isIncognito ? 'bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500 hover:text-white' : 'bg-white/5 text-white/60 border-white/10 hover:bg-white/10 hover:text-white'}`}
                                 title={isIncognito ? "Desactivar Modo Incógnito (Esc dual / Ctrl+I)" : "Activar Modo Incógnito (Esc dual / Ctrl+I)"}
+                                aria-label={isIncognito ? "Desactivar Modo Incógnito" : "Activar Modo Incógnito"}
+                                aria-pressed={isIncognito}
                             >
                                 {isIncognito ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                             </button>
@@ -121,6 +125,8 @@ const Navbar = ({ onMenuClick, showSearch = true, searchValue = "", onSearchChan
                             onClick={toggleMusic}
                             className={`ml-1.5 p-1 md:p-2 rounded-lg transition-all border ${isPlaying ? 'bg-brand-primary/15 text-brand-primary border-brand-primary/30 hover:bg-brand-primary hover:text-white' : 'bg-white/5 text-white/60 border-white/10 hover:bg-white/10 hover:text-white'}`}
                             title={isPlaying ? "Silenciar Música" : "Reproducir Música"}
+                            aria-label={isPlaying ? "Silenciar Música" : "Reproducir Música"}
+                            aria-pressed={isPlaying}
                         >
                             {isPlaying ? <Volume2 className="h-4 w-4 animate-pulse text-brand-primary group-hover:text-white" /> : <VolumeX className="h-4 w-4" />}
                         </button>
@@ -135,6 +141,7 @@ const Navbar = ({ onMenuClick, showSearch = true, searchValue = "", onSearchChan
                         <Search className="absolute left-3 top-3 h-4 w-4 text-white/40" />
                         <input
                             type="text"
+                            aria-label="Buscar figuras (nombre, EAN, ID)"
                             placeholder="Buscar figuras (nombre, EAN, ID)..."
                             value={searchValue}
                             onChange={(e) => onSearchChange?.(e.target.value)}

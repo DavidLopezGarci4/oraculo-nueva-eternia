@@ -15,7 +15,7 @@ import logging
 import re
 from pathlib import Path
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 # Importaciones del proyecto
 from src.infrastructure.scrapers.base import ScrapedOffer
@@ -138,7 +138,7 @@ class WallapopManualImporter:
                     shop_name=self.shop_name,
                     image_url=None,
                     source_type="Peer-to-Peer",
-                    found_at=datetime.utcnow()
+                    found_at=datetime.now(timezone.utc).replace(tzinfo=None)
                 )
                 db.add(pending)
                 saved += 1

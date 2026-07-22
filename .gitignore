@@ -89,3 +89,15 @@ backups/cloud/*.json
 
 # Diagnostic/Debug scratch folder
 scratch/
+
+# Personal data dump (Phase 0 hardening)
+local_collection_dump.json
+
+# Allow the env template (no real secrets)
+!.env.example
+
+# Notas personales de credenciales (Fase AAA-1) - NUNCA subir a git
+CREDENCIALES_LOCAL.md
+
+# Claude Code local settings (personal, machine-specific)
+.claude/settings.local.json

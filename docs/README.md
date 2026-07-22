@@ -31,6 +31,9 @@ Si buscas detalles específicos, puedes consultar los siguientes archivos histó
 - **[SISTEMA_DE_INCURSION_TECNICO.md](technical/SISTEMA_DE_INCURSION_TECNICO.md)**: Documento legacy sobre el funcionamiento específico del orquestador y los Scrapers.
 - **[MASTER_ROADMAP.md](MASTER_ROADMAP.md)**: El histórico de desarrollo y registro de todas las fases completadas (Fase 0 a Fase 62+).
 - **[architecture_map.md](technical/architecture_map.md)**: Mapa físico exacto de todas las carpetas, routers y responsabilidades del código fuente.
+- **[AUDITORIA_CARPETAS_RAIZ.md](technical/AUDITORIA_CARPETAS_RAIZ.md)**: Qué carpetas de la raíz usa de verdad esta app (backend/frontend/tests/CI/Docker) y cuáles no — sin borrar nada, para que cualquier máquina/herramienta decida qué hacer con las segundas.
+- **[REPORTE_MEJORAS_AAA.md](REPORTE_MEJORAS_AAA.md)**: Backlog vivo y priorizado de la elevación AAA (seguridad/arquitectura/rendimiento/diseño) en curso en `refactor/aaa-uplift` — qué está hecho, qué falta y por qué.
+- **[.claude/skills/aaa-buenas-practicas/SKILL.md](../.claude/skills/aaa-buenas-practicas/SKILL.md)**: Manual operativo de CÓMO continuar ese trabajo (protocolo de arranque de sesión, límites de seguridad, convenciones de código/testing/migraciones) — léelo antes de tocar código si vienes de otra máquina o sesión.
 
 ---
 
