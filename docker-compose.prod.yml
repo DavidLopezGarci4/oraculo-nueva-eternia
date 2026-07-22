@@ -14,26 +14,8 @@ services:
     env_file:
       - .env
     environment:
-      # Supabase Cloud (Nexo Central) — same for local and OCI
-      - SUPABASE_DATABASE_URL=${SUPABASE_DATABASE_URL}
-      - SCRAPERAPI_KEY=${SCRAPERAPI_KEY}
-      - APIFY_TOKEN=${APIFY_TOKEN}
-      - APIFY_TOKEN2=${APIFY_TOKEN2}
-      - APIFY_TOKEN3=${APIFY_TOKEN3}
-      - SUPABASE_URL=${SUPABASE_URL}
-      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
-      - DATABASE_URL=${DATABASE_URL:-sqlite:///./oraculo.db}
       - PYTHONUNBUFFERED=1
       - ENV=production
-      - ORACULO_API_KEY=${ORACULO_API_KEY}
-      - SOVEREIGN_EMAIL=${SOVEREIGN_EMAIL}
-      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
-      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
-      - SMTP_HOST=${SMTP_HOST}
-      - SMTP_PORT=${SMTP_PORT}
-      - SMTP_USER=${SMTP_USER}
-      - SMTP_PASS=${SMTP_PASS}
-      - SMTP_FROM=${SMTP_FROM}
     # Single-worker in production to prevent duplicate background Telegram listeners and conflicts (no --reload)
     command: uvicorn src.interfaces.api.main:app --host 0.0.0.0 --port 8000 --workers 1
     networks:
