@@ -54,24 +54,16 @@ _SESSION_TARGETS = [
     "src.interfaces.api.routers.logistics.SessionCloud",
     "src.interfaces.api.routers.auth.SessionCloud",
     "src.interfaces.api.routers.showcase.SessionCloud",
+    "src.interfaces.api.routers.scrapers.SessionCloud",
+    "src.interfaces.api.routers.wallapop_jobs.SessionCloud",
     "src.interfaces.api.deps.SessionCloud",
-    # Fase AAA-Ola3 (3b): descubierto al escribir un test real para
-    # /api/logistics/calculate-cart — LogisticsService.calculate_cart (y estos
-    # otros servicios) importan SessionCloud a NIVEL DE MODULO, con su propia
-    # referencia independiente de la del router que los invoca. Sin parchear
-    # aqui tambien, cualquier test que ejercite estos servicios toca
-    # SILENCIOSAMENTE la BD real (oraculo.db local o Supabase) en vez de la
-    # BD hermetica en memoria, dando resultados incorrectos/inconsistentes
-    # sin ningun error visible.
     "src.application.services.logistics_service.SessionCloud",
     "src.application.services.vault_service.SessionCloud",
     "src.application.services.nexus_service.SessionCloud",
     "src.application.services.nexus_vintage_service.SessionCloud",
     "src.application.services.excel_manager.SessionCloud",
-    # NOTA: backfill_intelligence.py importa SessionCloud DENTRO de una
-    # funcion (no a nivel de modulo) - no hay nada que parchear ahi hasta
-    # que esa funcion se ejecute; si algun dia se usa en un test, revisar
-    # la misma situacion en ese momento.
+    "src.infrastructure.scrapers.pipeline.SessionCloud",
+    "src.infrastructure.scrapers.wallapop_manual_importer.SessionCloud",
 ]
 
 # ─── Shared constants ────────────────────────────────────────────────────────
