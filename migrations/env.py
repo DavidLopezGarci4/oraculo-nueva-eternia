@@ -36,6 +36,8 @@ from src.core.config import settings
 _db_url = settings.SUPABASE_DATABASE_URL or settings.DATABASE_URL
 if isinstance(_db_url, str):
     _db_url = _db_url.strip().strip("'\"")
+if _db_url and _db_url.startswith("postgres://"):
+    _db_url = _db_url.replace("postgres://", "postgresql://", 1)
 if _db_url:
     config.set_main_option("sqlalchemy.url", _db_url)
 

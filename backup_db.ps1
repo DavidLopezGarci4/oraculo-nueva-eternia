@@ -41,9 +41,9 @@ src.close()
     Write-Host "✅ Backup creado con éxito: oraculo_$Timestamp.db" -ForegroundColor Green
     
     # Limpieza: Mantener solo los últimos 10 backups
-    $Backups = Get-ChildItem $BackupDir | Sort-Object LastWriteTime -Descending
+    $Backups = Get-ChildItem $BackupDir -File | Sort-Object LastWriteTime -Descending
     if ($Backups.Count -gt 10) {
-        $Backups[10..($Backups.Count - 1)] | Remove-Item
+        $Backups[10..($Backups.Count - 1)] | Remove-Item -Force
         Write-Host "🧹 Backups antiguos eliminados (mantenemos los 10 más recientes)." -ForegroundColor Gray
     }
 }
