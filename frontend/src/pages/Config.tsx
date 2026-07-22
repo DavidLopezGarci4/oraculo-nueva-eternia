@@ -39,7 +39,11 @@ import {
     type Hero,
     getTemporaryProducts,
     mergeProducts,
-    type TemporaryProduct
+    type TemporaryProduct,
+    getDevices,
+    authorizeDevice,
+    deleteDevice,
+    type Device
 } from '../api/admin';
 
 interface ConfigProps {
@@ -74,6 +78,9 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
     const [showIpLogsModal, setShowIpLogsModal] = useState(false);
     const [ipLogs, setIpLogs] = useState<WallapopIpLog[]>([]);
     const [loadingIpLogs, setLoadingIpLogs] = useState(false);
+
+    const [devices, setDevices] = useState<Device[]>([]);
+    const [loadingDevices, setLoadingDevices] = useState(false);
 
     const [, setLocalImagesEnabled] = useState(() => localStorage.getItem('use_local_images') === 'true');
     const [downloadStatus, setDownloadStatus] = useState({ active: false, total: 0, current: 0, errors: 0, last_error: null as string | null });
@@ -335,16 +342,50 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
         }
     }, [selectedLog?.logs]);
 
+    const loadDevices = async () => {
+        if (!isAdmin) return;
+        setLoadingDevices(true);
+        try {
+            const data = await getDevices();
+            setDevices(data || []);
+        } catch (err) {
+            console.error("Error cargando dispositivos:", err);
+        } finally {
+            setLoadingDevices(false);
+        }
+    };
+
+    const handleAuthorizeDevice = async (deviceId: string) => {
+        try {
+            await authorizeDevice(deviceId);
+            await loadDevices();
+        } catch (err) {
+            console.error("Error autorizando dispositivo:", err);
+            alert("Error al autorizar el dispositivo.");
+        }
+    };
+
+    const handleDeleteDevice = async (deviceId: string) => {
+        try {
+            await deleteDevice(deviceId);
+            await loadDevices();
+        } catch (err) {
+            console.error("Error eliminando dispositivo:", err);
+            alert("Error al revocar/eliminar el dispositivo.");
+        }
+    };
+
     const fetchData = async () => {
         try {
             // Fetch everything, but handle individual failures gracefully
-            const [s, u, al, h, ms, tempProducts] = await Promise.all([
+            const [s, u, al, h, ms, tempProducts, devs] = await Promise.all([
                 getScrapersStatus().catch((e: any) => { console.error("Scrapers error:", e); return []; }),
                 getUserSettings(activeUserId).catch((e: any) => { console.error("User settings error:", e); return null; }),
                 getScraperLogs().catch((e: any) => { console.error("Logs error:", e); return []; }),
                 getHeroes().catch((e: any) => { console.error("Heroes list error:", e); return []; }),
                 getDashboardMatchStats(activeUserId).catch((e: any) => { console.error("Match stats error:", e); return []; }),
-                isAdmin ? getTemporaryProducts().catch((e: any) => { console.error("Temp products error:", e); return []; }) : Promise.resolve([])
+                isAdmin ? getTemporaryProducts().catch((e: any) => { console.error("Temp products error:", e); return []; }) : Promise.resolve([]),
+                isAdmin ? getDevices().catch((e: any) => { console.error("Devices error:", e); return []; }) : Promise.resolve([])
             ]);
 
             setStatuses(s || []);
@@ -353,6 +394,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
             setHeroes(h || []);
             setMatchStats(ms || []);
             setTemporaryProducts(tempProducts || []);
+            setDevices(devs || []);
 
             // update selected log if necessary
             if (al && al.length > 0) {
@@ -830,6 +872,11 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                         handleExportSqliteAdmin={handleExportSqliteAdmin}
                         handlePasswordReset={handlePasswordReset}
                         handleDeleteHero={handleDeleteHero}
+                        devices={devices}
+                        loadingDevices={loadingDevices}
+                        onAuthorizeDevice={handleAuthorizeDevice}
+                        onDeleteDevice={handleDeleteDevice}
+                        onRefreshDevices={loadDevices}
                     />
                 ) : activeTab === 'wallapop' ? (
                     <motion.div

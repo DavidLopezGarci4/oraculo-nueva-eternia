@@ -257,3 +257,27 @@ export const runSystemMaintenance = async (): Promise<{ status: string; message:
     return response.data;
 };
 
+export interface Device {
+    id: number;
+    device_id: string;
+    device_name: string;
+    is_authorized: boolean;
+    created_at: string;
+    last_access_at: string | null;
+}
+
+export const getDevices = async (): Promise<Device[]> => {
+    const response = await adminAxios.get('/admin/devices');
+    return response.data;
+};
+
+export const authorizeDevice = async (deviceId: string): Promise<{ status: string; message: string }> => {
+    const response = await adminAxios.post(`/admin/devices/${encodeURIComponent(deviceId)}/authorize`);
+    return response.data;
+};
+
+export const deleteDevice = async (deviceId: string): Promise<{ status: string; message: string }> => {
+    const response = await adminAxios.delete(`/admin/devices/${encodeURIComponent(deviceId)}`);
+    return response.data;
+};
+

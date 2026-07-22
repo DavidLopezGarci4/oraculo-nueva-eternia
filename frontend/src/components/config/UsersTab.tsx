@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { Users, Swords, Shield, ChevronDown, Target, Repeat, FileSpreadsheet, Database, ShieldAlert, Trash2, CheckCircle2, Activity } from 'lucide-react';
-import type { Hero } from '../../api/admin';
+import type { Hero, Device } from '../../api/admin';
+import DevicesCard from './DevicesCard';
 
 interface UsersTabProps {
     heroes: Hero[];
@@ -11,6 +12,11 @@ interface UsersTabProps {
     handleExportSqliteAdmin: (userId: number) => void;
     handlePasswordReset: (heroId: number) => void;
     handleDeleteHero: (heroId: number, username: string) => void;
+    devices?: Device[];
+    loadingDevices?: boolean;
+    onAuthorizeDevice?: (deviceId: string) => void;
+    onDeleteDevice?: (deviceId: string) => void;
+    onRefreshDevices?: () => void;
 }
 
 /** Fase AAA-4a: extraido de Config.tsx (pestaña "users"). */
@@ -23,6 +29,11 @@ export default function UsersTab({
     handleExportSqliteAdmin,
     handlePasswordReset,
     handleDeleteHero,
+    devices = [],
+    loadingDevices = false,
+    onAuthorizeDevice,
+    onDeleteDevice,
+    onRefreshDevices,
 }: UsersTabProps) {
     return (
         <motion.div
@@ -160,6 +171,15 @@ export default function UsersTab({
                     </table>
                 </div>
             </div>
+
+            {/* Escudo de Eternia - Gestión de Dispositivos */}
+            <DevicesCard
+                devices={devices}
+                loading={loadingDevices}
+                onAuthorize={(deviceId) => onAuthorizeDevice?.(deviceId)}
+                onDelete={(deviceId) => onDeleteDevice?.(deviceId)}
+                onRefresh={onRefreshDevices}
+            />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="glass border border-white/10 p-5 rounded-2xl flex items-center justify-between group hover:bg-white/5 transition-all">
