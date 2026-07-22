@@ -12,6 +12,8 @@ services:
       - ./data:/app/data
       - ./logs:/app/logs
       - ./.env:/app/.env:ro
+      - ./migrations:/app/migrations
+      - ./src:/app/src
     env_file:
       - .env
     environment:
