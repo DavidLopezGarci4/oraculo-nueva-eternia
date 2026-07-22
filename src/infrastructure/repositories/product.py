@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from datetime import datetime, UTC
+from datetime import datetime, timezone
 from typing import Optional, List
 from src.infrastructure.repositories.base import BaseRepository
 from src.domain.models import ProductModel, OfferModel, PendingMatchModel, OfferHistoryModel
