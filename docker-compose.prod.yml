@@ -11,6 +11,8 @@ services:
       # Persistent data: images, Excel, logs
       - ./data:/app/data
       - ./logs:/app/logs
+    env_file:
+      - .env
     environment:
       # Supabase Cloud (Nexo Central) — same for local and OCI
       - SUPABASE_DATABASE_URL=${SUPABASE_DATABASE_URL}
