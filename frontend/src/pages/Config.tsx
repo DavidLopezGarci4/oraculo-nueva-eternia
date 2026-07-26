@@ -314,27 +314,59 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                         }
                     }
 
-                    // 2. Solicitarla a través del backend o desde Supabase CDN
+                    // 2. Solicitar la imagen con jerarquía de 3 capas ultra-resiliente
                     let imgBlob: Blob | null = null;
                     const fetchUrl = forceRefresh ? `${cacheKey}?t=${Date.now()}` : cacheKey;
 
+                    // Capa A: Petición a la API local
                     try {
                         const imgResponse = await fetch(fetchUrl);
                         if (imgResponse.ok) {
                             imgBlob = await imgResponse.blob();
                         }
                     } catch (e) {
-                        // Intento fallback
+                        // Fallback a Capa B
                     }
 
+                    // Capa B: Petición directa a Supabase CDN por fetch
                     if (!imgBlob && p.image_url && p.image_url.startsWith('http')) {
                         try {
-                            const fallbackResp = await fetch(p.image_url);
+                            const fallbackResp = await fetch(p.image_url, { mode: 'cors' });
                             if (fallbackResp.ok) {
                                 imgBlob = await fallbackResp.blob();
                             }
                         } catch (corsErr) {
-                            // Error de CORS o red
+                            // Fallback a Capa C
+                        }
+
+                        // Capa C: Carga a través de elemento Image HTML y lienzo Canvas (sin restricciones CORS de fetch)
+                        if (!imgBlob) {
+                            try {
+                                imgBlob = await new Promise<Blob>((resolve, reject) => {
+                                    const img = new Image();
+                                    img.crossOrigin = 'anonymous';
+                                    img.onload = () => {
+                                        try {
+                                            const canvas = document.createElement('canvas');
+                                            canvas.width = img.naturalWidth || img.width || 300;
+                                            canvas.height = img.naturalHeight || img.height || 300;
+                                            const ctx = canvas.getContext('2d');
+                                            if (!ctx) return reject(new Error('Canvas ctx error'));
+                                            ctx.drawImage(img, 0, 0);
+                                            canvas.toBlob((b) => {
+                                                if (b) resolve(b);
+                                                else reject(new Error('toBlob empty'));
+                                            }, 'image/webp', 0.85);
+                                        } catch (err) {
+                                            reject(err);
+                                        }
+                                    };
+                                    img.onerror = () => reject(new Error(`Failed to load HTMLImageElement for ${p.id}`));
+                                    img.src = p.image_url;
+                                });
+                            } catch (canvasErr) {
+                                // Error final
+                            }
                         }
                     }
 
