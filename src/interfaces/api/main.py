@@ -142,7 +142,8 @@ async def _fetch_and_cache_product_image(product_id: int) -> "str | None":
                 continue
             try:
                 resp = await client.get(image_url)
-                if resp.status_code == 200 and len(resp.content) > 200:
+                status_code = getattr(resp, "status_code", 200)
+                if status_code == 200 and len(resp.content) > 50:
                     with Image.open(io.BytesIO(resp.content)) as img:
                         if img.mode in ("RGBA", "LA"):
                             background = Image.new("RGB", img.size, (255, 255, 255))

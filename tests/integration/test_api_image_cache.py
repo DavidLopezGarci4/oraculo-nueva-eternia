@@ -45,8 +45,9 @@ def _fake_source_image_bytes() -> bytes:
 
 
 class _FakeResponse:
-    def __init__(self, content: bytes):
+    def __init__(self, content: bytes, status_code: int = 200):
         self.content = content
+        self.status_code = status_code
 
     def raise_for_status(self):
         pass
