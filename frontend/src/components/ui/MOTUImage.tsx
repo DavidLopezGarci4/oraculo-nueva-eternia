@@ -5,10 +5,12 @@ interface MOTUImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   fallbackSrc?: string;
 }
 
-// Global in-memory RAM cache for resolved Blob URLs across all components and pages.
-// Key: cacheKey (`/api/static/images/${productId}.webp`) -> Value: Object URL (`blob:http...`)
 const globalBlobUrlMap = new Map<string, string>();
 let motuCachePromise: Promise<Cache> | null = null;
+
+export function clearMOTURAMCache() {
+  globalBlobUrlMap.clear();
+}
 
 const getMotuCache = () => {
   if (!motuCachePromise && typeof window !== 'undefined' && 'caches' in window) {

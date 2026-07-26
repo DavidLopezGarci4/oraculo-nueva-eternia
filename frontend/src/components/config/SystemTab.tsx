@@ -26,7 +26,7 @@ interface SystemTabProps {
     handleUpdateLocation: (loc: string) => void;
     downloadStatus: DownloadStatus;
     cachedImagesCount: number;
-    handleTriggerDownload: () => void;
+    handleTriggerDownload: (forceRefresh?: boolean) => void;
     handleCancelDownload: () => void;
     setLocalImagesEnabled: (v: boolean) => void;
     fetchData: () => void;
@@ -373,16 +373,27 @@ export default function SystemTab({
                                 </div>
                             ) : (
                                 <div className="space-y-2">
-                                    <button
-                                        onClick={handleTriggerDownload}
-                                        className="w-full bg-brand-primary/15 hover:bg-brand-primary text-brand-primary hover:text-white border border-brand-primary/30 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2"
-                                    >
-                                        <Download className="h-3 w-3" />
-                                        Descargar todas las imágenes a la caché
-                                    </button>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                        <button
+                                            onClick={() => handleTriggerDownload(false)}
+                                            className="w-full bg-brand-primary/15 hover:bg-brand-primary text-brand-primary hover:text-white border border-brand-primary/30 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                                            title="Descarga únicamente las imágenes que aún no existen en la caché local"
+                                        >
+                                            <Download className="h-3 w-3" />
+                                            Descargar Faltantes
+                                        </button>
+                                        <button
+                                            onClick={() => handleTriggerDownload(true)}
+                                            className="w-full bg-amber-500/15 hover:bg-amber-500 text-amber-400 hover:text-black border border-amber-500/30 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                                            title="Borra la caché local antigua e importa de nuevo todas las imágenes desde el servidor"
+                                        >
+                                            <RefreshCw className="h-3 w-3" />
+                                            Actualizar Caché
+                                        </button>
+                                    </div>
                                     <button
                                         onClick={() => downloadImagesZip()}
-                                        className="w-full bg-emerald-500/15 hover:bg-emerald-500 text-emerald-400 hover:text-white border border-emerald-500/30 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2"
+                                        className="w-full bg-emerald-500/15 hover:bg-emerald-500 text-emerald-400 hover:text-white border border-emerald-500/30 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 cursor-pointer"
                                     >
                                         <Package className="h-3 w-3" />
                                         Descargar ZIP de imágenes WebP

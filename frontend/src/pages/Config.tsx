@@ -17,6 +17,7 @@ import UsersTab from '../components/config/UsersTab';
 import SystemTab from '../components/config/SystemTab';
 import InventoryTab from '../components/config/InventoryTab';
 import ScrapersTab from '../components/config/ScrapersTab';
+import { clearMOTURAMCache } from '../components/ui/MOTUImage';
 
 
 import {
@@ -247,10 +248,8 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
         } catch (e) {
             console.error("Error checking cache count", e);
         }
-    };
-
-    // Download images directly into the browser's Cache API storage
-    const handleTriggerDownload = async () => {
+    };    // Download or update images directly into the browser's Cache API storage
+    const handleTriggerDownload = async (forceRefresh: boolean = false) => {
         cancelDownloadRef.current = false;
         setDownloadStatus({
             active: true,
@@ -261,6 +260,17 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
         });
 
         try {
+            if (forceRefresh) {
+                clearMOTURAMCache();
+                if (typeof window !== 'undefined' && 'caches' in window) {
+                    try {
+                        await caches.delete('motu-image-cache');
+                    } catch (e) {
+                        console.warn("Could not delete motu-image-cache", e);
+                    }
+                }
+            }
+
             // 1. Fetch both non-vintage and vintage products to get their IDs
             const [modernRes, vintageRes] = await Promise.all([
                 axios.get('/api/products'),
@@ -289,21 +299,24 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                 const cacheKey = `/api/static/images/${p.id}.webp`;
                 
                 try {
-                    // 1. Comprobar primero si la imagen ya existe en la caché local del navegador
-                    const existingMatch = await cache.match(cacheKey);
-                    if (existingMatch) {
-                        current++;
-                        setDownloadStatus(prev => ({
-                            ...prev,
-                            current,
-                            errors,
-                            last_error
-                        }));
-                        continue;
+                    // 1. Si no es forzado, comprobar primero si la imagen ya existe en la caché local del navegador
+                    if (!forceRefresh) {
+                        const existingMatch = await cache.match(cacheKey);
+                        if (existingMatch) {
+                            current++;
+                            setDownloadStatus(prev => ({
+                                ...prev,
+                                current,
+                                errors,
+                                last_error
+                            }));
+                            continue;
+                        }
                     }
 
-                    // 2. Si no está en caché, solicitarla a través del backend
-                    let imgResponse = await fetch(cacheKey);
+                    // 2. Solicitarla a través del backend (añadiendo cache buster si es forzado)
+                    const fetchUrl = forceRefresh ? `${cacheKey}?t=${Date.now()}` : cacheKey;
+                    let imgResponse = await fetch(fetchUrl);
 
                     if (imgResponse.ok) {
                         await cache.put(cacheKey, imgResponse.clone());
