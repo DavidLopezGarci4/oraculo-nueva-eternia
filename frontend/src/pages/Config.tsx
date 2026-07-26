@@ -239,7 +239,17 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
         }
     };
 
-    // We will download images directly in the browser's Cache API for Option C
+    const updateCachedImagesCount = async () => {
+        try {
+            const cache = await caches.open('motu-image-cache');
+            const keys = await cache.keys();
+            setCachedImagesCount(keys.length);
+        } catch (e) {
+            console.error("Error checking cache count", e);
+        }
+    };
+
+    // Download images directly into the browser's Cache API storage
     const handleTriggerDownload = async () => {
         cancelDownloadRef.current = false;
         setDownloadStatus({
@@ -251,15 +261,15 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
         });
 
         try {
-            // 1. Fetch both non-vintage and vintage products to get their IDs and image URLs
+            // 1. Fetch both non-vintage and vintage products to get their IDs
             const [modernRes, vintageRes] = await Promise.all([
                 axios.get('/api/products'),
                 axios.get('/api/products?is_vintage=true')
             ]);
             const products = [...modernRes.data, ...vintageRes.data];
-            // Filter products that actually have image urls
-            const productsWithImages = products.filter((p: any) => p.image_url);
-            const totalCount = productsWithImages.length;
+            // Target products that have IDs
+            const targetProducts = products.filter((p: any) => p.id);
+            const totalCount = targetProducts.length;
 
             setDownloadStatus(prev => ({ ...prev, total: totalCount }));
 
@@ -271,7 +281,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
             let errors = 0;
             let last_error: string | null = null;
 
-            for (const p of productsWithImages) {
+            for (const p of targetProducts) {
                 if (cancelDownloadRef.current) {
                     break;
                 }
@@ -279,16 +289,26 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                 const cacheKey = `/api/static/images/${p.id}.webp`;
                 
                 try {
-                    // Intentar descargar desde el servidor de estáticos local primero
+                    // Solicitamos la imagen a través del servidor local/backend.
+                    // El backend gestiona la descarga remota (evitando CORS del navegador),
+                    // la convierte a WebP y la devuelve.
                     let imgResponse = await fetch(cacheKey);
-                    if (!imgResponse.ok) {
-                        // Fallback a la URL remota de Supabase si falla el estático local
-                        imgResponse = await fetch(p.image_url);
-                    }
-                    
+
                     if (imgResponse.ok) {
-                        // Store the response in the cache
-                        await cache.put(cacheKey, imgResponse);
+                        // Guardar la respuesta clonada en el almacenamiento del navegador
+                        await cache.put(cacheKey, imgResponse.clone());
+                    } else if (p.image_url && p.image_url.startsWith('http')) {
+                        // Fallback secundario directo solo si la URL es pública y accesible
+                        try {
+                            const fallbackResp = await fetch(p.image_url, { mode: 'cors' });
+                            if (fallbackResp.ok) {
+                                await cache.put(cacheKey, fallbackResp.clone());
+                            } else {
+                                throw new Error(`HTTP ${imgResponse.status}`);
+                            }
+                        } catch (corsErr) {
+                            throw new Error(`HTTP ${imgResponse.status} - No disponible en servidor`);
+                        }
                     } else {
                         throw new Error(`HTTP ${imgResponse.status}`);
                     }
@@ -308,15 +328,19 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
             }
 
             setDownloadStatus(prev => ({ ...prev, active: false }));
+            await updateCachedImagesCount();
+
             if (cancelDownloadRef.current) {
                 alert("Descarga en el navegador cancelada por el usuario.");
             } else {
-                alert(`Descarga completada. ${current - errors} imágenes guardadas en el navegador.`);
+                alert(`Descarga completada. ${current - errors} de ${totalCount} imágenes guardadas en el navegador.`);
             }
         } catch (e: any) {
             console.error("Failed to download images to browser cache", e);
             setDownloadStatus(prev => ({ ...prev, active: false, last_error: e.message || String(e) }));
             alert("Error al iniciar la descarga de imágenes en el navegador: " + (e.message || String(e)));
+        } finally {
+            await updateCachedImagesCount();
         }
     };
 
@@ -433,16 +457,6 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
             navigator.clipboard.writeText(textToCopy);
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
-        }
-    };
-
-    const updateCachedImagesCount = async () => {
-        try {
-            const cache = await caches.open('motu-image-cache');
-            const keys = await cache.keys();
-            setCachedImagesCount(keys.length);
-        } catch (e) {
-            console.error("Error checking cache count", e);
         }
     };
 
