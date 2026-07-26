@@ -314,25 +314,37 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                         }
                     }
 
-                    // 2. Solicitarla a través del backend (añadiendo cache buster si es forzado)
+                    // 2. Solicitarla a través del backend o desde Supabase CDN
+                    let imgBlob: Blob | null = null;
                     const fetchUrl = forceRefresh ? `${cacheKey}?t=${Date.now()}` : cacheKey;
-                    let imgResponse = await fetch(fetchUrl);
 
-                    if (imgResponse.ok) {
-                        await cache.put(cacheKey, imgResponse.clone());
-                    } else if (p.image_url && p.image_url.startsWith('http')) {
+                    try {
+                        const imgResponse = await fetch(fetchUrl);
+                        if (imgResponse.ok) {
+                            imgBlob = await imgResponse.blob();
+                        }
+                    } catch (e) {
+                        // Intento fallback
+                    }
+
+                    if (!imgBlob && p.image_url && p.image_url.startsWith('http')) {
                         try {
-                            const fallbackResp = await fetch(p.image_url, { mode: 'cors' });
+                            const fallbackResp = await fetch(p.image_url);
                             if (fallbackResp.ok) {
-                                await cache.put(cacheKey, fallbackResp.clone());
-                            } else {
-                                throw new Error(`HTTP ${imgResponse.status}`);
+                                imgBlob = await fallbackResp.blob();
                             }
                         } catch (corsErr) {
-                            throw new Error(`HTTP ${imgResponse.status} - No disponible en servidor`);
+                            // Error de CORS o red
                         }
+                    }
+
+                    if (imgBlob) {
+                        const responseToCache = new Response(imgBlob, {
+                            headers: { 'Content-Type': 'image/webp' }
+                        });
+                        await cache.put(cacheKey, responseToCache);
                     } else {
-                        throw new Error(`HTTP ${imgResponse.status}`);
+                        throw new Error(`No se pudo obtener la imagen del producto ${p.id}`);
                     }
                 } catch (err: any) {
                     console.error(`Error caching image for product ${p.id}:`, err);
@@ -355,7 +367,8 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
             if (cancelDownloadRef.current) {
                 alert("Descarga en el navegador cancelada por el usuario.");
             } else {
-                alert(`Descarga completada. ${current - errors} de ${totalCount} imágenes guardadas en el navegador.`);
+                const savedCount = current - errors;
+                alert(`Descarga completada. ${savedCount} de ${totalCount} imágenes guardadas en el navegador.`);
             }
         } catch (e: any) {
             console.error("Failed to download images to browser cache", e);
