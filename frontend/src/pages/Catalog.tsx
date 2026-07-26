@@ -1,5 +1,5 @@
 import React from 'react';
-import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import {
     Package,
@@ -137,77 +137,25 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
     }, [showVintageSyncModal, vintageSyncStatus, queryClient, isVintageOnly]);
 
 
-    // 1. Fetch de todos los productos con scroll infinito (Infinite Scroll)
+    // 1. Fetch de todos los productos para filtrado y ordenación ultra-rápida a 0ms en cliente
     const {
-        data: infiniteData,
-        fetchNextPage,
-        hasNextPage,
-        isFetchingNextPage,
+        data: products = [],
         isLoading: isLoadingProducts,
         isError: isErrorProducts
-    } = useInfiniteQuery<Product[]>({
-        queryKey: ['products-infinite', isVintageOnly, selectedShopFilter, searchQuery],
-        queryFn: async ({ pageParam = 0 }) => {
-            let url = `/api/products?is_vintage=${isVintageOnly ? 'true' : 'false'}&limit=24&offset=${pageParam}`;
-            if (selectedShopFilter) {
-                url += `&shop=${encodeURIComponent(selectedShopFilter)}`;
-            }
-            if (searchQuery) {
-                url += `&search=${encodeURIComponent(searchQuery)}`;
-            }
+    } = useQuery<Product[]>({
+        queryKey: ['products-full', isVintageOnly],
+        queryFn: async () => {
+            const url = `/api/products?is_vintage=${isVintageOnly ? 'true' : 'false'}`;
             const response = await axios.get(url);
             return response.data;
         },
-        initialPageParam: 0,
-        getNextPageParam: (lastPage, allPages) => {
-            if (lastPage.length < 24) return undefined;
-            return allPages.length * 24;
-        }
+        staleTime: 1000 * 60 * 5,
     });
-
-    const products = React.useMemo(() => {
-        return infiniteData ? infiniteData.pages.flat() : [];
-    }, [infiniteData]);
-
-    const loadMoreRef = React.useRef<HTMLDivElement | null>(null);
-
-    React.useEffect(() => {
-        if (!hasNextPage || isFetchingNextPage) return;
-
-        const observer = new IntersectionObserver(
-            (entries) => {
-                if (entries[0].isIntersecting) {
-                    fetchNextPage();
-                }
-            },
-            { threshold: 0.1 }
-        );
-
-        const currentSensor = loadMoreRef.current;
-        if (currentSensor) {
-            observer.observe(currentSensor);
-        }
-
-        return () => {
-            if (currentSensor) {
-                observer.unobserve(currentSensor);
-            }
-        };
-    }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
     // 2. Fetch de la colección (basada en el ID activo)
     const { data: collection, isLoading: isLoadingCollection } = useQuery<Product[]>({
         queryKey: ['collection', activeUserId, isVintageOnly],
         queryFn: () => getCollection(activeUserId, isVintageOnly)
-    });
-
-    // 2.5 Fetch de productos con ofertas activas (para el badge Live)
-    const { data: productsWithOffers } = useQuery<number[]>({
-        queryKey: ['products-with-offers'],
-        queryFn: async () => {
-            const response = await axios.get('/api/products/with-offers');
-            return response.data;
-        }
     });
 
     // 3. Fetch de ofertas del producto seleccionado
@@ -371,56 +319,64 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
         });
         return stats;
     }, [products, collectionMap]);
-    // 8. Lógica de Ordenación Híbrida (VEC3/Hunting List)
+
+    // 8. Lógica de Ordenación y Filtrado Híbrida 100% Instantánea en Cliente (0ms)
     const sortedProducts = React.useMemo(() => {
         if (!products) return [];
 
-        return [...products]
-            .filter(product => {
-                const query = searchQuery.toLowerCase();
-                const owned = isOwned(product.id);
-                const wished = isWished(product.id);
+        const filtered = [...products].filter(product => {
+            const query = searchQuery.toLowerCase();
+            const owned = isOwned(product.id);
+            const wished = isWished(product.id);
 
-                // Quick-Chips filter applications
-                if (selectedChips.includes('offers') && !(product.purgatory_match_count && product.purgatory_match_count > 0)) return false;
-                if (selectedChips.includes('coleccionado') && !owned) return false;
+            // Filtro por tienda si hay una seleccionada
+            if (selectedShopFilter && product.best_p2p_source !== selectedShopFilter) {
+                return false;
+            }
 
-                // If not explicitly filtering by owned items, maintain standard hunting list logic (hide owned)
-                if (!selectedChips.includes('coleccionado')) {
-                    if (viewMode === 'wish') {
-                        if (!wished) return false;
-                    } else {
-                        if (owned) return false;
-                    }
-                }
+            // Quick-Chips filter applications
+            if (selectedChips.includes('offers') && !(product.purgatory_match_count && product.purgatory_match_count > 0)) return false;
+            if (selectedChips.includes('coleccionado') && !owned) return false;
 
-                return (
-                    product.name.toLowerCase().includes(query) ||
-                    product.figure_id?.toLowerCase().includes(query) ||
-                    product.sub_category?.toLowerCase().includes(query)
-                );
-            })
-            .sort((a, b) => {
-                let comparison = 0;
-                if (sortBy === 'name') {
-                    comparison = a.name.localeCompare(b.name);
-                } else if (sortBy === 'offers') {
-                    comparison = (a.purgatory_match_count || 0) - (b.purgatory_match_count || 0);
-                } else if (sortBy === 'completion') {
-                    const statsA = subCatStats[a.sub_category || 'Desconocida'] || { total: 1, owned: 0 };
-                    const statsB = subCatStats[b.sub_category || 'Desconocida'] || { total: 1, owned: 0 };
-                    const rateA = statsA.total > 0 ? statsA.owned / statsA.total : 0;
-                    const rateB = statsB.total > 0 ? statsB.owned / statsB.total : 0;
-                    comparison = rateA - rateB;
+            // If not explicitly filtering by owned items, maintain standard hunting list logic (hide owned)
+            if (!selectedChips.includes('coleccionado')) {
+                if (viewMode === 'wish') {
+                    if (!wished) return false;
+                } else {
+                    if (owned) return false;
                 }
-                
-                if (comparison === 0) {
-                    comparison = a.id - b.id;
-                }
-                
-                return sortOrder === 'asc' ? comparison : -comparison;
-            });
-    }, [products, searchQuery, subCatStats, isOwned, isWished, isGrail, isVintageOnly, productsWithOffers, sortBy, sortOrder, viewMode, selectedChips]);
+            }
+
+            return (
+                product.name.toLowerCase().includes(query) ||
+                (product.figure_id?.toLowerCase().includes(query) ?? false) ||
+                (product.sub_category?.toLowerCase().includes(query) ?? false)
+            );
+        });
+
+        filtered.sort((a, b) => {
+            let comparison = 0;
+            if (sortBy === 'name') {
+                comparison = a.name.localeCompare(b.name);
+            } else if (sortBy === 'offers') {
+                comparison = (a.purgatory_match_count || 0) - (b.purgatory_match_count || 0);
+            } else if (sortBy === 'completion') {
+                const statsA = subCatStats[a.sub_category || 'Desconocida'] || { total: 1, owned: 0 };
+                const statsB = subCatStats[b.sub_category || 'Desconocida'] || { total: 1, owned: 0 };
+                const rateA = statsA.total > 0 ? statsA.owned / statsA.total : 0;
+                const rateB = statsB.total > 0 ? statsB.owned / statsB.total : 0;
+                comparison = rateA - rateB;
+            }
+
+            if (comparison === 0) {
+                comparison = a.id - b.id;
+            }
+
+            return sortOrder === 'asc' ? comparison : -comparison;
+        });
+
+        return filtered;
+    }, [products, searchQuery, selectedChips, selectedShopFilter, viewMode, sortBy, sortOrder, isOwned, isWished, subCatStats]);
 
     const chartData = React.useMemo(() => {
         if (!historyCronosA && !historyCronosB) return [];
@@ -805,35 +761,26 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                     </p>
                 </div>
             ) : (
-                <>
-                    <div className="grid grid-cols-2 gap-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4 landscape:grid-cols-3">
-                        {sortedProducts?.map((product) => (
-                            <ProductCard
-                                key={product.id}
-                                product={product}
-                                isVintageOnly={isVintageOnly}
-                                isOwned={isOwned}
-                                isWished={isWished}
-                                isGrail={isGrail}
-                                setSelectedProduct={setSelectedProduct}
-                                toggleMutation={toggleMutation}
-                                subCatStats={subCatStats}
-                                isAdmin={isAdmin}
-                                setEditingProduct={setEditingProduct}
-                            />
-                        ))}
-                    </div>
-                </>
-            )}
-
-            {/* Sensor y Spinner de Carga de Scroll Infinito */}
-            {hasNextPage && (
-                <div ref={loadMoreRef} className="flex justify-center p-8 mt-6 w-full">
-                    <PowerSwordLoader size={32} text="Invocando siguientes reliquias..." isVintage={isVintageOnly} />
+                <div className="grid grid-cols-2 gap-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4 landscape:grid-cols-3">
+                    {sortedProducts?.map((product) => (
+                        <ProductCard
+                            key={product.id}
+                            product={product}
+                            isVintageOnly={isVintageOnly}
+                            isOwned={isOwned}
+                            isWished={isWished}
+                            isGrail={isGrail}
+                            setSelectedProduct={setSelectedProduct}
+                            toggleMutation={toggleMutation}
+                            subCatStats={subCatStats}
+                            isAdmin={isAdmin}
+                            setEditingProduct={setEditingProduct}
+                        />
+                    ))}
                 </div>
             )}
-                </>
-            )}
+        </>
+    )}
 
             <ProductDetailModal
                 selectedProduct={selectedProduct}

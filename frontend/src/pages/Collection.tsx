@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
     Box,
     AlertCircle,
@@ -142,55 +142,16 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
         }
     };
 
-    // 1. Fetch de la colección con scroll infinito (Infinite Scroll)
+    // 1. Fetch de la colección para filtrado y ordenación instantánea a 0ms en cliente
     const {
-        data: infiniteData,
-        fetchNextPage,
-        hasNextPage,
-        isFetchingNextPage,
+        data: collection = [],
         isLoading,
         isError
-    } = useInfiniteQuery<Product[]>({
-        queryKey: ['collection-infinite', activeUserId, isVintageOnly, searchQuery],
-        queryFn: async ({ pageParam = 0 }) => {
-            return getCollection(activeUserId, isVintageOnly, 24, pageParam as number, searchQuery);
-        },
-        initialPageParam: 0,
-        getNextPageParam: (lastPage, allPages) => {
-            if (lastPage.length < 24) return undefined;
-            return allPages.length * 24;
-        }
+    } = useQuery<Product[]>({
+        queryKey: ['collection-full', activeUserId, isVintageOnly],
+        queryFn: () => getCollection(activeUserId, isVintageOnly),
+        staleTime: 1000 * 60 * 5,
     });
-
-    const collection = React.useMemo(() => {
-        return infiniteData ? infiniteData.pages.flat() : [];
-    }, [infiniteData]);
-
-    const loadMoreRef = React.useRef<HTMLDivElement | null>(null);
-
-    React.useEffect(() => {
-        if (!hasNextPage || isFetchingNextPage) return;
-
-        const observer = new IntersectionObserver(
-            (entries) => {
-                if (entries[0].isIntersecting) {
-                    fetchNextPage();
-                }
-            },
-            { threshold: 0.1 }
-        );
-
-        const currentSensor = loadMoreRef.current;
-        if (currentSensor) {
-            observer.observe(currentSensor);
-        }
-
-        return () => {
-            if (currentSensor) {
-                observer.unobserve(currentSensor);
-            }
-        };
-    }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
     // 2. Mutación para alternar estado
     const toggleMutation = useMutation({
@@ -726,13 +687,6 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                     </motion.div>
                 )}
             </AnimatePresence>
-
-            {/* Sensor y Spinner de Carga de Scroll Infinito */}
-            {hasNextPage && (
-                <div ref={loadMoreRef} className="flex justify-center p-8 mt-6 w-full">
-                    <PowerSwordLoader size={32} text="Invocando siguientes reliquias..." isVintage={isVintageOnly} />
-                </div>
-            )}
 
             {/* Detail Modal Integration (Legado Bridge) */}
             {isDetailOpen && selectedProduct && (
