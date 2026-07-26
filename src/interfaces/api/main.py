@@ -106,23 +106,33 @@ async def _fetch_and_cache_product_image(product_id: int) -> "str | None":
     desde caché local sin volver a descargarla.
     """
     from src.infrastructure.database_cloud import SessionCloud
-    from src.domain.models import ProductModel
+    from src.domain.models import ProductModel, OfferModel
 
     with SessionCloud() as db:
         product = db.query(ProductModel).filter(ProductModel.id == product_id).first()
         image_url = product.image_url if product else None
+        if not image_url and product:
+            offer = db.query(OfferModel).filter(OfferModel.product_id == product_id, OfferModel.image_url.is_not(None)).first()
+            image_url = offer.image_url if offer else None
 
     if not image_url or not image_url.startswith("http"):
         return None
 
     dest_path = os.path.join(settings.IMAGE_CACHE_DIR, f"{product_id}.webp")
+    if os.path.exists(dest_path) and os.path.getsize(dest_path) > 0:
+        return dest_path
+
     try:
         import io
-
         import httpx
         from PIL import Image
 
-        async with httpx.AsyncClient(timeout=10.0) as client:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+        }
+
+        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True, headers=headers) as client:
             resp = await client.get(image_url)
             resp.raise_for_status()
 
