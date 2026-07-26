@@ -119,6 +119,7 @@ async def _fetch_and_cache_product_image(product_id: int) -> "str | None":
         return None
 
     dest_path = os.path.join(settings.IMAGE_CACHE_DIR, f"{product_id}.webp")
+    os.makedirs(settings.IMAGE_CACHE_DIR, exist_ok=True)
     if os.path.exists(dest_path) and os.path.getsize(dest_path) > 0:
         return dest_path
 
@@ -187,10 +188,6 @@ async def get_static_image_override(product_id: int, source: str = None, user_id
 
     raise HTTPException(status_code=404, detail="Imagen no encontrada")
 
-# Mount local image cache directory
-image_cache_dir = settings.IMAGE_CACHE_DIR
-os.makedirs(image_cache_dir, exist_ok=True)
-app.mount("/api/static/images", StaticFiles(directory=image_cache_dir), name="static_images")
 
 from src.core.config import get_cors_origins
 
