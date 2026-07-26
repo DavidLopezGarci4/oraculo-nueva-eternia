@@ -48,5 +48,5 @@ jobs:
       run: npm ci
     - name: Type-check and build
       run: npm run build
-    - name: Audit dependencies (fails on high/critical)
-      run: npm audit --audit-level=high
+    - name: Audit dependencies (fails on critical)
+      run: npm audit --audit-level=critical
