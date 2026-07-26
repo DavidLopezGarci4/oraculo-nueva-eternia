@@ -108,14 +108,18 @@ async def _fetch_and_cache_product_image(product_id: int) -> "str | None":
     from src.infrastructure.database_cloud import SessionCloud
     from src.domain.models import ProductModel, OfferModel
 
+    candidate_urls = []
     with SessionCloud() as db:
         product = db.query(ProductModel).filter(ProductModel.id == product_id).first()
-        image_url = product.image_url if product else None
-        if not image_url and product:
-            offer = db.query(OfferModel).filter(OfferModel.product_id == product_id, OfferModel.image_url.is_not(None)).first()
-            image_url = offer.image_url if offer else None
+        if product and product.image_url:
+            candidate_urls.append(product.image_url)
+        
+        offers = db.query(OfferModel).filter(OfferModel.product_id == product_id, OfferModel.image_url.is_not(None)).all()
+        for o in offers:
+            if o.image_url and o.image_url not in candidate_urls:
+                candidate_urls.append(o.image_url)
 
-    if not image_url or not image_url.startswith("http"):
+    if not candidate_urls:
         return None
 
     dest_path = os.path.join(settings.IMAGE_CACHE_DIR, f"{product_id}.webp")
@@ -123,34 +127,37 @@ async def _fetch_and_cache_product_image(product_id: int) -> "str | None":
     if os.path.exists(dest_path) and os.path.getsize(dest_path) > 0:
         return dest_path
 
-    try:
-        import io
-        import httpx
-        from PIL import Image
+    import io
+    import httpx
+    from PIL import Image
 
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-            "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
-        }
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+    }
 
-        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True, headers=headers) as client:
-            resp = await client.get(image_url)
-            resp.raise_for_status()
+    async with httpx.AsyncClient(timeout=15.0, follow_redirects=True, headers=headers) as client:
+        for image_url in candidate_urls:
+            if not image_url or not image_url.startswith("http"):
+                continue
+            try:
+                resp = await client.get(image_url)
+                if resp.status_code == 200 and len(resp.content) > 200:
+                    with Image.open(io.BytesIO(resp.content)) as img:
+                        if img.mode in ("RGBA", "LA"):
+                            background = Image.new("RGB", img.size, (255, 255, 255))
+                            background.paste(img, mask=img.split()[-1])
+                            img = background
+                        elif img.mode != "RGB":
+                            img = img.convert("RGB")
+                        img.save(dest_path, "WEBP", quality=85)
 
-        with Image.open(io.BytesIO(resp.content)) as img:
-            if img.mode in ("RGBA", "LA"):
-                background = Image.new("RGB", img.size, (255, 255, 255))
-                background.paste(img, mask=img.split()[-1])  # último canal = alfa (RGBA o LA)
-                img = background
-            elif img.mode != "RGB":
-                img = img.convert("RGB")
-            img.save(dest_path, "WEBP", quality=85)
+                    logger.info(f"📸 Imagen del producto {product_id} descargada y cacheada en WebP desde {image_url}.")
+                    return dest_path
+            except Exception as e:
+                logger.warning(f"⚠️ Error intentando descargar desde {image_url} para producto {product_id}: {e}")
 
-        logger.info(f"📸 Imagen del producto {product_id} descargada y cacheada en WebP.")
-        return dest_path
-    except Exception as e:
-        logger.warning(f"⚠️ No se pudo descargar/cachear la imagen del producto {product_id}: {e}")
-        return None
+    return None
 
 
 @app.get("/api/static/images/{product_id}.webp")

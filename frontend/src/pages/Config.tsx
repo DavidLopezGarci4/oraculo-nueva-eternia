@@ -84,7 +84,16 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
     const [loadingDevices, setLoadingDevices] = useState(false);
 
     const [, setLocalImagesEnabled] = useState(() => localStorage.getItem('use_local_images') === 'true');
-    const [downloadStatus, setDownloadStatus] = useState({ active: false, total: 0, current: 0, errors: 0, last_error: null as string | null });
+    const [downloadStatus, setDownloadStatus] = useState({
+        active: false,
+        total: 0,
+        current: 0,
+        errors: 0,
+        last_error: null as string | null,
+        pass: 1,
+        maxPasses: 3,
+        failedItems: [] as Array<{ id: number; name: string; image_url?: string; reason: string }>
+    });
     const [cachedImagesCount, setCachedImagesCount] = useState(0);
     const [syncingExcel, setSyncingExcel] = useState(false);
     const [runningMaintenance, setRunningMaintenance] = useState(false);
@@ -248,16 +257,12 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
         } catch (e) {
             console.error("Error checking cache count", e);
         }
-    };    // Download or update images directly into the browser's Cache API storage
+    };
+    // Download or update images directly into the browser's Cache API storage with bounded auto-retries
     const handleTriggerDownload = async (forceRefresh: boolean = false) => {
         cancelDownloadRef.current = false;
-        setDownloadStatus({
-            active: true,
-            total: 0,
-            current: 0,
-            errors: 0,
-            last_error: null
-        });
+        let pass = 1;
+        const MAX_PASSES = 3;
 
         try {
             if (forceRefresh) {
@@ -276,138 +281,167 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                 axios.get('/api/products'),
                 axios.get('/api/products?is_vintage=true')
             ]);
-            const products = [...modernRes.data, ...vintageRes.data];
-            // Target products that have IDs
-            const targetProducts = products.filter((p: any) => p.id);
-            const totalCount = targetProducts.length;
+            const allProductsMap = new Map<number, any>();
+            [...modernRes.data, ...vintageRes.data].forEach((p: any) => {
+                if (p.id) allProductsMap.set(p.id, p);
+            });
+            const totalProducts = Array.from(allProductsMap.values());
+            const totalCount = totalProducts.length;
 
-            setDownloadStatus(prev => ({ ...prev, total: totalCount }));
-
-            // 2. Open the browser's Cache API storage
             const cache = await caches.open('motu-image-cache');
 
-            // 3. Download and cache each image sequentially
-            let current = 0;
-            let errors = 0;
-            let last_error: string | null = null;
+            let itemsToProcess = [...totalProducts];
+            let currentFailed: Array<{ id: number; name: string; image_url?: string; reason: string }> = [];
 
-            for (const p of targetProducts) {
-                if (cancelDownloadRef.current) {
+            while (itemsToProcess.length > 0 && pass <= MAX_PASSES) {
+                if (cancelDownloadRef.current) break;
+
+                setDownloadStatus({
+                    active: true,
+                    total: totalCount,
+                    current: totalCount - itemsToProcess.length,
+                    errors: currentFailed.length,
+                    last_error: currentFailed.length > 0 ? currentFailed[currentFailed.length - 1].reason : null,
+                    pass,
+                    maxPasses: MAX_PASSES,
+                    failedItems: currentFailed
+                });
+
+                const nextFailed: Array<{ id: number; name: string; image_url?: string; reason: string }> = [];
+
+                for (const p of itemsToProcess) {
+                    if (cancelDownloadRef.current) break;
+
+                    const cacheKey = `/api/static/images/${p.id}.webp`;
+
+                    try {
+                        // 1. Si no es forzado y es la primera pasada, comprobar primero si ya existe en la caché local
+                        if (!forceRefresh && pass === 1) {
+                            const existingMatch = await cache.match(cacheKey);
+                            if (existingMatch) {
+                                setDownloadStatus(prev => ({ ...prev, current: prev.current + 1 }));
+                                continue;
+                            }
+                        }
+
+                        // 2. Solicitar la imagen con jerarquía de 3 capas ultra-resiliente
+                        let imgBlob: Blob | null = null;
+                        const fetchUrl = (forceRefresh && pass === 1) ? `${cacheKey}?t=${Date.now()}` : cacheKey;
+
+                        // Capa A: Petición a la API local
+                        try {
+                            const imgResponse = await fetch(fetchUrl);
+                            if (imgResponse.ok) {
+                                imgBlob = await imgResponse.blob();
+                            }
+                        } catch (e) {
+                            // Fallback a Capa B
+                        }
+
+                        // Capa B: Petición directa a Supabase CDN por fetch
+                        if (!imgBlob && p.image_url && p.image_url.startsWith('http')) {
+                            try {
+                                const fallbackResp = await fetch(p.image_url, { mode: 'cors' });
+                                if (fallbackResp.ok) {
+                                    imgBlob = await fallbackResp.blob();
+                                }
+                            } catch (corsErr) {
+                                // Fallback a Capa C
+                            }
+
+                            // Capa C: Carga a través de elemento Image HTML y lienzo Canvas (sin restricciones CORS de fetch)
+                            if (!imgBlob) {
+                                try {
+                                    imgBlob = await new Promise<Blob>((resolve, reject) => {
+                                        const img = new Image();
+                                        img.crossOrigin = 'anonymous';
+                                        img.onload = () => {
+                                            try {
+                                                const canvas = document.createElement('canvas');
+                                                canvas.width = img.naturalWidth || img.width || 300;
+                                                canvas.height = img.naturalHeight || img.height || 300;
+                                                const ctx = canvas.getContext('2d');
+                                                if (!ctx) return reject(new Error('Canvas ctx error'));
+                                                ctx.drawImage(img, 0, 0);
+                                                canvas.toBlob((b) => {
+                                                    if (b) resolve(b);
+                                                    else reject(new Error('toBlob empty'));
+                                                }, 'image/webp', 0.85);
+                                            } catch (err) {
+                                                reject(err);
+                                            }
+                                        };
+                                        img.onerror = () => reject(new Error(`Error de CORS o URL inaccesible (${p.image_url || 'sin URL'})`));
+                                        img.src = p.image_url;
+                                    });
+                                } catch (canvasErr: any) {
+                                    // final error
+                                }
+                            }
+                        }
+
+                        if (imgBlob) {
+                            const responseToCache = new Response(imgBlob, {
+                                headers: { 'Content-Type': 'image/webp' }
+                            });
+                            await cache.put(cacheKey, responseToCache);
+                        } else {
+                            throw new Error(`Imagen no disponible en API local ni en CDN (${p.image_url ? p.image_url.substring(0, 50) + '...' : 'sin URL'})`);
+                        }
+                    } catch (err: any) {
+                        const reason = err.message || String(err);
+                        nextFailed.push({
+                            id: p.id,
+                            name: p.name || `Reliquia #${p.id}`,
+                            image_url: p.image_url || '',
+                            reason
+                        });
+                    }
+
+                    setDownloadStatus(prev => ({ ...prev, current: prev.current + 1 }));
+                }
+
+                currentFailed = nextFailed;
+
+                if (currentFailed.length === 0 || cancelDownloadRef.current) {
                     break;
                 }
 
-                const cacheKey = `/api/static/images/${p.id}.webp`;
-                
-                try {
-                    // 1. Si no es forzado, comprobar primero si la imagen ya existe en la caché local del navegador
-                    if (!forceRefresh) {
-                        const existingMatch = await cache.match(cacheKey);
-                        if (existingMatch) {
-                            current++;
-                            setDownloadStatus(prev => ({
-                                ...prev,
-                                current,
-                                errors,
-                                last_error
-                            }));
-                            continue;
-                        }
-                    }
-
-                    // 2. Solicitar la imagen con jerarquía de 3 capas ultra-resiliente
-                    let imgBlob: Blob | null = null;
-                    const fetchUrl = forceRefresh ? `${cacheKey}?t=${Date.now()}` : cacheKey;
-
-                    // Capa A: Petición a la API local
-                    try {
-                        const imgResponse = await fetch(fetchUrl);
-                        if (imgResponse.ok) {
-                            imgBlob = await imgResponse.blob();
-                        }
-                    } catch (e) {
-                        // Fallback a Capa B
-                    }
-
-                    // Capa B: Petición directa a Supabase CDN por fetch
-                    if (!imgBlob && p.image_url && p.image_url.startsWith('http')) {
-                        try {
-                            const fallbackResp = await fetch(p.image_url, { mode: 'cors' });
-                            if (fallbackResp.ok) {
-                                imgBlob = await fallbackResp.blob();
-                            }
-                        } catch (corsErr) {
-                            // Fallback a Capa C
-                        }
-
-                        // Capa C: Carga a través de elemento Image HTML y lienzo Canvas (sin restricciones CORS de fetch)
-                        if (!imgBlob) {
-                            try {
-                                imgBlob = await new Promise<Blob>((resolve, reject) => {
-                                    const img = new Image();
-                                    img.crossOrigin = 'anonymous';
-                                    img.onload = () => {
-                                        try {
-                                            const canvas = document.createElement('canvas');
-                                            canvas.width = img.naturalWidth || img.width || 300;
-                                            canvas.height = img.naturalHeight || img.height || 300;
-                                            const ctx = canvas.getContext('2d');
-                                            if (!ctx) return reject(new Error('Canvas ctx error'));
-                                            ctx.drawImage(img, 0, 0);
-                                            canvas.toBlob((b) => {
-                                                if (b) resolve(b);
-                                                else reject(new Error('toBlob empty'));
-                                            }, 'image/webp', 0.85);
-                                        } catch (err) {
-                                            reject(err);
-                                        }
-                                    };
-                                    img.onerror = () => reject(new Error(`Failed to load HTMLImageElement for ${p.id}`));
-                                    img.src = p.image_url;
-                                });
-                            } catch (canvasErr) {
-                                // Error final
-                            }
-                        }
-                    }
-
-                    if (imgBlob) {
-                        const responseToCache = new Response(imgBlob, {
-                            headers: { 'Content-Type': 'image/webp' }
-                        });
-                        await cache.put(cacheKey, responseToCache);
-                    } else {
-                        throw new Error(`No se pudo obtener la imagen del producto ${p.id}`);
-                    }
-                } catch (err: any) {
-                    console.error(`Error caching image for product ${p.id}:`, err);
-                    errors++;
-                    last_error = err.message || String(err);
+                // Preparar pase de reintento recursivo
+                pass++;
+                if (pass <= MAX_PASSES) {
+                    itemsToProcess = totalProducts.filter(p => currentFailed.some(f => f.id === p.id));
+                    await new Promise(r => setTimeout(r, 600)); // Pausa sutil entre pases
                 }
-
-                current++;
-                setDownloadStatus(prev => ({
-                    ...prev,
-                    current,
-                    errors,
-                    last_error
-                }));
             }
 
-            setDownloadStatus(prev => ({ ...prev, active: false }));
+            const keys = await cache.keys();
+            const finalSaved = keys.length;
+
+            setDownloadStatus(prev => ({
+                ...prev,
+                active: false,
+                pass,
+                failedItems: currentFailed,
+                errors: currentFailed.length
+            }));
+
             await updateCachedImagesCount();
 
             if (cancelDownloadRef.current) {
                 alert("Descarga en el navegador cancelada por el usuario.");
+            } else if (currentFailed.length === 0) {
+                alert(`¡Descarga 100% exitosa! ${finalSaved} de ${totalCount} imágenes guardadas en la caché local.`);
             } else {
-                const savedCount = current - errors;
-                alert(`Descarga completada. ${savedCount} de ${totalCount} imágenes guardadas en el navegador.`);
+                alert(`Descarga completada. ${finalSaved} de ${totalCount} imágenes guardadas. Fallaron ${currentFailed.length} imágenes tras ${pass - 1} pases de reintento (puedes consultar el informe de errores en Ajustes).`);
             }
         } catch (e: any) {
             console.error("Failed to download images to browser cache", e);
             setDownloadStatus(prev => ({ ...prev, active: false, last_error: e.message || String(e) }));
             alert("Error al iniciar la descarga de imágenes en el navegador: " + (e.message || String(e)));
         } finally {
-            await updateCachedImagesCount();
+            setDownloadStatus(prev => ({ ...prev, active: false }));
+            updateCachedImagesCount();
         }
     };
 

@@ -2,9 +2,17 @@ import { motion } from 'framer-motion';
 import {
     Database, Lock, AlertCircle, Target, Clock, Globe, Repeat, ChevronDown,
     CheckCircle2, RefreshCw, Download, Package, Sparkles, Settings, ShieldAlert,
-    FileSpreadsheet, Trash2, Zap,
+    FileSpreadsheet, Trash2, Zap, Copy, Check, X
 } from 'lucide-react';
+import { useState } from 'react';
 import { downloadImagesZip, type Hero } from '../../api/admin';
+
+interface ImageDownloadFailure {
+    id: number;
+    name: string;
+    image_url?: string;
+    reason: string;
+}
 
 interface DownloadStatus {
     active: boolean;
@@ -12,6 +20,9 @@ interface DownloadStatus {
     current: number;
     errors: number;
     last_error: string | null;
+    pass?: number;
+    maxPasses?: number;
+    failedItems?: ImageDownloadFailure[];
 }
 
 interface SystemTabProps {
@@ -68,6 +79,19 @@ export default function SystemTab({
     handleRunMaintenance,
     setResetStep,
 }: SystemTabProps) {
+    const [showErrorLogModal, setShowErrorLogModal] = useState(false);
+    const [copiedLog, setCopiedLog] = useState(false);
+
+    const handleCopyErrorLog = () => {
+        if (!downloadStatus.failedItems) return;
+        const logText = downloadStatus.failedItems.map(item =>
+            `[ID ${item.id}] ${item.name} | URL: ${item.image_url || 'N/A'} | Motivo: ${item.reason}`
+        ).join('\n');
+        navigator.clipboard.writeText(logText);
+        setCopiedLog(true);
+        setTimeout(() => setCopiedLog(false), 2500);
+    };
+
     return (
         <motion.div
             key="system"
@@ -350,7 +374,14 @@ export default function SystemTab({
                             {downloadStatus.active ? (
                                 <div className="space-y-2">
                                     <div className="flex justify-between text-[10px] font-black uppercase text-white/60">
-                                        <span>Descargando a caché...</span>
+                                        <span>
+                                            Descargando a caché...
+                                            {downloadStatus.pass && downloadStatus.pass > 1 && (
+                                                <span className="text-amber-400 font-bold ml-1">
+                                                    (Pase {downloadStatus.pass}/{downloadStatus.maxPasses} - Reintentando {downloadStatus.errors} fallidas)
+                                                </span>
+                                            )}
+                                        </span>
                                         <span>{downloadStatus.current} / {downloadStatus.total}</span>
                                     </div>
                                     <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
@@ -361,7 +392,7 @@ export default function SystemTab({
                                     </div>
                                     {downloadStatus.errors > 0 && (
                                         <p className="text-[8px] text-red-400 font-bold uppercase">
-                                            Errores: {downloadStatus.errors}
+                                            Errores en proceso: {downloadStatus.errors}
                                         </p>
                                     )}
                                     <button
@@ -385,12 +416,23 @@ export default function SystemTab({
                                         <button
                                             onClick={() => handleTriggerDownload(true)}
                                             className="w-full bg-amber-500/15 hover:bg-amber-500 text-amber-400 hover:text-black border border-amber-500/30 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                                            title="Borra la caché local antigua e importa de nuevo todas las imágenes desde el servidor"
+                                            title="Borra la caché local antigua e importa de nuevo todas las imágenes desde el servidor con reintentos automáticos"
                                         >
                                             <RefreshCw className="h-3 w-3" />
                                             Actualizar Caché
                                         </button>
                                     </div>
+
+                                    {downloadStatus.failedItems && downloadStatus.failedItems.length > 0 && (
+                                        <button
+                                            onClick={() => setShowErrorLogModal(true)}
+                                            className="w-full bg-red-500/15 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/30 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 cursor-pointer"
+                                        >
+                                            <AlertCircle className="h-3.5 w-3.5" />
+                                            Ver Informe de Errores ({downloadStatus.failedItems.length} falladas)
+                                        </button>
+                                    )}
+
                                     <button
                                         onClick={() => downloadImagesZip()}
                                         className="w-full bg-emerald-500/15 hover:bg-emerald-500 text-emerald-400 hover:text-white border border-emerald-500/30 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 cursor-pointer"
@@ -600,6 +642,67 @@ export default function SystemTab({
                     </div>
                 )}
             </div>
+
+            {/* Error Log Modal */}
+            {showErrorLogModal && downloadStatus.failedItems && downloadStatus.failedItems.length > 0 && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
+                    <div className="bg-[#12141a] border border-white/10 rounded-3xl p-6 max-w-2xl w-full max-h-[85vh] flex flex-col space-y-4 shadow-2xl">
+                        <div className="flex justify-between items-center pb-3 border-b border-white/10">
+                            <div className="flex items-center gap-2 text-red-400 font-black uppercase text-sm">
+                                <AlertCircle className="h-5 w-5" />
+                                <span>Informe de Errores de Descarga ({downloadStatus.failedItems.length} Imágenes)</span>
+                            </div>
+                            <button
+                                onClick={() => setShowErrorLogModal(false)}
+                                className="p-1 rounded-xl bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-all"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+
+                        <p className="text-[10px] text-white/60 font-bold uppercase leading-relaxed">
+                            Las siguientes reliquias no se pudieron guardar en la caché local tras 3 pases de reintento. Puedes copiar este registro o pulsar <span className="text-amber-400">Reintentar Fallidos</span>.
+                        </p>
+
+                        <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                            {downloadStatus.failedItems.map((item) => (
+                                <div key={item.id} className="p-3 bg-white/[0.02] border border-white/5 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                                    <div className="space-y-0.5">
+                                        <div className="flex items-center gap-2">
+                                            <span className="px-2 py-0.5 rounded-md bg-white/10 text-[9px] font-mono font-bold text-brand-primary">ID #{item.id}</span>
+                                            <span className="text-[11px] font-bold text-white uppercase">{item.name}</span>
+                                        </div>
+                                        <div className="text-[9px] text-red-400 font-mono flex items-center gap-1">
+                                            <span>Motivo:</span>
+                                            <span className="truncate max-w-md">{item.reason}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="pt-3 border-t border-white/10 flex flex-col sm:flex-row gap-2 justify-end">
+                            <button
+                                onClick={handleCopyErrorLog}
+                                className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white border border-white/10 text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all"
+                            >
+                                {copiedLog ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+                                {copiedLog ? '¡Copiado!' : 'Copiar Log de Errores'}
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setShowErrorLogModal(false);
+                                    handleTriggerDownload(true);
+                                }}
+                                className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-black uppercase text-[10px] tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer"
+                            >
+                                <RefreshCw className="h-4 w-4" />
+                                Reintentar Fallidos ({downloadStatus.failedItems.length})
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </motion.div>
     );
 }
