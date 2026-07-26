@@ -289,16 +289,25 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                 const cacheKey = `/api/static/images/${p.id}.webp`;
                 
                 try {
-                    // Solicitamos la imagen a través del servidor local/backend.
-                    // El backend gestiona la descarga remota (evitando CORS del navegador),
-                    // la convierte a WebP y la devuelve.
+                    // 1. Comprobar primero si la imagen ya existe en la caché local del navegador
+                    const existingMatch = await cache.match(cacheKey);
+                    if (existingMatch) {
+                        current++;
+                        setDownloadStatus(prev => ({
+                            ...prev,
+                            current,
+                            errors,
+                            last_error
+                        }));
+                        continue;
+                    }
+
+                    // 2. Si no está en caché, solicitarla a través del backend
                     let imgResponse = await fetch(cacheKey);
 
                     if (imgResponse.ok) {
-                        // Guardar la respuesta clonada en el almacenamiento del navegador
                         await cache.put(cacheKey, imgResponse.clone());
                     } else if (p.image_url && p.image_url.startsWith('http')) {
-                        // Fallback secundario directo solo si la URL es pública y accesible
                         try {
                             const fallbackResp = await fetch(p.image_url, { mode: 'cors' });
                             if (fallbackResp.ok) {
