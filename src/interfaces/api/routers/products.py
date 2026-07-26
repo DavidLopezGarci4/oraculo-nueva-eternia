@@ -54,7 +54,7 @@ def get_purgatory_counts(db) -> dict[int, int]:
     
     with _purgatory_counts_lock:
         now = time.time()
-        if _purgatory_counts_cache is not None and (now - _purgatory_counts_timestamp) < 60:
+        if _purgatory_counts_cache is not None and (now - _purgatory_counts_timestamp) < 600:
             return _purgatory_counts_cache
 
     from src.domain.models import PendingMatchModel, ProductModel
@@ -150,6 +150,11 @@ async def get_products(
             )
             query = query.where(ProductModel.id.in_(shop_exists_subq))
 
+        if offset:
+            query = query.offset(offset)
+        if limit:
+            query = query.limit(limit)
+
         results = db.execute(query).all()
         counts = get_purgatory_counts(db)
 
@@ -166,11 +171,6 @@ async def get_products(
                 po.best_p2p_price = best_offer.price
                 po.best_p2p_source = best_offer.shop_name
             final_products.append(po)
-
-        if offset is not None or limit is not None:
-            start = offset or 0
-            end = start + limit if limit is not None else len(final_products)
-            return final_products[start:end]
 
         return final_products
 
