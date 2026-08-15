@@ -1,6 +1,7 @@
 import hashlib
 import hmac
 import os
+from typing import Optional
 import httpx
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session
@@ -35,8 +36,8 @@ class SecurityShield:
             return False
     
     @staticmethod
-    async def send_telegram_alert(message: str):
-        """Envía un mensaje al Gran Arquitecto vía Telegram."""
+    async def send_telegram_alert(message: str, reply_markup: Optional[dict] = None, parse_mode: str = "HTML"):
+        """Envía un mensaje al Gran Arquitecto vía Telegram con soporte de botones interactivos."""
         if not settings.TELEGRAM_BOT_TOKEN or not settings.TELEGRAM_CHAT_ID:
             logger.warning("⚠️ Intento de envío de alerta Telegram cancelado: Credenciales ausentes.")
             return
@@ -45,8 +46,10 @@ class SecurityShield:
         payload = {
             "chat_id": settings.TELEGRAM_CHAT_ID,
             "text": message,
-            "parse_mode": "Markdown"
+            "parse_mode": parse_mode
         }
+        if reply_markup:
+            payload["reply_markup"] = reply_markup
         
         try:
             async with httpx.AsyncClient() as client:
@@ -74,17 +77,26 @@ class SecurityShield:
             )
             db.add(new_device)
             db.commit()
+            db.refresh(new_device)
             
-            # Notificar al Ojo de Sauron
+            # Notificar al Gran Arquitecto con botones de acción inmediata
             alert_msg = (
-                f"🛡️ *EL ORÁCULO: ALERTA DE ACCESO*\n\n"
+                f"🛡️ <b>[EL ORÁCULO: ALERTA DE ACCESO]</b>\n\n"
                 f"Se ha detectado un nuevo dispositivo intentando conectar:\n"
-                f"📱 *Dispositivo:* {device_name}\n"
-                f"🆔 *ID:* `{device_id}`\n"
-                f"🌐 *IP:* {ip_address}\n\n"
-                f"⚠️ *Acceso BLOQUEADO* hasta aprobación manual en el panel de control."
+                f"📱 <b>Dispositivo:</b> {device_name}\n"
+                f"🆔 <b>ID:</b> <code>{device_id}</code>\n"
+                f"🌐 <b>IP:</b> <code>{ip_address}</code>\n\n"
+                f"⚠️ <b>Acceso BLOQUEADO</b> hasta que lo autorices."
             )
-            await SecurityShield.send_telegram_alert(alert_msg)
+            device_keyboard = {
+                "inline_keyboard": [
+                    [
+                        {"text": "✅ Permitir Acceso", "callback_data": f"device:allow:{new_device.id}"},
+                        {"text": "🚫 Bloquear / Eliminar", "callback_data": f"device:deny:{new_device.id}"}
+                    ]
+                ]
+            }
+            await SecurityShield.send_telegram_alert(alert_msg, reply_markup=device_keyboard)
             return False
             
         # El dispositivo ya es conocido

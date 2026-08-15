@@ -10,11 +10,13 @@ ENV PYTHONUNBUFFERED=1 \
     PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
 # Install system dependencies
-# We need these for Playwright and general utility
+# We need these for Playwright, Certbot and Docker CLI operations
 RUN apt-get update && apt-get install -y \
     wget \
     gnupg \
     curl \
+    docker.io \
+    certbot \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy the uv binary from the official image

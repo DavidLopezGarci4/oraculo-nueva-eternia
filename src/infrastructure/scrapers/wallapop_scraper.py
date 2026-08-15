@@ -170,7 +170,12 @@ class WallapopScraper(BaseScraper):
             apify_max_items = 60
 
         # --- FASE 1: APIFY (Créditos Gratuitos ~20,000 reqs/mes) ---
-        tokens = [t for t in [os.environ.get("APIFY_TOKEN"), os.environ.get("APIFY_TOKEN2")] if t]
+        from src.core.config import settings
+        tokens = [t for t in [
+            settings.APIFY_TOKEN or os.environ.get("APIFY_TOKEN"),
+            settings.APIFY_TOKEN2 or os.environ.get("APIFY_TOKEN2"),
+            settings.APIFY_TOKEN3 or os.environ.get("APIFY_TOKEN3")
+        ] if t]
         apify_success = False
         apify_offers = []
         
@@ -451,8 +456,7 @@ class WallapopScraper(BaseScraper):
             
         self._log(f"🌩️ Wallapop Nexus: Iniciando búsqueda integrada para {len(queries_config)} términos.")
         
-        # --- INTENTO 1: API DIRECTA CON IMPERSONACIÓN ---
-        api_success = True
+        # --- INTENTO 1: API DIRECTA CON IMPERSONACIÓN / APIFY ---
         api_offers: List[ScrapedOffer] = []
         max_items = 30 if query == "auto" else 40
         
@@ -461,13 +465,10 @@ class WallapopScraper(BaseScraper):
                 res = await self.search_via_api(search_query, max_items=max_items)
                 if res:
                     api_offers.extend(res)
-                else:
-                    # Si la API no retorna nada, consideramos probar con Playwright
-                    api_success = False
-            except Exception:
-                api_success = False
+            except Exception as e:
+                self._log(f"⚠️ Error en API para '{search_query}': {e}", level="warning")
                 
-        if api_success and api_offers:
+        if api_offers:
             # Deduplicar ofertas
             seen_urls = set()
             unique_offers = []
@@ -476,20 +477,13 @@ class WallapopScraper(BaseScraper):
                     seen_urls.add(o.url)
                     unique_offers.append(o)
             self.items_scraped = len(unique_offers)
-            self._log(f"🚀 Wallapop API: Búsqueda completada con éxito. {self.items_scraped} reliquias encontradas sin levantar navegador.")
+            self._log(f"🚀 Wallapop API / Apify: Búsqueda completada con éxito. {self.items_scraped} reliquias encontradas sin levantar navegador.")
             return unique_offers
 
         # --- INTENTO 2: FALLBACK CON PLAYWRIGHT Y PERFIL PERSISTENTE (Solo local) ---
         if os.environ.get("GITHUB_ACTIONS") == "true":
             self._log("⚠️ Wallapop: API directa fallida en GitHub Actions. Saltando fallback de Playwright para evitar bloqueos CloudWAF.")
-            seen_urls = set()
-            unique_offers = []
-            for o in api_offers:
-                if o.url not in seen_urls:
-                    seen_urls.add(o.url)
-                    unique_offers.append(o)
-            self.items_scraped = len(unique_offers)
-            return unique_offers
+            return []
 
         self._log("🌐 Wallapop Fallback: La API directa no ha retornado datos. Levantando navegador Playwright...", level="warning")
         

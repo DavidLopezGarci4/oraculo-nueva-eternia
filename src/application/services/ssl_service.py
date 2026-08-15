@@ -89,6 +89,8 @@ class SSLService:
             logger.debug(f"Live TLS check for {domain}:{port} skipped/failed: {e}")
             return None
 
+    _last_renewal_result: Optional[dict] = None
+
     @classmethod
     def get_certificate_status(cls) -> dict:
         """
@@ -145,7 +147,8 @@ class SSLService:
                 "next_renewal_recommended": next_renewal,
                 "is_valid": is_valid,
                 "source": source,
-                "details": f"Certificado inspeccionado vía {source} ({'Vigente' if is_valid else 'Caducado'})."
+                "details": f"Certificado inspeccionado vía {source} ({'Vigente' if is_valid else 'Caducado'}).",
+                "last_renewal_result": cls._last_renewal_result,
             }
 
         # 4. Fallback si no hay certificados instalados en local ni red
@@ -159,7 +162,8 @@ class SSLService:
             "next_renewal_recommended": None,
             "is_valid": False,
             "source": "fallback",
-            "details": "No se detectaron certificados locales en /etc/letsencrypt ni conexión TLS activa."
+            "details": "No se detectaron certificados locales en /etc/letsencrypt ni conexión TLS activa.",
+            "last_renewal_result": cls._last_renewal_result,
         }
 
     @classmethod
@@ -167,7 +171,7 @@ class SSLService:
         """
         Ejecuta la renovación del certificado SSL.
         - Invoca el script de renovación en el servidor o mediante Certbot Docker.
-        - Envía notificaciones de alerta a Telegram.
+        - Envía notificaciones de alerta a Telegram con botones interactivos.
         """
         logger.info(f"🔒 [SSL] Iniciando proceso de renovación de certificado (force={force})...")
         
@@ -180,6 +184,7 @@ class SSLService:
 
         output_str = ""
         success = False
+        now_iso = datetime.now(timezone.utc).isoformat()
 
         if script_path.exists() and os.name != "nt":
             try:
@@ -202,6 +207,16 @@ class SSLService:
             success = status_info.get("is_valid", False) or status_info.get("status") == "UNKNOWN"
             output_str = f"[SIMULATION/DIAGNOSTIC] Chequeo de certificado ejecutado. Estado actual: {status_info.get('status')} ({status_info.get('days_remaining')} días restantes)."
 
+        # Teclado interactivo para Telegram
+        tg_keyboard = {
+            "inline_keyboard": [
+                [
+                    {"text": "🔄 Forzar Renovación SSL", "callback_data": "ssl:renew"},
+                    {"text": "📊 Ver Estado SSL", "callback_data": "ssl:status"}
+                ]
+            ]
+        }
+
         # Alerta de Telegram
         if success:
             msg = (
@@ -211,22 +226,27 @@ class SSLService:
                 f"• Resultado: <b>Éxito</b>\n\n"
                 "✨ <i>Nginx y los certificados de Let's Encrypt han sido sincronizados.</i>"
             )
-            await SecurityShield.send_telegram_alert(msg)
-            return {
+            await SecurityShield.send_telegram_alert(msg, reply_markup=tg_keyboard)
+            result = {
                 "status": "success",
                 "message": "Proceso de renovación de certificados SSL completado correctamente.",
-                "details": output_str
+                "details": output_str.strip(),
+                "timestamp": now_iso
             }
         else:
             err_msg = (
                 "🚨 <b>[Oráculo SSL] Fallo en la Renovación</b>\n\n"
                 f"• Dominio: <code>{cls.DEFAULT_DOMAIN}</code>\n"
                 f"• Error: <code>{output_str[:300]}</code>\n\n"
-                "⚠️ <i>Por favor, revisa la configuración del servidor en Oracle Cloud.</i>"
+                "⚠️ <i>Pulsa el botón inferior para reintentar cuando esté listo el servidor.</i>"
             )
-            await SecurityShield.send_telegram_alert(err_msg)
-            return {
+            await SecurityShield.send_telegram_alert(err_msg, reply_markup=tg_keyboard)
+            result = {
                 "status": "error",
                 "message": "Fallo al ejecutar la renovación de certificados SSL.",
-                "details": output_str
+                "details": output_str.strip(),
+                "timestamp": now_iso
             }
+
+        cls._last_renewal_result = result
+        return result

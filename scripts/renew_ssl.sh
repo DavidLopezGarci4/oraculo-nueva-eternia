@@ -1,11 +1,10 @@
 #!/bin/bash
 # -----------------------------------------------------------------------------
-# 🏰 ORÁCULO DE NUEVA ETERNIA - SSL AUTO RENEWAL & FORCE SCRIPT
+# 🏰 ORÁCULO DE NUEVA ETERNIA - SSL AUTO RENEWAL & FORCE SCRIPT (HYBRID V2)
 # -----------------------------------------------------------------------------
-# Se ejecuta a diario a las 03:00 AM (cron) o bajo demanda desde la app/CLI.
-# Utiliza el contenedor oficial de Certbot para renovar el certificado SSL.
-# Si se renueva (detectado por x509 o salida de Certbot), recarga Nginx y
-# notifica con los nuevos datos al Telegram del Administrador.
+# Funciona de forma resiliente tanto en el host (Linux/OCI) como dentro del
+# contenedor Docker del backend. Soporta ejecución directa de Certbot o
+# invocación a través del daemon de Docker.
 # -----------------------------------------------------------------------------
 
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH"
@@ -29,15 +28,33 @@ TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-""}
 TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-""}
 NGINX_CONTAINER_NAME="oraculo_frontend_prod"
 DOMAIN="oraculo-eternia.duckdns.org"
-CERT_FILE="$PROJECT_DIR/certbot/conf/live/$DOMAIN/fullchain.pem"
+
+# Detectar rutas de certificados en host o contenedor
+if [ -d "$PROJECT_DIR/certbot/conf" ]; then
+    CONF_DIR="$PROJECT_DIR/certbot/conf"
+    WWW_DIR="$PROJECT_DIR/certbot/www"
+elif [ -d "/app/certbot/conf" ]; then
+    CONF_DIR="/app/certbot/conf"
+    WWW_DIR="/app/certbot/www"
+else
+    CONF_DIR="/etc/letsencrypt"
+    WWW_DIR="/var/www/certbot"
+fi
+
+CERT_FILE="$CONF_DIR/live/$DOMAIN/fullchain.pem"
+WORK_DIR="/tmp/certbot-work"
+LOGS_DIR="/tmp/certbot-logs"
+mkdir -p "$WORK_DIR" "$LOGS_DIR" "$WWW_DIR" 2>/dev/null || true
 
 send_telegram_alert() {
     local message="$1"
+    local keyboard='{"inline_keyboard":[[{"text":"🔄 Forzar Renovación SSL","callback_data":"ssl:renew"},{"text":"📊 Estado SSL","callback_data":"ssl:status"}]]}'
     if [ -n "$TELEGRAM_BOT_TOKEN" ] && [ -n "$TELEGRAM_CHAT_ID" ]; then
         curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
             -d "chat_id=$TELEGRAM_CHAT_ID" \
             -d "text=🔒 [Oráculo SSL] $message" \
-            -d "parse_mode=HTML" > /dev/null 2>&1 || true
+            -d "parse_mode=HTML" \
+            -d "reply_markup=$keyboard" > /dev/null 2>&1 || true
     fi
 }
 
@@ -47,22 +64,45 @@ if [ "$1" = "--force" ] || [ "$1" = "-f" ]; then
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] ⚡ Modo de renovación forzada activado (--force-renewal)"
 fi
 
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] 📡 Iniciando comprobación de renovación de certificado SSL para $DOMAIN..."
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] 📡 Iniciando comprobación de renovación SSL para $DOMAIN..."
 
-# Comprobar fecha de vencimiento previa si el archivo existe
+# Comprobar fecha de vencimiento previa
 EXPIRY_BEFORE=""
 if [ -f "$CERT_FILE" ]; then
     EXPIRY_BEFORE=$(openssl x509 -enddate -noout -in "$CERT_FILE" 2>/dev/null | cut -d= -f2)
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] ℹ️ Fecha actual de caducidad: $EXPIRY_BEFORE"
 fi
 
-# Ejecutar el contenedor Certbot de Docker
-CERTBOT_OUTPUT=$(docker run --rm --name certbot-renew \
-  -v "$PROJECT_DIR/certbot/conf:/etc/letsencrypt" \
-  -v "$PROJECT_DIR/certbot/www:/var/www/certbot" \
-  certbot/certbot renew --webroot -w /var/www/certbot --non-interactive --agree-tos $FORCE_FLAG 2>&1)
+CERTBOT_OUTPUT=""
+CERTBOT_STATUS=1
 
-CERTBOT_STATUS=$?
+# Estrategia 1: Certbot binario directo (nativo en host o instalado en contenedor)
+if command -v certbot >/dev/null 2>&1; then
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] ⚙️ Ejecutando Certbot directo en el entorno..."
+    CERTBOT_OUTPUT=$(certbot renew \
+        --webroot \
+        -w "$WWW_DIR" \
+        --config-dir "$CONF_DIR" \
+        --work-dir "$WORK_DIR" \
+        --logs-dir "$LOGS_DIR" \
+        --non-interactive \
+        --agree-tos \
+        $FORCE_FLAG 2>&1)
+    CERTBOT_STATUS=$?
+
+# Estrategia 2: Contenedor Docker de Certbot (si docker está disponible)
+elif command -v docker >/dev/null 2>&1; then
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 🐳 Ejecutando Certbot mediante contenedor Docker..."
+    CERTBOT_OUTPUT=$(docker run --rm --name certbot-renew \
+      -v "$CONF_DIR:/etc/letsencrypt" \
+      -v "$WWW_DIR:/var/www/certbot" \
+      certbot/certbot renew --webroot -w /var/www/certbot --non-interactive --agree-tos $FORCE_FLAG 2>&1)
+    CERTBOT_STATUS=$?
+else
+    CERTBOT_OUTPUT="Error: No se encontró ni el binario 'certbot' ni 'docker' en el sistema."
+    CERTBOT_STATUS=127
+fi
+
 echo "$CERTBOT_OUTPUT"
 
 # Comprobar fecha de vencimiento posterior
@@ -82,17 +122,21 @@ if [ $CERTBOT_STATUS -eq 0 ]; then
     if [ "$IS_RENEWED" = true ]; then
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] ✅ ¡Certificado renovado con éxito! Nueva caducidad: $EXPIRY_AFTER"
         
-        # Probar y recargar Nginx
-        docker exec $NGINX_CONTAINER_NAME nginx -t >/dev/null 2>&1
-        RELOAD_OUTPUT=$(docker exec $NGINX_CONTAINER_NAME nginx -s reload 2>&1)
-        RELOAD_STATUS=$?
-        
-        if [ $RELOAD_STATUS -eq 0 ]; then
-            echo "[$(date '+%Y-%m-%d %H:%M:%S')] 🚀 Nginx recargado con éxito."
-            send_telegram_alert "<b>¡Certificado SSL renovado y aplicado!</b>\n\n• Dominio: <code>$DOMAIN</code>\n• Nueva Caducidad: <b>$EXPIRY_AFTER</b>\n• Nginx: Recargado correctamente"
+        # Probar y recargar Nginx si Docker está disponible
+        if command -v docker >/dev/null 2>&1; then
+            docker exec $NGINX_CONTAINER_NAME nginx -t >/dev/null 2>&1
+            RELOAD_OUTPUT=$(docker exec $NGINX_CONTAINER_NAME nginx -s reload 2>&1)
+            RELOAD_STATUS=$?
+            if [ $RELOAD_STATUS -eq 0 ]; then
+                echo "[$(date '+%Y-%m-%d %H:%M:%S')] 🚀 Nginx recargado con éxito."
+                send_telegram_alert "<b>¡Certificado SSL renovado y aplicado!</b>\n\n• Dominio: <code>$DOMAIN</code>\n• Nueva Caducidad: <b>$EXPIRY_AFTER</b>\n• Nginx: Recargado correctamente"
+            else
+                echo "[$(date '+%Y-%m-%d %H:%M:%S')] ⚠️ Certificado renovado pero falló el reload de Nginx: $RELOAD_OUTPUT"
+                send_telegram_alert "<b>Certificado SSL renovado pero falló reload de Nginx:</b>\n<code>$RELOAD_OUTPUT</code>"
+            fi
         else
-            echo "[$(date '+%Y-%m-%d %H:%M:%S')] ❌ Fallo al recargar Nginx: $RELOAD_OUTPUT"
-            send_telegram_alert "<b>Certificado SSL renovado pero falló el reload de Nginx:</b>\n<code>$RELOAD_OUTPUT</code>"
+            echo "[$(date '+%Y-%m-%d %H:%M:%S')] ℹ️ Certificado renovado en disco. Nginx leerá el nuevo certificado."
+            send_telegram_alert "<b>¡Certificado SSL renovado con éxito!</b>\n\n• Dominio: <code>$DOMAIN</code>\n• Nueva Caducidad: <b>$EXPIRY_AFTER</b>"
         fi
     else
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] 💤 El certificado sigue vigente ($EXPIRY_BEFORE). No se requirió renovación."

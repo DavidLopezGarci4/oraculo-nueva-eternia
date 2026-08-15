@@ -84,6 +84,15 @@ export default function SystemTab({
     const [sslStatus, setSslStatus] = useState<SSLStatus | null>(null);
     const [loadingSSL, setLoadingSSL] = useState(false);
     const [renewingSSL, setRenewingSSL] = useState(false);
+    const [showSSLModal, setShowSSLModal] = useState(false);
+    const [copiedSSLLog, setCopiedSSLLog] = useState(false);
+    const [sslModalData, setSslModalData] = useState<{
+        status: 'success' | 'error' | 'running' | 'info';
+        title: string;
+        message: string;
+        details: string;
+        timestamp?: string;
+    } | null>(null);
 
     const loadSSL = async () => {
         if (!isAdmin) return;
@@ -106,19 +115,94 @@ export default function SystemTab({
         if (!confirm('🔒 RENOVACIÓN DE CERTIFICADOS SSL (Let\'s Encrypt)\n\nEsta acción invocará el proceso de renovación forzada del certificado SSL para oraculo-eternia.duckdns.org y recargará Nginx de forma segura.\n\n¿Deseas proceder con la renovación forzada?')) return;
         
         setRenewingSSL(true);
+        setSslModalData({
+            status: 'running',
+            title: 'Ejecutando Renovación SSL',
+            message: 'Invocando script de renovación forzada contra Let\'s Encrypt y recarga segura de Nginx...',
+            details: '[INICIANDO] Contactando con el backend del Oráculo...\n[INFO] Ejecutando Certbot con --force-renewal en segundo plano...',
+            timestamp: new Date().toISOString()
+        });
+        setShowSSLModal(true);
+
         try {
             const res = await renewSSLCertificate(true);
-            alert(`🔒 Renovación SSL Iniciada:\n\n${res.message}`);
-            setTimeout(() => {
-                loadSSL();
-            }, 3000);
+            let attempts = 0;
+            const interval = setInterval(async () => {
+                attempts++;
+                try {
+                    const fresh = await getSSLStatus();
+                    setSslStatus(fresh);
+                    if (fresh.last_renewal_result || attempts >= 8) {
+                        clearInterval(interval);
+                        setRenewingSSL(false);
+                        const last = fresh.last_renewal_result;
+                        if (last) {
+                            setSslModalData({
+                                status: last.status === 'success' ? 'success' : 'error',
+                                title: last.status === 'success' ? 'Certificado SSL Renovado con Éxito' : 'Fallo en la Renovación SSL',
+                                message: last.message,
+                                details: last.details || 'Sin detalles adicionales de consola.',
+                                timestamp: last.timestamp || new Date().toISOString()
+                            });
+                        } else {
+                            setSslModalData({
+                                status: 'success',
+                                title: 'Proceso de Renovación Disparado',
+                                message: res.message,
+                                details: `Respuesta del Servidor:\n${JSON.stringify(res, null, 2)}`,
+                                timestamp: new Date().toISOString()
+                            });
+                        }
+                    }
+                } catch (pollErr) {
+                    if (attempts >= 8) {
+                        clearInterval(interval);
+                        setRenewingSSL(false);
+                    }
+                }
+            }, 2500);
         } catch (error: any) {
+            setRenewingSSL(false);
             console.error('Error renewing SSL:', error);
             const detail = error.response?.data?.detail || error.message || 'Fallo en la comunicación con el servidor.';
-            alert(`❌ Error al renovar SSL: ${detail}`);
-        } finally {
-            setRenewingSSL(false);
+            setSslModalData({
+                status: 'error',
+                title: 'Error al Iniciar Renovación SSL',
+                message: 'No se pudo completar la solicitud de renovación.',
+                details: typeof detail === 'object' ? JSON.stringify(detail, null, 2) : String(detail),
+                timestamp: new Date().toISOString()
+            });
         }
+    };
+
+    const handleOpenSSLModal = () => {
+        const last = sslStatus?.last_renewal_result;
+        if (last) {
+            setSslModalData({
+                status: last.status === 'success' ? 'success' : 'error',
+                title: last.status === 'success' ? 'Registro de Última Renovación (Éxito)' : 'Registro de Última Renovación (Error)',
+                message: last.message,
+                details: last.details || 'Sin detalles registrados.',
+                timestamp: last.timestamp
+            });
+        } else {
+            setSslModalData({
+                status: 'info',
+                title: 'Diagnóstico de Certificados SSL',
+                message: sslStatus?.details || 'Estado del certificado inspeccionado.',
+                details: `Dominio: ${sslStatus?.domain || 'oraculo-eternia.duckdns.org'}\nEmisor: ${sslStatus?.issuer || "Let's Encrypt"}\nEstado: ${sslStatus?.status || 'UNKNOWN'}\nDías Restantes: ${sslStatus?.days_remaining ?? 'N/D'}\nValidez: ${sslStatus?.is_valid ? 'Válido' : 'Caducado'}\nVálido Desde: ${sslStatus?.valid_from || 'N/D'}\nVálido Hasta: ${sslStatus?.valid_until || 'N/D'}\nPróxima Renovación Recomendada: ${sslStatus?.next_renewal_recommended || 'N/D'}\nFuente de Inspección: ${sslStatus?.source || 'N/D'}`,
+                timestamp: new Date().toISOString()
+            });
+        }
+        setShowSSLModal(true);
+    };
+
+    const handleCopySSLLog = () => {
+        if (!sslModalData) return;
+        const textToCopy = `=== INFORME SSL ORÁCULO DE ETERNIA ===\nFecha: ${sslModalData.timestamp || new Date().toISOString()}\nEstado: ${sslModalData.status.toUpperCase()}\nTítulo: ${sslModalData.title}\nMensaje: ${sslModalData.message}\n\nDETALLES / LOGS:\n${sslModalData.details}\n======================================`;
+        navigator.clipboard.writeText(textToCopy);
+        setCopiedSSLLog(true);
+        setTimeout(() => setCopiedSSLLog(false), 2500);
     };
 
     const handleCopyErrorLog = () => {
@@ -749,7 +833,7 @@ export default function SystemTab({
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
                                 <button
                                     onClick={handleRenewSSL}
                                     disabled={renewingSSL}
@@ -768,6 +852,15 @@ export default function SystemTab({
                                     {loadingSSL ? 'Chequeando...' : '🔍 Comprobar en Vivo'}
                                 </button>
                             </div>
+
+                            <button
+                                onClick={handleOpenSSLModal}
+                                className="w-full bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20 px-3 py-2 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                                title="Ver informe técnico de la última comprobación o renovación"
+                            >
+                                <Copy className="h-3 w-3" />
+                                📋 Ver Registro y Diagnóstico SSL
+                            </button>
                         </div>
                     </div>
                 )}
@@ -851,6 +944,91 @@ export default function SystemTab({
                             >
                                 <RefreshCw className="h-4 w-4" />
                                 Reintentar Fallidos ({downloadStatus.failedItems.length})
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* SSL Diagnosis & Renewal Log Modal */}
+            {showSSLModal && sslModalData && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
+                    <div className={`bg-[#12141a] border rounded-3xl p-6 max-w-2xl w-full max-h-[85vh] flex flex-col space-y-4 shadow-2xl ${
+                        sslModalData.status === 'error'
+                            ? 'border-red-500/40 shadow-red-500/10'
+                            : sslModalData.status === 'success'
+                            ? 'border-emerald-500/40 shadow-emerald-500/10'
+                            : 'border-white/15'
+                    }`}>
+                        <div className="flex justify-between items-center pb-3 border-b border-white/10">
+                            <div className="flex items-center gap-2.5">
+                                {sslModalData.status === 'error' ? (
+                                    <AlertCircle className="h-5 w-5 text-red-400" />
+                                ) : sslModalData.status === 'success' ? (
+                                    <ShieldCheck className="h-5 w-5 text-emerald-400" />
+                                ) : sslModalData.status === 'running' ? (
+                                    <RefreshCw className="h-5 w-5 text-amber-400 animate-spin" />
+                                ) : (
+                                    <ShieldAlert className="h-5 w-5 text-blue-400" />
+                                )}
+                                <span className={`font-black uppercase text-sm ${
+                                    sslModalData.status === 'error' ? 'text-red-400' : sslModalData.status === 'success' ? 'text-emerald-400' : 'text-white'
+                                }`}>
+                                    {sslModalData.title}
+                                </span>
+                            </div>
+                            <button
+                                onClick={() => setShowSSLModal(false)}
+                                className="p-1 rounded-xl bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-all"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+
+                        <div className="flex items-center justify-between text-[10px] text-white/60 font-mono">
+                            <span>Estado: <b className="uppercase">{sslModalData.status}</b></span>
+                            <span>{sslModalData.timestamp ? new Date(sslModalData.timestamp).toLocaleString('es-ES') : ''}</span>
+                        </div>
+
+                        <p className="text-xs text-white/80 leading-relaxed font-medium">
+                            {sslModalData.message}
+                        </p>
+
+                        <div className="flex-1 min-h-[160px] max-h-[300px] overflow-y-auto bg-black/70 border border-white/10 rounded-2xl p-4 custom-scrollbar">
+                            <div className="flex justify-between items-center mb-2 pb-1 border-b border-white/5 text-[9px] text-white/40 uppercase font-black tracking-wider">
+                                <span>Salida de Consola / Terminal</span>
+                                <span>UTF-8 Monospace</span>
+                            </div>
+                            <pre className="text-[11px] font-mono text-emerald-300/90 whitespace-pre-wrap select-text leading-relaxed">
+                                {sslModalData.details}
+                            </pre>
+                        </div>
+
+                        <div className="pt-3 border-t border-white/10 flex flex-col sm:flex-row gap-2 justify-end">
+                            <button
+                                onClick={handleCopySSLLog}
+                                className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/15 text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer"
+                                title="Copia el informe y logs para pegarlo en el chat de soporte"
+                            >
+                                {copiedSSLLog ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+                                {copiedSSLLog ? '¡Copiado al Portapapeles!' : '📋 Copiar Detalles para Soporte'}
+                            </button>
+                            {sslModalData.status === 'error' && (
+                                <button
+                                    onClick={() => {
+                                        handleRenewSSL();
+                                    }}
+                                    className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-black uppercase text-[10px] tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer"
+                                >
+                                    <RefreshCw className="h-4 w-4" />
+                                    Reintentar Renovación
+                                </button>
+                            )}
+                            <button
+                                onClick={() => setShowSSLModal(false)}
+                                className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer"
+                            >
+                                Cerrar
                             </button>
                         </div>
                     </div>

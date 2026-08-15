@@ -51,8 +51,8 @@ class TelegramService:
         except Exception as e:
             logger.error(f"Error escribiendo telemetría de Telegram: {e}")
 
-    async def send_message(self, text: str, chat_id: Optional[str] = None):
-        """Envia un mensaje de texto plano."""
+    async def send_message(self, text: str, chat_id: Optional[str] = None, reply_markup: Optional[dict] = None):
+        """Envia un mensaje de texto con soporte de teclado inline."""
         if not self.enabled:
             return
             
@@ -66,6 +66,8 @@ class TelegramService:
             "text": text,
             "parse_mode": "HTML"
         }
+        if reply_markup:
+            payload["reply_markup"] = reply_markup
         
         try:
             async with httpx.AsyncClient() as client:

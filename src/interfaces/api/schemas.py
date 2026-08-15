@@ -742,6 +742,7 @@ class SSLStatusOutput(BaseModel):
     is_valid: bool
     source: str  # "disk" | "live_tls" | "fallback"
     details: Optional[str] = None
+    last_renewal_result: Optional[dict] = None
 
 
 class SSLRenewRequest(BaseModel):

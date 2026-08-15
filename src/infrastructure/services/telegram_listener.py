@@ -5,7 +5,7 @@ import re
 from typing import Optional
 from src.core.config import settings
 from src.infrastructure.database_cloud import SessionCloud
-from src.domain.models import UserModel, ScraperStatusModel, PendingMatchModel, OfferModel, ProductModel
+from src.domain.models import UserModel, ScraperStatusModel, PendingMatchModel, OfferModel, ProductModel, AuthorizedDeviceModel
 from src.interfaces.api.routers.scrapers import run_scraper_task, stop_scrapers
 from src.infrastructure.services.telegram_service import telegram_service
 
@@ -24,6 +24,15 @@ class TelegramListener:
         
         if not self.enabled:
             logger.warning("TelegramListener: No se ha configurado TELEGRAM_BOT_TOKEN. La escucha de comandos estará inactiva.")
+
+    def is_sovereign_admin(self, chat_id: int) -> bool:
+        """Determina si el chat_id corresponde única y exclusivamente al Gran Arquitecto / Soberano."""
+        chat_id_str = str(chat_id)
+        if self.admin_chat_id and chat_id_str == str(self.admin_chat_id):
+            return True
+        if settings.TELEGRAM_CHAT_ID and chat_id_str == str(settings.TELEGRAM_CHAT_ID):
+            return True
+        return False
 
     async def get_user_status(self, chat_id: int) -> tuple[bool, bool, Optional[UserModel]]:
         """Devuelve (is_admin, is_guardian, user_obj)."""
@@ -74,8 +83,10 @@ class TelegramListener:
                         results = data.get("result", [])
                         for u in results:
                             self.offset = u["update_id"] + 1
-                            message = u.get("message", {})
-                            await self.process_message(message)
+                            if "callback_query" in u:
+                                await self.process_callback_query(u["callback_query"])
+                            elif "message" in u:
+                                await self.process_message(u["message"])
                     elif resp.status_code == 409:
                         # Conflicto de webhook u otra instancia
                         logger.warning("TelegramListener Conflict (409). Esperando 10s...")
@@ -92,6 +103,92 @@ class TelegramListener:
         logger.info("📡 Telegram Listener: Deteniendo bucle de escucha.")
         telegram_service.log_telemetry("LISTENER_STOP", {"status": "stopped"})
 
+    async def answer_callback_query(self, callback_query_id: str, text: Optional[str] = None):
+        """Responde a un callback_query de Telegram para finalizar la animación de carga."""
+        url = f"https://api.telegram.org/bot{self.token}/answerCallbackQuery"
+        payload = {"callback_query_id": callback_query_id}
+        if text:
+            payload["text"] = text
+        try:
+            async with httpx.AsyncClient() as client:
+                await client.post(url, json=payload, timeout=5.0)
+        except Exception as e:
+            logger.debug(f"Error answering callback query: {e}")
+
+    async def process_callback_query(self, callback_query: dict):
+        """Procesa pulsaciones de botones Inline de Telegram."""
+        cq_id = callback_query.get("id")
+        from_user = callback_query.get("from", {})
+        user_id = from_user.get("id")
+        message = callback_query.get("message", {})
+        chat = message.get("chat", {})
+        chat_id = chat.get("id") or user_id
+        data = callback_query.get("data", "")
+
+        if not cq_id or not chat_id:
+            return
+
+        telegram_service.log_telemetry("CALLBACK_QUERY_RECEIVED", {
+            "chat_id": chat_id,
+            "username": from_user.get("username"),
+            "data": data
+        })
+
+        is_admin, is_guardian, _ = await self.get_user_status(chat_id)
+        if not is_admin:
+            await self.answer_callback_query(cq_id, "❌ Acción solo para Administradores.")
+            return
+
+        if data == "ssl:renew":
+            await self.answer_callback_query(cq_id, "⏳ Iniciando renovación de certificados SSL...")
+            await telegram_service.send_message(
+                "🔒 <b>[Oráculo SSL]</b> Renovación forzada solicitada desde Telegram. Ejecutando...",
+                chat_id=chat_id
+            )
+            from src.application.services.ssl_service import SSLService
+            asyncio.create_task(SSLService.renew_ssl_certificate(force=True))
+        elif data == "ssl:status":
+            await self.answer_callback_query(cq_id, "🔍 Consultando estado SSL...")
+            await self.cmd_ssl_status(chat_id)
+        elif data.startswith("device:allow:"):
+            if not self.is_sovereign_admin(chat_id):
+                await self.answer_callback_query(cq_id, "❌ Acción restringida exclusivamente al Gran Arquitecto.")
+                return
+            dev_id = int(data.split(":")[2])
+            with SessionCloud() as db:
+                device = db.query(AuthorizedDeviceModel).filter(AuthorizedDeviceModel.id == dev_id).first()
+                if not device:
+                    await self.answer_callback_query(cq_id, "❌ Dispositivo no encontrado.")
+                    return
+                device.is_authorized = True
+                db.commit()
+                dev_name = device.device_name or device.device_id
+            await self.answer_callback_query(cq_id, f"✅ Dispositivo '{dev_name}' autorizado.")
+            await telegram_service.send_message(
+                f"🛡️ <b>[Escudo de Eternia]</b> Dispositivo <b>{dev_name}</b> (<code>{device.device_id}</code>) ha sido <b>AUTORIZADO</b> con éxito.",
+                chat_id=chat_id
+            )
+        elif data.startswith("device:deny:"):
+            if not self.is_sovereign_admin(chat_id):
+                await self.answer_callback_query(cq_id, "❌ Acción restringida exclusivamente al Gran Arquitecto.")
+                return
+            dev_id = int(data.split(":")[2])
+            with SessionCloud() as db:
+                device = db.query(AuthorizedDeviceModel).filter(AuthorizedDeviceModel.id == dev_id).first()
+                if not device:
+                    await self.answer_callback_query(cq_id, "❌ Dispositivo no encontrado.")
+                    return
+                dev_name = device.device_name or device.device_id
+                db.delete(device)
+                db.commit()
+            await self.answer_callback_query(cq_id, f"🚫 Dispositivo '{dev_name}' bloqueado.")
+            await telegram_service.send_message(
+                f"🛑 <b>[Escudo de Eternia]</b> Dispositivo <b>{dev_name}</b> ha sido <b>BLOQUEADO Y ELIMINADO</b>.",
+                chat_id=chat_id
+            )
+        else:
+            await self.answer_callback_query(cq_id)
+
     async def process_message(self, message: dict):
         chat = message.get("chat", {})
         chat_id = chat.get("id")
@@ -107,13 +204,21 @@ class TelegramListener:
             "text": text
         })
         
+        # Comprobar roles y permisos
+        is_admin, is_guardian, user = await self.get_user_status(chat_id)
+        
+        # Detección inteligente de enlaces de Wallapop compartidos desde móvil/chat (sin comando)
+        if "wallapop.com/item/" in text:
+            if not is_guardian:
+                await telegram_service.send_message("🔒 Debes estar registrado como Guardián (/register) para importar ofertas.", chat_id=chat_id)
+                return
+            await self.cmd_import_wallapop(chat_id, [text])
+            return
+
         # Solo procesar comandos que inicien con '/'
         if not text.startswith("/"):
             return
             
-        # Comprobar roles y permisos
-        is_admin, is_guardian, user = await self.get_user_status(chat_id)
-        
         parts = text.split(maxsplit=2)
         command = parts[0].lower()
         args = parts[1:] if len(parts) > 1 else []
@@ -141,11 +246,23 @@ class TelegramListener:
         elif command == "/buscar":
             query = " ".join(args) if args else ""
             await self.cmd_buscar(chat_id, query)
+        elif command in ["/wallapop", "/import"]:
+            await self.cmd_import_wallapop(chat_id, args)
             
         # --- Comandos de Administrador Only ---
         elif is_admin:
             if command == "/status":
                 await self.cmd_status(chat_id)
+            elif command in ["/ssl", "/ssl_status"]:
+                await self.cmd_ssl_status(chat_id)
+            elif command in ["/renew_ssl", "/renovar_ssl"]:
+                await self.cmd_renew_ssl(chat_id)
+            elif command in ["/devices", "/dispositivos"]:
+                await self.cmd_devices(chat_id)
+            elif command in ["/approve", "/aprobar"]:
+                await self.cmd_approve_device(chat_id, args)
+            elif command in ["/deny", "/rechazar"]:
+                await self.cmd_deny_device(chat_id, args)
             elif command == "/run":
                 scraper_name = args[0] if args else "all"
                 query_term = args[1] if len(args) > 1 else None
@@ -189,11 +306,17 @@ class TelegramListener:
         lines.append("<b>Comunes:</b>")
         lines.append("• <code>/purgatorio</code> - Muestra ofertas pendientes de clasificar.")
         lines.append("• <code>/buscar [figura]</code> - Busca ofertas activas en la base de datos.")
+        lines.append("• <code>/wallapop [enlace]</code> - Importa un artículo de Wallapop al Purgatorio (o comparte el link directo).")
         lines.append("• <code>/help</code> - Muestra este menú de ayuda.")
         
         if is_admin:
-            lines.append("\n<b>Administrador Only:</b>")
+            lines.append("\n<b>Administrador / Soberano Only:</b>")
             lines.append("• <code>/status</code> - Consulta de salud del sistema, scrapers y base de datos.")
+            lines.append("• <code>/ssl</code> - Diagnóstico en vivo y telemetría de certificados SSL.")
+            lines.append("• <code>/renew_ssl</code> - Forzar renovación inmediata de certificados SSL.")
+            lines.append("• <code>/devices</code> - Listar y gestionar dispositivos con botones de aprobación.")
+            lines.append("• <code>/approve [id]</code> - Autorizar acceso a un dispositivo.")
+            lines.append("• <code>/deny [id]</code> - Bloquear/eliminar un dispositivo.")
             lines.append("• <code>/run [tienda] [búsqueda]</code> - Lanza un recolector en segundo plano (ej: <code>/run wallapop heman</code>).")
             lines.append("• <code>/stop</code> - Protocolo de parada de emergencia para detener scrapers.")
             
@@ -300,6 +423,216 @@ class TelegramListener:
             )
         except Exception as e:
             await telegram_service.send_message(f"❌ Error al detener los scrapers: {e}", chat_id=chat_id)
+
+    async def cmd_ssl_status(self, chat_id: int):
+        from src.application.services.ssl_service import SSLService
+        status = SSLService.get_certificate_status()
+        
+        icon = "🟢" if status.get("status") == "ACTIVE" else "🟡" if status.get("status") == "EXPIRING_SOON" else "🔴"
+        valid_from = status.get("valid_from")
+        valid_until = status.get("valid_until")
+        next_renewal = status.get("next_renewal_recommended")
+        
+        from_str = valid_from.strftime("%d/%m/%Y %H:%M UTC") if valid_from else "N/D"
+        until_str = valid_until.strftime("%d/%m/%Y %H:%M UTC") if valid_until else "N/D"
+        next_str = next_renewal.strftime("%d/%m/%Y") if next_renewal else "N/D"
+        
+        msg = (
+            f"🔒 <b>[Oráculo SSL] Diagnóstico de Certificados</b>\n\n"
+            f"• Dominio: <code>{status.get('domain')}</code>\n"
+            f"• Estado: {icon} <b>{status.get('status')}</b> ({status.get('days_remaining')} días restantes)\n"
+            f"• Emisor: <b>{status.get('issuer')}</b>\n"
+            f"• Emisión: <code>{from_str}</code>\n"
+            f"• Caducidad: <code>{until_str}</code>\n"
+            f"• Próxima Renovación Recomendada: <b>{next_str}</b>\n\n"
+            f"ℹ️ <i>{status.get('details')}</i>"
+        )
+        keyboard = {
+            "inline_keyboard": [
+                [
+                    {"text": "🔄 Forzar Renovación SSL", "callback_data": "ssl:renew"},
+                    {"text": "📊 Actualizar Estado", "callback_data": "ssl:status"}
+                ]
+            ]
+        }
+        await telegram_service.send_message(msg, chat_id=chat_id, reply_markup=keyboard)
+
+    async def cmd_renew_ssl(self, chat_id: int):
+        await telegram_service.send_message(
+            "🔒 <b>[Oráculo SSL]</b> Iniciando renovación forzada de certificados SSL en segundo plano...",
+            chat_id=chat_id
+        )
+        from src.application.services.ssl_service import SSLService
+        asyncio.create_task(SSLService.renew_ssl_certificate(force=True))
+
+    async def cmd_devices(self, chat_id: int):
+        if not self.is_sovereign_admin(chat_id):
+            await telegram_service.send_message("❌ Comando restringido exclusivamente al Gran Arquitecto.", chat_id=chat_id)
+            return
+
+        with SessionCloud() as db:
+            devices = db.query(AuthorizedDeviceModel).order_by(AuthorizedDeviceModel.id.desc()).limit(15).all()
+
+        if not devices:
+            await telegram_service.send_message("🛡️ <b>[Escudo de Eternia]</b> No hay dispositivos registrados en la base de datos.", chat_id=chat_id)
+            return
+
+        lines = ["🛡️ <b>[Escudo de Eternia] Dispositivos Registrados:</b>\n"]
+        buttons = []
+
+        for d in devices:
+            status_icon = "🟢" if d.is_authorized else "🔴"
+            status_text = "AUTORIZADO" if d.is_authorized else "BLOQUEADO"
+            name = d.device_name or "Sin Nombre"
+            lines.append(f"{status_icon} <b>#{d.id} {name}</b> - {status_text}\n  🆔 <code>{d.device_id[:16]}...</code>")
+
+            if not d.is_authorized:
+                buttons.append([
+                    {"text": f"✅ Aprobar #{d.id} ({name[:12]})", "callback_data": f"device:allow:{d.id}"},
+                    {"text": f"🗑️ Eliminar #{d.id}", "callback_data": f"device:deny:{d.id}"}
+                ])
+            else:
+                buttons.append([
+                    {"text": f"🚫 Revocar/Eliminar #{d.id} ({name[:12]})", "callback_data": f"device:deny:{d.id}"}
+                ])
+
+        keyboard = {"inline_keyboard": buttons} if buttons else None
+        await telegram_service.send_message("\n".join(lines), chat_id=chat_id, reply_markup=keyboard)
+
+    async def cmd_approve_device(self, chat_id: int, args: list):
+        if not self.is_sovereign_admin(chat_id):
+            await telegram_service.send_message("❌ Comando restringido exclusivamente al Gran Arquitecto.", chat_id=chat_id)
+            return
+        if not args:
+            await telegram_service.send_message("❌ Uso: <code>/aprobar [ID_o_Fingerprint]</code>", chat_id=chat_id)
+            return
+        
+        target = args[0].strip()
+        with SessionCloud() as db:
+            device = None
+            if target.isdigit():
+                device = db.query(AuthorizedDeviceModel).filter(AuthorizedDeviceModel.id == int(target)).first()
+            if not device:
+                device = db.query(AuthorizedDeviceModel).filter(AuthorizedDeviceModel.device_id.like(f"%{target}%")).first()
+            
+            if not device:
+                await telegram_service.send_message(f"❌ No se encontró ningún dispositivo para '<b>{target}</b>'.", chat_id=chat_id)
+                return
+            
+            device.is_authorized = True
+            db.commit()
+            dev_name = device.device_name or device.device_id
+            
+        await telegram_service.send_message(
+            f"✅ <b>[Escudo de Eternia]</b> Dispositivo <b>{dev_name}</b> (<code>{device.device_id}</code>) ha sido <b>AUTORIZADO</b> permanentemente.",
+            chat_id=chat_id
+        )
+
+    async def cmd_deny_device(self, chat_id: int, args: list):
+        if not self.is_sovereign_admin(chat_id):
+            await telegram_service.send_message("❌ Comando restringido exclusivamente al Gran Arquitecto.", chat_id=chat_id)
+            return
+        if not args:
+            await telegram_service.send_message("❌ Uso: <code>/rechazar [ID_o_Fingerprint]</code>", chat_id=chat_id)
+            return
+        
+        target = args[0].strip()
+        with SessionCloud() as db:
+            device = None
+            if target.isdigit():
+                device = db.query(AuthorizedDeviceModel).filter(AuthorizedDeviceModel.id == int(target)).first()
+            if not device:
+                device = db.query(AuthorizedDeviceModel).filter(AuthorizedDeviceModel.device_id.like(f"%{target}%")).first()
+            
+            if not device:
+                await telegram_service.send_message(f"❌ No se encontró ningún dispositivo para '<b>{target}</b>'.", chat_id=chat_id)
+                return
+            
+            dev_name = device.device_name or device.device_id
+            db.delete(device)
+            db.commit()
+            
+        await telegram_service.send_message(
+            f"🛑 <b>[Escudo de Eternia]</b> Dispositivo <b>{dev_name}</b> ha sido <b>BLOQUEADO Y ELIMINADO</b>.",
+            chat_id=chat_id
+        )
+
+    async def cmd_import_wallapop(self, chat_id: int, args: list):
+        if not args:
+            await telegram_service.send_message("❌ Uso: <code>/wallapop [enlace_de_wallapop]</code>", chat_id=chat_id)
+            return
+
+        raw_text = " ".join(args).strip()
+        from src.core.url_utils import normalize_url
+        from src.application.services.wallapop_bridge import WallapopBridge
+        from src.core.vintage_utils import validate_motu_relevance
+
+        # Extraer URL del texto compartido (por ejemplo si viene de "Compartir en Telegram")
+        url_match = re.search(r"https?://[^\s]*wallapop\.com/item/[^\s]+", raw_text)
+        if not url_match:
+            await telegram_service.send_message("❌ No se encontró un enlace válido de producto de Wallapop (debe contener <code>/item/</code>).", chat_id=chat_id)
+            return
+            
+        url = normalize_url(url_match.group(0))
+        await telegram_service.send_message("🔍 <i>Extrayendo detalles del producto en Wallapop...</i>", chat_id=chat_id)
+
+        try:
+            details = await WallapopBridge.get_item_details(url)
+            if not details or not details.get("title"):
+                await telegram_service.send_message("❌ No se pudieron obtener los datos de la ficha de Wallapop en este momento.", chat_id=chat_id)
+                return
+
+            title = details.get("title", "")
+            price = details.get("price", 0.0)
+            images = details.get("images", [])
+            image_url = images[0] if images else None
+
+            # Relevancia MOTU
+            is_relevant, reason = validate_motu_relevance(title)
+            if not is_relevant:
+                await telegram_service.send_message(
+                    f"⚠️ <b>Artículo descartado por filtro MOTU:</b>\n"
+                    f"• <b>Título:</b> {title}\n"
+                    f"• <i>Motivo: {reason}</i>",
+                    chat_id=chat_id
+                )
+                return
+
+            with SessionCloud() as db:
+                existing_p = db.query(PendingMatchModel).filter(PendingMatchModel.url == url).first()
+                existing_o = db.query(OfferModel).filter(OfferModel.url == url).first()
+
+                if existing_p or existing_o:
+                    await telegram_service.send_message(
+                        f"ℹ️ El artículo <b>{title}</b> ({price} €) ya existe en la base de datos del Oráculo.",
+                        chat_id=chat_id
+                    )
+                    return
+
+                new_pending = PendingMatchModel(
+                    scraped_name=title,
+                    price=float(price) if price else 0.0,
+                    url=url,
+                    shop_name="Wallapop",
+                    image_url=image_url,
+                    source_type="Peer-to-Peer",
+                    sale_type="Fixed_P2P"
+                )
+                db.add(new_pending)
+                db.commit()
+
+            msg = (
+                f"🎁 <b>[Wallapop: Importación Exitosa]</b>\n\n"
+                f"• <b>Artículo:</b> {title}\n"
+                f"• <b>Precio:</b> <b>{price} €</b>\n"
+                f"• <b>Enlace:</b> <a href=\"{url}\">Ver en Wallapop</a>\n\n"
+                f"✅ <i>Añadido al Purgatorio del Oráculo para revisión y matching.</i>"
+            )
+            await telegram_service.send_message(msg, chat_id=chat_id)
+
+        except Exception as e:
+            logger.error(f"Error al importar producto de Wallapop desde Telegram: {e}")
+            await telegram_service.send_message(f"❌ Error al procesar el enlace: {e}", chat_id=chat_id)
 
 # Instancia única del listener
 telegram_listener = TelegramListener()

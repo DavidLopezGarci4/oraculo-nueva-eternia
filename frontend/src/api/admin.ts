@@ -292,6 +292,12 @@ export interface SSLStatus {
     is_valid: boolean;
     source: string;
     details?: string | null;
+    last_renewal_result?: {
+        status: string;
+        message: string;
+        details?: string;
+        timestamp?: string;
+    } | null;
 }
 
 export const getSSLStatus = async (): Promise<SSLStatus> => {

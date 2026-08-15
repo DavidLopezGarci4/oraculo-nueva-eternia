@@ -68,6 +68,11 @@ class Settings(BaseSettings):
     # ScraperAPI Key
     SCRAPERAPI_KEY: str | None = None
 
+    # Apify Tokens (Multi-Account Rotation)
+    APIFY_TOKEN: str | None = None
+    APIFY_TOKEN2: str | None = None
+    APIFY_TOKEN3: str | None = None
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_ignore_empty=True,
