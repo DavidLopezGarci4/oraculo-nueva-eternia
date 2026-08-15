@@ -96,15 +96,38 @@ sudo iptables -I INPUT -p tcp --dport 8000 -j ACCEPT 2>/dev/null || true
 sudo sh -c "iptables-save > /etc/iptables/rules.v4" 2>/dev/null || \
 sudo netfilter-persistent save 2>/dev/null || true
 
+# 10. Configurar permisos y Crontab automático (DuckDNS + SSL Let's Encrypt)
+echo "⏰ Paso 10: Configurando tareas programadas (Crontab)..."
+chmod +x "$REPO_DIR"/deploy/*.sh "$REPO_DIR"/scripts/*.sh 2>/dev/null || true
+mkdir -p "$REPO_DIR/logs" "$HOME/duckdns"
+
+CRON_FILE="/tmp/current_crontab"
+crontab -l 2>/dev/null > "$CRON_FILE" || true
+
+# DuckDNS IP updater (cada 5 min)
+if ! grep -q "duckdns_update.sh" "$CRON_FILE"; then
+    echo "*/5 * * * * bash $REPO_DIR/deploy/duckdns_update.sh >/dev/null 2>&1" >> "$CRON_FILE"
+fi
+
+# SSL Auto-renewal (todos los días a las 03:00 AM)
+if ! grep -q "renew_ssl.sh" "$CRON_FILE"; then
+    echo "0 3 * * * bash $REPO_DIR/scripts/renew_ssl.sh >> $REPO_DIR/logs/ssl_renew.log 2>&1" >> "$CRON_FILE"
+fi
+
+crontab "$CRON_FILE"
+rm -f "$CRON_FILE"
+echo "✅ Crontab configurado con DuckDNS y renovación diaria de SSL."
+
 echo ""
 echo "============================================"
 echo "🏰 ¡Setup completado!"
 echo "============================================"
 echo ""
 echo "Próximos pasos:"
-echo "  1. Edita las credenciales:  nano .env.prod"
-echo "  2. Despliega la aplicación: docker compose -f docker-compose.prod.yml up -d --build"
+echo "  1. Edita las credenciales:  nano $REPO_DIR/.env.prod"
+echo "  2. Despliega la aplicación: cd $REPO_DIR && docker compose -f docker-compose.prod.yml up -d --build"
 echo "  3. Verifica:                docker compose -f docker-compose.prod.yml logs -f"
 echo ""
-echo "La app estará accesible en: http://<TU_IP_PUBLICA>"
+echo "La app estará accesible en: https://oraculo-eternia.duckdns.org (o http://<TU_IP_PUBLICA>)"
 echo ""
+

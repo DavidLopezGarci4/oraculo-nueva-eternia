@@ -727,3 +727,23 @@ class PurgatoryItemOutput(BaseModel):
     # a nivel de elemento para no sobre-restringir un formato no garantizado.
     anomaly_flags: list
     suggestions: List[PurgatorySuggestionOutput]
+
+
+# --- SSL Certificates Management Schemas ---
+
+class SSLStatusOutput(BaseModel):
+    domain: str
+    issuer: str
+    valid_from: Optional[datetime] = None
+    valid_until: Optional[datetime] = None
+    days_remaining: int
+    status: str  # "ACTIVE" | "EXPIRING_SOON" | "EXPIRED" | "UNKNOWN"
+    next_renewal_recommended: Optional[datetime] = None
+    is_valid: bool
+    source: str  # "disk" | "live_tls" | "fallback"
+    details: Optional[str] = None
+
+
+class SSLRenewRequest(BaseModel):
+    force: bool = True
+

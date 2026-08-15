@@ -26,6 +26,8 @@ from src.interfaces.api.schemas import (
     DuplicateGroupOutput,
     AuthorizedDeviceOutput,
     TemporaryProductOutput,
+    SSLStatusOutput,
+    SSLRenewRequest,
 )
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -294,4 +296,23 @@ async def get_temporary_products():
                 "collection_count": collection_count
             })
         return results
+
+
+@router.get("/ssl/status", response_model=SSLStatusOutput, dependencies=[Depends(verify_api_key)])
+async def get_ssl_status():
+    """Obtiene la telemetría, vigencia y fechas de renovación del certificado SSL."""
+    from src.application.services.ssl_service import SSLService
+    return SSLService.get_certificate_status()
+
+
+@router.post("/ssl/renew", response_model=StatusMessageOutput, dependencies=[Depends(verify_api_key)])
+async def renew_ssl(background_tasks: BackgroundTasks, request: SSLRenewRequest = SSLRenewRequest()):
+    """Dispara la renovación manual/forzada de certificados SSL en segundo plano."""
+    from src.application.services.ssl_service import SSLService
+    background_tasks.add_task(SSLService.renew_ssl_certificate, force=request.force)
+    return {
+        "status": "success",
+        "message": f"Iniciando proceso de renovación de certificados SSL ({'Forzado' if request.force else 'Estándar'}) en segundo plano. Recibirás una alerta en Telegram con el resultado."
+    }
+
 

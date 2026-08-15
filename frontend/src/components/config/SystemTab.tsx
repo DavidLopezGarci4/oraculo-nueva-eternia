@@ -2,10 +2,10 @@ import { motion } from 'framer-motion';
 import {
     Database, Lock, AlertCircle, Target, Clock, Globe, Repeat, ChevronDown,
     CheckCircle2, RefreshCw, Download, Package, Sparkles, Settings, ShieldAlert,
-    FileSpreadsheet, Trash2, Zap, Copy, Check, X
+    FileSpreadsheet, Trash2, Zap, Copy, Check, X, ShieldCheck
 } from 'lucide-react';
-import { useState } from 'react';
-import { downloadImagesZip, type Hero } from '../../api/admin';
+import { useState, useEffect } from 'react';
+import { downloadImagesZip, getSSLStatus, renewSSLCertificate, type SSLStatus, type Hero } from '../../api/admin';
 
 interface ImageDownloadFailure {
     id: number;
@@ -81,6 +81,45 @@ export default function SystemTab({
 }: SystemTabProps) {
     const [showErrorLogModal, setShowErrorLogModal] = useState(false);
     const [copiedLog, setCopiedLog] = useState(false);
+    const [sslStatus, setSslStatus] = useState<SSLStatus | null>(null);
+    const [loadingSSL, setLoadingSSL] = useState(false);
+    const [renewingSSL, setRenewingSSL] = useState(false);
+
+    const loadSSL = async () => {
+        if (!isAdmin) return;
+        setLoadingSSL(true);
+        try {
+            const data = await getSSLStatus();
+            setSslStatus(data);
+        } catch (err) {
+            console.error('Error fetching SSL status:', err);
+        } finally {
+            setLoadingSSL(false);
+        }
+    };
+
+    useEffect(() => {
+        loadSSL();
+    }, [isAdmin]);
+
+    const handleRenewSSL = async () => {
+        if (!confirm('🔒 RENOVACIÓN DE CERTIFICADOS SSL (Let\'s Encrypt)\n\nEsta acción invocará el proceso de renovación forzada del certificado SSL para oraculo-eternia.duckdns.org y recargará Nginx de forma segura.\n\n¿Deseas proceder con la renovación forzada?')) return;
+        
+        setRenewingSSL(true);
+        try {
+            const res = await renewSSLCertificate(true);
+            alert(`🔒 Renovación SSL Iniciada:\n\n${res.message}`);
+            setTimeout(() => {
+                loadSSL();
+            }, 3000);
+        } catch (error: any) {
+            console.error('Error renewing SSL:', error);
+            const detail = error.response?.data?.detail || error.message || 'Fallo en la comunicación con el servidor.';
+            alert(`❌ Error al renovar SSL: ${detail}`);
+        } finally {
+            setRenewingSSL(false);
+        }
+    };
 
     const handleCopyErrorLog = () => {
         if (!downloadStatus.failedItems) return;
@@ -615,6 +654,120 @@ export default function SystemTab({
                                 <RefreshCw className={`h-3 w-3 ${runningMaintenance ? 'animate-spin' : ''}`} />
                                 {runningMaintenance ? 'Purificando...' : '🧹 Limpieza y Compactación'}
                             </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* --- SHIELD ARCHITECTURE: SSL CERTIFICATES --- */}
+                {isAdmin && (
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-3 px-2">
+                            <ShieldCheck className="h-6 w-6 text-emerald-400" />
+                            <h3 className="text-xl font-black uppercase tracking-[0.2em] text-white">Certificados SSL</h3>
+                        </div>
+                        <div className={`glass border p-6 rounded-3xl group transition-all max-w-md ${
+                            sslStatus?.status === 'EXPIRED'
+                                ? 'border-red-500/50 bg-red-500/5 shadow-lg shadow-red-500/10'
+                                : sslStatus?.status === 'EXPIRING_SOON'
+                                ? 'border-amber-500/40 bg-amber-500/5'
+                                : 'border-white/10 hover:bg-white/5'
+                        }`}>
+                            <div className="flex items-start justify-between mb-4">
+                                <div className="flex items-center gap-4">
+                                    <div className={`p-3 rounded-lg transition-all ${
+                                        sslStatus?.status === 'EXPIRED'
+                                            ? 'bg-red-500/20 text-red-400'
+                                            : sslStatus?.status === 'EXPIRING_SOON'
+                                            ? 'bg-amber-500/20 text-amber-400'
+                                            : 'bg-emerald-500/10 group-hover:bg-emerald-500/20 text-emerald-400'
+                                    }`}>
+                                        <ShieldCheck className="h-5 w-5" />
+                                    </div>
+                                    <div>
+                                        <h4 className="text-white font-bold text-sm">Let's Encrypt / HTTPS</h4>
+                                        <p className="text-[10px] text-white/60 font-mono">{sslStatus?.domain || 'oraculo-eternia.duckdns.org'}</p>
+                                    </div>
+                                </div>
+                                <div className="flex flex-col items-end">
+                                    {sslStatus?.status === 'ACTIVE' && (
+                                        <span className="text-[8px] font-black text-emerald-400 uppercase tracking-widest bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 flex items-center gap-1">
+                                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                                            Válido ({sslStatus.days_remaining}d)
+                                        </span>
+                                    )}
+                                    {sslStatus?.status === 'EXPIRING_SOON' && (
+                                        <span className="text-[8px] font-black text-amber-400 uppercase tracking-widest bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 flex items-center gap-1">
+                                            <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-ping"></span>
+                                            Renovar ({sslStatus.days_remaining}d)
+                                        </span>
+                                    )}
+                                    {sslStatus?.status === 'EXPIRED' && (
+                                        <span className="text-[8px] font-black text-red-400 uppercase tracking-widest bg-red-500/20 px-2 py-0.5 rounded border border-red-500/30 flex items-center gap-1">
+                                            <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-ping"></span>
+                                            CADUCADO ({Math.abs(sslStatus.days_remaining)}d)
+                                        </span>
+                                    )}
+                                    {(!sslStatus || sslStatus.status === 'UNKNOWN') && (
+                                        <span className="text-[8px] font-black text-white/40 uppercase tracking-widest bg-white/5 px-2 py-0.5 rounded">
+                                            {loadingSSL ? 'Verificando...' : 'Diagnóstico'}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+
+                            {sslStatus?.status === 'EXPIRED' && (
+                                <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-2xl flex items-start gap-2.5">
+                                    <AlertCircle className="h-4 w-4 text-red-400 shrink-0 mt-0.5" />
+                                    <p className="text-[10px] text-red-300 font-bold uppercase leading-relaxed">
+                                        Certificado caducado. La web puede mostrar advertencias de seguridad en el navegador. Pulsa Forzar Renovación para actualizar.
+                                    </p>
+                                </div>
+                            )}
+
+                            <div className="space-y-2 mb-5 p-3 rounded-2xl bg-white/[0.02] border border-white/5 text-[10px]">
+                                <div className="flex justify-between items-center text-white/70">
+                                    <span className="text-white/40 uppercase font-black text-[8px]">Última Renovación:</span>
+                                    <span className="font-mono text-white/90">
+                                        {sslStatus?.valid_from ? new Date(sslStatus.valid_from).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'N/D'}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between items-center text-white/70">
+                                    <span className="text-white/40 uppercase font-black text-[8px]">Límite de Expiración:</span>
+                                    <span className={`font-mono font-bold ${sslStatus?.status === 'EXPIRED' ? 'text-red-400' : 'text-white/90'}`}>
+                                        {sslStatus?.valid_until ? new Date(sslStatus.valid_until).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'N/D'}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between items-center text-white/70 pt-1 border-t border-white/5">
+                                    <span className="text-white/40 uppercase font-black text-[8px]" title="La aplicación intenta renovar automáticamente 1-2 semanas antes de expirar">Próxima Renovación Estimada:</span>
+                                    <span className="font-mono text-amber-400 font-bold">
+                                        {sslStatus?.next_renewal_recommended ? new Date(sslStatus.next_renewal_recommended).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'N/D'}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between items-center text-white/70">
+                                    <span className="text-white/40 uppercase font-black text-[8px]">Emisor:</span>
+                                    <span className="text-[9px] text-white/60 truncate max-w-[180px]">{sslStatus?.issuer || "Let's Encrypt"}</span>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <button
+                                    onClick={handleRenewSSL}
+                                    disabled={renewingSSL}
+                                    className={`w-full bg-emerald-500/15 hover:bg-emerald-500 text-emerald-400 hover:text-white border border-emerald-500/30 px-3 py-2.5 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/0 hover:shadow-emerald-500/20 cursor-pointer ${renewingSSL ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                >
+                                    <RefreshCw className={`h-3 w-3 ${renewingSSL ? 'animate-spin' : ''}`} />
+                                    {renewingSSL ? 'Renovando...' : '🔄 Forzar Renovación'}
+                                </button>
+                                <button
+                                    onClick={loadSSL}
+                                    disabled={loadingSSL}
+                                    className="w-full bg-white/5 hover:bg-white/10 text-white/80 hover:text-white border border-white/10 px-3 py-2.5 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                                    title="Consulta en tiempo real la validez del certificado en disco y el socket TLS"
+                                >
+                                    <ShieldCheck className={`h-3 w-3 ${loadingSSL ? 'animate-spin' : ''}`} />
+                                    {loadingSSL ? 'Chequeando...' : '🔍 Comprobar en Vivo'}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}

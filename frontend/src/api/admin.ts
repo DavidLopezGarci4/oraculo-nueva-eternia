@@ -281,3 +281,27 @@ export const deleteDevice = async (deviceId: string): Promise<{ status: string; 
     return response.data;
 };
 
+export interface SSLStatus {
+    domain: string;
+    issuer: string;
+    valid_from: string | null;
+    valid_until: string | null;
+    days_remaining: number;
+    status: 'ACTIVE' | 'EXPIRING_SOON' | 'EXPIRED' | 'UNKNOWN';
+    next_renewal_recommended: string | null;
+    is_valid: boolean;
+    source: string;
+    details?: string | null;
+}
+
+export const getSSLStatus = async (): Promise<SSLStatus> => {
+    const response = await adminAxios.get('/admin/ssl/status');
+    return response.data;
+};
+
+export const renewSSLCertificate = async (force: boolean = true): Promise<{ status: string; message: string }> => {
+    const response = await adminAxios.post('/admin/ssl/renew', { force });
+    return response.data;
+};
+
+

@@ -131,4 +131,22 @@ docker compose -f docker-compose.prod.yml up -d --build
 
 # Parar todo
 docker compose -f docker-compose.prod.yml down
+
+# Forzar renovación manual de Certificados SSL (Let's Encrypt)
+bash scripts/renew_ssl.sh --force
+
+# Comprobar tareas programadas de renovación SSL y DuckDNS
+crontab -l
 ```
+
+## 🔒 Certificados SSL (Let's Encrypt / HTTPS)
+
+El Oráculo renueva automáticamente sus certificados a diario a las 03:00 AM. Si tus certificados caducaron o necesitas regenerarlos de inmediato:
+
+1. **Desde la Aplicación**: Ve a **Configuración > Ajustes > Escudo de Encriptación SSL** y pulsa **"Forzar Renovación de Certificados"**.
+2. **Desde la Terminal SSH**:
+```bash
+cd ~/oraculo-nueva-eternia
+bash scripts/renew_ssl.sh --force
+```
+
