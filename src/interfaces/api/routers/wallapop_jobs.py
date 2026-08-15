@@ -125,6 +125,23 @@ async def submit_wallapop_job_results(job_id: int, request: WallapopJobResultsRe
         job.completed_at = datetime.now(timezone.utc)
         db.commit()
 
+        # Notificar a Telegram
+        try:
+            import asyncio
+            from src.infrastructure.services.telegram_service import telegram_service
+            if job.status == "done":
+                asyncio.create_task(telegram_service.send_message(
+                    f"⚡ <b>[Nexus Bridge: PC Local]</b> Trabajo #{job_id} completado con éxito.\n"
+                    f"• Búsqueda: <b>{job.query}</b>\n"
+                    f"• Reliquias extraídas: <b>{len(offers_payload)}</b> (<b>{new_items}</b> nuevas en el Purgatorio)."
+                ))
+            elif job.status == "error":
+                asyncio.create_task(telegram_service.send_message(
+                    f"⚠️ <b>[Nexus Bridge: PC Local]</b> Error en trabajo #{job_id} ('{job.query}'): {job.error_message}"
+                ))
+        except Exception:
+            pass
+
         return {"status": "success", "job_status": job.status, "new_items": new_items}
 
 

@@ -35,7 +35,19 @@ if hasattr(sys.stdout, "reconfigure"):
     except Exception:
         pass
 
-ORACULO_API_BASE_URL = os.environ.get("ORACULO_API_BASE_URL", "http://localhost:8000").rstrip("/")
+raw_api_url = os.environ.get("ORACULO_API_BASE_URL")
+if not raw_api_url:
+    # Intentar autodetectar de CORS_ORIGINS
+    cors = os.environ.get("CORS_ORIGINS", "")
+    for origin in cors.split(","):
+        origin = origin.strip()
+        if "duckdns.org" in origin or ("https://" in origin and "localhost" not in origin):
+            raw_api_url = origin
+            break
+if not raw_api_url:
+    raw_api_url = "http://localhost:8000"
+
+ORACULO_API_BASE_URL = raw_api_url.rstrip("/")
 ORACULO_API_KEY = os.environ.get("ORACULO_API_KEY", "eternia-shield-2026")
 POLL_INTERVAL_SECONDS = int(os.environ.get("NEXUS_BRIDGE_POLL_INTERVAL", "20"))
 WORKER_ID = socket.gethostname()

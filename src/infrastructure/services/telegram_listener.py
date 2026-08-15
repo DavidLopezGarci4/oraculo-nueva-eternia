@@ -257,6 +257,11 @@ class TelegramListener:
                 await self.cmd_ssl_status(chat_id)
             elif command in ["/renew_ssl", "/renovar_ssl"]:
                 await self.cmd_renew_ssl(chat_id)
+            elif command in ["/tokens", "/cuotas", "/apify"]:
+                await self.cmd_tokens(chat_id)
+            elif command in ["/nexus", "/nexus_job"]:
+                query_term = " ".join(args) if args else "auto"
+                await self.cmd_nexus(chat_id, query_term)
             elif command in ["/devices", "/dispositivos"]:
                 await self.cmd_devices(chat_id)
             elif command in ["/approve", "/aprobar"]:
@@ -314,6 +319,8 @@ class TelegramListener:
             lines.append("• <code>/status</code> - Consulta de salud del sistema, scrapers y base de datos.")
             lines.append("• <code>/ssl</code> - Diagnóstico en vivo y telemetría de certificados SSL.")
             lines.append("• <code>/renew_ssl</code> - Forzar renovación inmediata de certificados SSL.")
+            lines.append("• <code>/tokens</code> - Comprobación en vivo de Apify y ScraperAPI (0 créditos).")
+            lines.append("• <code>/nexus [búsqueda]</code> - Encola búsqueda masiva de Wallapop para tu PC local.")
             lines.append("• <code>/devices</code> - Listar y gestionar dispositivos con botones de aprobación.")
             lines.append("• <code>/approve [id]</code> - Autorizar acceso a un dispositivo.")
             lines.append("• <code>/deny [id]</code> - Bloquear/eliminar un dispositivo.")
@@ -633,6 +640,78 @@ class TelegramListener:
         except Exception as e:
             logger.error(f"Error al importar producto de Wallapop desde Telegram: {e}")
             await telegram_service.send_message(f"❌ Error al procesar el enlace: {e}", chat_id=chat_id)
+
+    async def cmd_tokens(self, chat_id: int):
+        await telegram_service.send_message("🔍 <i>Verificando estado de tokens de scraping (0 créditos consumidos)...</i>", chat_id=chat_id)
+        
+        t1 = settings.APIFY_TOKEN or os.environ.get("APIFY_TOKEN")
+        t2 = settings.APIFY_TOKEN2 or getattr(settings, "APYFY_TOKEN2", None) or os.environ.get("APIFY_TOKEN2") or os.environ.get("APYFY_TOKEN2")
+        t3 = settings.APIFY_TOKEN3 or os.environ.get("APIFY_TOKEN3")
+        s_key = settings.SCRAPERAPI_KEY or os.environ.get("SCRAPERAPI_KEY")
+        
+        lines = ["🛡️ <b>[Oráculo: Diagnóstico de Tokens de Scraping]</b>\n<i>(Comprobación gratuita de metadatos: 0 créditos)</i>\n"]
+        
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            # 1. Apify Tokens
+            apify_list = [
+                ("APIFY_TOKEN (Cuenta 1)", t1),
+                ("APIFY_TOKEN2 (Cuenta 2)", t2),
+                ("APIFY_TOKEN3 (Cuenta 3)", t3)
+            ]
+            
+            for label, token in apify_list:
+                if not token:
+                    lines.append(f"🟡 <b>{label}:</b> No configurado en .env")
+                    continue
+                try:
+                    res = await client.get(f"https://api.apify.com/v2/users/me?token={token.strip()}")
+                    if res.status_code == 200:
+                        data = res.json().get("data", {})
+                        uname = data.get("username", "Desconocido")
+                        plan = data.get("plan", {}).get("name", "Free")
+                        lines.append(f"🟢 <b>{label}:</b> Operativo\n   👤 Usuario: <code>{uname}</code> | Plan: <b>{plan}</b>")
+                    elif res.status_code in [401, 403]:
+                        lines.append(f"🔴 <b>{label}:</b> Token INVÁLIDO o expirado (HTTP {res.status_code})")
+                    else:
+                        lines.append(f"🔴 <b>{label}:</b> Error HTTP {res.status_code}")
+                except Exception as e:
+                    lines.append(f"⚠️ <b>{label}:</b> Error de red ({e})")
+                    
+            # 2. ScraperAPI Key
+            if not s_key:
+                lines.append("\n🟡 <b>SCRAPERAPI_KEY:</b> No configurada en .env")
+            else:
+                try:
+                    res = await client.get(f"https://api.scraperapi.com/account?api_key={s_key.strip()}")
+                    if res.status_code == 200:
+                        data = res.json()
+                        req_count = data.get("requestCount", 0)
+                        req_limit = data.get("requestLimit", 0)
+                        concurrency = data.get("concurrencyLimit", 0)
+                        lines.append(f"\n🟢 <b>SCRAPERAPI_KEY:</b> Operativa\n   📊 Consumo: <b>{req_count} / {req_limit}</b> peticiones (Concurrencia: {concurrency})")
+                    elif res.status_code in [401, 403]:
+                        lines.append(f"\n🔴 <b>SCRAPERAPI_KEY:</b> Clave INVÁLIDA o suspendida (HTTP {res.status_code})")
+                    else:
+                        lines.append(f"\n🔴 <b>SCRAPERAPI_KEY:</b> Error HTTP {res.status_code}")
+                except Exception as e:
+                    lines.append(f"\n⚠️ <b>SCRAPERAPI_KEY:</b> Error de red ({e})")
+
+        await telegram_service.send_message("\n".join(lines), chat_id=chat_id)
+
+    async def cmd_nexus(self, chat_id: int, query_term: str):
+        from src.domain.models import WallapopJobModel
+        with SessionCloud() as db:
+            job = WallapopJobModel(query=query_term, status="pending")
+            db.add(job)
+            db.commit()
+            db.refresh(job)
+            job_id = job.id
+
+        msg = (
+            f"⚡ <b>[Nexus Local Bridge]</b> Trabajo <b>#{job_id}</b> encolado para '<b>{query_term}</b>'.\n\n"
+            f"🖥️ Tu PC de casa (si tiene <code>run_nexus_bridge.ps1</code> activo) resolverá la búsqueda con tu IP residencial y guardará las ofertas en el Purgatorio."
+        )
+        await telegram_service.send_message(msg, chat_id=chat_id)
 
 # Instancia única del listener
 telegram_listener = TelegramListener()

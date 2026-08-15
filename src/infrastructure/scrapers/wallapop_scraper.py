@@ -171,9 +171,10 @@ class WallapopScraper(BaseScraper):
 
         # --- FASE 1: APIFY (Créditos Gratuitos ~20,000 reqs/mes) ---
         from src.core.config import settings
+        token2 = settings.APIFY_TOKEN2 or getattr(settings, "APYFY_TOKEN2", None) or os.environ.get("APIFY_TOKEN2") or os.environ.get("APYFY_TOKEN2")
         tokens = [t for t in [
             settings.APIFY_TOKEN or os.environ.get("APIFY_TOKEN"),
-            settings.APIFY_TOKEN2 or os.environ.get("APIFY_TOKEN2"),
+            token2,
             settings.APIFY_TOKEN3 or os.environ.get("APIFY_TOKEN3")
         ] if t]
         apify_success = False
