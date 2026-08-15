@@ -61,26 +61,16 @@ class WallapopManualScraper(BaseScraper):
         else:
             self._log("ℹ️ Sin proxy residencial. Si la IP es de datacenter, se recomienda el Nexus Local Bridge.")
 
-        clean_query = query.strip().lower() if query else "auto"
-        if clean_query in ["auto", "origins", "motu", "motu origins", "all", "presets", ""]:
+        if query == "auto" or not query:
             queries = [
                 "masters del universo origins",
                 "masters of the universe origins",
                 "motu origins",
             ]
-            self._log("🎯 WallapopManual: Ejecutando preset completo MOTU Origins (3 términos en secuencia).")
         elif "," in query:
             queries = [q.strip() for q in query.split(",") if q.strip()]
-            self._log(f"🎯 WallapopManual: Ejecutando {len(queries)} consultas personalizadas en lote.")
-        elif "wallapop.com/app/search" in query:
-            import urllib.parse
-            parsed = urllib.parse.urlparse(query)
-            qs = urllib.parse.parse_qs(parsed.query)
-            kw = qs.get("keywords", [query])[0]
-            queries = [kw]
-            self._log(f"🎯 WallapopManual: URL de búsqueda detectada. Término extraído: '{kw}'.")
         else:
-            queries = [query]
+            queries = [query.strip()]
 
         all_offers: List[ScrapedOffer] = []
         async with AsyncSession() as session:

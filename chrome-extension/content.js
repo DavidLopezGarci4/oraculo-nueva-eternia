@@ -17,53 +17,94 @@ const SELECTORS = {
 };
 
 /**
- * Extrae todos los productos visibles en la página actual.
+ * Extrae todos los productos visibles en la página actual (Wallapop o Vinted).
  */
 function extractProducts() {
     const products = [];
+    const isVinted = window.location.hostname.includes('vinted');
 
-    // Buscar todos los enlaces a items
-    const itemLinks = document.querySelectorAll(SELECTORS.itemLink);
+    if (isVinted) {
+        // Extracción para Vinted
+        const itemLinks = document.querySelectorAll('a[href*="/items/"]');
+        itemLinks.forEach(link => {
+            try {
+                const rawUrl = link.href || '';
+                const url = rawUrl.split('?')[0];
+                if (!url || !url.includes('/items/')) return;
+                if (products.some(p => p.url === url)) return;
 
-    itemLinks.forEach(link => {
-        try {
-            const card = link.closest('[class*="ItemCard"]') || link.parentElement;
-            if (!card) return;
+                const card = link.closest('[data-testid*="grid-item"]') || link.closest('[class*="ItemBox"]') || link.parentElement;
+                let title = 'Figura Vinted';
+                let price = 0;
+                let imageUrl = null;
 
-            // URL
-            const url = link.href;
-            if (!url || !url.includes('/item/')) return;
+                const imgEl = (card || link).querySelector('img');
+                if (imgEl) {
+                    imageUrl = imgEl.src || imgEl.getAttribute('data-src');
+                    if (imgEl.alt && imgEl.alt.length > 3) title = imgEl.alt.trim();
+                }
 
-            // Evitar duplicados
-            if (products.some(p => p.url === url)) return;
+                const titleEl = (card || link).querySelector('[class*="title"], h2, [class*="ItemBox_title"]');
+                if (titleEl && titleEl.textContent.trim()) {
+                    title = titleEl.textContent.trim();
+                }
 
-            // Título
-            const titleEl = card.querySelector(SELECTORS.itemTitle);
-            const title = titleEl ? titleEl.textContent.trim() : 'Producto Wallapop';
+                const priceEl = (card || link).querySelector('[data-testid*="price"], [class*="price"], h3, [class*="ItemBox_subtitle"]');
+                if (priceEl) {
+                    const priceText = priceEl.textContent.replace(/[^\d,\.]/g, '').replace(',', '.');
+                    price = parseFloat(priceText) || 0;
+                }
 
-            // Precio
-            const priceEl = card.querySelector(SELECTORS.itemPrice);
-            let price = 0;
-            if (priceEl) {
-                const priceText = priceEl.textContent.replace(/[^\d,\.]/g, '').replace(',', '.');
-                price = parseFloat(priceText) || 0;
+                if (title && price > 0) {
+                    products.push({
+                        title: title,
+                        price: price,
+                        url: url,
+                        imageUrl: imageUrl
+                    });
+                }
+            } catch (e) {
+                console.error('[Oráculo] Error extrayendo producto de Vinted:', e);
             }
+        });
+    } else {
+        // Extracción para Wallapop
+        const itemLinks = document.querySelectorAll('a[href*="/item/"]');
+        itemLinks.forEach(link => {
+            try {
+                const card = link.closest('[class*="ItemCard"]') || link.closest('article') || link.parentElement;
+                if (!card) return;
 
-            // Imagen
-            const imgEl = card.querySelector('img');
-            const imageUrl = imgEl ? imgEl.src : null;
+                const rawUrl = link.href || '';
+                const url = rawUrl.split('?')[0];
+                if (!url || !url.includes('/item/')) return;
+                if (products.some(p => p.url === url)) return;
 
-            products.push({
-                title: title,
-                price: price,
-                url: url,
-                imageUrl: imageUrl
-            });
+                const titleEl = card.querySelector('[class*="ItemCard__title"], [class*="ItemCard__info"], [class*="Title"], p');
+                const title = titleEl ? titleEl.textContent.trim() : 'Producto Wallapop';
 
-        } catch (e) {
-            console.error('[Oráculo] Error extrayendo producto:', e);
-        }
-    });
+                const priceEl = card.querySelector('[class*="ItemCard__price"], [class*="Price"], span[class*="price"]');
+                let price = 0;
+                if (priceEl) {
+                    const priceText = priceEl.textContent.replace(/[^\d,\.]/g, '').replace(',', '.');
+                    price = parseFloat(priceText) || 0;
+                }
+
+                const imgEl = card.querySelector('img');
+                const imageUrl = imgEl ? (imgEl.src || imgEl.getAttribute('data-src')) : null;
+
+                products.push({
+                    title: title,
+                    price: price,
+                    url: url,
+                    imageUrl: imageUrl
+                });
+
+            } catch (e) {
+                console.error('[Oráculo] Error extrayendo producto de Wallapop:', e);
+            }
+        });
+    }
 
     return products;
 }

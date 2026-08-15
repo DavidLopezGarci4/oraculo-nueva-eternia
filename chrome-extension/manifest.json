@@ -8,7 +8,10 @@
         "storage"
     ],
     "host_permissions": [
-        "https://*.wallapop.com/*"
+        "https://*.wallapop.com/*",
+        "https://*.vinted.es/*",
+        "https://*.vinted.fr/*",
+        "https://*.vinted.com/*"
     ],
     "action": {
         "default_popup": "popup.html",
@@ -21,7 +24,10 @@
     "content_scripts": [
         {
             "matches": [
-                "https://*.wallapop.com/*"
+                "https://*.wallapop.com/*",
+                "https://*.vinted.es/*",
+                "https://*.vinted.fr/*",
+                "https://*.vinted.com/*"
             ],
             "js": [
                 "content.js"
