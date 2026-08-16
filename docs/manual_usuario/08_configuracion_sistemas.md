@@ -61,3 +61,21 @@ Para recibir alertas personalizadas directamente en tu móvil:
 2.  Escribe el comando `/register [tu_nombre_de_usuario]` (el nombre de usuario con el que inicias sesión en el Oráculo).
 3.  El bot asociará automáticamente tu cuenta y comenzarás a recibir de inmediato notificaciones enriquecidas en HTML cada vez que una nueva oferta en el Purgatorio coincida con una figura de tu **Lista de Deseos** o con una **Alerta de Precio** configurada.
 
+### 4.5 Escudo de Dispositivos y Autorización Soberana
+*   **Seguridad de Acceso:** Cada vez que un nuevo navegador, móvil o PC intenta acceder a la aplicación, el Escudo de Seguridad (`SecurityShield`) lo bloquea de forma preventiva y envía una notificación instantánea a Telegram exclusivamente al Soberano (Administrador).
+*   **Aprobación en 1 Clic:** El Soberano puede pulsar directamente `[ ✅ Permitir Acceso ]` o `[ 🚫 Bloquear ]` en el propio mensaje de Telegram.
+*   **Comandos de Gestión:**
+    *   `/devices`: Lista los dispositivos registrados con botones interactivos para autorizar o eliminar.
+    *   `/approve [id]`: Autoriza manualmente un dispositivo por su identificador.
+    *   `/deny [id]`: Bloquea y purga un dispositivo.
+
+### 4.6 Telemetría y Renovación de Certificados SSL
+*   **Monitor en Vivo:** En la pestaña *Sistema*, una tarjeta dedicada muestra el estado del certificado SSL HTTPS (`DuckDNS`), emisor (`Let's Encrypt`) y días exactos restantes antes del vencimiento.
+*   **Forzar Renovación:** Permite disparar la renovación inmediata de Certbot. Si ocurre cualquier eventualidad, se abre un modal de diagnóstico con el registro de terminal y un botón para copiar los logs.
+*   **Control Remoto desde Telegram:** Los comandos `/ssl` (diagnóstico de estado) y `/renew_ssl` (forzar renovación) permiten mantener los certificados al día desde cualquier lugar.
+
+### 4.7 Nexus Local Bridge (Worker Residencial de Wallapop)
+*   **Panel de Trabajos:** Visualiza el historial y estado de los trabajos de extracción delegados al PC local.
+*   **Disparo desde Móvil (`/nexus`):** Encola búsquedas masivas ejecutadas con la IP residencial de tu hogar (evitando bloqueos WAF de CloudFront). Al terminar, Telegram envía un resumen de las ofertas recolectadas.
+
+

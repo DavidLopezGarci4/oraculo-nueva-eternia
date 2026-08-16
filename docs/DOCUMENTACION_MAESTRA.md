@@ -1,7 +1,7 @@
 # 📜 El Oráculo de Nueva Eternia: Documentación Maestra
 
-**Versión:** 2.3.0-OPTIMIZED (Divine Merge, WebP, Code Splitting & Infinite Scroll)
-**Última Revisión:** Julio 2026
+**Versión:** 2.4.0-SOVEREIGN (Telegram Sovereign Shield, SSL, Apify Multi-Token & Nexus Bridge)
+**Última Revisión:** Agosto 2026
 
 Este documento es la **Fuente de Verdad Absoluta** del proyecto "El Oráculo de Nueva Eternia". Se ha redactado tras una auditoría profunda del código fuente (`src/`, `frontend/`, `docker-compose.yml`), asegurando que describe **exactamente cómo funciona la aplicación hoy en día**, sin suposiciones ni elementos obsoletos.
 
@@ -615,3 +615,31 @@ Implementado en Configuración > Inventario, permite a David y administradores f
 
 ### 13.5 Conmutador de Rendimiento
 Para salvaguardar la batería y procesador en dispositivos móviles de gama baja, se inyectó una tarjeta de "Rendimiento y Efectos Visuales" en Configuración. Persiste un flag en `localStorage` que deshabilita los cálculos vectoriales 3D e iluminación holográfica neón en reposo de las tarjetas `FoilTiltCard` en modo clásico.
+
+---
+
+## 14. Seguridad Soberana, Telemetría SSL y Nexus Local Bridge (Versión 2.4.0)
+
+La versión 2.4.0 introduce el control remoto por Telegram, la gestión integral de certificados SSL y el puente de extracción residencial para evadir bloqueos WAF:
+
+### 14.1 Escudo de Seguridad y Autorización Soberana de Dispositivos
+*   **SecurityShield & Fingerprinting**: Todo dispositivo o navegador no registrado que intente acceder al backend es bloqueado de forma preventiva (`is_authorized = False`).
+*   **Aprobación Soberana por Telegram**: El backend envía una alerta interactiva exclusivamente al chat del Administrador (`TELEGRAM_CHAT_ID`) con botones `[ ✅ Permitir Acceso ]` y `[ 🚫 Bloquear ]`.
+*   **Comandos de Gestión**: `/devices` (lista interactiva), `/approve [id]` y `/deny [id]`.
+
+### 14.2 Telemetría y Renovación Forzada de Certificados SSL
+*   **`SSLService`**: Monitorea la validez, emisor y días restantes de los certificados HTTPS Let's Encrypt para `DuckDNS`.
+*   **Renovación en Caliente y Modal de Diagnóstico**: Disparo desde la interfaz web o mediante comandos de Telegram (`/ssl`, `/renew_ssl`), con visualización de terminal y botón de copiado de logs al portapapeles.
+
+### 14.3 Nexus Local Bridge (Worker Residencial de Wallapop)
+*   **Evasión WAF de CloudFront**: La extracción se ejecuta en el ordenador personal del usuario (`run_nexus_bridge.ps1`) utilizando su IP residencial española, superando al 100% los bloqueos de centros de datos.
+*   **Comando Remoto `/nexus`**: Permite encolar búsquedas masivas desde Telegram (ej. `/nexus` para el trío de Origins, o `/nexus he-man, skeletor` para listas separadas por comas).
+*   **Notificación Automática**: El backend avisa por Telegram al usuario cuando el trabajo finaliza con el conteo de ofertas recolectadas.
+
+### 14.4 Rotación de 3 Tokens de Apify y Auditoría a Coste Cero
+*   **Pool de 3 Cuentas**: `APIFY_TOKEN`, `APIFY_TOKEN2` (con tolerancia a `APYFY_TOKEN2`) y `APIFY_TOKEN3` se rotan en cascada para triplicar la cuota mensual gratuita.
+*   **Comando `/tokens`**: Consulta de metadatos de cuotas de Apify y ScraperAPI consumiendo 0 créditos.
+
+### 14.5 Extensión de Navegador Multitienda (Wallapop & Vinted)
+*   **Extracción DOM Directa**: La extensión lee las ofertas renderizadas en pantalla en Wallapop y Vinted, permitiendo enviarlas masivamente al Purgatorio con un solo clic y cero riesgo de baneo.
+

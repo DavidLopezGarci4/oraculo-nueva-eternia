@@ -35,21 +35,78 @@ class SmythsToysScraper(BaseScraper):
             shop_name="SmythsToys",
             base_url="https://www.smythstoys.com"
         )
-        self.search_url = "https://www.smythstoys.com/de/de-de/spielzeug/action-spielzeug/actionfiguren/masters-of-the-universe-figuren-und-sets/c/SM1001010408?sort=creationDate_dt%20desc"
+        self.category_url = "https://www.smythstoys.com/de/de-de/spielzeug/action-spielzeug/actionfiguren/masters-of-the-universe-figuren-und-sets/c/SM1001010408?sort=creationDate_dt+desc"
+        self.search_url = self.category_url
+        self.keywords_de = "masters of the universe figuren und sets"
         
         # --- CONFIGURACIÓN DE OPCIONES DE BYPASS ---
-        self.use_managed_api = False  # Cambiar a True para activar la OPCIÓN 2 (ScraperAPI Premium)
+        self.use_managed_api = False  # Si es True, fuerza el uso de ScraperAPI
 
     async def search(self, query: str = "auto") -> List[ScrapedOffer]:
         """
         Incursión para extraer reliquias MOTU de Smyths Toys Alemania.
+        Cascada Zero-Cost:
+        1. Nivel 1 (Gratis): Infiltración rápida curl_cffi con TLS Chrome 124 a categoría / buscador.
+        2. Nivel 2 (Gratis): Playwright Headless con Antidetect e inicialización de cookies.
+        3. Nivel 3 (Reserva): ScraperAPI Premium solo si los métodos gratuitos fallan.
         """
         self._log(f"🔎 Iniciando búsqueda en Smyths Toys para: {query}")
+        self.blocked = False
         
-        if self.use_managed_api:
-            return await self._search_option_2(query)
-        else:
-            return await self._search_option_1(query)
+        # Nivel 1: Fast Infiltration directa con curl_cffi (Gratis)
+        self._log("⚡ SmythsToys [Nivel 1 Gratis]: Probando infiltración directa con curl-cffi...")
+        offers = await self._fast_infiltration(query)
+        if offers and not self.blocked:
+            self._log(f"🎉 SmythsToys [Nivel 1 Gratis]: ¡Éxito! Encontradas {len(offers)} ofertas.")
+            return offers
+
+        # Nivel 2: Playwright Headless con antidetect profundo (Gratis)
+        self._log("🛡️ SmythsToys [Nivel 2 Gratis]: Infiltración rápida bloqueada/vacía. Escalamiento a Playwright Antidetect...", level="warning")
+        self.blocked = False
+        offers = await self._search_option_1(query)
+        if offers and not self.blocked:
+            return offers
+
+        # Nivel 3: ScraperAPI Premium (Solo si hay clave configurada)
+        if os.environ.get("SCRAPERAPI_KEY"):
+            self._log("📡 SmythsToys [Nivel 3 Reserva]: Activando ScraperAPI de rescate...", level="warning")
+            self.blocked = False
+            offers = await self._search_option_2(query)
+
+        return offers
+
+    async def _fast_infiltration(self, query: str) -> List[ScrapedOffer]:
+        """Infiltración ultrarrápida gratuita vía curl_cffi."""
+        target_url = self.category_url
+        if query and query.lower() != "auto":
+            encoded_query = urllib.parse.quote_plus(query)
+            target_url = f"https://www.smythstoys.com/de/de-de/search/?text={encoded_query}"
+
+        offers: List[ScrapedOffer] = []
+        try:
+            headers = {
+                "User-Agent": random.choice(self.USER_AGENTS),
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+                "Accept-Language": "de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7",
+                "Referer": "https://www.smythstoys.com/de/de-de",
+                "Upgrade-Insecure-Requests": "1"
+            }
+            async with AsyncSession(impersonate="chrome124") as session:
+                resp = await session.get(target_url, headers=headers, timeout=20)
+                if resp.status_code == 200:
+                    body_text = resp.text.lower()
+                    if "pardon our interruption" in body_text or "incapsula" in body_text or "incident id" in body_text:
+                        self._log("🛡️ SmythsToys: Desafío Imperva detectado en curl_cffi.", level="debug")
+                        self.blocked = True
+                        return []
+                    soup = BeautifulSoup(resp.text, "html.parser")
+                    offers = self._parse_html(soup, set())
+                else:
+                    self._log(f"⚠️ SmythsToys: HTTP {resp.status_code} en curl_cffi", level="debug")
+        except Exception as e:
+            self._log(f"⚠️ SmythsToys: Error en fast infiltration: {e}", level="debug")
+            
+        return offers
 
     async def _search_option_1(self, query: str) -> List[ScrapedOffer]:
         """

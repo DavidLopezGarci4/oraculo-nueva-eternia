@@ -543,6 +543,15 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
   - [x] **Dependencias**: `pip-audit` corrió por primera vez y encontró 20 CVEs conocidos (`PyJWT`, `pydantic-settings`, `starlette` vía `fastapi` desactualizado) — corregidos y verificados (suite completa + arranque real de `uvicorn`). `pip-audit` limpio.
   - [ ] Pendiente: virtualizar listas largas (`@tanstack/react-virtual`) en Catálogo/Colección/Purgatorio — deliberadamente pospuesto, necesita datos reales para verificar visualmente; y que el usuario rote los secretos + aplique la migración Alembic + despliegue real (ver `Apuntes a llevar a cabo.txt`, fuera del repo, y Ola 0/1 de [REPORTE_MEJORAS_AAA.md](REPORTE_MEJORAS_AAA.md)).
 
+- [x] **Phase 82: Control Soberano Telegram, Telemetría SSL, Multi-Token Apify y Nexus Bridge (16/08/2026)**
+  - [x] **Autorización Soberana de Dispositivos**: Integrado el Escudo de Seguridad (`SecurityShield`) con Telegram. Notificación en tiempo real y botones interactivos `[ ✅ Permitir Acceso ]` y `[ 🚫 Bloquear ]` para autorizar de forma inmediata dispositivos que intenten conectar a la plataforma. Comandos `/devices`, `/approve` y `/deny`.
+  - [x] **Telemetría y Renovación de Certificados SSL**: Creado el servicio `SSLService` y endpoints en `/api/admin/ssl` para vigilar los días restantes de validez de certificados Let's Encrypt / DuckDNS. Creado modal de diagnóstico en Frontend con visor de logs y botón de copiado. Comandos `/ssl` y `/renew_ssl` en Telegram.
+  - [x] **Nexus Local Bridge (Opción A)**: Implementada la delegación de scraping a la máquina local del usuario con su IP residencial (`run_nexus_bridge.ps1`). Comando `/nexus` en Telegram para disparar búsquedas masivas preconfiguradas o separadas por comas desde el móvil, con notificación automática al terminar.
+  - [x] **Rotación de 3 Tokens de Apify & Auditoría a Coste Cero**: Pool dinámico en `WallapopScraper` con `APIFY_TOKEN`, `APIFY_TOKEN2`/`APYFY_TOKEN2` y `APIFY_TOKEN3`. Comando `/tokens` para chequear cuotas consumidas consumiendo 0 créditos.
+  - [x] **Extensión Multitienda (Wallapop & Vinted)**: Actualizada la extensión de navegador para capturar el DOM tanto en Wallapop como en Vinted (.es, .fr, .com) y subir cientos de ofertas de un clic sin riesgo de baneo.
+  - [x] **Política de Purgatorio Primero**: Blindada la persistencia para que el 100% de nuevas ofertas descubiertas pasen obligatoriamente por el Purgatorio sin auto-asignaciones a ciegas.
+
+
 ---
 
 ## ✅ Plan de Verificación

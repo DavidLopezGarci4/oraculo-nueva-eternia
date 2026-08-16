@@ -1287,4 +1287,19 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
   - **Validación**: Compilación completa a producción mediante `npm run build` verificada satisfactoriamente con 0 advertencias de TypeScript y chunking óptimo.
 
 
+### 🛡️ Fase 82: Control Soberano Telegram, Telemetría SSL, Multi-Token Apify y Nexus Bridge (16/08/2026)
+
+- **Hitos**: Escudo soberano de autorización de dispositivos por Telegram con botones inline, telemetría y renovación forzada de certificados SSL, Nexus Local Bridge para delegar búsquedas de Wallapop al PC residencial con comando `/nexus`, rotación dinámica de 3 tokens de Apify, auditoría de cuotas a coste 0 y soporte de Vinted en la extensión de Chrome.
+- **Estado**: ✅ COMPLETADO Y VERIFICADO
+- **Logros Técnicos**:
+  - **Autorización Soberana de Dispositivos**: Integrado el servicio `SecurityShield` (`src/core/security.py`) con Telegram. Cada nuevo dispositivo o navegador es bloqueado de forma preventiva y envía una notificación en tiempo real con un teclado interactivo `InlineKeyboardMarkup` (`[ ✅ Permitir Acceso ]` y `[ 🚫 Bloquear ]`) exclusivamente al chat del Administrador (`TELEGRAM_CHAT_ID`). Comandos administrativos `/devices`, `/approve [id]` y `/deny [id]` implementados en `TelegramListener`.
+  - **Telemetría y Renovación de Certificados SSL**: Creado `SSLService` (`src/application/services/ssl_service.py`) y endpoints `/api/admin/ssl` para vigilar los certificados Let's Encrypt / DuckDNS y sus días de validez. Creado modal de diagnóstico en Frontend (`SystemTab.tsx`) con visor de logs y botón de copiado. Comandos `/ssl` y `/renew_ssl` en Telegram.
+  - **Nexus Local Bridge (Opción A)**: Implementada la delegación de scraping a la máquina local del usuario con su IP residencial (`run_nexus_bridge.ps1`). Comando `/nexus` en Telegram para encolar búsquedas masivas preconfiguradas de MOTU Origins o términos separados por comas desde el móvil, con notificación automática por Telegram al terminar el trabajo en el PC de casa. Autodetección de URL del servidor a partir de `CORS_ORIGINS`.
+  - **Rotación de 3 Tokens de Apify & Auditoría a Coste Cero**: Pool dinámico en `WallapopScraper` con `APIFY_TOKEN`, `APIFY_TOKEN2` (tolerante a `APYFY_TOKEN2`) y `APIFY_TOKEN3`. Comando `/tokens` para chequear cuotas consumidas consumiendo 0 créditos.
+  - **Extensión Multitienda (Wallapop & Vinted)**: Actualizada la extensión de navegador (`chrome-extension/`) para capturar el DOM tanto en Wallapop como en Vinted (.es, .fr, .com) y subir cientos de ofertas de un clic sin riesgo de baneo.
+  - **Política de Purgatorio Primero**: Blindada la persistencia en `pipeline.py` para que el 100% de nuevas ofertas descubiertas pasen obligatoriamente por el Purgatorio sin auto-asignaciones a ciegas.
+  - **Validación**: Suite completa de tests (`pytest tests/ -v`) superada con 67/67 tests aprobados (100% de éxito).
+
+
+
 

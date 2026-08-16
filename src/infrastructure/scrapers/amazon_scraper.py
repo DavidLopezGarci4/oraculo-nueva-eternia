@@ -31,38 +31,46 @@ class AmazonScraper(BaseScraper):
     async def search(self, query: str) -> List[ScrapedOffer]:
         """
         Searches Amazon.es for MOTU Origins items.
-        Evolved Strategy (Sirius A1): 
-        1. Try curl-cffi for fast infiltration (routed via ScraperAPI on GHA if key is present).
-        2. If blocked or 0 items, escalate to Playwright with Human Interaction (Session Legitimization) ONLY when running locally.
+        Evolved Zero-Cost Cascade Strategy:
+        1. Nivel 1 (Gratis): Infiltración rápida curl-cffi con TLS Chrome 124 directo.
+        2. Nivel 2 (Gratis): Escalamiento a Sirius A1 (Playwright Stealth con aceptación de cookies).
+        3. Nivel 3 (Reserva): ScraperAPI Premium solo si los métodos gratuitos son bloqueados.
         """
-        if os.environ.get("GITHUB_ACTIONS") == "true" and not os.environ.get("SCRAPERAPI_KEY"):
-            self._log("⚠️ Amazon.es: Detectado entorno GitHub Actions sin SCRAPERAPI_KEY (Azure IP bloqueado por Cloud WAF). Saltando búsqueda.")
-            return []
-            
         search_query = "masters of the universe origins" if query == "auto" else query
         url = f"{self.search_url}{search_query.replace(' ', '+')}"
         self.blocked = False
         
         self._log(f"🕸️ Amazon.es: Iniciando incursión para '{search_query}'...")
         
-        # Phase 1: Fast Infiltration (curl-cffi / ScraperAPI)
-        offers = await self._fast_infiltration(url, search_query)
+        # Nivel 1: Fast Infiltration directa y gratuita (curl-cffi sin ScraperAPI)
+        self._log("⚡ Amazon.es [Nivel 1 Gratis]: Probando infiltración directa con curl-cffi...")
+        offers = await self._fast_infiltration(url, search_query, use_scraperapi=False)
         
-        # Phase 2: Tactical Escalation (Playwright Human-Like) - Local only
-        if (not offers or self.blocked) and os.environ.get("GITHUB_ACTIONS") != "true":
-            self._log(f"⚠️ Amazon.es: Infiltración rápida fallida o bloqueada. Escalamiento a Sirius A1 (Buscador Humano)...", level="warning")
+        # Nivel 2: Playwright Headless Sigiloso (Gratis)
+        if not offers or self.blocked:
+            self._log("🛡️ Amazon.es [Nivel 2 Gratis]: Infiltración rápida bloqueada/vacía. Escalamiento a Playwright Antidetect...", level="warning")
+            self.blocked = False
             offers = await self._sirius_a1_human_search(search_query)
+            
+        # Nivel 3: ScraperAPI (Último recurso si hay clave configurada)
+        if (not offers or self.blocked) and os.environ.get("SCRAPERAPI_KEY"):
+            self._log("📡 Amazon.es [Nivel 3 Reserva]: Activando ScraperAPI de rescate...", level="warning")
+            self.blocked = False
+            offers = await self._fast_infiltration(url, search_query, use_scraperapi=True)
         
+        if not offers and self.blocked:
+            self._log("⚠️ Amazon.es: Todos los niveles de extracción fueron bloqueados temporalmente.", level="warning")
+            
         return offers
 
-    async def _fast_infiltration(self, url: str, search_query: str) -> List[ScrapedOffer]:
-        """Attempt fast extraction via curl-cffi."""
+    async def _fast_infiltration(self, url: str, search_query: str, use_scraperapi: bool = False) -> List[ScrapedOffer]:
+        """Attempt extraction via curl-cffi."""
         offers = []
         html = await self._curl_get(
             url, 
-            impersonate="chrome120", 
-            use_scraperapi=True,
-            scraperapi_params={"premium": "true", "country_code": "es", "render": "true"}
+            impersonate="chrome124", 
+            use_scraperapi=use_scraperapi,
+            scraperapi_params={"premium": "true", "country_code": "es", "render": "true"} if use_scraperapi else None
         )
         
         if not html:
@@ -101,10 +109,13 @@ class AmazonScraper(BaseScraper):
                     img_el = res.select_one("img.s-image")
                     image_url = img_el.get("src") if img_el else None
 
-                    offers.append(ScrapedOffer(
-                        product_name=title, price=price, url=full_url,
-                        shop_name=self.shop_name, image_url=image_url, source_type="Retail"
-                    ))
+                    # Deduplicate by URL
+                    if not any(o.url == full_url for o in offers):
+                        offers.append(ScrapedOffer(
+                            product_name=title, price=price, url=full_url,
+                            shop_name=self.shop_name, image_url=image_url, source_type="Retail"
+                        ))
+                        self.items_scraped += 1
             except: continue
             
         return offers

@@ -71,6 +71,9 @@ jobs:
         env:
           SUPABASE_DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
           SCRAPERAPI_KEY: ${{ secrets.SCRAPERAPI_KEY }}
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+          APIFY_TOKEN2: ${{ secrets.APIFY_TOKEN2 }}
+          APIFY_TOKEN3: ${{ secrets.APIFY_TOKEN3 }}
           PYTHONPATH: .
         run: |
           # Use 60 min delay for scheduled runs, 0 for manual
