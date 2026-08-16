@@ -103,6 +103,19 @@ class SSLService:
         cert_data = None
         source = "unknown"
 
+        # Obtener el último resultado de renovación persistido de la base de datos si en memoria es None
+        if not cls._last_renewal_result:
+            try:
+                from src.domain.models import SystemConfigModel
+                from src.infrastructure.database_cloud import SessionCloud
+                import json
+                with SessionCloud() as db:
+                    cfg = db.query(SystemConfigModel).filter(SystemConfigModel.key == "ssl_last_renewal_result").first()
+                    if cfg and cfg.value:
+                        cls._last_renewal_result = json.loads(cfg.value)
+            except Exception:
+                pass
+
         # 1. Inspección local de disco
         cert_path = cls._find_cert_path()
         if cert_path:
@@ -249,4 +262,39 @@ class SSLService:
             }
 
         cls._last_renewal_result = result
+
+        # Persistir resultado e historial en base de datos para observabilidad soberana
+        try:
+            from src.domain.models import SystemConfigModel
+            from src.infrastructure.database_cloud import SessionCloud
+            import json
+
+            with SessionCloud() as db:
+                # 1. Guardar último resultado
+                cfg_last = db.query(SystemConfigModel).filter(SystemConfigModel.key == "ssl_last_renewal_result").first()
+                if not cfg_last:
+                    cfg_last = SystemConfigModel(key="ssl_last_renewal_result")
+                    db.add(cfg_last)
+                cfg_last.value = json.dumps(result)
+
+                # 2. Guardar en histórico (limite 10 registros)
+                cfg_hist = db.query(SystemConfigModel).filter(SystemConfigModel.key == "ssl_renewal_history").first()
+                if not cfg_hist:
+                    cfg_hist = SystemConfigModel(key="ssl_renewal_history", value="[]")
+                    db.add(cfg_hist)
+                
+                try:
+                    history = json.loads(cfg_hist.value)
+                    if not isinstance(history, list):
+                        history = []
+                except Exception:
+                    history = []
+                
+                history.insert(0, result)
+                cfg_hist.value = json.dumps(history[:10])
+                
+                db.commit()
+        except Exception as e:
+            logger.error(f"⚠️ No se pudo guardar la telemetría SSL en la base de datos: {e}")
+
         return result

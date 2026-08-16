@@ -251,6 +251,29 @@ function Invoke-SshConnect {
     Read-Host "Presiona [Enter] para volver al menu principal..."
 }
 
+function Invoke-RenewSslCloud {
+    Show-Header
+    Write-Host "[11] RENOVANDO CERTIFICADOS SSL EN ORACLE CLOUD..." -ForegroundColor Cyan
+    Write-Host ""
+    
+    $KeyPath = "C:\Users\dace8\OneDrive\Documentos\nueva-eternia-produccion.key"
+    $Server = "opc@79.72.50.244"
+
+    if (!(Test-Path $KeyPath)) {
+        Write-Host "No se encontro la clave en: $KeyPath" -ForegroundColor Yellow
+        $KeyPath = Read-Host "Introduce la ruta completa a tu clave .key"
+    }
+
+    Write-Host "Conectando al servidor y ejecutando renovacion SSL..." -ForegroundColor Yellow
+    $RemoteCmd = "cd ~/oraculo-nueva-eternia && sudo docker run --rm -v \$(pwd)/certbot/conf:/etc/letsencrypt -v \$(pwd)/certbot/www:/var/www/certbot certbot/certbot renew && sudo docker compose -f docker-compose.prod.yml restart frontend"
+    
+    ssh -i "$KeyPath" "$Server" "$RemoteCmd"
+    
+    Write-Host ""
+    Write-Host "Proceso de renovacion SSL completado." -ForegroundColor Green
+    Read-Host "Presiona [Enter] para volver al menu principal..."
+}
+
 do {
     Show-Header
     Write-Host "  [1]  Iniciar Oraculo en Local (Backend + Frontend Nativo)" -ForegroundColor White
@@ -263,10 +286,11 @@ do {
     Write-Host "  [8]  Crear / Actualizar Accesos Directos en el Escritorio" -ForegroundColor White
     Write-Host "  [9]  Desplegar y Actualizar en Oracle Cloud (1 Clic)" -ForegroundColor Cyan
     Write-Host "  [10] Conectar por SSH al Servidor en la Nube" -ForegroundColor Cyan
+    Write-Host "  [11] Renovar Certificados SSL en Oracle Cloud" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "  [0]  Salir" -ForegroundColor Red
     Write-Host "-------------------------------------------------------------------" -ForegroundColor DarkGray
-    $choice = Read-Host "  Selecciona una opcion [0-10]"
+    $choice = Read-Host "  Selecciona una opcion [0-11]"
 
     switch ($choice.Trim()) {
         "1" { Invoke-LocalStart }
@@ -279,6 +303,7 @@ do {
         "8" { Invoke-CreateShortcuts }
         "9" { Invoke-DeployCloud }
         "10" { Invoke-SshConnect }
+        "11" { Invoke-RenewSslCloud }
         "0" { 
             Clear-Host
             Write-Host "Hasta la proxima, Guardian de Nueva Eternia!" -ForegroundColor Cyan

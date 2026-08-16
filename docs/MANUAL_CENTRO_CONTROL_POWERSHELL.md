@@ -165,6 +165,16 @@ Para abrirlo, simplemente abre PowerShell en la raíz del proyecto y escribe:
 
 ---
 
+### 🔒 Opción [11] — Renovar Certificados SSL en Oracle Cloud
+* **Propósito:** Ejecutar el protocolo de renovación de Let's Encrypt y reiniciar la capa frontend automáticamente sin necesidad de teclear comandos manuales de Docker.
+* **Mecanismo de Ejecución:**
+  1. Conecta por SSH con tu clave privada.
+  2. Arranca de forma efímera la herramienta Certbot mapeando los directorios de configuración de producción.
+  3. Ejecuta la renovación oficial y, acto seguido, reinicia de manera segura el contenedor `frontend` (Nginx) para recargar los certificados en memoria sin tiempo de caída.
+* **Cuándo usarlo:** Cuando notes problemas con el certificado HTTPS de la web en vivo o tras recibir una alerta de expiración.
+
+---
+
 ## 🗺️ 4. Mapa de Flujos de Ejecución por Caso de Uso
 
 ### 🔄 Flujo A: Ciclo Diario de Desarrollo Local
