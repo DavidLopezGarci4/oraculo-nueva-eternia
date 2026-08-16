@@ -30,7 +30,10 @@ NGINX_CONTAINER_NAME="oraculo_frontend_prod"
 DOMAIN="oraculo-eternia.duckdns.org"
 
 # Detectar rutas de certificados en host o contenedor
-if [ -d "$PROJECT_DIR/certbot/conf" ]; then
+if [ -d "/etc/letsencrypt/live/$DOMAIN" ]; then
+    CONF_DIR="/etc/letsencrypt"
+    WWW_DIR="/var/www/certbot"
+elif [ -d "$PROJECT_DIR/certbot/conf" ]; then
     CONF_DIR="$PROJECT_DIR/certbot/conf"
     WWW_DIR="$PROJECT_DIR/certbot/www"
 elif [ -d "/app/certbot/conf" ]; then
@@ -41,7 +44,43 @@ else
     WWW_DIR="/var/www/certbot"
 fi
 
+# 3. Auto-enlace y consistencia para el entorno de contenedor
+if [ "$CONF_DIR" != "/etc/letsencrypt" ] && [ -d "$CONF_DIR" ]; then
+    if [ ! -e "/etc/letsencrypt" ]; then
+        mkdir -p /etc 2>/dev/null || true
+        ln -sfn "$CONF_DIR" /etc/letsencrypt 2>/dev/null || true
+    fi
+    if [ ! -e "/var/www/certbot" ] && [ -d "$WWW_DIR" ]; then
+        mkdir -p /var/www 2>/dev/null || true
+        ln -sfn "$WWW_DIR" /var/www/certbot 2>/dev/null || true
+    fi
+fi
+
+# 4. Auto-reparación de symlinks de Certbot (si los archivos live fueron copiados como ficheros regulares)
+for TARGET_DIR in "$CONF_DIR" "/etc/letsencrypt"; do
+    LIVE_DIR="$TARGET_DIR/live/$DOMAIN"
+    ARCHIVE_DIR="$TARGET_DIR/archive/$DOMAIN"
+    if [ -d "$LIVE_DIR" ] && [ -d "$ARCHIVE_DIR" ]; then
+        for item in cert privkey chain fullchain; do
+            FILE_PATH="$LIVE_DIR/$item.pem"
+            if [ -f "$FILE_PATH" ] && [ ! -L "$FILE_PATH" ]; then
+                LATEST_ARCHIVE=$(ls -1 "$ARCHIVE_DIR/${item}"*.pem 2>/dev/null | sort -V | tail -n 1)
+                if [ -n "$LATEST_ARCHIVE" ]; then
+                    ARCHIVE_FILENAME=$(basename "$LATEST_ARCHIVE")
+                    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 🔧 Auto-reparando symlink de Certbot: $item.pem -> ../../archive/$DOMAIN/$ARCHIVE_FILENAME"
+                    rm -f "$FILE_PATH"
+                    ln -s "../../archive/$DOMAIN/$ARCHIVE_FILENAME" "$FILE_PATH"
+                fi
+            fi
+        done
+    fi
+done
+
 CERT_FILE="$CONF_DIR/live/$DOMAIN/fullchain.pem"
+if [ ! -f "$CERT_FILE" ] && [ -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]; then
+    CERT_FILE="/etc/letsencrypt/live/$DOMAIN/fullchain.pem"
+fi
+
 WORK_DIR="/tmp/certbot-work"
 LOGS_DIR="/tmp/certbot-logs"
 mkdir -p "$WORK_DIR" "$LOGS_DIR" "$WWW_DIR" 2>/dev/null || true
@@ -79,10 +118,19 @@ CERTBOT_STATUS=1
 # Estrategia 1: Certbot binario directo (nativo en host o instalado en contenedor)
 if command -v certbot >/dev/null 2>&1; then
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] ⚙️ Ejecutando Certbot directo en el entorno..."
+    
+    # Determinar si usamos /etc/letsencrypt o CONF_DIR
+    ACTIVE_CONF="$CONF_DIR"
+    ACTIVE_WWW="$WWW_DIR"
+    if [ -d "/etc/letsencrypt/live/$DOMAIN" ]; then
+        ACTIVE_CONF="/etc/letsencrypt"
+        ACTIVE_WWW="/var/www/certbot"
+    fi
+
     CERTBOT_OUTPUT=$(certbot renew \
         --webroot \
-        -w "$WWW_DIR" \
-        --config-dir "$CONF_DIR" \
+        -w "$ACTIVE_WWW" \
+        --config-dir "$ACTIVE_CONF" \
         --work-dir "$WORK_DIR" \
         --logs-dir "$LOGS_DIR" \
         --non-interactive \
@@ -122,7 +170,7 @@ if [ $CERTBOT_STATUS -eq 0 ]; then
     if [ "$IS_RENEWED" = true ]; then
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] ✅ ¡Certificado renovado con éxito! Nueva caducidad: $EXPIRY_AFTER"
         
-        # Probar y recargar Nginx si Docker está disponible
+        # Probar y recargar Nginx
         if command -v docker >/dev/null 2>&1; then
             docker exec $NGINX_CONTAINER_NAME nginx -t >/dev/null 2>&1
             RELOAD_OUTPUT=$(docker exec $NGINX_CONTAINER_NAME nginx -s reload 2>&1)
@@ -134,8 +182,12 @@ if [ $CERTBOT_STATUS -eq 0 ]; then
                 echo "[$(date '+%Y-%m-%d %H:%M:%S')] ⚠️ Certificado renovado pero falló el reload de Nginx: $RELOAD_OUTPUT"
                 send_telegram_alert "<b>Certificado SSL renovado pero falló reload de Nginx:</b>\n<code>$RELOAD_OUTPUT</code>"
             fi
+        elif command -v nginx >/dev/null 2>&1; then
+            nginx -s reload 2>/dev/null || true
+            echo "[$(date '+%Y-%m-%d %H:%M:%S')] 🚀 Nginx recargado directamente en el host."
+            send_telegram_alert "<b>¡Certificado SSL renovado con éxito!</b>\n\n• Dominio: <code>$DOMAIN</code>\n• Nueva Caducidad: <b>$EXPIRY_AFTER</b>"
         else
-            echo "[$(date '+%Y-%m-%d %H:%M:%S')] ℹ️ Certificado renovado en disco. Nginx leerá el nuevo certificado."
+            echo "[$(date '+%Y-%m-%d %H:%M:%S')] ℹ️ Certificado renovado en disco."
             send_telegram_alert "<b>¡Certificado SSL renovado con éxito!</b>\n\n• Dominio: <code>$DOMAIN</code>\n• Nueva Caducidad: <b>$EXPIRY_AFTER</b>"
         fi
     else

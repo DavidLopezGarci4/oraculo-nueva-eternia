@@ -627,9 +627,14 @@ La versión 2.4.0 introduce el control remoto por Telegram, la gestión integral
 *   **Aprobación Soberana por Telegram**: El backend envía una alerta interactiva exclusivamente al chat del Administrador (`TELEGRAM_CHAT_ID`) con botones `[ ✅ Permitir Acceso ]` y `[ 🚫 Bloquear ]`.
 *   **Comandos de Gestión**: `/devices` (lista interactiva), `/approve [id]` y `/deny [id]`.
 
-### 14.2 Telemetría y Renovación Forzada de Certificados SSL
+### 14.2 Telemetría y Renovación de Certificados SSL
 *   **`SSLService`**: Monitorea la validez, emisor y días restantes de los certificados HTTPS Let's Encrypt para `DuckDNS`.
-*   **Renovación en Caliente y Modal de Diagnóstico**: Disparo desde la interfaz web o mediante comandos de Telegram (`/ssl`, `/renew_ssl`), con visualización de terminal y botón de copiado de logs al portapapeles.
+*   **Auto-Reparación de Symlinks (`scripts/renew_ssl.sh`)**: El script en el servidor analiza de forma preventiva la carpeta `live/` antes de ejecutar Certbot. Si los ficheros `.pem` han sido copiados como ficheros regulares en lugar de enlaces simbólicos (symlinks), los repara automáticamente vinculándolos a su respectiva versión cronológica en la carpeta `archive/`. Esto previene fallos de parseo en Certbot (`parsefail`).
+*   **Sincronización de Rutas en Backend**: Se han unificado las rutas montando `/etc/letsencrypt` y `/var/www/certbot` tanto en el Host VM de OCI como en el contenedor Docker de Backend, asegurando coherencia entre todos los canales de renovación.
+*   **Guardián SSL en GitHub Actions**: Comprobación diaria programada que comprueba el estado TLS y lanza la renovación remota por SSH en Oracle Cloud automáticamente cuando faltan **14 días o menos** para la expiración del certificado, alertando al administrador en Telegram con los resultados.
+*   **Modal Preventivo para Administradores (Frontend)**: Si la validez del certificado es de 14 días o menos, la Web App muestra un pop-up emergente MOTU a usuarios Administradores con barra de urgencia, facilitando la renovación en caliente en un solo clic (`renewSSLCertificate(true)`) o redirigiendo al diagnóstico de Configuración.
+*   **Persistencia en Base de Datos**: Los resultados de cada renovación se guardan bajo las claves `ssl_last_renewal_result` y `ssl_renewal_history` en `SystemConfigModel` para garantizar un historial persistente de diagnóstico accesible a pesar de los reinicios.
+*   **Comandos y Consola Unificada**: Disparo manual desde la UI del panel, Telegram (`/renew_ssl`), o el Centro de Control de PowerShell (`oraculo.ps1` - Opción `[11]`).
 
 ### 14.3 Nexus Local Bridge (Worker Residencial de Wallapop)
 *   **Evasión WAF de CloudFront**: La extracción se ejecuta en el ordenador personal del usuario (`run_nexus_bridge.ps1`) utilizando su IP residencial española, superando al 100% los bloqueos de centros de datos.
