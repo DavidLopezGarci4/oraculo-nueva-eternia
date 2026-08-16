@@ -92,17 +92,13 @@ async def search_wallapop_v3_signed(
     query: str,
     proxy: Optional[str] = None,
     max_items: int = 40,
+    start: int = 0,
     log_callback: Optional[Callable[[str], None]] = None,
     shop_name_override: Optional[str] = None,
 ) -> SignedSearchResult:
     """
     Realiza una búsqueda firmada (X-Signature) contra la API v3 de Wallapop.
-
-    Nunca lanza excepción: en cualquier fallo devuelve un SignedSearchResult con
-    offers=[] para que el llamador pueda continuar con su propio cascade de
-    fallback sin romper el flujo. `blocked=True` distingue "WAF/HTML nos bloqueó"
-    de "búsqueda válida sin resultados", para que el cascade automático sepa si
-    merece la pena seguir insistiendo con este canal.
+    Soporta paginación escalonada mediante el parámetro start (start=0, start=40, etc.).
     """
     def _log(msg: str, level: str = "info"):
         lvl = getattr(logging, level.upper(), logging.INFO)
@@ -120,6 +116,8 @@ async def search_wallapop_v3_signed(
         "latitude": 40.416775,
         "longitude": -3.703790,
     }
+    if start > 0:
+        params["start"] = start
     path_with_query = f"{WALLAPOP_SEARCH_PATH}?{urllib.parse.urlencode(params)}"
     target_url = f"{WALLAPOP_API_HOST}{path_with_query}"
     headers = _build_signed_headers(path_with_query)

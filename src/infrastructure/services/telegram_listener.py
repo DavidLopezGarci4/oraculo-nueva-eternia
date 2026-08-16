@@ -320,7 +320,9 @@ class TelegramListener:
             lines.append("• <code>/ssl</code> - Diagnóstico en vivo y telemetría de certificados SSL.")
             lines.append("• <code>/renew_ssl</code> - Forzar renovación inmediata de certificados SSL.")
             lines.append("• <code>/tokens</code> - Comprobación en vivo de Apify y ScraperAPI (0 créditos).")
-            lines.append("• <code>/nexus [búsqueda]</code> - Encola búsqueda masiva de Wallapop para tu PC local.")
+            lines.append("• <code>/nexus</code> - Incursión rápida de novedades Wallapop (Tríada Core).")
+            lines.append("• <code>/nexus completo</code> - Incursión profunda (5 familias + paginación escalonada).")
+            lines.append("• <code>/nexus [consulta]</code> - Búsqueda personalizada en Wallapop.")
             lines.append("• <code>/devices</code> - Listar y gestionar dispositivos con botones de aprobación.")
             lines.append("• <code>/approve [id]</code> - Autorizar acceso a un dispositivo.")
             lines.append("• <code>/deny [id]</code> - Bloquear/eliminar un dispositivo.")
@@ -700,18 +702,36 @@ class TelegramListener:
 
     async def cmd_nexus(self, chat_id: int, query_term: str):
         from src.domain.models import WallapopJobModel
+        q_clean = query_term.strip().lower()
+        if q_clean in ["completo", "full", "deep", "exhaustivo"]:
+            job_desc = "🌟 <b>Incursión Profunda Escalonada</b> (5 Familias MOTU Origins + 2 Páginas de Profundidad)"
+            target_query = "completo"
+            cadence_note = "⏳ <i>Duración estimada: ~1.5 - 2.5 min (Pausas orgánicas entre consultas para 0% detección).</i>"
+        elif q_clean in ["auto", "basico", "basic", ""]:
+            job_desc = "⚡ <b>Incursión Rápida de Novedades</b> (Tríada Canónica: ~120 ofertas)"
+            target_query = "auto"
+            cadence_note = "⚡ <i>Duración estimada: ~3 - 5 seg.</i>"
+        else:
+            job_desc = f"🎯 <b>Búsqueda Personalizada:</b> '<code>{query_term}</code>'"
+            target_query = query_term
+            cadence_note = "⚡ <i>Duración estimada: ~3 - 10 seg.</i>"
+
         with SessionCloud() as db:
-            job = WallapopJobModel(query=query_term, status="pending")
+            job = WallapopJobModel(query=target_query, status="pending")
             db.add(job)
             db.commit()
             db.refresh(job)
             job_id = job.id
 
         msg = (
-            f"⚡ <b>[Nexus Local Bridge]</b> Trabajo <b>#{job_id}</b> encolado para '<b>{query_term}</b>'.\n\n"
-            f"🖥️ Tu PC de casa (si tiene <code>run_nexus_bridge.ps1</code> activo) resolverá la búsqueda con tu IP residencial y guardará las ofertas en el Purgatorio."
+            f"⚡ <b>[Nexus Local Bridge]</b> Trabajo <b>#{job_id}</b> encolado.\n\n"
+            f"• <b>Modo:</b> {job_desc}\n"
+            f"• <b>Destino:</b> El Purgatorio del Oráculo\n"
+            f"• {cadence_note}\n\n"
+            f"🖥️ <i>Tu PC de casa (con opción [3] de <code>oraculo.ps1</code>) lo procesará con tu IP residencial limpia.</i>"
         )
         await telegram_service.send_message(msg, chat_id=chat_id)
 
 # Instancia única del listener
 telegram_listener = TelegramListener()
+
