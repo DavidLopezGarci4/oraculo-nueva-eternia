@@ -46,11 +46,13 @@ fi
 
 # 3. Auto-enlace y consistencia para el entorno de contenedor
 if [ "$CONF_DIR" != "/etc/letsencrypt" ] && [ -d "$CONF_DIR" ]; then
-    if [ ! -e "/etc/letsencrypt" ]; then
+    if [ ! -d "/etc/letsencrypt/live" ]; then
+        rm -rf /etc/letsencrypt 2>/dev/null || true
         mkdir -p /etc 2>/dev/null || true
         ln -sfn "$CONF_DIR" /etc/letsencrypt 2>/dev/null || true
     fi
-    if [ ! -e "/var/www/certbot" ] && [ -d "$WWW_DIR" ]; then
+    if [ ! -d "/var/www/certbot" ] || [ ! -L "/var/www/certbot" ]; then
+        rm -rf /var/www/certbot 2>/dev/null || true
         mkdir -p /var/www 2>/dev/null || true
         ln -sfn "$WWW_DIR" /var/www/certbot 2>/dev/null || true
     fi

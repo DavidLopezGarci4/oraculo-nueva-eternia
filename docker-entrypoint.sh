@@ -18,6 +18,18 @@ if [ "$#" -gt 0 ] && [ "$1" = "uvicorn" ]; then
         echo "⚠️  Alembic fallo o no pudo aplicar migraciones. Continuando arranque:" \
              "init_cloud_db() cubre el esquema minimo necesario como red de seguridad." >&2
     fi
+
+    # Garantizar consistencia canónica de rutas SSL dentro del contenedor
+    if [ -d "/app/certbot/conf" ] && [ ! -d "/etc/letsencrypt/live" ]; then
+        rm -rf /etc/letsencrypt 2>/dev/null || true
+        mkdir -p /etc 2>/dev/null || true
+        ln -sfn /app/certbot/conf /etc/letsencrypt 2>/dev/null || true
+    fi
+    if [ -d "/app/certbot/www" ] && [ ! -L "/var/www/certbot" ]; then
+        rm -rf /var/www/certbot 2>/dev/null || true
+        mkdir -p /var/www 2>/dev/null || true
+        ln -sfn /app/certbot/www /var/www/certbot 2>/dev/null || true
+    fi
 fi
 
 exec "$@"
