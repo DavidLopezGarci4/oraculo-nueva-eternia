@@ -551,6 +551,13 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
   - [x] **Extensión Multitienda (Wallapop & Vinted)**: Actualizada la extensión de navegador para capturar el DOM tanto en Wallapop como en Vinted (.es, .fr, .com) y subir cientos de ofertas de un clic sin riesgo de baneo.
   - [x] **Política de Purgatorio Primero**: Blindada la persistencia para que el 100% de nuevas ofertas descubiertas pasen obligatoriamente por el Purgatorio sin auto-asignaciones a ciegas.
 
+- [x] **Phase 82.5: Auto-Renovación SSL Asíncrona y Alerta Preventiva en Frontend (16/08/2026)**
+  - [x] **Auto-Renovación SSL en GitHub Actions (Guardián)**: Creación de `check_and_renew_ssl_gh_actions.py` integrado en scrapers.yml que monitorea la vigencia de `oraculo-eternia.duckdns.org`. Si quedan ≤ 14 días, ejecuta la renovación preventiva vía SSH en Oracle Cloud y avisa a Telegram.
+  - [x] **Modal de Alerta Preventiva para Admins**: Integrado en el inicio de la app un pop-up MOTU exclusivo para perfiles admin que alerta con barra de urgencia visual si los certificados caducan en ≤ 14 días, permitiendo renovación manual en 1 clic o redirección al diagnóstico.
+  - [x] **Auto-Reparación de Symlinks de Certbot**: Implementada lógica curativa en `renew_ssl.sh` que restaura enlaces simbólicos a `archive/` si se detectan ficheros planos en `live/`, evitando fallos `parsefail`.
+  - [x] **Ejecución Asíncrona y Sincronización de Rutas**: Refactorizado `SSLService.renew_ssl_certificate` usando `asyncio.to_thread` para evitar congelar el bucle de FastAPI (eliminando errores 504 Gateway Timeout). Mapeados los directorios `/etc/letsencrypt` y `/var/www/certbot` preventivamente en `docker-entrypoint.sh` y backend en `docker-compose.prod.yml`.
+
+
 
 ---
 
