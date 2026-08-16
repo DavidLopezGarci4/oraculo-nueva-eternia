@@ -202,6 +202,7 @@ from src.core.config import get_cors_origins
 app.add_middleware(
     CORSMiddleware,
     allow_origins=get_cors_origins(),
+    allow_origin_regex=r"^chrome-extension://.*$",
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "X-API-Key", "X-Device-ID", "X-Device-Name"],

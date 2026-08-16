@@ -11,7 +11,10 @@
         "https://*.wallapop.com/*",
         "https://*.vinted.es/*",
         "https://*.vinted.fr/*",
-        "https://*.vinted.com/*"
+        "https://*.vinted.com/*",
+        "https://*/*",
+        "http://localhost/*",
+        "http://127.0.0.1/*"
     ],
     "action": {
         "default_popup": "popup.html",

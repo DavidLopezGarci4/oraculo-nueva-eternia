@@ -10,7 +10,9 @@ Bienvenido al centro de documentación oficial del proyecto. La documentación h
 | :--- | :--- |
 | **[`DOCUMENTACION_MAESTRA.md`](DOCUMENTACION_MAESTRA.md)** | **Fuente de Verdad Técnica**: Arquitectura de Cebolla, esquema de bases de datos (SQLite + PostgreSQL Supabase), APIs de FastAPI y flujo de datos. |
 | **[`MASTER_ROADMAP.md`](MASTER_ROADMAP.md)** | **Plan de Ruta SMART**: Registro de fases de desarrollo (Fase 0 a Fase 75+), visión arquitectónica y objetivos futuros. |
+| **[`MANUAL_CENTRO_CONTROL_POWERSHELL.md`](MANUAL_CENTRO_CONTROL_POWERSHELL.md)** | **Centro de Control (`oraculo.ps1`)**: Guía de operaciones en PowerShell, opciones del menú y orden de ejecución. |
 | **[`GUIA_SCRAPING_Y_NEXUS_BRIDGE.md`](GUIA_SCRAPING_Y_NEXUS_BRIDGE.md)** | **Inteligencia de Mercado**: Guía completa sobre el Nexus Local Bridge (PC residencial), rotación de tokens Apify, API v3 firmada, Vinted y extensión de navegador. |
+| **[`Estrategias Avanzadas de webscraping.md`](Estrategias%20Avanzadas%20de%20webscraping.md)** | **Ingeniería de Extracción (Guía 2026)**: Estado del arte sobre evasión de WAFs, TLS/JA4 fingerprinting, arquitectura de datos y bypass de bloqueos. |
 | **[`grading_scale_guide.md`](grading_scale_guide.md)** | **Escala de Conservación**: Guía de referencia de graduación de figuras (C-10, MOC, Loose, AFA/UKG). |
 
 ---
