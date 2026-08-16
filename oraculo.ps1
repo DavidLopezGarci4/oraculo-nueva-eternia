@@ -265,7 +265,7 @@ function Invoke-RenewSslCloud {
     }
 
     Write-Host "Conectando al servidor y ejecutando renovacion SSL..." -ForegroundColor Yellow
-    $RemoteCmd = "cd ~/oraculo-nueva-eternia && sudo docker run --rm -v \$(pwd)/certbot/conf:/etc/letsencrypt -v \$(pwd)/certbot/www:/var/www/certbot certbot/certbot renew && sudo docker compose -f docker-compose.prod.yml restart frontend"
+    $RemoteCmd = "cd ~/oraculo-nueva-eternia && bash scripts/renew_ssl.sh --force"
     
     ssh -i "$KeyPath" "$Server" "$RemoteCmd"
     
