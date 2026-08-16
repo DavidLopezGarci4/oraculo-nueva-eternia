@@ -298,6 +298,7 @@ export interface SSLStatus {
         details?: string;
         timestamp?: string;
     } | null;
+    is_renewing?: boolean;
 }
 
 export const getSSLStatus = async (): Promise<SSLStatus> => {

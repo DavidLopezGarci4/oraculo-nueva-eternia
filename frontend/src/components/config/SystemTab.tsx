@@ -124,6 +124,7 @@ export default function SystemTab({
         });
         setShowSSLModal(true);
 
+        const startTime = Date.now();
         try {
             const res = await renewSSLCertificate(true);
             let attempts = 0;
@@ -132,17 +133,23 @@ export default function SystemTab({
                 try {
                     const fresh = await getSSLStatus();
                     setSslStatus(fresh);
-                    if (fresh.last_renewal_result || attempts >= 8) {
+                    
+                    const lastResult = fresh.last_renewal_result;
+                    const isNewResult = lastResult?.timestamp 
+                        ? new Date(lastResult.timestamp).getTime() >= startTime - 3000 
+                        : false;
+
+                    if (isNewResult || (!fresh.is_renewing && attempts >= 10) || attempts >= 35) {
                         clearInterval(interval);
                         setRenewingSSL(false);
-                        const last = fresh.last_renewal_result;
-                        if (last) {
+                        
+                        if (lastResult && (isNewResult || attempts >= 10)) {
                             setSslModalData({
-                                status: last.status === 'success' ? 'success' : 'error',
-                                title: last.status === 'success' ? 'Certificado SSL Renovado con Éxito' : 'Fallo en la Renovación SSL',
-                                message: last.message,
-                                details: last.details || 'Sin detalles adicionales de consola.',
-                                timestamp: last.timestamp || new Date().toISOString()
+                                status: lastResult.status === 'success' ? 'success' : 'error',
+                                title: lastResult.status === 'success' ? 'Certificado SSL Renovado con Éxito' : 'Fallo en la Renovación SSL',
+                                message: lastResult.message,
+                                details: lastResult.details || 'Sin detalles adicionales de consola.',
+                                timestamp: lastResult.timestamp || new Date().toISOString()
                             });
                         } else {
                             setSslModalData({
@@ -155,7 +162,7 @@ export default function SystemTab({
                         }
                     }
                 } catch (pollErr) {
-                    if (attempts >= 8) {
+                    if (attempts >= 35) {
                         clearInterval(interval);
                         setRenewingSSL(false);
                     }

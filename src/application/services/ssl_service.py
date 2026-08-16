@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import os
@@ -16,6 +17,8 @@ class SSLService:
 
     DEFAULT_DOMAIN = "oraculo-eternia.duckdns.org"
     RENEWAL_WINDOW_DAYS = 14  # Intentar renovar 14 días (2 semanas) antes de expirar
+    _last_renewal_result: Optional[dict] = None
+    _is_renewing: bool = False
 
     @classmethod
     def _find_cert_path(cls) -> Optional[Path]:
@@ -89,8 +92,6 @@ class SSLService:
             logger.debug(f"Live TLS check for {domain}:{port} skipped/failed: {e}")
             return None
 
-    _last_renewal_result: Optional[dict] = None
-
     @classmethod
     def get_certificate_status(cls) -> dict:
         """
@@ -162,6 +163,7 @@ class SSLService:
                 "source": source,
                 "details": f"Certificado inspeccionado vía {source} ({'Vigente' if is_valid else 'Caducado'}).",
                 "last_renewal_result": cls._last_renewal_result,
+                "is_renewing": cls._is_renewing,
             }
 
         # 4. Fallback si no hay certificados instalados en local ni red
@@ -177,16 +179,18 @@ class SSLService:
             "source": "fallback",
             "details": "No se detectaron certificados locales en /etc/letsencrypt ni conexión TLS activa.",
             "last_renewal_result": cls._last_renewal_result,
+            "is_renewing": cls._is_renewing,
         }
 
     @classmethod
     async def renew_ssl_certificate(cls, force: bool = True) -> dict:
         """
-        Ejecuta la renovación del certificado SSL.
-        - Invoca el script de renovación en el servidor o mediante Certbot Docker.
+        Ejecuta la renovación del certificado SSL de forma no bloqueante.
+        - Invoca el script de renovación en el servidor o mediante Certbot Docker en un hilo desacoplado.
         - Envía notificaciones de alerta a Telegram con botones interactivos.
         """
         logger.info(f"🔒 [SSL] Iniciando proceso de renovación de certificado (force={force})...")
+        cls._is_renewing = True
         
         project_root = Path(__file__).resolve().parent.parent.parent.parent
         script_path = project_root / "scripts" / "renew_ssl.sh"
@@ -199,26 +203,31 @@ class SSLService:
         success = False
         now_iso = datetime.now(timezone.utc).isoformat()
 
-        if script_path.exists() and os.name != "nt":
-            try:
-                proc = subprocess.run(
-                    cmd,
-                    capture_output=True,
-                    text=True,
-                    timeout=180,
-                    cwd=str(project_root)
-                )
-                output_str = proc.stdout + "\n" + proc.stderr
-                success = proc.returncode == 0
-            except Exception as e:
-                output_str = f"Error al ejecutar script de renovación: {e}"
-                success = False
-        else:
-            # Entorno Windows / Desarrollo o sin script bash directo
-            logger.info("🔒 [SSL] Entorno de desarrollo / local detectado. Ejecutando verificación de estado.")
-            status_info = cls.get_certificate_status()
-            success = status_info.get("is_valid", False) or status_info.get("status") == "UNKNOWN"
-            output_str = f"[SIMULATION/DIAGNOSTIC] Chequeo de certificado ejecutado. Estado actual: {status_info.get('status')} ({status_info.get('days_remaining')} días restantes)."
+        try:
+            if script_path.exists() and os.name != "nt":
+                def _run_sub():
+                    return subprocess.run(
+                        cmd,
+                        capture_output=True,
+                        text=True,
+                        timeout=180,
+                        cwd=str(project_root)
+                    )
+                try:
+                    proc = await asyncio.to_thread(_run_sub)
+                    output_str = proc.stdout + "\n" + proc.stderr
+                    success = proc.returncode == 0
+                except Exception as e:
+                    output_str = f"Error al ejecutar script de renovación: {e}"
+                    success = False
+            else:
+                # Entorno Windows / Desarrollo o sin script bash directo
+                logger.info("🔒 [SSL] Entorno de desarrollo / local detectado. Ejecutando verificación de estado.")
+                status_info = cls.get_certificate_status()
+                success = status_info.get("is_valid", False) or status_info.get("status") == "UNKNOWN"
+                output_str = f"[SIMULATION/DIAGNOSTIC] Chequeo de certificado ejecutado. Estado actual: {status_info.get('status')} ({status_info.get('days_remaining')} días restantes)."
+        finally:
+            cls._is_renewing = False
 
         # Teclado interactivo para Telegram
         tg_keyboard = {
