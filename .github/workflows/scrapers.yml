@@ -81,6 +81,20 @@ jobs:
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then DELAY=0; fi
           
           python src/application/jobs/daily_scan.py --shops "${{ github.event.inputs.shops }}" --random-delay $DELAY --no-nexus
+
+      - name: SSL Certificate Guardian (Auto-Renew if <= 14 days)
+        if: always()
+        env:
+          SUPABASE_DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
+          OCI_SSH_KEY: ${{ secrets.OCI_SSH_KEY || secrets.SSH_PRIVATE_KEY }}
+          OCI_SSH_HOST: ${{ secrets.OCI_SSH_HOST || '79.72.50.244' }}
+          OCI_SSH_USER: ${{ secrets.OCI_SSH_USER || 'opc' }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          PYTHONPATH: .
+        run: |
+          python scripts/check_and_renew_ssl_gh_actions.py
+
       - name: Send Telegram Reminder
         if: always()
         run: |
@@ -93,3 +107,4 @@ jobs:
           else
             echo "Telegram credentials not found. Skipping notification."
           fi
+

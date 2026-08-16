@@ -6,10 +6,11 @@ import Navbar from './components/layout/Navbar';
 import ErrorBoundary from './components/ErrorBoundary';
 import ShieldBypass from './components/ShieldBypass';
 import MasterLogin from './components/auth/MasterLogin';
-import { getUserSettings, type Hero } from './api/admin';
+import { getUserSettings, getSSLStatus, type Hero, type SSLStatus } from './api/admin';
 import PowerSwordLoader from './components/ui/PowerSwordLoader';
 import axios from 'axios';
 import CacheWelcomeModal from './components/ui/CacheWelcomeModal';
+import SSLWarningModal from './components/ui/SSLWarningModal';
 import { clearSession, setUnauthorizedHandler } from './api/client';
 
 // Lazy-Loaded Page Components for Code Splitting
@@ -85,6 +86,8 @@ function App() {
   const [useLocalImages, setUseLocalImages] = useState<boolean>(() => localStorage.getItem('use_local_images') === 'true');
   const [bgDownloadEnabled, setBgDownloadEnabled] = useState<boolean>(() => localStorage.getItem('motu_background_download_enabled') === 'true');
   const [showCacheWelcome, setShowCacheWelcome] = useState<boolean>(false);
+  const [expiringSSLStatus, setExpiringSSLStatus] = useState<SSLStatus | null>(null);
+  const [showSSLWarningModal, setShowSSLWarningModal] = useState<boolean>(false);
 
   // Global Incognito Keyboard Shortcuts: Double Esc or Ctrl + I
   useEffect(() => {
@@ -294,6 +297,39 @@ function App() {
   // /purgatory (ver <Routes> más abajo), sin necesidad de useEffect.
   const isAdminUser = currentUser?.role === 'admin' || currentUser?.username === 'David';
 
+  // Comprobación preventiva de SSL para administradores (<= 14 días)
+  useEffect(() => {
+    if (!isAdminUser) return;
+    const dismissed = sessionStorage.getItem('motu_ssl_warning_dismissed') === 'true';
+    if (dismissed) return;
+
+    const checkSSL = async () => {
+      try {
+        const data = await getSSLStatus();
+        if (data && (data.days_remaining <= 14 || data.status === 'EXPIRING_SOON' || data.status === 'EXPIRED')) {
+          setExpiringSSLStatus(data);
+          setShowSSLWarningModal(true);
+        }
+      } catch (err) {
+        // Silencioso ante pérdidas temporales de red
+      }
+    };
+
+    const timer = setTimeout(checkSSL, 2500);
+    return () => clearTimeout(timer);
+  }, [isAdminUser]);
+
+  const handleDismissSSLWarning = () => {
+    sessionStorage.setItem('motu_ssl_warning_dismissed', 'true');
+    setShowSSLWarningModal(false);
+  };
+
+  const handleNavigateToConfigSystem = () => {
+    sessionStorage.setItem('motu_ssl_warning_dismissed', 'true');
+    setShowSSLWarningModal(false);
+    navigate(TAB_PATHS.settings);
+  };
+
   const [showMasterLogin, setShowMasterLogin] = useState(false);
 
   // --- PUBLIC SHOWCASE BYPASS ---
@@ -419,6 +455,14 @@ function App() {
         onClose={() => setShowCacheWelcome(false)}
         onSelect={handleCacheWelcomeSelect}
       />
+
+      {showSSLWarningModal && expiringSSLStatus && (
+        <SSLWarningModal
+          sslStatus={expiringSSLStatus}
+          onDismiss={handleDismissSSLWarning}
+          onNavigateToConfig={handleNavigateToConfigSystem}
+        />
+      )}
     </div>
   );
 }
