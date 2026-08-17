@@ -343,62 +343,146 @@ async def get_dashboard_history():
 
 @router.post("/revert", response_model=StatusMessageOutput, dependencies=[Depends(verify_api_key)])
 async def revert_action(request: dict):
-    # Fase AAA-2.1: esta acción borra/reconstruye entradas de OfferModel,
-    # BlackcludedItemModel e historial — no tenía NINGUNA protección. Se alinea
-    # con el resto de herramientas de curación (purgatory.py), que exigen
-    # admin.
+    # Fase AAA-2.1 / Fix Logística: esta acción borra/reconstruye entradas de OfferModel,
+    # BlackcludedItemModel, VintageMiscellaneousModel e historial con soporte completo de tipos
     history_id = request.get("history_id")
     if not history_id:
         raise HTTPException(status_code=400, detail="ID de historial requerido")
+
+    from src.core.url_utils import normalize_url
+    from src.domain.models import VintageMiscellaneousModel, VintageProductModel, ProductAliasModel
 
     with SessionCloud() as db:
         history = db.query(OfferHistoryModel).filter(OfferHistoryModel.id == history_id).first()
         if not history:
             raise HTTPException(status_code=404, detail="Entrada de historial no encontrada")
 
+        raw_url = history.offer_url
+        norm_url = normalize_url(raw_url) if raw_url else raw_url
+        urls_to_match = list(set(filter(None, [raw_url, norm_url])))
+
         original_item = None
         try:
-            details_json = json.loads(history.details)
-            if isinstance(details_json, dict):
-                original_item = details_json.get("original_item")
+            if history.details:
+                details_json = json.loads(history.details)
+                if isinstance(details_json, dict):
+                    original_item = details_json.get("original_item")
         except Exception:
             logger.warning(f"Reconstruction Fallback for History ID {history_id}: No JSON metadata found.")
 
-        if not original_item:
-            original_item = {
-                "scraped_name": history.product_name,
-                "ean": None,
-                "price": history.price,
-                "currency": "EUR",
-                "url": history.offer_url,
-                "shop_name": history.shop_name,
-                "image_url": None,
-                "receipt_id": None,
-            }
+        # 1. Clean up blacklist (BlackcludedItemModel)
+        bl_items = db.query(BlackcludedItemModel).filter(BlackcludedItemModel.url.in_(urls_to_match)).all()
+        bl_scraped_name = bl_items[0].scraped_name if bl_items and bl_items[0].scraped_name else None
+        bl_source_type = bl_items[0].source_type if bl_items and hasattr(bl_items[0], 'source_type') else None
+        for bl in bl_items:
+            db.delete(bl)
 
-        if history.action_type in ["LINKED_MANUAL", "SMART_MATCH", "UPDATE"]:
-            offer = db.query(OfferModel).filter(OfferModel.url == history.offer_url).first()
-            if offer:
-                db.delete(offer)
+        # 2. Clean up offers (OfferModel) and extract any available metadata
+        offers = db.query(OfferModel).filter(OfferModel.url.in_(urls_to_match)).all()
+        offer_image = None
+        offer_cond = None
+        offer_grad = None
+        offer_is_v = False
+        offer_source = None
+        offer_receipt = None
 
-        elif history.action_type == "DISCARDED":
-            bl = db.query(BlackcludedItemModel).filter(BlackcludedItemModel.url == history.offer_url).first()
-            if bl:
-                db.delete(bl)
+        for offer in offers:
+            offer_image = offer.image_url or (offer.product.image_url if offer.product else None)
+            offer_cond = offer.condition
+            offer_grad = offer.grading
+            offer_is_v = bool(offer.is_vintage)
+            offer_source = offer.source_type
+            offer_receipt = offer.receipt_id
+            prod_id = offer.product_id
 
-        purgatory_item = PendingMatchModel(
-            scraped_name=original_item["scraped_name"],
-            ean=original_item.get("ean"),
-            price=original_item["price"],
-            currency=original_item.get("currency", "EUR"),
-            url=original_item["url"],
-            shop_name=original_item["shop_name"],
-            image_url=original_item.get("image_url"),
-            receipt_id=original_item.get("receipt_id"),
+            db.delete(offer)
+            db.flush()
+
+            if prod_id and offer_is_v:
+                rem = db.query(OfferModel).filter(
+                    OfferModel.product_id == prod_id,
+                    OfferModel.is_vintage == True
+                ).count()
+                if rem == 0:
+                    prod = db.query(ProductModel).filter(ProductModel.id == prod_id).first()
+                    if prod:
+                        prod.is_vintage = False
+                    db.query(VintageProductModel).filter(VintageProductModel.product_id == prod_id).delete()
+
+        # 3. Clean up Vintage Miscellaneous (VintageMiscellaneousModel)
+        misc_items = db.query(VintageMiscellaneousModel).filter(VintageMiscellaneousModel.url.in_(urls_to_match)).all()
+        misc_title = None
+        misc_image = None
+        misc_cond = None
+        misc_grad = None
+        for misc in misc_items:
+            misc_title = misc.title
+            misc_image = misc.image_url
+            misc_cond = misc.condition
+            misc_grad = misc.grading
+            db.delete(misc)
+
+        # 4. Clean up ProductAliasModel
+        db.query(ProductAliasModel).filter(ProductAliasModel.source_url.in_(urls_to_match)).delete(synchronize_session=False)
+
+        # 5. Build full metadata for PendingMatchModel
+        scraped_name = (
+            (original_item.get("scraped_name") if original_item else None)
+            or bl_scraped_name
+            or misc_title
+            or history.product_name
         )
-        db.add(purgatory_item)
+        price = (original_item.get("price") if original_item else None) or history.price or 0.0
+        shop_name = (original_item.get("shop_name") if original_item else None) or history.shop_name or "Desconocido"
+        currency = (original_item.get("currency") if original_item else None) or "EUR"
+        image_url = (original_item.get("image_url") if original_item else None) or offer_image or misc_image
+        condition = (original_item.get("condition") if original_item else None) or offer_cond or misc_cond or "Loose"
+        grading = (original_item.get("grading") if original_item else None) or offer_grad or misc_grad or 7.5
+        source_type = (original_item.get("source_type") if original_item else None) or offer_source or bl_source_type or "Retail"
+        is_vintage = (
+            (original_item.get("is_vintage") if original_item else None)
+            or offer_is_v
+            or bool(misc_items)
+            or ("VINTAGE" in history.action_type or "MISCELLANEOUS" in history.action_type)
+        )
+        receipt_id = (original_item.get("receipt_id") if original_item else None) or offer_receipt
+
+        # 6. Recreate or update in PendingMatchModel idempotently
+        existing_pending = db.query(PendingMatchModel).filter(PendingMatchModel.url.in_(urls_to_match)).first()
+        if existing_pending:
+            existing_pending.scraped_name = scraped_name
+            existing_pending.price = price
+            existing_pending.shop_name = shop_name
+            existing_pending.currency = currency
+            existing_pending.image_url = image_url or existing_pending.image_url
+            existing_pending.condition = condition
+            existing_pending.grading = grading
+            existing_pending.source_type = source_type
+            existing_pending.is_vintage = is_vintage
+            existing_pending.receipt_id = receipt_id or existing_pending.receipt_id
+            existing_pending.is_blocked = False
+            existing_pending.validation_status = "PENDING"
+        else:
+            purgatory_item = PendingMatchModel(
+                scraped_name=scraped_name,
+                ean=(original_item.get("ean") if original_item else None),
+                price=price,
+                currency=currency,
+                url=raw_url,
+                shop_name=shop_name,
+                image_url=image_url,
+                condition=condition,
+                grading=grading,
+                source_type=source_type,
+                is_vintage=is_vintage,
+                receipt_id=receipt_id,
+                validation_status="PENDING",
+                is_blocked=False,
+            )
+            db.add(purgatory_item)
 
         db.delete(history)
         db.commit()
 
-        return {"status": "success", "message": f"Justicia restaurada: '{history.product_name}' devuelto al Purgatorio"}
+        return {"status": "success", "message": f"Justicia restaurada: '{scraped_name}' devuelto al Purgatorio"}
+

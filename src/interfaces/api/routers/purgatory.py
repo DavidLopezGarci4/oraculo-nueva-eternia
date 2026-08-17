@@ -194,13 +194,28 @@ def run_match_task(pending_id: int, product_id: int):
 
             new_offer, _ = repo.add_offer(product, offer_data, commit=False)
 
+            item_data = {
+                "scraped_name": item.scraped_name,
+                "ean": item.ean,
+                "price": item.price,
+                "currency": item.currency,
+                "url": item.url,
+                "shop_name": item.shop_name,
+                "image_url": item.image_url,
+                "condition": item.condition,
+                "grading": item.grading,
+                "is_vintage": is_v,
+                "source_type": item.source_type,
+                "receipt_id": item.receipt_id,
+            }
+
             history = OfferHistoryModel(
                 offer_url=item.url,
                 product_name=product.name,
                 shop_name=item.shop_name,
                 price=item.price,
                 action_type="LINKED_MANUAL",
-                details=json.dumps({"product_id": product.id, "receipt_id": item.receipt_id, "is_vintage": is_v}),
+                details=json.dumps({"product_id": product.id, "receipt_id": item.receipt_id, "is_vintage": is_v, "original_item": item_data}),
             )
             db.add(history)
 
@@ -298,13 +313,28 @@ def run_match_bulk_task(matches: list[dict]):
                     
                     repo.add_offer(product, offer_data, commit=False)
                     
+                    item_data = {
+                        "scraped_name": item.scraped_name,
+                        "ean": item.ean,
+                        "price": item.price,
+                        "currency": item.currency,
+                        "url": item.url,
+                        "shop_name": item.shop_name,
+                        "image_url": item.image_url,
+                        "condition": item.condition,
+                        "grading": item.grading,
+                        "is_vintage": is_v,
+                        "source_type": item.source_type,
+                        "receipt_id": item.receipt_id,
+                    }
+                    
                     history = OfferHistoryModel(
                         offer_url=item.url,
                         product_name=product.name,
                         shop_name=item.shop_name,
                         price=item.price,
                         action_type="LINKED_MANUAL_BULK",
-                        details=json.dumps({"product_id": product.id, "receipt_id": item.receipt_id, "is_vintage": is_v}),
+                        details=json.dumps({"product_id": product.id, "receipt_id": item.receipt_id, "is_vintage": is_v, "original_item": item_data}),
                     )
                     db.add(history)
                     
@@ -432,13 +462,27 @@ def run_discard_bulk_task(pending_ids: list[int], reason: str):
                     )
                     blacklist_ref = db.add(blacklist)
 
+                item_data = {
+                    "scraped_name": item.scraped_name,
+                    "ean": item.ean,
+                    "price": item.price,
+                    "currency": item.currency,
+                    "url": item.url,
+                    "shop_name": item.shop_name,
+                    "image_url": item.image_url,
+                    "condition": item.condition,
+                    "grading": item.grading,
+                    "is_vintage": item.is_vintage,
+                    "source_type": item.source_type,
+                    "receipt_id": item.receipt_id,
+                }
                 history = OfferHistoryModel(
                     offer_url=item.url,
                     product_name=item.scraped_name,
                     shop_name=item.shop_name,
                     price=item.price,
                     action_type="DISCARDED_BULK",
-                    details=json.dumps({"reason": reason}),
+                    details=json.dumps({"reason": reason, "original_item": item_data}),
                 )
                 db.add(history)
 
@@ -694,6 +738,21 @@ def run_match_vintage_task(pending_id: int, custom_name: Optional[str], product_
 
             new_offer, _ = repo.add_offer(product, offer_data, commit=False)
 
+            item_data = {
+                "scraped_name": item.scraped_name,
+                "ean": item.ean,
+                "price": item.price,
+                "currency": item.currency,
+                "url": item.url,
+                "shop_name": item.shop_name,
+                "image_url": item.image_url,
+                "condition": cond,
+                "grading": grad,
+                "is_vintage": is_vintage,
+                "source_type": item.source_type,
+                "receipt_id": item.receipt_id,
+            }
+
             # Audit Trail
             from src.domain.models import OfferHistoryModel
             history = OfferHistoryModel(
@@ -702,7 +761,7 @@ def run_match_vintage_task(pending_id: int, custom_name: Optional[str], product_
                 shop_name=item.shop_name,
                 price=item.price,
                 action_type="LINKED_VINTAGE" if is_vintage else "LINKED_MANUAL",
-                details=json.dumps({"product_id": product.id, "receipt_id": item.receipt_id, "condition": cond, "grading": grad}),
+                details=json.dumps({"product_id": product.id, "receipt_id": item.receipt_id, "condition": cond, "grading": grad, "original_item": item_data}),
             )
             db.add(history)
 
@@ -826,6 +885,20 @@ def run_match_miscellaneous_task(pending_id: int):
             )
             db.add(misc_item)
 
+            item_data = {
+                "scraped_name": item.scraped_name,
+                "ean": item.ean,
+                "price": item.price,
+                "currency": item.currency,
+                "url": item.url,
+                "shop_name": item.shop_name,
+                "image_url": item.image_url,
+                "condition": item.condition or "Loose",
+                "grading": item.grading or 7.5,
+                "is_vintage": True,
+                "source_type": item.source_type,
+                "receipt_id": item.receipt_id,
+            }
             from src.domain.models import OfferHistoryModel
             history = OfferHistoryModel(
                 offer_url=normalized_url,
@@ -833,7 +906,7 @@ def run_match_miscellaneous_task(pending_id: int):
                 shop_name=item.shop_name,
                 price=item.price,
                 action_type="LINKED_MISCELLANEOUS",
-                details=json.dumps({"receipt_id": item.receipt_id, "shop_name": item.shop_name}),
+                details=json.dumps({"receipt_id": item.receipt_id, "shop_name": item.shop_name, "original_item": item_data}),
             )
             db.add(history)
 

@@ -60,6 +60,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
             queryClient.invalidateQueries({ queryKey: ['dashboard-history'] });
             queryClient.invalidateQueries({ queryKey: ['match-stats'] });
             queryClient.invalidateQueries({ queryKey: ['top-deals'] });
+            queryClient.invalidateQueries({ queryKey: ['purgatory'] });
+            queryClient.invalidateQueries({ queryKey: ['purgatory-count'] });
+            queryClient.invalidateQueries({ queryKey: ['products'] });
+            queryClient.invalidateQueries({ queryKey: ['vintage-products'] });
+            queryClient.invalidateQueries({ queryKey: ['vintage-miscellaneous'] });
             alert(data.message);
         }
     });
@@ -652,7 +657,15 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                                     <div key={entry.id} className="flex flex-col gap-1.5 rounded-xl border border-white/5 bg-white/[0.01] p-3 text-xs">
                                         <div className="flex items-center justify-between gap-4">
                                             <div className="flex items-center gap-2">
-                                                <div className={`h-1.5 w-1.5 rounded-full ${entry.action_type === 'LINKED_MANUAL' ? 'bg-brand-primary' : 'bg-green-500'}`}></div>
+                                                <div className={`h-1.5 w-1.5 rounded-full ${
+                                                    entry.action_type?.startsWith('DISCARDED') || entry.action_type?.includes('AUTO_DISCARDED')
+                                                        ? 'bg-rose-500'
+                                                        : entry.action_type?.includes('VINTAGE') || entry.action_type?.includes('MISCELLANEOUS')
+                                                        ? 'bg-amber-400'
+                                                        : entry.action_type === 'LINKED_MANUAL'
+                                                        ? 'bg-brand-primary'
+                                                        : 'bg-emerald-400'
+                                                }`}></div>
                                                 <span className="font-bold text-white/90 truncate max-w-[150px] md:max-w-none">{entry.product_name}</span>
                                             </div>
                                             <button 
