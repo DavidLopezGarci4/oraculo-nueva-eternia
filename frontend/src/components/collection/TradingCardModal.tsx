@@ -400,7 +400,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
         e.preventDefault();
         e.stopPropagation();
         const delta = e.deltaY < 0 ? 0.08 : -0.08;
-        setImgZoom((prev) => Math.min(2.8, Math.max(0.75, +(prev + delta).toFixed(2))));
+        setImgZoom((prev) => Math.min(3.5, Math.max(0.4, +(prev + delta).toFixed(2))));
     };
 
     // Control Táctil (Móvil): 1 Dedo = Arrastrar, 2 Dedos = Pellizcar para Zoom
@@ -448,7 +448,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                 e.touches[0].clientY - e.touches[1].clientY
             );
             const scale = currentDist / touchStartRef.current.dist;
-            setImgZoom(Math.min(2.8, Math.max(0.75, +(touchStartRef.current.startZoom * scale).toFixed(2))));
+            setImgZoom(Math.min(3.5, Math.max(0.4, +(touchStartRef.current.startZoom * scale).toFixed(2))));
         }
     };
 
@@ -808,13 +808,13 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                     }}
                                 />
 
-                                {/* Contenedor de la Imagen con Transformación Interactiva */}
+                                {/* Capa de la Imagen Completa Nativa (Permite deslizar y encuadrar toda la obra original) */}
                                 <div
-                                    className="h-full w-full flex items-center justify-center pointer-events-none"
+                                    className="absolute flex items-center justify-center pointer-events-none select-none"
                                     style={{
                                         transform: `translate(${imgPan.x}px, ${imgPan.y}px) scale(${imgZoom})`,
                                         transformOrigin: 'center center',
-                                        transition: isDraggingImg ? 'none' : 'transform 0.12s ease-out'
+                                        transition: isDraggingImg ? 'none' : 'transform 0.1s ease-out'
                                     }}
                                 >
                                     {aiResult?.image_base64 ? (
@@ -822,15 +822,21 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                             src={aiResult.image_base64}
                                             alt={name}
                                             draggable={false}
-                                            className="h-full w-full object-cover object-center z-10 animate-in fade-in zoom-in-95 duration-500 pointer-events-none select-none"
+                                            className="max-w-none max-h-none select-none pointer-events-none animate-in fade-in duration-300"
+                                            style={{
+                                                width: '320px',
+                                                height: 'auto',
+                                                minHeight: '224px',
+                                                display: 'block'
+                                            }}
                                         />
                                     ) : (
-                                        <div className="relative h-full w-full flex items-center justify-center overflow-hidden pointer-events-none select-none">
+                                        <div className="flex items-center justify-center pointer-events-none select-none" style={{ width: '320px', height: '224px' }}>
                                             <MOTUImage
                                                 productId={item.id}
                                                 src={item.image_url}
                                                 alt={name}
-                                                className="max-h-full max-w-full object-contain p-2.5 z-10 drop-shadow-[0_10px_15px_rgba(0,0,0,0.8)] transition-all duration-500 pointer-events-none select-none"
+                                                className="max-h-full max-w-full object-contain p-2.5 z-10 drop-shadow-[0_10px_15px_rgba(0,0,0,0.8)] pointer-events-none select-none"
                                             />
                                         </div>
                                     )}
@@ -842,7 +848,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                         type="button"
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            setImgZoom((prev) => Math.min(2.8, +(prev + 0.15).toFixed(2)));
+                                            setImgZoom((prev) => Math.min(3.5, +(prev + 0.15).toFixed(2)));
                                         }}
                                         title="Ampliar Imagen (+)"
                                         className="p-1 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition active:scale-90"
@@ -853,7 +859,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                         type="button"
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            setImgZoom((prev) => Math.max(0.75, +(prev - 0.15).toFixed(2)));
+                                            setImgZoom((prev) => Math.max(0.4, +(prev - 0.15).toFixed(2)));
                                         }}
                                         title="Reducir Imagen (-)"
                                         className="p-1 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition active:scale-90"
