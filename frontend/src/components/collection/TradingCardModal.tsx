@@ -17,7 +17,10 @@ import {
     RotateCcw,
     Zap,
     BookOpen,
-    Image as ImageIcon
+    Image as ImageIcon,
+    Plus,
+    Minus,
+    Move
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { MOTUImage } from '../ui/MOTUImage';
@@ -48,34 +51,60 @@ const dataUrlToBlob = async (dataUrl: string): Promise<Blob> => {
     return await res.blob();
 };
 
-// Obtiene la imagen individual pura (arte IA o foto) como DataURL
-const getSingleIllustrationDataUrl = async (item: any, aiImageBase64?: string | null): Promise<string> => {
-    if (aiImageBase64) return aiImageBase64;
-    if (item.image_url) {
-        return new Promise((resolve) => {
-            const img = new window.Image();
-            img.crossOrigin = 'anonymous';
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                canvas.width = img.naturalWidth || 800;
-                canvas.height = img.naturalHeight || 800;
-                const ctx = canvas.getContext('2d');
-                if (ctx) {
-                    ctx.drawImage(img, 0, 0);
-                    try {
-                        resolve(canvas.toDataURL('image/png'));
-                    } catch {
-                        resolve(item.image_url);
-                    }
-                } else {
-                    resolve(item.image_url);
-                }
-            };
-            img.onerror = () => resolve(item.image_url);
-            img.src = item.image_url;
-        });
+// Obtiene la imagen individual pura con el encuadre y zoom personalizados como DataURL HD
+const getSingleIllustrationDataUrl = async (
+    item: any,
+    aiImageBase64?: string | null,
+    zoom: number = 1,
+    pan: { x: number; y: number } = { x: 0, y: 0 }
+): Promise<string> => {
+    if (zoom === 1 && pan.x === 0 && pan.y === 0 && aiImageBase64) {
+        return aiImageBase64;
     }
-    return '';
+    const targetSrc = aiImageBase64 || item.image_url;
+    if (!targetSrc) return '';
+
+    return new Promise((resolve) => {
+        const img = new window.Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = 900;
+            canvas.height = 1200;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                ctx.fillStyle = '#090d16';
+                ctx.fillRect(0, 0, 900, 1200);
+
+                ctx.save();
+                // Aplicar escala y desplazamiento adaptados a la resolución HD del canvas
+                ctx.translate(450 + pan.x * (900 / 320), 600 + pan.y * (1200 / 224));
+                ctx.scale(zoom, zoom);
+
+                const imgAspect = img.width / img.height;
+                const canvasAspect = 900 / 1200;
+                let drawW = 900;
+                let drawH = 1200;
+                if (imgAspect > canvasAspect) {
+                    drawW = 1200 * imgAspect;
+                } else {
+                    drawH = 900 / imgAspect;
+                }
+                ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
+                ctx.restore();
+
+                try {
+                    resolve(canvas.toDataURL('image/png'));
+                } catch {
+                    resolve(targetSrc);
+                }
+            } else {
+                resolve(targetSrc);
+            }
+        };
+        img.onerror = () => resolve(targetSrc);
+        img.src = targetSrc;
+    });
 };
 
 // Generador de Cromo PNG con html-to-image y fallback infalible mediante Canvas 2D
@@ -307,6 +336,128 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
 
     const [exportTarget, setExportTarget] = useState<'card' | 'image'>('card');
 
+    // Estado para Encuadre y Zoom interactivo de la imagen
+    const [imgZoom, setImgZoom] = useState<number>(1);
+    const [imgPan, setImgPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+    const [isDraggingImg, setIsDraggingImg] = useState(false);
+    const dragStartRef = useRef<{ x: number; y: number; startPanX: number; startPanY: number }>({
+        x: 0,
+        y: 0,
+        startPanX: 0,
+        startPanY: 0
+    });
+    const touchStartRef = useRef<{ dist: number; startZoom: number; x: number; y: number; startPanX: number; startPanY: number }>({
+        dist: 0,
+        startZoom: 1,
+        x: 0,
+        y: 0,
+        startPanX: 0,
+        startPanY: 0
+    });
+
+    const resetFraming = () => {
+        setImgZoom(1);
+        setImgPan({ x: 0, y: 0 });
+    };
+
+    // Control de Arrastre con Ratón (PC)
+    const handleImgMouseDown = (e: React.MouseEvent) => {
+        if (e.button !== 0) return; // solo botón izquierdo
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDraggingImg(true);
+        dragStartRef.current = {
+            x: e.clientX,
+            y: e.clientY,
+            startPanX: imgPan.x,
+            startPanY: imgPan.y
+        };
+    };
+
+    const handleImgMouseMove = (e: React.MouseEvent) => {
+        if (!isDraggingImg) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const dx = e.clientX - dragStartRef.current.x;
+        const dy = e.clientY - dragStartRef.current.y;
+        setImgPan({
+            x: dragStartRef.current.startPanX + dx,
+            y: dragStartRef.current.startPanY + dy
+        });
+    };
+
+    const handleImgMouseUp = (e: React.MouseEvent) => {
+        if (isDraggingImg) {
+            e.stopPropagation();
+            setIsDraggingImg(false);
+        }
+    };
+
+    // Control de Zoom con Rueda del Ratón (PC)
+    const handleImgWheel = (e: React.WheelEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const delta = e.deltaY < 0 ? 0.08 : -0.08;
+        setImgZoom((prev) => Math.min(2.8, Math.max(0.75, +(prev + delta).toFixed(2))));
+    };
+
+    // Control Táctil (Móvil): 1 Dedo = Arrastrar, 2 Dedos = Pellizcar para Zoom
+    const handleImgTouchStart = (e: React.TouchEvent) => {
+        e.stopPropagation();
+        if (e.touches.length === 1) {
+            setIsDraggingImg(true);
+            touchStartRef.current = {
+                ...touchStartRef.current,
+                x: e.touches[0].clientX,
+                y: e.touches[0].clientY,
+                startPanX: imgPan.x,
+                startPanY: imgPan.y
+            };
+        } else if (e.touches.length === 2) {
+            setIsDraggingImg(true);
+            const dist = Math.hypot(
+                e.touches[0].clientX - e.touches[1].clientX,
+                e.touches[0].clientY - e.touches[1].clientY
+            );
+            touchStartRef.current = {
+                dist,
+                startZoom: imgZoom,
+                x: (e.touches[0].clientX + e.touches[1].clientX) / 2,
+                y: (e.touches[0].clientY + e.touches[1].clientY) / 2,
+                startPanX: imgPan.x,
+                startPanY: imgPan.y
+            };
+        }
+    };
+
+    const handleImgTouchMove = (e: React.TouchEvent) => {
+        if (!isDraggingImg) return;
+        e.stopPropagation();
+        if (e.touches.length === 1) {
+            const dx = e.touches[0].clientX - touchStartRef.current.x;
+            const dy = e.touches[0].clientY - touchStartRef.current.y;
+            setImgPan({
+                x: touchStartRef.current.startPanX + dx,
+                y: touchStartRef.current.startPanY + dy
+            });
+        } else if (e.touches.length === 2 && touchStartRef.current.dist > 0) {
+            const currentDist = Math.hypot(
+                e.touches[0].clientX - e.touches[1].clientX,
+                e.touches[0].clientY - e.touches[1].clientY
+            );
+            const scale = currentDist / touchStartRef.current.dist;
+            setImgZoom(Math.min(2.8, Math.max(0.75, +(touchStartRef.current.startZoom * scale).toFixed(2))));
+        }
+    };
+
+    const handleImgTouchEnd = (e: React.TouchEvent) => {
+        e.stopPropagation();
+        if (e.touches.length === 0) {
+            setIsDraggingImg(false);
+            touchStartRef.current.dist = 0;
+        }
+    };
+
     // 1. Descargar PNG HD (Carta Completa o Solo Ilustración)
     const handleDownload = async () => {
         if (!cardRef.current || !item) return;
@@ -320,7 +471,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                 dataUrl = await generateTradingCardDataUrl(cardRef.current, item, activeImage, aiResult?.lore);
                 filename = `Carta_MOTU_${name.replace(/\s+/g, '_')}${aiResult ? `_${aiResult.style}` : ''}.png`;
             } else {
-                dataUrl = await getSingleIllustrationDataUrl(item, aiResult?.image_base64);
+                dataUrl = await getSingleIllustrationDataUrl(item, aiResult?.image_base64, imgZoom, imgPan);
                 filename = `Ilustracion_MOTU_${name.replace(/\s+/g, '_')}${aiResult ? `_${aiResult.style}` : ''}.png`;
             }
 
@@ -355,7 +506,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                 const activeImage = aiResult?.image_base64 || undefined;
                 dataUrl = await generateTradingCardDataUrl(cardRef.current, item, activeImage, aiResult?.lore);
             } else {
-                dataUrl = await getSingleIllustrationDataUrl(item, aiResult?.image_base64);
+                dataUrl = await getSingleIllustrationDataUrl(item, aiResult?.image_base64, imgZoom, imgPan);
             }
 
             if (!dataUrl) return;
@@ -391,7 +542,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                 dataUrl = await generateTradingCardDataUrl(cardRef.current, item, activeImage, aiResult?.lore);
                 filename = `Carta_MOTU_${name.replace(/\s+/g, '_')}.png`;
             } else {
-                dataUrl = await getSingleIllustrationDataUrl(item, aiResult?.image_base64);
+                dataUrl = await getSingleIllustrationDataUrl(item, aiResult?.image_base64, imgZoom, imgPan);
                 filename = `Ilustracion_MOTU_${name.replace(/\s+/g, '_')}.png`;
             }
 
@@ -623,33 +774,112 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                 </div>
                             </div>
 
-                            {/* 2. Marco Holográfico con Foto HD o Arte Transformado con IA */}
-                            <div className="relative z-10 h-56 w-full rounded-xl bg-gradient-to-b from-slate-950 via-slate-900 to-black border border-slate-800 flex items-center justify-center overflow-hidden mb-2.5 group shadow-inner">
+                            {/* 2. Marco Holográfico con Foto HD o Arte Transformado con IA (Encuadre & Zoom Interactivo) */}
+                            <div
+                                onMouseDown={handleImgMouseDown}
+                                onMouseMove={handleImgMouseMove}
+                                onMouseUp={handleImgMouseUp}
+                                onMouseLeave={handleImgMouseUp}
+                                onWheel={handleImgWheel}
+                                onTouchStart={handleImgTouchStart}
+                                onTouchMove={handleImgTouchMove}
+                                onTouchEnd={handleImgTouchEnd}
+                                onContextMenu={(e) => {
+                                    e.preventDefault();
+                                    resetFraming();
+                                }}
+                                onDoubleClick={(e) => {
+                                    e.preventDefault();
+                                    resetFraming();
+                                }}
+                                className={`relative z-10 h-56 w-full rounded-xl bg-gradient-to-b from-slate-950 via-slate-900 to-black border border-slate-800 flex items-center justify-center overflow-hidden mb-2.5 group shadow-inner select-none ${
+                                    isDraggingImg ? 'cursor-grabbing' : 'cursor-grab'
+                                }`}
+                                title="Arrastra con el ratón o usa la rueda para ampliar y encuadrar"
+                            >
                                 {/* Patrón de rejilla de fondo */}
                                 <div
-                                    className="absolute inset-0 opacity-10"
+                                    className="absolute inset-0 opacity-10 pointer-events-none"
                                     style={{
                                         backgroundImage: 'radial-gradient(#22d3ee 1px, transparent 1px)',
                                         backgroundSize: '12px 12px'
                                     }}
                                 />
 
-                                {aiResult?.image_base64 ? (
-                                    <img
-                                        src={aiResult.image_base64}
-                                        alt={name}
-                                        className="h-full w-full object-cover object-center z-10 animate-in fade-in zoom-in-95 duration-500"
-                                    />
-                                ) : (
-                                    <div className="relative h-full w-full flex items-center justify-center overflow-hidden">
-                                        <MOTUImage
-                                            productId={item.id}
-                                            src={item.image_url}
+                                {/* Contenedor de la Imagen con Transformación Interactiva */}
+                                <div
+                                    className="h-full w-full flex items-center justify-center pointer-events-none"
+                                    style={{
+                                        transform: `translate(${imgPan.x}px, ${imgPan.y}px) scale(${imgZoom})`,
+                                        transformOrigin: 'center center',
+                                        transition: isDraggingImg ? 'none' : 'transform 0.12s ease-out'
+                                    }}
+                                >
+                                    {aiResult?.image_base64 ? (
+                                        <img
+                                            src={aiResult.image_base64}
                                             alt={name}
-                                            className="max-h-full max-w-full object-contain p-2.5 z-10 drop-shadow-[0_10px_15px_rgba(0,0,0,0.8)] transition-all duration-500"
+                                            draggable={false}
+                                            className="h-full w-full object-cover object-center z-10 animate-in fade-in zoom-in-95 duration-500 pointer-events-none select-none"
                                         />
-                                    </div>
-                                )}
+                                    ) : (
+                                        <div className="relative h-full w-full flex items-center justify-center overflow-hidden pointer-events-none select-none">
+                                            <MOTUImage
+                                                productId={item.id}
+                                                src={item.image_url}
+                                                alt={name}
+                                                className="max-h-full max-w-full object-contain p-2.5 z-10 drop-shadow-[0_10px_15px_rgba(0,0,0,0.8)] transition-all duration-500 pointer-events-none select-none"
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Mini Barra de Herramientas de Encuadre y Zoom Flotante */}
+                                <div className="absolute top-2 right-2 z-30 flex items-center gap-1 bg-black/75 backdrop-blur-md px-1.5 py-1 rounded-lg border border-slate-700/80 shadow-md opacity-80 group-hover:opacity-100 transition-opacity">
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setImgZoom((prev) => Math.min(2.8, +(prev + 0.15).toFixed(2)));
+                                        }}
+                                        title="Ampliar Imagen (+)"
+                                        className="p-1 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition active:scale-90"
+                                    >
+                                        <Plus className="h-3 w-3" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setImgZoom((prev) => Math.max(0.75, +(prev - 0.15).toFixed(2)));
+                                        }}
+                                        title="Reducir Imagen (-)"
+                                        className="p-1 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition active:scale-90"
+                                    >
+                                        <Minus className="h-3 w-3" />
+                                    </button>
+                                    {(imgZoom !== 1 || imgPan.x !== 0 || imgPan.y !== 0) && (
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                resetFraming();
+                                            }}
+                                            title="Restablecer Encuadre Original"
+                                            className="p-1 hover:bg-rose-500/20 text-amber-400 hover:text-rose-300 rounded transition active:scale-90"
+                                        >
+                                            <RotateCcw className="h-3 w-3" />
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* Pista de Interacción en la esquina inferior */}
+                                <div className="absolute bottom-2 left-2 z-20 pointer-events-none opacity-60 group-hover:opacity-100 transition-opacity">
+                                    <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/70 border border-slate-800 text-[8px] font-mono text-slate-300">
+                                        <Move className="h-2.5 w-2.5 text-amber-400" />
+                                        {imgZoom !== 1 ? `${Math.round(imgZoom * 100)}%` : 'Arrastra / Zoom'}
+                                    </span>
+                                </div>
 
                                 {/* Multiplicador Flotante o Golpe Especial */}
                                 {purchase > 0 && profit > 0 && (
