@@ -76,8 +76,8 @@ export const GrayskullRitualOverlay: React.FC<GrayskullRitualOverlayProps> = ({ 
     useEffect(() => {
         playAudioEffect(type);
 
-        // Fase 1: Intro (0s -> 0.4s)
-        const t1 = setTimeout(() => setPhase('raising'), 400);
+        // Fase 1: Intro (0s -> 0.3s)
+        const t1 = setTimeout(() => setPhase('raising'), 300);
 
         // Si es cremación, animar la progresión del fuego de arriba a abajo
         let burnInterval: any = null;
@@ -92,8 +92,8 @@ export const GrayskullRitualOverlay: React.FC<GrayskullRitualOverlayProps> = ({ 
             }, 30);
         }
 
-        // Fase 2: Clímax (1.2s -> El Rayo Azul Cósmico se eleva al cielo)
-        const t2 = setTimeout(() => setPhase('climax'), 1200);
+        // Fase 2: Clímax (1.0s -> Los rayos se unen en el centro superior y el gran rayo azul se dispara al cielo)
+        const t2 = setTimeout(() => setPhase('climax'), 1000);
 
         // Fase 3: Exit (2.1s)
         const t3 = setTimeout(() => setPhase('exit'), 2100);
@@ -116,26 +116,26 @@ export const GrayskullRitualOverlay: React.FC<GrayskullRitualOverlayProps> = ({ 
     return (
         <AnimatePresence>
             <div className="fixed inset-0 z-[300] flex flex-col items-center justify-center p-3 sm:p-6 bg-black/95 backdrop-blur-3xl overflow-hidden select-none">
-                {/* 1. FONDO ATMOSFÉRICO DE GRAYSKULL (AZUL ELÉCTRICO) / INFIERNO DE CENIZAS */}
+                {/* 1. FONDO ATMOSFÉRICO DE GRAYSKULL / INFIERNO */}
                 {isClaim ? (
                     <>
-                        {/* Cielo tormentoso azul eléctrico / cian de Grayskull */}
+                        {/* Cielo tormentoso azul eléctrico de Grayskull */}
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{
-                                opacity: phase === 'climax' ? 0.95 : 0.4,
-                                scale: phase === 'climax' ? [1, 1.2, 1.1] : 1
+                                opacity: phase === 'climax' ? 0.95 : 0.45,
+                                scale: phase === 'climax' ? [1, 1.15, 1.08] : 1
                             }}
                             transition={{ duration: 0.6 }}
-                            className="absolute inset-0 bg-gradient-to-t from-sky-950 via-cyan-950/50 to-black pointer-events-none"
+                            className="absolute inset-0 bg-gradient-to-t from-slate-950 via-sky-950/60 to-black pointer-events-none"
                         />
-                        {/* Destellos de relámpagos azulados en el cielo superior */}
+                        {/* Relámpagos celestes de fondo */}
                         <motion.div
                             animate={{
-                                opacity: phase === 'climax' ? [0, 1, 0.4, 1, 0] : [0, 0.25, 0]
+                                opacity: phase === 'climax' ? [0, 1, 0.4, 1, 0] : [0, 0.2, 0]
                             }}
                             transition={{ duration: 0.7, repeat: phase === 'climax' ? 2 : Infinity }}
-                            className="absolute inset-0 bg-radial from-cyan-400/35 via-sky-300/15 to-transparent pointer-events-none"
+                            className="absolute inset-0 bg-radial from-cyan-400/30 via-sky-300/10 to-transparent pointer-events-none"
                         />
                     </>
                 ) : (
@@ -152,32 +152,7 @@ export const GrayskullRitualOverlay: React.FC<GrayskullRitualOverlayProps> = ({ 
                     </>
                 )}
 
-                {/* 2. ⚡ RAYO AZUL ELÉCTRICO DISPARADO HACIA EL CIELO (CLAIM - Estilo He-Man en Grayskull) */}
-                {isClaim && (phase === 'climax' || phase === 'raising') && (
-                    <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{
-                            height: phase === 'climax' ? '70vh' : '30vh',
-                            opacity: phase === 'climax' ? [0.9, 1, 0.95] : 0.6
-                        }}
-                        transition={{ duration: 0.3, ease: 'easeOut' }}
-                        className="absolute top-0 left-1/2 -translate-x-1/2 w-12 sm:w-20 flex flex-col items-center pointer-events-none z-40"
-                    >
-                        {/* Columna central de plasma azul eléctrico y blanco */}
-                        <div className="w-full h-full bg-gradient-to-t from-cyan-400 via-sky-300 to-white blur-[2px] shadow-[0_0_90px_#00f0ff]" />
-                        {/* Haces exteriores de relámpago azul cobalto */}
-                        <div className="absolute inset-0 w-full h-full bg-gradient-to-t from-transparent via-blue-500 to-cyan-200 blur-md opacity-90 animate-pulse" />
-                        {/* Explosión cósmica en el cielo superior */}
-                        <motion.div
-                            initial={{ scale: 0 }}
-                            animate={{ scale: [1, 2.8, 2.2], opacity: [0.8, 1, 0.7] }}
-                            transition={{ duration: 0.4, repeat: Infinity }}
-                            className="absolute -top-12 w-56 sm:w-80 h-56 sm:h-80 rounded-full bg-radial from-white via-cyan-300/90 to-blue-600/0 blur-2xl"
-                        />
-                    </motion.div>
-                )}
-
-                {/* 3. PARTÍCULAS CÓSMICAS AZULES / CENIZAS FLOTANTES */}
+                {/* 2. PARTÍCULAS CÓSMICAS AZULES / CENIZAS FLOTANTES */}
                 <div className="absolute inset-0 pointer-events-none overflow-hidden">
                     {Array.from({ length: 32 }).map((_, i) => (
                         <motion.div
@@ -207,7 +182,37 @@ export const GrayskullRitualOverlay: React.FC<GrayskullRitualOverlayProps> = ({ 
                     ))}
                 </div>
 
-                {/* 4. CONTENEDOR PRINCIPAL: Tarjeta y Portal de Grayskull */}
+                {/* 3. TÍTULO Y SUBTÍTULO DEL RITUAL (DESPEJADO ARRIBA) */}
+                <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-center mb-3 sm:mb-5 z-40"
+                >
+                    <div className="flex items-center justify-center gap-2 text-xs sm:text-sm font-black uppercase tracking-widest drop-shadow-lg">
+                        {isClaim ? (
+                            <>
+                                <Sparkles className="h-4 w-4 text-cyan-400 animate-spin" style={{ animationDuration: '3s' }} />
+                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-sky-100 to-blue-400 font-black tracking-widest">
+                                    ¡Por el Poder de Grayskull!
+                                </span>
+                                <Sparkles className="h-4 w-4 text-sky-300 animate-spin" style={{ animationDuration: '3s' }} />
+                            </>
+                        ) : (
+                            <>
+                                <Flame className="h-4 w-4 text-orange-400 animate-bounce" />
+                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-red-400 to-amber-300 font-black">
+                                    Liberando de la Fortaleza
+                                </span>
+                                <Flame className="h-4 w-4 text-red-500 animate-bounce" />
+                            </>
+                        )}
+                    </div>
+                    <p className="text-[11px] text-cyan-200/90 font-bold tracking-widest mt-1">
+                        {isClaim ? '⚡ ¡YO TENGO EL PODER! ⚡' : '🔥 Desintegrando en cenizas de retorno'}
+                    </p>
+                </motion.div>
+
+                {/* 4. CONTENEDOR PRINCIPAL: Tarjeta con Portal Detrás y Rayos en los Bordes */}
                 <motion.div
                     initial={{ scale: 0.75, opacity: 0, y: 30 }}
                     animate={{
@@ -216,75 +221,71 @@ export const GrayskullRitualOverlay: React.FC<GrayskullRitualOverlayProps> = ({ 
                         y: phase === 'exit' ? (isClaim ? -40 : 30) : 0
                     }}
                     transition={{ type: 'spring', stiffness: 280, damping: 20 }}
-                    className="relative w-full max-w-[320px] sm:max-w-[360px] flex flex-col items-center z-20 mt-2 sm:mt-4"
+                    className="relative w-full max-w-[310px] sm:max-w-[340px] flex flex-col items-center z-20"
                 >
-                    {/* 🛡️ HE-MAN Y LA ESPADA DE GRAYSKULL (Escena Oficial con Rayos Azules) */}
+                    {/* 🛡️ FONDO ÉPICO DETRÁS DE LA TARJETA: He-Man alzando la Espada en Grayskull */}
                     {isClaim && (
                         <motion.div
-                            initial={{ y: 30, opacity: 0, scale: 0.85 }}
+                            initial={{ opacity: 0, scale: 0.9 }}
                             animate={{
-                                y: phase === 'climax' ? -15 : -5,
-                                opacity: 1,
+                                opacity: phase === 'climax' ? 0.45 : 0.3,
                                 scale: phase === 'climax' ? 1.08 : 1
                             }}
-                            transition={{ duration: 0.5, ease: 'easeOut' }}
-                            className="relative z-50 -mb-6 flex flex-col items-center"
+                            transition={{ duration: 0.6 }}
+                            className="absolute -inset-6 sm:-inset-10 rounded-3xl overflow-hidden -z-10 flex items-center justify-center pointer-events-none"
                         >
-                            <div className="relative h-28 sm:h-36 rounded-2xl overflow-hidden border-2 border-cyan-400/80 shadow-[0_0_40px_rgba(6,182,212,0.8)] bg-slate-950/80">
-                                <img
-                                    src={hemanLightningArt}
-                                    alt="He-Man alzando la Espada de Poder en Grayskull"
-                                    className="h-full w-auto object-contain"
-                                />
-                                {/* Halo azul de energía en la punta */}
-                                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-cyan-400/20 pointer-events-none" />
-                            </div>
+                            <img
+                                src={hemanLightningArt}
+                                alt="He-Man y Castillo Grayskull"
+                                className="w-full h-full object-cover filter saturate-150 brightness-75 blur-[1px]"
+                            />
+                            {/* Halo azul envolvente */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black via-cyan-950/40 to-black/80" />
+                            <div className="absolute inset-0 border border-cyan-400/30 rounded-3xl shadow-[0_0_50px_rgba(6,182,212,0.3)]" />
+                        </motion.div>
+                    )}
 
-                            {/* Chispas y haz de plasma azul saliendo de la punta */}
+                    {/* ⚡ 5. RAYO AZUL ELÉCTRICO BROTANDO DESDE EL CENTRO SUPERIOR AL CIELO */}
+                    {isClaim && phase === 'climax' && (
+                        <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: '65vh', opacity: [0.9, 1, 0.95] }}
+                            transition={{ duration: 0.35, ease: 'easeOut' }}
+                            className="absolute bottom-full left-1/2 -translate-x-1/2 w-12 sm:w-20 flex flex-col items-center pointer-events-none z-50 -mb-2"
+                        >
+                            {/* Columna central de plasma azul eléctrico y blanco */}
+                            <div className="w-full h-full bg-gradient-to-t from-white via-cyan-400 to-sky-300 blur-[2px] shadow-[0_0_90px_#00f0ff]" />
+                            {/* Haces exteriores de relámpago */}
+                            <div className="absolute inset-0 w-full h-full bg-gradient-to-t from-cyan-200 via-blue-500 to-transparent blur-md opacity-90 animate-pulse" />
+                            {/* Explosión cósmica en el cielo superior */}
                             <motion.div
-                                animate={{ scale: [1, 2, 1.2], opacity: [0.7, 1, 0.8] }}
-                                transition={{ duration: 0.25, repeat: Infinity }}
-                                className="absolute -top-3 w-10 h-10 rounded-full bg-radial from-white via-cyan-300 to-blue-500 blur-sm shadow-[0_0_35px_#00f0ff]"
+                                initial={{ scale: 0 }}
+                                animate={{ scale: [1, 2.5, 2], opacity: [0.8, 1, 0.7] }}
+                                transition={{ duration: 0.4, repeat: Infinity }}
+                                className="absolute -top-12 w-56 sm:w-80 h-56 sm:h-80 rounded-full bg-radial from-white via-cyan-300/90 to-blue-600/0 blur-2xl"
                             />
                         </motion.div>
                     )}
 
-                    {/* TÍTULO Y SUBTÍTULO DEL RITUAL */}
-                    <motion.div
-                        initial={{ opacity: 0, y: -15 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="text-center mb-3 sm:mb-4 z-30"
-                    >
-                        <div className="flex items-center justify-center gap-1.5 text-xs sm:text-sm font-black uppercase tracking-widest drop-shadow-lg">
-                            {isClaim ? (
-                                <>
-                                    <Sparkles className="h-4 w-4 text-cyan-400 animate-spin" style={{ animationDuration: '3s' }} />
-                                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-sky-100 to-blue-400 font-black tracking-widest">
-                                        ¡Por el Poder de Grayskull!
-                                    </span>
-                                    <Sparkles className="h-4 w-4 text-sky-300 animate-spin" style={{ animationDuration: '3s' }} />
-                                </>
-                            ) : (
-                                <>
-                                    <Flame className="h-4 w-4 text-orange-400 animate-bounce" />
-                                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-red-400 to-amber-300 font-black">
-                                        Liberando de la Fortaleza
-                                    </span>
-                                    <Flame className="h-4 w-4 text-red-500 animate-bounce" />
-                                </>
-                            )}
-                        </div>
-                        <p className="text-[11px] text-slate-300 font-bold truncate max-w-xs mt-0.5 tracking-wider">
-                            {isClaim ? '⚡ ¡YO TENGO EL PODER! ⚡' : '🔥 Desintegrando en cenizas de retorno'}
-                        </p>
-                    </motion.div>
+                    {/* ⚡ NÚCLEO DE GRAYSKULL EN EL CENTRO DEL TOPE SUPERIOR */}
+                    {isClaim && (phase === 'raising' || phase === 'climax') && (
+                        <motion.div
+                            initial={{ scale: 0, opacity: 0 }}
+                            animate={{
+                                scale: phase === 'climax' ? [1.2, 2.2, 1.6] : 1,
+                                opacity: 1
+                            }}
+                            transition={{ duration: 0.3 }}
+                            className="absolute -top-3 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-radial from-white via-cyan-300 to-blue-600 blur-sm shadow-[0_0_35px_#00f0ff] z-50 pointer-events-none"
+                        />
+                    )}
 
                     {/* LA TARJETA CINEMÁTICA */}
-                    <div className={`relative w-full aspect-[3/4] rounded-3xl overflow-hidden shadow-[0_0_60px_rgba(0,0,0,0.9)] border-2 bg-slate-950 flex flex-col justify-between p-3.5 sm:p-4 ${
-                        isClaim ? 'border-cyan-400/60 shadow-[0_0_40px_rgba(6,182,212,0.4)]' : 'border-white/20'
+                    <div className={`relative w-full aspect-[3/4] rounded-3xl overflow-hidden shadow-[0_0_60px_rgba(0,0,0,0.95)] border-2 bg-slate-950 flex flex-col justify-between p-3.5 sm:p-4 z-20 ${
+                        isClaim ? 'border-cyan-400/80 shadow-[0_0_45px_rgba(6,182,212,0.6)]' : 'border-white/20'
                     }`}>
                         {/* IMAGEN DE LA FIGURA */}
-                        <div className="relative w-full h-full flex items-center justify-center overflow-hidden rounded-2xl bg-black/70 border border-white/10">
+                        <div className="relative w-full h-full flex items-center justify-center overflow-hidden rounded-2xl bg-black/75 border border-white/10">
                             <MOTUImage
                                 productId={product.id}
                                 src={product.image_url}
@@ -293,7 +294,7 @@ export const GrayskullRitualOverlay: React.FC<GrayskullRitualOverlayProps> = ({ 
                             />
 
                             {/* Badge de Categoría */}
-                            <div className="absolute top-2 left-2 px-2.5 py-1 rounded-lg bg-black/80 border border-white/20 text-[9px] font-black text-cyan-300 uppercase tracking-wider backdrop-blur-md">
+                            <div className="absolute top-2 left-2 px-2.5 py-1 rounded-lg bg-black/85 border border-cyan-400/40 text-[9px] font-black text-cyan-300 uppercase tracking-wider backdrop-blur-md">
                                 {product.sub_category || (product.is_vintage ? 'Vintage' : 'MOTU Origins')}
                             </div>
                         </div>
@@ -305,23 +306,46 @@ export const GrayskullRitualOverlay: React.FC<GrayskullRitualOverlayProps> = ({ 
                             </h4>
                         </div>
 
-                        {/* ⚡ ESCENA A: ENERGÍA Y RAYO AZUL HACIA EL CIELO (CLAIM) */}
+                        {/* ⚡ ESCENA A: RAYOS AZULES FLUYENDO POR LOS BORDES HACIA EL TOPE SUPERIOR */}
                         {isClaim && (
                             <>
-                                {/* Aura perimetral de energía azul eléctrico / cian */}
+                                {/* Rayo Borde Izquierdo (Sube de abajo hacia arriba) */}
                                 <motion.div
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: [0.5, 1, 0.7] }}
-                                    transition={{ duration: 0.5, repeat: Infinity }}
-                                    className="absolute inset-0 rounded-3xl border-4 border-cyan-400 shadow-[0_0_35px_#00f0ff] pointer-events-none"
+                                    initial={{ height: 0 }}
+                                    animate={{ height: '100%' }}
+                                    transition={{ duration: 0.6, ease: 'easeOut' }}
+                                    className="absolute left-0 bottom-0 w-1.5 bg-gradient-to-t from-cyan-500 via-sky-300 to-white shadow-[0_0_15px_#00f0ff] pointer-events-none z-30"
                                 />
 
-                                {/* Corriente ascendente de plasma azul hacia la espada */}
+                                {/* Rayo Borde Derecho (Sube de abajo hacia arriba) */}
                                 <motion.div
-                                    initial={{ y: '100%', opacity: 0.9 }}
-                                    animate={{ y: '-100%', opacity: [0, 1, 0] }}
-                                    transition={{ duration: 0.9, repeat: Infinity, ease: 'linear' }}
-                                    className="absolute inset-0 bg-gradient-to-t from-transparent via-cyan-400/50 to-sky-300/70 pointer-events-none blur-sm"
+                                    initial={{ height: 0 }}
+                                    animate={{ height: '100%' }}
+                                    transition={{ duration: 0.6, ease: 'easeOut' }}
+                                    className="absolute right-0 bottom-0 w-1.5 bg-gradient-to-t from-cyan-500 via-sky-300 to-white shadow-[0_0_15px_#00f0ff] pointer-events-none z-30"
+                                />
+
+                                {/* Rayo Borde Superior Izquierdo (Viaja hacia el centro) */}
+                                <motion.div
+                                    initial={{ width: 0 }}
+                                    animate={{ width: '50%' }}
+                                    transition={{ duration: 0.4, delay: 0.5, ease: 'easeOut' }}
+                                    className="absolute top-0 left-0 h-1.5 bg-gradient-to-r from-sky-400 via-cyan-300 to-white shadow-[0_0_20px_#00f0ff] pointer-events-none z-30"
+                                />
+
+                                {/* Rayo Borde Superior Derecho (Viaja hacia el centro) */}
+                                <motion.div
+                                    initial={{ width: 0 }}
+                                    animate={{ width: '50%' }}
+                                    transition={{ duration: 0.4, delay: 0.5, ease: 'easeOut' }}
+                                    className="absolute top-0 right-0 h-1.5 bg-gradient-to-l from-sky-400 via-cyan-300 to-white shadow-[0_0_20px_#00f0ff] pointer-events-none z-30"
+                                />
+
+                                {/* Aura luminosa de plasma por toda la tarjeta */}
+                                <motion.div
+                                    animate={{ opacity: phase === 'climax' ? [0.6, 1, 0.8] : 0.4 }}
+                                    transition={{ duration: 0.3, repeat: Infinity }}
+                                    className="absolute inset-0 rounded-3xl border-2 border-cyan-400/70 shadow-[inset_0_0_25px_rgba(6,182,212,0.5)] pointer-events-none"
                                 />
                             </>
                         )}
@@ -362,9 +386,9 @@ export const GrayskullRitualOverlay: React.FC<GrayskullRitualOverlayProps> = ({ 
                     </div>
 
                     {/* PIE DE ESTADO DEL RITUAL */}
-                    <div className="mt-3.5 flex items-center gap-2">
+                    <div className="mt-3.5 flex items-center gap-2 z-30">
                         {isClaim ? (
-                            <div className="px-4 py-1.5 rounded-full bg-cyan-500/20 border border-cyan-400/60 text-cyan-300 text-xs font-black uppercase tracking-widest flex items-center gap-2 shadow-[0_0_25px_rgba(6,182,212,0.4)]">
+                            <div className="px-4 py-1.5 rounded-full bg-cyan-500/20 border border-cyan-400/70 text-cyan-300 text-xs font-black uppercase tracking-widest flex items-center gap-2 shadow-[0_0_25px_rgba(6,182,212,0.5)]">
                                 <Shield className="h-4 w-4 fill-cyan-400" />
                                 <span>Asegurada en la Fortaleza</span>
                             </div>

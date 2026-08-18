@@ -352,28 +352,25 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                 setShared(true);
                 setTimeout(() => setShared(false), 3000);
             } else {
-                // Fallback para Desktop o navegadores sin File Sharing
-                const link = document.createElement('a');
-                link.download = `Cromo_MOTU_${name.replace(/\s+/g, '_')}.png`;
-                link.href = dataUrl;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
+                // Fallback para PC/Desktop: Abrir WhatsApp Web mediante enlace directo seguro
+                const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
+                const waLink = document.createElement('a');
+                waLink.href = waUrl;
+                waLink.target = '_blank';
+                waLink.rel = 'noopener noreferrer';
+                document.body.appendChild(waLink);
+                waLink.click();
+                document.body.removeChild(waLink);
 
-                // Copiar imagen al portapapeles si es posible
-                if (navigator.clipboard && (window as any).ClipboardItem) {
-                    try {
-                        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-                    } catch {}
-                }
-
-                // Abrir enlace directo de WhatsApp
-                window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`, '_blank');
                 setShared(true);
                 setTimeout(() => setShared(false), 3000);
             }
         } catch (err) {
             console.error('Error compartiendo cromo:', err);
+            // Fallback de emergencia a WhatsApp Web directo si falla el canvas o navigator
+            let emergencyText = `🏰 Cromo Oficial: ${name} custodiado en La Fortaleza de Grayskull.`;
+            if (aiResult?.lore) emergencyText += `\n\n📜 Lore (Gemini AI):\n"${aiResult.lore}"`;
+            window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(emergencyText)}`, '_blank');
         } finally {
             setExporting(false);
         }
@@ -563,12 +560,32 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                         className="h-full w-full object-cover z-10 animate-in fade-in zoom-in-95 duration-500"
                                     />
                                 ) : (
-                                    <MOTUImage
-                                        productId={item.id}
-                                        src={item.image_url}
-                                        alt={name}
-                                        className="max-h-full max-w-full object-contain p-2.5 z-10 drop-shadow-[0_10px_15px_rgba(0,0,0,0.8)]"
-                                    />
+                                    <div className="relative h-full w-full flex items-center justify-center overflow-hidden">
+                                        <MOTUImage
+                                            productId={item.id}
+                                            src={item.image_url}
+                                            alt={name}
+                                            className={`max-h-full max-w-full object-contain p-2.5 z-10 drop-shadow-[0_10px_15px_rgba(0,0,0,0.8)] transition-all duration-500 ${
+                                                aiResult?.style === 'oil_vintage'
+                                                    ? 'sepia-[0.35] contrast-[1.35] saturate-[1.45] brightness-95'
+                                                    : aiResult?.style === 'comic_retro'
+                                                    ? 'contrast-[1.65] saturate-[1.8] brightness-105'
+                                                    : aiResult?.style === 'cinematic_4k'
+                                                    ? 'contrast-[1.45] saturate-[1.25] brightness-90'
+                                                    : ''
+                                            }`}
+                                        />
+                                        {/* Capa de textura artística según el estilo */}
+                                        {aiResult?.style === 'oil_vintage' && (
+                                            <div className="absolute inset-0 bg-gradient-to-t from-amber-950/40 via-yellow-900/10 to-transparent pointer-events-none z-10 mix-blend-color-burn" />
+                                        )}
+                                        {aiResult?.style === 'comic_retro' && (
+                                            <div className="absolute inset-0 pointer-events-none z-10 mix-blend-overlay opacity-30" style={{ backgroundImage: 'radial-gradient(#000 1.5px, transparent 1.5px)', backgroundSize: '6px 6px' }} />
+                                        )}
+                                        {aiResult?.style === 'cinematic_4k' && (
+                                            <div className="absolute inset-0 bg-gradient-to-tr from-cyan-950/50 via-transparent to-amber-950/40 pointer-events-none z-10 mix-blend-screen" />
+                                        )}
+                                    </div>
                                 )}
 
                                 {/* Badge de Estado (MOC / LOOSE / AI ART) con resplandor */}
@@ -582,7 +599,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                                 : 'bg-cyan-500/90 text-black border-cyan-300 shadow-cyan-500/40'
                                         }`}
                                     >
-                                        {aiResult ? '✨ AI ENHANCED' : isMoc ? '🛡️ MOC • CARDED' : '⚔️ LOOSE • MINT'}
+                                        {aiResult ? `✨ ${aiResult.style_name.split(' ')[0] || 'AI'}` : isMoc ? '🛡️ MOC • CARDED' : '⚔️ LOOSE • MINT'}
                                     </span>
                                 </div>
 

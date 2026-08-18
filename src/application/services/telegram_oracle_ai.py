@@ -44,7 +44,7 @@ class OracleAssistantAI:
     @classmethod
     async def _query_gemini_flash(cls, text: str, user_id: int) -> Optional[str]:
         """Consulta a Gemini Flash mediante Function Calling estructurado."""
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={settings.GEMINI_API_KEY}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={settings.GEMINI_API_KEY}"
         
         tools = [{
             "function_declarations": [

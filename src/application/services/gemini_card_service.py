@@ -138,7 +138,7 @@ class GeminiCardService:
         Genera el trasfondo épico y estadísticas RPG con Gemini 1.5 Flash.
         """
         if settings.GEMINI_API_KEY:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={settings.GEMINI_API_KEY}"
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={settings.GEMINI_API_KEY}"
             prompt = (
                 f"Genera una ficha de coleccionista y estadísticas de combate en JSON para la figura '{product_name}' "
                 f"({sub_category}, estado {condition}, grado {grading}/10). "
