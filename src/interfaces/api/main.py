@@ -75,10 +75,19 @@ async def lifespan(app: FastAPI):
 
         # Iniciar escucha de comandos de Telegram en segundo plano (supervisada)
         app.state.telegram_task = asyncio.create_task(_supervised_telegram_listener())
+
+        # Iniciar Centinela Autónomo de Vinted (Phase 84)
+        if getattr(settings, "VINTED_SENTINEL_ENABLED", True):
+            from src.application.services.vinted_sentinel_service import vinted_sentinel
+            vinted_sentinel.start()
     except Exception as e:
         logger.error(f"Startup initialization failed: {e}")
     yield
     # Cleanup task on shutdown
+    if getattr(settings, "VINTED_SENTINEL_ENABLED", True):
+        from src.application.services.vinted_sentinel_service import vinted_sentinel
+        vinted_sentinel.stop()
+
     if hasattr(app.state, "telegram_task"):
         app.state.telegram_task.cancel()
         try:

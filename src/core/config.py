@@ -74,6 +74,15 @@ class Settings(BaseSettings):
     APYFY_TOKEN2: str | None = None  # Tolerancia a errata común en .env
     APIFY_TOKEN3: str | None = None
 
+    # GitHub Actions Cloud Runner & Dispatch (Phase 84)
+    GITHUB_TOKEN: str | None = None
+    GITHUB_REPOSITORY: str = "DavidLopezGarci4/oraculo-nueva-eternia"
+
+    # Vinted Sentinel Autonomous Settings (Phase 84)
+    VINTED_SENTINEL_ENABLED: bool = True
+    VINTED_SENTINEL_MIN_DELAY_MIN: int = 50
+    VINTED_SENTINEL_MAX_DELAY_MIN: int = 75
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_ignore_empty=True,

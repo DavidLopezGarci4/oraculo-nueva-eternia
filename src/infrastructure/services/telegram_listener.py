@@ -250,6 +250,8 @@ class TelegramListener:
             await self.cmd_import_wallapop(chat_id, args)
         elif command in ["/caza", "/hunt"]:
             await self.cmd_caza(chat_id, args)
+        elif command in ["/centinela", "/sentinel"]:
+            await self.cmd_centinela(chat_id, args)
             
         # --- Comandos de Administrador Only ---
         elif is_admin:
@@ -316,6 +318,8 @@ class TelegramListener:
         lines.append("• <code>/wallapop [enlace]</code> - Importa un artículo de Wallapop al Purgatorio (o comparte el link directo).")
         lines.append("• <code>/caza</code> - Incursión instantánea en Vinted (4 consultas canónicas) con alerta push de gangas bajo precio medio.")
         lines.append("• <code>/caza [figura]</code> - Caza personalizada de una figura en Vinted.")
+        lines.append("• <code>/centinela</code> - Consulta el estado del Centinela Autónomo 24/7 de Vinted.")
+        lines.append("• <code>/centinela [on|off]</code> - Activa o pausa las incursiones automáticas (50-75 min).")
         lines.append("• <code>/help</code> - Muestra este menú de ayuda.")
         
         if is_admin:
@@ -775,7 +779,63 @@ class TelegramListener:
                 
         asyncio.create_task(_run_hunter_bg())
 
+    async def cmd_centinela(self, chat_id: int, args: list):
+        from src.application.services.vinted_sentinel_service import vinted_sentinel
+        
+        action = args[0].lower().strip() if args else "status"
+        
+        if action in ["on", "activar", "start"]:
+            vinted_sentinel.start()
+            status = vinted_sentinel.get_status()
+            mins = status.get("next_run_in_minutes", 60)
+            msg = (
+                "🟢 <b>[Centinela de Vinted Activado]</b>\n\n"
+                "• <b>Estado:</b> ⚡ Vigilancia 24/7 en marcha\n"
+                "• <b>Cadencia:</b> Incursiones pseudoaleatorias cada 50 - 75 min\n"
+                f"• <b>Próxima Incursión:</b> En ~{mins} minutos\n"
+                "• <b>Destino:</b> Purgatorio + Alerta inmediata si hay gangas bajo P25\n\n"
+                "🛡️ <i>Tu servidor velará día y noche sin requerir tu PC encendido.</i>"
+            )
+            await telegram_service.send_message(msg, chat_id=chat_id)
+            return
+            
+        elif action in ["off", "pausar", "stop"]:
+            vinted_sentinel.stop()
+            msg = (
+                "🔴 <b>[Centinela de Vinted Pausado]</b>\n\n"
+                "• <b>Estado:</b> En reposo\n"
+                "• Las incursiones automáticas han quedado detenidas.\n"
+                "• Puedes reactivarlo en cualquier momento enviando <code>/centinela on</code>."
+            )
+            await telegram_service.send_message(msg, chat_id=chat_id)
+            return
+
+        # Estado general
+        status = vinted_sentinel.get_status()
+        is_active = status.get("is_running", False)
+        state_badge = "🟢 <b>ACTIVO (24/7)</b>" if is_active else "🔴 <b>EN REPOSO</b>"
+        mins_remaining = status.get("next_run_in_minutes", 0)
+        total_hunts = status.get("total_hunts", 0)
+        total_bargains = status.get("total_bargains", 0)
+        using_az = "☁️ Microsoft Azure (GitHub Actions)" if status.get("using_github_dispatch") else "🖥️ Motor Asíncrono Local"
+
+        msg = (
+            f"🏹 <b>[Panel de Control: Centinela de Vinted]</b>\n\n"
+            f"• <b>Estado:</b> {state_badge}\n"
+            f"• <b>Infraestructura:</b> {using_az}\n"
+            f"• <b>Cadencia:</b> 50 - 75 minutos aleatorios\n"
+            f"• <b>Próxima Incursión:</b> {'En ~' + str(mins_remaining) + ' min' if is_active else 'N/A'}\n"
+            f"• <b>Incursiones Realizadas:</b> {total_hunts}\n"
+            f"• <b>Chollos Detectados:</b> {total_bargains}\n\n"
+            f"<b>Comandos:</b>\n"
+            f"• <code>/centinela on</code> - Activar vigilancia continua\n"
+            f"• <code>/centinela off</code> - Pausar centinela\n"
+            f"• <code>/caza</code> - Forzar incursión inmediata"
+        )
+        await telegram_service.send_message(msg, chat_id=chat_id)
+
 # Instancia única del listener
 telegram_listener = TelegramListener()
+
 
 

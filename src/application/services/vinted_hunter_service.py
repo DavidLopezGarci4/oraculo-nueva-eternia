@@ -21,7 +21,12 @@ class VintedHunterService:
     """
 
     @staticmethod
-    async def run_hunt(query: str = "auto", chat_id: Optional[str] = None) -> Dict[str, Any]:
+    async def run_hunt(
+        query: str = "auto",
+        chat_id: Optional[str] = None,
+        notify_summary: bool = True,
+        next_eta_mins: Optional[int] = None
+    ) -> Dict[str, Any]:
         logger.info(f"🏹 VintedHunter: Iniciando caza para query='{query}'...")
         
         # 1. Ejecutar scraper de Vinted
@@ -31,6 +36,16 @@ class VintedHunterService:
         logger.info(f"🏹 VintedHunter: Extraídas {total_scraped} ofertas de Vinted.")
         
         if not offers:
+            if notify_summary and chat_id:
+                try:
+                    await telegram_service.send_message(
+                        "🏹 <b>[Centinela de Vinted]</b> Incursión finalizada.\n\n"
+                        "• 📦 <b>Ofertas analizadas:</b> 0\n"
+                        "• 🛡️ <i>Sin actividad reciente en este ciclo.</i>",
+                        chat_id=int(chat_id) if str(chat_id).isdigit() else None
+                    )
+                except Exception:
+                    pass
             return {
                 "total_scraped": 0,
                 "new_purgatory": 0,
@@ -108,7 +123,7 @@ class VintedHunterService:
 
         logger.info(f"🏹 VintedHunter: Detectadas {len(bargains)} gangas bajo el precio medio.")
         
-        # 4. Despachar alertas push directas a Telegram
+        # 4. Despachar alertas push individuales si hay chollos
         for b in bargains:
             try:
                 await telegram_service.send_bargain_hunt_alert(
@@ -123,9 +138,36 @@ class VintedHunterService:
                     image_url=b.get("image_url"),
                     chat_id=chat_id
                 )
-                await asyncio.sleep(0.5) # Pausa suave entre notificaciones
+                await asyncio.sleep(0.5)
             except Exception as ex:
                 logger.error(f"Error enviando alerta de ganga Vinted: {ex}")
+
+        # 5. Despachar reporte consolidado del ciclo si está activado
+        if notify_summary:
+            if bargains:
+                bargains_list = "\n".join([
+                    f"  ↳ <b>{b['product_name']}</b> a <b>{b['price']:.2f}€</b> (Landed: {b['landed_price']:.2f}€ vs Ref: {b['benchmark_price']:.2f}€ | 💰 <b>-{b['savings_pct']:.0f}%</b>) — <a href=\"{b['url']}\">Ver Oferta</a>"
+                    for b in bargains[:5]
+                ])
+                opportunities_block = f"🔥 <b>¡Oportunidades Únicas Detectadas! ({len(bargains)})</b>\n{bargains_list}\n\n"
+            else:
+                opportunities_block = "🛡️ <i>Sin chollos por debajo del precio medio en este ciclo. Todo bajo control.</i>\n\n"
+
+            eta_text = f"⏱️ <i>Próxima incursión aleatoria en ~{next_eta_mins} min (IP Azure rotatoria).</i>" if next_eta_mins else "⏱️ <i>Incursión completada con éxito.</i>"
+
+            summary_msg = (
+                f"🏹 <b>[Centinela de Vinted: Incursión Completada]</b>\n\n"
+                f"• 📦 <b>Ofertas analizadas:</b> {total_scraped}\n"
+                f"• ⚖️ <b>Purgatorio:</b> Registradas en base de datos\n\n"
+                f"{opportunities_block}"
+                f"{eta_text}"
+            ).strip()
+
+            try:
+                target_chat_int = int(chat_id) if chat_id and str(chat_id).isdigit() else None
+                await telegram_service.send_message(summary_msg, chat_id=target_chat_int)
+            except Exception as ex:
+                logger.error(f"Error enviando resumen de centinela a Telegram: {ex}")
 
         return {
             "total_scraped": total_scraped,
