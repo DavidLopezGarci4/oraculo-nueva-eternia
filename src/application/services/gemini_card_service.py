@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Dict, Any, Optional, Tuple
 import httpx
 from src.core.config import settings
+from src.domain.motu_canon_database import resolve_motu_profile, ATTACK_MATRIX
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +17,13 @@ class GeminiCardService:
     extrae al personaje de forma coherente con sus accesorios/armas reales y lo recrea fuera del blíster
     en una postura de acción épica en Eternia, en 4 estilos de ilustradores legendarios de MOTU.
     """
+
+    FRAMING_DIRECTIVE = (
+        "FRAMING AND COMPOSITION MANDATE: Vertical 3:4 portrait orientation perfectly proportioned for a collectible trading card. "
+        "The character MUST be centered in the frame with ample headroom above the head/helmet so it is NEVER cropped. "
+        "Show a 3/4 heroic dynamic body shot (head to knees/feet) fully inside the canvas borders without awkward limb cuts. "
+        "Background elements (Eternia landscapes, lightning, rocks) must fill the remaining space naturally."
+    )
 
     STYLES_CONFIG = {
         "obrero_norem_80s": {
@@ -30,7 +38,8 @@ class GeminiCardService:
                 "with atmospheric stormy skies and glowing lightning. "
                 "The character is actively wielding their authentic weapons and accessories. "
                 "Art style: Authentic 1980s Mattel toy box art oil-on-canvas painting style by Rudy Obrero, Earl Norem, and William George. "
-                "Rich painterly oil textures, dramatic chiaroscuro lighting, visceral muscular heroic fantasy anatomy, vivid saturated 80s palette."
+                "Rich painterly oil textures, dramatic chiaroscuro lighting, visceral muscular heroic fantasy anatomy, vivid saturated 80s palette. "
+                f"{FRAMING_DIRECTIVE}"
             )
         },
         "alcala_texeira_minicomic": {
@@ -44,7 +53,8 @@ class GeminiCardService:
                 "brandishing their iconic weapons and gear with heroic intensity. "
                 "Art style: Vintage 1980s Masters of the Universe mini-comic book illustration by Alfredo Alcala, Mark Texeira, and Bruce Timm. "
                 "Dense handcrafted cross-hatching, heavy expressive black ink shadows, vintage four-color printing with subtle Ben-Day halftone dots, "
-                "classic barbarian sword-and-sorcery comic aesthetic."
+                "classic barbarian sword-and-sorcery comic aesthetic. "
+                f"{FRAMING_DIRECTIVE}"
             )
         },
         "gimenez_santalucia_modern": {
@@ -57,7 +67,8 @@ class GeminiCardService:
                 "Illustrate the character leaping into an epic battle stance outside the Royal Palace of Eternia or the Mystic Mountains, "
                 "unleashing the glowing energy of their signature weapons and magical gear with radiant light effects. "
                 "Art style: Modern official Masters of the Universe Origins, Classics, and Masterverse packaging art by Axel Gimenez and Emiliano Santalucia. "
-                "Crisp hyper-clean ink linework, vibrant digital cel-shading, rich atmospheric lighting gradients, dynamic superhero action perspective."
+                "Crisp hyper-clean ink linework, vibrant digital cel-shading, rich atmospheric lighting gradients, dynamic superhero action perspective. "
+                f"{FRAMING_DIRECTIVE}"
             )
         },
         "heavy_metal_dark_eternia": {
@@ -69,7 +80,8 @@ class GeminiCardService:
                 "Reimagine the character in a gritty, high-stakes life-or-death battle in the mystical Dark Lands or Subternia of Eternia, "
                 "wielding their weapons with glowing arcane runes, flying sparks, and atmospheric battle dust. "
                 "Art style: Hyper-detailed Heavy Metal dark fantasy illustration inspired by Kenneth Rocafort, Simon Bisley, and Mondo MOTU art. "
-                "Intricate battle-worn armor textures, volumetric fog, dramatic backlit highlights, intense cinematic mood, dark mature sword-and-sorcery masterpiece."
+                "Intricate battle-worn armor textures, volumetric fog, dramatic backlit highlights, intense cinematic mood, dark mature sword-and-sorcery masterpiece. "
+                f"{FRAMING_DIRECTIVE}"
             )
         }
     }
@@ -275,29 +287,34 @@ class GeminiCardService:
         style_name: str = ""
     ) -> Dict[str, Any]:
         """
-        Genera el trasfondo canónico épico y estadísticas RPG con Gemini Flash.
+        Genera el trasfondo canónico épico y estadísticas RPG enriquecidas mediante la enciclopedia MOTU y Gemini Flash.
         """
+        # Perfil base canónico resuelto por enciclopedia de MOTU
+        canonical_profile = resolve_motu_profile(product_name, sub_category)
+
         if settings.GEMINI_API_KEY:
             url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={settings.GEMINI_API_KEY}"
             prompt = (
                 f"Genera una ficha canónica de combate y coleccionismo en JSON para la figura de Masters of the Universe '{product_name}' "
-                f"({sub_category}, estado {condition}, grado {grading}/10, estilo visual '{style_name}'). "
+                f"({sub_category}, estado {condition}, estilo visual '{style_name}').\n"
+                f"Contexto Canónico sugerido: {canonical_profile['lore']}\n"
+                f"Técnica / Ataque Definitivo sugerido: {canonical_profile['special_move']}\n\n"
                 "Responde ÚNICAMENTE un JSON válido con este formato exacto:\n"
                 "{\n"
-                '  "lore": "Texto épico canónico de 2 frases sobre la figura en la batalla por Eternia.",\n'
+                '  "lore": "Micro-relato épico canónico de 2 frases en español sobre el personaje combatiendo en Eternia.",\n'
                 '  "stats": {\n'
                 '    "fuerza": 92,\n'
                 '    "magia": 85,\n'
                 '    "defensa": 90,\n'
                 '    "agilidad": 88\n'
                 "  },\n"
-                '  "special_move": "Nombre del Ataque Definitivo o Técnica Legendaria",\n'
-                '  "rarity_class": "Reliquia Sagrada de Grayskull"\n'
+                f'  "special_move": "{canonical_profile["special_move"]}",\n'
+                f'  "rarity_class": "{canonical_profile["rarity_class"]}"\n'
                 "}"
             )
             payload = {
                 "contents": [{"parts": [{"text": prompt}]}],
-                "generationConfig": {"temperature": 0.4, "responseMimeType": "application/json"}
+                "generationConfig": {"temperature": 0.3, "responseMimeType": "application/json"}
             }
 
             try:
@@ -308,26 +325,13 @@ class GeminiCardService:
                         candidates = res_json.get("candidates", [])
                         if candidates:
                             text_content = candidates[0]["content"]["parts"][0]["text"]
-                            return json.loads(text_content)
+                            parsed = json.loads(text_content)
+                            # Asegurar que no venga vacío
+                            if parsed.get("lore") and parsed.get("stats"):
+                                return parsed
             except Exception as e:
-                logger.warning(f"Error generando lore con Gemini Flash: {e}")
+                logger.warning(f"Error generando lore con Gemini Flash, usando enciclopedia canónica: {e}")
 
-        # Fallback determinista local
-        base_hash = sum(ord(c) for c in product_name)
-        fuerza = 75 + (base_hash % 24)
-        magia = 70 + ((base_hash * 3) % 29)
-        defensa = 78 + ((base_hash * 7) % 21)
-        agilidad = 72 + ((base_hash * 11) % 26)
-
-        return {
-            "lore": f"Forjado en los fuegos arcanos de Eternia, {product_name} porta la esencia y el poder ancestral de Grayskull en cada combate.",
-            "stats": {
-                "fuerza": fuerza,
-                "magia": magia,
-                "defensa": defensa,
-                "agilidad": agilidad
-            },
-            "special_move": "Impacto de Relámpago Cósmico",
-            "rarity_class": "Reliquia Sagrada de Grayskull" if grading >= 9.5 else "Guardián de Nueva Eternia"
-        }
+        # Fallback canónico oficial (100% fiel al personaje y sus armas)
+        return canonical_profile
 

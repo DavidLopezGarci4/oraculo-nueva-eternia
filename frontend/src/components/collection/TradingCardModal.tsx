@@ -88,7 +88,7 @@ const generateTradingCardDataUrl = async (node: HTMLElement, item: any, activeIm
             ctx.lineWidth = 3;
             ctx.strokeRect(30, 30, width - 60, height - 60);
 
-            // 3. Cabecera y Grado
+            // 3. Cabecera y Estado de Combate
             ctx.fillStyle = '#fde68a';
             ctx.font = 'bold 28px sans-serif';
             ctx.fillText(item.sub_category || 'MOTU ORIGINS', 50, 85);
@@ -98,8 +98,8 @@ const generateTradingCardDataUrl = async (node: HTMLElement, item: any, activeIm
             ctx.fillText(`HERITAGE ARCHIVE • #${(item.sku || String(item.id)).slice(-5)}`, 50, 115);
 
             ctx.fillStyle = '#34d399';
-            ctx.font = 'bold 24px monospace';
-            ctx.fillText(`GRADE ${(item.grading || 10.0).toFixed(1)} • GEM MINT`, width - 380, 85);
+            ctx.font = 'bold 22px monospace';
+            ctx.fillText('⚔️ COMBATE ÉPICO • ETERNIA', width - 380, 85);
 
             // 4. Área de Imagen
             ctx.fillStyle = '#090d16';
@@ -216,7 +216,6 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
 
     const name = item.product_name || item.name || 'Figura MOTU';
     const condition = (item.condition || 'MOC').toUpperCase();
-    const isMoc = condition === 'MOC';
     const grade = item.grading || 10.0;
     const purchase = item.purchase_price || 0.0;
     const market = item.current_value || purchase || 19.99;
@@ -551,17 +550,17 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                     </div>
                                 </div>
 
-                                {/* Insignia de Grado Oficial */}
-                                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-emerald-500/20 to-teal-500/20 border border-emerald-400/50 shadow-sm">
-                                    <Award className="h-3 w-3 text-emerald-400" />
-                                    <span className="text-[10px] font-black text-emerald-300 font-mono">
-                                        GRADE {grade.toFixed(1)}
+                                {/* Insignia de Combate Oficial de Eternia */}
+                                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500/20 to-yellow-500/20 border border-amber-400/50 shadow-sm">
+                                    <Zap className="h-3 w-3 text-amber-400" />
+                                    <span className="text-[9px] font-black text-amber-300 font-mono uppercase tracking-wider">
+                                        COMBATE ÉPICO
                                     </span>
                                 </div>
                             </div>
 
                             {/* 2. Marco Holográfico con Foto HD o Arte Transformado con IA */}
-                            <div className="relative z-10 h-52 w-full rounded-xl bg-gradient-to-b from-slate-950 via-slate-900 to-black border border-slate-800 flex items-center justify-center overflow-hidden mb-2.5 group shadow-inner">
+                            <div className="relative z-10 h-56 w-full rounded-xl bg-gradient-to-b from-slate-950 via-slate-900 to-black border border-slate-800 flex items-center justify-center overflow-hidden mb-2.5 group shadow-inner">
                                 {/* Patrón de rejilla de fondo */}
                                 <div
                                     className="absolute inset-0 opacity-10"
@@ -575,7 +574,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                     <img
                                         src={aiResult.image_base64}
                                         alt={name}
-                                        className="h-full w-full object-cover z-10 animate-in fade-in zoom-in-95 duration-500"
+                                        className="h-full w-full object-cover object-center z-10 animate-in fade-in zoom-in-95 duration-500"
                                     />
                                 ) : (
                                     <div className="relative h-full w-full flex items-center justify-center overflow-hidden">
@@ -587,21 +586,6 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                         />
                                     </div>
                                 )}
-
-                                {/* Badge de Estado (MOC / LOOSE / AI ART) con resplandor */}
-                                <div className="absolute top-2 left-2 z-20">
-                                    <span
-                                        className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider border shadow-lg ${
-                                            aiResult
-                                                ? 'bg-purple-600/90 text-white border-purple-300 shadow-purple-500/40'
-                                                : isMoc
-                                                ? 'bg-amber-500/90 text-black border-amber-300 shadow-amber-500/40'
-                                                : 'bg-cyan-500/90 text-black border-cyan-300 shadow-cyan-500/40'
-                                        }`}
-                                    >
-                                        {aiResult ? `✨ ${aiResult.style_name.split(' ')[0] || 'AI'}` : isMoc ? '🛡️ MOC • CARDED' : '⚔️ LOOSE • MINT'}
-                                    </span>
-                                </div>
 
                                 {/* Multiplicador Flotante o Golpe Especial */}
                                 {purchase > 0 && profit > 0 && (
