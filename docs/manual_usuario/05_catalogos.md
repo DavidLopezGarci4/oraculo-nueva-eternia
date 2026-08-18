@@ -15,7 +15,7 @@ Al acceder a cualquier figura del catálogo, la aplicación muestra una ficha t�
 *   **Métricas de Mercado**:
     *   *MSRP (Retail)*: Precio recomendado de venta al público en tiendas oficiales.
     *   *Precio Medio del Mercado Secundario*: Calculado a partir del percentil 25 (P25) de las ofertas activas en el mercado P2P.
-*   **Ofertas Activas**: Un listado de todas las ofertas que están a la venta actualmente en portales online (Wallapop, Vinted, eBay o tiendas de distribución) que han sido enlazadas a esta figura. Cada oferta muestra su precio, gastos de envío calculados, procedencia y un enlace de redirección directa al portal de venta original.
+*   **Ofertas Activas**: Un listado de todas las ofertas que están a la venta actualmente en portales online (Wallapop, Vinted, eBay o tiendas de distribución) que han sido enlazadas a esta figura. Cada oferta muestra su precio base, desglose de gastos de envío/seguros, coste final consolidado (*Landed Price*), procedencia y un enlace de redirección directa. La oferta con el menor coste total puesto en casa es destacada automáticamente con el distintivo de **Mejor Oferta**.
 
 ---
 

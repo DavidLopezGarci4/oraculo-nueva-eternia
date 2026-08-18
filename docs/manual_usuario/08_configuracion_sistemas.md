@@ -46,8 +46,15 @@ La pestaña de **Ajustes de Sistema** está abierta tanto a Guardianes como a Ad
 *   **Toggle de Habilitación**: Permite encender o apagar la visibilidad pública de tu colección.
 *   **Enlace de Compartir**: Muestra el enlace exclusivo a tu Showcase y un botón rápido para copiarlo al portapapeles.
 
-### 4.2 Ubicación del Guardián (Cálculo de Envíos)
-*   Permite seleccionar el país de residencia (ej. España, Francia). El sistema cruzará esta ubicación con las reglas logísticas para calcular de forma dinámica y precisa el costo real de envío consolidado (Landed Price) de cada oferta de subasta o tienda.
+### 4.2 Ubicación del Guardián y Reglas Logísticas (Landed Price)
+*   Permite seleccionar el país de residencia (ej. España, Francia). El sistema cruza esta ubicación y las directivas logísticas del oráculo para calcular de forma dinámica y precisa el costo real de envío consolidado (*Landed Price*) de cada oferta de subasta o tienda.
+*   **Reglas Logísticas por Tienda y Marketplace:**
+    *   **BigBadToyStore (BBTS):** Tarifa fija de $8.00 USD de envío a España con conversión de divisa a EUR y recargo del 21% de IVA/aduanas sobre el importe total.
+    *   **Marketplaces P2P (Wallapop, Vinted, eBay):** Tarifa base de envío de 5.00€ + 2% adicional en concepto de seguro y protección al comprador.
+    *   **Frikimaz:** Coste de envío de 5.00€, siendo gratuito en pedidos a partir de 69.00€.
+    *   **Smyths Toys:** Tarifa de envío estándar de 4.00€.
+    *   **Triguetech:** Tarifa plana inamovible de 7.00€ por expedición.
+    *   **Toymi / ToymiEU:** Coste estándar consolidado europeo.
 
 ### 4.3 Caché Local de Imágenes (Acelerador de Carga en Cliente)
 El Oráculo cuenta con un sistema de almacenamiento en caché en el navegador (utilizando Cache API / IndexedDB) para erradicar por completo los tiempos de carga:

@@ -37,6 +37,10 @@ El tablero cuenta con widgets laterales de estado técnico que proporcionan info
 
 El tablero también destaca ofertas activas e inmediatas clasificadas por el algoritmo con un **DealScore** excepcional (puntuaciones cercanas a 100). Sirve como acceso directo para comprar gangas que acaban de publicarse en internet antes de que otros coleccionistas las detecten.
 
+> [!NOTE]
+> **Cálculo de Precios Reales Puestos en Casa (Landed Price)**:
+> A diferencia de otros agregadores que solo comparan el precio base de catálogo, el Oráculo calcula el coste final real puesto en casa (*Landed Price*). El algoritmo incluye los gastos de envío específicos de cada tienda o marketplace, comisiones de protección al comprador (seguro P2P del 2%), aranceles e IVA de importación (como en BigBadToyStore) y umbrales de envío gratuito (ej. Frikimaz a partir de 69€). Esto garantiza que las oportunidades sugeridas sean gangas auténticas y no oculten sobrecostes logísticos.
+
 ---
 
 ## Regimientos del Destino (Completitud de Hordas)

@@ -1301,5 +1301,26 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
   - **Validación**: Suite completa de tests (`pytest tests/ -v`) superada con 67/67 tests aprobados (100% de éxito).
 
 
+### 🛡️ Fase 83: Refactorización y Calibración del Landed Price y Reglas Logísticas por Tienda (18/08/2026)
+
+- **Hitos**: Reestructuración del motor de cálculo de precios finales (*Landed Price*), erradicación del sesgo de ofertas por precio base en catálogo, calibración matemática precisa de reglas logísticas por marketplace/tienda y suite integral de tests.
+- **Estado**: ✅ COMPLETADO Y VERIFICADO
+- **Logros Técnicos**:
+  - **Cálculo Real del Landed Price (`LogisticsService`)**: Refactorizada la función `optimized_get_landing_price()` y el servicio de carrito `calculate_cart` para aplicar de forma exacta las estructuras tarifarias y fiscales:
+    * **BigBadToyStore (BBTS)**: Envío fijo de $8.00 USD + conversión de divisa a EUR + 21% de IVA (recargo aduanero/arancelario sobre el total importado).
+    * **Marketplaces P2P (Ebay, Vinted, Wallapop)**: Tarifa plana de envío de 5.00€ + 2% de comisión de seguro/protección de plataforma sobre el valor del artículo.
+    * **Frikimaz**: Envío base de 5.00€ con umbral de gratuidad para pedidos iguales o superiores a 69.00€.
+    * **Smyths Toys**: Tarifa plana de envío calibrada en 4.00€.
+    * **Triguetech**: Tarifa plana inamovible de 7.00€ independiente del volumen de unidades.
+    * **Consolidación y Limpieza**: Retirada *ActionToys* y unificadas las denominaciones *Toymi* y *ToymiEU*.
+  - **Erradicación del Filtro de Ofertas Engañosas en Dashboard y Catálogo**:
+    * En `src/interfaces/api/routers/dashboard.py` (`/api/dashboard/top-deals`), se eliminó la subconsulta SQL basada en `MIN(price)` que descartaba ofertas óptimas con envío barato frente a ofertas con precio base bajo pero costes de importación abusivos. Ahora se cargan las ofertas candidatas y se evalúa el *Landed Price* algorítmicamente en memoria.
+    * En `ValuationService` (`get_consolidated_value` y `get_pure_landed_value`), se actualizó la comparación de las ramas *best_retail* y *best_p2p* para iterar directamente sobre el precio final en mano.
+    * En `src/interfaces/api/routers/products.py` (`/api/products/{id}/offers`), la determinación de la bandera `is_best: True` se computa ahora contra el menor *Landed Price*.
+  - **Sincronización y Sembrado de Reglas (`seed_logistics.py`)**: Actualizado el script con las reglas definitivas y habilitada la inyección paramétrica (`db_session`) para poblar la base de datos de test en memoria.
+  - **Suite de Pruebas Automatizadas**: Creada la suite `tests/integration/test_logistics_and_pricing.py` y adaptado `conftest.py` con precarga del caché de divisas en `CurrencyService` y sembrado automático de reglas logísticas para ejecución de tests 100% offline y hermética.
+
+
+
 
 

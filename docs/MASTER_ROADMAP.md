@@ -557,6 +557,11 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
   - [x] **Auto-Reparación de Symlinks de Certbot**: Implementada lógica curativa en `renew_ssl.sh` que restaura enlaces simbólicos a `archive/` si se detectan ficheros planos en `live/`, evitando fallos `parsefail`.
   - [x] **Ejecución Asíncrona y Sincronización de Rutas**: Refactorizado `SSLService.renew_ssl_certificate` usando `asyncio.to_thread` para evitar congelar el bucle de FastAPI (eliminando errores 504 Gateway Timeout). Mapeados los directorios `/etc/letsencrypt` y `/var/www/certbot` preventivamente en `docker-entrypoint.sh` y backend en `docker-compose.prod.yml`.
 
+- [x] **Phase 83: Refactorización y Calibración del Landed Price y Reglas Logísticas por Tienda (18/08/2026)**
+  - [x] **Revisión y Ajuste de Reglas Logísticas**: Calibradas las tarifas comerciales exactas en `seed_logistics.py` y `LogisticsService`: BigBadToyStore ($8 USD + 21% IVA en aduanas sobre el total en EUR), P2P (Wallapop/Vinted/eBay: 5.00€ envío + 2% de comisión de seguro), Frikimaz (5.00€ con umbral de envío gratis ≥ 69.00€), Smyths Toys (4.00€), Triguetech (7.00€ fijo) y consolidación/unificación de Toymi/ToymiEU (retirando ActionToys).
+  - [x] **Cálculo de Mejores Ofertas Basado en Landed Price**: Eliminadas las consultas SQL `MIN(price)` en `/api/dashboard/top-deals`, `ValuationService` y `/api/products/{id}/offers` que sesgaban los resultados al ignorar gastos de envío e impuestos. El sistema evalúa ahora el precio final real puesto en casa de forma iterativa y precisa.
+  - [x] **Suite de Integración y Tests Herméticos**: Creado `test_logistics_and_pricing.py` y adaptado `conftest.py` con precarga del caché de divisas en `CurrencyService` y sembrado de reglas logísticas para ejecución de tests 100% offline.
+
 
 
 ---
