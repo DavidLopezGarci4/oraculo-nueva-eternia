@@ -13,7 +13,7 @@ import {
     RefreshCw,
     ChevronDown
 } from 'lucide-react';
-import { updateCollectionItem, toggleCollection } from '../api/collection';
+import { updateCollectionItem } from '../api/collection';
 import type { Product } from '../api/collection';
 import { getOptimizedImageUrl } from '../utils/imageUtils';
 import { MOTUImage } from './ui/MOTUImage';
@@ -57,15 +57,6 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
             acquired_at: acquiredAt,
             acquired: product.is_wish ? true : undefined
         }),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['collection', userId] });
-            queryClient.invalidateQueries({ queryKey: ['dashboard-stats', userId] });
-            onClose();
-        }
-    });
-
-    const toggleMutation = useMutation({
-        mutationFn: () => toggleCollection(product.id, userId, false),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['collection', userId] });
             queryClient.invalidateQueries({ queryKey: ['dashboard-stats', userId] });
@@ -269,27 +260,8 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
                         <div className="flex flex-row justify-center items-center gap-2 md:gap-4 w-full">
                             <button
                                 type="button"
-                                onClick={() => {
-                                    const isVintage = !!product.is_vintage;
-                                    const message = isVintage
-                                        ? `¿Seguro de desvincular '${product.name}' de tu colección? Volverá a aparecer en Eternia (las estadísticas y ofertas del producto permanecerán intactas).`
-                                        : `¿Seguro de liberar '${product.name}' de tu colección?`;
-                                    if (confirm(message)) {
-                                        toggleMutation.mutate();
-                                    }
-                                }}
-                                disabled={toggleMutation.isPending}
-                                className="flex-1 sm:flex-initial min-w-[90px] sm:min-w-[140px] px-3 py-2 md:px-6 md:py-4 rounded-lg md:rounded-2xl bg-red-500/10 text-red-400 border border-red-500/20 font-black uppercase tracking-widest text-[8px] md:text-[10px] hover:bg-red-500 hover:text-white transition-all shadow-lg hover:shadow-red-500/20 flex justify-center items-center gap-2"
-                                title={product.is_vintage ? "Desvincular de la Colección" : "Liberar de la Colección"}
-                            >
-                                {toggleMutation.isPending ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
-                                <span>{product.is_vintage ? 'Desvincular' : 'Liberar'}</span>
-                            </button>
-
-                            <button
-                                type="button"
                                 onClick={() => setShowTradingCard(true)}
-                                className="flex-1 sm:flex-initial min-w-[90px] sm:min-w-[140px] px-3 py-2 md:px-6 md:py-4 rounded-lg md:rounded-2xl bg-amber-500/15 text-amber-300 border border-amber-500/30 font-black uppercase tracking-widest text-[8px] md:text-[10px] hover:bg-amber-500 hover:text-black transition-all shadow-lg flex justify-center items-center gap-1.5"
+                                className="flex-1 sm:flex-initial min-w-[120px] sm:min-w-[150px] px-3 py-2 md:px-6 md:py-4 rounded-lg md:rounded-2xl bg-amber-500/15 text-amber-300 border border-amber-500/30 font-black uppercase tracking-widest text-[8px] md:text-[10px] hover:bg-amber-500 hover:text-black transition-all shadow-lg flex justify-center items-center gap-1.5"
                                 title="Generar Cromo de Colección Compartible"
                             >
                                 <Sparkles className="h-3.5 w-3.5" />

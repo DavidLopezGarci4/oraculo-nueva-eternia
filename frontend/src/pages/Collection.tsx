@@ -16,7 +16,6 @@ import {
     Database,
     RefreshCw,
     Settings,
-    Trash2,
     X,
     Save,
     ArrowUp,
@@ -32,7 +31,7 @@ import { getOptimizedImageUrl } from '../utils/imageUtils';
 import { MOTUImage } from '../components/ui/MOTUImage';
 import CollectionItemDetailModal from '../components/CollectionItemDetailModal';
 import { FoilTiltCard } from '../components/ui/FoilTiltCard';
-import { updateProduct, deleteProduct, exportCollectionExcel, exportCollectionExcelVintage, exportCollectionSqlite } from '../api/admin';
+import { updateProduct, exportCollectionExcel, exportCollectionExcelVintage, exportCollectionSqlite } from '../api/admin';
 import type { Hero } from '../api/admin';
 
 const getAdjustedStats = (product: Product, isOwned: boolean) => {
@@ -104,22 +103,6 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
         }
     });
 
-    const deleteProductMutation = useMutation({
-        mutationFn: (productId: number) => deleteProduct(productId),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['collection'] });
-            queryClient.invalidateQueries({ queryKey: ['vintage-products'] });
-            queryClient.invalidateQueries({ queryKey: ['purgatory'] });
-            queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
-            setSelectedProduct(null);
-            alert('Reliquia eliminada y devuelta al Purgatorio con éxito.');
-        },
-        onError: (err) => {
-            console.error('Error al eliminar producto:', err);
-            alert('No se pudo eliminar el producto. Inténtelo de nuevo.');
-        }
-    });
-
     const handleSaveEdit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!editingProduct) return;
@@ -134,12 +117,6 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                 is_vintage: editingProduct.is_vintage
             }
         });
-    };
-
-    const handleDeleteProduct = (product: Product) => {
-        if (confirm(`¿Estás completamente seguro de que deseas eliminar permanentemente '${product.name}' de los catálogos y colecciones? Todas sus ofertas vinculadas volverán al Purgatorio.`)) {
-            deleteProductMutation.mutate(product.id);
-        }
     };
 
     // 1. Fetch de la colección para filtrado y ordenación instantánea a 0ms en cliente
@@ -611,22 +588,13 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                                         </button>
 
                                         {isAdmin && (
-                                            <>
-                                                <button
-                                                    onClick={() => setEditingProduct(product)}
-                                                    className="h-7 w-7 flex items-center justify-center rounded-xl bg-white/5 border border-white/5 text-white/60 hover:bg-white/10 hover:text-white transition-all"
-                                                    title="Editar metadatos"
-                                                >
-                                                    <Settings className="h-3.5 w-3.5" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDeleteProduct(product)}
-                                                    className="h-7 w-7 flex items-center justify-center rounded-xl bg-white/5 border border-white/5 text-white/60 hover:bg-red-500/20 hover:text-red-400 transition-all"
-                                                    title="Eliminar y devolver al Purgatorio"
-                                                >
-                                                    <Trash2 className="h-3.5 w-3.5" />
-                                                </button>
-                                            </>
+                                            <button
+                                                onClick={() => setEditingProduct(product)}
+                                                className="h-7 w-7 flex items-center justify-center rounded-xl bg-white/5 border border-white/5 text-white/60 hover:bg-white/10 hover:text-white transition-all"
+                                                title="Editar metadatos"
+                                            >
+                                                <Settings className="h-3.5 w-3.5" />
+                                            </button>
                                         )}
 
                                         {activeTab === 'wish' ? (

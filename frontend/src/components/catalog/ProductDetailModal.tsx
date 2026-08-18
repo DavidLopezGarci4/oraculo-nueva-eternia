@@ -1,6 +1,6 @@
 import React from 'react';
 import type { UseMutationResult, QueryClient } from '@tanstack/react-query';
-import { RefreshCw, Trash2, GitMerge, Package, ShoppingBasket, ExternalLink } from 'lucide-react';
+import { RefreshCw, GitMerge, Package, ShoppingBasket, ExternalLink } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { getOptimizedImageUrl } from '../../utils/imageUtils';
@@ -15,7 +15,6 @@ interface ProductDetailModalProps {
     isVintageOnly: boolean;
     setExpandedImage: (url: string | null) => void;
     isAdmin: boolean;
-    deleteProductMutation: UseMutationResult<any, any, number, any>;
     showMergePanel: boolean;
     setShowMergePanel: (show: boolean) => void;
     mergeSearchQuery: string;
@@ -38,7 +37,6 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
     isVintageOnly,
     setExpandedImage,
     isAdmin,
-    deleteProductMutation,
     showMergePanel,
     setShowMergePanel,
     mergeSearchQuery,
@@ -97,20 +95,6 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                         >
                             <span className="text-2xl">&times;</span>
                         </button>
-                        {isAdmin && (
-                            <button
-                                onClick={() => {
-                                    if (confirm(`¿Arquitecto, está seguro de ELIMINAR por completo el producto genérico '${selectedProduct.name}' de Eternia? Todas las ofertas vinculadas serán devueltas de inmediato al Purgatorio.`)) {
-                                        deleteProductMutation.mutate(selectedProduct.id);
-                                    }
-                                }}
-                                disabled={deleteProductMutation.isPending}
-                                className="h-10 w-10 flex items-center justify-center rounded-xl bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500 hover:text-white transition-all shadow-lg"
-                                title="Eliminar producto de Eternia (Devolver ofertas al Purgatorio)"
-                            >
-                                {deleteProductMutation.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                            </button>
-                        )}
                         {isAdmin && (
                             <button
                                 onClick={() => setShowMergePanel(!showMergePanel)}

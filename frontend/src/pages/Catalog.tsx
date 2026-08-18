@@ -15,7 +15,7 @@ import {
 import { useCart } from '../context/CartContext';
 import { getCollection, toggleCollection } from '../api/collection';
 import type { Product } from '../api/collection';
-import { updateProduct, unlinkOffer, deleteProduct, syncNexusVintage, getScrapersLogs } from '../api/admin';
+import { updateProduct, unlinkOffer, syncNexusVintage, getScrapersLogs } from '../api/admin';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { getProductPriceHistory, getUniqueShops } from '../api/products';
@@ -273,21 +273,6 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['product-offers', selectedProduct?.id] });
             queryClient.invalidateQueries({ queryKey: ['products-with-offers'] });
-        }
-    });
-
-    const deleteProductMutation = useMutation({
-        mutationFn: (productId: number) => deleteProduct(productId),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['products', isVintageOnly] });
-            queryClient.invalidateQueries({ queryKey: ['vintage-products'] });
-            queryClient.invalidateQueries({ queryKey: ['purgatory'] });
-            queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
-            setSelectedProduct(null);
-        },
-        onError: (err) => {
-            console.error('Error al eliminar de Eternia:', err);
-            alert('No se pudo eliminar el producto. Inténtelo de nuevo.');
         }
     });
 
@@ -788,7 +773,6 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                 isVintageOnly={isVintageOnly}
                 setExpandedImage={setExpandedImage}
                 isAdmin={isAdmin}
-                deleteProductMutation={deleteProductMutation}
                 showMergePanel={showMergePanel}
                 setShowMergePanel={setShowMergePanel}
                 mergeSearchQuery={mergeSearchQuery}
