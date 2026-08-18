@@ -90,7 +90,8 @@ class GeminiCardService:
     @classmethod
     async def _generate_ai_art(cls, product_name: str, sub_category: str, style: str) -> Optional[str]:
         """
-        Llama al endpoint de Google Imagen 3 mediante la API de Gemini para generar el arte del cromo.
+        Llama al endpoint de generación de imagen multimodal de Gemini (gemini-2.5-flash-image / gemini-3.1-flash-image)
+        para generar una pintura real de la figura.
         """
         if not settings.GEMINI_API_KEY:
             logger.info("Sin GEMINI_API_KEY: devolviendo modo determinista.")
@@ -99,30 +100,43 @@ class GeminiCardService:
         style_cfg = cls.STYLES_CONFIG.get(style, cls.STYLES_CONFIG["oil_vintage"])
         prompt_text = style_cfg["prompt"].format(name=product_name, sub_category=sub_category)
 
-        # Intentar llamada a Imagen 3
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key={settings.GEMINI_API_KEY}"
+        models_to_try = [
+            "gemini-2.5-flash-image",
+            "gemini-3.1-flash-image",
+            "gemini-3-pro-image",
+            "gemini-3.1-flash-lite-image"
+        ]
+
         payload = {
-            "instances": [{"prompt": prompt_text}],
-            "parameters": {
-                "sampleCount": 1,
-                "aspectRatio": "3:4",
-                "outputOptions": {"mimeType": "image/png"}
+            "contents": [{
+                "parts": [{"text": prompt_text}]
+            }],
+            "generationConfig": {
+                "responseModalities": ["IMAGE"]
             }
         }
 
-        try:
-            async with httpx.AsyncClient(timeout=25.0) as client:
-                resp = await client.post(url, json=payload)
-                if resp.status_code == 200:
-                    data = resp.json()
-                    predictions = data.get("predictions", [])
-                    if predictions and "bytesBase64Encoded" in predictions[0]:
-                        b64 = predictions[0]["bytesBase64Encoded"]
-                        return f"data:image/png;base64,{b64}"
-                else:
-                    logger.warning(f"Imagen 3 API devolvió status {resp.status_code}: {resp.text[:150]}")
-        except Exception as e:
-            logger.warning(f"Error generando arte con Imagen 3: {e}")
+        async with httpx.AsyncClient(timeout=45.0) as client:
+            for model in models_to_try:
+                try:
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={settings.GEMINI_API_KEY}"
+                    resp = await client.post(url, json=payload)
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        candidates = data.get("candidates", [])
+                        if candidates:
+                            parts = candidates[0].get("content", {}).get("parts", [])
+                            for part in parts:
+                                if "inlineData" in part:
+                                    mime = part["inlineData"].get("mimeType", "image/png")
+                                    b64 = part["inlineData"].get("data")
+                                    if b64:
+                                        logger.info(f"Arte generado con éxito usando {model} ({len(b64)} bytes base64)")
+                                        return f"data:{mime};base64,{b64}"
+                    else:
+                        logger.warning(f"Modelo {model} respondió {resp.status_code}: {resp.text[:120]}")
+                except Exception as e:
+                    logger.warning(f"Error generando arte con modelo {model}: {e}")
 
         return None
 

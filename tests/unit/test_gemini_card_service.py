@@ -45,14 +45,21 @@ async def test_enhance_card_oil_vintage():
 
 @pytest.mark.asyncio
 async def test_enhance_card_with_mocked_imagen():
-    """Verifica la integración con mock de la respuesta de Imagen 3."""
+    """Verifica la integración con mock de la respuesta multimodal de Gemini."""
     from unittest.mock import MagicMock
     mock_response = MagicMock()
     mock_response.status_code = 200
     mock_response.json.return_value = {
-        "predictions": [
-            {"bytesBase64Encoded": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="}
-        ]
+        "candidates": [{
+            "content": {
+                "parts": [{
+                    "inlineData": {
+                        "mimeType": "image/png",
+                        "data": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+                    }
+                }]
+            }
+        }]
     }
 
     with patch("httpx.AsyncClient.post", return_value=mock_response):
