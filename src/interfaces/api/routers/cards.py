@@ -16,6 +16,8 @@ async def enhance_card_with_ai(payload: CardAiEnhanceInput):
         sub_category=payload.sub_category,
         style=payload.style,
         condition=payload.condition,
-        grading=payload.grading
+        grading=payload.grading,
+        image_url=payload.image_url,
+        image_base64=payload.image_base64
     )
     return result

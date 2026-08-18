@@ -757,9 +757,11 @@ class SSLRenewRequest(BaseModel):
 class CardAiEnhanceInput(BaseModel):
     product_name: str
     sub_category: Optional[str] = "MOTU Origins"
-    style: str = "oil_vintage"  # 'oil_vintage' | 'comic_retro' | 'cinematic_4k' | 'rpg_lore'
+    style: str = "obrero_norem_80s"  # 'obrero_norem_80s' | 'alcala_texeira_minicomic' | 'gimenez_santalucia_modern' | 'heavy_metal_dark_eternia'
     condition: str = "MOC"
     grading: float = 10.0
+    image_url: Optional[str] = None
+    image_base64: Optional[str] = None
 
 
 class CardAiEnhanceOutput(BaseModel):
@@ -770,5 +772,6 @@ class CardAiEnhanceOutput(BaseModel):
     stats: Optional[Dict[str, int]] = None
     special_move: Optional[str] = None
     rarity_class: Optional[str] = None
+
 
 

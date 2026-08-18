@@ -1,11 +1,23 @@
 import axios from 'axios';
 
+export type MotuArtStyle =
+    | 'obrero_norem_80s'
+    | 'alcala_texeira_minicomic'
+    | 'gimenez_santalucia_modern'
+    | 'heavy_metal_dark_eternia'
+    | 'oil_vintage'
+    | 'comic_retro'
+    | 'cinematic_4k'
+    | 'rpg_lore';
+
 export interface CardAiEnhancePayload {
     product_name: string;
     sub_category?: string;
-    style: 'oil_vintage' | 'comic_retro' | 'cinematic_4k' | 'rpg_lore';
+    style: MotuArtStyle;
     condition?: string;
     grading?: number;
+    image_url?: string;
+    image_base64?: string;
 }
 
 export interface CardAiEnhanceResult {

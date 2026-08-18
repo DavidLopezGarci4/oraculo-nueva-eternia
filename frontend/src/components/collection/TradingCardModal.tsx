@@ -252,7 +252,9 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
     };
 
     // Manejador de Transformación con Gemini
-    const handleTransformWithAI = async (style: 'oil_vintage' | 'comic_retro' | 'cinematic_4k' | 'rpg_lore') => {
+    const handleTransformWithAI = async (
+        style: 'obrero_norem_80s' | 'alcala_texeira_minicomic' | 'gimenez_santalucia_modern' | 'heavy_metal_dark_eternia'
+    ) => {
         try {
             setIsAiLoading(true);
             setAiError(null);
@@ -261,7 +263,8 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                 sub_category: item.sub_category,
                 style,
                 condition,
-                grading: grade
+                grading: grade,
+                image_url: item.image_url
             });
             setAiResult(res);
         } catch (err: any) {
@@ -409,16 +412,16 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                             onClick={() => setShowAiDrawer(!showAiDrawer)}
                             className="w-full py-1.5 px-3 rounded-xl bg-gradient-to-r from-purple-600/30 via-cyan-600/30 to-amber-600/30 hover:from-purple-600/40 hover:to-amber-600/40 border border-cyan-400/50 text-cyan-200 text-xs font-black uppercase tracking-wider flex items-center justify-between shadow-lg shadow-cyan-500/10 transition"
                         >
-                            <span className="flex items-center gap-1.5">
-                                <Wand2 className="h-3.5 w-3.5 text-yellow-300 animate-pulse" />
-                                {aiResult ? `✨ Estilo: ${aiResult.style_name}` : '🪄 Transformar con IA de Gemini'}
+                            <span className="flex items-center gap-1.5 truncate">
+                                <Wand2 className="h-3.5 w-3.5 text-yellow-300 animate-pulse shrink-0" />
+                                <span className="truncate">{aiResult ? `✨ ${aiResult.style_name}` : '🪄 Ilustrar con Maestros MOTU'}</span>
                             </span>
-                            <span className="text-[10px] text-cyan-300/80 font-mono">
-                                {showAiDrawer ? '▲ Ocultar' : '▼ Opciones'}
+                            <span className="text-[10px] text-cyan-300/80 font-mono shrink-0 ml-1">
+                                {showAiDrawer ? '▲ Ocultar' : '▼ 4 Estilos'}
                             </span>
                         </button>
 
-                        {/* Menú Desplegable de Estilos de IA */}
+                        {/* Menú Desplegable de Estilos de Ilustradores MOTU */}
                         {showAiDrawer && (
                             <motion.div
                                 initial={{ opacity: 0, height: 0 }}
@@ -426,36 +429,51 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                 className="mt-2 p-2 bg-slate-950/90 border border-cyan-500/30 rounded-xl grid grid-cols-2 gap-1.5 text-[10px]"
                             >
                                 <button
-                                    onClick={() => handleTransformWithAI('oil_vintage')}
+                                    onClick={() => handleTransformWithAI('obrero_norem_80s')}
                                     disabled={isAiLoading}
-                                    className="p-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 font-bold flex items-center gap-1 transition"
+                                    className="p-2 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 font-bold flex flex-col items-start gap-0.5 transition text-left"
                                 >
-                                    <Sparkles className="h-3 w-3 text-amber-400" />
-                                    <span>🎨 Óleo 80s (Mattel)</span>
+                                    <div className="flex items-center gap-1">
+                                        <Sparkles className="h-3 w-3 text-amber-400 shrink-0" />
+                                        <span className="font-black">🎨 Óleo Box-Art 80s</span>
+                                    </div>
+                                    <span className="text-[8px] text-amber-400/70 font-normal">Rudy Obrero & Earl Norem</span>
                                 </button>
+
                                 <button
-                                    onClick={() => handleTransformWithAI('comic_retro')}
+                                    onClick={() => handleTransformWithAI('alcala_texeira_minicomic')}
                                     disabled={isAiLoading}
-                                    className="p-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 font-bold flex items-center gap-1 transition"
+                                    className="p-2 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 font-bold flex flex-col items-start gap-0.5 transition text-left"
                                 >
-                                    <Zap className="h-3 w-3 text-cyan-400" />
-                                    <span>⚔️ Cómic Retro 80s</span>
+                                    <div className="flex items-center gap-1">
+                                        <Zap className="h-3 w-3 text-cyan-400 shrink-0" />
+                                        <span className="font-black">⚔️ Mini-Cómic 80s</span>
+                                    </div>
+                                    <span className="text-[8px] text-cyan-400/70 font-normal">Alfredo Alcala & Texeira</span>
                                 </button>
+
                                 <button
-                                    onClick={() => handleTransformWithAI('cinematic_4k')}
+                                    onClick={() => handleTransformWithAI('gimenez_santalucia_modern')}
                                     disabled={isAiLoading}
-                                    className="p-1.5 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-300 font-bold flex items-center gap-1 transition"
+                                    className="p-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 font-bold flex flex-col items-start gap-0.5 transition text-left"
                                 >
-                                    <Award className="h-3 w-3 text-purple-400" />
-                                    <span>🌌 Cine Épico 4K</span>
+                                    <div className="flex items-center gap-1">
+                                        <Award className="h-3 w-3 text-emerald-400 shrink-0" />
+                                        <span className="font-black">✨ Cardback Moderno</span>
+                                    </div>
+                                    <span className="text-[8px] text-emerald-400/70 font-normal">Axel Gimenez & Santalucia</span>
                                 </button>
+
                                 <button
-                                    onClick={() => handleTransformWithAI('rpg_lore')}
+                                    onClick={() => handleTransformWithAI('heavy_metal_dark_eternia')}
                                     disabled={isAiLoading}
-                                    className="p-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 font-bold flex items-center gap-1 transition"
+                                    className="p-2 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-300 font-bold flex flex-col items-start gap-0.5 transition text-left"
                                 >
-                                    <BookOpen className="h-3 w-3 text-emerald-400" />
-                                    <span>📜 Lore & Stats RPG</span>
+                                    <div className="flex items-center gap-1">
+                                        <BookOpen className="h-3 w-3 text-purple-400 shrink-0" />
+                                        <span className="font-black">🌌 Dark Fantasy MOTU</span>
+                                    </div>
+                                    <span className="text-[8px] text-purple-400/70 font-normal">Kenneth Rocafort & Bisley</span>
                                 </button>
 
                                 {aiResult && (
@@ -473,7 +491,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                         {isAiLoading && (
                             <div className="mt-2 py-1.5 px-3 rounded-lg bg-cyan-500/20 border border-cyan-400 text-cyan-200 text-[11px] font-bold flex items-center justify-center gap-2 animate-pulse">
                                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                <span>Invocando la magia de Gemini & Imagen 3...</span>
+                                <span>Recreando figura fuera del blíster con IA en Eternia...</span>
                             </div>
                         )}
 
@@ -565,26 +583,8 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                             productId={item.id}
                                             src={item.image_url}
                                             alt={name}
-                                            className={`max-h-full max-w-full object-contain p-2.5 z-10 drop-shadow-[0_10px_15px_rgba(0,0,0,0.8)] transition-all duration-500 ${
-                                                aiResult?.style === 'oil_vintage'
-                                                    ? 'sepia-[0.35] contrast-[1.35] saturate-[1.45] brightness-95'
-                                                    : aiResult?.style === 'comic_retro'
-                                                    ? 'contrast-[1.65] saturate-[1.8] brightness-105'
-                                                    : aiResult?.style === 'cinematic_4k'
-                                                    ? 'contrast-[1.45] saturate-[1.25] brightness-90'
-                                                    : ''
-                                            }`}
+                                            className="max-h-full max-w-full object-contain p-2.5 z-10 drop-shadow-[0_10px_15px_rgba(0,0,0,0.8)] transition-all duration-500"
                                         />
-                                        {/* Capa de textura artística según el estilo */}
-                                        {aiResult?.style === 'oil_vintage' && (
-                                            <div className="absolute inset-0 bg-gradient-to-t from-amber-950/40 via-yellow-900/10 to-transparent pointer-events-none z-10 mix-blend-color-burn" />
-                                        )}
-                                        {aiResult?.style === 'comic_retro' && (
-                                            <div className="absolute inset-0 pointer-events-none z-10 mix-blend-overlay opacity-30" style={{ backgroundImage: 'radial-gradient(#000 1.5px, transparent 1.5px)', backgroundSize: '6px 6px' }} />
-                                        )}
-                                        {aiResult?.style === 'cinematic_4k' && (
-                                            <div className="absolute inset-0 bg-gradient-to-tr from-cyan-950/50 via-transparent to-amber-950/40 pointer-events-none z-10 mix-blend-screen" />
-                                        )}
                                     </div>
                                 )}
 
