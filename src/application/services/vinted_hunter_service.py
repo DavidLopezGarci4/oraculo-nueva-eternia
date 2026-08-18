@@ -55,7 +55,7 @@ class VintedHunterService:
 
         # 2. Inyectar en base de datos / Purgatorio mediante ScrapingPipeline
         pipeline = ScrapingPipeline([])
-        pipeline.update_database([offers])
+        pipeline.update_database(offers, shop_names=["Vinted"])
         
         # 3. Detectar y evaluar gangas respecto al precio medio de mercado (P25)
         bargains = []
