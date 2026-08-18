@@ -422,7 +422,7 @@ async def run_daily_scan(progress_callback=None):
         
         with SessionLocal() as db_purg:
             purg_count = db_purg.query(PendingMatchModel).filter(
-                PendingMatchModel.created_at >= start_time
+                PendingMatchModel.first_seen_at >= start_time
             ).count()
             
             tg_msg = (

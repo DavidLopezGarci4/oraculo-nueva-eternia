@@ -289,7 +289,7 @@ async def get_top_deals(user_id: int = 2):
                     best_by_product[o.product_id] = item_data
 
         deals = list(best_by_product.values())
-        deals.sort(key=lambda x: (-x["opportunity_score"], x["landing_price"]))
+        deals.sort(key=lambda x: (x["landing_price"], -x["opportunity_score"]))
 
         seen_names = set()
         final_deals = []

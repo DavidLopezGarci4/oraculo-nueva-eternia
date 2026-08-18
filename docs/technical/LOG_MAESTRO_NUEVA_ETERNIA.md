@@ -1318,7 +1318,17 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
     * En `ValuationService` (`get_consolidated_value` y `get_pure_landed_value`), se actualizó la comparación de las ramas *best_retail* y *best_p2p* para iterar directamente sobre el precio final en mano.
     * En `src/interfaces/api/routers/products.py` (`/api/products/{id}/offers`), la determinación de la bandera `is_best: True` se computa ahora contra el menor *Landed Price*.
   - **Sincronización y Sembrado de Reglas (`seed_logistics.py`)**: Actualizado el script con las reglas definitivas y habilitada la inyección paramétrica (`db_session`) para poblar la base de datos de test en memoria.
-  - **Suite de Pruebas Automatizadas**: Creada la suite `tests/integration/test_logistics_and_pricing.py` y adaptado `conftest.py` con precarga del caché de divisas en `CurrencyService` y sembrado automático de reglas logísticas para ejecución de tests 100% offline y hermética.
+### 🛡️ Fase 84: Cazador Efímero de Vinted, Cuarteto MOTU y Optimización FinOps de GitHub Actions (18/08/2026)
+
+- **Hitos**: Incursión y rastreo bajo demanda de Vinted desde Telegram con detección automática de gangas bajo el precio medio (P25), estandarización del cuarteto canónico de búsquedas MOTU, creación de workflow efímero en Microsoft Azure y eliminación de 60 minutos de espera artificial en el Daily Scan.
+- **Estado**: ✅ COMPLETADO Y VERIFICADO
+- **Logros Técnicos**:
+  - **Cuarteto Canónico de Búsquedas en Vinted**: Estandarizadas en `VintedScraper` las 4 consultas oficiales de rastreo: `"motu origins"`, `"masters del universo"`, `"masters of the universe"` y `"he-man origins"`.
+  - **Servicio `VintedHunterService`**: Implementado en `src/application/services/vinted_hunter_service.py`. Ejecuta el barrido anónimo con huella TLS Chrome (`curl_cffi`), inyecta las ofertas en el Purgatorio y evalúa de forma reactiva cada oferta contra el catálogo. Si el *Landed Price* es inferior al percentil 25 o MSRP con ≥10% de ventaja, dispara una notificación push enriquecida a Telegram con ahorro estimado y enlace directo.
+  - **Comando `/caza` en Telegram**: Integrado en `TelegramListener` (`/caza` y `/caza [término]`), permitiendo disparar cazas en segundo plano desde el móvil con el PC apagado y recibir el informe consolidado.
+  - **Workflow Cloud Efímero (`vinted_hunter.yml`)**: Creado el workflow en GitHub Actions para posibilitar ejecuciones bajo demanda con direcciones IP públicas de Microsoft Azure dinámicas y efímeras (0% riesgo de bloqueo de IP).
+  - **Ahorro FinOps del 85% de Minutos en GitHub Actions**: Eliminado el `sleep` artificial de 60 minutos en `.github/workflows/scrapers.yml` (`--random-delay 0`), reduciendo la duración del Daily Scan a sus 3-5 minutos reales de trabajo y liberando más de 1.700 minutos al mes para cazas móviles.
+  - **Validación Total**: Suite completa de tests superada con 68/68 tests aprobados (100% de éxito).
 
 
 

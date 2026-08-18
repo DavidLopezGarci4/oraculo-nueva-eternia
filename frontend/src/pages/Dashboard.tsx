@@ -791,9 +791,14 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                                                         <a href={deal.url} target="_blank" rel="noopener noreferrer" className="h-10 w-10 shrink-0 rounded-lg bg-white/5 overflow-hidden block">
                                                             <MOTUImage productId={deal.product_id} src={deal.image_url || undefined} alt="" className="h-full w-full object-cover" />
                                                         </a>
-                                                        <div className="min-w-0">
+                                                        <div className="min-w-0 flex-1">
                                                             <a href={deal.url} target="_blank" rel="noopener noreferrer" className="truncate text-xs font-bold text-white block hover:text-brand-primary transition-colors">{deal.product_name}</a>
-                                                            <p className="text-[10px] font-black text-white/60 uppercase">{deal.shop_name} - {deal.price}€</p>
+                                                            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
+                                                                <span className="text-[10px] font-black text-white/60 uppercase">{deal.shop_name}</span>
+                                                                <span className="text-white/20">•</span>
+                                                                <span className="text-xs font-black text-brand-primary">{deal.landing_price} € <span className="text-[8px] opacity-40 font-bold">LANDED</span></span>
+                                                                <span className="text-[10px] font-bold text-white/40">({deal.price} € base)</span>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                     <div className="flex items-center gap-2">

@@ -53,20 +53,11 @@ class VintedScraper(BaseScraper):
         # 1. Configuración inteligente de palabras clave y límites de página
         if query == "auto":
             queries_config = [
-                # Foco Origins (Moderno)
-                ("masters of the universe origins", 2),
-                ("masters del universo origins", 2),
+                # Cuarteto Oficial de Búsquedas MOTU
                 ("motu origins", 2),
-                
-                # Foco Vintage (Clásicos de los 80 - Desactivado temporalmente)
-                # ("masters of the universe vintage", 2),
-                # ("masters del universo vintage", 2),
-                # ("motu vintage", 2),
-                
-                # Foco General (Bajo volumen de páginas para evitar spam/bloqueos)
-                ("masters of the universe", 1),
-                ("masters del universo", 1),
-                ("motu", 1)
+                ("masters del universo", 2),
+                ("masters of the universe", 2),
+                ("he-man origins", 2),
             ]
         else:
             queries_config = [(query, self.max_pages)]

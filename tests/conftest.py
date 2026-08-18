@@ -63,6 +63,7 @@ _SESSION_TARGETS = [
     "src.application.services.excel_manager.SessionCloud",
     "src.infrastructure.scrapers.pipeline.SessionCloud",
     "src.infrastructure.scrapers.wallapop_manual_importer.SessionCloud",
+    "src.application.services.vinted_hunter_service.SessionCloud",
     "scripts.seed_logistics.SessionCloud",
 ]
 

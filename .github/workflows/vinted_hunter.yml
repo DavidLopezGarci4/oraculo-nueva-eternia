@@ -1,0 +1,42 @@
+name: Vinted Hunter (On-Demand Cloud Scan)
+
+on:
+  workflow_dispatch:
+    inputs:
+      query:
+        description: "Search term or 'auto' for 4 MOTU queries"
+        required: false
+        default: "auto"
+      chat_id:
+        description: "Optional specific Telegram Chat ID for alerts"
+        required: false
+        default: ""
+
+jobs:
+  hunt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4.2.2
+
+      - name: Set up Python
+        uses: actions/setup-python@v5.4.0
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run Vinted Cloud Hunter
+        env:
+          SUPABASE_DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          PYTHONPATH: .
+        run: |
+          CHAT_ARG=""
+          if [ -n "${{ github.event.inputs.chat_id }}" ]; then
+            CHAT_ARG="--chat-id ${{ github.event.inputs.chat_id }}"
+          fi
+          python scripts/hunt_vinted.py --query "${{ github.event.inputs.query || 'auto' }}" $CHAT_ARG

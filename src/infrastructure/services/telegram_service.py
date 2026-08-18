@@ -161,5 +161,25 @@ class TelegramService:
         
         return await self.send_message(message, chat_id=chat_id)
 
+    async def send_bargain_hunt_alert(self, product_name: str, item_title: str, price: float, landed_price: float, benchmark_price: float, savings_pct: float, shop_name: str, url: str, image_url: Optional[str] = None, chat_id: Optional[str] = None):
+        """Alerta de ganga detectada en incursión de caza con Landed Price inferior a mercado."""
+        if not self.enabled:
+            return
+
+        message = (
+            f"🔥 <b>¡GANGA DETECTADA EN {shop_name.upper()}!</b> 🔥\n\n"
+            f"📦 <b>Figura Identificada:</b> <b>{product_name}</b>\n"
+            f"🏷️ <b>Título del Anuncio:</b> <i>{item_title}</i>\n"
+            f"🏷️ <b>Precio Base:</b> {price:.2f}€\n"
+            f"🛬 <b>Landed (con envío + seguro):</b> <b>{landed_price:.2f}€</b>\n"
+            f"📊 <b>Precio Medio de Mercado (P25):</b> {benchmark_price:.2f}€\n"
+            f"📉 <b>Ahorro Estimado:</b> <b>{savings_pct:.0f}%</b>\n\n"
+            f"⚡ <i>Oferta inyectada al Purgatorio del Oráculo.</i>\n\n"
+            f"🛒 <a href='{url}'>VER Y COMPRAR EN {shop_name.upper()}</a>"
+        )
+        
+        return await self.send_message(message, chat_id=chat_id)
+
 # Instancia unica para toda la app
 telegram_service = TelegramService()
+

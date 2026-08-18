@@ -248,6 +248,8 @@ class TelegramListener:
             await self.cmd_buscar(chat_id, query)
         elif command in ["/wallapop", "/import"]:
             await self.cmd_import_wallapop(chat_id, args)
+        elif command in ["/caza", "/hunt"]:
+            await self.cmd_caza(chat_id, args)
             
         # --- Comandos de Administrador Only ---
         elif is_admin:
@@ -312,6 +314,8 @@ class TelegramListener:
         lines.append("• <code>/purgatorio</code> - Muestra ofertas pendientes de clasificar.")
         lines.append("• <code>/buscar [figura]</code> - Busca ofertas activas en la base de datos.")
         lines.append("• <code>/wallapop [enlace]</code> - Importa un artículo de Wallapop al Purgatorio (o comparte el link directo).")
+        lines.append("• <code>/caza</code> - Incursión instantánea en Vinted (4 consultas canónicas) con alerta push de gangas bajo precio medio.")
+        lines.append("• <code>/caza [figura]</code> - Caza personalizada de una figura en Vinted.")
         lines.append("• <code>/help</code> - Muestra este menú de ayuda.")
         
         if is_admin:
@@ -732,6 +736,46 @@ class TelegramListener:
         )
         await telegram_service.send_message(msg, chat_id=chat_id)
 
+    async def cmd_caza(self, chat_id: int, args: list):
+        from src.application.services.vinted_hunter_service import VintedHunterService
+        query_term = " ".join(args).strip() if args else "auto"
+        
+        if query_term.lower() in ["auto", "origins", "motu", ""]:
+            desc = "Cuarteto Canónico MOTU (<i>motu origins, masters del universo, masters of the universe, he-man origins</i>)"
+            actual_query = "auto"
+        else:
+            desc = f"Búsqueda Personalizada: '<code>{query_term}</code>'"
+            actual_query = query_term
+            
+        await telegram_service.send_message(
+            f"🏹 <b>[Cazador de Vinted: Incursión Activa]</b>\n\n"
+            f"• <b>Modo:</b> {desc}\n"
+            f"• <b>Objetivo:</b> Detectar ofertas bajo el precio medio de mercado (P25)\n"
+            f"• <b>Destino:</b> Purgatorio + Alerta Inmediata si hay gangas\n\n"
+            f"⏳ <i>Rastreando en la nube con huella Chrome segura...</i>",
+            chat_id=chat_id
+        )
+        
+        async def _run_hunter_bg():
+            try:
+                res = await VintedHunterService.run_hunt(query=actual_query, chat_id=str(chat_id))
+                scraped = res.get("total_scraped", 0)
+                bargains = res.get("bargains_found", 0)
+                
+                summary = (
+                    f"🏁 <b>[Caza de Vinted: Finalizada con Éxito]</b>\n\n"
+                    f"• 📦 <b>Ofertas Extraídas:</b> {scraped}\n"
+                    f"• 🔥 <b>Gangas Bajo Precio Medio:</b> {bargains}\n\n"
+                    f"✅ <i>Todas las ofertas válidas han sido inyectadas al Purgatorio del Oráculo.</i>"
+                )
+                await telegram_service.send_message(summary, chat_id=chat_id)
+            except Exception as ex:
+                logger.error(f"Error en ejecución de VintedHunter: {ex}")
+                await telegram_service.send_message(f"⚠️ Error durante la caza de Vinted: {ex}", chat_id=chat_id)
+                
+        asyncio.create_task(_run_hunter_bg())
+
 # Instancia única del listener
 telegram_listener = TelegramListener()
+
 

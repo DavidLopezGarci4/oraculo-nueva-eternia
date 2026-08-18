@@ -562,6 +562,12 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
   - [x] **Cálculo de Mejores Ofertas Basado en Landed Price**: Eliminadas las consultas SQL `MIN(price)` en `/api/dashboard/top-deals`, `ValuationService` y `/api/products/{id}/offers` que sesgaban los resultados al ignorar gastos de envío e impuestos. El sistema evalúa ahora el precio final real puesto en casa de forma iterativa y precisa.
   - [x] **Suite de Integración y Tests Herméticos**: Creado `test_logistics_and_pricing.py` y adaptado `conftest.py` con precarga del caché de divisas en `CurrencyService` y sembrado de reglas logísticas para ejecución de tests 100% offline.
 
+- [x] **Phase 84: Cazador Efímero de Vinted, Cuarteto MOTU y Optimización FinOps de GitHub Actions (18/08/2026)**
+  - [x] **Estandarización del Cuarteto Canónico de Búsquedas**: Integradas en `VintedScraper` las 4 consultas oficiales (`"motu origins"`, `"masters del universo"`, `"masters of the universe"`, `"he-man origins"`).
+  - [x] **Servicio y Comandos de Caza Móvil (`/caza`)**: Creado `VintedHunterService` y añadido el comando `/caza` en Telegram. Inyecta ofertas en el Purgatorio y envía alertas inmediatas si el Landed Price es inferior al precio medio (P25).
+  - [x] **Workflow Cloud Efímero (`vinted_hunter.yml`)**: Diseñado el workflow para ejecución on-demand en GitHub Actions con IPs dinámicas de Microsoft Azure.
+  - [x] **Optimización FinOps en GitHub Actions**: Eliminado el delay de 60m en `scrapers.yml` (`--random-delay 0`), recuperando >1.700 minutos/mes libres.
+
 
 
 ---

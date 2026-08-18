@@ -76,11 +76,7 @@ jobs:
           APIFY_TOKEN3: ${{ secrets.APIFY_TOKEN3 }}
           PYTHONPATH: .
         run: |
-          # Use 60 min delay for scheduled runs, 0 for manual
-          DELAY=60
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then DELAY=0; fi
-          
-          python src/application/jobs/daily_scan.py --shops "${{ github.event.inputs.shops }}" --random-delay $DELAY --no-nexus
+          python src/application/jobs/daily_scan.py --shops "${{ github.event.inputs.shops }}" --random-delay 0 --no-nexus
 
       - name: SSL Certificate Guardian (Auto-Renew if <= 14 days)
         if: always()
