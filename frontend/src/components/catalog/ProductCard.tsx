@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { UseMutationResult } from '@tanstack/react-query';
 import { Info, Star, Search, Settings, Check, X, ShoppingCart, Plus, Gem, Flame, ArrowUpRight, RefreshCw } from 'lucide-react';
 import { getOptimizedImageUrl } from '../../utils/imageUtils';
 import { MOTUImage } from '../ui/MOTUImage';
 import { FoilTiltCard } from '../ui/FoilTiltCard';
+import { GrayskullLightning } from '../ui/GrayskullLightning';
 import type { Product } from '../../api/collection';
 import { buildSearchQuery } from './catalogHelpers';
 
@@ -68,6 +69,15 @@ const ProductCard: React.FC<ProductCardProps> = ({
 }) => {
     const owned = isOwned(product.id);
     const wished = isWished(product.id);
+    const [lightningActive, setLightningActive] = useState(false);
+
+    const handleToggleCollection = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!owned) {
+            setLightningActive(true);
+        }
+        toggleMutation.mutate({ productId: product.id, wish: false });
+    };
 
     const idNum = parseInt(product.figure_id?.replace(/[^0-9]/g, '') || '0');
     const itemIsGrail = isGrail(product.id);
@@ -100,6 +110,14 @@ const ProductCard: React.FC<ProductCardProps> = ({
             isSpecial={isSpecial}
             className={`group relative flex flex-col gap-1 sm:gap-1.5 md:gap-3 rounded-2xl sm:rounded-[1.5rem] md:rounded-3xl border p-1.5 sm:p-2 md:p-3.5 transition-all duration-500 hover:translate-y-[-8px] backdrop-blur-md ${cardBorderClass}`}
         >
+            {/* Rayo de Grayskull en tiempo real */}
+            <GrayskullLightning
+                active={lightningActive}
+                onComplete={() => setLightningActive(false)}
+                productName={product.name}
+                color={isVintageOnly ? 'gold' : 'emerald'}
+            />
+
             {/* Owned/Wish Badge */}
             {owned && (
                 <div className="absolute top-0 left-0 w-12 h-12 sm:w-16 sm:h-16 overflow-hidden z-20">
@@ -145,10 +163,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                                 ? 'bg-white/5 text-amber-500/60 hover:text-amber-500 hover:bg-amber-500/20'
                                 : 'bg-white/5 text-brand-primary/60 hover:text-brand-primary hover:bg-brand-primary/20'
                         }`}
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        toggleMutation.mutate({ productId: product.id, wish: false });
-                    }}
+                    onClick={handleToggleCollection}
                     title={owned ? 'Liberar del Catálogo (Presionar Lateral)' : wished ? 'Reclamar Reliquia (Presionar Lateral)' : 'Asegurar en la Fortaleza (Presionar Lateral)'}
                 >
                     {toggleMutation.isPending ? (

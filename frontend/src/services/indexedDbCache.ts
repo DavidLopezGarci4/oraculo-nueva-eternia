@@ -104,6 +104,39 @@ class IndexedDbCacheService {
     }
 
     /**
+     * Obtiene el número total de productos en IndexedDB.
+     */
+    async getCount(): Promise<number> {
+        try {
+            const db = await this.getDb();
+            return new Promise((resolve) => {
+                const tx = db.transaction(STORE_PRODUCTS, 'readonly');
+                const store = tx.objectStore(STORE_PRODUCTS);
+                const req = store.count();
+                req.onsuccess = () => resolve(req.result || 0);
+                req.onerror = () => resolve(0);
+            });
+        } catch {
+            return 0;
+        }
+    }
+
+    /**
+     * Limpia la base de datos de IndexedDB.
+     */
+    async clearCache(): Promise<void> {
+        this.memoryCache = null;
+        try {
+            const db = await this.getDb();
+            const tx = db.transaction([STORE_PRODUCTS, STORE_META], 'readwrite');
+            tx.objectStore(STORE_PRODUCTS).clear();
+            tx.objectStore(STORE_META).clear();
+        } catch (e) {
+            console.warn('Error limpiando IndexedDB:', e);
+        }
+    }
+
+    /**
      * Búsqueda ultrarrápida en memoria local (sub-2 milisegundos).
      */
     searchFast(query: string, productsList?: CachedProduct[]): CachedProduct[] {
@@ -119,3 +152,4 @@ class IndexedDbCacheService {
 }
 
 export const indexedDbCache = new IndexedDbCacheService();
+

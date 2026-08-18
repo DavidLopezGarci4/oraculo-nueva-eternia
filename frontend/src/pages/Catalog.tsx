@@ -10,7 +10,8 @@ import {
     Box,
     ArrowUp,
     ArrowDown,
-    Store
+    Store,
+    Zap
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { getCollection, toggleCollection } from '../api/collection';
@@ -20,6 +21,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { getProductPriceHistory, getUniqueShops } from '../api/products';
 import type { Hero } from '../api/admin';
+import { indexedDbCache } from '../services/indexedDbCache';
 import PowerSwordLoader from '../components/ui/PowerSwordLoader';
 import CronosView from '../components/catalog/CronosView';
 import ProductDetailModal from '../components/catalog/ProductDetailModal';
@@ -137,6 +139,8 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
     }, [showVintageSyncModal, vintageSyncStatus, queryClient, isVintageOnly]);
 
 
+    const [idbCount, setIdbCount] = React.useState<number>(0);
+
     // 1. Fetch de todos los productos para filtrado y ordenación ultra-rápida a 0ms en cliente
     const {
         data: products = [],
@@ -147,10 +151,19 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
         queryFn: async () => {
             const url = `/api/products?is_vintage=${isVintageOnly ? 'true' : 'false'}`;
             const response = await axios.get(url);
+            if (response.data && Array.isArray(response.data)) {
+                indexedDbCache.setProducts(response.data).then(() => {
+                    indexedDbCache.getCount().then(setIdbCount);
+                });
+            }
             return response.data;
         },
         staleTime: 1000 * 60 * 5,
     });
+
+    React.useEffect(() => {
+        indexedDbCache.getCount().then(setIdbCount);
+    }, []);
 
     // 2. Fetch de la colección (basada en el ID activo)
     const { data: collection, isLoading: isLoadingCollection } = useQuery<Product[]>({
@@ -526,19 +539,27 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                 <div className={`absolute -right-20 -top-20 h-64 w-64 rounded-full blur-3xl pointer-events-none ${isVintageOnly ? 'bg-amber-500/10' : 'bg-brand-primary/10'}`}></div>
 
                 <div className="relative z-10 flex flex-col gap-1">
-                    <div className={`flex items-center gap-2 ${isVintageOnly ? 'text-amber-500' : 'text-brand-primary'}`}>
-                        <Box className="h-3 w-3 md:h-4 md:w-4" />
-                        <h2 className="text-sm md:text-base font-black uppercase tracking-[0.2em] text-white">
-                            {isVintageOnly ? (
-                                <>
-                                    Eternia <span className="text-amber-500">Vintage</span>
-                                </>
-                            ) : (
-                                <>
-                                    Nueva <span className="text-brand-primary">Eternia</span>
-                                </>
-                            )}
-                        </h2>
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <div className={`flex items-center gap-2 ${isVintageOnly ? 'text-amber-500' : 'text-brand-primary'}`}>
+                            <Box className="h-3 w-3 md:h-4 md:w-4" />
+                            <h2 className="text-sm md:text-base font-black uppercase tracking-[0.2em] text-white">
+                                {isVintageOnly ? (
+                                    <>
+                                        Eternia <span className="text-amber-500">Vintage</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        Nueva <span className="text-brand-primary">Eternia</span>
+                                    </>
+                                )}
+                            </h2>
+                        </div>
+                        {idbCount > 0 && (
+                            <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-[9px] font-mono font-bold text-emerald-300 flex items-center gap-1 shadow-sm">
+                                <Zap className="h-2.5 w-2.5 fill-emerald-400 text-emerald-400" />
+                                <span>{idbCount} en IndexedDB</span>
+                            </span>
+                        )}
                     </div>
                     <p className="max-w-xl text-[11px] md:text-sm text-white/40 font-medium uppercase tracking-[0.1em]">
                         {isVintageOnly ? 'Almacén Sagrado de Reliquias Vintage' : 'Almacén Sagrado de Reliquias'}
