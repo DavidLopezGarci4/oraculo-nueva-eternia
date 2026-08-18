@@ -237,36 +237,6 @@ async def get_top_deals(user_id: int = 2):
 
         freshness_threshold = datetime.now(timezone.utc) - timedelta(hours=72)
 
-        best_prices_subq = (
-            db.query(OfferModel.product_id, func.min(OfferModel.price).label("min_price"))
-            .filter(
-                OfferModel.is_available == True,
-                OfferModel.last_seen >= freshness_threshold,
-                OfferModel.source_type == "Retail",
-                OfferModel.product_id.notin_(owned_ids) if owned_ids else True,
-            )
-            .group_by(OfferModel.product_id)
-            .subquery()
-        )
-
-        offers = (
-            db.query(OfferModel)
-            .join(
-                best_prices_subq,
-                and_(
-                    OfferModel.product_id == best_prices_subq.c.product_id,
-                    OfferModel.price == best_prices_subq.c.min_price,
-                ),
-            )
-            .join(ProductModel)
-            .filter(
-                OfferModel.is_available == True,
-                OfferModel.last_seen >= freshness_threshold,
-                OfferModel.opportunity_score > 0,
-            )
-            .order_by(OfferModel.opportunity_score.desc())
-        )
-
         rules = db.query(LogisticRuleModel).all()
         rules_map = {f"{r.shop_name}_{r.country_code}": r for r in rules}
 
@@ -275,12 +245,29 @@ async def get_top_deals(user_id: int = 2):
         if user:
             user_location = user.location
 
-        offers_pool = offers.limit(50).all()
+        # Consultar ofertas candidatas activas sin filtro SQL prematuro de MIN(price)
+        query = (
+            db.query(OfferModel)
+            .join(ProductModel)
+            .filter(
+                OfferModel.is_available == True,
+                OfferModel.last_seen >= freshness_threshold,
+                OfferModel.source_type == "Retail",
+                OfferModel.opportunity_score > 0,
+            )
+        )
+        if owned_ids:
+            query = query.filter(OfferModel.product_id.notin_(owned_ids))
 
-        results = []
-        for o in offers_pool:
+        all_candidate_offers = query.all()
+
+        # Agrupar por producto y seleccionar la oferta con el menor Landed Price real
+        best_by_product = {}
+        for o in all_candidate_offers:
+            if not o.product:
+                continue
             landing_p = LogisticsService.optimized_get_landing_price(o.price, o.shop_name, user_location, rules_map)
-            results.append({
+            item_data = {
                 "id": o.id,
                 "product_id": o.product_id,
                 "product_name": o.product.name,
@@ -290,13 +277,23 @@ async def get_top_deals(user_id: int = 2):
                 "url": o.url,
                 "opportunity_score": o.opportunity_score,
                 "image_url": o.product.image_url,
-            })
+            }
 
-        results.sort(key=lambda x: x["landing_price"])
+            if o.product_id not in best_by_product:
+                best_by_product[o.product_id] = item_data
+            else:
+                current_best = best_by_product[o.product_id]
+                if landing_p < current_best["landing_price"] or (
+                    abs(landing_p - current_best["landing_price"]) < 0.01 and o.opportunity_score > current_best["opportunity_score"]
+                ):
+                    best_by_product[o.product_id] = item_data
+
+        deals = list(best_by_product.values())
+        deals.sort(key=lambda x: (-x["opportunity_score"], x["landing_price"]))
 
         seen_names = set()
         final_deals = []
-        for r in results:
+        for r in deals:
             if r["product_name"] not in seen_names:
                 seen_names.add(r["product_name"])
                 final_deals.append(r)

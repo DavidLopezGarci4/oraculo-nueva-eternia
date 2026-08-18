@@ -9,7 +9,14 @@ from sqlalchemy import and_, desc, func, select, event
 
 from src.application.services.deal_scorer import DealScorer
 from src.application.services.logistics_service import LogisticsService
-from src.domain.models import CollectionItemModel, OfferModel, ProductModel, UserModel, PendingMatchModel
+from src.domain.models import (
+    CollectionItemModel,
+    LogisticRuleModel,
+    OfferModel,
+    PendingMatchModel,
+    ProductModel,
+    UserModel,
+)
 from src.infrastructure.database_cloud import SessionCloud
 from src.interfaces.api.deps import verify_api_key, verify_device
 from src.interfaces.api.schemas import (
@@ -407,7 +414,7 @@ async def get_product_offers(product_id: int):
         all_offers = (
             db.query(OfferModel)
             .filter(OfferModel.product_id == product_id, OfferModel.is_available == True)
-            .order_by(OfferModel.price.asc(), desc(OfferModel.last_seen))
+            .order_by(desc(OfferModel.last_seen))
             .all()
         )
 
@@ -416,29 +423,38 @@ async def get_product_offers(product_id: int):
         if user:
             user_location = user.location
 
-        latest_by_shop = {}
-        for o in all_offers:
-            if o.shop_name not in latest_by_shop:
-                landing_p = LogisticsService.get_landing_price(o.price, o.shop_name, user_location)
-                latest_by_shop[o.shop_name] = {
-                    "id": o.id,
-                    "shop_name": o.shop_name,
-                    "price": o.price,
-                    "landing_price": landing_p,
-                    "url": o.url,
-                    "last_seen": o.last_seen.isoformat(),
-                    "min_historical": o.min_price or o.price,
-                    "opportunity_score": o.opportunity_score,
-                    "source_type": o.source_type,
-                    "is_best": False,
-                    "is_available": o.is_available,
-                    "sale_type": o.sale_type,
-                    "expiry_at": o.expiry_at.isoformat() if o.expiry_at else None,
-                    "bids_count": o.bids_count,
-                    "time_left_raw": o.time_left_raw,
-                }
+        rules = db.query(LogisticRuleModel).all()
+        rules_map = {f"{r.shop_name}_{r.country_code}": r for r in rules}
 
-        results = list(latest_by_shop.values())
+        best_by_shop = {}
+        for o in all_offers:
+            canonical_shop = LogisticsService.normalize_shop_name(o.shop_name)
+            landing_p = LogisticsService.optimized_get_landing_price(o.price, o.shop_name, user_location, rules_map)
+            offer_data = {
+                "id": o.id,
+                "shop_name": o.shop_name,
+                "price": o.price,
+                "landing_price": landing_p,
+                "url": o.url,
+                "last_seen": o.last_seen.isoformat(),
+                "min_historical": o.min_price or o.price,
+                "opportunity_score": o.opportunity_score,
+                "source_type": o.source_type,
+                "is_best": False,
+                "is_available": o.is_available,
+                "sale_type": o.sale_type,
+                "expiry_at": o.expiry_at.isoformat() if o.expiry_at else None,
+                "bids_count": o.bids_count,
+                "time_left_raw": o.time_left_raw,
+            }
+
+            if canonical_shop not in best_by_shop:
+                best_by_shop[canonical_shop] = offer_data
+            else:
+                if landing_p < best_by_shop[canonical_shop]["landing_price"]:
+                    best_by_shop[canonical_shop] = offer_data
+
+        results = list(best_by_shop.values())
         if results:
             results.sort(key=lambda x: x["landing_price"])
             results[0]["is_best"] = True

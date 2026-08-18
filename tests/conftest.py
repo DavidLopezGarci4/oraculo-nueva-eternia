@@ -60,10 +60,10 @@ _SESSION_TARGETS = [
     "src.application.services.logistics_service.SessionCloud",
     "src.application.services.vault_service.SessionCloud",
     "src.application.services.nexus_service.SessionCloud",
-    "src.application.services.nexus_vintage_service.SessionCloud",
     "src.application.services.excel_manager.SessionCloud",
     "src.infrastructure.scrapers.pipeline.SessionCloud",
     "src.infrastructure.scrapers.wallapop_manual_importer.SessionCloud",
+    "scripts.seed_logistics.SessionCloud",
 ]
 
 # ─── Shared constants ────────────────────────────────────────────────────────
@@ -98,6 +98,15 @@ def client():
     """
     import src.domain.models
     from src.domain.models import Base
+    from datetime import datetime, timedelta
+    from src.application.services.currency_service import CurrencyService
+
+    # Pre-calentar caché de divisas para hermeticidad offline
+    CurrencyService._cache = {
+        "rate": 0.92,
+        "expiry": datetime.max
+    }
+
     Base.metadata.create_all(bind=TEST_ENGINE)
 
     active = []
@@ -105,6 +114,10 @@ def client():
         p = patch(target, _TestSession)
         p.start()
         active.append(p)
+
+    from scripts.seed_logistics import seed_logistics
+    with _TestSession() as db:
+        seed_logistics(db)
 
     # Suppress init_cloud_db so it doesn't touch any SQLite file
     p_init = patch("src.infrastructure.database_cloud.init_cloud_db", return_value=None)

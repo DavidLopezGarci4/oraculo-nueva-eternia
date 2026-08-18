@@ -34,50 +34,36 @@ class ValuationService:
         Implementation of the VALUATION WATERFALL.
         Returns the best possible market value estimation.
         """
-        best_retail = None
-        best_p2p = None
+        best_retail_landed = None
+        best_p2p_landed = None
         
-        if product.id in self.preloaded_offers:
-            # Recuperar de las ofertas precargadas en memoria
-            product_offers = self.preloaded_offers[product.id]
-            for o in product_offers:
-                if o.source_type == "Retail":
-                    if not best_retail or o.price < best_retail.price:
-                        best_retail = o
-                elif o.source_type == "Peer-to-Peer":
-                    if not best_p2p or o.price < best_p2p.price:
-                        best_p2p = o
-        else:
-            # Fallback a consultas SQL individuales
-            best_retail = self.db.query(OfferModel).filter(
+        product_offers = self.preloaded_offers.get(product.id)
+        if product_offers is None:
+            product_offers = self.db.query(OfferModel).filter(
                 OfferModel.product_id == product.id,
-                OfferModel.is_available == True,
-                OfferModel.source_type == "Retail"
-            ).order_by(OfferModel.price.asc()).first()
-            
-            best_p2p = self.db.query(OfferModel).filter(
-                OfferModel.product_id == product.id,
-                OfferModel.is_available == True,
-                OfferModel.source_type == "Peer-to-Peer"
-            ).order_by(OfferModel.price.asc()).first()
+                OfferModel.is_available == True
+            ).all()
+
+        for o in product_offers:
+            if not o.price or o.price <= 0:
+                continue
+            landed = LogisticsService.optimized_get_landing_price(
+                o.price, o.shop_name, user_location, self.rules_map
+            )
+            if o.source_type == "Retail":
+                if best_retail_landed is None or landed < best_retail_landed:
+                    best_retail_landed = landed
+            elif o.source_type == "Peer-to-Peer":
+                if best_p2p_landed is None or landed < best_p2p_landed:
+                    best_p2p_landed = landed
         
         # --- LEVEL 1: ACTIVE RETAIL OFFER (BEST LANDED) ---
-        if best_retail:
-            return LogisticsService.optimized_get_landing_price(
-                best_retail.price, 
-                best_retail.shop_name, 
-                user_location, 
-                self.rules_map
-            )
+        if best_retail_landed is not None:
+            return best_retail_landed
 
         # --- LEVEL 2: ACTIVE P2P OFFER (BEST LANDED) ---
-        if best_p2p:
-            return LogisticsService.optimized_get_landing_price(
-                best_p2p.price, 
-                best_p2p.shop_name, 
-                user_location, 
-                self.rules_map
-            )
+        if best_p2p_landed is not None:
+            return best_p2p_landed
 
         # --- LEVEL 3: AF411 HISTORICAL BENCHMARK (ORACULO MASTER) ---
         # Prefer the more granular avg_market_price if populated
@@ -174,50 +160,36 @@ class ValuationService:
         Returns ONLY the landed value if a live offer exists (Retail or P2P).
         Used for the independent 'Landed Value' metric.
         """
-        best_retail = None
-        best_p2p = None
+        best_retail_landed = None
+        best_p2p_landed = None
         
-        if product.id in self.preloaded_offers:
-            # Recuperar de las ofertas precargadas en memoria
-            product_offers = self.preloaded_offers[product.id]
-            for o in product_offers:
-                if o.source_type == "Retail":
-                    if not best_retail or o.price < best_retail.price:
-                        best_retail = o
-                elif o.source_type == "Peer-to-Peer":
-                    if not best_p2p or o.price < best_p2p.price:
-                        best_p2p = o
-        else:
-            # Fallback a consultas SQL individuales
-            best_retail = self.db.query(OfferModel).filter(
+        product_offers = self.preloaded_offers.get(product.id)
+        if product_offers is None:
+            product_offers = self.db.query(OfferModel).filter(
                 OfferModel.product_id == product.id,
-                OfferModel.is_available == True,
-                OfferModel.source_type == "Retail"
-            ).order_by(OfferModel.price.asc()).first()
-            
-            best_p2p = self.db.query(OfferModel).filter(
-                OfferModel.product_id == product.id,
-                OfferModel.is_available == True,
-                OfferModel.source_type == "Peer-to-Peer"
-            ).order_by(OfferModel.price.asc()).first()
+                OfferModel.is_available == True
+            ).all()
+
+        for o in product_offers:
+            if not o.price or o.price <= 0:
+                continue
+            landed = LogisticsService.optimized_get_landing_price(
+                o.price, o.shop_name, user_location, self.rules_map
+            )
+            if o.source_type == "Retail":
+                if best_retail_landed is None or landed < best_retail_landed:
+                    best_retail_landed = landed
+            elif o.source_type == "Peer-to-Peer":
+                if best_p2p_landed is None or landed < best_p2p_landed:
+                    best_p2p_landed = landed
             
         # --- LEVEL 1: RETAIL ---
-        if best_retail:
-            return LogisticsService.optimized_get_landing_price(
-                best_retail.price, 
-                best_retail.shop_name, 
-                user_location, 
-                self.rules_map
-            )
+        if best_retail_landed is not None:
+            return best_retail_landed
 
         # --- LEVEL 2: P2P ---
-        if best_p2p:
-            return LogisticsService.optimized_get_landing_price(
-                best_p2p.price, 
-                best_p2p.shop_name, 
-                user_location, 
-                self.rules_map
-            )
+        if best_p2p_landed is not None:
+            return best_p2p_landed
             
         return 0.0
 
