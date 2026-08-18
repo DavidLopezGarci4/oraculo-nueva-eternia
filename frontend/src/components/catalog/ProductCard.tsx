@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
 import type { UseMutationResult } from '@tanstack/react-query';
 import { Info, Star, Search, Settings, Check, X, ShoppingCart, Plus, Gem, Flame, ArrowUpRight, RefreshCw } from 'lucide-react';
 import { getOptimizedImageUrl } from '../../utils/imageUtils';
 import { MOTUImage } from '../ui/MOTUImage';
 import { FoilTiltCard } from '../ui/FoilTiltCard';
-import { GrayskullLightning } from '../ui/GrayskullLightning';
+import { useGrayskullRitual } from '../../context/GrayskullRitualContext';
 import type { Product } from '../../api/collection';
 import { buildSearchQuery } from './catalogHelpers';
 
@@ -67,16 +67,29 @@ const ProductCard: React.FC<ProductCardProps> = ({
     isAdmin,
     setEditingProduct
 }) => {
+    const { triggerRitual } = useGrayskullRitual();
     const owned = isOwned(product.id);
     const wished = isWished(product.id);
-    const [lightningActive, setLightningActive] = useState(false);
 
     const handleToggleCollection = (e: React.MouseEvent) => {
         e.stopPropagation();
-        if (!owned) {
-            setLightningActive(true);
-        }
-        toggleMutation.mutate({ productId: product.id, wish: false });
+        if (toggleMutation.isPending) return;
+
+        const ritualType = owned ? 'burn' : 'claim';
+        triggerRitual({
+            type: ritualType,
+            product: {
+                id: product.id,
+                name: product.name,
+                image_url: product.image_url || undefined,
+                sub_category: product.sub_category,
+                is_vintage: isVintageOnly || !!product.is_vintage,
+                retail_price: product.retail_price
+            },
+            onComplete: () => {
+                toggleMutation.mutate({ productId: product.id, wish: false });
+            }
+        });
     };
 
     const idNum = parseInt(product.figure_id?.replace(/[^0-9]/g, '') || '0');
@@ -110,13 +123,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
             isSpecial={isSpecial}
             className={`group relative flex flex-col gap-1 sm:gap-1.5 md:gap-3 rounded-2xl sm:rounded-[1.5rem] md:rounded-3xl border p-1.5 sm:p-2 md:p-3.5 transition-all duration-500 hover:translate-y-[-8px] backdrop-blur-md ${cardBorderClass}`}
         >
-            {/* Rayo de Grayskull en tiempo real */}
-            <GrayskullLightning
-                active={lightningActive}
-                onComplete={() => setLightningActive(false)}
-                productName={product.name}
-                color={isVintageOnly ? 'gold' : 'emerald'}
-            />
 
             {/* Owned/Wish Badge */}
             {owned && (

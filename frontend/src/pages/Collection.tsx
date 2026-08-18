@@ -31,6 +31,7 @@ import { getOptimizedImageUrl } from '../utils/imageUtils';
 import { MOTUImage } from '../components/ui/MOTUImage';
 import CollectionItemDetailModal from '../components/CollectionItemDetailModal';
 import { FoilTiltCard } from '../components/ui/FoilTiltCard';
+import { useGrayskullRitual } from '../context/GrayskullRitualContext';
 import { updateProduct, exportCollectionExcel, exportCollectionExcelVintage, exportCollectionSqlite } from '../api/admin';
 import type { Hero } from '../api/admin';
 
@@ -82,6 +83,7 @@ interface CollectionProps {
 
 const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly = false, user, isIncognito = false }) => {
     const queryClient = useQueryClient();
+    const { triggerRitual } = useGrayskullRitual();
     const [activeTab, setActiveTab] = useState<'owned' | 'wish'>('owned');
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -599,7 +601,23 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
 
                                         {activeTab === 'wish' ? (
                                             <button
-                                                onClick={() => toggleMutation.mutate({ productId: product.id, wish: false })}
+                                                onClick={() => {
+                                                    if (toggleMutation.isPending) return;
+                                                    triggerRitual({
+                                                        type: 'claim',
+                                                        product: {
+                                                            id: product.id,
+                                                            name: product.name,
+                                                            image_url: product.image_url || undefined,
+                                                            sub_category: product.sub_category,
+                                                            is_vintage: isVintageOnly || !!product.is_vintage,
+                                                            retail_price: product.retail_price
+                                                        },
+                                                        onComplete: () => {
+                                                            toggleMutation.mutate({ productId: product.id, wish: false });
+                                                        }
+                                                    });
+                                                }}
                                                 disabled={toggleMutation.isPending}
                                                 className={`h-7 px-2.5 flex items-center justify-center gap-1 rounded-xl font-black text-[9px] uppercase tracking-widest shadow-lg transition-all flex-1 ${isVintageOnly ? 'bg-amber-500 text-black border border-amber-500/50 shadow-amber-500/20 hover:brightness-110' : 'bg-brand-primary text-white border border-brand-primary/50 shadow-brand-primary/20 hover:brightness-110'}`}
                                             >
@@ -609,12 +627,21 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                                         ) : (
                                             <button
                                                 onClick={() => {
-                                                    const message = isVintageOnly
-                                                        ? `¿Seguro de desvincular '${product.name}' de tu colección? Volverá a aparecer en Eternia (el producto, sus ofertas y estadísticas se conservarán intactos).`
-                                                        : `¿Seguro de liberar '${product.name}' de tu colección? Volverá a aparecer en Nueva Eternia.`;
-                                                    if (confirm(message)) {
-                                                        toggleMutation.mutate({ productId: product.id, wish: false });
-                                                    }
+                                                    if (toggleMutation.isPending) return;
+                                                    triggerRitual({
+                                                        type: 'burn',
+                                                        product: {
+                                                            id: product.id,
+                                                            name: product.name,
+                                                            image_url: product.image_url || undefined,
+                                                            sub_category: product.sub_category,
+                                                            is_vintage: isVintageOnly || !!product.is_vintage,
+                                                            retail_price: product.retail_price
+                                                        },
+                                                        onComplete: () => {
+                                                            toggleMutation.mutate({ productId: product.id, wish: false });
+                                                        }
+                                                    });
                                                 }}
                                                 disabled={toggleMutation.isPending}
                                                 className={`h-7 px-2.5 flex items-center justify-center gap-1 rounded-xl font-black text-[9px] uppercase tracking-widest border transition-all group/action flex-1 ${

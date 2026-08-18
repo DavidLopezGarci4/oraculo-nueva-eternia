@@ -10,17 +10,32 @@ interface OpportunityHeatMatrixProps {
     onSelectFilter: (filter: HeatFilterType) => void;
 }
 
+export const getDealDiscount = (d: any): number => {
+    if (d.discount_pct !== undefined && d.discount_pct !== null && d.discount_pct > 0) {
+        return d.discount_pct;
+    }
+    if (d.savings_pct !== undefined && d.savings_pct !== null && d.savings_pct > 0) {
+        return d.savings_pct;
+    }
+    const retail = d.retail_price || 19.99;
+    const price = Math.min(d.landing_price || d.price, d.price || d.landing_price);
+    if (retail > 0 && price < retail) {
+        return Math.round(((retail - price) / retail) * 100);
+    }
+    return 0;
+};
+
 export const OpportunityHeatMatrix: React.FC<OpportunityHeatMatrixProps> = ({
     deals,
     activeFilter,
     onSelectFilter
 }) => {
     // Clasificar ofertas por nivel de temperatura de ahorro
-    const hotDeals = deals.filter((d) => (d.discount_pct || d.savings_pct || 0) >= 40);
+    const hotDeals = deals.filter((d) => getDealDiscount(d) >= 40);
     const warmDeals = deals.filter(
-        (d) => (d.discount_pct || d.savings_pct || 0) >= 20 && (d.discount_pct || d.savings_pct || 0) < 40
+        (d) => getDealDiscount(d) >= 20 && getDealDiscount(d) < 40
     );
-    const coolDeals = deals.filter((d) => (d.discount_pct || d.savings_pct || 0) < 20);
+    const coolDeals = deals.filter((d) => getDealDiscount(d) < 20);
 
     const tiers = [
         {

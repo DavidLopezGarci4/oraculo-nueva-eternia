@@ -18,6 +18,7 @@ const queryClient = new QueryClient({
 })
 
 import { CartProvider } from './context/CartContext.tsx'
+import { GrayskullRitualProvider } from './context/GrayskullRitualContext.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -28,7 +29,9 @@ createRoot(document.getElementById('root')!).render(
       <BrowserRouter>
         <QueryClientProvider client={queryClient}>
           <CartProvider>
-            <App />
+            <GrayskullRitualProvider>
+              <App />
+            </GrayskullRitualProvider>
           </CartProvider>
         </QueryClientProvider>
       </BrowserRouter>

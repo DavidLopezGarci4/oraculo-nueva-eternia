@@ -27,7 +27,7 @@ import { parseUtcDate } from '../utils/dateUtils';
 import masterRoleImg from '../assets/role-master.webp';
 import guardianRoleImg from '../assets/role-guardian.webp';
 import { MOTUImage } from '../components/ui/MOTUImage';
-import OpportunityHeatMatrix, { type HeatFilterType } from '../components/dashboard/OpportunityHeatMatrix';
+import OpportunityHeatMatrix, { type HeatFilterType, getDealDiscount } from '../components/dashboard/OpportunityHeatMatrix';
 import EterniaMarketIndexWidget from '../components/dashboard/EterniaMarketIndexWidget';
 
 // Recharts & Collection API Imports for Arsenal Analytics & Completitud
@@ -120,9 +120,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
 
     const filteredTopDeals = React.useMemo(() => {
         if (!topDeals) return [];
-        if (heatFilter === 'HOT') return topDeals.filter((d: any) => (d.discount_pct || 0) >= 40);
-        if (heatFilter === 'WARM') return topDeals.filter((d: any) => (d.discount_pct || 0) >= 20 && (d.discount_pct || 0) < 40);
-        if (heatFilter === 'COOL') return topDeals.filter((d: any) => (d.discount_pct || 0) < 20);
+        if (heatFilter === 'HOT') return topDeals.filter((d: any) => getDealDiscount(d) >= 40);
+        if (heatFilter === 'WARM') return topDeals.filter((d: any) => getDealDiscount(d) >= 20 && getDealDiscount(d) < 40);
+        if (heatFilter === 'COOL') return topDeals.filter((d: any) => getDealDiscount(d) < 20);
         return topDeals;
     }, [topDeals, heatFilter]);
 

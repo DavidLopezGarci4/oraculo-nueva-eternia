@@ -267,6 +267,12 @@ async def get_top_deals(user_id: int = 2):
             if not o.product:
                 continue
             landing_p = LogisticsService.optimized_get_landing_price(o.price, o.shop_name, user_location, rules_map)
+            retail = float(o.product.retail_price or 19.99)
+            base_p = float(o.price)
+            # Calcular descuento respecto al PVP oficial usando el precio base de tienda o landed
+            ref_price = min(landing_p, base_p)
+            discount = max(0.0, round(((retail - ref_price) / retail) * 100, 1)) if retail > 0 else 0.0
+
             item_data = {
                 "id": o.id,
                 "product_id": o.product_id,
@@ -277,6 +283,8 @@ async def get_top_deals(user_id: int = 2):
                 "url": o.url,
                 "opportunity_score": o.opportunity_score,
                 "image_url": o.product.image_url,
+                "retail_price": retail,
+                "discount_pct": discount,
             }
 
             if o.product_id not in best_by_product:

@@ -343,6 +343,8 @@ class TopDealOutput(BaseModel):
     url: str
     opportunity_score: int | None
     image_url: str | None
+    retail_price: float | None = 19.99
+    discount_pct: float | None = 0.0
 
 
 class MatchStatOutput(BaseModel):

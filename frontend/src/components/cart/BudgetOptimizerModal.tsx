@@ -46,31 +46,32 @@ export const BudgetOptimizerModal: React.FC<BudgetOptimizerModalProps> = ({
 
     return (
         <AnimatePresence>
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+            <div className="fixed inset-0 z-[200] flex items-center justify-center p-3 sm:p-6 bg-black/90 backdrop-blur-2xl overflow-y-auto">
                 <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    className="relative w-full max-w-lg bg-gradient-to-b from-slate-900 via-slate-950 to-black border border-brand-primary/40 rounded-2xl shadow-2xl p-5 text-white max-h-[90vh] flex flex-col"
+                    initial={{ opacity: 0, scale: 0.93, y: 15 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.93, y: 15 }}
+                    className="relative w-full max-w-xl bg-gradient-to-b from-slate-900 via-slate-950 to-black border-2 border-brand-primary/50 rounded-3xl shadow-[0_0_60px_rgba(0,0,0,0.9)] p-5 sm:p-6 text-white my-auto flex flex-col max-h-[88vh] overflow-hidden"
                 >
                     {/* Botón cerrar */}
                     <button
                         onClick={onClose}
-                        className="absolute top-4 right-4 p-1.5 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 transition"
+                        className="absolute top-4 right-4 p-2 rounded-full bg-slate-800/90 hover:bg-red-500 text-slate-300 hover:text-white transition z-20 shadow-md"
+                        title="Cerrar Asistente"
                     >
-                        <X className="h-5 w-5" />
+                        <X className="h-4 w-4" />
                     </button>
 
                     {/* Header */}
-                    <div className="flex items-center gap-2.5 mb-4">
-                        <div className="p-2 bg-brand-primary/20 border border-brand-primary/40 rounded-xl text-brand-primary">
+                    <div className="flex items-center gap-3 mb-4 border-b border-white/10 pb-3 pr-10">
+                        <div className="p-2.5 bg-brand-primary/20 border border-brand-primary/40 rounded-2xl text-brand-primary shrink-0 shadow-lg">
                             <Sparkles className="h-5 w-5" />
                         </div>
                         <div>
-                            <h3 className="text-base font-bold text-slate-100">
+                            <h3 className="text-base sm:text-lg font-black text-white uppercase tracking-wider">
                                 Asistente de Presupuesto (Matrix Cart)
                             </h3>
-                            <p className="text-xs text-slate-400">
+                            <p className="text-[11px] text-slate-400">
                                 Maximiza tus compras agrupando envíos y ahorrando el máximo posible
                             </p>
                         </div>
