@@ -567,6 +567,8 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
   - [x] **Invocación de Runners Efímeros en Azure**: Despacho de workflows de GitHub Actions (`vinted_hunter.yml`) con IPs rotatorias limpias mediante `GITHUB_TOKEN` y fallback automático local.
   - [x] **Estandarización del Cuarteto Canónico de Búsquedas**: Integradas en `VintedScraper` las 4 consultas oficiales (`"motu origins"`, `"masters del universo"`, `"masters of the universe"`, `"he-man origins"`).
   - [x] **Comandos y Reportes en Telegram (`/centinela`, `/caza`)**: Control de estado y arranque/pausa desde el móvil, con alertas instantáneas de chollos e informes detallados al término de cada ciclo.
+  - [x] **Deduplicación Diaria Anti-Spam (`HunterAlertLogModel`)**: Silenciamiento de alertas repetidas para la misma oferta durante el mismo día natural (rearmándose al día siguiente).
+  - [x] **Filtro Estricto de Ofertas Descartadas**: Supresión total de alertas para ofertas presentes en `BlackcludedItemModel` o marcadas como `REJECTED` / `is_blocked` en el Purgatorio.
   - [x] **Optimización FinOps en GitHub Actions**: Eliminado el delay de 60m en `scrapers.yml` (`--random-delay 0`), recuperando >1.700 minutos/mes libres.
 
 

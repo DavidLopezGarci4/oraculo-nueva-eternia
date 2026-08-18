@@ -1,11 +1,18 @@
 import asyncio
 import logging
-from typing import Optional, Dict, Any, List
+from datetime import datetime, timezone
+from typing import Optional, Dict, Any, List, Set
 
 from src.infrastructure.scrapers.vinted_scraper import VintedScraper
 from src.infrastructure.scrapers.pipeline import ScrapingPipeline
 from src.infrastructure.database_cloud import SessionCloud
-from src.domain.models import ProductModel, LogisticRuleModel
+from src.domain.models import (
+    ProductModel,
+    LogisticRuleModel,
+    BlackcludedItemModel,
+    PendingMatchModel,
+    HunterAlertLogModel
+)
 from src.application.services.logistics_service import LogisticsService
 from src.infrastructure.services.telegram_service import telegram_service
 from src.core.matching import SmartMatcher
@@ -17,7 +24,8 @@ class VintedHunterService:
     Servicio de Incursión y Caza para Vinted.
     Rastrea el cuarteto oficial de búsquedas MOTU (o término personalizado),
     inyecta las ofertas en el Purgatorio y envía alertas push inmediatas a Telegram
-    cuando una oferta tiene un Landed Price inferior al precio medio de mercado (P25 / MSRP).
+    cuando una oferta tiene un Landed Price inferior al precio medio de mercado (P25 / MSRP),
+    omitiendo ofertas descartadas por el usuario o ya notificadas en el mismo día natural.
     """
 
     @staticmethod
@@ -58,17 +66,39 @@ class VintedHunterService:
         pipeline.update_database(offers, shop_names=["Vinted"])
         
         # 3. Detectar y evaluar gangas respecto al precio medio de mercado (P25)
-        bargains = []
+        new_bargains_to_alert = []
+        recurring_bargains_count = 0
         matcher = SmartMatcher()
         
         with SessionCloud() as db:
-            # Precargar reglas logísticas y catálogo activo
+            # A) Precargar URLs descartadas o bloqueadas por el usuario
+            blackcluded_urls: Set[str] = {b.url for b in db.query(BlackcludedItemModel.url).all()}
+            rejected_matches = db.query(PendingMatchModel.url).filter(
+                (PendingMatchModel.validation_status == "REJECTED") | 
+                (PendingMatchModel.is_blocked == True)
+            ).all()
+            rejected_urls: Set[str] = {p[0] for p in rejected_matches}
+            discarded_urls: Set[str] = blackcluded_urls.union(rejected_urls)
+
+            # B) Precargar URLs ya notificadas hoy (día natural UTC actual)
+            today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+            today_alerted_urls: Set[str] = {
+                a[0] for a in db.query(HunterAlertLogModel.url).filter(
+                    HunterAlertLogModel.sent_at >= today_start
+                ).all()
+            }
+
+            # C) Precargar reglas logísticas y catálogo activo
             rules = db.query(LogisticRuleModel).all()
             rules_map = {f"{r.shop_name}_{r.country_code}": r for r in rules}
             products = db.query(ProductModel).filter(ProductModel.is_vintage == False).all()
             
             for offer in offers:
                 if offer.price <= 0:
+                    continue
+                
+                # Descartar si el usuario la ha bloqueado o rechazado previamente
+                if offer.url in discarded_urls:
                     continue
                     
                 # Calcular Landed Price optimizado (Base + 5€ envío + 2% seguro Vinted)
@@ -119,12 +149,30 @@ class VintedHunterService:
                             "image_url": offer.image_url,
                             "shop_name": "Vinted"
                         }
-                        bargains.append(bargain_data)
 
-        logger.info(f"🏹 VintedHunter: Detectadas {len(bargains)} gangas bajo el precio medio.")
+                        # Comprobar si ya fue alertada hoy
+                        if offer.url in today_alerted_urls:
+                            recurring_bargains_count += 1
+                        else:
+                            new_bargains_to_alert.append(bargain_data)
+                            # Registrar en la base de datos para deduplicación diaria
+                            db.add(HunterAlertLogModel(
+                                url=offer.url,
+                                product_name=best_match_product.name,
+                                price=offer.price,
+                                sent_at=datetime.now(timezone.utc)
+                            ))
+                            today_alerted_urls.add(offer.url)
+
+            db.commit()
+
+        logger.info(
+            f"🏹 VintedHunter: {len(new_bargains_to_alert)} nuevas gangas para alertar "
+            f"({recurring_bargains_count} omitidas por haber sido alertadas ya hoy)."
+        )
         
-        # 4. Despachar alertas push individuales si hay chollos
-        for b in bargains:
+        # 4. Despachar alertas push individuales para ofertas NUEVAS no alertadas hoy
+        for b in new_bargains_to_alert:
             try:
                 await telegram_service.send_bargain_hunt_alert(
                     product_name=b["product_name"],
@@ -144,14 +192,17 @@ class VintedHunterService:
 
         # 5. Despachar reporte consolidado del ciclo si está activado
         if notify_summary:
-            if bargains:
+            if new_bargains_to_alert:
                 bargains_list = "\n".join([
                     f"  ↳ <b>{b['product_name']}</b> a <b>{b['price']:.2f}€</b> (Landed: {b['landed_price']:.2f}€ vs Ref: {b['benchmark_price']:.2f}€ | 💰 <b>-{b['savings_pct']:.0f}%</b>) — <a href=\"{b['url']}\">Ver Oferta</a>"
-                    for b in bargains[:5]
+                    for b in new_bargains_to_alert[:5]
                 ])
-                opportunities_block = f"🔥 <b>¡Oportunidades Únicas Detectadas! ({len(bargains)})</b>\n{bargains_list}\n\n"
+                opportunities_block = f"🔥 <b>¡Nuevas Oportunidades Detectadas! ({len(new_bargains_to_alert)})</b>\n{bargains_list}\n\n"
             else:
-                opportunities_block = "🛡️ <i>Sin chollos por debajo del precio medio en este ciclo. Todo bajo control.</i>\n\n"
+                if recurring_bargains_count > 0:
+                    opportunities_block = f"🛡️ <i>{recurring_bargains_count} chollos activos ya fueron notificados hoy (silenciados para evitar repetición).</i>\n\n"
+                else:
+                    opportunities_block = "🛡️ <i>Sin chollos por debajo del precio medio en este ciclo. Todo bajo control.</i>\n\n"
 
             eta_text = f"⏱️ <i>Próxima incursión aleatoria en ~{next_eta_mins} min (IP Azure rotatoria).</i>" if next_eta_mins else "⏱️ <i>Incursión completada con éxito.</i>"
 
@@ -171,7 +222,8 @@ class VintedHunterService:
 
         return {
             "total_scraped": total_scraped,
-            "bargains_found": len(bargains),
-            "bargains": bargains,
+            "bargains_found": len(new_bargains_to_alert),
+            "recurring_bargains": recurring_bargains_count,
+            "bargains": new_bargains_to_alert,
             "status": "success"
         }

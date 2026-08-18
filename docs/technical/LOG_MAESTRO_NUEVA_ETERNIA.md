@@ -1329,6 +1329,8 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
   - **Comandos de Gestión en Telegram**: Añadidos `/centinela` (estado general y próxima ejecución), `/centinela on`, `/centinela off` y `/caza` para forzar incursiones manuales instantáneas.
   - **Cuarteto Canónico de Búsquedas en Vinted**: Estandarizadas en `VintedScraper` las 4 consultas oficiales de rastreo: `"motu origins"`, `"masters del universo"`, `"masters of the universe"` y `"he-man origins"`.
   - **Ahorro FinOps del 85% de Minutos en GitHub Actions**: Eliminado el `sleep` artificial de 60 minutos en `.github/workflows/scrapers.yml` (`--random-delay 0`), reduciendo la duración del Daily Scan a sus 3-5 minutos reales de trabajo y liberando más de 1.700 minutos al mes para las incursiones del centinela.
+  - **Deduplicación Diaria Anti-Spam (`HunterAlertLogModel`)**: Registro persistente de alertas enviadas en la base de datos. Si una oferta ya fue notificada en el mismo día natural (desde las 00:00 UTC), se omite la notificación push redundante hasta el día siguiente.
+  - **Filtro Estricto de Ofertas Descartadas y Rechazadas**: Exclusión automática de ofertas marcadas en `BlackcludedItemModel` o en `PendingMatchModel` (`validation_status == "REJECTED"` o `is_blocked == True`), garantizando que los artículos descartados por el usuario no vuelvan a alertarse.
   - **Validación Total**: Suite completa de tests superada al 100% (`tests/unit/test_vinted_sentinel.py` y `test_vinted_hunter.py`).
 
 

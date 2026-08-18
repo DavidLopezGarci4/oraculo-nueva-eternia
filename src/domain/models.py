@@ -362,6 +362,19 @@ class PriceHistoryModel(Base):
     
     offer: Mapped["OfferModel"] = relationship("OfferModel", back_populates="price_history")
 
+class HunterAlertLogModel(Base):
+    """
+    Registro de alertas push enviadas por el Cazador de Vinted para deduplicación diaria.
+    Evita repetir notificaciones de la misma oferta durante el mismo día natural.
+    """
+    __tablename__ = "hunter_alert_logs"
+    
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    url: Mapped[str] = mapped_column(String, index=True)
+    product_name: Mapped[str] = mapped_column(String)
+    price: Mapped[float] = mapped_column(Float)
+    sent_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+
 class ScraperExecutionLogModel(Base):
     """
     Immutable log of every scraper execution run.
