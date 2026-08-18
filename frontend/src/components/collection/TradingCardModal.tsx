@@ -12,10 +12,15 @@ import {
     TrendingUp,
     Calendar,
     Lock,
-    Loader2
+    Loader2,
+    Wand2,
+    RotateCcw,
+    Zap,
+    BookOpen
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { MOTUImage } from '../ui/MOTUImage';
+import { enhanceCardWithAI, type CardAiEnhanceResult } from '../../api/cards';
 
 interface TradingCardModalProps {
     isOpen: boolean;
@@ -43,7 +48,7 @@ const dataUrlToBlob = async (dataUrl: string): Promise<Blob> => {
 };
 
 // Generador de Cromo PNG con html-to-image y fallback infalible mediante Canvas 2D
-const generateTradingCardDataUrl = async (node: HTMLElement, item: any): Promise<string> => {
+const generateTradingCardDataUrl = async (node: HTMLElement, item: any, activeImageSrc?: string, aiLore?: string | null): Promise<string> => {
     try {
         // Intento 1: Renderizado vectorial nítido con html-to-image (skipFonts evita bloqueos de CORS en fuentes)
         return await toPng(node, {
@@ -110,10 +115,16 @@ const generateTradingCardDataUrl = async (node: HTMLElement, item: any): Promise
                 ctx.textAlign = 'center';
                 ctx.fillText(item.product_name || item.name || 'FIGURA MOTU', width / 2, 725);
 
-                // Estado
-                ctx.fillStyle = '#10b981';
-                ctx.font = 'bold 20px sans-serif';
-                ctx.fillText('🛡️ 100% AUTÉNTICO • COLECCIÓN OFICIAL', width / 2, 765);
+                // Lore o Estado
+                if (aiLore) {
+                    ctx.fillStyle = '#67e8f9';
+                    ctx.font = 'italic 18px sans-serif';
+                    ctx.fillText(aiLore.slice(0, 75) + (aiLore.length > 75 ? '...' : ''), width / 2, 765);
+                } else {
+                    ctx.fillStyle = '#10b981';
+                    ctx.font = 'bold 20px sans-serif';
+                    ctx.fillText('🛡️ 100% AUTÉNTICO • COLECCIÓN OFICIAL', width / 2, 765);
+                }
 
                 // 6. Matriz de Valoración y Rendimiento
                 ctx.fillStyle = '#0f172a';
@@ -154,8 +165,9 @@ const generateTradingCardDataUrl = async (node: HTMLElement, item: any): Promise
                 resolve(canvas.toDataURL('image/png'));
             };
 
-            // Intentar cargar y dibujar la imagen de la figura
-            if (item.image_url) {
+            // Dibujar imagen (la de IA si existe, o la original)
+            const targetImgUrl = activeImageSrc || item.image_url;
+            if (targetImgUrl) {
                 const img = new Image();
                 img.crossOrigin = 'anonymous';
                 img.onload = () => {
@@ -176,7 +188,7 @@ const generateTradingCardDataUrl = async (node: HTMLElement, item: any): Promise
                 img.onerror = () => {
                     finishDraw();
                 };
-                img.src = item.image_url;
+                img.src = targetImgUrl;
             } else {
                 finishDraw();
             }
@@ -193,6 +205,12 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
     const [rotateX, setRotateX] = useState(0);
     const [rotateY, setRotateY] = useState(0);
     const [glarePos, setGlarePos] = useState({ x: 50, y: 50, opacity: 0 });
+
+    // Estado para la transformación mágica con Gemini
+    const [showAiDrawer, setShowAiDrawer] = useState(false);
+    const [aiResult, setAiResult] = useState<CardAiEnhanceResult | null>(null);
+    const [isAiLoading, setIsAiLoading] = useState(false);
+    const [aiError, setAiError] = useState<string | null>(null);
 
     if (!isOpen || !item) return null;
 
@@ -233,15 +251,37 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
         setGlarePos((prev) => ({ ...prev, opacity: 0 }));
     };
 
+    // Manejador de Transformación con Gemini
+    const handleTransformWithAI = async (style: 'oil_vintage' | 'comic_retro' | 'cinematic_4k' | 'rpg_lore') => {
+        try {
+            setIsAiLoading(true);
+            setAiError(null);
+            const res = await enhanceCardWithAI({
+                product_name: name,
+                sub_category: item.sub_category,
+                style,
+                condition,
+                grading: grade
+            });
+            setAiResult(res);
+        } catch (err: any) {
+            console.error('Error transformando con Gemini:', err);
+            setAiError('No se pudo conectar con Gemini. Inténtalo de nuevo.');
+        } finally {
+            setIsAiLoading(false);
+        }
+    };
+
     // 1. Descargar imagen PNG HD
     const handleDownload = async () => {
         if (!cardRef.current || !item) return;
         try {
             setExporting(true);
-            const dataUrl = await generateTradingCardDataUrl(cardRef.current, item);
+            const activeImage = aiResult?.image_base64 || undefined;
+            const dataUrl = await generateTradingCardDataUrl(cardRef.current, item, activeImage, aiResult?.lore);
 
             const link = document.createElement('a');
-            link.download = `Cromo_MOTU_${name.replace(/\s+/g, '_')}.png`;
+            link.download = `Cromo_MOTU_${name.replace(/\s+/g, '_')}${aiResult ? `_${aiResult.style}` : ''}.png`;
             link.href = dataUrl;
             document.body.appendChild(link);
             link.click();
@@ -261,7 +301,8 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
         if (!cardRef.current || !item) return;
         try {
             setExporting(true);
-            const dataUrl = await generateTradingCardDataUrl(cardRef.current, item);
+            const activeImage = aiResult?.image_base64 || undefined;
+            const dataUrl = await generateTradingCardDataUrl(cardRef.current, item, activeImage, aiResult?.lore);
             const blob = await dataUrlToBlob(dataUrl);
 
             if (navigator.clipboard && (window as any).ClipboardItem) {
@@ -286,13 +327,21 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
         if (!cardRef.current || !item) return;
         try {
             setExporting(true);
-            const dataUrl = await generateTradingCardDataUrl(cardRef.current, item);
+            const activeImage = aiResult?.image_base64 || undefined;
+            const dataUrl = await generateTradingCardDataUrl(cardRef.current, item, activeImage, aiResult?.lore);
             const blob = await dataUrlToBlob(dataUrl);
             const file = new File([blob], `Cromo_MOTU_${name.replace(/\s+/g, '_')}.png`, {
                 type: 'image/png'
             });
 
-            const shareText = `🏰 Cromo Oficial: ${name} custodiado en La Fortaleza de Grayskull.\nValor de Mercado: ${market.toFixed(2)}€ (${profit >= 0 ? '+' : ''}${profit.toFixed(2)}€ | ${roiPct}% ROI)`;
+            let shareText = `🏰 Cromo Oficial: ${name} custodiado en La Fortaleza de Grayskull.\nValor de Mercado: ${market.toFixed(2)}€ (${profit >= 0 ? '+' : ''}${profit.toFixed(2)}€ | ${roiPct}% ROI)`;
+            
+            if (aiResult?.lore) {
+                shareText += `\n\n📜 Lore Canónico (Gemini AI):\n"${aiResult.lore}"`;
+            }
+            if (aiResult?.special_move) {
+                shareText += `\n⚡ Técnica Definitiva: ${aiResult.special_move}`;
+            }
 
             if (navigator.canShare && navigator.canShare({ files: [file] })) {
                 await navigator.share({
@@ -349,12 +398,93 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                     </button>
 
                     {/* Título de la Ficha */}
-                    <div className="flex items-center gap-2 mb-3 text-center">
+                    <div className="flex items-center gap-2 mb-2.5 text-center">
                         <Sparkles className="h-4 w-4 text-amber-400" />
                         <h2 className="text-xs sm:text-sm font-black uppercase tracking-widest text-amber-300">
                             Cromo Coleccionista Digital
                         </h2>
                         <Sparkles className="h-4 w-4 text-amber-400" />
+                    </div>
+
+                    {/* BARRA DE TRANSFORMACIÓN CON GEMINI */}
+                    <div className="w-full mb-3">
+                        <button
+                            onClick={() => setShowAiDrawer(!showAiDrawer)}
+                            className="w-full py-1.5 px-3 rounded-xl bg-gradient-to-r from-purple-600/30 via-cyan-600/30 to-amber-600/30 hover:from-purple-600/40 hover:to-amber-600/40 border border-cyan-400/50 text-cyan-200 text-xs font-black uppercase tracking-wider flex items-center justify-between shadow-lg shadow-cyan-500/10 transition"
+                        >
+                            <span className="flex items-center gap-1.5">
+                                <Wand2 className="h-3.5 w-3.5 text-yellow-300 animate-pulse" />
+                                {aiResult ? `✨ Estilo: ${aiResult.style_name}` : '🪄 Transformar con IA de Gemini'}
+                            </span>
+                            <span className="text-[10px] text-cyan-300/80 font-mono">
+                                {showAiDrawer ? '▲ Ocultar' : '▼ Opciones'}
+                            </span>
+                        </button>
+
+                        {/* Menú Desplegable de Estilos de IA */}
+                        {showAiDrawer && (
+                            <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                className="mt-2 p-2 bg-slate-950/90 border border-cyan-500/30 rounded-xl grid grid-cols-2 gap-1.5 text-[10px]"
+                            >
+                                <button
+                                    onClick={() => handleTransformWithAI('oil_vintage')}
+                                    disabled={isAiLoading}
+                                    className="p-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 font-bold flex items-center gap-1 transition"
+                                >
+                                    <Sparkles className="h-3 w-3 text-amber-400" />
+                                    <span>🎨 Óleo 80s (Mattel)</span>
+                                </button>
+                                <button
+                                    onClick={() => handleTransformWithAI('comic_retro')}
+                                    disabled={isAiLoading}
+                                    className="p-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 font-bold flex items-center gap-1 transition"
+                                >
+                                    <Zap className="h-3 w-3 text-cyan-400" />
+                                    <span>⚔️ Cómic Retro 80s</span>
+                                </button>
+                                <button
+                                    onClick={() => handleTransformWithAI('cinematic_4k')}
+                                    disabled={isAiLoading}
+                                    className="p-1.5 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-300 font-bold flex items-center gap-1 transition"
+                                >
+                                    <Award className="h-3 w-3 text-purple-400" />
+                                    <span>🌌 Cine Épico 4K</span>
+                                </button>
+                                <button
+                                    onClick={() => handleTransformWithAI('rpg_lore')}
+                                    disabled={isAiLoading}
+                                    className="p-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 font-bold flex items-center gap-1 transition"
+                                >
+                                    <BookOpen className="h-3 w-3 text-emerald-400" />
+                                    <span>📜 Lore & Stats RPG</span>
+                                </button>
+
+                                {aiResult && (
+                                    <button
+                                        onClick={() => setAiResult(null)}
+                                        className="col-span-2 mt-1 py-1 rounded-lg bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-300 font-bold flex items-center justify-center gap-1 transition"
+                                    >
+                                        <RotateCcw className="h-3 w-3" />
+                                        <span>Restaurar Foto Original</span>
+                                    </button>
+                                )}
+                            </motion.div>
+                        )}
+
+                        {isAiLoading && (
+                            <div className="mt-2 py-1.5 px-3 rounded-lg bg-cyan-500/20 border border-cyan-400 text-cyan-200 text-[11px] font-bold flex items-center justify-center gap-2 animate-pulse">
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                <span>Invocando la magia de Gemini & Imagen 3...</span>
+                            </div>
+                        )}
+
+                        {aiError && (
+                            <div className="mt-1.5 text-center text-red-400 text-[10px]">
+                                {aiError}
+                            </div>
+                        )}
                     </div>
 
                     {/* CONTENEDOR 3D DEL CROMO */}
@@ -401,7 +531,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                             {item.sub_category || 'MOTU Origins'}
                                         </div>
                                         <div className="text-[8px] text-slate-400 font-mono tracking-tighter">
-                                            HERITAGE ARCHIVE • #{(item.sku || String(item.id)).slice(-5)}
+                                            {aiResult?.rarity_class || `HERITAGE ARCHIVE • #${(item.sku || String(item.id)).slice(-5)}`}
                                         </div>
                                     </div>
                                 </div>
@@ -415,7 +545,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                 </div>
                             </div>
 
-                            {/* 2. Marco Holográfico con Foto HD */}
+                            {/* 2. Marco Holográfico con Foto HD o Arte Transformado con IA */}
                             <div className="relative z-10 h-52 w-full rounded-xl bg-gradient-to-b from-slate-950 via-slate-900 to-black border border-slate-800 flex items-center justify-center overflow-hidden mb-2.5 group shadow-inner">
                                 {/* Patrón de rejilla de fondo */}
                                 <div
@@ -426,27 +556,37 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                     }}
                                 />
 
-                                <MOTUImage
-                                    productId={item.id}
-                                    src={item.image_url}
-                                    alt={name}
-                                    className="max-h-full max-w-full object-contain p-2.5 z-10 drop-shadow-[0_10px_15px_rgba(0,0,0,0.8)]"
-                                />
+                                {aiResult?.image_base64 ? (
+                                    <img
+                                        src={aiResult.image_base64}
+                                        alt={name}
+                                        className="h-full w-full object-cover z-10 animate-in fade-in zoom-in-95 duration-500"
+                                    />
+                                ) : (
+                                    <MOTUImage
+                                        productId={item.id}
+                                        src={item.image_url}
+                                        alt={name}
+                                        className="max-h-full max-w-full object-contain p-2.5 z-10 drop-shadow-[0_10px_15px_rgba(0,0,0,0.8)]"
+                                    />
+                                )}
 
-                                {/* Badge de Estado (MOC / LOOSE) con resplandor */}
+                                {/* Badge de Estado (MOC / LOOSE / AI ART) con resplandor */}
                                 <div className="absolute top-2 left-2 z-20">
                                     <span
                                         className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider border shadow-lg ${
-                                            isMoc
+                                            aiResult
+                                                ? 'bg-purple-600/90 text-white border-purple-300 shadow-purple-500/40'
+                                                : isMoc
                                                 ? 'bg-amber-500/90 text-black border-amber-300 shadow-amber-500/40'
                                                 : 'bg-cyan-500/90 text-black border-cyan-300 shadow-cyan-500/40'
                                         }`}
                                     >
-                                        {isMoc ? '🛡️ MOC • CARDED' : '⚔️ LOOSE • MINT'}
+                                        {aiResult ? '✨ AI ENHANCED' : isMoc ? '🛡️ MOC • CARDED' : '⚔️ LOOSE • MINT'}
                                     </span>
                                 </div>
 
-                                {/* Multiplicador Flotante */}
+                                {/* Multiplicador Flotante o Golpe Especial */}
                                 {purchase > 0 && profit > 0 && (
                                     <div className="absolute bottom-2 right-2 z-20 px-2 py-0.5 rounded-md bg-black/80 border border-emerald-500/60 text-emerald-400 text-[10px] font-mono font-black flex items-center gap-1 shadow-md">
                                         <TrendingUp className="h-3 w-3" />
@@ -456,7 +596,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                             </div>
 
                             {/* 3. Nombre y Datos Técnicos */}
-                            <div className="relative z-10 text-center mb-2.5">
+                            <div className="relative z-10 text-center mb-2">
                                 <h3 className="text-sm font-black text-white uppercase tracking-wider truncate drop-shadow-sm">
                                     {name}
                                 </h3>
@@ -471,23 +611,59 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                 </div>
                             </div>
 
-                            {/* 4. Matriz de Valoración y Rendimiento */}
-                            <div className="relative z-10 grid grid-cols-3 gap-1.5 bg-slate-950/90 border border-amber-500/20 rounded-xl p-2 mb-2 text-center shadow-inner">
-                                <div className="border-r border-slate-800 pr-1">
-                                    <span className="text-[8px] text-slate-400 uppercase tracking-tighter block">Inversión</span>
-                                    <span className="text-xs font-bold text-white font-mono">{purchase.toFixed(2)}€</span>
+                            {/* 4. Panel Dinámico: Matriz de Lore & Stats RPG de Gemini O Valoración Financiera */}
+                            {aiResult?.stats ? (
+                                <div className="relative z-10 bg-slate-950/90 border border-cyan-500/40 rounded-xl p-2 mb-2 text-center shadow-inner">
+                                    {/* Mini-Lore Narrativo */}
+                                    {aiResult.lore && (
+                                        <p className="text-[9px] text-cyan-200 italic mb-1.5 leading-tight line-clamp-2 px-1">
+                                            "{aiResult.lore}"
+                                        </p>
+                                    )}
+                                    {/* Estadísticas de Combate RPG */}
+                                    <div className="grid grid-cols-4 gap-1 text-[8px] font-mono border-t border-slate-800 pt-1">
+                                        <div className="bg-red-500/10 p-1 rounded border border-red-500/20">
+                                            <span className="text-red-400 block font-bold">FUERZA</span>
+                                            <span className="text-white font-bold text-xs">{aiResult.stats.fuerza}</span>
+                                        </div>
+                                        <div className="bg-purple-500/10 p-1 rounded border border-purple-500/20">
+                                            <span className="text-purple-400 block font-bold">MAGIA</span>
+                                            <span className="text-white font-bold text-xs">{aiResult.stats.magia}</span>
+                                        </div>
+                                        <div className="bg-blue-500/10 p-1 rounded border border-blue-500/20">
+                                            <span className="text-blue-400 block font-bold">DEFENSA</span>
+                                            <span className="text-white font-bold text-xs">{aiResult.stats.defensa}</span>
+                                        </div>
+                                        <div className="bg-emerald-500/10 p-1 rounded border border-emerald-500/20">
+                                            <span className="text-emerald-400 block font-bold">AGILIDAD</span>
+                                            <span className="text-white font-bold text-xs">{aiResult.stats.agilidad}</span>
+                                        </div>
+                                    </div>
+                                    {aiResult.special_move && (
+                                        <div className="text-[8px] text-amber-300 font-bold uppercase mt-1 tracking-wider">
+                                            ⚡ {aiResult.special_move}
+                                        </div>
+                                    )}
                                 </div>
-                                <div className="border-r border-slate-800 px-1">
-                                    <span className="text-[8px] text-slate-400 uppercase tracking-tighter block">Mercado</span>
-                                    <span className="text-xs font-bold text-amber-300 font-mono">{market.toFixed(2)}€</span>
+                            ) : (
+                                /* Matriz de Rendimiento Estándar */
+                                <div className="relative z-10 grid grid-cols-3 gap-1.5 bg-slate-950/90 border border-amber-500/20 rounded-xl p-2 mb-2 text-center shadow-inner">
+                                    <div className="border-r border-slate-800 pr-1">
+                                        <span className="text-[8px] text-slate-400 uppercase tracking-tighter block">Inversión</span>
+                                        <span className="text-xs font-bold text-white font-mono">{purchase.toFixed(2)}€</span>
+                                    </div>
+                                    <div className="border-r border-slate-800 px-1">
+                                        <span className="text-[8px] text-slate-400 uppercase tracking-tighter block">Mercado</span>
+                                        <span className="text-xs font-bold text-amber-300 font-mono">{market.toFixed(2)}€</span>
+                                    </div>
+                                    <div className="pl-1">
+                                        <span className="text-[8px] text-slate-400 uppercase tracking-tighter block">Plusvalía</span>
+                                        <span className={`text-xs font-black font-mono ${profit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                            {profit >= 0 ? '+' : ''}{roiPct}%
+                                        </span>
+                                    </div>
                                 </div>
-                                <div className="pl-1">
-                                    <span className="text-[8px] text-slate-400 uppercase tracking-tighter block">Plusvalía</span>
-                                    <span className={`text-xs font-black font-mono ${profit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                                        {profit >= 0 ? '+' : ''}{roiPct}%
-                                    </span>
-                                </div>
-                            </div>
+                            )}
 
                             {/* 5. Sello de Autenticidad de La Fortaleza */}
                             <div className="relative z-10 flex items-center justify-between border-t border-slate-800/80 pt-1.5 px-1 text-[8px] text-slate-400 uppercase tracking-widest font-mono">

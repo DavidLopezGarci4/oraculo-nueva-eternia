@@ -751,3 +751,24 @@ class SSLStatusOutput(BaseModel):
 class SSLRenewRequest(BaseModel):
     force: bool = True
 
+
+# --- Gemini Card AI Enhancement Schemas ---
+
+class CardAiEnhanceInput(BaseModel):
+    product_name: str
+    sub_category: Optional[str] = "MOTU Origins"
+    style: str = "oil_vintage"  # 'oil_vintage' | 'comic_retro' | 'cinematic_4k' | 'rpg_lore'
+    condition: str = "MOC"
+    grading: float = 10.0
+
+
+class CardAiEnhanceOutput(BaseModel):
+    style: str
+    style_name: str
+    image_base64: Optional[str] = None
+    lore: Optional[str] = None
+    stats: Optional[Dict[str, int]] = None
+    special_move: Optional[str] = None
+    rarity_class: Optional[str] = None
+
+
