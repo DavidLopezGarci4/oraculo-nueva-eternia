@@ -83,6 +83,9 @@ class Settings(BaseSettings):
     VINTED_SENTINEL_MIN_DELAY_MIN: int = 50
     VINTED_SENTINEL_MAX_DELAY_MIN: int = 75
 
+    # AI Conversational Assistant (Phase 86)
+    GEMINI_API_KEY: str | None = None
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_ignore_empty=True,

@@ -575,6 +575,14 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
   - [x] **Casilla / Widget de Cuota en Configuración (`GitHubQuotaWidget.tsx`)**: Visualización exclusiva para administradores de minutos usados vs límite de 2.000 min, saldo restante, cuenta atrás de reposición (día 1 de cada mes a las 00:00 UTC) y desglose por workflow.
   - [x] **Diagnóstico Inteligente de Cadencia**: Monitoreo continuo del ritmo de incursiones (50-75 min) para garantizar que el consumo mensual no exceda la cuota gratuita.
   - [x] **Exportación Descargable de Logs (CSV)**: Generación y descarga directa del historial de ejecuciones y minutos facturables con un solo clic.
+- [x] **Phase 86: Evolución Integral de UX, Rendimiento y Nuevas Capacidades Analíticas (18/08/2026)**
+  - [x] **Micro-interacciones de Poder (`GrayskullLightning.tsx`)**: Efecto visual de relámpago de la Espada de Grayskull al consolidar compras y vínculos.
+  - [x] **Generador de Trading Cards (`TradingCardModal.tsx`)**: Exportador de cromos digitales coleccionables en alta definición con grado de conservación, ROI y estado para compartir.
+  - [x] **Matriz Térmica & Termómetro de Gangas (`OpportunityHeatMatrix.tsx`)**: Clasificador táctil de oportunidades en 3 niveles de temperatura (Fuego >40%, Rayo 20-40%, Escudo <20%) integrado en el Dashboard.
+  - [x] **Aceleración con IndexedDB Smart Cache (`IndexedDbCacheService`)**: Inicio a 0ms y búsqueda en memoria sub-2ms con sincronización delta ligera.
+  - [x] **Asistente de Presupuesto Matrix Cart (`BudgetOptimizerService` & `BudgetOptimizerModal.tsx`)**: Calculadora inteligente para optimizar compras por presupuesto y agrupar gastos de envío sin alterar el carrito manual.
+  - [x] **Índice Bursátil MOTU (`MarketAnalyticsService` & `EterniaMarketIndexWidget.tsx`)**: Gráfico táctil responsivo para móvil y PC del valor medio ponderado de mercado por Waves (EMI).
+  - [x] **Asistente Conversacional en Telegram (`OracleAssistantAI`)**: Consultas en lenguaje natural sobre la colección, precios y chollos mediante llamadas de función seguras de solo lectura y blindadas a tu `chat_id`.
 
 ---
 

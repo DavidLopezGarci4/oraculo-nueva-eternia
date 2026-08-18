@@ -15,13 +15,23 @@ En esta pestaña se listan todos los usuarios ("Héroes") registrados en el Orá
 
 ---
 
-El Oráculo extrae información comercial mediante un conjunto de arañas web automatizadas (`scrapers`) que simulan navegación humana para evitar baneos de IPs.
+## 2. Centro de Mando: Telemetría FinOps y Control de Arañas
 
-Desde este panel, los administradores pueden gestionar el ciclo de recolección de forma interactiva:
-*   **Listado de Arañas**: Visualiza las tiendas y portales soportados por el sistema (como Wallapop, eBay, Vinted, Amazon.es -habiéndose limpiado la versión duplicada de Amazon-, etc.).
+El Oráculo extrae información comercial mediante un conjunto de arañas web automatizadas (`scrapers`) y runners efímeros en la nube que simulan navegación humana para evitar bloqueos.
+
+### 2.1 Cuota de Ejecución en la Nube (GitHub Actions)
+En la parte superior de la pestaña de Scrapers, los administradores disponen de un panel de **Telemetría FinOps en Vivo**:
+*   **Contador y Barra de Progreso:** Visualiza los minutos consumidos en tiempo real sobre la cuota mensual de **2.000 minutos gratuitos** de GitHub Actions.
+*   **Saldo y Días de Reposición:** Muestra los minutos disponibles y la fecha exacta en la que se reinicia el ciclo mensual (el día 1 de cada mes a las 00:00 UTC con cuenta atrás en días).
+*   **Desglose por Proceso:** Detalla cuántos minutos han consumido el *Daily Scan* (`scrapers.yml`), el *Centinela / Cazador de Vinted* (`vinted_hunter.yml`) y las suites de integración (*CI / Tests*).
+*   **Diagnóstico Inteligente de Cadencia:** Analiza el ritmo diario y proyecta el cierre de mes, confirmando con insignias visuales (🟢 *Óptimo*, 🟡 *Precaución*, 🔴 *Ajustar Cadencia*) si la cadencia de 50-75 min es segura.
+*   **Descarga de Logs (CSV):** Botón `[ 📥 Descargar Log (CSV) ]` para exportar el historial forense de ejecuciones directamente a la carpeta de Descargas del dispositivo.
+
+### 2.2 Control Operativo de Scrapers
+*   **Listado de Arañas**: Visualiza las tiendas y portales soportados por el sistema (como Wallapop, eBay, Vinted, Amazon.es, BigBadToyStore, Frikimaz, etc.).
 *   **Incursión Manual**: Dispara un escaneo en caliente para una tienda concreta o inicia una **Incursión Total**.
-*   **Consola de Telemetría Homogeneizada**: Visualiza la telemetría en tiempo real. Para conservar la atmósfera premium y el tono oscuro monocromático, cualquier emoji producido por los logs del backend es parseado dinámicamente al vuelo en el cliente y presentado como un icono vectorial de contorno limpio (Lucide icons).
-*   **Cancelación Cooperativa**: Si una incursión está tardando demasiado, puedes pulsar **"Detener Incursión"** para detener ordenadamente las arañas al terminar su ciclo de tienda actual, sin dejar procesos colgados.
+*   **Consola de Telemetría Homogeneizada**: Visualiza la telemetría en tiempo real con iconos outline limpios y sin emojis en bruto.
+*   **Cancelación Cooperativa**: Si una incursión está tardando demasiado, puedes pulsar **"Detener Incursión"** para detener ordenadamente las arañas al terminar su ciclo de tienda actual.
 
 ---
 
@@ -84,5 +94,17 @@ Para recibir alertas personalizadas directamente en tu móvil:
 ### 4.7 Nexus Local Bridge (Worker Residencial de Wallapop)
 *   **Panel de Trabajos:** Visualiza el historial y estado de los trabajos de extracción delegados al PC local.
 *   **Disparo desde Móvil (`/nexus`):** Encola búsquedas masivas ejecutadas con la IP residencial de tu hogar (evitando bloqueos WAF de CloudFront). Al terminar, Telegram envía un resumen de las ofertas recolectadas.
+
+### 4.8 Centinela Autónomo 24/7 de Vinted y Cazador Móvil
+*   **Vigilancia Continua 24/7:** Servicio singleton que lanza incursiones automáticas con intervalos dinámicos aleatorios (de 50 a 75 minutos), evitando ventanas de solapamiento (*Blackout*) con los Daily Scans de las 02:00 y 14:30 UTC.
+*   **Ejecución Efímera en Microsoft Azure:** Utiliza runners de GitHub Actions con IPs públicas dinámicas limpias para evitar bloqueos por tasa de peticiones.
+*   **Deduplicación Diaria Anti-Spam:** Si una ganga ya te fue notificada durante el día de hoy, el sistema la silencia hasta el día siguiente para evitar spam en Telegram.
+*   **Filtro Estricto de Ofertas Descartadas:** Omite automáticamente cualquier oferta marcada como rechazada o bloqueada en el Purgatorio o en la lista negra.
+*   **Comandos de Control en Telegram:**
+    *   `/centinela`: Consulta el estado de la vigilancia, total de incursiones, chollos descubiertos y tiempo para la próxima incursión.
+    *   `/centinela on` / `/centinela off`: Activa o pausa la vigilancia 24/7.
+    *   `/caza`: Dispara una incursión manual inmediata con el cuarteto canónico oficial MOTU (*"motu origins"*, *"masters del universo"*, *"masters of the universe"*, *"he-man origins"*).
+    *   `/caza [figura]`: Ejecuta una búsqueda personalizada en tiempo real.
+
 
 

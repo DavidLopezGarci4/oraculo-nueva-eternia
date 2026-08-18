@@ -254,7 +254,9 @@ app.include_router(logistics_router.router)
 app.include_router(wallapop_jobs_router.router)
 
 from src.interfaces.api.routers import showcase as showcase_router
+from src.interfaces.api.routers import analytics as analytics_router
 app.include_router(showcase_router.router)
+app.include_router(analytics_router.router)
 
 
 if __name__ == "__main__":

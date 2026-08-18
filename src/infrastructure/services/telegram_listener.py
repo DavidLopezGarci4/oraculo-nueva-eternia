@@ -216,7 +216,20 @@ class TelegramListener:
             return
 
         # Solo procesar comandos que inicien con '/'
+        # --- Procesamiento en Lenguaje Natural (El Ojo del Oráculo) ---
         if not text.startswith("/"):
+            if not is_guardian:
+                msg = (
+                    "<b>🔒 Acceso Restringido</b>\n\n"
+                    "No estás registrado como Guardián del Oráculo. Por favor, asocia tu chat ID enviando:\n"
+                    "<code>/register [tu_usuario_del_sistema]</code>"
+                )
+                await telegram_service.send_message(msg, chat_id=chat_id)
+                return
+            
+            from src.application.services.telegram_oracle_ai import OracleAssistantAI
+            ai_reply = await OracleAssistantAI.process_user_query(text, user_id=2)
+            await telegram_service.send_message(ai_reply, chat_id=chat_id)
             return
             
         parts = text.split(maxsplit=2)

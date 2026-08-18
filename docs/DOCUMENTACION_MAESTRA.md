@@ -65,6 +65,73 @@ El orquestador realiza una consulta masiva para evitar el temido error "N+1" (co
 2. Si el Ã­tem **ya estÃ¡ vinculado** en el catÃ¡logo, se actualiza su precio y se recalcula su puntuaciÃ³n financiera al instante.
 3. Si el Ã­tem es **nuevo**, pasa directamente al **Purgatorio** (`PendingMatchModel`), guardando todos sus datos (precio, nombre, URL, imagen).
 
+# 📜 El Oráculo de Nueva Eternia: Documentación Maestra
+
+**Versión:** 2.4.0-SOVEREIGN (Telegram Sovereign Shield, SSL, Apify Multi-Token & Nexus Bridge)
+**Última Revisión:** Agosto 2026
+
+Este documento es la **Fuente de Verdad Absoluta** del proyecto "El Oráculo de Nueva Eternia". Se ha redactado tras una auditoría profunda del código fuente (`src/`, `frontend/`, `docker-compose.yml`), asegurando que describe **exactamente cómo funciona la aplicación hoy en día**, sin suposiciones ni elementos obsoletos.
+
+Cualquier desarrollador, arquitecto o auditor que necesite entender el proyecto, debe empezar por aquÃ­.
+
+---
+
+## 1. VisiÃ³n General y PropÃ³sito
+
+**El OrÃ¡culo de Nueva Eternia** es una plataforma integral de inteligencia de mercado y gestiÃ³n patrimonial para coleccionistas (especÃ­ficamente enfocada en la lÃ­nea de figuras *Masters of the Universe: Origins*).
+
+### Â¿QuÃ© hace?
+
+1. **Inteligencia de Mercado (Scraping):** Extrae automÃ¡ticamente precios y disponibilidad de 15 tiendas de Europa y plataformas P2P (Wallapop, Vinted, eBay).
+2. **Filtrado y VinculaciÃ³n (El Purgatorio):** Procesa los datos crudos, detecta anomalÃ­as, y sugiere a quÃ© figura del catÃ¡logo pertenece cada oferta (SmartMatch), dejÃ¡ndolo en un estado de "espera" hasta su validaciÃ³n humana.
+3. **AnÃ¡lisis Financiero (DealScorer):** Calcula el coste real de una figura (Landed Price = Precio + EnvÃ­o + Aduanas/IVA) y asigna una puntuaciÃ³n de "Oportunidad" (1-100) frente al mercado secundario y el MSRP (Precio de salida).
+4. **GestiÃ³n de ColecciÃ³n (La Fortaleza):** Permite al usuario llevar un control estricto de su colecciÃ³n personal (inversiÃ³n, estado MOC/Loose, Shelf Wear) y calcular el retorno de inversiÃ³n (ROI) en tiempo real.
+
+---
+
+## 2. Arquitectura Global y TopologÃ­a
+
+La aplicaciÃ³n sigue los principios de **Clean Architecture** (Arquitectura de Cebolla) y opera bajo el estÃ¡ndar interno de resiliencia **3OX (Tier 3)**.
+
+### 2.1 Stack TecnolÃ³gico Definitivo
+
+| Capa | TecnologÃ­a | JustificaciÃ³n |
+| :--- | :--- | :--- |
+| **Frontend UI** | **React 19** + Vite | Velocidad de recarga, estado reactivo concurrente. |
+| **Estilos** | **Tailwind CSS 4.0** + Framer Motion | EstÃ©tica *Glassmorphism* sin configuraciones pesadas. |
+| **Peticiones/Estado** | **TanStack Query** (React Query) | Cacheo, re-fetching inteligente y gestiÃ³n de carga de la API. |
+| **Backend API (Broker)**| **FastAPI** (Python 3.12+) | AltÃ­simo rendimiento, tipado estricto (Pydantic V2) y asincronÃ­a. |
+| **Persistencia (Local)**| **SQLite** (`oraculo.db`) | Buffer de alta velocidad para sincronizaciÃ³n *Out-of-Band* y offline. |
+| **Persistencia (Cloud)**| **PostgreSQL** (Supabase) | Fuente de verdad global, respaldada por RLS (Row Level Security). |
+| **Motor de ExtracciÃ³n** | **Playwright** + BeautifulSoup4 | Capacidad de saltar bloqueos (403, 503) mediante simulaciÃ³n humana. |
+| **Infraestructura** | **Docker** + Docker Compose | Despliegue industrializado, consistente entre desarrollo y producciÃ³n. |
+
+### 2.2 TopologÃ­a de Conexiones
+
+1. **El Frontend** se comunica **exclusivamente** con el **API Broker (FastAPI)** a travÃ©s del puerto 8000 usando JWT para autenticaciÃ³n.
+2. **El API Broker** valida reglas de negocio y delega las operaciones de guardado al **Módulo de Infraestructura (SQLAlchemy)**.
+3. Las operaciones pesadas (ej. Incursiones masivas) se lanzan mediante `BackgroundTasks` en FastAPI, devolviendo inmediatamente un `200 OK` al Frontend para no bloquear la UI.
+
+---
+
+## 3. Flujo de Datos (El Ciclo de Vida de una Oferta)
+
+Entender cÃ³mo viaja un dato desde una tienda hasta el "Dashboard" es vital para dominar la aplicaciÃ³n. El sistema emplea una polÃ­tica de **"Purgatory-First"** (RevisiÃ³n humana obligatoria para Ã­tems nuevos).
+
+### FASE A: IncursiÃ³n (El Pipeline)
+
+1. El usuario (o un *cron job*) dispara la "IncursiÃ³n Total" (`POST /api/scrapers/run`).
+2. El `ScrapingPipeline` inicia la recolecciÃ³n de manera **secuencial**. (Se implementÃ³ en Fase 56 para permitir **cancelaciÃ³n cooperativa** y timeouts individuales precisos de 5 minutos).
+3. Cada araÃ±a (*Scraper*) devuelve objetos en bruto que pasan por un **Adapter**, generando un `receipt_id` forense.
+
+### FASE B: Bulk Pre-Filtering & Purgatorio
+
+El orquestador realiza una consulta masiva para evitar el temido error "N+1" (consultar la base de datos por cada Ã­tem):
+
+1. Si el Ã­tem estÃ¡ en **Lista Negra**, se descarta silenciosamente.
+2. Si el Ã­tem **ya estÃ¡ vinculado** en el catÃ¡logo, se actualiza su precio y se recalcula su puntuaciÃ³n financiera al instante.
+3. Si el Ã­tem es **nuevo**, pasa directamente al **Purgatorio** (`PendingMatchModel`), guardando todos sus datos (precio, nombre, URL, imagen).
+
 ### FASE C: SmartMatch (Identidad)
 
 El `SmartMatcher` (`matching.py`) analiza los Ã­tems del Purgatorio intentando adivinar de quÃ© figura se trata. ActÃºa como un tribunal:
@@ -73,68 +140,62 @@ El `SmartMatcher` (`matching.py`) analiza los Ã­tems del Purgatorio intentando
 - **Test de Velocidad (Rust Kernel):** Realiza bÃºsquedas hiper-rÃ¡pidas mediante lÃ³gica de cercanÃ­a de strings.
 - **El Juez SemÃ¡ntico (Python Brain & VETO):** Un motor con "pesos" IDF. Sabe que la palabra "Origins" vale mÃ¡s que "Figura". Si detecta una contradicciÃ³n flagrante (ej. coinciden en "Skeletor" pero uno es "Masterverse" y otro "Origins"), **Python aplica VETO y bloquea el Match** por seguridad.
 
-### FASE D: ConsolidaciÃ³n Financiera (DealScorer)
+### FASE D: Consolidación Financiera (DealScorer)
 
-Una vez que una oferta es vÃ¡lida, entra al `DealScorer`:
-
-1. El sistema de **LogÃ­stica** calcula el `Landed Price` (si la tienda es de USA, aÃ±ade aduanas; si es Europea, aÃ±ade envÃ­os locales).
+Una vez que una oferta es válida, entra al `DealScorer`:
+1. El sistema de **Logística** calcula el `Landed Price` (si la tienda es de USA, añade aduanas; si es Europea, añade envíos locales y seguros P2P).
 2. Se asigna una nota (0 a 100) en base a 3 vectores:
-   - CuÃ¡nto descuento tiene frente al Precio Oficial (MSRP) [Max 40pts].
-   - QuÃ© tan barato es frente a la media de segunda mano (P25 Floor) [Max 40pts].
-   - Â¿EstÃ¡ en tu lista de deseos? [Max 20pts].
-3. Si la oferta supera los 90 puntos y tiene mÃ¡s de 20% de descuento real, se dispara un */oraculo-nueva-eternia
-â”‚
-â”œâ”€â”€ .env                     # [CRÃTICO] Secretos y configuraciones
-â”œâ”€â”€ docker-compose.yml       # Orquestador local de contenedores
-â”œâ”€â”€ docs/                    # Documentación del proyecto
-â”‚   â””â”€â”€ manual_usuario/      # Manual de usuario interactivo (8 guías detalladas)
-â”œâ”€â”€ frontend/                # AplicaciÃ³n React 19 / Vite
-â”‚   â””â”€â”€ src/
-â”‚       â”œâ”€â”€ api/             # Clientes axios para FastAPI
-â”‚       â”œâ”€â”€ components/      # UI, Layout, Loaders (PowerSwordLoader)
-â”‚       â””â”€â”€ pages/           # Vistas (Dashboard, Catalog, Purgatory...)
-â”‚
-â””â”€â”€ src/                     # Backend Python / FastAPI
-    â”œâ”€â”€ core/                # Módulo central: config.py, matching.py, logger.py
-    â”œâ”€â”€ domain/              # LÃ³gica pura: schemas.py, models.py (SQLAlchemy)
-    â”œâ”€â”€ application/         # Casos de uso: deal_scorer.py, logistics_service.py
-    â”œâ”€â”€ infrastructure/      # Capa externa:
-    â”‚   â”œâ”€â”€ database_cloud.py# ConexiÃ³n Supabase/SQLite
-    â”‚   â””â”€â”€ scrapers/        # Motores web (amazon_scraper.py, wallapop_scraper.py)
-    â””â”€â”€ interfaces/
-        â””â”€â”€ api/             # Capa de entrada FastAPI
-            â”œâ”€â”€ main.py      # App FastAPI, middlewares y manejadores de error
-            â””â”€â”€ routers/     # 12 módulos enrutados (products.py, admin.py...)
-��‚   â”œâ”€â”€ database_cloud.py# ConexiÃ³n Supabase/SQLite
-    â”‚   â””â”€â”€ scrapers/        # Motores web (amazon_scraper.py, wallapop_scraper.py)
-    â””â”€â”€ interfaces/
-        â””â”€â”€ api/             # Capa de entrada FastAPI
-            â”œâ”€â”€ main.py      # App FastAPI, middlewares y manejadores de error
-            â””â”€â”€ routers/     # 12 módulos enrutados (products.py, admin.py...)
+   - Cuánto descuento tiene frente al Precio Oficial (MSRP) [Max 40pts].
+   - Qué tan barato es frente a la media de segunda mano (P25 Floor) [Max 40pts].
+   - ¿Está en tu lista de deseos? [Max 20pts].
+3. Si la oferta supera los 90 puntos y tiene más de 20% de descuento real, se dispara una alerta push a Telegram de forma inmediata.
+
+---
+
+## 4. Estructura de Directorios del Repositorio
+
+```text
+oraculo-nueva-eternia/
+├── .env                     # [CRÍTICO] Secretos y configuraciones
+├── docker-compose.yml       # Orquestador local de contenedores
+├── docs/                    # Documentación del proyecto
+│   └── manual_usuario/      # Manual de usuario interactivo (8 guías detalladas)
+├── frontend/                # Aplicación React 19 / Vite
+│   └── src/
+│       ├── api/             # Clientes axios para FastAPI
+│       ├── components/      # UI, Layout, Loaders, Widgets (GitHubQuotaWidget)
+│       └── pages/           # Vistas (Dashboard, Catalog, Purgatory, Config...)
+└── src/                     # Backend Python / FastAPI
+    ├── core/                # Módulo central: config.py, matching.py, logger.py
+    ├── domain/              # Lógica pura: schemas.py, models.py (SQLAlchemy)
+    ├── application/         # Casos de uso: deal_scorer.py, logistics_service.py, github_quota_service.py, vinted_sentinel_service.py
+    ├── infrastructure/      # Capa externa: database_cloud.py, scrapers/
+    └── interfaces/
+        └── api/             # Capa de entrada FastAPI (main.py, routers/)
 ```
 
 ---
 
 ## 5. Diccionario de Variables de Entorno (`.env`)
 
-El sistema sigue una polÃ­tica **Zero-Leak**. Ninguna credencial se escribe en el código. Para levantar la aplicaciÃ³n, necesitas configurar estas variables (presentes en `src/core/config.py`).
+El sistema sigue una política **Zero-Leak**. Ninguna credencial se escribe en el código. Para levantar la aplicación, necesitas configurar estas variables (presentes en `src/core/config.py`).
 
-*(AclaraciÃ³n: No se incluyen valores reales, solo las definiciones).*
-
-| Variable | DescripciÃ³n | Estado |
+| Variable | Descripción | Estado |
 | :--- | :--- | :--- |
-| `DATABASE_URL` | Ruta local para el buffer rÃ¡pido. Ej: `sqlite:///./oraculo.db`. | Requerida |
+| `DATABASE_URL` | Ruta local para el buffer rápido. Ej: `sqlite:///./oraculo.db`. | Requerida |
 | `SUPABASE_DATABASE_URL` | Connection string a la base de datos maestra en la nube. | Requerida (Cloud) |
-| `IMAGE_CACHE_DIR` | Directorio local donde se guardarán las imágenes de productos (caché local). Por defecto data/image_cache. | Opcional |
-| `IMAGE_CACHE_DIR` | Directorio local donde se guardarán las imágenes de productos (caché local). Por defecto data/image_cache. | Opcional |
-| `SUPABASE_URL` y `KEY` | (Legacy/Opcional) Si se utiliza la API REST de Supabase directamente. | Opcional |
-| `ORACULO_API_KEY` | Clave de seguridad interna. Protege los endpoints de administraciÃ³n y comandos. | Requerida |
-| `JWT_SECRET` | Semilla para firmar los tokens de sesiÃ³n de usuarios (React). **CrÃ­tico cambiarla en prod.** | Requerida |
-| `TELEGRAM_BOT_TOKEN` | Token del bot de Telegram para alertas de "Compra Obligatoria". | Opcional |
-| `TELEGRAM_CHAT_ID` | Tu ID de usuario en Telegram para que el bot sepa a quiÃ©n escribirle. | Opcional |
-| `SMTP_HOST`, `SMTP_USER`... | Credenciales para envÃ­o de emails (RecuperaciÃ³n de contraseÃ±as, reportes). | Opcional |
-| `CLOUDINARY_API_KEY` | (Futuro/ImÃ¡genes) Servicio de hosteo de imÃ¡genes. Actualmente usando Supabase Storage. | Opcional |
-| `SOVEREIGN_EMAIL` | Email de emergencia para bypassear la seguridad y obtener rol `admin` si falla la BD. | Opcional |
+| `IMAGE_CACHE_DIR` | Directorio local de imágenes (caché local). Por defecto `data/image_cache`. | Opcional |
+| `ORACULO_API_KEY` | Clave de seguridad interna para endpoints admin y scrapers. | Requerida |
+| `JWT_SECRET` | Semilla para firmar los tokens de sesión de usuarios (React). | Requerida |
+| `TELEGRAM_BOT_TOKEN` | Token del bot de Telegram para alertas de ofertas y comandos. | Opcional |
+| `TELEGRAM_CHAT_ID` | Tu ID de usuario en Telegram para recibir alertas y reportes. | Opcional |
+| `SMTP_HOST`, `SMTP_USER`... | Credenciales para envío de emails (recuperación de accesos). | Opcional |
+| `SOVEREIGN_EMAIL` | Email de emergencia para bypassear seguridad y obtener rol `admin`. | Opcional |
+| `GITHUB_TOKEN` | Token clásico de GitHub (repo/workflow) para runners en Azure y telemetría FinOps. | Opcional |
+| `GITHUB_REPOSITORY` | Repositorio remoto (`DavidLopezGarci4/oraculo-nueva-eternia`). | Opcional |
+| `VINTED_SENTINEL_ENABLED` | Activa/desactiva el Centinela 24/7 en segundo plano (`true`/`false`). | Opcional (def: true) |
+| `VINTED_SENTINEL_MIN_DELAY_MIN` | Tiempo mínimo en minutos para el ciclo aleatorio del centinela (def: 50). | Opcional |
+| `VINTED_SENTINEL_MAX_DELAY_MIN` | Tiempo máximo en minutos para el ciclo aleatorio del centinela (def: 75). | Opcional |
 
 ---
 
@@ -142,28 +203,16 @@ El sistema sigue una polÃ­tica **Zero-Leak**. Ninguna credencial se escribe en
 
 ### 6.1 Bypasseando el Firewall (Sovereign Login)
 
-Si la base de datos se corrompe o pierdes tu cuenta, el sistema incluye un mecanismo de emergencia (*MasterLogin / ShieldBypass* en React). Si introduces el `SOVEREIGN_EMAIL` validado por el backend, obtienes poderes administrativos instantÃ¡neos, seteando tu rol localmente.
+Si la base de datos se corrompe o pierdes tu cuenta, el sistema incluye un mecanismo de emergencia (*MasterLogin / ShieldBypass* en React). Si introduces el `SOVEREIGN_EMAIL` validado por el backend, obtienes poderes administrativos instantáneos, seteando tu rol localmente.
 
-### 6.2 Modificar / AÃ±adir un Scraper
+### 6.2 Modificar / Añadir un Scraper
 
-Para aÃ±adir un nuevo motor de bÃºsqueda (por ejemplo, Triguetech):
+Para añadir un nuevo motor de búsqueda (por ejemplo, Triguetech):
 
 1. Crea un archivo en `src/infrastructure/scrapers/nuevo_scraper.py`.
 2. Hereda de `BaseScraper` y define `shop_name` y la URL.
-3. Sobrescribe el mÃ©todo `search()`.
-4. **Registro Manual:** A diferencia de sistemas antiguos, los scrapers NO se autodescubren. Debes registrarlos manualmente en dos lugares clave para que sean reconocidos por el ecosistema:
-   - En `src/application/jobs/daily_scan.py` (dentro de la lista `all_scrapers` para las rondas nocturnas).
-   - En `src/interfaces/api/routers/scrapers.py` (dentro del diccionario `spiders_map` para ejecuciones manuales desde el admin).
-
-#### Troubleshootings Comunes de Scrapers
-
-- **Scraper no aparece en el Panel Admin:** Asegúrate de haberlo añadido en `spiders_map` de `routers/scrapers.py`.
-- **Scraper de WooCommerce (ej. Triguetech) no detecta precios/stock:** WooCommerce puede variar las clases de CSS (`ins` vs `del`, `.instock` vs `.outofstock`). Si hay errores en las lecturas, inspecciona la estructura devuelta (`_parse_listing`) con BeautifulSoup y ajusta los selectores.
-
-### 6.3 Seguridad y Permisos
-
-- El sistema utiliza `create_access_token` basado en PyJWT para generar tokens que expiran en 24h.
-- Los endpoints críticos (`/api/admin/`, `/api/scrapers/run`) requieren validación de JWT y, adicionalmente, verificación de rol `admin` inyectado mediante dependencias de FastAPI (`get_current_user`).
+3. Sobrescribe el método `search()`.
+4. **Registro Manual:** Registra el scraper en `src/application/jobs/daily_scan.py` (`all_scrapers`) y en `src/interfaces/api/routers/scrapers.py` (`spiders_map`).
 
 ---
 
@@ -177,11 +226,6 @@ Para aÃ±adir un nuevo motor de bÃºsqueda (por ejemplo, Triguetech):
 - **Conexión Supabase PostgreSQL**: La sincronización de configuraciones y calibraciones globales requiere la activación de la cadena de conexión cloud mediante la variable `SUPABASE_DATABASE_URL` en el archivo `.env` en la raíz del proyecto. En su ausencia, el backend operará de forma transparente en modo offline tirando únicamente del archivo local de SQLite `oraculo.db`.
 - **Motor de Landed Price y Logística por Tienda**: El motor de valoración (`LogisticsService` y `ValuationService`) computa el coste final real puesto en casa de cada oferta activa. Se integran tarifas de plataformas P2P (5€ envío + 2% de seguro), recargos de importación de BigBadToyStore ($8 USD + 21% IVA en aduanas convertidos a EUR), umbrales de gratuidad de Frikimaz (5€ / gratis ≥69€), Smyths Toys (4€) y Triguetech (7€ fijo). El panel de oportunidades (`/api/dashboard/top-deals`) y el selector de ofertas en catálogo determinan las gangas reales en base a dicho coste total puesto en casa, erradicando los sesgos del precio base de catálogo.
 - **Resolución de Inconsistencias de Código (Auditoría code-error-analyzer)**: Se ha implementado un saneamiento global para unificar y estrucutrar importaciones estáticas en el frontend (evitando advertencias de Rollup sobre dynamic imports en Catalog y Collection), alinear el auto-registro de scrapers al arrancar el servidor (`deps.py`), erradicar warnings de deprecación de fecha/hora en pytest (`product.py`) y homogeneizar por completo la ocultación de datos en modo incógnito (Grayskull) en el Dashboard.
-
-
----
-
-## 8. OrquestaciÃ³n DevOps, CI/CD y Despliegue en la Nube
 
 Para entender verdaderamente Nueva Eternia, no basta con mirar el código local. El sistema es un ecosistema vivo que respira gracias a la interacciÃ³n coordinada entre **GitHub**, **Oracle Cloud (OCI)** y **Docker**.
 

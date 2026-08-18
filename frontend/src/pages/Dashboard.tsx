@@ -27,6 +27,8 @@ import { parseUtcDate } from '../utils/dateUtils';
 import masterRoleImg from '../assets/role-master.webp';
 import guardianRoleImg from '../assets/role-guardian.webp';
 import { MOTUImage } from '../components/ui/MOTUImage';
+import OpportunityHeatMatrix, { type HeatFilterType } from '../components/dashboard/OpportunityHeatMatrix';
+import EterniaMarketIndexWidget from '../components/dashboard/EterniaMarketIndexWidget';
 
 // Recharts & Collection API Imports for Arsenal Analytics & Completitud
 import {
@@ -113,6 +115,16 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
         queryFn: () => getHallOfFame(user?.id || 2),
         refetchInterval: 300000 // 5 min
     });
+
+    const [heatFilter, setHeatFilter] = React.useState<HeatFilterType>('ALL');
+
+    const filteredTopDeals = React.useMemo(() => {
+        if (!topDeals) return [];
+        if (heatFilter === 'HOT') return topDeals.filter((d: any) => (d.discount_pct || 0) >= 40);
+        if (heatFilter === 'WARM') return topDeals.filter((d: any) => (d.discount_pct || 0) >= 20 && (d.discount_pct || 0) < 40);
+        if (heatFilter === 'COOL') return topDeals.filter((d: any) => (d.discount_pct || 0) < 20);
+        return topDeals;
+    }, [topDeals, heatFilter]);
 
     const activeUserId = user?.id || 2;
 
@@ -488,6 +500,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                 </div>
             </div>
 
+            {/* Widget del Índice Bursátil MOTU (EMI) */}
+            <div className="mt-6">
+                <EterniaMarketIndexWidget />
+            </div>
+
             {/* Pareto features: Completitud and Donut Chart */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
                 {/* Arsenal Analytics: Donut Chart */}
@@ -730,10 +747,17 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                                     {isAdmin ? 'Oportunidades de Capturas Bajo Seguimiento' : 'Oportunidades de Captura'}
                                 </h4>
 
+                                {/* Matriz Térmica / Termómetro de Gangas Responsive */}
+                                <OpportunityHeatMatrix
+                                    deals={topDeals || []}
+                                    activeFilter={heatFilter}
+                                    onSelectFilter={setHeatFilter}
+                                />
+
                                 {!isAdmin ? (
                                     // Guardian view
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-white">
-                                        {topDeals?.map((deal) => (
+                                        {filteredTopDeals?.map((deal) => (
                                             <div key={deal.id} className="border-b border-white/[0.03] last:border-0 hover:bg-white/[0.02] p-4 rounded-2xl transition-all">
                                                 <div className="flex items-center gap-3">
                                                     <a href={deal.url} target="_blank" rel="noopener noreferrer" className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-black/40 border border-white/5">
@@ -777,14 +801,14 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                                                 </div>
                                             </div>
                                         ))}
-                                        {(!topDeals || topDeals.length === 0) && (
+                                        {(!filteredTopDeals || filteredTopDeals.length === 0) && (
                                             <div className="col-span-2 py-20 text-center text-white/60 uppercase font-black text-[10px] tracking-widest">Nada en el radar local</div>
                                         )}
                                     </div>
                                 ) : (
                                     // Admin view
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        {topDeals?.map((deal) => (
+                                        {filteredTopDeals?.map((deal) => (
                                             <div key={deal.id} className="p-4 border border-white/5 bg-white/[0.01] hover:bg-white/[0.02] rounded-2xl transition-all">
                                                 <div className="flex items-center justify-between gap-4">
                                                     <div className="flex items-center gap-3 min-w-0">

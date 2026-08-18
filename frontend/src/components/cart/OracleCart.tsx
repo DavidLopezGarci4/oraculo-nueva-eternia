@@ -1,11 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useCart } from '../../context/CartContext';
 import { useQuery } from '@tanstack/react-query';
 import { calculateCart } from '../../api/cart';
-import { ShoppingBasket, Trash2, Plus, Minus, ReceiptText, Package, Truck, Info, Zap } from 'lucide-react';
+import { ShoppingBasket, Trash2, Plus, Minus, ReceiptText, Package, Truck, Info, Zap, Sparkles } from 'lucide-react';
+import BudgetOptimizerModal from './BudgetOptimizerModal';
 
 const OracleCart: React.FC = () => {
-    const { items, removeFromCart, updateQuantity, clearCart, totalItems } = useCart();
+    const { items, addToCart, removeFromCart, updateQuantity, clearCart, totalItems } = useCart();
+    const [showOptimizer, setShowOptimizer] = useState(false);
 
     const { data: invoice, isLoading } = useQuery({
         queryKey: ['cart-calculation', items],
@@ -14,16 +16,40 @@ const OracleCart: React.FC = () => {
         placeholderData: (prev) => prev
     });
 
+    const handleAddOptimizedItems = (optimizedItems: any[]) => {
+        for (const item of optimizedItems) {
+            addToCart({
+                id: item.product_id ? item.product_id.toString() : Math.random().toString(),
+                product_name: item.product_name,
+                shop_name: item.shop_name,
+                price: item.base_price,
+                image_url: item.image_url
+            });
+        }
+    };
+
     if (items.length === 0) {
         return (
-            <div className="rounded-[2.5rem] border border-white/5 bg-black/50 backdrop-blur-md p-10 flex flex-col items-center justify-center text-center gap-4">
+            <div className="rounded-[2.5rem] border border-white/5 bg-black/50 backdrop-blur-md p-8 flex flex-col items-center justify-center text-center gap-4">
                 <div className="h-16 w-16 rounded-full bg-white/5 flex items-center justify-center text-white/10">
                     <ShoppingBasket className="h-8 w-8" />
                 </div>
                 <div className="space-y-1">
                     <h3 className="text-white font-black uppercase tracking-widest text-sm">Carrito Ficticio Vacío</h3>
-                    <p className="text-[10px] text-white/20 font-bold max-w-xs uppercase">Añade reliquias desde Oportunidades, Mercader de Eternos o Nueva Eternia para simular tu pedido logístico.</p>
+                    <p className="text-[10px] text-white/20 font-bold max-w-xs uppercase">Añade reliquias desde Oportunidades o pide al Asistente que te optimice un lote.</p>
                 </div>
+                <button
+                    onClick={() => setShowOptimizer(true)}
+                    className="mt-2 px-4 py-2.5 bg-gradient-to-r from-amber-500/20 to-brand-primary/20 border border-brand-primary/40 hover:border-brand-primary text-brand-primary rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-lg"
+                >
+                    <Sparkles className="h-4 w-4" />
+                    🧙‍♂️ Optimizar Cesta con Presupuesto
+                </button>
+                <BudgetOptimizerModal
+                    isOpen={showOptimizer}
+                    onClose={() => setShowOptimizer(false)}
+                    onAddItemsToCart={handleAddOptimizedItems}
+                />
             </div>
         );
     }
@@ -37,8 +63,23 @@ const OracleCart: React.FC = () => {
                         <span className="text-[8px] font-black text-orange-500 uppercase tracking-tighter">{totalItems} Ítems</span>
                     </div>
                 </div>
-                <button onClick={clearCart} className="text-[10px] font-black text-red-400/50 hover:text-red-400 uppercase tracking-widest transition-colors">Vaciar Carrito</button>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => setShowOptimizer(true)}
+                        className="px-3 py-1 bg-brand-primary/10 hover:bg-brand-primary/20 border border-brand-primary/30 text-brand-primary rounded-lg text-[10px] font-bold uppercase tracking-wider transition flex items-center gap-1.5"
+                    >
+                        <Sparkles className="h-3 w-3" />
+                        Asistente Presupuesto
+                    </button>
+                    <button onClick={clearCart} className="text-[10px] font-black text-red-400/50 hover:text-red-400 uppercase tracking-widest transition-colors">Vaciar Carrito</button>
+                </div>
             </div>
+
+            <BudgetOptimizerModal
+                isOpen={showOptimizer}
+                onClose={() => setShowOptimizer(false)}
+                onAddItemsToCart={handleAddOptimizedItems}
+            />
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Items List */}

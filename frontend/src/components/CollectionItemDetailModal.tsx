@@ -18,6 +18,8 @@ import type { Product } from '../api/collection';
 import { getOptimizedImageUrl } from '../utils/imageUtils';
 import { MOTUImage } from './ui/MOTUImage';
 import { useModalA11y } from '../hooks/useModalA11y';
+import TradingCardModal from './collection/TradingCardModal';
+import { Sparkles } from 'lucide-react';
 
 
 interface CollectionItemDetailModalProps {
@@ -43,6 +45,7 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
     );
     const [expandedImage, setExpandedImage] = useState<string | null>(null);
     const [showGradingGuide, setShowGradingGuide] = useState(false);
+    const [showTradingCard, setShowTradingCard] = useState(false);
 
 
     const updateMutation = useMutation({
@@ -285,6 +288,16 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
 
                             <button
                                 type="button"
+                                onClick={() => setShowTradingCard(true)}
+                                className="flex-1 sm:flex-initial min-w-[90px] sm:min-w-[140px] px-3 py-2 md:px-6 md:py-4 rounded-lg md:rounded-2xl bg-amber-500/15 text-amber-300 border border-amber-500/30 font-black uppercase tracking-widest text-[8px] md:text-[10px] hover:bg-amber-500 hover:text-black transition-all shadow-lg flex justify-center items-center gap-1.5"
+                                title="Generar Cromo de Colección Compartible"
+                            >
+                                <Sparkles className="h-3.5 w-3.5" />
+                                <span>Cromo Digital</span>
+                            </button>
+
+                            <button
+                                type="button"
                                 onClick={onClose}
                                 className="flex-1 sm:flex-initial min-w-[90px] sm:min-w-[140px] px-3 py-2 md:px-8 md:py-4 rounded-lg md:rounded-2xl bg-white/5 text-white/70 font-black uppercase tracking-widest text-[8px] md:text-[10px] hover:bg-white/10 transition-all border border-white/5 flex justify-center items-center"
                             >
@@ -301,6 +314,24 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
                                 <span>{updateMutation.isPending ? 'Guardando...' : 'Guardar Legado'}</span>
                             </button>
                         </div>
+
+                        {/* Trading Card Modal */}
+                        <TradingCardModal
+                            isOpen={showTradingCard}
+                            onClose={() => setShowTradingCard(false)}
+                            item={{
+                                id: product.id,
+                                name: product.name,
+                                image_url: product.image_url || undefined,
+                                condition: condition,
+                                grading: grading,
+                                purchase_price: price === '' ? 0.0 : (parseFloat(price) || 0.0),
+                                current_value: product.p25_price || product.retail_price || 19.99,
+                                sub_category: product.sub_category,
+                                release_year: (product as any).release_year,
+                                sku: (product as any).sku || (product as any).ean
+                            }}
+                        />
 
                         {/* Collapsible Grading Guide Section */}
                         <div className="w-full border-t border-white/5 pt-3">
