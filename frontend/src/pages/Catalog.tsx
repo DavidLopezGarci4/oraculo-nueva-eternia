@@ -238,8 +238,9 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
             }
         },
         onSettled: () => {
-            queryClient.invalidateQueries({ queryKey: ['collection', activeUserId, isVintageOnly] });
-            queryClient.invalidateQueries({ queryKey: ['dashboard-stats', activeUserId] });
+            queryClient.invalidateQueries({ queryKey: ['collection'] });
+            queryClient.invalidateQueries({ queryKey: ['collection-full'] });
+            queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
         }
     });
 

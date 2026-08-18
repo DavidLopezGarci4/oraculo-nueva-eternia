@@ -11,9 +11,10 @@ import {
     Award,
     TrendingUp,
     Calendar,
-    Lock
+    Lock,
+    Loader2
 } from 'lucide-react';
-import { toBlob, toPng } from 'html-to-image';
+import { toPng } from 'html-to-image';
 import { MOTUImage } from '../ui/MOTUImage';
 
 interface TradingCardModalProps {
@@ -35,11 +36,160 @@ interface TradingCardModalProps {
     } | null;
 }
 
+// Convertidor de DataURL base64 a Blob nativo
+const dataUrlToBlob = async (dataUrl: string): Promise<Blob> => {
+    const res = await fetch(dataUrl);
+    return await res.blob();
+};
+
+// Generador de Cromo PNG con html-to-image y fallback infalible mediante Canvas 2D
+const generateTradingCardDataUrl = async (node: HTMLElement, item: any): Promise<string> => {
+    try {
+        // Intento 1: Renderizado vectorial nítido con html-to-image (skipFonts evita bloqueos de CORS en fuentes)
+        return await toPng(node, {
+            pixelRatio: 2,
+            skipFonts: true,
+            cacheBust: false,
+            style: { transform: 'none' }
+        });
+    } catch (e1) {
+        console.warn('html-to-image falló, ejecutando motor de composición directa por Canvas:', e1);
+        
+        // Intento 2: Motor de Dibujo Canvas 2D Nativo (100% libre de errores CORS y de red)
+        return new Promise((resolve, reject) => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return reject('No se pudo inicializar contexto Canvas 2D');
+
+            const width = 720;
+            const height = 1080;
+            canvas.width = width;
+            canvas.height = height;
+
+            // 1. Fondo Oscuro Gradiente
+            const grad = ctx.createLinearGradient(0, 0, 0, height);
+            grad.addColorStop(0, '#030712');
+            grad.addColorStop(0.5, '#0f172a');
+            grad.addColorStop(1, '#000000');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, width, height);
+
+            // 2. Marco Dorado Metálico
+            ctx.strokeStyle = '#f59e0b';
+            ctx.lineWidth = 10;
+            ctx.strokeRect(15, 15, width - 30, height - 30);
+
+            ctx.strokeStyle = '#10b981';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(30, 30, width - 60, height - 60);
+
+            // 3. Cabecera y Grado
+            ctx.fillStyle = '#fde68a';
+            ctx.font = 'bold 28px sans-serif';
+            ctx.fillText(item.sub_category || 'MOTU ORIGINS', 50, 85);
+
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '18px monospace';
+            ctx.fillText(`HERITAGE ARCHIVE • #${(item.sku || String(item.id)).slice(-5)}`, 50, 115);
+
+            ctx.fillStyle = '#34d399';
+            ctx.font = 'bold 24px monospace';
+            ctx.fillText(`GRADE ${(item.grading || 10.0).toFixed(1)} • GEM MINT`, width - 380, 85);
+
+            // 4. Área de Imagen
+            ctx.fillStyle = '#090d16';
+            ctx.fillRect(50, 145, width - 100, 520);
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(50, 145, width - 100, 520);
+
+            const finishDraw = () => {
+                // 5. Nombre de la Figura
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 36px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(item.product_name || item.name || 'FIGURA MOTU', width / 2, 725);
+
+                // Estado
+                ctx.fillStyle = '#10b981';
+                ctx.font = 'bold 20px sans-serif';
+                ctx.fillText('🛡️ 100% AUTÉNTICO • COLECCIÓN OFICIAL', width / 2, 765);
+
+                // 6. Matriz de Valoración y Rendimiento
+                ctx.fillStyle = '#0f172a';
+                ctx.fillRect(50, 800, width - 100, 160);
+                ctx.strokeStyle = '#f59e0b';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(50, 800, width - 100, 160);
+
+                const purchase = item.purchase_price || 0;
+                const market = item.current_value || purchase || 19.99;
+                const profit = market - purchase;
+                const roi = purchase > 0 ? ((profit / purchase) * 100).toFixed(0) : '0';
+
+                ctx.textAlign = 'left';
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = '20px sans-serif';
+                ctx.fillText('INVERSIÓN:', 90, 850);
+                ctx.fillText('VALOR MERCADO:', 90, 895);
+                ctx.fillText('PLUSVALÍA:', 90, 940);
+
+                ctx.textAlign = 'right';
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 24px monospace';
+                ctx.fillText(`${purchase.toFixed(2)} €`, width - 90, 850);
+
+                ctx.fillStyle = '#fde047';
+                ctx.fillText(`${market.toFixed(2)} €`, width - 90, 895);
+
+                ctx.fillStyle = profit >= 0 ? '#34d399' : '#f87171';
+                ctx.fillText(`${profit >= 0 ? '+' : ''}${profit.toFixed(2)} € (+${roi}%)`, width - 90, 940);
+
+                // 7. Sello de Grayskull
+                ctx.textAlign = 'center';
+                ctx.fillStyle = '#f59e0b';
+                ctx.font = 'bold 22px monospace';
+                ctx.fillText('⚔️ FORTALEZA DE GRAYSKULL • NUEVA ETERNIA ⚔️', width / 2, 1025);
+
+                resolve(canvas.toDataURL('image/png'));
+            };
+
+            // Intentar cargar y dibujar la imagen de la figura
+            if (item.image_url) {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = () => {
+                    try {
+                        const aspect = img.width / img.height;
+                        let drawW = width - 140;
+                        let drawH = drawW / aspect;
+                        if (drawH > 480) {
+                            drawH = 480;
+                            drawW = drawH * aspect;
+                        }
+                        const drawX = (width - drawW) / 2;
+                        const drawY = 165 + (480 - drawH) / 2;
+                        ctx.drawImage(img, drawX, drawY, drawW, drawH);
+                    } catch {}
+                    finishDraw();
+                };
+                img.onerror = () => {
+                    finishDraw();
+                };
+                img.src = item.image_url;
+            } else {
+                finishDraw();
+            }
+        });
+    }
+};
+
 export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onClose, item }) => {
     const cardRef = useRef<HTMLDivElement>(null);
     const [exporting, setExporting] = useState(false);
     const [copied, setCopied] = useState(false);
     const [shared, setShared] = useState(false);
+    const [downloaded, setDownloaded] = useState(false);
     const [rotateX, setRotateX] = useState(0);
     const [rotateY, setRotateY] = useState(0);
     const [glarePos, setGlarePos] = useState({ x: 50, y: 50, opacity: 0 });
@@ -85,20 +235,22 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
 
     // 1. Descargar imagen PNG HD
     const handleDownload = async () => {
-        if (!cardRef.current) return;
+        if (!cardRef.current || !item) return;
         try {
             setExporting(true);
-            const dataUrl = await toPng(cardRef.current, {
-                pixelRatio: 3,
-                cacheBust: true,
-                style: { transform: 'none' }
-            });
+            const dataUrl = await generateTradingCardDataUrl(cardRef.current, item);
+
             const link = document.createElement('a');
             link.download = `Cromo_MOTU_${name.replace(/\s+/g, '_')}.png`;
             link.href = dataUrl;
+            document.body.appendChild(link);
             link.click();
+            document.body.removeChild(link);
+
+            setDownloaded(true);
+            setTimeout(() => setDownloaded(false), 3000);
         } catch (err) {
-            console.error('Error generando cromo:', err);
+            console.error('Error descargando cromo:', err);
         } finally {
             setExporting(false);
         }
@@ -106,20 +258,18 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
 
     // 2. Copiar Imagen al Portapapeles (para pegar directo en WhatsApp Web / Telegram)
     const handleCopyImage = async () => {
-        if (!cardRef.current) return;
+        if (!cardRef.current || !item) return;
         try {
             setExporting(true);
-            const blob = await toBlob(cardRef.current, {
-                pixelRatio: 3,
-                cacheBust: true,
-                style: { transform: 'none' }
-            });
-            if (blob && navigator.clipboard && (window as any).ClipboardItem) {
+            const dataUrl = await generateTradingCardDataUrl(cardRef.current, item);
+            const blob = await dataUrlToBlob(dataUrl);
+
+            if (navigator.clipboard && (window as any).ClipboardItem) {
                 await navigator.clipboard.write([
                     new ClipboardItem({ 'image/png': blob })
                 ]);
                 setCopied(true);
-                setTimeout(() => setCopied(false), 2500);
+                setTimeout(() => setCopied(false), 3000);
             } else {
                 handleDownload();
             }
@@ -133,30 +283,45 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
 
     // 3. Compartir nativo (WhatsApp, Telegram, Móvil)
     const handleNativeShare = async () => {
-        if (!cardRef.current) return;
+        if (!cardRef.current || !item) return;
         try {
             setExporting(true);
-            const blob = await toBlob(cardRef.current, {
-                pixelRatio: 3,
-                cacheBust: true,
-                style: { transform: 'none' }
+            const dataUrl = await generateTradingCardDataUrl(cardRef.current, item);
+            const blob = await dataUrlToBlob(dataUrl);
+            const file = new File([blob], `Cromo_MOTU_${name.replace(/\s+/g, '_')}.png`, {
+                type: 'image/png'
             });
-            if (blob) {
-                const file = new File([blob], `Cromo_MOTU_${name.replace(/\s+/g, '_')}.png`, {
-                    type: 'image/png'
-                });
 
-                if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                    await navigator.share({
-                        title: `Cromo MOTU: ${name}`,
-                        text: `🏰 Cromo Oficial de ${name} custodidado en La Fortaleza de Grayskull.\nValor de Mercado: ${market.toFixed(2)}€ (${profit >= 0 ? '+' : ''}${profit.toFixed(2)}€ | ${roiPct}% ROI)`,
-                        files: [file]
-                    });
-                    setShared(true);
-                    setTimeout(() => setShared(false), 2500);
-                } else {
-                    handleCopyImage();
+            const shareText = `🏰 Cromo Oficial: ${name} custodiado en La Fortaleza de Grayskull.\nValor de Mercado: ${market.toFixed(2)}€ (${profit >= 0 ? '+' : ''}${profit.toFixed(2)}€ | ${roiPct}% ROI)`;
+
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                await navigator.share({
+                    title: `Cromo MOTU: ${name}`,
+                    text: shareText,
+                    files: [file]
+                });
+                setShared(true);
+                setTimeout(() => setShared(false), 3000);
+            } else {
+                // Fallback para Desktop o navegadores sin File Sharing
+                const link = document.createElement('a');
+                link.download = `Cromo_MOTU_${name.replace(/\s+/g, '_')}.png`;
+                link.href = dataUrl;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                // Copiar imagen al portapapeles si es posible
+                if (navigator.clipboard && (window as any).ClipboardItem) {
+                    try {
+                        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+                    } catch {}
                 }
+
+                // Abrir enlace directo de WhatsApp
+                window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`, '_blank');
+                setShared(true);
+                setTimeout(() => setShared(false), 3000);
             }
         } catch (err) {
             console.error('Error compartiendo cromo:', err);
@@ -167,34 +332,35 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
 
     return (
         <AnimatePresence>
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-xl overflow-y-auto">
+            <div className="fixed inset-0 z-[260] flex items-center justify-center p-3 sm:p-4 bg-black/90 backdrop-blur-2xl overflow-y-auto">
                 <motion.div
                     initial={{ opacity: 0, scale: 0.92, y: 15 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.92, y: 15 }}
-                    className="relative w-full max-w-sm sm:max-w-md bg-gradient-to-b from-slate-900/95 via-slate-950 to-black border border-amber-500/40 rounded-3xl shadow-2xl p-4 sm:p-5 text-white my-auto flex flex-col items-center"
+                    className="relative w-full max-w-sm sm:max-w-md bg-gradient-to-b from-slate-900/95 via-slate-950 to-black border-2 border-amber-500/50 rounded-3xl shadow-[0_0_60px_rgba(0,0,0,0.9)] p-4 sm:p-5 text-white my-auto flex flex-col items-center"
                 >
                     {/* Botón cerrar */}
                     <button
                         onClick={onClose}
-                        className="absolute top-3 right-3 p-2 rounded-full bg-slate-800/80 hover:bg-red-500 text-slate-300 hover:text-white transition z-20 shadow-lg"
+                        className="absolute top-3 right-3 p-2 rounded-full bg-slate-800/90 hover:bg-red-500 text-slate-300 hover:text-white transition z-20 shadow-lg"
+                        title="Cerrar Cromo"
                     >
                         <X className="h-4 w-4" />
                     </button>
 
-                    {/* Título y subtítulo */}
-                    <div className="text-center mb-3">
-                        <div className="flex items-center justify-center gap-1.5 text-amber-400 text-xs font-black uppercase tracking-widest">
-                            <Sparkles className="h-4 w-4 text-amber-300 animate-spin" style={{ animationDuration: '6s' }} />
-                            <span>Cromo Holográfico de Grayskull</span>
-                        </div>
-                        <p className="text-[10px] text-slate-400">Exporta y comparte tu reliquia en alta fidelidad</p>
+                    {/* Título de la Ficha */}
+                    <div className="flex items-center gap-2 mb-3 text-center">
+                        <Sparkles className="h-4 w-4 text-amber-400" />
+                        <h2 className="text-xs sm:text-sm font-black uppercase tracking-widest text-amber-300">
+                            Cromo Coleccionista Digital
+                        </h2>
+                        <Sparkles className="h-4 w-4 text-amber-400" />
                     </div>
 
-                    {/* CONTENEDOR DEL CROMO (RENDERIZADO VISUAL ESPECTACULAR) */}
+                    {/* CONTENEDOR 3D DEL CROMO */}
                     <div
+                        className="w-full flex justify-center cursor-grab active:cursor-grabbing"
                         style={{ perspective: 1000 }}
-                        className="w-full flex justify-center py-1 select-none"
                         onMouseMove={handleMouseMove}
                         onMouseLeave={handleMouseLeave}
                     >
@@ -342,8 +508,14 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                             disabled={exporting}
                             className="flex flex-col items-center justify-center gap-1 p-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-[10px] font-bold shadow-lg shadow-emerald-600/30 transition active:scale-95 disabled:opacity-50"
                         >
-                            {shared ? <Check className="h-4 w-4" /> : <Share2 className="h-4 w-4" />}
-                            <span>{shared ? '¡Compartido!' : 'WhatsApp / Redes'}</span>
+                            {exporting ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : shared ? (
+                                <Check className="h-4 w-4 text-white" />
+                            ) : (
+                                <Share2 className="h-4 w-4" />
+                            )}
+                            <span>{shared ? '¡Listo!' : 'WhatsApp / Redes'}</span>
                         </button>
 
                         {/* 2. Copiar Imagen al Portapapeles */}
@@ -352,8 +524,14 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                             disabled={exporting}
                             className="flex flex-col items-center justify-center gap-1 p-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-xl text-[10px] font-bold shadow-md transition active:scale-95 disabled:opacity-50"
                         >
-                            {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
-                            <span>{copied ? '¡Imagen Copiada!' : 'Copiar Imagen'}</span>
+                            {exporting ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : copied ? (
+                                <Check className="h-4 w-4 text-emerald-400" />
+                            ) : (
+                                <Copy className="h-4 w-4" />
+                            )}
+                            <span>{copied ? '¡Copiado!' : 'Copiar Imagen'}</span>
                         </button>
 
                         {/* 3. Descargar Imagen HD */}
@@ -362,8 +540,14 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                             disabled={exporting}
                             className="flex flex-col items-center justify-center gap-1 p-2.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 rounded-xl text-[10px] font-bold shadow-md transition active:scale-95 disabled:opacity-50"
                         >
-                            <Download className="h-4 w-4" />
-                            <span>{exporting ? 'Generando...' : 'Descargar HD'}</span>
+                            {exporting ? (
+                                <Loader2 className="h-4 w-4 animate-spin text-amber-300" />
+                            ) : downloaded ? (
+                                <Check className="h-4 w-4 text-emerald-400" />
+                            ) : (
+                                <Download className="h-4 w-4" />
+                            )}
+                            <span>{downloaded ? '¡Descargado!' : 'Descargar HD'}</span>
                         </button>
                     </div>
                 </motion.div>

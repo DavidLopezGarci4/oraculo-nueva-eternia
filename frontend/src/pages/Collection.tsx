@@ -132,12 +132,33 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
         staleTime: 1000 * 60 * 5,
     });
 
-    // 2. Mutación para alternar estado
+    // 2. Mutación para alternar estado con actualización optimista inmediata
     const toggleMutation = useMutation({
         mutationFn: ({ productId, wish }: { productId: number, wish: boolean }) => toggleCollection(productId, activeUserId, wish),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['collection', activeUserId, isVintageOnly] });
-            queryClient.invalidateQueries({ queryKey: ['dashboard-stats', activeUserId] });
+        onMutate: async ({ productId }) => {
+            await queryClient.cancelQueries({ queryKey: ['collection-full', activeUserId, isVintageOnly] });
+            const previousCollection = queryClient.getQueryData<Product[]>(['collection-full', activeUserId, isVintageOnly]);
+
+            if (previousCollection) {
+                // Al desvincular/liberar de Mi Fortaleza, eliminar instantáneamente de la lista visible
+                queryClient.setQueryData<Product[]>(
+                    ['collection-full', activeUserId, isVintageOnly],
+                    previousCollection.filter(item => item.id !== productId)
+                );
+            }
+
+            return { previousCollection };
+        },
+        onError: (_err, _variables, context) => {
+            if (context?.previousCollection) {
+                queryClient.setQueryData(['collection-full', activeUserId, isVintageOnly], context.previousCollection);
+            }
+        },
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: ['collection-full'] });
+            queryClient.invalidateQueries({ queryKey: ['collection'] });
+            queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+            queryClient.invalidateQueries({ queryKey: ['products'] });
         }
     });
 
