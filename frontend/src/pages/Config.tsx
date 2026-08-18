@@ -854,16 +854,16 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                 <div className="flex flex-col gap-2">
                     <h2 className="text-3xl font-bold tracking-tight text-white flex items-center gap-3">
                         <Terminal className="h-8 w-8 text-brand-primary" />
-                        Poderes del <span className="text-brand-primary">{user?.role === 'admin' ? 'Arquitecto' : 'Guardián'} de Nueva Eternia</span>
+                        Poderes del <span className="text-brand-primary">{isAdmin ? 'Arquitecto' : 'Guardián'} de Nueva Eternia</span>
                     </h2>
                     <p className="text-white/50">
-                        {user?.role === 'admin' 
+                        {isAdmin 
                             ? 'Administra los scrapers de incursión, el catálogo de reliquias, la gestión de héroes y la calibración del sistema.' 
                             : 'Configura tu ubicación geográfica, el Santuario público y la caché de imágenes local.'}
                     </p>
                 </div>
 
-                {user?.role === 'admin' && (
+                {isAdmin && (
                     <div className="flex flex-wrap items-center justify-center gap-1 bg-white/5 p-1 rounded-2xl border border-white/10 backdrop-blur-xl w-full md:w-auto shadow-lg">
                         <button
                             onClick={() => setActiveTab('scrapers')}

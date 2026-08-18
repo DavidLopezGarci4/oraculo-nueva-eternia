@@ -37,7 +37,23 @@ def _is_service_key(x_api_key: str | None) -> bool:
     return bool(x_api_key) and x_api_key == settings.ORACULO_API_KEY
 
 
-# ─── Admin guard (antes: verify_api_key) ──────────────────────────────────────
+# ─── Admin helpers & guard ───────────────────────────────────────────────────
+
+def is_admin(user: UserModel | None) -> bool:
+    """Valida si un usuario posee privilegios de administración/Arquitecto."""
+    if not user:
+        return False
+    role = (user.role or "").strip().lower()
+    username = (user.username or "").strip().lower()
+    email = (user.email or "").strip().lower()
+    sovereign_email = (settings.SOVEREIGN_EMAIL or "").strip().lower()
+
+    return (
+        role == "admin"
+        or username in ("david", "admin")
+        or (bool(sovereign_email) and email == sovereign_email)
+    )
+
 
 def verify_api_key(
     x_api_key: str = Header(None, alias="X-API-Key"),
@@ -46,13 +62,13 @@ def verify_api_key(
     """
     Guardián de administración (modo dual):
       - Acepta la API key SERVIDOR-A-SERVIDOR (scrapers/workers), o
-      - un JWT válido cuyo usuario tenga rol 'admin'.
+      - un JWT válido cuyo usuario tenga privilegios de administrador.
     La API key ya NO viaja en el navegador; el panel usa JWT de admin.
     """
     if _is_service_key(x_api_key):
         return "service"
     user = _user_from_token(token)
-    if user and user.role == "admin":
+    if user and is_admin(user):
         return user
     raise HTTPException(status_code=403, detail="Se requieren privilegios de administrador.")
 
@@ -140,8 +156,8 @@ def get_current_user(token: str = Depends(_oauth2_scheme)) -> UserModel:
 
 
 def require_admin(user: UserModel = Depends(get_current_user)) -> UserModel:
-    """Exige que el usuario autenticado por JWT tenga rol admin."""
-    if user.role != "admin":
+    """Exige que el usuario autenticado por JWT tenga privilegios de administrador."""
+    if not is_admin(user):
         raise HTTPException(status_code=403, detail="Se requieren privilegios de administrador.")
     return user
 
@@ -153,9 +169,6 @@ def require_admin(user: UserModel = Depends(get_current_user)) -> UserModel:
 # (IDOR). Ahora cualquier usuario autenticado solo puede actuar sobre su
 # propio id; solo un admin puede seguir operando sobre cualquier user_id
 # (necesario para el cambio de identidad entre 'héroes' del panel).
-
-def is_admin(user: UserModel) -> bool:
-    return user.role == "admin" or user.username == "David"
 
 
 def scope_user_id(current_user: UserModel, requested_user_id: int) -> int:

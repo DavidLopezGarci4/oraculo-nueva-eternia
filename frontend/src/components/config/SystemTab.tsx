@@ -230,7 +230,7 @@ export default function SystemTab({
             exit={{ opacity: 0, y: -10 }}
             className="space-y-6"
         >
-            {user?.role === 'admin' && (
+            {isAdmin && (
                 <div className="flex justify-between items-center mb-6">
                     <div>
                         <h2 className="text-2xl font-bold flex items-center gap-2">
@@ -873,7 +873,7 @@ export default function SystemTab({
                 )}
 
                 {/* Purification (Admin Power) */}
-                {user?.role === 'admin' && (
+                {isAdmin && (
                     <div className="glass border border-red-500/30 p-6 rounded-3xl space-y-4 bg-red-500/5 col-span-1 md:col-span-2 lg:col-span-1">
                         <div className="flex items-center gap-3 text-red-500 font-bold uppercase tracking-widest text-xs mb-2">
                             <ShieldAlert className="h-4 w-4" />

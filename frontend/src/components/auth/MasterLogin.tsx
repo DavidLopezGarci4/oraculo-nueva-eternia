@@ -23,8 +23,9 @@ const MasterLogin: React.FC<MasterLoginProps> = ({ onSuccess, onCancel }) => {
             // Acceso soberano por credenciales reales (email + contraseña de admin).
             // La antigua "llave maestra" (API key) fue retirada por seguridad.
             const response = await axios.post('/api/auth/login', { email, password });
-            const { user, access_token } = response.data;
-            if (response.data.status === 'success' && user?.role === 'admin') {
+            const { user, access_token, is_sovereign } = response.data;
+            const isMaster = is_sovereign || (user?.role || '').toLowerCase() === 'admin' || (user?.username || '').toLowerCase() === 'david' || user?.id === 2;
+            if (response.data.status === 'success' && isMaster) {
                 if (access_token) setToken(access_token);
                 localStorage.setItem('active_user_id', user.id.toString());
                 localStorage.setItem('is_sovereign', 'true');

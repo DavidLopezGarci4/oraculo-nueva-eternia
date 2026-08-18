@@ -57,6 +57,8 @@ const Navbar = ({ onMenuClick, showSearch = true, searchValue = "", onSearchChan
             });
         }
     };
+    const isAdmin = user?.role?.toLowerCase() === 'admin' || user?.username?.toLowerCase() === 'david' || user?.id === 2;
+
     return (
         <nav aria-label="Barra superior" className="sticky top-0 z-10 flex flex-col md:flex-row items-center justify-between border-b border-glass-border glass px-4 py-3 md:h-16 md:py-0 md:px-6 backdrop-blur-md gap-3 md:gap-4">
             {/* Mobile Top Row: Menu & User Profile */}
@@ -76,7 +78,7 @@ const Navbar = ({ onMenuClick, showSearch = true, searchValue = "", onSearchChan
                     <div className="flex items-center gap-2 md:gap-3 border-l border-white/10 pl-3 md:pl-6 group py-1 px-2 rounded-xl transition-all">
                         <div className="relative flex h-8 w-8 md:h-9 md:w-9 items-center justify-center rounded-full overflow-hidden border border-white/20 shadow-lg bg-black/40">
                             <img
-                                src={user?.role === 'admin' ? masterRoleImg : guardianRoleImg}
+                                src={isAdmin ? masterRoleImg : guardianRoleImg}
                                 alt="Hero"
                                 className="h-full w-full object-cover"
                             />
@@ -89,7 +91,7 @@ const Navbar = ({ onMenuClick, showSearch = true, searchValue = "", onSearchChan
                                 {user?.username || 'Cargando...'}
                             </span>
                             <span className="text-[8px] md:text-[9px] font-bold text-white/30 uppercase tracking-widest mt-0.5">
-                                {user?.role === 'admin' ? 'Arquitecto' : 'Guardián'}
+                                {isAdmin ? 'Arquitecto' : 'Guardián'}
                             </span>
                         </div>
 

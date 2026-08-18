@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from loguru import logger
 
 from src.infrastructure.database_cloud import SessionCloud
-from src.interfaces.api.deps import verify_api_key
+from src.interfaces.api.deps import get_current_user, is_admin, verify_api_key
 from src.interfaces.api.schemas import StatusMessageOutput
 
 router = APIRouter(tags=["system"])
@@ -125,7 +125,7 @@ async def get_sword_configs(current_user: UserModel = Depends(get_current_user))
 
 @router.post("/api/system/sword-configs", response_model=StatusMessageOutput)
 async def save_sword_configs(configs: dict, current_user: UserModel = Depends(get_current_user)):
-    if current_user.role != "admin" and current_user.id != 2:
+    if not is_admin(current_user):
         raise HTTPException(status_code=403, detail="No autorizado para modificar la configuración de espadas.")
         
     with SessionCloud() as db:
@@ -170,7 +170,7 @@ async def run_maintenance(
     current_user: UserModel = Depends(get_current_user)
 ):
     """Ejecuta la compactación de historial de precios y mantenimiento FinOps en segundo plano."""
-    if current_user.role != "admin" and current_user.id != 2:
+    if not is_admin(current_user):
         raise HTTPException(
             status_code=403, 
             detail="No tienes los privilegios del Arquitecto necesarios para purificar el Oráculo."
