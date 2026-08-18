@@ -279,6 +279,26 @@ async def get_scrapers_logs():
         )
 
 
+@router.get("/quota-status", dependencies=[Depends(verify_api_key)])
+async def get_github_quota_status():
+    """Retorna el estado en vivo de la cuota mensual de GitHub Actions (2.000 min), saldo y reposición."""
+    from src.application.services.github_quota_service import GitHubQuotaService
+    return await GitHubQuotaService.get_quota_status()
+
+
+@router.get("/execution-logs/export", dependencies=[Depends(verify_api_key)])
+async def export_execution_logs_csv():
+    """Genera y descarga un archivo CSV con el historial de ejecuciones y minutos facturables."""
+    from src.application.services.github_quota_service import GitHubQuotaService
+    csv_data = GitHubQuotaService.generate_logs_csv()
+    filename = f"oraculo_execution_logs_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.csv"
+    return Response(
+        content=csv_data,
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
 @router.post("/run", response_model=RunScraperOutput, dependencies=[Depends(verify_api_key)])
 async def run_scrapers(request: ScraperRunRequest, background_tasks: BackgroundTasks):
     """Inicia la recolección de reliquias en segundo plano (Admin Only)"""

@@ -1333,6 +1333,18 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
   - **Filtro Estricto de Ofertas Descartadas y Rechazadas**: Exclusión automática de ofertas marcadas en `BlackcludedItemModel` o en `PendingMatchModel` (`validation_status == "REJECTED"` o `is_blocked == True`), garantizando que los artículos descartados por el usuario no vuelvan a alertarse.
   - **Validación Total**: Suite completa de tests superada al 100% (`tests/unit/test_vinted_sentinel.py` y `test_vinted_hunter.py`).
 
+### ⚡ Fase 85: Telemetría FinOps en Vivo de GitHub Actions, Widget de Cuota (2.000 min) y Exportación CSV (18/08/2026)
+
+- **Hitos**: Sincronización en vivo con la API oficial de GitHub Actions (`/repos/.../actions/runs`) para telemetría de runners en tiempo real, cómputo oficial de facturación (minutos redondeados), Widget interactivo de cuota mensual (2.000 min, saldo, fecha de reposición y desglose por workflow) en Configuración (Admin Only) y exportación descargable de logs en CSV.
+- **Estado**: ✅ COMPLETADO Y VERIFICADO
+- **Logros Técnicos**:
+  - **Servicio de Sincronización en Vivo (`GitHubQuotaService`)**: Conexión directa a la API de GitHub Actions para leer los runs del mes actual, computar minutos facturables de Ubuntu, calcular promedio diario y proyectar el consumo al fin de mes con recomendación inteligente de cadencia.
+  - **Fallback Offline Robusto**: Si no hay conexión o no hay token de GitHub, el servicio lee de forma transparente los registros locales en `ScraperExecutionLogModel`.
+  - **Registro Universal de Ejecuciones**: Registro forense de tiempos de inicio, fin y duración en `VintedHunterService` y `daily_scan.py`.
+  - **Widget Visual en Configuración (`GitHubQuotaWidget.tsx`)**: Componente React con glassmorphism, barra de progreso animada, 4 tarjetas KPI (Minutos Usados, Minutos Libres, Reposición en X días, Incursiones del Mes), desglose por proceso (Daily Scan, Centinela Vinted, CI/Tests) y banner de diagnóstico FinOps.
+  - **Descarga Directa de Logs (CSV)**: Endpoint `GET /api/scrapers/execution-logs/export` y botón en la UI para descargar el historial forense estructurado directamente a la carpeta de descargas del usuario.
+  - **Validación Automatizada**: Creada la suite `tests/unit/test_github_quota_service.py` (3/3 tests aprobados) y suite completa de tests (`67/67 tests aprobados`). Frontend compilado con `npm run build` en 9.66s con 0 errores.
+
 
 
 

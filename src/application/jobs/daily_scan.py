@@ -438,6 +438,26 @@ async def run_daily_scan(progress_callback=None):
             logger.info("📡 Reporte final del Daily Scan enviado a Telegram.")
     except Exception as tg_ex:
         logger.error(f"⚠️ No se pudo enviar el reporte del Daily Scan a Telegram: {tg_ex}")
+
+    # Registrar resumen global de ejecución en base de datos para métricas de cuota
+    try:
+        with SessionLocal() as db_summary:
+            event_name = os.getenv("GITHUB_EVENT_NAME", "manual")
+            trigger = "scheduled" if event_name == "schedule" else "manual"
+            db_summary.add(ScraperExecutionLogModel(
+                spider_name="DailyScan",
+                status="success" if total_stats["errors"] == 0 else "error",
+                items_found=total_stats["found"],
+                new_items=total_stats["new"],
+                errors=total_stats["errors"],
+                start_time=start_time,
+                end_time=datetime.now(),
+                trigger_type=trigger,
+                logs=f"Daily Scan completo finalizado en {str(duration).split('.')[0]}. Ofertas: {total_stats['found']}, Nuevas: {total_stats['new']}, Errores: {total_stats['errors']}."
+            ))
+            db_summary.commit()
+    except Exception as sum_ex:
+        logger.error(f"⚠️ Error guardando log global de DailyScan: {sum_ex}")
         
     # 3OX Reporting
     # save_json_report(results, filename_prefix="daily_scan")

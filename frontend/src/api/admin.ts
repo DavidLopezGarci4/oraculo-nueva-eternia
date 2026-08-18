@@ -311,4 +311,52 @@ export const renewSSLCertificate = async (force: boolean = true): Promise<{ stat
     return response.data;
 };
 
+// --- GITHUB ACTIONS QUOTA & EXECUTION LOGS ---
+
+export interface GitHubQuotaBreakdownItem {
+    minutes: number;
+    runs: number;
+}
+
+export interface GitHubQuotaStatus {
+    source: string;
+    total_quota_minutes: number;
+    used_minutes: number;
+    remaining_minutes: number;
+    percentage_used: number;
+    reset_date: string;
+    days_until_reset: number;
+    total_runs_this_month: number;
+    daily_average_minutes: number;
+    projected_month_end_minutes: number;
+    cadence_status: 'optimal' | 'warning' | 'critical';
+    cadence_recommendation: string;
+    breakdown: {
+        daily_scan: GitHubQuotaBreakdownItem;
+        vinted_sentinel: GitHubQuotaBreakdownItem;
+        ci_tests: GitHubQuotaBreakdownItem;
+        others: GitHubQuotaBreakdownItem;
+    };
+}
+
+export const getGitHubQuotaStatus = async (): Promise<GitHubQuotaStatus> => {
+    const response = await adminAxios.get('/scrapers/quota-status');
+    return response.data;
+};
+
+export const downloadExecutionLogsCsv = async (): Promise<void> => {
+    const response = await adminAxios.get('/scrapers/execution-logs/export', {
+        responseType: 'blob'
+    });
+    const url = window.URL.createObjectURL(new Blob([response.data], { type: 'text/csv;charset=utf-8;' }));
+    const link = document.createElement('a');
+    link.href = url;
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/[-:]/g, '').replace('T', '_');
+    link.setAttribute('download', `oraculo_execution_logs_${timestamp}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+};
+
 

@@ -11,7 +11,8 @@ from src.domain.models import (
     LogisticRuleModel,
     BlackcludedItemModel,
     PendingMatchModel,
-    HunterAlertLogModel
+    HunterAlertLogModel,
+    ScraperExecutionLogModel
 )
 from src.application.services.logistics_service import LogisticsService
 from src.infrastructure.services.telegram_service import telegram_service
@@ -35,6 +36,7 @@ class VintedHunterService:
         notify_summary: bool = True,
         next_eta_mins: Optional[int] = None
     ) -> Dict[str, Any]:
+        start_time = datetime.now(timezone.utc)
         logger.info(f"🏹 VintedHunter: Iniciando caza para query='{query}'...")
         
         # 1. Ejecutar scraper de Vinted
@@ -219,6 +221,24 @@ class VintedHunterService:
                 await telegram_service.send_message(summary_msg, chat_id=target_chat_int)
             except Exception as ex:
                 logger.error(f"Error enviando resumen de centinela a Telegram: {ex}")
+
+        # 6. Guardar log forense de ejecución y minutos en la base de datos
+        try:
+            with SessionCloud() as db_log:
+                db_log.add(ScraperExecutionLogModel(
+                    spider_name="VintedHunter",
+                    status="success",
+                    items_found=total_scraped,
+                    new_items=len(new_bargains_to_alert),
+                    errors=0,
+                    start_time=start_time.replace(tzinfo=None),
+                    end_time=datetime.now(timezone.utc).replace(tzinfo=None),
+                    trigger_type="sentinel" if query == "auto" else "manual",
+                    logs=f"Incursión '{query}': {total_scraped} analizadas, {len(new_bargains_to_alert)} gangas nuevas, {recurring_bargains_count} recurrentes."
+                ))
+                db_log.commit()
+        except Exception as log_ex:
+            logger.error(f"Error guardando ScraperExecutionLogModel en VintedHunter: {log_ex}")
 
         return {
             "total_scraped": total_scraped,

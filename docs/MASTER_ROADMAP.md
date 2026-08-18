@@ -570,8 +570,11 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
   - [x] **Deduplicación Diaria Anti-Spam (`HunterAlertLogModel`)**: Silenciamiento de alertas repetidas para la misma oferta durante el mismo día natural (rearmándose al día siguiente).
   - [x] **Filtro Estricto de Ofertas Descartadas**: Supresión total de alertas para ofertas presentes en `BlackcludedItemModel` o marcadas como `REJECTED` / `is_blocked` en el Purgatorio.
   - [x] **Optimización FinOps en GitHub Actions**: Eliminado el delay de 60m en `scrapers.yml` (`--random-delay 0`), recuperando >1.700 minutos/mes libres.
-
-
+- [x] **Phase 85: Telemetría FinOps en Vivo de GitHub Actions, Widget de Cuota (2.000 min) y Exportación CSV (18/08/2026)**
+  - [x] **Sincronización en Vivo con GitHub Actions (`GitHubQuotaService`)**: Consulta en tiempo real de todos los runs del mes vía REST API (`/repos/.../actions/runs`), cálculo oficial de minutos facturables de Ubuntu y proyección de fin de mes.
+  - [x] **Casilla / Widget de Cuota en Configuración (`GitHubQuotaWidget.tsx`)**: Visualización exclusiva para administradores de minutos usados vs límite de 2.000 min, saldo restante, cuenta atrás de reposición (día 1 de cada mes a las 00:00 UTC) y desglose por workflow.
+  - [x] **Diagnóstico Inteligente de Cadencia**: Monitoreo continuo del ritmo de incursiones (50-75 min) para garantizar que el consumo mensual no exceda la cuota gratuita.
+  - [x] **Exportación Descargable de Logs (CSV)**: Generación y descarga directa del historial de ejecuciones y minutos facturables con un solo clic.
 
 ---
 

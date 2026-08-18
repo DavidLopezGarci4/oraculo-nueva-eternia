@@ -14,6 +14,7 @@ import { parseUtcDate } from '../../utils/dateUtils';
 import { getParsedMetrics, getStepperStatus } from './configHelpers';
 import type { ScraperStatus } from '../../api/admin';
 import type { ScraperExecutionLog } from '../../api/purgatory';
+import GitHubQuotaWidget from './GitHubQuotaWidget';
 
 const EMOJI_MAP: { [key: string]: React.ReactNode } = {
     '🚀': <Play className="inline h-3 w-3 mr-1 text-brand-primary align-middle" />,
@@ -113,8 +114,11 @@ export default function ScrapersTab({
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="space-y-8"
+            className="space-y-6"
         >
+            {/* TELEMETRÍA FINOPS & CUOTA EN LA NUBE */}
+            <GitHubQuotaWidget />
+
             {/* CENTRO DE MANDO OPERATIVO */}
             <div className="space-y-2 md:space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-700">
 
