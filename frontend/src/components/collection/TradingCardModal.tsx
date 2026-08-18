@@ -16,7 +16,8 @@ import {
     Wand2,
     RotateCcw,
     Zap,
-    BookOpen
+    BookOpen,
+    Image as ImageIcon
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { MOTUImage } from '../ui/MOTUImage';
@@ -45,6 +46,36 @@ interface TradingCardModalProps {
 const dataUrlToBlob = async (dataUrl: string): Promise<Blob> => {
     const res = await fetch(dataUrl);
     return await res.blob();
+};
+
+// Obtiene la imagen individual pura (arte IA o foto) como DataURL
+const getSingleIllustrationDataUrl = async (item: any, aiImageBase64?: string | null): Promise<string> => {
+    if (aiImageBase64) return aiImageBase64;
+    if (item.image_url) {
+        return new Promise((resolve) => {
+            const img = new window.Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.naturalWidth || 800;
+                canvas.height = img.naturalHeight || 800;
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    ctx.drawImage(img, 0, 0);
+                    try {
+                        resolve(canvas.toDataURL('image/png'));
+                    } catch {
+                        resolve(item.image_url);
+                    }
+                } else {
+                    resolve(item.image_url);
+                }
+            };
+            img.onerror = () => resolve(item.image_url);
+            img.src = item.image_url;
+        });
+    }
+    return '';
 };
 
 // Generador de Cromo PNG con html-to-image y fallback infalible mediante Canvas 2D
@@ -274,16 +305,32 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
         }
     };
 
-    // 1. Descargar imagen PNG HD
+    const [exportTarget, setExportTarget] = useState<'card' | 'image'>('card');
+
+    // 1. Descargar PNG HD (Carta Completa o Solo Ilustración)
     const handleDownload = async () => {
         if (!cardRef.current || !item) return;
         try {
             setExporting(true);
-            const activeImage = aiResult?.image_base64 || undefined;
-            const dataUrl = await generateTradingCardDataUrl(cardRef.current, item, activeImage, aiResult?.lore);
+            let dataUrl = '';
+            let filename = '';
+
+            if (exportTarget === 'card') {
+                const activeImage = aiResult?.image_base64 || undefined;
+                dataUrl = await generateTradingCardDataUrl(cardRef.current, item, activeImage, aiResult?.lore);
+                filename = `Carta_MOTU_${name.replace(/\s+/g, '_')}${aiResult ? `_${aiResult.style}` : ''}.png`;
+            } else {
+                dataUrl = await getSingleIllustrationDataUrl(item, aiResult?.image_base64);
+                filename = `Ilustracion_MOTU_${name.replace(/\s+/g, '_')}${aiResult ? `_${aiResult.style}` : ''}.png`;
+            }
+
+            if (!dataUrl) {
+                console.warn('No hay imagen disponible para descargar');
+                return;
+            }
 
             const link = document.createElement('a');
-            link.download = `Cromo_MOTU_${name.replace(/\s+/g, '_')}${aiResult ? `_${aiResult.style}` : ''}.png`;
+            link.download = filename;
             link.href = dataUrl;
             document.body.appendChild(link);
             link.click();
@@ -292,7 +339,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
             setDownloaded(true);
             setTimeout(() => setDownloaded(false), 3000);
         } catch (err) {
-            console.error('Error descargando cromo:', err);
+            console.error('Error descargando:', err);
         } finally {
             setExporting(false);
         }
@@ -303,8 +350,15 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
         if (!cardRef.current || !item) return;
         try {
             setExporting(true);
-            const activeImage = aiResult?.image_base64 || undefined;
-            const dataUrl = await generateTradingCardDataUrl(cardRef.current, item, activeImage, aiResult?.lore);
+            let dataUrl = '';
+            if (exportTarget === 'card') {
+                const activeImage = aiResult?.image_base64 || undefined;
+                dataUrl = await generateTradingCardDataUrl(cardRef.current, item, activeImage, aiResult?.lore);
+            } else {
+                dataUrl = await getSingleIllustrationDataUrl(item, aiResult?.image_base64);
+            }
+
+            if (!dataUrl) return;
             const blob = await dataUrlToBlob(dataUrl);
 
             if (navigator.clipboard && (window as any).ClipboardItem) {
@@ -329,17 +383,28 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
         if (!cardRef.current || !item) return;
         try {
             setExporting(true);
-            const activeImage = aiResult?.image_base64 || undefined;
-            const dataUrl = await generateTradingCardDataUrl(cardRef.current, item, activeImage, aiResult?.lore);
-            const blob = await dataUrlToBlob(dataUrl);
-            const file = new File([blob], `Cromo_MOTU_${name.replace(/\s+/g, '_')}.png`, {
-                type: 'image/png'
-            });
+            let dataUrl = '';
+            let filename = '';
 
-            let shareText = `🏰 Cromo Oficial: ${name} custodiado en La Fortaleza de Grayskull.\nValor de Mercado: ${market.toFixed(2)}€ (${profit >= 0 ? '+' : ''}${profit.toFixed(2)}€ | ${roiPct}% ROI)`;
-            
+            if (exportTarget === 'card') {
+                const activeImage = aiResult?.image_base64 || undefined;
+                dataUrl = await generateTradingCardDataUrl(cardRef.current, item, activeImage, aiResult?.lore);
+                filename = `Carta_MOTU_${name.replace(/\s+/g, '_')}.png`;
+            } else {
+                dataUrl = await getSingleIllustrationDataUrl(item, aiResult?.image_base64);
+                filename = `Ilustracion_MOTU_${name.replace(/\s+/g, '_')}.png`;
+            }
+
+            if (!dataUrl) return;
+            const blob = await dataUrlToBlob(dataUrl);
+            const file = new File([blob], filename, { type: 'image/png' });
+
+            let shareText = exportTarget === 'card'
+                ? `🏰 Cromo Oficial: ${name} custodiado en La Fortaleza de Grayskull.\nValor de Mercado: ${market.toFixed(2)}€ (${profit >= 0 ? '+' : ''}${profit.toFixed(2)}€ | ${roiPct}% ROI)`
+                : `🎨 Ilustración Épica: ${name} en Eternia.`;
+
             if (aiResult?.lore) {
-                shareText += `\n\n📜 Lore Canónico (Gemini AI):\n"${aiResult.lore}"`;
+                shareText += `\n\n📜 Lore Canónico:\n"${aiResult.lore}"`;
             }
             if (aiResult?.special_move) {
                 shareText += `\n⚡ Técnica Definitiva: ${aiResult.special_move}`;
@@ -347,7 +412,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
 
             if (navigator.canShare && navigator.canShare({ files: [file] })) {
                 await navigator.share({
-                    title: `Cromo MOTU: ${name}`,
+                    title: exportTarget === 'card' ? `Cromo MOTU: ${name}` : `Ilustración MOTU: ${name}`,
                     text: shareText,
                     files: [file]
                 });
@@ -368,10 +433,9 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                 setTimeout(() => setShared(false), 3000);
             }
         } catch (err) {
-            console.error('Error compartiendo cromo:', err);
-            // Fallback de emergencia a WhatsApp Web directo si falla el canvas o navigator
-            let emergencyText = `🏰 Cromo Oficial: ${name} custodiado en La Fortaleza de Grayskull.`;
-            if (aiResult?.lore) emergencyText += `\n\n📜 Lore (Gemini AI):\n"${aiResult.lore}"`;
+            console.error('Error compartiendo:', err);
+            let emergencyText = `🏰 Figura MOTU: ${name}`;
+            if (aiResult?.lore) emergencyText += `\n\n📜 Lore:\n"${aiResult.lore}"`;
             window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(emergencyText)}`, '_blank');
         } finally {
             setExporting(false);
@@ -677,8 +741,34 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                         </motion.div>
                     </div>
 
+                    {/* SELECTOR DE MODO: CARTA COMPLETA VS SOLO ILUSTRACIÓN */}
+                    <div className="w-full flex items-center justify-center p-1 rounded-xl bg-slate-950/90 border border-amber-500/30 gap-1 mt-3 mb-1 shadow-inner">
+                        <button
+                            onClick={() => setExportTarget('card')}
+                            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all ${
+                                exportTarget === 'card'
+                                    ? 'bg-gradient-to-r from-amber-500 to-yellow-600 text-black shadow-md shadow-amber-500/20'
+                                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                            }`}
+                        >
+                            <Shield className="h-3.5 w-3.5" />
+                            <span>🃏 Carta Completa</span>
+                        </button>
+                        <button
+                            onClick={() => setExportTarget('image')}
+                            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all ${
+                                exportTarget === 'image'
+                                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-md shadow-cyan-500/20'
+                                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                            }`}
+                        >
+                            <ImageIcon className="h-3.5 w-3.5" />
+                            <span>🖼️ Solo Ilustración</span>
+                        </button>
+                    </div>
+
                     {/* BOTONES DE EXPORTACIÓN Y COMPARTIR */}
-                    <div className="w-full grid grid-cols-3 gap-2 mt-4">
+                    <div className="w-full grid grid-cols-3 gap-2 mt-2">
                         {/* 1. Compartir Nativo a WhatsApp / Móvil */}
                         <button
                             onClick={handleNativeShare}
@@ -692,7 +782,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                             ) : (
                                 <Share2 className="h-4 w-4" />
                             )}
-                            <span>{shared ? '¡Listo!' : 'WhatsApp / Redes'}</span>
+                            <span>{shared ? '¡Compartido!' : 'WhatsApp / Redes'}</span>
                         </button>
 
                         {/* 2. Copiar Imagen al Portapapeles */}
@@ -708,7 +798,13 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                             ) : (
                                 <Copy className="h-4 w-4" />
                             )}
-                            <span>{copied ? '¡Copiado!' : 'Copiar Imagen'}</span>
+                            <span>
+                                {copied
+                                    ? '¡Copiado!'
+                                    : exportTarget === 'card'
+                                    ? 'Copiar Carta'
+                                    : 'Copiar Ilustración'}
+                            </span>
                         </button>
 
                         {/* 3. Descargar Imagen HD */}
@@ -724,7 +820,13 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                             ) : (
                                 <Download className="h-4 w-4" />
                             )}
-                            <span>{downloaded ? '¡Descargado!' : 'Descargar HD'}</span>
+                            <span>
+                                {downloaded
+                                    ? '¡Descargado!'
+                                    : exportTarget === 'card'
+                                    ? 'Descargar Carta'
+                                    : 'Descargar HD'}
+                            </span>
                         </button>
                     </div>
                 </motion.div>
