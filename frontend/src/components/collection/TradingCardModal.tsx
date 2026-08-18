@@ -272,6 +272,33 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
     const [isAiLoading, setIsAiLoading] = useState(false);
     const [aiError, setAiError] = useState<string | null>(null);
 
+    // Estado para selector dual de exportación (Carta Completa vs Solo Ilustración)
+    const [exportTarget, setExportTarget] = useState<'card' | 'image'>('card');
+
+    // Estado para Encuadre y Zoom interactivo de la imagen
+    const [imgZoom, setImgZoom] = useState<number>(1);
+    const [imgPan, setImgPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+    const [isDraggingImg, setIsDraggingImg] = useState(false);
+    const dragStartRef = useRef<{ x: number; y: number; startPanX: number; startPanY: number }>({
+        x: 0,
+        y: 0,
+        startPanX: 0,
+        startPanY: 0
+    });
+    const touchStartRef = useRef<{ dist: number; startZoom: number; x: number; y: number; startPanX: number; startPanY: number }>({
+        dist: 0,
+        startZoom: 1,
+        x: 0,
+        y: 0,
+        startPanX: 0,
+        startPanY: 0
+    });
+
+    const resetFraming = () => {
+        setImgZoom(1);
+        setImgPan({ x: 0, y: 0 });
+    };
+
     if (!isOpen || !item) return null;
 
     const name = item.product_name || item.name || 'Figura MOTU';
@@ -326,38 +353,13 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                 image_url: item.image_url
             });
             setAiResult(res);
+            resetFraming();
         } catch (err: any) {
             console.error('Error transformando con Gemini:', err);
             setAiError('No se pudo conectar con Gemini. Inténtalo de nuevo.');
         } finally {
             setIsAiLoading(false);
         }
-    };
-
-    const [exportTarget, setExportTarget] = useState<'card' | 'image'>('card');
-
-    // Estado para Encuadre y Zoom interactivo de la imagen
-    const [imgZoom, setImgZoom] = useState<number>(1);
-    const [imgPan, setImgPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-    const [isDraggingImg, setIsDraggingImg] = useState(false);
-    const dragStartRef = useRef<{ x: number; y: number; startPanX: number; startPanY: number }>({
-        x: 0,
-        y: 0,
-        startPanX: 0,
-        startPanY: 0
-    });
-    const touchStartRef = useRef<{ dist: number; startZoom: number; x: number; y: number; startPanX: number; startPanY: number }>({
-        dist: 0,
-        startZoom: 1,
-        x: 0,
-        y: 0,
-        startPanX: 0,
-        startPanY: 0
-    });
-
-    const resetFraming = () => {
-        setImgZoom(1);
-        setImgPan({ x: 0, y: 0 });
     };
 
     // Control de Arrastre con Ratón (PC)
