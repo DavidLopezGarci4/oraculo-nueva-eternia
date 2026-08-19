@@ -133,10 +133,16 @@ class GeminiCardService:
             "style": resolved_style,
             "style_name": style_info["name"],
             "image_base64": image_data,
+            "canonical_name": lore_data.get("canonical_name", product_name),
+            "faction": lore_data.get("faction", "Guerreros Heroicos"),
+            "type_line": lore_data.get("type_line", "Criatura Legendaria — Guerrero Heroico"),
+            "frame_theme": lore_data.get("frame_theme", "castle_grayskull"),
+            "emblem": lore_data.get("emblem", "shield"),
+            "mana_gems": lore_data.get("mana_gems", ["grayskull", "gold"]),
             "lore": lore_data.get("lore"),
             "stats": lore_data.get("stats"),
             "special_move": lore_data.get("special_move"),
-            "rarity_class": lore_data.get("rarity_class")
+            "rarity_class": lore_data.get("rarity_class", lore_data.get("faction"))
         }
 
     @classmethod
@@ -327,8 +333,13 @@ class GeminiCardService:
                             text_content = candidates[0]["content"]["parts"][0]["text"]
                             parsed = json.loads(text_content)
                             # Asegurar que no venga vacío
-                            if parsed.get("lore") and parsed.get("stats"):
-                                return parsed
+                            if parsed.get("lore"):
+                                canonical_profile["lore"] = parsed["lore"]
+                            if parsed.get("stats"):
+                                canonical_profile["stats"] = parsed["stats"]
+                            if parsed.get("special_move"):
+                                canonical_profile["special_move"] = parsed["special_move"]
+                            return canonical_profile
             except Exception as e:
                 logger.warning(f"Error generando lore con Gemini Flash, usando enciclopedia canónica: {e}")
 

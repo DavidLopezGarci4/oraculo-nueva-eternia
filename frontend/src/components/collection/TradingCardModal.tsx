@@ -9,8 +9,6 @@ import {
     Check,
     X,
     Award,
-    TrendingUp,
-    Calendar,
     Lock,
     Loader2,
     Wand2,
@@ -20,7 +18,11 @@ import {
     Image as ImageIcon,
     Plus,
     Minus,
-    Move
+    Move,
+    Skull,
+    Flame,
+    Infinity as InfinityIcon,
+    Swords
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { MOTUImage } from '../ui/MOTUImage';
@@ -44,6 +46,174 @@ interface TradingCardModalProps {
         shelf_wear?: string;
     } | null;
 }
+
+// Interfaz para la configuración estética de cada facción
+interface FactionThemeConfig {
+    name: string;
+    faction: string;
+    typeLine: string;
+    borderClass: string;
+    innerBorderClass: string;
+    headerBg: string;
+    textAccent: string;
+    badgeBg: string;
+    boxBg: string;
+    boxBorder: string;
+    gemColors: string[];
+    emblemIcon: 'shield' | 'skull' | 'bat' | 'snake' | 'sparkles' | 'infinity';
+}
+
+const FACTION_THEMES: Record<string, FactionThemeConfig> = {
+    castle_grayskull: {
+        name: 'Guerreros Heroicos',
+        faction: 'Guerreros Heroicos',
+        typeLine: 'Criatura Legendaria — Guerrero Heroico',
+        borderClass: 'border-emerald-500/80 shadow-[0_0_35px_rgba(16,185,129,0.35)]',
+        innerBorderClass: 'border-amber-400/50',
+        headerBg: 'from-emerald-950/90 via-slate-900 to-black',
+        textAccent: 'text-emerald-300',
+        badgeBg: 'from-emerald-500/20 to-teal-500/20 border-emerald-400/50',
+        boxBg: 'bg-slate-950/90',
+        boxBorder: 'border-emerald-500/30',
+        gemColors: ['#10b981', '#10b981', '#f59e0b', '#38bdf8'],
+        emblemIcon: 'shield'
+    },
+    snake_mountain: {
+        name: 'Guerreros Diabólicos',
+        faction: 'Guerreros Diabólicos',
+        typeLine: 'Criatura Legendaria — Guerrero Diabólico',
+        borderClass: 'border-purple-600/90 shadow-[0_0_35px_rgba(168,85,247,0.35)]',
+        innerBorderClass: 'border-amber-500/40',
+        headerBg: 'from-purple-950/90 via-slate-900 to-black',
+        textAccent: 'text-purple-300',
+        badgeBg: 'from-purple-500/20 to-red-500/20 border-purple-400/50',
+        boxBg: 'bg-slate-950/90',
+        boxBorder: 'border-purple-500/30',
+        gemColors: ['#a855f7', '#ef4444', '#f59e0b', '#8b5cf6'],
+        emblemIcon: 'skull'
+    },
+    evil_horde: {
+        name: 'La Horda del Terror',
+        faction: 'La Horda del Terror',
+        typeLine: 'Tirano Legendario — Soldado de la Horda',
+        borderClass: 'border-red-600/90 shadow-[0_0_35px_rgba(239,68,68,0.35)]',
+        innerBorderClass: 'border-slate-500/50',
+        headerBg: 'from-red-950/90 via-slate-900 to-black',
+        textAccent: 'text-red-300',
+        badgeBg: 'from-red-600/20 to-rose-600/20 border-red-500/50',
+        boxBg: 'bg-slate-950/90',
+        boxBorder: 'border-red-500/30',
+        gemColors: ['#ef4444', '#dc2626', '#111827', '#f87171'],
+        emblemIcon: 'bat'
+    },
+    snake_men: {
+        name: 'Los Hombres Serpiente',
+        faction: 'Los Hombres Serpiente',
+        typeLine: 'Monarca Ofídico — Hombre Serpiente',
+        borderClass: 'border-lime-500/90 shadow-[0_0_35px_rgba(132,204,22,0.35)]',
+        innerBorderClass: 'border-amber-500/40',
+        headerBg: 'from-emerald-950/90 via-lime-950/40 to-black',
+        textAccent: 'text-lime-300',
+        badgeBg: 'from-lime-500/20 to-emerald-500/20 border-lime-400/50',
+        boxBg: 'bg-slate-950/90',
+        boxBorder: 'border-lime-500/30',
+        gemColors: ['#84cc16', '#22c55e', '#eab308', '#10b981'],
+        emblemIcon: 'snake'
+    },
+    great_rebellion: {
+        name: 'La Gran Rebelión',
+        faction: 'La Gran Rebelión',
+        typeLine: 'Princesa del Poder — Gran Rebelión',
+        borderClass: 'border-pink-400/90 shadow-[0_0_35px_rgba(244,114,182,0.35)]',
+        innerBorderClass: 'border-amber-300/40',
+        headerBg: 'from-pink-950/80 via-slate-900 to-black',
+        textAccent: 'text-pink-300',
+        badgeBg: 'from-pink-500/20 to-cyan-500/20 border-pink-400/50',
+        boxBg: 'bg-slate-950/90',
+        boxBorder: 'border-pink-500/30',
+        gemColors: ['#f472b6', '#38bdf8', '#fbbf24', '#c084fc'],
+        emblemIcon: 'sparkles'
+    },
+    cosmic_enforcers: {
+        name: 'Guardianes Cósmicos',
+        faction: 'Guardianes Cósmicos',
+        typeLine: 'Ejecutor Cósmico — Juez del Equilibrio',
+        borderClass: 'border-cyan-400/90 shadow-[0_0_35px_rgba(6,182,212,0.35)]',
+        innerBorderClass: 'border-slate-400/40',
+        headerBg: 'from-cyan-950/80 via-slate-900 to-black',
+        textAccent: 'text-cyan-300',
+        badgeBg: 'from-cyan-500/20 to-blue-500/20 border-cyan-400/50',
+        boxBg: 'bg-slate-950/90',
+        boxBorder: 'border-cyan-500/30',
+        gemColors: ['#06b6d4', '#3b82f6', '#e0e7ff', '#a855f7'],
+        emblemIcon: 'infinity'
+    }
+};
+
+// Resolver canónico determinista para la interfaz local
+const getLocalMotuProfile = (productName: string, _subCategory?: string) => {
+    const clean = (productName || '').toLowerCase().trim();
+
+    if (clean.includes('skeletor') || clean.includes('beast') || clean.includes('trap') || clean.includes('tri-klops') || clean.includes('mer-man') || clean.includes('evil-lyn') || clean.includes('faker') || clean.includes('scare') || clean.includes('clawful') || clean.includes('whiplash') || clean.includes('webstor') || clean.includes('spikor') || clean.includes('stinkor') || clean.includes('two-bad') || clean.includes('ninjor') || clean.includes('jitsu') || clean.includes('blade') || clean.includes('saurod')) {
+        return {
+            themeKey: 'snake_mountain',
+            faction: 'Guerreros Diabólicos',
+            typeLine: 'Criatura Legendaria — Guerrero Diabólico',
+            specialMove: clean.includes('beast') ? 'Zarpazo Titánico de la Jungla' : clean.includes('trap') ? 'Mordisco de Mandíbula de Acero' : clean.includes('tri-klops') ? 'Láser Óptico de Rastreo Letal' : clean.includes('mer-man') ? 'Tsunami de las Profundidades de Rakash' : clean.includes('evil-lyn') ? 'Tormenta Ilusoria de Subternia' : clean.includes('clawful') ? 'Presa Hidráulica Trituradora' : clean.includes('whiplash') ? 'Azote Ofídico Venenoso' : clean.includes('faker') ? 'Tajo Cósmico de Luz Ancestral' : 'Descarga de Sombras Arcanas',
+            lore: clean.includes('beast') ? 'Señor salvaje de las bestias de Eternia y leal esbirro de Skeletor. Con su látigo ardiente y telepatía animal doblega a las criaturas más temibles.' : clean.includes('skeletor') ? 'Señor de la destrucción y tirano nigromántico de Snake Mountain cuya sed de conquista amenaza la existencia.' : 'Combatiente despiadado de las legiones oscuras de Snake Mountain al servicio de Skeletor.',
+            stats: { fuerza: 92, magia: clean.includes('skeletor') || clean.includes('lyn') ? 98 : 68, defensa: 89, agilidad: 86 }
+        };
+    }
+    if (clean.includes('hordak') || clean.includes('horde') || clean.includes('weaver') || clean.includes('catra') || clean.includes('grizzlor') || clean.includes('mantenna') || clean.includes('leech') || clean.includes('scorpia') || clean.includes('mosquitor') || clean.includes('modulok')) {
+        return {
+            themeKey: 'evil_horde',
+            faction: 'La Horda del Terror',
+            typeLine: 'Tirano Legendario — Soldado de la Horda',
+            specialMove: 'Flecha de Plasma Carmesí de la Horda',
+            lore: 'Tirano supremo de la Zona del Terror y maestro de la tecno-magia oscura, capaz de transmutar su propio cuerpo en armamento mecánico mortal.',
+            stats: { fuerza: 95, magia: 96, defensa: 95, agilidad: 87 }
+        };
+    }
+    if (clean.includes('snake') || clean.includes('hiss') || clean.includes('khan') || clean.includes('rattlor') || clean.includes('tung') || clean.includes('lashr') || clean.includes('sssqueeze') || clean.includes('serpiente')) {
+        return {
+            themeKey: 'snake_men',
+            faction: 'Los Hombres Serpiente',
+            typeLine: 'Monarca Ofídico — Hombre Serpiente',
+            specialMove: clean.includes('khan') ? 'Chorro Ácido Corrosivo' : 'Mordisco Asfixiante del Rey Hiss',
+            lore: 'Antiquísimo monarca ofídico cuyo disfraz humano oculta una masa de serpientes devoradoras. Regresa del pasado para dominar Eternia.',
+            stats: { fuerza: 93, magia: 95, defensa: 91, agilidad: 93 }
+        };
+    }
+    if (clean.includes('she-ra') || clean.includes('shera') || clean.includes('bow') || clean.includes('glimmer') || clean.includes('frosta') || clean.includes('angella') || clean.includes('mermista') || clean.includes('rebellion')) {
+        return {
+            themeKey: 'great_rebellion',
+            faction: 'La Gran Rebelión',
+            typeLine: 'Princesa del Poder — Gran Rebelión',
+            specialMove: 'Tajo Cósmico de Luz Ancestral',
+            lore: 'Princesa del Poder y líder invicta de la Gran Rebelión en Etheria. Con la Espada de Protección canaliza la luz pura del honor.',
+            stats: { fuerza: 98, magia: 94, defensa: 95, agilidad: 96 }
+        };
+    }
+    if (clean.includes('zodac') || clean.includes('zodak') || clean.includes('he-ro') || clean.includes('eldor') || clean.includes('cosmic')) {
+        return {
+            themeKey: 'cosmic_enforcers',
+            faction: 'Guardianes Cósmicos',
+            typeLine: 'Ejecutor Cósmico — Juez del Equilibrio',
+            specialMove: 'Descarga Cósmica de Zodac',
+            lore: 'Enforcer Cósmico neutral que vela por el equilibrio universal entre la luz y las sombras con su conocimiento infinito.',
+            stats: { fuerza: 90, magia: 95, defensa: 92, agilidad: 91 }
+        };
+    }
+    // Default: Guerreros Heroicos (Grayskull)
+    return {
+        themeKey: 'castle_grayskull',
+        faction: 'Guerreros Heroicos',
+        typeLine: 'Criatura Legendaria — Guerrero Heroico',
+        specialMove: clean.includes('ram') ? 'Impacto de Ariete Inamovible' : clean.includes('man-at-arms') ? 'Ráfaga Fotónica Man-At-Arms' : clean.includes('stratos') ? 'Picado Aéreo de Avion' : clean.includes('teela') ? 'Estocada Táctica de la Cobra' : clean.includes('cat') ? 'Desgarro Feroz de la Selva Carmesí' : clean.includes('sorceress') ? 'Escudo del Halcón Místico' : clean.includes('fisto') ? 'Golpe Demoledor de Murallas' : 'Furia del Relámpago de Grayskull',
+        lore: clean.includes('he-man') ? 'Defensor supremo de los secretos de Castle Grayskull y campeón de Eternia. Guiado por la Espada del Poder, protege el cosmos de la oscuridad.' : 'Noble defensor de la corte real de Eternia y custodio de la paz sagrada de Grayskull.',
+        stats: { fuerza: clean.includes('he-man') ? 99 : 88, magia: clean.includes('sorceress') ? 99 : 78, defensa: 92, agilidad: 89 }
+    };
+};
 
 // Convertidor de DataURL base64 a Blob nativo
 const dataUrlToBlob = async (dataUrl: string): Promise<Blob> => {
@@ -77,7 +247,6 @@ const getSingleIllustrationDataUrl = async (
                 ctx.fillRect(0, 0, 900, 1200);
 
                 ctx.save();
-                // Aplicar escala y desplazamiento adaptados a la resolución HD del canvas
                 ctx.translate(450 + pan.x * (900 / 320), 600 + pan.y * (1200 / 224));
                 ctx.scale(zoom, zoom);
 
@@ -107,125 +276,196 @@ const getSingleIllustrationDataUrl = async (
     });
 };
 
-// Generador de Cromo PNG con html-to-image y fallback infalible mediante Canvas 2D
-const generateTradingCardDataUrl = async (node: HTMLElement, item: any, activeImageSrc?: string, aiLore?: string | null): Promise<string> => {
+// Generador de Cromo PNG con html-to-image y fallback infalible mediante Canvas 2D (Sin Panel Financiero)
+const generateTradingCardDataUrl = async (
+    node: HTMLElement,
+    item: any,
+    activeImageSrc?: string,
+    aiLore?: string | null,
+    profileData?: any
+): Promise<string> => {
     try {
-        // Intento 1: Renderizado vectorial nítido con html-to-image (skipFonts evita bloqueos de CORS en fuentes)
+        // Intento 1: Renderizado vectorial nítido con html-to-image (excluyendo controles interactivos)
         return await toPng(node, {
-            pixelRatio: 2,
+            pixelRatio: 2.5,
             skipFonts: true,
             cacheBust: false,
+            filter: (domNode) => {
+                if (domNode instanceof HTMLElement && domNode.classList.contains('export-exclude')) {
+                    return false;
+                }
+                return true;
+            },
             style: { transform: 'none' }
         });
     } catch (e1) {
         console.warn('html-to-image falló, ejecutando motor de composición directa por Canvas:', e1);
-        
-        // Intento 2: Motor de Dibujo Canvas 2D Nativo (100% libre de errores CORS y de red)
+
+        // Intento 2: Motor de Dibujo Canvas 2D Nativo MTG Showcase
         return new Promise((resolve, reject) => {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
             if (!ctx) return reject('No se pudo inicializar contexto Canvas 2D');
 
-            const width = 720;
-            const height = 1080;
+            const width = 750;
+            const height = 1050;
             canvas.width = width;
             canvas.height = height;
 
-            // 1. Fondo Oscuro Gradiente
+            const faction = profileData?.faction || 'Guerreros Heroicos';
+            const specialMove = profileData?.specialMove || 'Furia del Relámpago de Grayskull';
+            const loreText = aiLore || profileData?.lore || 'Defensor legendario de Eternia custodiado en La Fortaleza de Grayskull.';
+            const stats = profileData?.stats || { fuerza: 90, magia: 85, defensa: 90, agilidad: 88 };
+
+            // 1. Fondo Oscuro y Textura de Facción
             const grad = ctx.createLinearGradient(0, 0, 0, height);
-            grad.addColorStop(0, '#030712');
-            grad.addColorStop(0.5, '#0f172a');
-            grad.addColorStop(1, '#000000');
+            if (faction === 'Guerreros Diabólicos') {
+                grad.addColorStop(0, '#1e102d');
+                grad.addColorStop(0.5, '#0f0a17');
+                grad.addColorStop(1, '#050308');
+            } else if (faction === 'La Horda del Terror') {
+                grad.addColorStop(0, '#2b0c0c');
+                grad.addColorStop(0.5, '#150606');
+                grad.addColorStop(1, '#050202');
+            } else {
+                grad.addColorStop(0, '#0a2318');
+                grad.addColorStop(0.5, '#07150e');
+                grad.addColorStop(1, '#030805');
+            }
             ctx.fillStyle = grad;
             ctx.fillRect(0, 0, width, height);
 
-            // 2. Marco Dorado Metálico
-            ctx.strokeStyle = '#f59e0b';
-            ctx.lineWidth = 10;
-            ctx.strokeRect(15, 15, width - 30, height - 30);
+            // 2. Marco Dorado y Bisel Metálico
+            ctx.strokeStyle = '#d97706';
+            ctx.lineWidth = 12;
+            ctx.strokeRect(18, 18, width - 36, height - 36);
 
-            ctx.strokeStyle = '#10b981';
+            ctx.strokeStyle = faction === 'Guerreros Diabólicos' ? '#a855f7' : faction === 'La Horda del Terror' ? '#ef4444' : '#10b981';
             ctx.lineWidth = 3;
-            ctx.strokeRect(30, 30, width - 60, height - 60);
+            ctx.strokeRect(32, 32, width - 64, height - 64);
 
-            // 3. Cabecera y Estado de Combate
-            ctx.fillStyle = '#fde68a';
-            ctx.font = 'bold 28px sans-serif';
-            ctx.fillText(item.sub_category || 'MOTU ORIGINS', 50, 85);
+            // 3. Cabecera (Header con Nombre y Orbes)
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 30px sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText(item.product_name || item.name || 'FIGURA MOTU', 55, 80);
 
-            ctx.fillStyle = '#94a3b8';
-            ctx.font = '18px monospace';
-            ctx.fillText(`HERITAGE ARCHIVE • #${(item.sku || String(item.id)).slice(-5)}`, 50, 115);
+            // Orbes de poder en la cabecera derecha
+            const orbColors = faction === 'Guerreros Diabólicos' ? ['#a855f7', '#ef4444', '#f59e0b'] : ['#10b981', '#10b981', '#f59e0b'];
+            orbColors.forEach((col, idx) => {
+                ctx.beginPath();
+                ctx.arc(width - 65 - idx * 26, 70, 9, 0, Math.PI * 2);
+                ctx.fillStyle = col;
+                ctx.fill();
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+            });
 
-            ctx.fillStyle = '#34d399';
-            ctx.font = 'bold 22px monospace';
-            ctx.fillText('⚔️ COMBATE ÉPICO • ETERNIA', width - 380, 85);
-
-            // 4. Área de Imagen
-            ctx.fillStyle = '#090d16';
-            ctx.fillRect(50, 145, width - 100, 520);
-            ctx.strokeStyle = '#334155';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(50, 145, width - 100, 520);
+            // 4. Área de Ilustración
+            ctx.fillStyle = '#05070c';
+            ctx.fillRect(50, 110, width - 100, 480);
+            ctx.strokeStyle = '#d97706';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(50, 110, width - 100, 480);
 
             const finishDraw = () => {
-                // 5. Nombre de la Figura
-                ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 36px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText(item.product_name || item.name || 'FIGURA MOTU', width / 2, 725);
-
-                // Lore o Estado
-                if (aiLore) {
-                    ctx.fillStyle = '#67e8f9';
-                    ctx.font = 'italic 18px sans-serif';
-                    ctx.fillText(aiLore.slice(0, 75) + (aiLore.length > 75 ? '...' : ''), width / 2, 765);
-                } else {
-                    ctx.fillStyle = '#10b981';
-                    ctx.font = 'bold 20px sans-serif';
-                    ctx.fillText('🛡️ 100% AUTÉNTICO • COLECCIÓN OFICIAL', width / 2, 765);
-                }
-
-                // 6. Matriz de Valoración y Rendimiento
+                // 5. Barra de Tipo y Facción (Type-Line)
                 ctx.fillStyle = '#0f172a';
-                ctx.fillRect(50, 800, width - 100, 160);
+                ctx.fillRect(50, 610, width - 100, 45);
                 ctx.strokeStyle = '#f59e0b';
                 ctx.lineWidth = 2;
-                ctx.strokeRect(50, 800, width - 100, 160);
+                ctx.strokeRect(50, 610, width - 100, 45);
 
-                const purchase = item.purchase_price || 0;
-                const market = item.current_value || purchase || 19.99;
-                const profit = market - purchase;
-                const roi = purchase > 0 ? ((profit / purchase) * 100).toFixed(0) : '0';
-
+                ctx.fillStyle = '#fde68a';
+                ctx.font = 'bold 20px sans-serif';
                 ctx.textAlign = 'left';
-                ctx.fillStyle = '#94a3b8';
-                ctx.font = '20px sans-serif';
-                ctx.fillText('INVERSIÓN:', 90, 850);
-                ctx.fillText('VALOR MERCADO:', 90, 895);
-                ctx.fillText('PLUSVALÍA:', 90, 940);
+                ctx.fillText(`⚡ CRIATURA LEGENDARIA — ${faction.toUpperCase()}`, 65, 640);
 
                 ctx.textAlign = 'right';
-                ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 24px monospace';
-                ctx.fillText(`${purchase.toFixed(2)} €`, width - 90, 850);
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = 'bold 16px monospace';
+                ctx.fillText(item.sub_category || 'ORIGINS', width - 65, 640);
 
-                ctx.fillStyle = '#fde047';
-                ctx.fillText(`${market.toFixed(2)} €`, width - 90, 895);
+                // 6. Text Box (Habilidad + Lore Canónico)
+                ctx.fillStyle = '#090d16';
+                ctx.fillRect(50, 675, width - 100, 240);
+                ctx.strokeStyle = '#334155';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(50, 675, width - 100, 240);
 
-                ctx.fillStyle = profit >= 0 ? '#34d399' : '#f87171';
-                ctx.fillText(`${profit >= 0 ? '+' : ''}${profit.toFixed(2)} € (+${roi}%)`, width - 90, 940);
-
-                // 7. Sello de Grayskull
-                ctx.textAlign = 'center';
+                // Título de Habilidad
+                ctx.textAlign = 'left';
                 ctx.fillStyle = '#f59e0b';
-                ctx.font = 'bold 22px monospace';
-                ctx.fillText('⚔️ FORTALEZA DE GRAYSKULL • NUEVA ETERNIA ⚔️', width / 2, 1025);
+                ctx.font = 'bold 22px sans-serif';
+                ctx.fillText(`⚡ ${specialMove}`, 70, 715);
+
+                // Línea divisoria
+                ctx.strokeStyle = '#334155';
+                ctx.beginPath();
+                ctx.moveTo(70, 735);
+                ctx.lineTo(width - 70, 735);
+                ctx.stroke();
+
+                // Flavor Text (Lore en cursiva)
+                ctx.fillStyle = '#cbd5e1';
+                ctx.font = 'italic 18px sans-serif';
+                const words = `"${loreText}"`.split(' ');
+                let line = '';
+                let yPos = 770;
+                for (let n = 0; n < words.length; n++) {
+                    const testLine = line + words[n] + ' ';
+                    const metrics = ctx.measureText(testLine);
+                    if (metrics.width > width - 140 && n > 0) {
+                        ctx.fillText(line, 70, yPos);
+                        line = words[n] + ' ';
+                        yPos += 26;
+                    } else {
+                        line = testLine;
+                    }
+                }
+                ctx.fillText(line, 70, yPos);
+
+                // 7. Placas de Estadísticas RPG (FUE, MAG, DEF, AGI) y Sello Holográfico
+                ctx.fillStyle = '#0f172a';
+                ctx.fillRect(50, 935, width - 100, 55);
+                ctx.strokeStyle = '#d97706';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(50, 935, width - 100, 55);
+
+                ctx.textAlign = 'left';
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 18px monospace';
+                ctx.fillText(`FUE ${stats.fuerza}  |  MAG ${stats.magia}`, 70, 970);
+
+                ctx.textAlign = 'right';
+                ctx.fillText(`DEF ${stats.defensa}  |  AGI ${stats.agilidad}`, width - 70, 970);
+
+                // Sello Holográfico Oval Central
+                ctx.save();
+                ctx.beginPath();
+                ctx.ellipse(width / 2, 962, 38, 18, 0, 0, Math.PI * 2);
+                const holoGrad = ctx.createLinearGradient(width / 2 - 38, 0, width / 2 + 38, 0);
+                holoGrad.addColorStop(0, '#06b6d4');
+                holoGrad.addColorStop(0.3, '#3b82f6');
+                holoGrad.addColorStop(0.6, '#ec4899');
+                holoGrad.addColorStop(1, '#f59e0b');
+                ctx.fillStyle = holoGrad;
+                ctx.fill();
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+                ctx.restore();
+
+                // 8. Sello de Autenticidad en Footer
+                ctx.textAlign = 'center';
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = 'bold 14px monospace';
+                ctx.fillText(`🏰 FORTALEZA DE GRAYSKULL • NUEVA ETERNIA • #${(item.sku || String(item.id)).slice(-5)}`, width / 2, 1020);
 
                 resolve(canvas.toDataURL('image/png'));
             };
 
-            // Dibujar imagen (la de IA si existe, o la original)
             const targetImgUrl = activeImageSrc || item.image_url;
             if (targetImgUrl) {
                 const img = new Image();
@@ -233,21 +473,19 @@ const generateTradingCardDataUrl = async (node: HTMLElement, item: any, activeIm
                 img.onload = () => {
                     try {
                         const aspect = img.width / img.height;
-                        let drawW = width - 140;
+                        let drawW = width - 120;
                         let drawH = drawW / aspect;
-                        if (drawH > 480) {
-                            drawH = 480;
+                        if (drawH > 460) {
+                            drawH = 460;
                             drawW = drawH * aspect;
                         }
                         const drawX = (width - drawW) / 2;
-                        const drawY = 165 + (480 - drawH) / 2;
+                        const drawY = 120 + (460 - drawH) / 2;
                         ctx.drawImage(img, drawX, drawY, drawW, drawH);
                     } catch {}
                     finishDraw();
                 };
-                img.onerror = () => {
-                    finishDraw();
-                };
+                img.onerror = () => finishDraw();
                 img.src = targetImgUrl;
             } else {
                 finishDraw();
@@ -304,11 +542,16 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
     const name = item.product_name || item.name || 'Figura MOTU';
     const condition = (item.condition || 'MOC').toUpperCase();
     const grade = item.grading || 10.0;
-    const purchase = item.purchase_price || 0.0;
-    const market = item.current_value || purchase || 19.99;
-    const profit = market - purchase;
-    const roiPct = purchase > 0 ? ((profit / purchase) * 100).toFixed(0) : '0';
-    const multiplier = purchase > 0 ? (market / purchase).toFixed(1) : '1.0';
+
+    // Perfil canónico local y tema de facción
+    const localProfile = getLocalMotuProfile(name, item.sub_category);
+    const themeKey = aiResult?.frame_theme || localProfile.themeKey;
+    const theme = FACTION_THEMES[themeKey] || FACTION_THEMES.castle_grayskull;
+    const factionName = aiResult?.faction || localProfile.faction;
+    const typeLineText = aiResult?.type_line || localProfile.typeLine;
+    const specialMoveText = aiResult?.special_move || localProfile.specialMove;
+    const loreText = aiResult?.lore || localProfile.lore;
+    const statsData = aiResult?.stats || localProfile.stats;
 
     // Manejo de giro 3D holográfico con el ratón
     const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -362,9 +605,9 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
         }
     };
 
-    // Control de Arrastre con Ratón (PC)
+    // Control de Arrastre con Ratón
     const handleImgMouseDown = (e: React.MouseEvent) => {
-        if (e.button !== 0) return; // solo botón izquierdo
+        if (e.button !== 0) return;
         e.preventDefault();
         e.stopPropagation();
         setIsDraggingImg(true);
@@ -395,7 +638,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
         }
     };
 
-    // Control de Zoom con Rueda del Ratón (PC)
+    // Control de Zoom con Rueda del Ratón
     const handleImgWheel = (e: React.WheelEvent) => {
         e.preventDefault();
         e.stopPropagation();
@@ -403,7 +646,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
         setImgZoom((prev) => Math.min(3.5, Math.max(0.4, +(prev + delta).toFixed(2))));
     };
 
-    // Control Táctil (Móvil): 1 Dedo = Arrastrar, 2 Dedos = Pellizcar para Zoom
+    // Control Táctil (Móvil)
     const handleImgTouchStart = (e: React.TouchEvent) => {
         e.stopPropagation();
         if (e.touches.length === 1) {
@@ -460,27 +703,32 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
         }
     };
 
-    // 1. Descargar PNG HD (Carta Completa o Solo Ilustración)
+    // 1. Descargar PNG HD
     const handleDownload = async () => {
         if (!cardRef.current || !item) return;
         try {
             setExporting(true);
+            // Breve espera para que React aplique el ocultamiento de controles
+            await new Promise((r) => setTimeout(r, 60));
+
             let dataUrl = '';
             let filename = '';
 
             if (exportTarget === 'card') {
                 const activeImage = aiResult?.image_base64 || undefined;
-                dataUrl = await generateTradingCardDataUrl(cardRef.current, item, activeImage, aiResult?.lore);
-                filename = `Carta_MOTU_${name.replace(/\s+/g, '_')}${aiResult ? `_${aiResult.style}` : ''}.png`;
+                dataUrl = await generateTradingCardDataUrl(cardRef.current, item, activeImage, aiResult?.lore, {
+                    faction: factionName,
+                    specialMove: specialMoveText,
+                    lore: loreText,
+                    stats: statsData
+                });
+                filename = `Carta_TCG_${name.replace(/\s+/g, '_')}${aiResult ? `_${aiResult.style}` : ''}.png`;
             } else {
                 dataUrl = await getSingleIllustrationDataUrl(item, aiResult?.image_base64, imgZoom, imgPan);
-                filename = `Ilustracion_MOTU_${name.replace(/\s+/g, '_')}${aiResult ? `_${aiResult.style}` : ''}.png`;
+                filename = `Ilustracion_${name.replace(/\s+/g, '_')}${aiResult ? `_${aiResult.style}` : ''}.png`;
             }
 
-            if (!dataUrl) {
-                console.warn('No hay imagen disponible para descargar');
-                return;
-            }
+            if (!dataUrl) return;
 
             const link = document.createElement('a');
             link.download = filename;
@@ -498,15 +746,22 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
         }
     };
 
-    // 2. Copiar Imagen al Portapapeles (para pegar directo en WhatsApp Web / Telegram)
+    // 2. Copiar Imagen al Portapapeles
     const handleCopyImage = async () => {
         if (!cardRef.current || !item) return;
         try {
             setExporting(true);
+            await new Promise((r) => setTimeout(r, 60));
+
             let dataUrl = '';
             if (exportTarget === 'card') {
                 const activeImage = aiResult?.image_base64 || undefined;
-                dataUrl = await generateTradingCardDataUrl(cardRef.current, item, activeImage, aiResult?.lore);
+                dataUrl = await generateTradingCardDataUrl(cardRef.current, item, activeImage, aiResult?.lore, {
+                    faction: factionName,
+                    specialMove: specialMoveText,
+                    lore: loreText,
+                    stats: statsData
+                });
             } else {
                 dataUrl = await getSingleIllustrationDataUrl(item, aiResult?.image_base64, imgZoom, imgPan);
             }
@@ -531,48 +786,46 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
         }
     };
 
-    // 3. Compartir nativo (WhatsApp, Telegram, Móvil)
+    // 3. Compartir nativo
     const handleNativeShare = async () => {
         if (!cardRef.current || !item) return;
         try {
             setExporting(true);
+            await new Promise((r) => setTimeout(r, 60));
+
             let dataUrl = '';
             let filename = '';
 
             if (exportTarget === 'card') {
                 const activeImage = aiResult?.image_base64 || undefined;
-                dataUrl = await generateTradingCardDataUrl(cardRef.current, item, activeImage, aiResult?.lore);
-                filename = `Carta_MOTU_${name.replace(/\s+/g, '_')}.png`;
+                dataUrl = await generateTradingCardDataUrl(cardRef.current, item, activeImage, aiResult?.lore, {
+                    faction: factionName,
+                    specialMove: specialMoveText,
+                    lore: loreText,
+                    stats: statsData
+                });
+                filename = `Carta_TCG_${name.replace(/\s+/g, '_')}.png`;
             } else {
                 dataUrl = await getSingleIllustrationDataUrl(item, aiResult?.image_base64, imgZoom, imgPan);
-                filename = `Ilustracion_MOTU_${name.replace(/\s+/g, '_')}.png`;
+                filename = `Ilustracion_${name.replace(/\s+/g, '_')}.png`;
             }
 
             if (!dataUrl) return;
             const blob = await dataUrlToBlob(dataUrl);
             const file = new File([blob], filename, { type: 'image/png' });
 
-            let shareText = exportTarget === 'card'
-                ? `🏰 Cromo Oficial: ${name} custodiado en La Fortaleza de Grayskull.\nValor de Mercado: ${market.toFixed(2)}€ (${profit >= 0 ? '+' : ''}${profit.toFixed(2)}€ | ${roiPct}% ROI)`
-                : `🎨 Ilustración Épica: ${name} en Eternia.`;
-
-            if (aiResult?.lore) {
-                shareText += `\n\n📜 Lore Canónico:\n"${aiResult.lore}"`;
-            }
-            if (aiResult?.special_move) {
-                shareText += `\n⚡ Técnica Definitiva: ${aiResult.special_move}`;
-            }
+            let shareText = `🏰 Cromo Coleccionista: ${name}\n⚔️ Facción: ${factionName}\n⚡ Técnica: ${specialMoveText}`;
+            if (loreText) shareText += `\n\n📜 "${loreText}"`;
 
             if (navigator.canShare && navigator.canShare({ files: [file] })) {
                 await navigator.share({
-                    title: exportTarget === 'card' ? `Cromo MOTU: ${name}` : `Ilustración MOTU: ${name}`,
+                    title: `Cromo TCG: ${name}`,
                     text: shareText,
                     files: [file]
                 });
                 setShared(true);
                 setTimeout(() => setShared(false), 3000);
             } else {
-                // Fallback para PC/Desktop: Abrir WhatsApp Web mediante enlace directo seguro
                 const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
                 const waLink = document.createElement('a');
                 waLink.href = waUrl;
@@ -587,12 +840,18 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
             }
         } catch (err) {
             console.error('Error compartiendo:', err);
-            let emergencyText = `🏰 Figura MOTU: ${name}`;
-            if (aiResult?.lore) emergencyText += `\n\n📜 Lore:\n"${aiResult.lore}"`;
-            window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(emergencyText)}`, '_blank');
         } finally {
             setExporting(false);
         }
+    };
+
+    const renderEmblemIcon = () => {
+        if (theme.emblemIcon === 'skull') return <Skull className="h-3.5 w-3.5 text-purple-400" />;
+        if (theme.emblemIcon === 'bat') return <Flame className="h-3.5 w-3.5 text-red-400" />;
+        if (theme.emblemIcon === 'snake') return <Zap className="h-3.5 w-3.5 text-lime-400" />;
+        if (theme.emblemIcon === 'sparkles') return <Sparkles className="h-3.5 w-3.5 text-pink-400" />;
+        if (theme.emblemIcon === 'infinity') return <InfinityIcon className="h-3.5 w-3.5 text-cyan-400" />;
+        return <Shield className="h-3.5 w-3.5 text-emerald-400" />;
     };
 
     return (
@@ -718,7 +977,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                         )}
                     </div>
 
-                    {/* CONTENEDOR 3D DEL CROMO */}
+                    {/* CONTENEDOR 3D DEL CROMO MTG SHOWCASE */}
                     <div
                         className="w-full flex justify-center cursor-grab active:cursor-grabbing"
                         style={{ perspective: 1000 }}
@@ -732,10 +991,10 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                 transformStyle: 'preserve-3d',
                                 transition: 'transform 0.1s ease-out'
                             }}
-                            className="relative w-full max-w-[340px] rounded-2xl bg-gradient-to-b from-slate-950 via-slate-900 to-black p-3.5 border-2 border-amber-400/80 shadow-[0_0_35px_rgba(245,158,11,0.25)] overflow-hidden"
+                            className={`relative w-full max-w-[340px] rounded-2xl bg-gradient-to-b ${theme.headerBg} p-3.5 border-2 ${theme.borderClass} overflow-hidden select-none`}
                         >
-                            {/* Marco exterior metálico grabado */}
-                            <div className="absolute inset-0.5 rounded-2xl border border-emerald-400/40 pointer-events-none" />
+                            {/* Bisel metálico grabado */}
+                            <div className={`absolute inset-0.5 rounded-2xl border ${theme.innerBorderClass} pointer-events-none`} />
                             <div className="absolute inset-1.5 rounded-xl border border-amber-500/20 pointer-events-none" />
 
                             {/* Brillo reflectivo holográfico dinámico */}
@@ -747,36 +1006,33 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                 }}
                             />
 
-                            {/* Nebulosa cósmica de fondo */}
-                            <div className="absolute -top-12 -right-12 w-36 h-36 bg-cyan-500/20 rounded-full blur-2xl pointer-events-none" />
-                            <div className="absolute -bottom-12 -left-12 w-36 h-36 bg-amber-500/20 rounded-full blur-2xl pointer-events-none" />
-
-                            {/* 1. Cabecera Heroica del Cromo */}
+                            {/* 1. Cabecera MTG: Nombre con Relieve y Orbes de Poder */}
                             <div className="relative z-10 flex items-center justify-between border-b border-amber-500/30 pb-2 mb-2">
-                                <div className="flex items-center gap-1.5">
-                                    <div className="p-1 rounded-md bg-gradient-to-br from-amber-400 to-yellow-600 text-black shadow-sm">
-                                        <Shield className="h-3.5 w-3.5 fill-black" />
+                                <div className="flex items-center gap-1.5 min-w-0 pr-1">
+                                    <div className="p-1 rounded-md bg-gradient-to-br from-amber-400 to-yellow-600 text-black shadow-sm shrink-0">
+                                        {renderEmblemIcon()}
                                     </div>
-                                    <div>
-                                        <div className="text-[10px] font-black text-amber-300 uppercase tracking-widest leading-none">
-                                            {item.sub_category || 'MOTU Origins'}
-                                        </div>
-                                        <div className="text-[8px] text-slate-400 font-mono tracking-tighter">
-                                            {aiResult?.rarity_class || `HERITAGE ARCHIVE • #${(item.sku || String(item.id)).slice(-5)}`}
-                                        </div>
-                                    </div>
+                                    <h3 className="text-xs sm:text-sm font-black text-white uppercase tracking-wider truncate drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                                        {name}
+                                    </h3>
                                 </div>
 
-                                {/* Insignia de Combate Oficial de Eternia */}
-                                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500/20 to-yellow-500/20 border border-amber-400/50 shadow-sm">
-                                    <Zap className="h-3 w-3 text-amber-400" />
-                                    <span className="text-[9px] font-black text-amber-300 font-mono uppercase tracking-wider">
-                                        COMBATE ÉPICO
-                                    </span>
+                                {/* Orbes de Maná / Poder */}
+                                <div className="flex items-center gap-1 shrink-0 bg-black/60 px-2 py-0.5 rounded-full border border-amber-400/40 shadow-inner">
+                                    {theme.gemColors.map((color, idx) => (
+                                        <div
+                                            key={idx}
+                                            className="w-2.5 h-2.5 rounded-full shadow-sm"
+                                            style={{
+                                                backgroundColor: color,
+                                                boxShadow: `0 0 6px ${color}`
+                                            }}
+                                        />
+                                    ))}
                                 </div>
                             </div>
 
-                            {/* 2. Marco Holográfico con Foto HD o Arte Transformado con IA (Encuadre & Zoom Interactivo) */}
+                            {/* 2. Ventana de Arte Coleccionista (Foto HD o Arte IA con Zoom/Encuadre) */}
                             <div
                                 onMouseDown={handleImgMouseDown}
                                 onMouseMove={handleImgMouseMove}
@@ -794,7 +1050,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                     e.preventDefault();
                                     resetFraming();
                                 }}
-                                className={`relative z-10 h-56 w-full rounded-xl bg-gradient-to-b from-slate-950 via-slate-900 to-black border border-slate-800 flex items-center justify-center overflow-hidden mb-2.5 group shadow-inner select-none ${
+                                className={`relative z-10 h-52 w-full rounded-xl bg-gradient-to-b from-slate-950 via-slate-900 to-black border-2 border-amber-500/40 flex items-center justify-center overflow-hidden mb-2 group shadow-inner select-none ${
                                     isDraggingImg ? 'cursor-grabbing' : 'cursor-grab'
                                 }`}
                                 title="Arrastra con el ratón o usa la rueda para ampliar y encuadrar"
@@ -808,7 +1064,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                     }}
                                 />
 
-                                {/* Capa de la Imagen Completa Nativa (Permite deslizar y encuadrar toda la obra original) */}
+                                {/* Capa de la Imagen con Zoom y Desplazamiento */}
                                 <div
                                     className="absolute flex items-center justify-center pointer-events-none select-none"
                                     style={{
@@ -826,12 +1082,12 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                             style={{
                                                 width: '320px',
                                                 height: 'auto',
-                                                minHeight: '224px',
+                                                minHeight: '208px',
                                                 display: 'block'
                                             }}
                                         />
                                     ) : (
-                                        <div className="flex items-center justify-center pointer-events-none select-none" style={{ width: '320px', height: '224px' }}>
+                                        <div className="flex items-center justify-center pointer-events-none select-none" style={{ width: '320px', height: '208px' }}>
                                             <MOTUImage
                                                 productId={item.id}
                                                 src={item.image_url}
@@ -842,139 +1098,124 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                     )}
                                 </div>
 
-                                {/* Mini Barra de Herramientas de Encuadre y Zoom Flotante */}
-                                <div className="absolute top-2 right-2 z-30 flex items-center gap-1 bg-black/75 backdrop-blur-md px-1.5 py-1 rounded-lg border border-slate-700/80 shadow-md opacity-80 group-hover:opacity-100 transition-opacity">
-                                    <button
-                                        type="button"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setImgZoom((prev) => Math.min(3.5, +(prev + 0.15).toFixed(2)));
-                                        }}
-                                        title="Ampliar Imagen (+)"
-                                        className="p-1 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition active:scale-90"
-                                    >
-                                        <Plus className="h-3 w-3" />
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setImgZoom((prev) => Math.max(0.4, +(prev - 0.15).toFixed(2)));
-                                        }}
-                                        title="Reducir Imagen (-)"
-                                        className="p-1 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition active:scale-90"
-                                    >
-                                        <Minus className="h-3 w-3" />
-                                    </button>
-                                    {(imgZoom !== 1 || imgPan.x !== 0 || imgPan.y !== 0) && (
+                                {/* Mini Barra de Herramientas de Zoom Flotante (OCULTA EN EXPORTACIÓN) */}
+                                {!exporting && (
+                                    <div className="export-exclude absolute top-2 right-2 z-30 flex items-center gap-1 bg-black/80 backdrop-blur-md px-1.5 py-1 rounded-lg border border-slate-700/80 shadow-md opacity-80 group-hover:opacity-100 transition-opacity">
                                         <button
                                             type="button"
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                resetFraming();
+                                                setImgZoom((prev) => Math.min(3.5, +(prev + 0.15).toFixed(2)));
                                             }}
-                                            title="Restablecer Encuadre Original"
-                                            className="p-1 hover:bg-rose-500/20 text-amber-400 hover:text-rose-300 rounded transition active:scale-90"
+                                            title="Ampliar Imagen (+)"
+                                            className="p-1 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition active:scale-90"
                                         >
-                                            <RotateCcw className="h-3 w-3" />
+                                            <Plus className="h-3 w-3" />
                                         </button>
-                                    )}
-                                </div>
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setImgZoom((prev) => Math.max(0.4, +(prev - 0.15).toFixed(2)));
+                                            }}
+                                            title="Reducir Imagen (-)"
+                                            className="p-1 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition active:scale-90"
+                                        >
+                                            <Minus className="h-3 w-3" />
+                                        </button>
+                                        {(imgZoom !== 1 || imgPan.x !== 0 || imgPan.y !== 0) && (
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    resetFraming();
+                                                }}
+                                                title="Restablecer Encuadre Original"
+                                                className="p-1 hover:bg-rose-500/20 text-amber-400 hover:text-rose-300 rounded transition active:scale-90"
+                                            >
+                                                <RotateCcw className="h-3 w-3" />
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
 
-                                {/* Pista de Interacción en la esquina inferior */}
-                                <div className="absolute bottom-2 left-2 z-20 pointer-events-none opacity-60 group-hover:opacity-100 transition-opacity">
-                                    <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/70 border border-slate-800 text-[8px] font-mono text-slate-300">
-                                        <Move className="h-2.5 w-2.5 text-amber-400" />
-                                        {imgZoom !== 1 ? `${Math.round(imgZoom * 100)}%` : 'Arrastra / Zoom'}
-                                    </span>
-                                </div>
-
-                                {/* Multiplicador Flotante o Golpe Especial */}
-                                {purchase > 0 && profit > 0 && (
-                                    <div className="absolute bottom-2 right-2 z-20 px-2 py-0.5 rounded-md bg-black/80 border border-emerald-500/60 text-emerald-400 text-[10px] font-mono font-black flex items-center gap-1 shadow-md">
-                                        <TrendingUp className="h-3 w-3" />
-                                        <span>{multiplier}x GAIN</span>
+                                {/* Pista de Interacción (OCULTA EN EXPORTACIÓN) */}
+                                {!exporting && (
+                                    <div className="export-exclude absolute bottom-2 left-2 z-20 pointer-events-none opacity-60 group-hover:opacity-100 transition-opacity">
+                                        <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/75 border border-slate-800 text-[8px] font-mono text-slate-300">
+                                            <Move className="h-2.5 w-2.5 text-amber-400" />
+                                            {imgZoom !== 1 ? `${Math.round(imgZoom * 100)}%` : 'Arrastra / Zoom'}
+                                        </span>
                                     </div>
                                 )}
                             </div>
 
-                            {/* 3. Nombre y Datos Técnicos */}
-                            <div className="relative z-10 text-center mb-2">
-                                <h3 className="text-sm font-black text-white uppercase tracking-wider truncate drop-shadow-sm">
-                                    {name}
-                                </h3>
-                                <div className="flex items-center justify-center gap-2 text-[10px] text-slate-400 mt-0.5">
-                                    {item.release_year && (
-                                        <span className="flex items-center gap-1">
-                                            <Calendar className="h-2.5 w-2.5 text-amber-400" /> {item.release_year}
-                                        </span>
-                                    )}
-                                    <span>•</span>
-                                    <span className="text-emerald-400 font-semibold">100% Auténtico</span>
+                            {/* 3. Barra de Tipo y Facción (Type-Line MTG) */}
+                            <div className="relative z-10 flex items-center justify-between px-2.5 py-1 rounded-lg bg-slate-950/95 border border-amber-500/30 mb-2 shadow-inner">
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                    <Swords className="h-3 w-3 text-amber-400 shrink-0" />
+                                    <span className="text-[9px] font-black text-amber-200 uppercase tracking-wide truncate">
+                                        {typeLineText}
+                                    </span>
+                                </div>
+                                <span className="text-[8px] font-mono font-bold text-slate-400 shrink-0 ml-1">
+                                    {item.sub_category || 'ORIGINS'}
+                                </span>
+                            </div>
+
+                            {/* 4. Text Box: Habilidad Definitiva + Lore Canónico */}
+                            <div className="relative z-10 bg-slate-950/95 border border-amber-500/25 rounded-xl p-2 mb-2 shadow-inner">
+                                {/* Habilidad / Ataque */}
+                                <div className="flex items-center gap-1 text-[10px] font-black text-amber-300 uppercase tracking-wider mb-1">
+                                    <Zap className="h-3 w-3 text-yellow-400 shrink-0" />
+                                    <span className="truncate">{specialMoveText}</span>
+                                </div>
+
+                                {/* Línea Divisoria Ornamental */}
+                                <div className="w-full h-px bg-gradient-to-r from-transparent via-amber-500/40 to-transparent my-1" />
+
+                                {/* Lore Canónico en Cursiva (Flavor Text) */}
+                                <p className="text-[8.5px] text-slate-300 italic leading-snug line-clamp-2 px-0.5">
+                                    "{loreText}"
+                                </p>
+                            </div>
+
+                            {/* 5. Placas de Estadísticas RPG y Sello Holográfico de Grayskull */}
+                            <div className="relative z-10 flex items-center justify-between bg-slate-950/95 border border-amber-500/30 rounded-xl px-2 py-1.5 mb-1.5 shadow-inner">
+                                {/* Lado Izquierdo: FUERZA / MAGIA */}
+                                <div className="flex items-center gap-2 font-mono text-[9px]">
+                                    <span className="text-red-400 font-bold">FUE <strong className="text-white text-xs">{statsData.fuerza}</strong></span>
+                                    <span className="text-slate-600">•</span>
+                                    <span className="text-purple-400 font-bold">MAG <strong className="text-white text-xs">{statsData.magia}</strong></span>
+                                </div>
+
+                                {/* Sello Holográfico Oval 3D Central */}
+                                <div
+                                    className="w-12 h-6 rounded-full border border-amber-300/60 flex items-center justify-center shadow-md overflow-hidden relative"
+                                    style={{
+                                        background: 'linear-gradient(135deg, #06b6d4 0%, #3b82f6 30%, #ec4899 70%, #f59e0b 100%)'
+                                    }}
+                                    title="Sello de Autenticidad Grayskull"
+                                >
+                                    <div className="absolute inset-0 bg-white/20 backdrop-blur-[0.5px]" />
+                                    <Shield className="h-3 w-3 text-black/80 drop-shadow-sm z-10" />
+                                </div>
+
+                                {/* Lado Derecho: DEFENSA / AGILIDAD */}
+                                <div className="flex items-center gap-2 font-mono text-[9px]">
+                                    <span className="text-blue-400 font-bold">DEF <strong className="text-white text-xs">{statsData.defensa}</strong></span>
+                                    <span className="text-slate-600">•</span>
+                                    <span className="text-emerald-400 font-bold">AGI <strong className="text-white text-xs">{statsData.agilidad}</strong></span>
                                 </div>
                             </div>
 
-                            {/* 4. Panel Dinámico: Matriz de Lore & Stats RPG de Gemini O Valoración Financiera */}
-                            {aiResult?.stats ? (
-                                <div className="relative z-10 bg-slate-950/90 border border-cyan-500/40 rounded-xl p-2 mb-2 text-center shadow-inner">
-                                    {/* Mini-Lore Narrativo */}
-                                    {aiResult.lore && (
-                                        <p className="text-[9px] text-cyan-200 italic mb-1.5 leading-tight line-clamp-2 px-1">
-                                            "{aiResult.lore}"
-                                        </p>
-                                    )}
-                                    {/* Estadísticas de Combate RPG */}
-                                    <div className="grid grid-cols-4 gap-1 text-[8px] font-mono border-t border-slate-800 pt-1">
-                                        <div className="bg-red-500/10 p-1 rounded border border-red-500/20">
-                                            <span className="text-red-400 block font-bold">FUERZA</span>
-                                            <span className="text-white font-bold text-xs">{aiResult.stats.fuerza}</span>
-                                        </div>
-                                        <div className="bg-purple-500/10 p-1 rounded border border-purple-500/20">
-                                            <span className="text-purple-400 block font-bold">MAGIA</span>
-                                            <span className="text-white font-bold text-xs">{aiResult.stats.magia}</span>
-                                        </div>
-                                        <div className="bg-blue-500/10 p-1 rounded border border-blue-500/20">
-                                            <span className="text-blue-400 block font-bold">DEFENSA</span>
-                                            <span className="text-white font-bold text-xs">{aiResult.stats.defensa}</span>
-                                        </div>
-                                        <div className="bg-emerald-500/10 p-1 rounded border border-emerald-500/20">
-                                            <span className="text-emerald-400 block font-bold">AGILIDAD</span>
-                                            <span className="text-white font-bold text-xs">{aiResult.stats.agilidad}</span>
-                                        </div>
-                                    </div>
-                                    {aiResult.special_move && (
-                                        <div className="text-[8px] text-amber-300 font-bold uppercase mt-1 tracking-wider">
-                                            ⚡ {aiResult.special_move}
-                                        </div>
-                                    )}
-                                </div>
-                            ) : (
-                                /* Matriz de Rendimiento Estándar */
-                                <div className="relative z-10 grid grid-cols-3 gap-1.5 bg-slate-950/90 border border-amber-500/20 rounded-xl p-2 mb-2 text-center shadow-inner">
-                                    <div className="border-r border-slate-800 pr-1">
-                                        <span className="text-[8px] text-slate-400 uppercase tracking-tighter block">Inversión</span>
-                                        <span className="text-xs font-bold text-white font-mono">{purchase.toFixed(2)}€</span>
-                                    </div>
-                                    <div className="border-r border-slate-800 px-1">
-                                        <span className="text-[8px] text-slate-400 uppercase tracking-tighter block">Mercado</span>
-                                        <span className="text-xs font-bold text-amber-300 font-mono">{market.toFixed(2)}€</span>
-                                    </div>
-                                    <div className="pl-1">
-                                        <span className="text-[8px] text-slate-400 uppercase tracking-tighter block">Plusvalía</span>
-                                        <span className={`text-xs font-black font-mono ${profit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                                            {profit >= 0 ? '+' : ''}{roiPct}%
-                                        </span>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* 5. Sello de Autenticidad de La Fortaleza */}
-                            <div className="relative z-10 flex items-center justify-between border-t border-slate-800/80 pt-1.5 px-1 text-[8px] text-slate-400 uppercase tracking-widest font-mono">
+                            {/* 6. Sello de Autenticidad en Footer */}
+                            <div className="relative z-10 flex items-center justify-between border-t border-slate-800/80 pt-1 px-1 text-[7.5px] text-slate-400 uppercase tracking-widest font-mono">
                                 <div className="flex items-center gap-1">
-                                    <Lock className="h-2.5 w-2.5 text-amber-400" />
+                                    <Lock className="h-2 w-2 text-amber-400" />
                                     <span>FORTALEZA DE GRAYSKULL</span>
                                 </div>
-                                <span className="text-amber-400/80 font-bold">NUEVA ETERNIA</span>
+                                <span className="text-amber-400/80 font-bold">#{ (item.sku || String(item.id)).slice(-5) } • NUEVA ETERNIA</span>
                             </div>
                         </motion.div>
                     </div>
@@ -1074,3 +1315,4 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
 };
 
 export default TradingCardModal;
+

@@ -24,6 +24,12 @@ export interface CardAiEnhanceResult {
     style: string;
     style_name: string;
     image_base64?: string | null;
+    canonical_name?: string | null;
+    faction?: string | null;
+    type_line?: string | null;
+    frame_theme?: string | null;
+    emblem?: string | null;
+    mana_gems?: string[] | null;
     lore?: string | null;
     stats?: {
         fuerza: number;

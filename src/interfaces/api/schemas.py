@@ -768,10 +768,17 @@ class CardAiEnhanceOutput(BaseModel):
     style: str
     style_name: str
     image_base64: Optional[str] = None
+    canonical_name: Optional[str] = None
+    faction: Optional[str] = None
+    type_line: Optional[str] = None
+    frame_theme: Optional[str] = None
+    emblem: Optional[str] = None
+    mana_gems: Optional[List[str]] = None
     lore: Optional[str] = None
     stats: Optional[Dict[str, int]] = None
     special_move: Optional[str] = None
     rarity_class: Optional[str] = None
+
 
 
 
