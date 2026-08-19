@@ -9,7 +9,6 @@ import {
     Check,
     X,
     Award,
-    Lock,
     Loader2,
     Wand2,
     RotateCcw,
@@ -18,11 +17,7 @@ import {
     Image as ImageIcon,
     Plus,
     Minus,
-    Move,
-    Skull,
-    Flame,
-    Infinity as InfinityIcon,
-    Swords
+    Move
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { MOTUImage } from '../ui/MOTUImage';
@@ -47,106 +42,113 @@ interface TradingCardModalProps {
     } | null;
 }
 
-// Interfaz para la configuración estética de cada facción
-interface FactionThemeConfig {
-    name: string;
+// Configuración estética de alta fidelidad para cada facción de Masters of the Universe
+interface FactionVisualTheme {
     faction: string;
     typeLine: string;
-    borderClass: string;
-    innerBorderClass: string;
-    headerBg: string;
-    textAccent: string;
-    badgeBg: string;
-    boxBg: string;
-    boxBorder: string;
-    gemColors: string[];
-    emblemIcon: 'shield' | 'skull' | 'bat' | 'snake' | 'sparkles' | 'infinity';
+    outerStoneGrad: string;
+    stoneBorderColor: string;
+    goldBevelGrad: string;
+    textBoxSlabGrad: string;
+    textBoxBorderColor: string;
+    runicColor: string;
+    runicGlow: string;
+    specialMoveColor: string;
+    loreTextColor: string;
+    emblemType: 'grayskull_shield' | 'havoc_ram_skull' | 'horde_bat' | 'snake_cobra' | 'rebellion_wing' | 'cosmic_eye';
+    gemPreset: 'heroic_green_gold' | 'evil_fire_ruby' | 'horde_blood_dark' | 'snake_venom_lime' | 'rebellion_pink_star' | 'cosmic_sapphire_star';
 }
 
-const FACTION_THEMES: Record<string, FactionThemeConfig> = {
+const FACTION_VISUAL_THEMES: Record<string, FactionVisualTheme> = {
     castle_grayskull: {
-        name: 'Guerreros Heroicos',
         faction: 'Guerreros Heroicos',
         typeLine: 'Criatura Legendaria — Guerrero Heroico',
-        borderClass: 'border-emerald-500/80 shadow-[0_0_35px_rgba(16,185,129,0.35)]',
-        innerBorderClass: 'border-amber-400/50',
-        headerBg: 'from-emerald-950/90 via-slate-900 to-black',
-        textAccent: 'text-emerald-300',
-        badgeBg: 'from-emerald-500/20 to-teal-500/20 border-emerald-400/50',
-        boxBg: 'bg-slate-950/90',
-        boxBorder: 'border-emerald-500/30',
-        gemColors: ['#10b981', '#10b981', '#f59e0b', '#38bdf8'],
-        emblemIcon: 'shield'
+        outerStoneGrad: 'linear-gradient(180deg, #5b714b 0%, #3e5033 45%, #253320 100%)',
+        stoneBorderColor: '#303f27',
+        goldBevelGrad: 'linear-gradient(135deg, #f7e089 0%, #d4af37 40%, #8c6819 80%, #ffd966 100%)',
+        textBoxSlabGrad: 'linear-gradient(180deg, #323d2f 0%, #20281e 60%, #141a13 100%)',
+        textBoxBorderColor: '#4f6048',
+        runicColor: '#dfc067',
+        runicGlow: 'rgba(223, 192, 103, 0.45)',
+        specialMoveColor: '#ffdb70',
+        loreTextColor: '#d8e5d3',
+        emblemType: 'grayskull_shield',
+        gemPreset: 'heroic_green_gold'
     },
     snake_mountain: {
-        name: 'Guerreros Diabólicos',
         faction: 'Guerreros Diabólicos',
         typeLine: 'Criatura Legendaria — Guerrero Diabólico',
-        borderClass: 'border-purple-600/90 shadow-[0_0_35px_rgba(168,85,247,0.35)]',
-        innerBorderClass: 'border-amber-500/40',
-        headerBg: 'from-purple-950/90 via-slate-900 to-black',
-        textAccent: 'text-purple-300',
-        badgeBg: 'from-purple-500/20 to-red-500/20 border-purple-400/50',
-        boxBg: 'bg-slate-950/90',
-        boxBorder: 'border-purple-500/30',
-        gemColors: ['#a855f7', '#ef4444', '#f59e0b', '#8b5cf6'],
-        emblemIcon: 'skull'
+        outerStoneGrad: 'linear-gradient(180deg, #3b3040 0%, #251d2b 45%, #140e1a 100%)',
+        stoneBorderColor: '#281c2d',
+        goldBevelGrad: 'linear-gradient(135deg, #eed27c 0%, #c99c32 40%, #7c5713 80%, #f7df8f 100%)',
+        textBoxSlabGrad: 'linear-gradient(180deg, #2b2029 0%, #1a1219 60%, #0d090d 100%)',
+        textBoxBorderColor: '#533c50',
+        runicColor: '#e5a84b',
+        runicGlow: 'rgba(249, 115, 22, 0.45)',
+        specialMoveColor: '#ff8a3d',
+        loreTextColor: '#eedac5',
+        emblemType: 'havoc_ram_skull',
+        gemPreset: 'evil_fire_ruby'
     },
     evil_horde: {
-        name: 'La Horda del Terror',
         faction: 'La Horda del Terror',
         typeLine: 'Tirano Legendario — Soldado de la Horda',
-        borderClass: 'border-red-600/90 shadow-[0_0_35px_rgba(239,68,68,0.35)]',
-        innerBorderClass: 'border-slate-500/50',
-        headerBg: 'from-red-950/90 via-slate-900 to-black',
-        textAccent: 'text-red-300',
-        badgeBg: 'from-red-600/20 to-rose-600/20 border-red-500/50',
-        boxBg: 'bg-slate-950/90',
-        boxBorder: 'border-red-500/30',
-        gemColors: ['#ef4444', '#dc2626', '#111827', '#f87171'],
-        emblemIcon: 'bat'
+        outerStoneGrad: 'linear-gradient(180deg, #44171c 0%, #290b0f 45%, #150407 100%)',
+        stoneBorderColor: '#30080c',
+        goldBevelGrad: 'linear-gradient(135deg, #f09595 0%, #b93232 40%, #5e1111 80%, #fca5a5 100%)',
+        textBoxSlabGrad: 'linear-gradient(180deg, #261014 0%, #17070a 60%, #0b0204 100%)',
+        textBoxBorderColor: '#5a2227',
+        runicColor: '#f87171',
+        runicGlow: 'rgba(239, 68, 68, 0.5)',
+        specialMoveColor: '#fca5a5',
+        loreTextColor: '#fee2e2',
+        emblemType: 'horde_bat',
+        gemPreset: 'horde_blood_dark'
     },
     snake_men: {
-        name: 'Los Hombres Serpiente',
         faction: 'Los Hombres Serpiente',
         typeLine: 'Monarca Ofídico — Hombre Serpiente',
-        borderClass: 'border-lime-500/90 shadow-[0_0_35px_rgba(132,204,22,0.35)]',
-        innerBorderClass: 'border-amber-500/40',
-        headerBg: 'from-emerald-950/90 via-lime-950/40 to-black',
-        textAccent: 'text-lime-300',
-        badgeBg: 'from-lime-500/20 to-emerald-500/20 border-lime-400/50',
-        boxBg: 'bg-slate-950/90',
-        boxBorder: 'border-lime-500/30',
-        gemColors: ['#84cc16', '#22c55e', '#eab308', '#10b981'],
-        emblemIcon: 'snake'
+        outerStoneGrad: 'linear-gradient(180deg, #465a2a 0%, #2c3c18 45%, #17220b 100%)',
+        stoneBorderColor: '#2d3b13',
+        goldBevelGrad: 'linear-gradient(135deg, #d8e576 0%, #a3b827 40%, #5b6910 80%, #ecf78d 100%)',
+        textBoxSlabGrad: 'linear-gradient(180deg, #283419 0%, #18220d 60%, #0c1306 100%)',
+        textBoxBorderColor: '#536831',
+        runicColor: '#a3e635',
+        runicGlow: 'rgba(163, 230, 53, 0.5)',
+        specialMoveColor: '#bef264',
+        loreTextColor: '#ecfccb',
+        emblemType: 'snake_cobra',
+        gemPreset: 'snake_venom_lime'
     },
     great_rebellion: {
-        name: 'La Gran Rebelión',
         faction: 'La Gran Rebelión',
         typeLine: 'Princesa del Poder — Gran Rebelión',
-        borderClass: 'border-pink-400/90 shadow-[0_0_35px_rgba(244,114,182,0.35)]',
-        innerBorderClass: 'border-amber-300/40',
-        headerBg: 'from-pink-950/80 via-slate-900 to-black',
-        textAccent: 'text-pink-300',
-        badgeBg: 'from-pink-500/20 to-cyan-500/20 border-pink-400/50',
-        boxBg: 'bg-slate-950/90',
-        boxBorder: 'border-pink-500/30',
-        gemColors: ['#f472b6', '#38bdf8', '#fbbf24', '#c084fc'],
-        emblemIcon: 'sparkles'
+        outerStoneGrad: 'linear-gradient(180deg, #533852 0%, #352034 45%, #1f101f 100%)',
+        stoneBorderColor: '#361d35',
+        goldBevelGrad: 'linear-gradient(135deg, #fcd0ea 0%, #f472b6 40%, #9d2568 80%, #fce7f3 100%)',
+        textBoxSlabGrad: 'linear-gradient(180deg, #301f2f 0%, #1c101c 60%, #0d060d 100%)',
+        textBoxBorderColor: '#623860',
+        runicColor: '#f472b6',
+        runicGlow: 'rgba(244, 114, 182, 0.5)',
+        specialMoveColor: '#fbcfe8',
+        loreTextColor: '#fdf2f8',
+        emblemType: 'rebellion_wing',
+        gemPreset: 'rebellion_pink_star'
     },
     cosmic_enforcers: {
-        name: 'Guardianes Cósmicos',
         faction: 'Guardianes Cósmicos',
         typeLine: 'Ejecutor Cósmico — Juez del Equilibrio',
-        borderClass: 'border-cyan-400/90 shadow-[0_0_35px_rgba(6,182,212,0.35)]',
-        innerBorderClass: 'border-slate-400/40',
-        headerBg: 'from-cyan-950/80 via-slate-900 to-black',
-        textAccent: 'text-cyan-300',
-        badgeBg: 'from-cyan-500/20 to-blue-500/20 border-cyan-400/50',
-        boxBg: 'bg-slate-950/90',
-        boxBorder: 'border-cyan-500/30',
-        gemColors: ['#06b6d4', '#3b82f6', '#e0e7ff', '#a855f7'],
-        emblemIcon: 'infinity'
+        outerStoneGrad: 'linear-gradient(180deg, #243b53 0%, #142436 45%, #08121d 100%)',
+        stoneBorderColor: '#12253a',
+        goldBevelGrad: 'linear-gradient(135deg, #a5f3fc 0%, #06b6d4 40%, #0e5a6f 80%, #cffafe 100%)',
+        textBoxSlabGrad: 'linear-gradient(180deg, #132435 0%, #0b1521 60%, #040910 100%)',
+        textBoxBorderColor: '#2b4d6e',
+        runicColor: '#38bdf8',
+        runicGlow: 'rgba(56, 189, 248, 0.5)',
+        specialMoveColor: '#7dd3fc',
+        loreTextColor: '#e0f2fe',
+        emblemType: 'cosmic_eye',
+        gemPreset: 'cosmic_sapphire_star'
     }
 };
 
@@ -160,11 +162,11 @@ const getLocalMotuProfile = (productName: string, _subCategory?: string) => {
             faction: 'Guerreros Diabólicos',
             typeLine: 'Criatura Legendaria — Guerrero Diabólico',
             specialMove: clean.includes('beast') ? 'Zarpazo Titánico de la Jungla' : clean.includes('trap') ? 'Mordisco de Mandíbula de Acero' : clean.includes('tri-klops') ? 'Láser Óptico de Rastreo Letal' : clean.includes('mer-man') ? 'Tsunami de las Profundidades de Rakash' : clean.includes('evil-lyn') ? 'Tormenta Ilusoria de Subternia' : clean.includes('clawful') ? 'Presa Hidráulica Trituradora' : clean.includes('whiplash') ? 'Azote Ofídico Venenoso' : clean.includes('faker') ? 'Tajo Cósmico de Luz Ancestral' : 'Descarga de Sombras Arcanas',
-            lore: clean.includes('beast') ? 'Señor salvaje de las bestias de Eternia y leal esbirro de Skeletor. Con su látigo ardiente y telepatía animal doblega a las criaturas más temibles.' : clean.includes('skeletor') ? 'Señor de la destrucción y tirano nigromántico de Snake Mountain cuya sed de conquista amenaza la existencia.' : 'Combatiente despiadado de las legiones oscuras de Snake Mountain al servicio de Skeletor.',
+            lore: clean.includes('beast') ? 'Sus garras desgarran, su voluntad domina. El Señor de las Bestias de la Montaña de la Serpiente no conoce la piedad.' : clean.includes('skeletor') ? 'Señor de la destrucción y tirano nigromántico de Snake Mountain cuya sed de conquista amenaza la existencia de Eternia.' : 'Combatiente despiadado de las legiones oscuras de Snake Mountain al servicio de Skeletor.',
             stats: { fuerza: 92, magia: clean.includes('skeletor') || clean.includes('lyn') ? 98 : 68, defensa: 89, agilidad: 86 }
         };
     }
-    if (clean.includes('hordak') || clean.includes('horde') || clean.includes('weaver') || clean.includes('catra') || clean.includes('grizzlor') || clean.includes('mantenna') || clean.includes('leech') || clean.includes('scorpia') || clean.includes('mosquitor') || clean.includes('modulok')) {
+    if (clean.includes('hordak') || clean.includes('horde') || clean.includes('weaver') || clean.includes('catra') || clean.includes('grizzlor') || clean.includes('mantenna') || clean.includes('leech') || clean.includes('scorpia') || clean.includes('mosquitor') || clean.includes('modulok') || clean.includes('dragstor') || clean.includes('multi-bot')) {
         return {
             themeKey: 'evil_horde',
             faction: 'La Horda del Terror',
@@ -174,17 +176,17 @@ const getLocalMotuProfile = (productName: string, _subCategory?: string) => {
             stats: { fuerza: 95, magia: 96, defensa: 95, agilidad: 87 }
         };
     }
-    if (clean.includes('snake') || clean.includes('hiss') || clean.includes('khan') || clean.includes('rattlor') || clean.includes('tung') || clean.includes('lashr') || clean.includes('sssqueeze') || clean.includes('serpiente')) {
+    if (clean.includes('snake') || clean.includes('hiss') || clean.includes('khan') || clean.includes('rattlor') || clean.includes('tung') || clean.includes('lashr') || clean.includes('sssqueeze') || clean.includes('serpiente') || clean.includes('gr\'asp')) {
         return {
             themeKey: 'snake_men',
             faction: 'Los Hombres Serpiente',
             typeLine: 'Monarca Ofídico — Hombre Serpiente',
             specialMove: clean.includes('khan') ? 'Chorro Ácido Corrosivo' : 'Mordisco Asfixiante del Rey Hiss',
-            lore: 'Antiquísimo monarca ofídico cuyo disfraz humano oculta una masa de serpientes devoradoras. Regresa del pasado para dominar Eternia.',
+            lore: 'Antiquísimo monarca ofídico cuyo disfraz oculta una masa de serpientes devoradoras. Regresa del pasado para dominar Eternia.',
             stats: { fuerza: 93, magia: 95, defensa: 91, agilidad: 93 }
         };
     }
-    if (clean.includes('she-ra') || clean.includes('shera') || clean.includes('bow') || clean.includes('glimmer') || clean.includes('frosta') || clean.includes('angella') || clean.includes('mermista') || clean.includes('rebellion')) {
+    if (clean.includes('she-ra') || clean.includes('shera') || clean.includes('bow') || clean.includes('glimmer') || clean.includes('frosta') || clean.includes('angella') || clean.includes('mermista') || clean.includes('castaspella') || clean.includes('netossa') || clean.includes('kowl') || clean.includes('rebellion')) {
         return {
             themeKey: 'great_rebellion',
             faction: 'La Gran Rebelión',
@@ -194,7 +196,7 @@ const getLocalMotuProfile = (productName: string, _subCategory?: string) => {
             stats: { fuerza: 98, magia: 94, defensa: 95, agilidad: 96 }
         };
     }
-    if (clean.includes('zodac') || clean.includes('zodak') || clean.includes('he-ro') || clean.includes('eldor') || clean.includes('cosmic')) {
+    if (clean.includes('zodac') || clean.includes('zodak') || clean.includes('he-ro') || clean.includes('eldor') || clean.includes('gray') || clean.includes('cosmic')) {
         return {
             themeKey: 'cosmic_enforcers',
             faction: 'Guardianes Cósmicos',
@@ -210,8 +212,8 @@ const getLocalMotuProfile = (productName: string, _subCategory?: string) => {
         faction: 'Guerreros Heroicos',
         typeLine: 'Criatura Legendaria — Guerrero Heroico',
         specialMove: clean.includes('ram') ? 'Impacto de Ariete Inamovible' : clean.includes('man-at-arms') ? 'Ráfaga Fotónica Man-At-Arms' : clean.includes('stratos') ? 'Picado Aéreo de Avion' : clean.includes('teela') ? 'Estocada Táctica de la Cobra' : clean.includes('cat') ? 'Desgarro Feroz de la Selva Carmesí' : clean.includes('sorceress') ? 'Escudo del Halcón Místico' : clean.includes('fisto') ? 'Golpe Demoledor de Murallas' : 'Furia del Relámpago de Grayskull',
-        lore: clean.includes('he-man') ? 'Defensor supremo de los secretos de Castle Grayskull y campeón de Eternia. Guiado por la Espada del Poder, protege el cosmos de la oscuridad.' : 'Noble defensor de la corte real de Eternia y custodio de la paz sagrada de Grayskull.',
-        stats: { fuerza: clean.includes('he-man') ? 99 : 88, magia: clean.includes('sorceress') ? 99 : 78, defensa: 92, agilidad: 89 }
+        lore: clean.includes('he-man') ? '¡Por el poder de Grayskull, la justicia siempre prevalecerá!' : 'Noble defensor de la corte real de Eternia y custodio de la paz sagrada de Grayskull.',
+        stats: { fuerza: clean.includes('he-man') ? 99 : 88, magia: clean.includes('sorceress') ? 99 : 78, defensa: 95, agilidad: 90 }
     };
 };
 
@@ -276,7 +278,7 @@ const getSingleIllustrationDataUrl = async (
     });
 };
 
-// Generador de Cromo PNG con html-to-image y fallback infalible mediante Canvas 2D (Sin Panel Financiero)
+// Generador de Cromo PNG de Alta Fidelidad mediante html-to-image con Canvas 2D Fallback
 const generateTradingCardDataUrl = async (
     node: HTMLElement,
     item: any,
@@ -285,10 +287,9 @@ const generateTradingCardDataUrl = async (
     profileData?: any
 ): Promise<string> => {
     try {
-        // Intento 1: Renderizado vectorial nítido con html-to-image (excluyendo controles interactivos)
         return await toPng(node, {
             pixelRatio: 2.5,
-            skipFonts: true,
+            skipFonts: false,
             cacheBust: false,
             filter: (domNode) => {
                 if (domNode instanceof HTMLElement && domNode.classList.contains('export-exclude')) {
@@ -299,9 +300,8 @@ const generateTradingCardDataUrl = async (
             style: { transform: 'none' }
         });
     } catch (e1) {
-        console.warn('html-to-image falló, ejecutando motor de composición directa por Canvas:', e1);
+        console.warn('html-to-image falló, ejecutando motor de composición directa por Canvas HD:', e1);
 
-        // Intento 2: Motor de Dibujo Canvas 2D Nativo MTG Showcase
         return new Promise((resolve, reject) => {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
@@ -313,155 +313,158 @@ const generateTradingCardDataUrl = async (
             canvas.height = height;
 
             const faction = profileData?.faction || 'Guerreros Heroicos';
+            const isDark = faction.includes('Diabólicos') || faction.includes('Horda');
             const specialMove = profileData?.specialMove || 'Furia del Relámpago de Grayskull';
-            const loreText = aiLore || profileData?.lore || 'Defensor legendario de Eternia custodiado en La Fortaleza de Grayskull.';
-            const stats = profileData?.stats || { fuerza: 90, magia: 85, defensa: 90, agilidad: 88 };
+            const loreText = aiLore || profileData?.lore || '¡Por el poder de Grayskull, la justicia siempre prevalecerá!';
+            const stats = profileData?.stats || { fuerza: 99, magia: 88, defensa: 95, agilidad: 90 };
 
-            // 1. Fondo Oscuro y Textura de Facción
+            // 1. Fondo de Piedra Esculpida
             const grad = ctx.createLinearGradient(0, 0, 0, height);
-            if (faction === 'Guerreros Diabólicos') {
-                grad.addColorStop(0, '#1e102d');
-                grad.addColorStop(0.5, '#0f0a17');
-                grad.addColorStop(1, '#050308');
-            } else if (faction === 'La Horda del Terror') {
-                grad.addColorStop(0, '#2b0c0c');
-                grad.addColorStop(0.5, '#150606');
-                grad.addColorStop(1, '#050202');
+            if (isDark) {
+                grad.addColorStop(0, '#352938');
+                grad.addColorStop(0.5, '#1e1622');
+                grad.addColorStop(1, '#0e0911');
             } else {
-                grad.addColorStop(0, '#0a2318');
-                grad.addColorStop(0.5, '#07150e');
-                grad.addColorStop(1, '#030805');
+                grad.addColorStop(0, '#556846');
+                grad.addColorStop(0.5, '#38472f');
+                grad.addColorStop(1, '#1e2819');
             }
             ctx.fillStyle = grad;
             ctx.fillRect(0, 0, width, height);
 
-            // 2. Marco Dorado y Bisel Metálico
-            ctx.strokeStyle = '#d97706';
-            ctx.lineWidth = 12;
-            ctx.strokeRect(18, 18, width - 36, height - 36);
+            // 2. Bisel Exterior de Piedra Tallada
+            ctx.strokeStyle = isDark ? '#231828' : '#2c3a24';
+            ctx.lineWidth = 14;
+            ctx.strokeRect(10, 10, width - 20, height - 20);
 
-            ctx.strokeStyle = faction === 'Guerreros Diabólicos' ? '#a855f7' : faction === 'La Horda del Terror' ? '#ef4444' : '#10b981';
+            // 3. Columnas de Runas Laterales Grabadas en Oro
+            const leftRunes = ['ᚠ', 'ᚢ', 'ᚦ', 'ᚨ', 'ᚱ', 'ᚲ', 'ᚷ', 'ᚹ', 'ᚺ', 'ᚾ', 'ᛁ', 'ᛃ', 'ᛇ', 'ᛈ', 'ᛉ', 'ᛋ', 'ᛏ'];
+            const rightRunes = ['ᛒ', 'ᛖ', 'ᛗ', 'ᛚ', 'ᛜ', 'ᛞ', 'ᛟ', 'ᚠ', 'ᚢ', 'ᚦ', 'ᚨ', 'ᚱ', 'ᚲ', 'ᚷ', 'ᚹ', 'ᚺ', 'ᛋ'];
+
+            ctx.fillStyle = '#dfc067';
+            ctx.font = 'bold 16px serif';
+            ctx.textAlign = 'center';
+            leftRunes.forEach((r, idx) => {
+                ctx.fillText(r, 26, 120 + idx * 48);
+            });
+            rightRunes.forEach((r, idx) => {
+                ctx.fillText(r, width - 26, 120 + idx * 48);
+            });
+
+            // 4. Cabecera con Marco Dorado Metálico
+            ctx.fillStyle = '#0f1712';
+            ctx.fillRect(45, 45, width - 90, 60);
+            ctx.strokeStyle = '#d4af37';
             ctx.lineWidth = 3;
-            ctx.strokeRect(32, 32, width - 64, height - 64);
+            ctx.strokeRect(45, 45, width - 90, 60);
 
-            // 3. Cabecera (Header con Nombre y Orbes)
             ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 30px sans-serif';
+            ctx.font = '900 28px serif';
             ctx.textAlign = 'left';
-            ctx.fillText(item.product_name || item.name || 'FIGURA MOTU', 55, 80);
+            ctx.fillText(item.product_name || item.name || 'HE-MAN', 65, 87);
 
-            // Orbes de poder en la cabecera derecha
-            const orbColors = faction === 'Guerreros Diabólicos' ? ['#a855f7', '#ef4444', '#f59e0b'] : ['#10b981', '#10b981', '#f59e0b'];
-            orbColors.forEach((col, idx) => {
+            // Gemas de Maná Superiores
+            const gemColors = isDark ? ['#ef4444', '#dc2626', '#f59e0b'] : ['#10b981', '#059669', '#f59e0b'];
+            gemColors.forEach((color, idx) => {
                 ctx.beginPath();
-                ctx.arc(width - 65 - idx * 26, 70, 9, 0, Math.PI * 2);
-                ctx.fillStyle = col;
+                ctx.arc(width - 75 - idx * 26, 75, 10, 0, Math.PI * 2);
+                ctx.fillStyle = color;
                 ctx.fill();
-                ctx.strokeStyle = '#ffffff';
-                ctx.lineWidth = 1.5;
+                ctx.strokeStyle = '#fef08a';
+                ctx.lineWidth = 2;
                 ctx.stroke();
             });
 
-            // 4. Área de Ilustración
-            ctx.fillStyle = '#05070c';
-            ctx.fillRect(50, 110, width - 100, 480);
-            ctx.strokeStyle = '#d97706';
-            ctx.lineWidth = 3;
-            ctx.strokeRect(50, 110, width - 100, 480);
+            // 5. Ventana de Ilustración con Arco Dorado
+            ctx.fillStyle = '#060a0f';
+            ctx.fillRect(50, 120, width - 100, 480);
+            ctx.strokeStyle = '#d4af37';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(50, 120, width - 100, 480);
 
             const finishDraw = () => {
-                // 5. Barra de Tipo y Facción (Type-Line)
-                ctx.fillStyle = '#0f172a';
-                ctx.fillRect(50, 610, width - 100, 45);
-                ctx.strokeStyle = '#f59e0b';
-                ctx.lineWidth = 2;
-                ctx.strokeRect(50, 610, width - 100, 45);
+                // 6. Barra de Tipo y Facción
+                ctx.fillStyle = isDark ? '#231828' : '#2f3c2b';
+                ctx.fillRect(45, 615, width - 90, 46);
+                ctx.strokeStyle = '#d4af37';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(45, 615, width - 90, 46);
 
                 ctx.fillStyle = '#fde68a';
-                ctx.font = 'bold 20px sans-serif';
+                ctx.font = 'bold 20px serif';
                 ctx.textAlign = 'left';
-                ctx.fillText(`⚡ CRIATURA LEGENDARIA — ${faction.toUpperCase()}`, 65, 640);
+                ctx.fillText(`⚡ CRIATURA LEGENDARIA — ${faction.toUpperCase()}`, 65, 646);
 
-                ctx.textAlign = 'right';
-                ctx.fillStyle = '#94a3b8';
-                ctx.font = 'bold 16px monospace';
-                ctx.fillText(item.sub_category || 'ORIGINS', width - 65, 640);
-
-                // 6. Text Box (Habilidad + Lore Canónico)
-                ctx.fillStyle = '#090d16';
-                ctx.fillRect(50, 675, width - 100, 240);
-                ctx.strokeStyle = '#334155';
+                // 7. Losa de Texto (Lore Canónico & Técnica)
+                ctx.fillStyle = isDark ? '#1a1219' : '#1f271d';
+                ctx.fillRect(45, 675, width - 90, 240);
+                ctx.strokeStyle = isDark ? '#533c50' : '#4f6048';
                 ctx.lineWidth = 2;
-                ctx.strokeRect(50, 675, width - 100, 240);
+                ctx.strokeRect(45, 675, width - 90, 240);
 
-                // Título de Habilidad
                 ctx.textAlign = 'left';
-                ctx.fillStyle = '#f59e0b';
-                ctx.font = 'bold 22px sans-serif';
-                ctx.fillText(`⚡ ${specialMove}`, 70, 715);
+                ctx.fillStyle = isDark ? '#ff8a3d' : '#f59e0b';
+                ctx.font = 'bold 22px serif';
+                ctx.fillText(`⚡ ${specialMove}`, 68, 715);
 
-                // Línea divisoria
-                ctx.strokeStyle = '#334155';
+                // Línea divisoria dorada
+                ctx.strokeStyle = '#d4af37';
+                ctx.lineWidth = 1;
                 ctx.beginPath();
-                ctx.moveTo(70, 735);
-                ctx.lineTo(width - 70, 735);
+                ctx.moveTo(68, 735);
+                ctx.lineTo(width - 68, 735);
                 ctx.stroke();
 
-                // Flavor Text (Lore en cursiva)
-                ctx.fillStyle = '#cbd5e1';
-                ctx.font = 'italic 18px sans-serif';
+                // Flavor Text en cursiva
+                ctx.fillStyle = '#e2eedd';
+                ctx.font = 'italic 18px serif';
                 const words = `"${loreText}"`.split(' ');
                 let line = '';
-                let yPos = 770;
+                let yPos = 775;
                 for (let n = 0; n < words.length; n++) {
                     const testLine = line + words[n] + ' ';
                     const metrics = ctx.measureText(testLine);
                     if (metrics.width > width - 140 && n > 0) {
-                        ctx.fillText(line, 70, yPos);
+                        ctx.fillText(line, 68, yPos);
                         line = words[n] + ' ';
-                        yPos += 26;
+                        yPos += 28;
                     } else {
                         line = testLine;
                     }
                 }
-                ctx.fillText(line, 70, yPos);
+                ctx.fillText(line, 68, yPos);
 
-                // 7. Placas de Estadísticas RPG (FUE, MAG, DEF, AGI) y Sello Holográfico
-                ctx.fillStyle = '#0f172a';
-                ctx.fillRect(50, 935, width - 100, 55);
-                ctx.strokeStyle = '#d97706';
-                ctx.lineWidth = 2;
-                ctx.strokeRect(50, 935, width - 100, 55);
+                // 8. Placa de Combate Inferior & Sello Holográfico
+                ctx.fillStyle = '#151c14';
+                ctx.fillRect(45, 935, width - 90, 60);
+                ctx.strokeStyle = '#d4af37';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(45, 935, width - 90, 60);
 
                 ctx.textAlign = 'left';
-                ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 18px monospace';
-                ctx.fillText(`FUE ${stats.fuerza}  |  MAG ${stats.magia}`, 70, 970);
+                ctx.fillStyle = '#fef08a';
+                ctx.font = 'bold 20px serif';
+                ctx.fillText(`FUE ${stats.fuerza}   |   MAG ${stats.magia}`, 68, 972);
 
                 ctx.textAlign = 'right';
-                ctx.fillText(`DEF ${stats.defensa}  |  AGI ${stats.agilidad}`, width - 70, 970);
+                ctx.fillText(`DEF ${stats.defensa}   |   AGI ${stats.agilidad}`, width - 68, 972);
 
-                // Sello Holográfico Oval Central
+                // Sello Holográfico Oval 3D Central
                 ctx.save();
                 ctx.beginPath();
-                ctx.ellipse(width / 2, 962, 38, 18, 0, 0, Math.PI * 2);
-                const holoGrad = ctx.createLinearGradient(width / 2 - 38, 0, width / 2 + 38, 0);
+                ctx.ellipse(width / 2, 965, 42, 20, 0, 0, Math.PI * 2);
+                const holoGrad = ctx.createLinearGradient(width / 2 - 42, 0, width / 2 + 42, 0);
                 holoGrad.addColorStop(0, '#06b6d4');
-                holoGrad.addColorStop(0.3, '#3b82f6');
-                holoGrad.addColorStop(0.6, '#ec4899');
-                holoGrad.addColorStop(1, '#f59e0b');
+                holoGrad.addColorStop(0.25, '#3b82f6');
+                holoGrad.addColorStop(0.5, '#ec4899');
+                holoGrad.addColorStop(0.75, '#f59e0b');
+                holoGrad.addColorStop(1, '#10b981');
                 ctx.fillStyle = holoGrad;
                 ctx.fill();
-                ctx.strokeStyle = '#ffffff';
-                ctx.lineWidth = 1.5;
+                ctx.strokeStyle = '#fef08a';
+                ctx.lineWidth = 2;
                 ctx.stroke();
                 ctx.restore();
-
-                // 8. Sello de Autenticidad en Footer
-                ctx.textAlign = 'center';
-                ctx.fillStyle = '#94a3b8';
-                ctx.font = 'bold 14px monospace';
-                ctx.fillText(`🏰 FORTALEZA DE GRAYSKULL • NUEVA ETERNIA • #${(item.sku || String(item.id)).slice(-5)}`, width / 2, 1020);
 
                 resolve(canvas.toDataURL('image/png'));
             };
@@ -480,7 +483,7 @@ const generateTradingCardDataUrl = async (
                             drawW = drawH * aspect;
                         }
                         const drawX = (width - drawW) / 2;
-                        const drawY = 120 + (460 - drawH) / 2;
+                        const drawY = 130 + (460 - drawH) / 2;
                         ctx.drawImage(img, drawX, drawY, drawW, drawH);
                     } catch {}
                     finishDraw();
@@ -543,10 +546,10 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
     const condition = (item.condition || 'MOC').toUpperCase();
     const grade = item.grading || 10.0;
 
-    // Perfil canónico local y tema de facción
+    // Perfil canónico local y tema visual de facción
     const localProfile = getLocalMotuProfile(name, item.sub_category);
     const themeKey = aiResult?.frame_theme || localProfile.themeKey;
-    const theme = FACTION_THEMES[themeKey] || FACTION_THEMES.castle_grayskull;
+    const theme = FACTION_VISUAL_THEMES[themeKey] || FACTION_VISUAL_THEMES.castle_grayskull;
     const factionName = aiResult?.faction || localProfile.faction;
     const typeLineText = aiResult?.type_line || localProfile.typeLine;
     const specialMoveText = aiResult?.special_move || localProfile.specialMove;
@@ -562,15 +565,15 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
         const centerX = rect.width / 2;
         const centerY = rect.height / 2;
 
-        const rotX = ((y - centerY) / centerY) * -12;
-        const rotY = ((x - centerX) / centerX) * 12;
+        const rotX = ((y - centerY) / centerY) * -10;
+        const rotY = ((x - centerX) / centerX) * 10;
 
         setRotateX(rotX);
         setRotateY(rotY);
         setGlarePos({
             x: (x / rect.width) * 100,
             y: (y / rect.height) * 100,
-            opacity: 0.6
+            opacity: 0.55
         });
     };
 
@@ -708,8 +711,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
         if (!cardRef.current || !item) return;
         try {
             setExporting(true);
-            // Breve espera para que React aplique el ocultamiento de controles
-            await new Promise((r) => setTimeout(r, 60));
+            await new Promise((r) => setTimeout(r, 70));
 
             let dataUrl = '';
             let filename = '';
@@ -751,7 +753,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
         if (!cardRef.current || !item) return;
         try {
             setExporting(true);
-            await new Promise((r) => setTimeout(r, 60));
+            await new Promise((r) => setTimeout(r, 70));
 
             let dataUrl = '';
             if (exportTarget === 'card') {
@@ -791,7 +793,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
         if (!cardRef.current || !item) return;
         try {
             setExporting(true);
-            await new Promise((r) => setTimeout(r, 60));
+            await new Promise((r) => setTimeout(r, 70));
 
             let dataUrl = '';
             let filename = '';
@@ -845,13 +847,97 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
         }
     };
 
-    const renderEmblemIcon = () => {
-        if (theme.emblemIcon === 'skull') return <Skull className="h-3.5 w-3.5 text-purple-400" />;
-        if (theme.emblemIcon === 'bat') return <Flame className="h-3.5 w-3.5 text-red-400" />;
-        if (theme.emblemIcon === 'snake') return <Zap className="h-3.5 w-3.5 text-lime-400" />;
-        if (theme.emblemIcon === 'sparkles') return <Sparkles className="h-3.5 w-3.5 text-pink-400" />;
-        if (theme.emblemIcon === 'infinity') return <InfinityIcon className="h-3.5 w-3.5 text-cyan-400" />;
-        return <Shield className="h-3.5 w-3.5 text-emerald-400" />;
+    // Renderizador de Gemas de Maná 3D de la Cabecera
+    const renderManaGems = () => {
+        if (theme.gemPreset === 'evil_fire_ruby') {
+            return (
+                <div className="flex items-center gap-1">
+                    {[1, 2, 3].map((i) => (
+                        <div
+                            key={i}
+                            className="w-4 h-4 rounded-full border border-amber-300/80 shadow-md flex items-center justify-center relative overflow-hidden"
+                            style={{
+                                background: 'radial-gradient(circle at 35% 35%, #f87171 0%, #dc2626 50%, #7f1d1d 100%)',
+                                boxShadow: '0 0 8px rgba(239, 68, 68, 0.6), inset 0 1px 2px rgba(255,255,255,0.7)'
+                            }}
+                        >
+                            <div className="w-1.5 h-1.5 bg-white/70 rounded-full absolute top-0.5 left-1 blur-[0.3px]" />
+                        </div>
+                    ))}
+                </div>
+            );
+        }
+
+        // Default Heroic Grayskull: Emerald + Tree Crest + Gold Star
+        return (
+            <div className="flex items-center gap-1.5">
+                {/* 1. Esmeralda Facetada */}
+                <div
+                    className="w-4 h-4 rounded-[3px] rotate-45 border border-emerald-200/90 shadow-md flex items-center justify-center relative overflow-hidden"
+                    style={{
+                        background: 'linear-gradient(135deg, #34d399 0%, #059669 60%, #064e3b 100%)',
+                        boxShadow: '0 0 8px rgba(16, 185, 129, 0.7), inset 0 1px 2px rgba(255,255,255,0.8)'
+                    }}
+                >
+                    <div className="w-1 h-1 bg-white/80 rounded-full -rotate-45" />
+                </div>
+
+                {/* 2. Insignia de Grayskull / Bosque */}
+                <div
+                    className="w-4 h-4 rounded-full border border-emerald-300/80 shadow-md flex items-center justify-center bg-emerald-950/90"
+                    style={{ boxShadow: '0 0 6px rgba(16, 185, 129, 0.4)' }}
+                >
+                    <Shield className="h-2.5 w-2.5 text-emerald-400 fill-emerald-500/40" />
+                </div>
+
+                {/* 3. Estrella Dorada de Poder */}
+                <div
+                    className="w-4 h-4 rounded-full border border-amber-200/90 shadow-md flex items-center justify-center"
+                    style={{
+                        background: 'radial-gradient(circle at 35% 35%, #fef08a 0%, #eab308 60%, #854d0e 100%)',
+                        boxShadow: '0 0 8px rgba(234, 179, 8, 0.7), inset 0 1px 2px rgba(255,255,255,0.8)'
+                    }}
+                >
+                    <Sparkles className="h-2.5 w-2.5 text-amber-950" />
+                </div>
+            </div>
+        );
+    };
+
+    // Renderizador del Emblema 3D en la Barra de Tipo
+    const renderTypeLineEmblem = () => {
+        if (theme.emblemType === 'havoc_ram_skull') {
+            return (
+                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 z-20 flex items-center justify-center filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.9)]">
+                    {/* Cráneo de Havoc con cuernos dorados tallados */}
+                    <svg viewBox="0 0 64 48" className="w-11 h-8">
+                        <path
+                            d="M8,12 C14,4 24,6 28,14 C30,12 34,12 36,14 C40,6 50,4 56,12 C62,20 54,28 46,24 C44,28 38,36 32,44 C26,36 20,28 18,24 C10,28 2,20 8,12 Z"
+                            fill="url(#goldRampage)"
+                            stroke="#5a3d08"
+                            strokeWidth="1.5"
+                        />
+                        <circle cx="27" cy="24" r="3" fill="#14070a" />
+                        <circle cx="37" cy="24" r="3" fill="#14070a" />
+                        <path d="M30,32 L34,32 L32,36 Z" fill="#14070a" />
+                        <defs>
+                            <linearGradient id="goldRampage" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor="#fef08a" />
+                                <stop offset="50%" stopColor="#d4af37" />
+                                <stop offset="100%" stopColor="#854d0e" />
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                </div>
+            );
+        }
+
+        // Default Grayskull: Escudo Dorado a la derecha
+        return (
+            <div className="flex items-center justify-center p-0.5 rounded border border-amber-300/80 bg-gradient-to-b from-amber-300 to-amber-700 shadow-md">
+                <Shield className="h-3 w-3 text-amber-950 fill-amber-300" />
+            </div>
+        );
     };
 
     return (
@@ -875,7 +961,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                     {/* Título de la Ficha */}
                     <div className="flex items-center gap-2 mb-2.5 text-center">
                         <Sparkles className="h-4 w-4 text-amber-400" />
-                        <h2 className="text-xs sm:text-sm font-black uppercase tracking-widest text-amber-300">
+                        <h2 className="text-xs sm:text-sm font-black uppercase tracking-widest text-amber-300 font-cinzel">
                             Cromo Coleccionista Digital
                         </h2>
                         <Sparkles className="h-4 w-4 text-amber-400" />
@@ -887,7 +973,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                             onClick={() => setShowAiDrawer(!showAiDrawer)}
                             className="w-full py-1.5 px-3 rounded-xl bg-gradient-to-r from-purple-600/30 via-cyan-600/30 to-amber-600/30 hover:from-purple-600/40 hover:to-amber-600/40 border border-cyan-400/50 text-cyan-200 text-xs font-black uppercase tracking-wider flex items-center justify-between shadow-lg shadow-cyan-500/10 transition"
                         >
-                            <span className="flex items-center gap-1.5 truncate">
+                            <span className="flex items-center gap-1.5 truncate font-cinzel">
                                 <Wand2 className="h-3.5 w-3.5 text-yellow-300 animate-pulse shrink-0" />
                                 <span className="truncate">{aiResult ? `✨ ${aiResult.style_name}` : '🪄 Ilustrar con Maestros MOTU'}</span>
                             </span>
@@ -910,7 +996,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                 >
                                     <div className="flex items-center gap-1">
                                         <Sparkles className="h-3 w-3 text-amber-400 shrink-0" />
-                                        <span className="font-black">🎨 Óleo Box-Art 80s</span>
+                                        <span className="font-black font-cinzel">🎨 Óleo Box-Art 80s</span>
                                     </div>
                                     <span className="text-[8px] text-amber-400/70 font-normal">Rudy Obrero & Earl Norem</span>
                                 </button>
@@ -922,7 +1008,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                 >
                                     <div className="flex items-center gap-1">
                                         <Zap className="h-3 w-3 text-cyan-400 shrink-0" />
-                                        <span className="font-black">⚔️ Mini-Cómic 80s</span>
+                                        <span className="font-black font-cinzel">⚔️ Mini-Cómic 80s</span>
                                     </div>
                                     <span className="text-[8px] text-cyan-400/70 font-normal">Alfredo Alcala & Texeira</span>
                                 </button>
@@ -934,7 +1020,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                 >
                                     <div className="flex items-center gap-1">
                                         <Award className="h-3 w-3 text-emerald-400 shrink-0" />
-                                        <span className="font-black">✨ Cardback Moderno</span>
+                                        <span className="font-black font-cinzel">✨ Cardback Moderno</span>
                                     </div>
                                     <span className="text-[8px] text-emerald-400/70 font-normal">Axel Gimenez & Santalucia</span>
                                 </button>
@@ -946,7 +1032,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                 >
                                     <div className="flex items-center gap-1">
                                         <BookOpen className="h-3 w-3 text-purple-400 shrink-0" />
-                                        <span className="font-black">🌌 Dark Fantasy MOTU</span>
+                                        <span className="font-black font-cinzel">🌌 Dark Fantasy MOTU</span>
                                     </div>
                                     <span className="text-[8px] text-purple-400/70 font-normal">Kenneth Rocafort & Bisley</span>
                                 </button>
@@ -964,7 +1050,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                         )}
 
                         {isAiLoading && (
-                            <div className="mt-2 py-1.5 px-3 rounded-lg bg-cyan-500/20 border border-cyan-400 text-cyan-200 text-[11px] font-bold flex items-center justify-center gap-2 animate-pulse">
+                            <div className="mt-2 py-1.5 px-3 rounded-lg bg-cyan-500/20 border border-cyan-400 text-cyan-200 text-[11px] font-bold flex items-center justify-center gap-2 animate-pulse font-cinzel">
                                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
                                 <span>Recreando figura fuera del blíster con IA en Eternia...</span>
                             </div>
@@ -977,10 +1063,10 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                         )}
                     </div>
 
-                    {/* CONTENEDOR 3D DEL CROMO MTG SHOWCASE */}
+                    {/* CONTENEDOR 3D DEL CROMO MAGIC SHOWCASE */}
                     <div
                         className="w-full flex justify-center cursor-grab active:cursor-grabbing"
-                        style={{ perspective: 1000 }}
+                        style={{ perspective: 1100 }}
                         onMouseMove={handleMouseMove}
                         onMouseLeave={handleMouseLeave}
                     >
@@ -989,233 +1075,273 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                             style={{
                                 transform: `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`,
                                 transformStyle: 'preserve-3d',
-                                transition: 'transform 0.1s ease-out'
+                                transition: 'transform 0.1s ease-out',
+                                background: theme.outerStoneGrad,
+                                borderColor: theme.stoneBorderColor,
+                                boxShadow: 'inset 0 2px 6px rgba(255,255,255,0.35), inset 0 -3px 8px rgba(0,0,0,0.9), 0 16px 40px rgba(0,0,0,0.9)'
                             }}
-                            className={`relative w-full max-w-[340px] rounded-2xl bg-gradient-to-b ${theme.headerBg} p-3.5 border-2 ${theme.borderClass} overflow-hidden select-none`}
+                            className="relative w-full max-w-[348px] rounded-[24px] p-3 border-2 select-none overflow-hidden font-cinzel"
                         >
-                            {/* Bisel metálico grabado */}
-                            <div className={`absolute inset-0.5 rounded-2xl border ${theme.innerBorderClass} pointer-events-none`} />
-                            <div className="absolute inset-1.5 rounded-xl border border-amber-500/20 pointer-events-none" />
-
                             {/* Brillo reflectivo holográfico dinámico */}
                             <div
-                                className="absolute inset-0 pointer-events-none z-10 transition-opacity duration-200"
+                                className="absolute inset-0 pointer-events-none z-30 transition-opacity duration-200"
                                 style={{
                                     opacity: glarePos.opacity,
-                                    background: `radial-gradient(circle at ${glarePos.x}% ${glarePos.y}%, rgba(255,255,255,0.4) 0%, rgba(6,182,212,0.2) 30%, rgba(245,158,11,0.15) 55%, transparent 80%)`
+                                    background: `radial-gradient(circle at ${glarePos.x}% ${glarePos.y}%, rgba(255,255,255,0.45) 0%, rgba(254,240,138,0.2) 30%, transparent 75%)`
                                 }}
                             />
 
-                            {/* 1. Cabecera MTG: Nombre con Relieve y Orbes de Poder */}
-                            <div className="relative z-10 flex items-center justify-between border-b border-amber-500/30 pb-2 mb-2">
-                                <div className="flex items-center gap-1.5 min-w-0 pr-1">
-                                    <div className="p-1 rounded-md bg-gradient-to-br from-amber-400 to-yellow-600 text-black shadow-sm shrink-0">
-                                        {renderEmblemIcon()}
-                                    </div>
-                                    <h3 className="text-xs sm:text-sm font-black text-white uppercase tracking-wider truncate drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-                                        {name}
-                                    </h3>
-                                </div>
-
-                                {/* Orbes de Maná / Poder */}
-                                <div className="flex items-center gap-1 shrink-0 bg-black/60 px-2 py-0.5 rounded-full border border-amber-400/40 shadow-inner">
-                                    {theme.gemColors.map((color, idx) => (
-                                        <div
-                                            key={idx}
-                                            className="w-2.5 h-2.5 rounded-full shadow-sm"
-                                            style={{
-                                                backgroundColor: color,
-                                                boxShadow: `0 0 6px ${color}`
-                                            }}
-                                        />
-                                    ))}
-                                </div>
+                            {/* COLUMNAS LATERALES DE RUNAS ETERNIANAS TALLADAS EN ORO */}
+                            <div
+                                className="absolute left-1.5 top-12 bottom-12 w-3 flex flex-col justify-between items-center pointer-events-none z-10 text-[9px] font-bold select-none leading-tight"
+                                style={{
+                                    color: theme.runicColor,
+                                    textShadow: `0 1px 0 rgba(255,255,255,0.4), 0 -1px 2px rgba(0,0,0,0.9), 0 0 6px ${theme.runicGlow}`
+                                }}
+                            >
+                                {['ᚠ', 'ᚢ', 'ᚦ', 'ᚨ', 'ᚱ', 'ᚲ', 'ᚷ', 'ᚹ', 'ᚺ', 'ᚾ', 'ᛁ', 'ᛃ', 'ᛇ', 'ᛈ', 'ᛉ', 'ᛋ', 'ᛏ'].map((r, i) => (
+                                    <span key={i}>{r}</span>
+                                ))}
                             </div>
 
-                            {/* 2. Ventana de Arte Coleccionista (Foto HD o Arte IA con Zoom/Encuadre) */}
                             <div
-                                onMouseDown={handleImgMouseDown}
-                                onMouseMove={handleImgMouseMove}
-                                onMouseUp={handleImgMouseUp}
-                                onMouseLeave={handleImgMouseUp}
-                                onWheel={handleImgWheel}
-                                onTouchStart={handleImgTouchStart}
-                                onTouchMove={handleImgTouchMove}
-                                onTouchEnd={handleImgTouchEnd}
-                                onContextMenu={(e) => {
-                                    e.preventDefault();
-                                    resetFraming();
+                                className="absolute right-1.5 top-12 bottom-12 w-3 flex flex-col justify-between items-center pointer-events-none z-10 text-[9px] font-bold select-none leading-tight"
+                                style={{
+                                    color: theme.runicColor,
+                                    textShadow: `0 1px 0 rgba(255,255,255,0.4), 0 -1px 2px rgba(0,0,0,0.9), 0 0 6px ${theme.runicGlow}`
                                 }}
-                                onDoubleClick={(e) => {
-                                    e.preventDefault();
-                                    resetFraming();
-                                }}
-                                className={`relative z-10 h-52 w-full rounded-xl bg-gradient-to-b from-slate-950 via-slate-900 to-black border-2 border-amber-500/40 flex items-center justify-center overflow-hidden mb-2 group shadow-inner select-none ${
-                                    isDraggingImg ? 'cursor-grabbing' : 'cursor-grab'
-                                }`}
-                                title="Arrastra con el ratón o usa la rueda para ampliar y encuadrar"
                             >
-                                {/* Patrón de rejilla de fondo */}
-                                <div
-                                    className="absolute inset-0 opacity-10 pointer-events-none"
-                                    style={{
-                                        backgroundImage: 'radial-gradient(#22d3ee 1px, transparent 1px)',
-                                        backgroundSize: '12px 12px'
-                                    }}
-                                />
+                                {['ᛒ', 'ᛖ', 'ᛗ', 'ᛚ', 'ᛜ', 'ᛞ', 'ᛟ', 'ᚠ', 'ᚢ', 'ᚦ', 'ᚨ', 'ᚱ', 'ᚲ', 'ᚷ', 'ᚹ', 'ᚺ', 'ᛋ'].map((r, i) => (
+                                    <span key={i}>{r}</span>
+                                ))}
+                            </div>
 
-                                {/* Capa de la Imagen con Zoom y Desplazamiento */}
+                            {/* CONTENEDOR CENTRAL DEL CROMO (ENTRE LAS DOS COLUMNAS RÚNICAS) */}
+                            <div className="mx-2.5 relative z-20 flex flex-col gap-1.5">
+                                {/* 1. CABECERA: TÍTULO EN RELIEVE METÁLICO Y GEMAS 3D */}
                                 <div
-                                    className="absolute flex items-center justify-center pointer-events-none select-none"
+                                    className="px-3 py-1.5 rounded-xl border-2 flex items-center justify-between shadow-md"
                                     style={{
-                                        transform: `translate(${imgPan.x}px, ${imgPan.y}px) scale(${imgZoom})`,
-                                        transformOrigin: 'center center',
-                                        transition: isDraggingImg ? 'none' : 'transform 0.1s ease-out'
+                                        background: 'linear-gradient(180deg, rgba(20,25,18,0.95) 0%, rgba(10,14,9,0.98) 100%)',
+                                        borderColor: '#dfbe64',
+                                        boxShadow: 'inset 0 1px 2px rgba(255,255,255,0.6), inset 0 -2px 4px rgba(0,0,0,0.9), 0 3px 6px rgba(0,0,0,0.6)'
                                     }}
                                 >
-                                    {aiResult?.image_base64 ? (
-                                        <img
-                                            src={aiResult.image_base64}
-                                            alt={name}
-                                            draggable={false}
-                                            className="max-w-none max-h-none select-none pointer-events-none animate-in fade-in duration-300"
-                                            style={{
-                                                width: '320px',
-                                                height: 'auto',
-                                                minHeight: '208px',
-                                                display: 'block'
-                                            }}
-                                        />
-                                    ) : (
-                                        <div className="flex items-center justify-center pointer-events-none select-none" style={{ width: '320px', height: '208px' }}>
-                                            <MOTUImage
-                                                productId={item.id}
-                                                src={item.image_url}
-                                                alt={name}
-                                                className="max-h-full max-w-full object-contain p-2.5 z-10 drop-shadow-[0_10px_15px_rgba(0,0,0,0.8)] pointer-events-none select-none"
-                                            />
-                                        </div>
-                                    )}
+                                    <h3 className="text-sm font-black text-white uppercase tracking-wider truncate tcg-gold-emboss">
+                                        {name}
+                                    </h3>
+
+                                    {/* Gemas de Maná / Poder */}
+                                    <div className="shrink-0">
+                                        {renderManaGems()}
+                                    </div>
                                 </div>
 
-                                {/* Mini Barra de Herramientas de Zoom Flotante (OCULTA EN EXPORTACIÓN) */}
-                                {!exporting && (
-                                    <div className="export-exclude absolute top-2 right-2 z-30 flex items-center gap-1 bg-black/80 backdrop-blur-md px-1.5 py-1 rounded-lg border border-slate-700/80 shadow-md opacity-80 group-hover:opacity-100 transition-opacity">
-                                        <button
-                                            type="button"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setImgZoom((prev) => Math.min(3.5, +(prev + 0.15).toFixed(2)));
-                                            }}
-                                            title="Ampliar Imagen (+)"
-                                            className="p-1 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition active:scale-90"
-                                        >
-                                            <Plus className="h-3 w-3" />
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setImgZoom((prev) => Math.max(0.4, +(prev - 0.15).toFixed(2)));
-                                            }}
-                                            title="Reducir Imagen (-)"
-                                            className="p-1 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition active:scale-90"
-                                        >
-                                            <Minus className="h-3 w-3" />
-                                        </button>
-                                        {(imgZoom !== 1 || imgPan.x !== 0 || imgPan.y !== 0) && (
+                                {/* 2. VENTANA DE ARTE COLECCIONISTA CON ARCO DORADO */}
+                                <div
+                                    onMouseDown={handleImgMouseDown}
+                                    onMouseMove={handleImgMouseMove}
+                                    onMouseUp={handleImgMouseUp}
+                                    onMouseLeave={handleImgMouseUp}
+                                    onWheel={handleImgWheel}
+                                    onTouchStart={handleImgTouchStart}
+                                    onTouchMove={handleImgTouchMove}
+                                    onTouchEnd={handleImgTouchEnd}
+                                    onContextMenu={(e) => {
+                                        e.preventDefault();
+                                        resetFraming();
+                                    }}
+                                    onDoubleClick={(e) => {
+                                        e.preventDefault();
+                                        resetFraming();
+                                    }}
+                                    className={`relative h-52 w-full rounded-2xl bg-black border-[3px] flex items-center justify-center overflow-hidden group shadow-2xl select-none ${
+                                        isDraggingImg ? 'cursor-grabbing' : 'cursor-grab'
+                                    }`}
+                                    style={{
+                                        borderColor: '#dfbe64',
+                                        boxShadow: 'inset 0 3px 6px rgba(255,255,255,0.8), inset 0 -4px 8px rgba(0,0,0,0.95), 0 6px 16px rgba(0,0,0,0.85)'
+                                    }}
+                                    title="Arrastra con el ratón o usa la rueda para ampliar y encuadrar"
+                                >
+                                    {/* Capa de la Imagen con Zoom y Desplazamiento */}
+                                    <div
+                                        className="absolute flex items-center justify-center pointer-events-none select-none"
+                                        style={{
+                                            transform: `translate(${imgPan.x}px, ${imgPan.y}px) scale(${imgZoom})`,
+                                            transformOrigin: 'center center',
+                                            transition: isDraggingImg ? 'none' : 'transform 0.1s ease-out'
+                                        }}
+                                    >
+                                        {aiResult?.image_base64 ? (
+                                            <img
+                                                src={aiResult.image_base64}
+                                                alt={name}
+                                                draggable={false}
+                                                className="max-w-none max-h-none select-none pointer-events-none animate-in fade-in duration-300"
+                                                style={{
+                                                    width: '320px',
+                                                    height: 'auto',
+                                                    minHeight: '208px',
+                                                    display: 'block'
+                                                }}
+                                            />
+                                        ) : (
+                                            <div className="flex items-center justify-center pointer-events-none select-none" style={{ width: '320px', height: '208px' }}>
+                                                <MOTUImage
+                                                    productId={item.id}
+                                                    src={item.image_url}
+                                                    alt={name}
+                                                    className="max-h-full max-w-full object-contain p-2 z-10 drop-shadow-[0_10px_20px_rgba(0,0,0,0.9)] pointer-events-none select-none"
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Mini Barra de Herramientas de Zoom Flotante (OCULTA EN EXPORTACIÓN) */}
+                                    {!exporting && (
+                                        <div className="export-exclude absolute top-2 right-2 z-30 flex items-center gap-1 bg-black/85 backdrop-blur-md px-1.5 py-1 rounded-lg border border-slate-700/80 shadow-md opacity-80 group-hover:opacity-100 transition-opacity">
                                             <button
                                                 type="button"
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    resetFraming();
+                                                    setImgZoom((prev) => Math.min(3.5, +(prev + 0.15).toFixed(2)));
                                                 }}
-                                                title="Restablecer Encuadre Original"
-                                                className="p-1 hover:bg-rose-500/20 text-amber-400 hover:text-rose-300 rounded transition active:scale-90"
+                                                title="Ampliar Imagen (+)"
+                                                className="p-1 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition active:scale-90"
                                             >
-                                                <RotateCcw className="h-3 w-3" />
+                                                <Plus className="h-3 w-3" />
                                             </button>
-                                        )}
-                                    </div>
-                                )}
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setImgZoom((prev) => Math.max(0.4, +(prev - 0.15).toFixed(2)));
+                                                }}
+                                                title="Reducir Imagen (-)"
+                                                className="p-1 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition active:scale-90"
+                                            >
+                                                <Minus className="h-3 w-3" />
+                                            </button>
+                                            {(imgZoom !== 1 || imgPan.x !== 0 || imgPan.y !== 0) && (
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        resetFraming();
+                                                    }}
+                                                    title="Restablecer Encuadre Original"
+                                                    className="p-1 hover:bg-rose-500/20 text-amber-400 hover:text-rose-300 rounded transition active:scale-90"
+                                                >
+                                                    <RotateCcw className="h-3 w-3" />
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
 
-                                {/* Pista de Interacción (OCULTA EN EXPORTACIÓN) */}
-                                {!exporting && (
-                                    <div className="export-exclude absolute bottom-2 left-2 z-20 pointer-events-none opacity-60 group-hover:opacity-100 transition-opacity">
-                                        <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/75 border border-slate-800 text-[8px] font-mono text-slate-300">
-                                            <Move className="h-2.5 w-2.5 text-amber-400" />
-                                            {imgZoom !== 1 ? `${Math.round(imgZoom * 100)}%` : 'Arrastra / Zoom'}
+                                    {/* Pista de Interacción (OCULTA EN EXPORTACIÓN) */}
+                                    {!exporting && (
+                                        <div className="export-exclude absolute bottom-2 left-2 z-20 pointer-events-none opacity-60 group-hover:opacity-100 transition-opacity">
+                                            <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/75 border border-slate-800 text-[8px] font-mono text-slate-300">
+                                                <Move className="h-2.5 w-2.5 text-amber-400" />
+                                                {imgZoom !== 1 ? `${Math.round(imgZoom * 100)}%` : 'Arrastra / Zoom'}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* 3. BARRA DE TIPO Y FACCIÓN CON ESCUDO/CALAVERA */}
+                                <div
+                                    className="relative px-2.5 py-1 rounded-lg border-2 flex items-center justify-between shadow-md"
+                                    style={{
+                                        background: 'linear-gradient(180deg, rgba(28,36,25,0.95) 0%, rgba(16,21,14,0.98) 100%)',
+                                        borderColor: '#dfbe64',
+                                        boxShadow: 'inset 0 1px 2px rgba(255,255,255,0.5), inset 0 -2px 4px rgba(0,0,0,0.8)'
+                                    }}
+                                >
+                                    {renderTypeLineEmblem()}
+
+                                    <div className="flex items-center gap-1.5 min-w-0">
+                                        <span className="text-[9.5px] font-bold text-amber-100 uppercase tracking-wide truncate tcg-gold-emboss">
+                                            {typeLineText}
                                         </span>
                                     </div>
-                                )}
-                            </div>
 
-                            {/* 3. Barra de Tipo y Facción (Type-Line MTG) */}
-                            <div className="relative z-10 flex items-center justify-between px-2.5 py-1 rounded-lg bg-slate-950/95 border border-amber-500/30 mb-2 shadow-inner">
-                                <div className="flex items-center gap-1.5 min-w-0">
-                                    <Swords className="h-3 w-3 text-amber-400 shrink-0" />
-                                    <span className="text-[9px] font-black text-amber-200 uppercase tracking-wide truncate">
-                                        {typeLineText}
-                                    </span>
-                                </div>
-                                <span className="text-[8px] font-mono font-bold text-slate-400 shrink-0 ml-1">
-                                    {item.sub_category || 'ORIGINS'}
-                                </span>
-                            </div>
-
-                            {/* 4. Text Box: Habilidad Definitiva + Lore Canónico */}
-                            <div className="relative z-10 bg-slate-950/95 border border-amber-500/25 rounded-xl p-2 mb-2 shadow-inner">
-                                {/* Habilidad / Ataque */}
-                                <div className="flex items-center gap-1 text-[10px] font-black text-amber-300 uppercase tracking-wider mb-1">
-                                    <Zap className="h-3 w-3 text-yellow-400 shrink-0" />
-                                    <span className="truncate">{specialMoveText}</span>
+                                    {theme.emblemType !== 'havoc_ram_skull' && renderTypeLineEmblem()}
                                 </div>
 
-                                {/* Línea Divisoria Ornamental */}
-                                <div className="w-full h-px bg-gradient-to-r from-transparent via-amber-500/40 to-transparent my-1" />
-
-                                {/* Lore Canónico en Cursiva (Flavor Text) */}
-                                <p className="text-[8.5px] text-slate-300 italic leading-snug line-clamp-2 px-0.5">
-                                    "{loreText}"
-                                </p>
-                            </div>
-
-                            {/* 5. Placas de Estadísticas RPG y Sello Holográfico de Grayskull */}
-                            <div className="relative z-10 flex items-center justify-between bg-slate-950/95 border border-amber-500/30 rounded-xl px-2 py-1.5 mb-1.5 shadow-inner">
-                                {/* Lado Izquierdo: FUERZA / MAGIA */}
-                                <div className="flex items-center gap-2 font-mono text-[9px]">
-                                    <span className="text-red-400 font-bold">FUE <strong className="text-white text-xs">{statsData.fuerza}</strong></span>
-                                    <span className="text-slate-600">•</span>
-                                    <span className="text-purple-400 font-bold">MAG <strong className="text-white text-xs">{statsData.magia}</strong></span>
-                                </div>
-
-                                {/* Sello Holográfico Oval 3D Central */}
+                                {/* 4. LOSA DE PIEDRA ESCULPIDA (HABILIDAD + LORE CANÓNICO) */}
                                 <div
-                                    className="w-12 h-6 rounded-full border border-amber-300/60 flex items-center justify-center shadow-md overflow-hidden relative"
+                                    className="rounded-xl p-2.5 border-2 shadow-inner"
                                     style={{
-                                        background: 'linear-gradient(135deg, #06b6d4 0%, #3b82f6 30%, #ec4899 70%, #f59e0b 100%)'
+                                        background: theme.textBoxSlabGrad,
+                                        borderColor: theme.textBoxBorderColor,
+                                        boxShadow: 'inset 0 2px 5px rgba(0,0,0,0.9), inset 0 0 12px rgba(0,0,0,0.7), 0 2px 4px rgba(0,0,0,0.5)'
                                     }}
-                                    title="Sello de Autenticidad Grayskull"
                                 >
-                                    <div className="absolute inset-0 bg-white/20 backdrop-blur-[0.5px]" />
-                                    <Shield className="h-3 w-3 text-black/80 drop-shadow-sm z-10" />
+                                    {/* Habilidad / Técnica de Combate */}
+                                    <div
+                                        className="flex items-center gap-1 text-[11px] font-black uppercase tracking-wider mb-1"
+                                        style={{
+                                            color: theme.specialMoveColor,
+                                            textShadow: '0 1px 0 rgba(255,255,255,0.2), 0 -1px 2px rgba(0,0,0,0.9)'
+                                        }}
+                                    >
+                                        <Zap className="h-3 w-3 fill-current shrink-0" />
+                                        <span className="truncate">{specialMoveText}</span>
+                                    </div>
+
+                                    {/* Línea Divisoria de Piedra Tallada */}
+                                    <div className="w-full h-px bg-gradient-to-r from-transparent via-amber-400/40 to-transparent my-1" />
+
+                                    {/* Cita de Lore Canónico en Cursiva */}
+                                    <p
+                                        className="text-[9px] italic leading-snug px-0.5 line-clamp-3"
+                                        style={{
+                                            color: theme.loreTextColor,
+                                            textShadow: '0 1px 1px rgba(0,0,0,0.85)'
+                                        }}
+                                    >
+                                        "{loreText}"
+                                    </p>
                                 </div>
 
-                                {/* Lado Derecho: DEFENSA / AGILIDAD */}
-                                <div className="flex items-center gap-2 font-mono text-[9px]">
-                                    <span className="text-blue-400 font-bold">DEF <strong className="text-white text-xs">{statsData.defensa}</strong></span>
-                                    <span className="text-slate-600">•</span>
-                                    <span className="text-emerald-400 font-bold">AGI <strong className="text-white text-xs">{statsData.agilidad}</strong></span>
-                                </div>
-                            </div>
+                                {/* 5. PLACA DE COMBATE INFERIOR & SELLO HOLOGRÁFICO 3D */}
+                                <div
+                                    className="rounded-xl px-3 py-1.5 border-2 flex items-center justify-between shadow-lg"
+                                    style={{
+                                        background: 'linear-gradient(180deg, rgba(20,25,18,0.95) 0%, rgba(10,14,9,0.98) 100%)',
+                                        borderColor: '#dfbe64',
+                                        boxShadow: 'inset 0 1px 2px rgba(255,255,255,0.6), inset 0 -2px 4px rgba(0,0,0,0.9), 0 4px 10px rgba(0,0,0,0.7)'
+                                    }}
+                                >
+                                    {/* Lado Izquierdo: FUE | MAG */}
+                                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-amber-100 tcg-gold-emboss">
+                                        <span>FUE <strong className="text-white text-xs">{statsData.fuerza}</strong></span>
+                                        <span className="text-amber-400/60">|</span>
+                                        <span>MAG <strong className="text-white text-xs">{statsData.magia}</strong></span>
+                                    </div>
 
-                            {/* 6. Sello de Autenticidad en Footer */}
-                            <div className="relative z-10 flex items-center justify-between border-t border-slate-800/80 pt-1 px-1 text-[7.5px] text-slate-400 uppercase tracking-widest font-mono">
-                                <div className="flex items-center gap-1">
-                                    <Lock className="h-2 w-2 text-amber-400" />
-                                    <span>FORTALEZA DE GRAYSKULL</span>
+                                    {/* Sello Holográfico Oval 3D Central con Bisel Dorado */}
+                                    <div
+                                        className="w-11 h-6 rounded-full border-2 border-amber-300 shadow-md flex items-center justify-center relative overflow-hidden shrink-0 mx-1"
+                                        style={{
+                                            background: 'linear-gradient(135deg, #06b6d4 0%, #3b82f6 25%, #ec4899 50%, #f59e0b 75%, #10b981 100%)',
+                                            boxShadow: 'inset 0 0 6px rgba(255,255,255,0.9), 0 0 10px rgba(245,158,11,0.5)'
+                                        }}
+                                        title="Sello de Autenticidad Grayskull 3D"
+                                    >
+                                        <div className="absolute inset-0 bg-white/25 backdrop-blur-[0.5px]" />
+                                        <Shield className="h-3 w-3 text-black/85 drop-shadow-sm z-10" />
+                                    </div>
+
+                                    {/* Lado Derecho: DEF | AGI */}
+                                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-amber-100 tcg-gold-emboss">
+                                        <span>DEF <strong className="text-white text-xs">{statsData.defensa}</strong></span>
+                                        <span className="text-amber-400/60">|</span>
+                                        <span>AGI <strong className="text-white text-xs">{statsData.agilidad}</strong></span>
+                                    </div>
                                 </div>
-                                <span className="text-amber-400/80 font-bold">#{ (item.sku || String(item.id)).slice(-5) } • NUEVA ETERNIA</span>
                             </div>
                         </motion.div>
                     </div>
@@ -1224,7 +1350,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                     <div className="w-full flex items-center justify-center p-1 rounded-xl bg-slate-950/90 border border-amber-500/30 gap-1 mt-3 mb-1 shadow-inner">
                         <button
                             onClick={() => setExportTarget('card')}
-                            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all ${
+                            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all font-cinzel ${
                                 exportTarget === 'card'
                                     ? 'bg-gradient-to-r from-amber-500 to-yellow-600 text-black shadow-md shadow-amber-500/20'
                                     : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
@@ -1235,7 +1361,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                         </button>
                         <button
                             onClick={() => setExportTarget('image')}
-                            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all ${
+                            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all font-cinzel ${
                                 exportTarget === 'image'
                                     ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-md shadow-cyan-500/20'
                                     : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
@@ -1252,7 +1378,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                         <button
                             onClick={handleNativeShare}
                             disabled={exporting}
-                            className="flex flex-col items-center justify-center gap-1 p-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-[10px] font-bold shadow-lg shadow-emerald-600/30 transition active:scale-95 disabled:opacity-50"
+                            className="flex flex-col items-center justify-center gap-1 p-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-[10px] font-bold shadow-lg shadow-emerald-600/30 transition active:scale-95 disabled:opacity-50 font-cinzel"
                         >
                             {exporting ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -1268,7 +1394,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                         <button
                             onClick={handleCopyImage}
                             disabled={exporting}
-                            className="flex flex-col items-center justify-center gap-1 p-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-xl text-[10px] font-bold shadow-md transition active:scale-95 disabled:opacity-50"
+                            className="flex flex-col items-center justify-center gap-1 p-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-xl text-[10px] font-bold shadow-md transition active:scale-95 disabled:opacity-50 font-cinzel"
                         >
                             {exporting ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -1290,7 +1416,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                         <button
                             onClick={handleDownload}
                             disabled={exporting}
-                            className="flex flex-col items-center justify-center gap-1 p-2.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 rounded-xl text-[10px] font-bold shadow-md transition active:scale-95 disabled:opacity-50"
+                            className="flex flex-col items-center justify-center gap-1 p-2.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 rounded-xl text-[10px] font-bold shadow-md transition active:scale-95 disabled:opacity-50 font-cinzel"
                         >
                             {exporting ? (
                                 <Loader2 className="h-4 w-4 animate-spin text-amber-300" />
@@ -1315,4 +1441,5 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
 };
 
 export default TradingCardModal;
+
 
