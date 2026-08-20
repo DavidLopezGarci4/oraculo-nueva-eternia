@@ -112,13 +112,13 @@ MOTU_LORE_ENCYCLOPEDIA: Dict[str, Dict[str, Any]] = {
     "he-man": {
         "canonical_name": "He-Man",
         "faction": "Guerreros Heroicos",
-        "type_line": "Criatura Legendaria — Guerrero Heroico",
+        "type_line": "Campeón Legendario — Guerrero Heroico",
         "frame_theme": "castle_grayskull",
         "emblem": "shield",
         "mana_gems": ["grayskull", "grayskull", "gold", "sword"],
-        "lore": "Defensor supremo de los secretos de Castle Grayskull y campeón indiscutible de Eternia. Guiado por la Espada del Poder, su fuerza inquebrantable protege el universo de las garras de la oscuridad.",
+        "lore": "¡Por el poder de Grayskull, yo tengo el poder! El hombre más poderoso del universo y defensor eterno de los secretos sagrados del castillo.",
         "stats": {"fuerza": 99, "magia": 88, "defensa": 95, "agilidad": 90},
-        "special_move": "Furia del Relámpago de Grayskull",
+        "special_move": "Por el Poder de Grayskull",
         "weapon_type": "power_sword"
     },
     "battle armor he-man": {
@@ -302,10 +302,34 @@ MOTU_LORE_ENCYCLOPEDIA: Dict[str, Dict[str, Any]] = {
         "weapon_type": "laser_blaster"
     },
 
-    # ── GUERREROS DIABÓLICOS (SNAKE MOUNTAIN) ──
+    # ── GUERREROS DEL MAL (SNAKE MOUNTAIN) ──
+    "anti-eternia he-man": {
+        "canonical_name": "Anti-Eternia He-Man",
+        "faction": "Guerreros del Mal",
+        "type_line": "Doble Oscuro — Multiverso Anti-Eternia",
+        "frame_theme": "snake_mountain",
+        "emblem": "skull",
+        "mana_gems": ["havoc", "havoc", "dark", "fire"],
+        "lore": "Nacido del reflejo infernal del World Converter en el Multiverso Oscuro, es un tirano implacable de ojos incandescentes cuyo poder busca aniquilar la luz de Eternia.",
+        "stats": {"fuerza": 99, "magia": 92, "defensa": 95, "agilidad": 92},
+        "special_move": "Estallido de Sombras de Anti-Eternia",
+        "weapon_type": "havoc_staff"
+    },
+    "he-skeletor": {
+        "canonical_name": "He-Skeletor",
+        "faction": "Guerreros del Mal",
+        "type_line": "Campeón Oscuro — Multiverso Anti-Eternia",
+        "frame_theme": "snake_mountain",
+        "emblem": "skull",
+        "mana_gems": ["havoc", "grayskull", "dark", "lightning"],
+        "lore": "El Campeón del Multiverso Oscuro donde Keldor abrazó el poder del Relámpago de Grayskull combinándolo con la nigromancia tártara.",
+        "stats": {"fuerza": 96, "magia": 98, "defensa": 93, "agilidad": 88},
+        "special_move": "Relámpago Destructor de Skeletor",
+        "weapon_type": "havoc_staff"
+    },
     "skeletor": {
         "canonical_name": "Skeletor",
-        "faction": "Guerreros Diabólicos",
+        "faction": "Guerreros del Mal",
         "type_line": "Señor Oscuro — Tirano de Snake Mountain",
         "frame_theme": "snake_mountain",
         "emblem": "skull",
@@ -317,7 +341,7 @@ MOTU_LORE_ENCYCLOPEDIA: Dict[str, Dict[str, Any]] = {
     },
     "battle armor skeletor": {
         "canonical_name": "Skeletor (Battle Armor)",
-        "faction": "Guerreros Diabólicos",
+        "faction": "Guerreros del Mal",
         "type_line": "Señor Oscuro — Tirano de Snake Mountain",
         "frame_theme": "snake_mountain",
         "emblem": "skull",
@@ -329,7 +353,7 @@ MOTU_LORE_ENCYCLOPEDIA: Dict[str, Dict[str, Any]] = {
     },
     "beast man": {
         "canonical_name": "Beast Man",
-        "faction": "Guerreros Diabólicos",
+        "faction": "Guerreros del Mal",
         "type_line": "Criatura Legendaria — Guerrero Diabólico",
         "frame_theme": "snake_mountain",
         "emblem": "skull",
@@ -341,7 +365,7 @@ MOTU_LORE_ENCYCLOPEDIA: Dict[str, Dict[str, Any]] = {
     },
     "trap jaw": {
         "canonical_name": "Trap Jaw",
-        "faction": "Guerreros Diabólicos",
+        "faction": "Guerreros del Mal",
         "type_line": "Cíborg Legendario — Guerrero Diabólico",
         "frame_theme": "snake_mountain",
         "emblem": "skull",
@@ -353,7 +377,7 @@ MOTU_LORE_ENCYCLOPEDIA: Dict[str, Dict[str, Any]] = {
     },
     "tri-klops": {
         "canonical_name": "Tri-Klops",
-        "faction": "Guerreros Diabólicos",
+        "faction": "Guerreros del Mal",
         "type_line": "Espadachín Táctico — Rastreador Diabólico",
         "frame_theme": "snake_mountain",
         "emblem": "skull",
@@ -365,7 +389,7 @@ MOTU_LORE_ENCYCLOPEDIA: Dict[str, Dict[str, Any]] = {
     },
     "evil-lyn": {
         "canonical_name": "Evil-Lyn",
-        "faction": "Guerreros Diabólicos",
+        "faction": "Guerreros del Mal",
         "type_line": "Hechicera de las Sombras — Consejera Diabólica",
         "frame_theme": "snake_mountain",
         "emblem": "skull",
@@ -377,7 +401,7 @@ MOTU_LORE_ENCYCLOPEDIA: Dict[str, Dict[str, Any]] = {
     },
     "mer-man": {
         "canonical_name": "Mer-Man",
-        "faction": "Guerreros Diabólicos",
+        "faction": "Guerreros del Mal",
         "type_line": "Soberano Acuático — Señor de Rakash",
         "frame_theme": "snake_mountain",
         "emblem": "skull",
@@ -389,7 +413,7 @@ MOTU_LORE_ENCYCLOPEDIA: Dict[str, Dict[str, Any]] = {
     },
     "faker": {
         "canonical_name": "Faker",
-        "faction": "Guerreros Diabólicos",
+        "faction": "Guerreros del Mal",
         "type_line": "Cíborg Impostor — Creación Diabólica",
         "frame_theme": "snake_mountain",
         "emblem": "skull",
@@ -401,7 +425,7 @@ MOTU_LORE_ENCYCLOPEDIA: Dict[str, Dict[str, Any]] = {
     },
     "scare glow": {
         "canonical_name": "Scare Glow",
-        "faction": "Guerreros Diabólicos",
+        "faction": "Guerreros del Mal",
         "type_line": "Espíritu Espectral — Heraldo del Pavor",
         "frame_theme": "snake_mountain",
         "emblem": "skull",
@@ -413,7 +437,7 @@ MOTU_LORE_ENCYCLOPEDIA: Dict[str, Dict[str, Any]] = {
     },
     "clawful": {
         "canonical_name": "Clawful",
-        "faction": "Guerreros Diabólicos",
+        "faction": "Guerreros del Mal",
         "type_line": "Criatura Legendaria — Bruto Acorazado",
         "frame_theme": "snake_mountain",
         "emblem": "skull",
@@ -425,7 +449,7 @@ MOTU_LORE_ENCYCLOPEDIA: Dict[str, Dict[str, Any]] = {
     },
     "whiplash": {
         "canonical_name": "Whiplash",
-        "faction": "Guerreros Diabólicos",
+        "faction": "Guerreros del Mal",
         "type_line": "Criatura Legendaria — Reptil de Combate",
         "frame_theme": "snake_mountain",
         "emblem": "skull",
@@ -437,7 +461,7 @@ MOTU_LORE_ENCYCLOPEDIA: Dict[str, Dict[str, Any]] = {
     },
     "webstor": {
         "canonical_name": "Webstor",
-        "faction": "Guerreros Diabólicos",
+        "faction": "Guerreros del Mal",
         "type_line": "Criatura Legendaria — Maestro Arácnido",
         "frame_theme": "snake_mountain",
         "emblem": "skull",
@@ -449,7 +473,7 @@ MOTU_LORE_ENCYCLOPEDIA: Dict[str, Dict[str, Any]] = {
     },
     "spikor": {
         "canonical_name": "Spikor",
-        "faction": "Guerreros Diabólicos",
+        "faction": "Guerreros del Mal",
         "type_line": "Criatura Legendaria — Herrero de Espinas",
         "frame_theme": "snake_mountain",
         "emblem": "skull",
@@ -461,7 +485,7 @@ MOTU_LORE_ENCYCLOPEDIA: Dict[str, Dict[str, Any]] = {
     },
     "stinkor": {
         "canonical_name": "Stinkor",
-        "faction": "Guerreros Diabólicos",
+        "faction": "Guerreros del Mal",
         "type_line": "Criatura Legendaria — Maestro del Olor",
         "frame_theme": "snake_mountain",
         "emblem": "skull",
@@ -473,7 +497,7 @@ MOTU_LORE_ENCYCLOPEDIA: Dict[str, Dict[str, Any]] = {
     },
     "two-bad": {
         "canonical_name": "Two-Bad",
-        "faction": "Guerreros Diabólicos",
+        "faction": "Guerreros del Mal",
         "type_line": "Criatura Legendaria — Estratega Bicéfalo",
         "frame_theme": "snake_mountain",
         "emblem": "skull",
@@ -841,7 +865,7 @@ MOTU_LORE_ENCYCLOPEDIA: Dict[str, Dict[str, Any]] = {
     },
     "frog monger": {
         "canonical_name": "Frog Monger",
-        "faction": "Guerreros Diabólicos",
+        "faction": "Guerreros del Mal",
         "type_line": "Monstruo de las Mazmorras — Bestia Diabólica",
         "frame_theme": "snake_mountain",
         "emblem": "skull",
@@ -985,7 +1009,7 @@ MOTU_LORE_ENCYCLOPEDIA: Dict[str, Dict[str, Any]] = {
     },
     "tyrantisaurus rex": {
         "canonical_name": "Tyrantisaurus Rex",
-        "faction": "Guerreros Diabólicos",
+        "faction": "Guerreros del Mal",
         "type_line": "Tiranosaurio Biónico — Monstruo Titánico",
         "frame_theme": "snake_mountain",
         "emblem": "skull",
@@ -1009,7 +1033,7 @@ MOTU_LORE_ENCYCLOPEDIA: Dict[str, Dict[str, Any]] = {
     },
     "megator": {
         "canonical_name": "Megator",
-        "faction": "Guerreros Diabólicos",
+        "faction": "Guerreros del Mal",
         "type_line": "Titán Monstruoso — Gigante del Caos",
         "frame_theme": "snake_mountain",
         "emblem": "skull",
@@ -1021,7 +1045,7 @@ MOTU_LORE_ENCYCLOPEDIA: Dict[str, Dict[str, Any]] = {
     },
     "mouse-jaw": {
         "canonical_name": "Mouse-Jaw",
-        "faction": "Guerreros Diabólicos",
+        "faction": "Guerreros del Mal",
         "type_line": "Mutación Mecánica — Guerrero Diabólico",
         "frame_theme": "snake_mountain",
         "emblem": "skull",
@@ -1232,7 +1256,7 @@ def resolve_motu_profile(product_name: str, sub_category: Optional[str] = "MOTU 
     detected_gems = ["grayskull", "gold"]
 
     if any(w in clean_name for w in ["skeletor", "beast", "trap", "tri-klops", "mer-man", "lyn", "faker", "scare", "clawful", "whiplash", "spikor", "stinkor", "two-bad"]):
-        detected_faction = "Guerreros Diabólicos"
+        detected_faction = "Guerreros del Mal"
         detected_theme = "snake_mountain"
         detected_type = "Criatura Legendaria — Guerrero Diabólico"
         detected_emblem = "skull"

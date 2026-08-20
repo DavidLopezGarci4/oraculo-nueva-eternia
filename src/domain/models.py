@@ -1,4 +1,4 @@
-from sqlalchemy import Integer, String, Float, DateTime, ForeignKey, Boolean
+from sqlalchemy import Integer, String, Float, DateTime, ForeignKey, Boolean, Text
 from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column
 from datetime import datetime, timezone
 from typing import List, Optional
@@ -51,6 +51,9 @@ class ProductModel(Base):
     master_image_hash: Mapped[Optional[str]] = mapped_column(String, nullable=True) # ActionFigure411 reference hash
     
     is_vintage: Mapped[Optional[bool]] = mapped_column(Boolean, default=False, nullable=True, index=True)
+    
+    # Phase 88: Living Lore Engine MOTU
+    character_slug: Mapped[Optional[str]] = mapped_column(String, index=True, nullable=True)
     
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
@@ -548,6 +551,34 @@ class ProductMonthlyStatsModel(Base):
     
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
+class CharacterLoreModel(Base):
+    """
+    Entidad canónica de Lore, Bando y Estadísticas MOTU.
+    Una vez guardada o verificada, permanece inmutable en la base de datos (0 coste de red).
+    """
+    __tablename__ = "character_lore"
+    
+    slug: Mapped[str] = mapped_column(String, primary_key=True, index=True) # ej. "he_man", "anti_eternia_he_man", "clawful"
+    canonical_name: Mapped[str] = mapped_column(String, index=True)
+    faction: Mapped[str] = mapped_column(String, index=True) # "Guerreros Heroicos", "Guerreros del Mal", etc.
+    theme_key: Mapped[str] = mapped_column(String, default="castle_grayskull") # "castle_grayskull", "snake_mountain", etc.
+    type_line: Mapped[str] = mapped_column(String) # "Campeón Legendario — Guerrero Heroico"
+    special_move: Mapped[str] = mapped_column(String) # "Por el Poder de Grayskull"
+    quote: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    lore: Mapped[str] = mapped_column(Text)
+    
+    # Matriz de Combate RPG
+    fuerza: Mapped[int] = mapped_column(Integer, default=85)
+    magia: Mapped[int] = mapped_column(Integer, default=75)
+    defensa: Mapped[int] = mapped_column(Integer, default=85)
+    agilidad: Mapped[int] = mapped_column(Integer, default=85)
+    
+    source_url: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    is_verified: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
 __all__ = [
     "Base", 
     "ProductModel", 
@@ -572,7 +603,9 @@ __all__ = [
     "VintageProductModel",
     "VintageMiscellaneousModel",
     "ProductMonthlyStatsModel",
+    "CharacterLoreModel",
     "DOMAIN_VERSION"
 ]
+
 
 

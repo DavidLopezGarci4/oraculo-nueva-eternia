@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Activity, Terminal, Settings, Users, Package } from 'lucide-react';
+import { Activity, Terminal, Settings, Users, Package, BookOpen } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { resetSmartMatches, runScrapers, stopScrapers, getScraperLogs, type ScraperExecutionLog, getWallapopIpLogs, downloadWallapopIpLogs, type WallapopIpLog, runWallaManualHtml } from '../api/purgatory';
@@ -17,6 +17,8 @@ import UsersTab from '../components/config/UsersTab';
 import SystemTab from '../components/config/SystemTab';
 import InventoryTab from '../components/config/InventoryTab';
 import ScrapersTab from '../components/config/ScrapersTab';
+import { LoreTab } from '../components/config/LoreTab';
+
 import { clearMOTURAMCache } from '../components/ui/MOTUImage';
 
 
@@ -55,7 +57,7 @@ interface ConfigProps {
 
 const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange }) => {
     const consoleRef = React.useRef<HTMLDivElement>(null);
-    const [activeTab, setActiveTab] = useState<'scrapers' | 'system' | 'users' | 'wallapop' | 'inventory'>('scrapers');
+    const [activeTab, setActiveTab] = useState<'scrapers' | 'system' | 'users' | 'wallapop' | 'inventory' | 'lore'>('scrapers');
     const [statuses, setStatuses] = useState<ScraperStatus[]>([]);
     const [matchStats, setMatchStats] = useState<any[]>([]);
     const [syncingSensores, setSyncingSensores] = useState(false);
@@ -893,6 +895,13 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                             <Users className="h-4 w-4" />
                             Héroes
                         </button>
+                        <button
+                            onClick={() => setActiveTab('lore')}
+                            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 flex-1 sm:flex-initial min-w-[100px] sm:min-w-0 ${activeTab === 'lore' ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/20' : 'text-amber-400/80 hover:text-amber-300 hover:bg-amber-500/10'}`}
+                        >
+                            <BookOpen className="h-4 w-4" />
+                            Grimorio Lore
+                        </button>
                     </div>
                 )}
             </div>
@@ -1002,6 +1011,15 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                     >
                         <WallapopImporter />
                         <WallapopNexusBridge />
+                    </motion.div>
+                ) : activeTab === 'lore' ? (
+                    <motion.div
+                        key="lore"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                    >
+                        <LoreTab />
                     </motion.div>
                 ) : null}
             </AnimatePresence>

@@ -60,7 +60,7 @@ const FACTION_VISUAL_THEMES: Record<string, FactionVisualTheme> = {
         loreTextColor: '#e2eedd'
     },
     snake_mountain: {
-        faction: 'Guerreros Diabólicos',
+        faction: 'Guerreros del Mal',
         typeLine: 'Criatura Legendaria — Guerrero Diabólico',
         frameAsset: '/frames/frame_snake_mountain.webp',
         specialMoveColor: '#ff8a3d',
@@ -96,68 +96,458 @@ const FACTION_VISUAL_THEMES: Record<string, FactionVisualTheme> = {
     }
 };
 
-// Resolver canónico determinista para la interfaz local
-const getLocalMotuProfile = (productName: string, _subCategory?: string) => {
-    const clean = (productName || '').toLowerCase().trim();
+export interface MotuProfile {
+    themeKey: 'castle_grayskull' | 'snake_mountain' | 'evil_horde' | 'snake_men' | 'great_rebellion' | 'cosmic_enforcers';
+    faction: string;
+    typeLine: string;
+    specialMove: string;
+    lore: string;
+    stats: {
+        fuerza: number;
+        magia: number;
+        defensa: number;
+        agilidad: number;
+    };
+}
 
-    if (clean.includes('skeletor') || clean.includes('beast') || clean.includes('trap') || clean.includes('tri-klops') || clean.includes('mer-man') || clean.includes('evil-lyn') || clean.includes('faker') || clean.includes('scare') || clean.includes('clawful') || clean.includes('whiplash') || clean.includes('webstor') || clean.includes('spikor') || clean.includes('stinkor') || clean.includes('two-bad') || clean.includes('ninjor') || clean.includes('jitsu') || clean.includes('blade') || clean.includes('saurod')) {
-        return {
+/**
+ * BASE DE DATOS CANÓNICA DE PERSONAJES MOTU
+ * Define de forma personalizada e independiente el lore, facción,
+ * poder especial y estadísticas de cada figura del universo Masters of the Universe.
+ */
+export const MOTU_CHARACTER_PROFILES: { match: RegExp; profile: MotuProfile }[] = [
+    // -------------------------------------------------------------
+    // MULTIVERSO OSCURO / ANTI-ETERNIA (Prioridad Máxima sobre He-Man)
+    // -------------------------------------------------------------
+    {
+        match: /anti[\s\-]?eternia|anti[\s\-]?he[\s\-]?man/i,
+        profile: {
             themeKey: 'snake_mountain',
-            faction: 'Guerreros Diabólicos',
-            typeLine: 'Criatura Legendaria — Guerrero Diabólico',
-            specialMove: clean.includes('beast') ? 'Zarpazo Titánico de la Jungla' : clean.includes('trap') ? 'Mordisco de Mandíbula de Acero' : clean.includes('tri-klops') ? 'Láser Óptico de Rastreo Letal' : clean.includes('mer-man') ? 'Tsunami de las Profundidades de Rakash' : clean.includes('evil-lyn') ? 'Tormenta Ilusoria de Subternia' : clean.includes('clawful') ? 'Presa Hidráulica Trituradora' : clean.includes('whiplash') ? 'Azote Ofídico Venenoso' : clean.includes('faker') ? 'Tajo Cósmico de Luz Ancestral' : 'Descarga de Sombras Arcanas',
-            lore: clean.includes('beast') ? 'Sus garras desgarran, su voluntad domina. El Señor de las Bestias de la Montaña de la Serpiente no conoce la piedad.' : clean.includes('skeletor') ? 'Señor de la destrucción y tirano nigromántico de Snake Mountain cuya sed de conquista amenaza la existencia de Eternia.' : 'Combatiente despiadado de las legiones oscuras de Snake Mountain al servicio de Skeletor.',
-            stats: { fuerza: 92, magia: clean.includes('skeletor') || clean.includes('lyn') ? 98 : 68, defensa: 89, agilidad: 86 }
-        };
-    }
-    if (clean.includes('hordak') || clean.includes('horde') || clean.includes('weaver') || clean.includes('catra') || clean.includes('grizzlor') || clean.includes('mantenna') || clean.includes('leech') || clean.includes('scorpia') || clean.includes('mosquitor') || clean.includes('modulok') || clean.includes('dragstor') || clean.includes('multi-bot')) {
-        return {
-            themeKey: 'evil_horde',
-            faction: 'La Horda del Terror',
-            typeLine: 'Tirano Legendario — Soldado de la Horda',
-            specialMove: 'Flecha de Plasma Carmesí de la Horda',
-            lore: 'Tirano supremo de la Zona del Terror y maestro de la tecno-magia oscura, capaz de transmutar su propio cuerpo en armamento mecánico mortal.',
-            stats: { fuerza: 95, magia: 96, defensa: 95, agilidad: 87 }
-        };
-    }
-    if (clean.includes('snake') || clean.includes('hiss') || clean.includes('khan') || clean.includes('rattlor') || clean.includes('tung') || clean.includes('lashr') || clean.includes('sssqueeze') || clean.includes('serpiente') || clean.includes('gr\'asp')) {
-        return {
-            themeKey: 'snake_men',
-            faction: 'Los Hombres Serpiente',
-            typeLine: 'Monarca Ofídico — Hombre Serpiente',
-            specialMove: clean.includes('khan') ? 'Chorro Ácido Corrosivo' : 'Mordisco Asfixiante del Rey Hiss',
-            lore: 'Antiquísimo monarca ofídico cuyo disfraz oculta una masa de serpientes devoradoras. Regresa del pasado para dominar Eternia.',
-            stats: { fuerza: 93, magia: 95, defensa: 91, agilidad: 93 }
-        };
-    }
-    if (clean.includes('she-ra') || clean.includes('shera') || clean.includes('bow') || clean.includes('glimmer') || clean.includes('frosta') || clean.includes('angella') || clean.includes('mermista') || clean.includes('castaspella') || clean.includes('netossa') || clean.includes('kowl') || clean.includes('rebellion')) {
-        return {
-            themeKey: 'great_rebellion',
-            faction: 'La Gran Rebelión',
-            typeLine: 'Princesa del Poder — Gran Rebelión',
-            specialMove: 'Tajo Cósmico de Luz Ancestral',
-            lore: 'Princesa del Poder y líder invicta de la Gran Rebelión en Etheria. Con la Espada de Protección canaliza la luz pura del honor.',
-            stats: { fuerza: 98, magia: 94, defensa: 95, agilidad: 96 }
-        };
-    }
-    if (clean.includes('zodac') || clean.includes('zodak') || clean.includes('he-ro') || clean.includes('eldor') || clean.includes('gray') || clean.includes('cosmic')) {
-        return {
+            faction: 'Guerreros del Mal',
+            typeLine: 'Doble Oscuro — Multiverso Anti-Eternia',
+            specialMove: 'Estallido de Sombras de Anti-Eternia',
+            lore: 'Nacido del reflejo infernal del World Converter en el Multiverso Oscuro, es un tirano implacable de ojos incandescentes cuyo poder busca aniquilar la luz de Eternia.',
+            stats: { fuerza: 99, magia: 92, defensa: 95, agilidad: 92 }
+        }
+    },
+    {
+        match: /he[\s\-]?skeletor/i,
+        profile: {
+            themeKey: 'snake_mountain',
+            faction: 'Guerreros del Mal',
+            typeLine: 'Campeón Oscuro — Multiverso Anti-Eternia',
+            specialMove: 'Relámpago Destructor de Skeletor',
+            lore: 'El Campeón del Multiverso Oscuro donde Keldor abrazó el poder del Relámpago de Grayskull combinándolo con la nigromancia tártara.',
+            stats: { fuerza: 96, magia: 98, defensa: 93, agilidad: 88 }
+        }
+    },
+
+    // -------------------------------------------------------------
+    // PRETERNIA & GUARDIANES CÓSMICOS
+    // -------------------------------------------------------------
+    {
+        match: /great\s+black\s+wizard/i,
+        profile: {
+            themeKey: 'castle_grayskull',
+            faction: 'Guerreros Heroicos',
+            typeLine: 'Hechicero Legendario — Guerrero Oscuro',
+            specialMove: 'Conjuro Ancestral de Sombras Preternianas',
+            lore: 'Antiguo y enigmático hechicero oscuro de la era preterniana, maestro de las artes arcanas prohibidas y guardián de hechizos milenarios.',
+            stats: { fuerza: 88, magia: 99, defensa: 85, agilidad: 88 }
+        }
+    },
+    {
+        match: /\bhe[\s\-]?ro\b/i,
+        profile: {
+            themeKey: 'cosmic_enforcers',
+            faction: 'Guardianes Cósmicos',
+            typeLine: 'Mago Preterniano — Ancestro de Grayskull',
+            specialMove: 'Magia Ancestral de Preternia',
+            lore: 'El Mago más poderoso del Universo en la remota Preternia. Portador del báculo con la piedra de la sabiduría y ancestro del poder de Grayskull.',
+            stats: { fuerza: 92, magia: 99, defensa: 94, agilidad: 93 }
+        }
+    },
+    {
+        match: /\beldor\b/i,
+        profile: {
+            themeKey: 'cosmic_enforcers',
+            faction: 'Guardianes Cósmicos',
+            typeLine: 'Sabio de Preternia — Custodio del Libro',
+            specialMove: 'Sabiduría de los Antiguos',
+            lore: 'Antiguo sabio de Preternia y mentor de He-Ro, guardián del Libro de los Hechizos Vivientes que salvaguarda la historia secreta.',
+            stats: { fuerza: 85, magia: 98, defensa: 90, agilidad: 86 }
+        }
+    },
+    {
+        match: /\bzodac\b|\bzodak\b/i,
+        profile: {
             themeKey: 'cosmic_enforcers',
             faction: 'Guardianes Cósmicos',
             typeLine: 'Ejecutor Cósmico — Juez del Equilibrio',
             specialMove: 'Descarga Cósmica de Zodac',
-            lore: 'Enforcer Cósmico neutral que vela por el equilibrio universal entre la luz y las sombras con su conocimiento infinito.',
+            lore: 'Enforcer Cósmico neutral que vela por el equilibrio universal entre la luz y las sombras con su sabiduría e intelecto infinitos.',
             stats: { fuerza: 90, magia: 95, defensa: 92, agilidad: 91 }
-        };
+        }
+    },
+
+    // -------------------------------------------------------------
+    // GUERREROS HEROICOS (CASTLE GRAYSKULL)
+    // -------------------------------------------------------------
+    {
+        match: /\bhe[\s\-]?man\b|\bprince\s+adam\b/i,
+        profile: {
+            themeKey: 'castle_grayskull',
+            faction: 'Guerreros Heroicos',
+            typeLine: 'Campeón Legendario — Guerrero Heroico',
+            specialMove: 'Por el Poder de Grayskull',
+            lore: '¡Por el poder de Grayskull, yo tengo el poder! El hombre más poderoso del universo y defensor eterno de los secretos del castillo.',
+            stats: { fuerza: 99, magia: 88, defensa: 95, agilidad: 90 }
+        }
+    },
+    {
+        match: /\bsorceress\b|\bhechicera\b/i,
+        profile: {
+            themeKey: 'castle_grayskull',
+            faction: 'Guerreros Heroicos',
+            typeLine: 'Guardiana Mística — Guerrera Heroica',
+            specialMove: 'Escudo del Halcón Místico',
+            lore: 'Custodia inmortal del Castillo Grayskull y canalizadora de la magia más poderosa de Eternia bajo el manto de Zoar.',
+            stats: { fuerza: 80, magia: 99, defensa: 92, agilidad: 89 }
+        }
+    },
+    {
+        match: /\bman[\s\-]?at[\s\-]?arms\b|\bduncan\b/i,
+        profile: {
+            themeKey: 'castle_grayskull',
+            faction: 'Guerreros Heroicos',
+            typeLine: 'Maestro de Armas — Guerrero Heroico',
+            specialMove: 'Ráfaga Fotónica Man-At-Arms',
+            lore: 'Duncan, maestro de armas de la corte real de Eternia e inventor genial de la tecnología defensiva de Grayskull.',
+            stats: { fuerza: 91, magia: 75, defensa: 94, agilidad: 87 }
+        }
+    },
+    {
+        match: /\bteela\b/i,
+        profile: {
+            themeKey: 'castle_grayskull',
+            faction: 'Guerreros Heroicos',
+            typeLine: 'Capitana de la Guardia — Guerrera Heroica',
+            specialMove: 'Estocada Táctica de la Cobra',
+            lore: 'Capitana de la Guardia Real y prodigio del combate cuerpo a cuerpo, destinada a heredar los secretos arcanos de Grayskull.',
+            stats: { fuerza: 89, magia: 85, defensa: 90, agilidad: 94 }
+        }
+    },
+    {
+        match: /\bbattle\s+cat\b|\bcringer\b/i,
+        profile: {
+            themeKey: 'castle_grayskull',
+            faction: 'Guerreros Heroicos',
+            typeLine: 'Felino Blindado — Guerrero Heroico',
+            specialMove: 'Desgarro Feroz de la Selva Carmesí',
+            lore: 'El fiel corcel acorazado de He-Man, valiente tigre de combate de Grayskull dotado de garras y colmillos titánicos.',
+            stats: { fuerza: 95, magia: 70, defensa: 93, agilidad: 95 }
+        }
+    },
+    {
+        match: /\bram[\s\-]?man\b/i,
+        profile: {
+            themeKey: 'castle_grayskull',
+            faction: 'Guerreros Heroicos',
+            typeLine: 'Ariete Humano — Guerrero Heroico',
+            specialMove: 'Impacto de Ariete Inamovible',
+            lore: 'El ariete humano de Eternia, cuya armadura reforzada y coraje demoledor pueden derribar cualquier fortaleza enemiga.',
+            stats: { fuerza: 94, magia: 60, defensa: 98, agilidad: 75 }
+        }
+    },
+    {
+        match: /\bstratos\b/i,
+        profile: {
+            themeKey: 'castle_grayskull',
+            faction: 'Guerreros Heroicos',
+            typeLine: 'Señor de Avion — Guerrero Heroico',
+            specialMove: 'Picado Aéreo de Avion',
+            lore: 'Líder de los guerreros alados de Avion y señor de las corrientes aéreas que vigila los cielos de Eternia.',
+            stats: { fuerza: 88, magia: 72, defensa: 87, agilidad: 98 }
+        }
+    },
+    {
+        match: /\bfisto\b/i,
+        profile: {
+            themeKey: 'castle_grayskull',
+            faction: 'Guerreros Heroicos',
+            typeLine: 'Guerrero Titánico — Guerrero Heroico',
+            specialMove: 'Golpe Demoledor de Murallas',
+            lore: 'Luchador legendario cuyo puño metálico gigante es capaz de quebrar montañas y aplastar la maquinaria del mal.',
+            stats: { fuerza: 96, magia: 65, defensa: 92, agilidad: 84 }
+        }
+    },
+    {
+        match: /\bmoss\s+man\b/i,
+        profile: {
+            themeKey: 'castle_grayskull',
+            faction: 'Guerreros Heroicos',
+            typeLine: 'Señor de la Naturaleza — Guerrero Heroico',
+            specialMove: 'Crecimiento de Raíces Primitivas',
+            lore: 'Espíritu ancestral de la flora y los bosques eternianos, maestro del camuflaje y comunión con el mundo vegetal.',
+            stats: { fuerza: 90, magia: 92, defensa: 88, agilidad: 89 }
+        }
+    },
+
+    // -------------------------------------------------------------
+    // GUERREROS DEL MAL (SNAKE MOUNTAIN)
+    // -------------------------------------------------------------
+    {
+        match: /\bskeletor\b|\bkeldor\b/i,
+        profile: {
+            themeKey: 'snake_mountain',
+            faction: 'Guerreros del Mal',
+            typeLine: 'Señor de la Destrucción — Guerrero Diabólico',
+            specialMove: 'Rayo Destructor del Báculo de Havoc',
+            lore: 'Señor de la destrucción y tirano nigromántico de Snake Mountain cuya sed insaciable de conquista amenaza el multiverso.',
+            stats: { fuerza: 93, magia: 99, defensa: 91, agilidad: 88 }
+        }
+    },
+    {
+        match: /\bevil[\s\-]?lyn\b/i,
+        profile: {
+            themeKey: 'snake_mountain',
+            faction: 'Guerreros del Mal',
+            typeLine: 'Hechicera de Subternia — Guerrera Diabólica',
+            specialMove: 'Tormenta Ilusoria de Subternia',
+            lore: 'Nigromante y hechicera suprema de Subternia, cuyas profecías y magia oscura rivalizan con el poder de Grayskull.',
+            stats: { fuerza: 82, magia: 98, defensa: 86, agilidad: 91 }
+        }
+    },
+    {
+        match: /\bbeast[\s\-]?man\b/i,
+        profile: {
+            themeKey: 'snake_mountain',
+            faction: 'Guerreros del Mal',
+            typeLine: 'Señor de las Bestias — Guerrero Diabólico',
+            specialMove: 'Zarpazo Titánico de la Jungla',
+            lore: 'Sus garras desgarran, su voluntad domina. El Señor de las Bestias de la Montaña de la Serpiente controla a las criaturas más temibles.',
+            stats: { fuerza: 93, magia: 70, defensa: 89, agilidad: 87 }
+        }
+    },
+    {
+        match: /\btrap[\s\-]?jaw\b/i,
+        profile: {
+            themeKey: 'snake_mountain',
+            faction: 'Guerreros del Mal',
+            typeLine: 'Ciborg de Combate — Guerrero Diabólico',
+            specialMove: 'Mordisco de Mandíbula de Acero',
+            lore: 'Ciborg armado con mandíbula de acero indestructible y brazo multifunción con armamento intercambiable letal.',
+            stats: { fuerza: 92, magia: 65, defensa: 95, agilidad: 85 }
+        }
+    },
+    {
+        match: /\btri[\s\-]?klops\b/i,
+        profile: {
+            themeKey: 'snake_mountain',
+            faction: 'Guerreros del Mal',
+            typeLine: 'Cazador Letal — Guerrero Diabólico',
+            specialMove: 'Láser Óptico de Rastreo Letal',
+            lore: 'Visor omnisciente de Snake Mountain dotado de visión gamma, nocturna y rastreo óptico infrarrojo infalible.',
+            stats: { fuerza: 89, magia: 78, defensa: 88, agilidad: 93 }
+        }
+    },
+    {
+        match: /\bmer[\s\-]?man\b/i,
+        profile: {
+            themeKey: 'snake_mountain',
+            faction: 'Guerreros del Mal',
+            typeLine: 'Señor del Océano — Guerrero Diabólico',
+            specialMove: 'Tsunami de las Profundidades de Rakash',
+            lore: 'Soberano de los océanos de Rakash y señor de las profundidades acuáticas de Eternia, capaz de invocar bestias abisales.',
+            stats: { fuerza: 90, magia: 85, defensa: 89, agilidad: 90 }
+        }
+    },
+    {
+        match: /\bclawful\b/i,
+        profile: {
+            themeKey: 'snake_mountain',
+            faction: 'Guerreros del Mal',
+            typeLine: 'Criatura Legendaria — Guerrero Diabólico',
+            specialMove: 'Presa Hidráulica Trituradora',
+            lore: 'Combatiente despiadado de las legiones oscuras de Snake Mountain al servicio de Skeletor. Su pinza titánica pulveriza cualquier aleación.',
+            stats: { fuerza: 92, magia: 68, defensa: 89, agilidad: 86 }
+        }
+    },
+    {
+        match: /\bfaker\b/i,
+        profile: {
+            themeKey: 'snake_mountain',
+            faction: 'Guerreros del Mal',
+            typeLine: 'Gólem Cibernético — Guerrero Diabólico',
+            specialMove: 'Réplica Macabra de Combate',
+            lore: 'Gólem cibernético de piel azul creado por Skeletor como una réplica despiadada de He-Man para engañar al reino.',
+            stats: { fuerza: 98, magia: 60, defensa: 94, agilidad: 89 }
+        }
+    },
+    {
+        match: /\bscare[\s\-]?glow\b/i,
+        profile: {
+            themeKey: 'snake_mountain',
+            faction: 'Guerreros del Mal',
+            typeLine: 'Espectro de la Oscuridad — Guerrero Diabólico',
+            specialMove: 'Terror Paralizante de Subternia',
+            lore: 'Espectro no-muerto de la oscuridad eterna que infunde un terror paralizante en el corazón de cualquier guerrero.',
+            stats: { fuerza: 87, magia: 97, defensa: 85, agilidad: 92 }
+        }
+    },
+    {
+        match: /\bwhiplash\b/i,
+        profile: {
+            themeKey: 'snake_mountain',
+            faction: 'Guerreros del Mal',
+            typeLine: 'Reptil de Asalto — Guerrero Diabólico',
+            specialMove: 'Azote Ofídico Venenoso',
+            lore: 'Bruto reptiliano con una cola descomunal capaz de aplastar roca sólida y azotar batallones enteros en combate.',
+            stats: { fuerza: 94, magia: 60, defensa: 92, agilidad: 86 }
+        }
+    },
+
+    // -------------------------------------------------------------
+    // LA HORDA DEL TERROR (EVIL HORDE)
+    // -------------------------------------------------------------
+    {
+        match: /\bhordak\b/i,
+        profile: {
+            themeKey: 'evil_horde',
+            faction: 'La Horda del Terror',
+            typeLine: 'Tirano Legendario — Líder de la Horda',
+            specialMove: 'Flecha de Plasma Carmesí de la Horda',
+            lore: 'Tirano supremo de la Zona del Terror y maestro de la tecno-magia oscura, capaz de transmutar su propio cuerpo en armamento mecánico mortal.',
+            stats: { fuerza: 95, magia: 96, defensa: 95, agilidad: 87 }
+        }
+    },
+    {
+        match: /\bshadow\s+weaver\b/i,
+        profile: {
+            themeKey: 'evil_horde',
+            faction: 'La Horda del Terror',
+            typeLine: 'Hechicera de las Sombras — Horda del Terror',
+            specialMove: 'Niebla de Sombras Eternas',
+            lore: 'Poderosa maga oscura de la Horda del Terror, capaz de manipular la oscuridad y tejer maleficios desde la Zona del Terror.',
+            stats: { fuerza: 78, magia: 99, defensa: 85, agilidad: 88 }
+        }
+    },
+    {
+        match: /\bcatra\b/i,
+        profile: {
+            themeKey: 'evil_horde',
+            faction: 'La Horda del Terror',
+            typeLine: 'Capitana de la Fuerza — Horda del Terror',
+            specialMove: 'Transformación Felina de la Máscara',
+            lore: 'Líder de asalto de la Horda dotada de la máscara mágica que le permite transformarse en una pantera salvaje letal.',
+            stats: { fuerza: 88, magia: 87, defensa: 86, agilidad: 98 }
+        }
+    },
+    {
+        match: /\bgrizzlor\b/i,
+        profile: {
+            themeKey: 'evil_horde',
+            faction: 'La Horda del Terror',
+            typeLine: 'Bestia Brutal — Horda del Terror',
+            specialMove: 'Furia Salvaje Destructora',
+            lore: 'Monstruo fiero cubierto de pelaje con una fuerza física descomunal capaz de aplastar cualquier obstáculo.',
+            stats: { fuerza: 96, magia: 50, defensa: 94, agilidad: 82 }
+        }
+    },
+    {
+        match: /\bmantenna\b|\bleech\b|\bscorpia\b|\bmosquitor\b|\bmodulok\b|\bdragstor\b|\bmulti[\s\-]?bot\b/i,
+        profile: {
+            themeKey: 'evil_horde',
+            faction: 'La Horda del Terror',
+            typeLine: 'Monstruo Tecnológico — Soldado de la Horda',
+            specialMove: 'Descarga de Plasma de la Horda',
+            lore: 'Soldado aberrante y bio-mecánico forjado en los laboratorios oscuros de Hordak para conquistar Eternia y Etheria.',
+            stats: { fuerza: 91, magia: 80, defensa: 90, agilidad: 88 }
+        }
+    },
+
+    // -------------------------------------------------------------
+    // LOS HOMBRES SERPIENTE (SNAKE MEN)
+    // -------------------------------------------------------------
+    {
+        match: /\bking\s+hiss\b|\bking\s+hsss\b/i,
+        profile: {
+            themeKey: 'snake_men',
+            faction: 'Los Hombres Serpiente',
+            typeLine: 'Monarca Ofídico — Rey de las Serpientes',
+            specialMove: 'Mordisco Asfixiante del Rey Hiss',
+            lore: 'Antiquísimo monarca ofídico cuyo disfraz oculta una masa de serpientes devoradoras. Regresa del pasado para dominar Eternia.',
+            stats: { fuerza: 93, magia: 95, defensa: 91, agilidad: 93 }
+        }
+    },
+    {
+        match: /\bkobra\s+khan\b|\bkhan\b/i,
+        profile: {
+            themeKey: 'snake_men',
+            faction: 'Los Hombres Serpiente',
+            typeLine: 'Guerrero Reptil — Hombre Serpiente',
+            specialMove: 'Chorro Ácido Corrosivo',
+            lore: 'Astuto guerrero ofídico capaz de exhalar una niebla somnífera y corrosiva mortal para cualquier adversario.',
+            stats: { fuerza: 90, magia: 82, defensa: 88, agilidad: 92 }
+        }
+    },
+    {
+        match: /\brattlor\b|\btung\s+lashr\b|\bsssqueeze\b|\bsnake\s+face\b/i,
+        profile: {
+            themeKey: 'snake_men',
+            faction: 'Los Hombres Serpiente',
+            typeLine: 'Guerrero Ofídico — Hombre Serpiente',
+            specialMove: 'Picadura Venenosa Ancestral',
+            lore: 'Guerrero letal de las huestes ofídicas del Foso de las Serpientes devoto a la dominación reptiliana.',
+            stats: { fuerza: 91, magia: 85, defensa: 89, agilidad: 91 }
+        }
+    },
+
+    // -------------------------------------------------------------
+    // LA GRAN REBELIÓN (GREAT REBELLION / SHE-RA)
+    // -------------------------------------------------------------
+    {
+        match: /\bshe[\s\-]?ra\b/i,
+        profile: {
+            themeKey: 'great_rebellion',
+            faction: 'La Gran Rebelión',
+            typeLine: 'Princesa del Poder — Gran Rebelión',
+            specialMove: 'Por el Honor de Grayskull',
+            lore: '¡Por el honor de Grayskull, soy She-Ra! Princesa del Poder y líder invicta de la Gran Rebelión en Etheria con su fiel corcel Swift Wind.',
+            stats: { fuerza: 98, magia: 94, defensa: 95, agilidad: 96 }
+        }
+    },
+    {
+        match: /\bbow\b|\bglimmer\b|\bfrosta\b|\bangella\b|\bmermista\b|\bcastaspella\b|\bnetossa\b|\bkowl\b/i,
+        profile: {
+            themeKey: 'great_rebellion',
+            faction: 'La Gran Rebelión',
+            typeLine: 'Aliado de la Luz — Gran Rebelión',
+            specialMove: 'Ráfaga de Luz de Etheria',
+            lore: 'Valiente protector de Etheria y miembro insigne de la Gran Rebelión que combate la tiranía de la Horda del Terror.',
+            stats: { fuerza: 88, magia: 92, defensa: 89, agilidad: 92 }
+        }
     }
-    // Default: Guerreros Heroicos (Grayskull)
+];
+
+// Resolver canónico determinista para la interfaz local
+const getLocalMotuProfile = (productName: string, _subCategory?: string): MotuProfile => {
+    const clean = (productName || '').trim();
+
+    for (const entry of MOTU_CHARACTER_PROFILES) {
+        if (entry.match.test(clean)) {
+            return entry.profile;
+        }
+    }
+
+    // Default: Guerrero Heroico Genérico (Castle Grayskull)
     return {
         themeKey: 'castle_grayskull',
         faction: 'Guerreros Heroicos',
         typeLine: 'Criatura Legendaria — Guerrero Heroico',
-        specialMove: clean.includes('ram') ? 'Impacto de Ariete Inamovible' : clean.includes('man-at-arms') ? 'Ráfaga Fotónica Man-At-Arms' : clean.includes('stratos') ? 'Picado Aéreo de Avion' : clean.includes('teela') ? 'Estocada Táctica de la Cobra' : clean.includes('cat') ? 'Desgarro Feroz de la Selva Carmesí' : clean.includes('sorceress') ? 'Escudo del Halcón Místico' : clean.includes('fisto') ? 'Golpe Demoledor de Murallas' : 'Furia del Relámpago de Grayskull',
-        lore: clean.includes('he-man') ? '¡Por el poder de Grayskull, la justicia siempre prevalecerá!' : 'Noble defensor de la corte real de Eternia y custodio de la paz sagrada de Grayskull.',
-        stats: { fuerza: clean.includes('he-man') ? 99 : 88, magia: clean.includes('sorceress') ? 99 : 78, defensa: 95, agilidad: 90 }
+        specialMove: 'Furia del Relámpago de Grayskull',
+        lore: '¡Por el poder de Grayskull, yo tengo el poder! Noble defensor de la corte real de Eternia y custodio de la paz sagrada de Grayskull.',
+        stats: { fuerza: 88, magia: 78, defensa: 95, agilidad: 90 }
     };
 };
 
@@ -288,57 +678,61 @@ const generateTradingCardDataUrl = async (
                 frameImg.onload = () => {
                     ctx.drawImage(frameImg, 0, 0, width, height);
 
-                    // 2. Tipografía en placa de cabecera (y=92)
+                    // 2. Tipografía en placa de cabecera (y=126 / top: 10.5%)
                     ctx.fillStyle = '#ffffff';
-                    ctx.font = '900 28px serif';
+                    ctx.font = '900 26px serif';
                     ctx.textAlign = 'left';
-                    ctx.fillText(titleParts.main.toUpperCase(), 120, 92);
+                    ctx.fillText(titleParts.main.toUpperCase(), 120, 126);
 
                     if (titleParts.sub) {
                         ctx.fillStyle = '#fde68a';
-                        ctx.font = 'bold 16px serif';
-                        ctx.fillText(`• ${titleParts.sub.toUpperCase()}`, 120 + ctx.measureText(titleParts.main.toUpperCase()).width + 12, 92);
+                        ctx.font = 'bold 15px serif';
+                        ctx.fillText(`• ${titleParts.sub.toUpperCase()}`, 120 + ctx.measureText(titleParts.main.toUpperCase()).width + 12, 126);
                     }
 
-                    // 3. Barra de Tipo y Facción (y=573)
+                    // 3. Barra de Tipo y Facción (y=568 / top: 47.3%)
                     ctx.fillStyle = '#fde68a';
-                    ctx.font = 'bold 17px serif';
+                    ctx.font = 'bold 16px serif';
                     ctx.textAlign = 'center';
-                    ctx.fillText(profileData?.typeLine || `CRIATURA LEGENDARIA — ${faction.toUpperCase()}`, width / 2, 573);
+                    ctx.fillText(profileData?.typeLine || `CRIATURA LEGENDARIA — ${faction.toUpperCase()}`, width / 2, 568);
 
-                    // 4. Placa de Poder de Alto Impacto (y=675..730)
-                    ctx.fillStyle = 'rgba(20, 10, 15, 0.9)';
-                    ctx.fillRect(135, 675, 626, 55);
+                    // 4. Placa de Poder de Alto Impacto (y=665..718 / top: 55.4%)
+                    ctx.fillStyle = 'rgba(20, 10, 15, 0.92)';
+                    ctx.fillRect(135, 665, 626, 53);
                     ctx.strokeStyle = '#eab308';
                     ctx.lineWidth = 2;
-                    ctx.strokeRect(135, 675, 626, 55);
+                    ctx.strokeRect(135, 665, 626, 53);
 
                     ctx.textAlign = 'center';
                     ctx.fillStyle = profileData?.specialMoveColor || '#ff8a3d';
-                    ctx.font = '900 22px serif';
-                    ctx.fillText(`⚡ PODER: ${specialMove.toUpperCase()}`, width / 2, 710);
+                    const powerText = `⚡ PODER: ${specialMove.toUpperCase()}`;
+                    ctx.font = '900 20px serif';
+                    if (ctx.measureText(powerText).width > 590) {
+                        ctx.font = '900 16px serif';
+                    }
+                    ctx.fillText(powerText, width / 2, 698);
 
-                    // 5. Flavor Lore Canónico en Cursiva (y=755..880)
+                    // 5. Flavor Lore Canónico en Cursiva (y=745..880 / top: 62.0%)
                     ctx.textAlign = 'left';
                     ctx.fillStyle = profileData?.loreTextColor || '#f5f5f0';
-                    ctx.font = 'italic 19px serif';
+                    ctx.font = 'italic 18px serif';
                     const words = `"${loreText}"`.split(' ');
                     let line = '';
-                    let yPos = 765;
+                    let yPos = 750;
                     for (let n = 0; n < words.length; n++) {
                         const testLine = line + words[n] + ' ';
                         const metrics = ctx.measureText(testLine);
-                        if (metrics.width > 610 && n > 0) {
+                        if (metrics.width > 600 && n > 0) {
                             ctx.fillText(line, 140, yPos);
                             line = words[n] + ' ';
-                            yPos += 30;
+                            yPos += 28;
                         } else {
                             line = testLine;
                         }
                     }
                     ctx.fillText(line, 140, yPos);
 
-                    // 6. Sockets de Combate Centrados (y=1045)
+                    // 6. Sockets de Combate Centrados (y=1045 / top: 87.0%)
                     // Izquierdo: FUE | MAG
                     ctx.textAlign = 'center';
                     ctx.fillStyle = '#fef08a';
@@ -346,7 +740,7 @@ const generateTradingCardDataUrl = async (
                     ctx.fillText(`FUE ${stats.fuerza}  |  MAG ${stats.magia}`, 240, 1045);
 
                     // Derecho: DEF | AGI
-                    ctx.fillText(`DEF ${stats.defensa}  |  AGI ${stats.agilidad}`, 660, 1045);
+                    ctx.fillText(`DEF ${stats.defensa}  |  AGI ${stats.agilidad}`, 655, 1045);
 
                     resolve(canvas.toDataURL('image/png'));
                 };
@@ -1009,14 +1403,14 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                     <div
                                         className="absolute z-20 flex items-center justify-start pointer-events-none overflow-hidden px-1"
                                         style={{
-                                            top: '7.4%',
+                                            top: '10.4%',
                                             left: '13.5%',
                                             width: '58%',
-                                            height: '4.5%'
+                                            height: '4.2%'
                                         }}
                                     >
                                         <div className="flex items-center gap-1.5 min-w-0">
-                                            <h3 className="text-[12px] sm:text-[13px] font-black text-white uppercase tracking-wider truncate tcg-gold-emboss">
+                                            <h3 className="text-[11.5px] sm:text-[12.5px] font-black text-white uppercase tracking-wider truncate tcg-gold-emboss">
                                                 {titleParts.main}
                                             </h3>
                                             {titleParts.sub && (
@@ -1033,9 +1427,9 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                             <div
                                 className="absolute z-20 flex items-center justify-center text-center pointer-events-none px-1"
                                 style={{
-                                    top: '47.5%',
-                                    left: '14.5%',
-                                    width: '71%',
+                                    top: '47.3%',
+                                    left: '14%',
+                                    width: '72%',
                                     height: '3.5%'
                                 }}
                             >
@@ -1048,14 +1442,14 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                             <div
                                 className="absolute z-20 flex items-center justify-center gap-1.5 px-2 py-0.5 rounded-md border border-amber-400/90 bg-gradient-to-r from-black/85 via-amber-950/85 to-black/85 shadow-[0_2px_8px_rgba(0,0,0,0.9)] pointer-events-none overflow-hidden"
                                 style={{
-                                    top: '56.8%',
-                                    left: '14%',
-                                    width: '72%',
-                                    height: '5%'
+                                    top: '55.4%',
+                                    left: '13.5%',
+                                    width: '73%',
+                                    height: '4.8%'
                                 }}
                             >
                                 <Zap className="h-3 w-3 fill-amber-400 text-amber-400 shrink-0 animate-pulse" />
-                                <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-amber-300 truncate tcg-gold-emboss">
+                                <span className="text-[8.5px] sm:text-[9.5px] font-black uppercase tracking-wider text-amber-300 whitespace-nowrap overflow-hidden text-ellipsis tcg-gold-emboss">
                                     PODER: {specialMoveText}
                                 </span>
                             </div>
@@ -1064,10 +1458,10 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                             <div
                                 className="absolute z-20 flex flex-col justify-start pointer-events-none px-2 py-1 overflow-hidden bg-black/25 backdrop-blur-[1px] rounded-lg"
                                 style={{
-                                    top: '63.2%',
+                                    top: '61.5%',
                                     left: '14%',
                                     width: '72%',
-                                    height: '21.5%'
+                                    height: '23%'
                                 }}
                             >
                                 <p
@@ -1086,7 +1480,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                             <div
                                 className="absolute z-20 flex items-center justify-center pointer-events-none"
                                 style={{
-                                    top: '86.5%',
+                                    top: '86.8%',
                                     left: '13.5%',
                                     width: '27%',
                                     height: '4.8%'
@@ -1103,7 +1497,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                             <div
                                 className="absolute z-20 flex items-center justify-center pointer-events-none"
                                 style={{
-                                    top: '86.5%',
+                                    top: '86.8%',
                                     right: '13.5%',
                                     width: '27%',
                                     height: '4.8%'

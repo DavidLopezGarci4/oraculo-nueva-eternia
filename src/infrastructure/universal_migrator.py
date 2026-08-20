@@ -68,7 +68,8 @@ def _sync_engine(engine, label: str):
             ("figure_id", "VARCHAR(100) UNIQUE"),
             ("sub_category", "VARCHAR(100)"),
             ("release_year", "INTEGER"),
-            ("is_vintage", "BOOLEAN DEFAULT FALSE")
+            ("is_vintage", "BOOLEAN DEFAULT FALSE"),
+            ("character_slug", "VARCHAR(100)")
         ]
 
         for col_name, col_type in new_product_cols:

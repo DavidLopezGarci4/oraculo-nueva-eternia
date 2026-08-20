@@ -409,8 +409,20 @@ async def run_daily_scan(progress_callback=None):
         if backup_path:
             logger.info(f"🛡️ Vault sealed at: {backup_path}")
         backup_db.close()
-    except Exception as e:
-        logger.error(f"⚠️ Failed to seal Data Vault: {e}")
+    # PHASE 88: Auto-resolución de Lore para productos nuevos (Caché permanente, 0 coste de red)
+    try:
+        from src.application.services.lore_harvester_service import LoreHarvesterService
+        with SessionLocal() as db_lore:
+            unlinked = db_lore.query(ProductModel).filter(ProductModel.character_slug == None).all()
+            if unlinked:
+                logger.info(f"🔮 Auto-resolviendo lore para {len(unlinked)} productos sin vincular...")
+                for p in unlinked:
+                    lore = LoreHarvesterService.get_or_create_character_lore(db_lore, p.name)
+                    p.character_slug = lore.slug
+                db_lore.commit()
+                logger.info("✨ Auto-resolución de lore finalizada.")
+    except Exception as e_lore:
+        logger.warning(f"⚠️ Error en la auto-asignación de lore durante Daily Scan: {e_lore}")
 
     duration = datetime.now() - start_time
     logger.info(f"🏁 Daily Scan Complete in {duration}. Total: {total_stats}")

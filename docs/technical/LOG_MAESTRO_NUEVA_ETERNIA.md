@@ -1373,6 +1373,20 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
   - **Exportador Dual Sincronizado**: El motor de exportación gráfica por Canvas 2D HD comparte exactamente la misma cuadrícula porcentual que la interfaz React DOM, asegurando descargas PNG en alta resolución calcadas a la pantalla.
   - **Compilación de Producción Validada**: `npm run build` ejecutado y aprobado con 0 errores en 8.69s.
 
+### ⚡ Fase 88: Living Lore Engine MOTU a Coste Cero, Inmutabilidad de Base de Datos y Grimorio de Configuración (20/08/2026)
+
+- **Hitos**: Motor cosechador determinista de Lore MOTU a coste 0 (MediaWiki API de Wiki Grayskull + regex), regla de inmutabilidad y caché permanente en base de datos (`character_lore`), vinculación canónica al 100% de los 507 muñecos, reglas de negocio estrictas (frase canónica de He-Man *"¡Por el poder de Grayskull, yo tengo el poder!"*, Anti-Eternia He-Man como villano de *Guerreros del Mal / Snake Mountain*), traducción canónica oficial de *Evil Warriors* a *Guerreros del Mal*, pestaña **"Grimorio de Lore"** en Configuración con editor visual y hook en Daily Scan.
+- **Estado**: ✅ COMPLETADO Y VERIFICADO
+- **Logros Técnicos**:
+  - **Servicio Cosechador Determinista (`LoreHarvesterService`)**: Mapeo canónico a 0 tokens y 0 créditos IA mediante consultas estructuradas a la API gratuita de MediaWiki (`he-man.fandom.com/api.php`) con expresiones regulares y diccionarios de facciones en español.
+  - **Regla de Inmutabilidad y Caché Permanente**: Una vez guardado o verificado un personaje en la tabla `character_lore`, jamás se vuelve a cosechar o sobreescribir automáticamente. Las 507 figuras de la colección resuelven su lore instantáneamente a 0ms.
+  - **Modelos de Datos y Migración Universal**: Creación del modelo `CharacterLoreModel` y adición de `character_slug` en `ProductModel` sincronizados de forma transparente tanto en SQLite local como en Supabase PostgreSQL mediante `src/infrastructure/universal_migrator.py`.
+  - **Sembrado Inicial Canónico**: Vinculación inmediata del 100% de los 507 productos con 91 perfiles canónicos ricos en facciones, marcos TCG, habilidades, frases célebres y matrices de combate (FUE/MAG/DEF/AGI).
+  - **Pestaña Grimorio de Lore en Configuración (`LoreTab.tsx` & `/api/lore`)**: Interfaz premium con buscador por nombre/lore, selector de facciones, filtro de pendientes de revisión, editor modal de atributos con contador de caracteres (máx 180 para el cromo TCG), botón de re-cosecha manual y aprobación en 1 clic (`is_verified = True`).
+  - **Hook Automatizado en Daily Scan (`daily_scan.py`)**: Auto-resolución de lore para figuras recién descubiertas, guardándolas como borrador para revisión humana sin ralentizar el escaneo.
+  - **Validación Automatizada**: 4 tests unitarios específicos (`tests/unit/test_lore_harvester.py`), suite completa del backend aprobada al 100% (67/67 tests) y frontend compilado con `npm run build` en 8.13s con 0 errores.
+
+
 
 
 

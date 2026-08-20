@@ -237,6 +237,12 @@ Ejecutar la suite real: `.venv\Scripts\python -m pytest tests/` (**63 tests, 0 f
   - Índices de rendimiento en base de datos local y recálculo masivo de estadísticas para 519 productos, reactivando el Radar de Oportunidades.
 
 - **Fase AAA — Ola 4a (2026-07-21)**: troceados `Config.tsx`/`Purgatory.tsx`/`Catalog.tsx` en 24 componentes nuevos (§4). Ver [REPORTE_MEJORAS_AAA.md](../REPORTE_MEJORAS_AAA.md) para el detalle completo y los gaps de verificación.
-- **Fase AAA — Ola 5 (2026-07-21)**: `pip-audit` corrió por primera vez y corrigió 20 CVEs conocidos (`PyJWT`, `pydantic-settings`, `starlette`/`fastapi`). Hallazgo adicional durante la revisión documental: 4 archivos de test existen pero no los recoge `pytest`/CI por el filtro `python_files` de `pyproject.toml` (§8), y uno de ellos (`test_phase0_migration.py::test_migration_logic`) falla al ejecutarlo explícito.
+- **Phase 88**: Living Lore Engine MOTU a Coste Cero, Inmutabilidad de Base de Datos y Grimorio de Configuración (20/08/2026):
+  - Nuevo modelo `CharacterLoreModel` (`character_lore`) y adición de `character_slug` a `ProductModel`.
+  - Cosechador determinista de coste cero `LoreHarvesterService` integrado con la API pública de Wiki Grayskull (MediaWiki) + expresiones regulares.
+  - Regla de inmutabilidad y caché permanente: una vez guardado un personaje, jamás se vuelve a consultar a la red.
+  - Endpoints REST en `/api/lore` (`list_lore`, `get_character_lore`, `update_character_lore`, `harvest_lore`, `seed_lore`).
+  - Nueva pestaña "Grimorio de Lore" en `Config.tsx` con el componente `LoreTab.tsx`.
+  - Hook en `daily_scan.py` para auto-vincular nuevos ítems sin detener el escaneo.
 
-*Última actualización: 2026-07-21 - Fase AAA Ola 4a/5: troceo de monolitos frontend + auditoría de dependencias.*
+*Última actualización: 2026-08-20 - Fase 88: Living Lore Engine MOTU & Grimorio de Lore.*
