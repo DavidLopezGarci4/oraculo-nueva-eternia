@@ -61,7 +61,7 @@ const FACTION_VISUAL_THEMES: Record<string, FactionVisualTheme> = {
     },
     snake_mountain: {
         faction: 'Guerreros del Mal',
-        typeLine: 'Criatura Legendaria — Guerrero Diabólico',
+        typeLine: 'Criatura Legendaria — Guerrero del Mal',
         frameAsset: '/frames/frame_snake_mountain.webp',
         specialMoveColor: '#ff8a3d',
         loreTextColor: '#eedac5'
@@ -95,6 +95,178 @@ const FACTION_VISUAL_THEMES: Record<string, FactionVisualTheme> = {
         loreTextColor: '#e0f2fe'
     }
 };
+
+export interface FactionCardLayout {
+    header: { top: string; left: string; width: string; height: string };
+    textBox: { top: string; left: string; width: string; height: string };
+    powerPlate: {
+        height: string;
+        fontSize: string;
+        border: string;
+        bg: string;
+    };
+    lore: {
+        fontSize: string;
+        lineHeight: string;
+    };
+    typeLine: {
+        fontSize: string;
+        color: string;
+    };
+    leftSocket: { top: string; left: string; width: string; height: string };
+    rightSocket: { top: string; right: string; width: string; height: string };
+    canvas: {
+        header: { x: number; y: number };
+        powerBox: { x: number; y: number; w: number; h: number };
+        powerText: { y: number; fontSize: number };
+        loreText: { y: number; maxW: number; lineH: number; fontSize: number };
+        typeLine: { y: number; fontSize: number };
+        leftSocket: { x: number; y: number };
+        rightSocket: { x: number; y: number };
+    };
+}
+
+export const FACTION_CARD_LAYOUTS: Record<string, FactionCardLayout> = {
+    castle_grayskull: {
+        header: { top: '10.4%', left: '13.5%', width: '58%', height: '4.2%' },
+        textBox: { top: '54.2%', left: '13.5%', width: '73%', height: '30.5%' },
+        powerPlate: {
+            height: '24px',
+            fontSize: '9.5px',
+            border: 'border-amber-400/90',
+            bg: 'from-black/90 via-amber-950/90 to-black/90'
+        },
+        lore: { fontSize: '9px', lineHeight: '1.42' },
+        typeLine: { fontSize: '8px', color: '#fef08a' },
+        leftSocket: { top: '86.8%', left: '14.5%', width: '31.5%', height: '4.5%' },
+        rightSocket: { top: '86.8%', right: '14.5%', width: '31.5%', height: '4.5%' },
+        canvas: {
+            header: { x: 120, y: 126 },
+            powerBox: { x: 130, y: 655, w: 636, h: 48 },
+            powerText: { y: 686, fontSize: 18 },
+            loreText: { y: 730, maxW: 600, lineH: 26, fontSize: 17 },
+            typeLine: { y: 840, fontSize: 15 },
+            leftSocket: { x: 240, y: 1045 },
+            rightSocket: { x: 655, y: 1045 }
+        }
+    },
+    snake_mountain: {
+        header: { top: '10.5%', left: '13.8%', width: '57%', height: '4.2%' },
+        textBox: { top: '54.5%', left: '13.5%', width: '73%', height: '30.2%' },
+        powerPlate: {
+            height: '24px',
+            fontSize: '9.5px',
+            border: 'border-orange-500/90',
+            bg: 'from-black/90 via-stone-950/90 to-black/90'
+        },
+        lore: { fontSize: '9px', lineHeight: '1.42' },
+        typeLine: { fontSize: '8px', color: '#fed7aa' },
+        leftSocket: { top: '86.8%', left: '14.0%', width: '32.0%', height: '4.5%' },
+        rightSocket: { top: '86.8%', right: '14.0%', width: '32.0%', height: '4.5%' },
+        canvas: {
+            header: { x: 124, y: 126 },
+            powerBox: { x: 130, y: 658, w: 636, h: 48 },
+            powerText: { y: 689, fontSize: 18 },
+            loreText: { y: 732, maxW: 600, lineH: 26, fontSize: 17 },
+            typeLine: { y: 840, fontSize: 15 },
+            leftSocket: { x: 240, y: 1045 },
+            rightSocket: { x: 655, y: 1045 }
+        }
+    },
+    evil_horde: {
+        header: { top: '10.2%', left: '13.5%', width: '58%', height: '4.2%' },
+        textBox: { top: '53.8%', left: '13.5%', width: '73%', height: '31.0%' },
+        powerPlate: {
+            height: '24px',
+            fontSize: '9.5px',
+            border: 'border-rose-500/90',
+            bg: 'from-black/90 via-red-950/90 to-black/90'
+        },
+        lore: { fontSize: '9px', lineHeight: '1.42' },
+        typeLine: { fontSize: '8px', color: '#fecaca' },
+        leftSocket: { top: '86.6%', left: '14.0%', width: '32.0%', height: '4.5%' },
+        rightSocket: { top: '86.6%', right: '14.0%', width: '32.0%', height: '4.5%' },
+        canvas: {
+            header: { x: 120, y: 123 },
+            powerBox: { x: 130, y: 648, w: 636, h: 48 },
+            powerText: { y: 679, fontSize: 18 },
+            loreText: { y: 722, maxW: 600, lineH: 26, fontSize: 17 },
+            typeLine: { y: 835, fontSize: 15 },
+            leftSocket: { x: 240, y: 1042 },
+            rightSocket: { x: 655, y: 1042 }
+        }
+    },
+    snake_men: {
+        header: { top: '10.4%', left: '13.5%', width: '58%', height: '4.2%' },
+        textBox: { top: '54.2%', left: '13.5%', width: '73%', height: '30.5%' },
+        powerPlate: {
+            height: '24px',
+            fontSize: '9.5px',
+            border: 'border-lime-400/90',
+            bg: 'from-black/90 via-emerald-950/90 to-black/90'
+        },
+        lore: { fontSize: '9px', lineHeight: '1.42' },
+        typeLine: { fontSize: '8px', color: '#d9f99d' },
+        leftSocket: { top: '86.8%', left: '14.0%', width: '32.0%', height: '4.5%' },
+        rightSocket: { top: '86.8%', right: '14.0%', width: '32.0%', height: '4.5%' },
+        canvas: {
+            header: { x: 120, y: 126 },
+            powerBox: { x: 130, y: 655, w: 636, h: 48 },
+            powerText: { y: 686, fontSize: 18 },
+            loreText: { y: 730, maxW: 600, lineH: 26, fontSize: 17 },
+            typeLine: { y: 840, fontSize: 15 },
+            leftSocket: { x: 240, y: 1045 },
+            rightSocket: { x: 655, y: 1045 }
+        }
+    },
+    great_rebellion: {
+        header: { top: '10.4%', left: '13.5%', width: '58%', height: '4.2%' },
+        textBox: { top: '54.0%', left: '13.5%', width: '73%', height: '30.8%' },
+        powerPlate: {
+            height: '24px',
+            fontSize: '9.5px',
+            border: 'border-pink-400/90',
+            bg: 'from-black/85 via-pink-950/85 to-black/85'
+        },
+        lore: { fontSize: '9px', lineHeight: '1.42' },
+        typeLine: { fontSize: '8px', color: '#fce7f3' },
+        leftSocket: { top: '86.8%', left: '14.0%', width: '32.0%', height: '4.5%' },
+        rightSocket: { top: '86.8%', right: '14.0%', width: '32.0%', height: '4.5%' },
+        canvas: {
+            header: { x: 120, y: 126 },
+            powerBox: { x: 130, y: 652, w: 636, h: 48 },
+            powerText: { y: 683, fontSize: 18 },
+            loreText: { y: 726, maxW: 600, lineH: 26, fontSize: 17 },
+            typeLine: { y: 838, fontSize: 15 },
+            leftSocket: { x: 240, y: 1045 },
+            rightSocket: { x: 655, y: 1045 }
+        }
+    },
+    cosmic_enforcers: {
+        header: { top: '10.4%', left: '13.5%', width: '58%', height: '4.2%' },
+        textBox: { top: '53.8%', left: '13.5%', width: '73%', height: '31.0%' },
+        powerPlate: {
+            height: '24px',
+            fontSize: '9.5px',
+            border: 'border-sky-400/90',
+            bg: 'from-black/90 via-sky-950/90 to-black/90'
+        },
+        lore: { fontSize: '9px', lineHeight: '1.42' },
+        typeLine: { fontSize: '8px', color: '#bae6fd' },
+        leftSocket: { top: '86.8%', left: '14.0%', width: '32.0%', height: '4.5%' },
+        rightSocket: { top: '86.8%', right: '14.0%', width: '32.0%', height: '4.5%' },
+        canvas: {
+            header: { x: 120, y: 126 },
+            powerBox: { x: 130, y: 650, w: 636, h: 48 },
+            powerText: { y: 681, fontSize: 18 },
+            loreText: { y: 724, maxW: 600, lineH: 26, fontSize: 17 },
+            typeLine: { y: 836, fontSize: 15 },
+            leftSocket: { x: 240, y: 1045 },
+            rightSocket: { x: 655, y: 1045 }
+        }
+    }
+};
+
 
 export interface MotuProfile {
     themeKey: 'castle_grayskull' | 'snake_mountain' | 'evil_horde' | 'snake_men' | 'great_rebellion' | 'cosmic_enforcers';
@@ -661,6 +833,8 @@ const generateTradingCardDataUrl = async (
             canvas.height = height;
 
             const titleParts = formatCardTitle(item.product_name || item.name || 'HE-MAN');
+            const themeKey = profileData?.themeKey || 'castle_grayskull';
+            const layout = FACTION_CARD_LAYOUTS[themeKey] || FACTION_CARD_LAYOUTS.castle_grayskull;
             const faction = profileData?.faction || 'Guerreros Heroicos';
             const specialMove = profileData?.specialMove || 'Furia del Relámpago de Grayskull';
             const loreText = aiLore || profileData?.lore || '¡Por el poder de Grayskull, la justicia siempre prevalecerá!';
@@ -678,69 +852,70 @@ const generateTradingCardDataUrl = async (
                 frameImg.onload = () => {
                     ctx.drawImage(frameImg, 0, 0, width, height);
 
-                    // 2. Tipografía en placa de cabecera (y=126 / top: 10.5%)
+                    // 2. Tipografía en placa de cabecera (individual por facción)
                     ctx.fillStyle = '#ffffff';
                     ctx.font = '900 26px serif';
                     ctx.textAlign = 'left';
-                    ctx.fillText(titleParts.main.toUpperCase(), 120, 126);
+                    ctx.fillText(titleParts.main.toUpperCase(), layout.canvas.header.x, layout.canvas.header.y);
 
                     if (titleParts.sub) {
                         ctx.fillStyle = '#fde68a';
                         ctx.font = 'bold 15px serif';
-                        ctx.fillText(`• ${titleParts.sub.toUpperCase()}`, 120 + ctx.measureText(titleParts.main.toUpperCase()).width + 12, 126);
+                        ctx.fillText(`• ${titleParts.sub.toUpperCase()}`, layout.canvas.header.x + ctx.measureText(titleParts.main.toUpperCase()).width + 12, layout.canvas.header.y);
                     }
 
-                    // 3. Barra de Tipo y Facción (y=568 / top: 47.3%)
-                    ctx.fillStyle = '#fde68a';
-                    ctx.font = 'bold 16px serif';
-                    ctx.textAlign = 'center';
-                    ctx.fillText(profileData?.typeLine || `CRIATURA LEGENDARIA — ${faction.toUpperCase()}`, width / 2, 568);
-
-                    // 4. Placa de Poder de Alto Impacto (y=665..718 / top: 55.4%)
-                    ctx.fillStyle = 'rgba(20, 10, 15, 0.92)';
-                    ctx.fillRect(135, 665, 626, 53);
+                    // 3. Placa de Poder de Alto Impacto (En la parte superior de la losa de piedra)
+                    const pb = layout.canvas.powerBox;
+                    ctx.fillStyle = 'rgba(15, 20, 25, 0.90)';
+                    ctx.fillRect(pb.x, pb.y, pb.w, pb.h);
                     ctx.strokeStyle = '#eab308';
                     ctx.lineWidth = 2;
-                    ctx.strokeRect(135, 665, 626, 53);
+                    ctx.strokeRect(pb.x, pb.y, pb.w, pb.h);
 
                     ctx.textAlign = 'center';
-                    ctx.fillStyle = profileData?.specialMoveColor || '#ff8a3d';
+                    ctx.fillStyle = profileData?.specialMoveColor || '#ffdb70';
                     const powerText = `⚡ PODER: ${specialMove.toUpperCase()}`;
-                    ctx.font = '900 20px serif';
+                    ctx.font = `900 ${layout.canvas.powerText.fontSize}px serif`;
                     if (ctx.measureText(powerText).width > 590) {
-                        ctx.font = '900 16px serif';
+                        ctx.font = '900 15px serif';
                     }
-                    ctx.fillText(powerText, width / 2, 698);
+                    ctx.fillText(powerText, width / 2, layout.canvas.powerText.y);
 
-                    // 5. Flavor Lore Canónico en Cursiva (y=745..880 / top: 62.0%)
-                    ctx.textAlign = 'left';
+                    // 4. Flavor Lore Canónico en Cursiva (En el centro de la losa de texto)
+                    ctx.textAlign = 'center';
                     ctx.fillStyle = profileData?.loreTextColor || '#f5f5f0';
-                    ctx.font = 'italic 18px serif';
+                    ctx.font = `italic ${layout.canvas.loreText.fontSize}px serif`;
                     const words = `"${loreText}"`.split(' ');
                     let line = '';
-                    let yPos = 750;
+                    let yPos = layout.canvas.loreText.y;
                     for (let n = 0; n < words.length; n++) {
                         const testLine = line + words[n] + ' ';
                         const metrics = ctx.measureText(testLine);
-                        if (metrics.width > 600 && n > 0) {
-                            ctx.fillText(line, 140, yPos);
+                        if (metrics.width > layout.canvas.loreText.maxW && n > 0) {
+                            ctx.fillText(line.trim(), width / 2, yPos);
                             line = words[n] + ' ';
-                            yPos += 28;
+                            yPos += layout.canvas.loreText.lineH;
                         } else {
                             line = testLine;
                         }
                     }
-                    ctx.fillText(line, 140, yPos);
+                    ctx.fillText(line.trim(), width / 2, yPos);
 
-                    // 6. Sockets de Combate Centrados (y=1045 / top: 87.0%)
+                    // 5. Barra de Categorización / Tipo (DEBAJO del texto de descripción)
+                    ctx.fillStyle = layout.typeLine.color || '#fde68a';
+                    ctx.font = `bold ${layout.canvas.typeLine.fontSize}px serif`;
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`— ${profileData?.typeLine || `CRIATURA LEGENDARIA • ${faction.toUpperCase()}`} —`, width / 2, layout.canvas.typeLine.y);
+
+                    // 6. Sockets de Combate Centrados
                     // Izquierdo: FUE | MAG
                     ctx.textAlign = 'center';
                     ctx.fillStyle = '#fef08a';
                     ctx.font = 'bold 20px serif';
-                    ctx.fillText(`FUE ${stats.fuerza}  |  MAG ${stats.magia}`, 240, 1045);
+                    ctx.fillText(`FUE ${stats.fuerza}  |  MAG ${stats.magia}`, layout.canvas.leftSocket.x, layout.canvas.leftSocket.y);
 
                     // Derecho: DEF | AGI
-                    ctx.fillText(`DEF ${stats.defensa}  |  AGI ${stats.agilidad}`, 655, 1045);
+                    ctx.fillText(`DEF ${stats.defensa}  |  AGI ${stats.agilidad}`, layout.canvas.rightSocket.x, layout.canvas.rightSocket.y);
 
                     resolve(canvas.toDataURL('image/png'));
                 };
@@ -826,6 +1001,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
     const localProfile = getLocalMotuProfile(name, item.sub_category);
     const themeKey = aiResult?.frame_theme || localProfile.themeKey;
     const theme = FACTION_VISUAL_THEMES[themeKey] || FACTION_VISUAL_THEMES.castle_grayskull;
+    const layout = FACTION_CARD_LAYOUTS[themeKey] || FACTION_CARD_LAYOUTS.castle_grayskull;
     const factionName = aiResult?.faction || localProfile.faction;
     const typeLineText = aiResult?.type_line || localProfile.typeLine;
     const specialMoveText = aiResult?.special_move || localProfile.specialMove;
@@ -1395,7 +1571,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                 className="absolute inset-0 w-full h-full object-fill pointer-events-none z-10 select-none drop-shadow-2xl"
                             />
 
-                            {/* CAPA 3 (Frente): Tipografía Vectorial Nítida y Datos Canónicos */}
+                            {/* CAPA 3 (Frente): Tipografía Vectorial Nítida y Datos Canónicos Individualizados */}
                             {/* 1. TÍTULO EN LA CABECERA (Nombre + Subtítulo con formato de lujo) */}
                             {(() => {
                                 const titleParts = formatCardTitle(name);
@@ -1403,10 +1579,10 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                     <div
                                         className="absolute z-20 flex items-center justify-start pointer-events-none overflow-hidden px-1"
                                         style={{
-                                            top: '10.4%',
-                                            left: '13.5%',
-                                            width: '58%',
-                                            height: '4.2%'
+                                            top: layout.header.top,
+                                            left: layout.header.left,
+                                            width: layout.header.width,
+                                            height: layout.header.height
                                         }}
                                     >
                                         <div className="flex items-center gap-1.5 min-w-0">
@@ -1423,67 +1599,71 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                 );
                             })()}
 
-                            {/* 2. BARRA DE TIPO Y FACCIÓN (Texto completo con espaciado sin cortes) */}
+                            {/* 2. CAJA DE TEXTO UNIFICADA (Losa de Piedra: Poder + Lore + Categorización de Tipo) */}
                             <div
-                                className="absolute z-20 flex items-center justify-center text-center pointer-events-none px-1"
+                                className="absolute z-20 flex flex-col justify-between pointer-events-none px-2.5 py-1.5 overflow-hidden rounded-xl bg-black/35 backdrop-blur-[1px] shadow-inner"
                                 style={{
-                                    top: '47.3%',
-                                    left: '14%',
-                                    width: '72%',
-                                    height: '3.5%'
+                                    top: layout.textBox.top,
+                                    left: layout.textBox.left,
+                                    width: layout.textBox.width,
+                                    height: layout.textBox.height
                                 }}
                             >
-                                <span className="text-[7.5px] sm:text-[8.5px] font-black text-amber-100 uppercase tracking-wider truncate drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">
-                                    {typeLineText}
-                                </span>
-                            </div>
-
-                            {/* 3. PLACA DE PODER / HABILIDAD ESPECIAL DE ALTO IMPACTO */}
-                            <div
-                                className="absolute z-20 flex items-center justify-center gap-1.5 px-2 py-0.5 rounded-md border border-amber-400/90 bg-gradient-to-r from-black/85 via-amber-950/85 to-black/85 shadow-[0_2px_8px_rgba(0,0,0,0.9)] pointer-events-none overflow-hidden"
-                                style={{
-                                    top: '55.4%',
-                                    left: '13.5%',
-                                    width: '73%',
-                                    height: '4.8%'
-                                }}
-                            >
-                                <Zap className="h-3 w-3 fill-amber-400 text-amber-400 shrink-0 animate-pulse" />
-                                <span className="text-[8.5px] sm:text-[9.5px] font-black uppercase tracking-wider text-amber-300 whitespace-nowrap overflow-hidden text-ellipsis tcg-gold-emboss">
-                                    PODER: {specialMoveText}
-                                </span>
-                            </div>
-
-                            {/* 4. LOSA DE LORE CANÓNICO (MÁXIMA LEGIBILIDAD) */}
-                            <div
-                                className="absolute z-20 flex flex-col justify-start pointer-events-none px-2 py-1 overflow-hidden bg-black/25 backdrop-blur-[1px] rounded-lg"
-                                style={{
-                                    top: '61.5%',
-                                    left: '14%',
-                                    width: '72%',
-                                    height: '23%'
-                                }}
-                            >
-                                <p
-                                    className="text-[9px] sm:text-[9.5px] italic leading-relaxed text-stone-100 line-clamp-4 drop-shadow-[0_1px_3px_rgba(0,0,0,1)]"
-                                    style={{
-                                        color: theme.loreTextColor,
-                                        textShadow: '0 1px 2px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,0.8)'
-                                    }}
+                                {/* 2a. PLACA DE PODER / HABILIDAD ESPECIAL DE ALTO IMPACTO (Arriba en la losa) */}
+                                <div
+                                    className={`flex items-center justify-center gap-1.5 px-2 py-0.5 rounded-lg border ${layout.powerPlate.border} bg-gradient-to-r ${layout.powerPlate.bg} shadow-[0_2px_8px_rgba(0,0,0,0.9)] shrink-0`}
+                                    style={{ minHeight: '24px' }}
                                 >
-                                    "{loreText}"
-                                </p>
+                                    <Zap className="h-3 w-3 fill-amber-400 text-amber-400 shrink-0 animate-pulse" />
+                                    <span
+                                        className="font-black uppercase tracking-wider whitespace-nowrap overflow-hidden text-ellipsis tcg-gold-emboss"
+                                        style={{
+                                            fontSize: layout.powerPlate.fontSize,
+                                            color: theme.specialMoveColor
+                                        }}
+                                    >
+                                        PODER: {specialMoveText}
+                                    </span>
+                                </div>
+
+                                {/* 2b. TEXTO DE DESCRIPCIÓN / LORE CANÓNICO (En el cuerpo central) */}
+                                <div className="flex-1 flex items-center justify-center text-center my-1 overflow-hidden">
+                                    <p
+                                        className="italic leading-relaxed text-stone-100 line-clamp-3 drop-shadow-[0_1px_3px_rgba(0,0,0,1)]"
+                                        style={{
+                                            fontSize: layout.lore.fontSize,
+                                            lineHeight: layout.lore.lineHeight,
+                                            color: theme.loreTextColor,
+                                            textShadow: '0 1px 2px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,0.8)'
+                                        }}
+                                    >
+                                        "{loreText}"
+                                    </p>
+                                </div>
+
+                                {/* 2c. CATEGORIZACIÓN DE TIPO (Debajo del texto de descripción) */}
+                                <div className="flex items-center justify-center text-center shrink-0 pt-0.5 border-t border-amber-500/20">
+                                    <span
+                                        className="font-black uppercase tracking-wider truncate drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]"
+                                        style={{
+                                            fontSize: layout.typeLine.fontSize,
+                                            color: layout.typeLine.color
+                                        }}
+                                    >
+                                        — {typeLineText} —
+                                    </span>
+                                </div>
                             </div>
 
-                            {/* 5. SOCKETS DE COMBATE CENTRADOS EN LAS CASILLAS DE PIEDRA */}
+                            {/* 3. SOCKETS DE COMBATE CENTRADOS EN LAS CASILLAS DE PIEDRA */}
                             {/* Sockets Izquierdo: FUE | MAG */}
                             <div
                                 className="absolute z-20 flex items-center justify-center pointer-events-none"
                                 style={{
-                                    top: '86.8%',
-                                    left: '13.5%',
-                                    width: '27%',
-                                    height: '4.8%'
+                                    top: layout.leftSocket.top,
+                                    left: layout.leftSocket.left,
+                                    width: layout.leftSocket.width,
+                                    height: layout.leftSocket.height
                                 }}
                             >
                                 <div className="flex items-center justify-center gap-1.5 text-[9px] sm:text-[9.5px] font-bold text-amber-200">
@@ -1497,10 +1677,10 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                             <div
                                 className="absolute z-20 flex items-center justify-center pointer-events-none"
                                 style={{
-                                    top: '86.8%',
-                                    right: '13.5%',
-                                    width: '27%',
-                                    height: '4.8%'
+                                    top: layout.rightSocket.top,
+                                    right: layout.rightSocket.right,
+                                    width: layout.rightSocket.width,
+                                    height: layout.rightSocket.height
                                 }}
                             >
                                 <div className="flex items-center justify-center gap-1.5 text-[9px] sm:text-[9.5px] font-bold text-amber-200">

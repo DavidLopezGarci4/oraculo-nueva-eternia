@@ -1386,6 +1386,18 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
   - **Hook Automatizado en Daily Scan (`daily_scan.py`)**: Auto-resolución de lore para figuras recién descubiertas, guardándolas como borrador para revisión humana sin ralentizar el escaneo.
   - **Validación Automatizada**: 4 tests unitarios específicos (`tests/unit/test_lore_harvester.py`), suite completa del backend aprobada al 100% (67/67 tests) y frontend compilado con `npm run build` en 8.13s con 0 errores.
 
+### ⚡ Fase 89: Calibración Individual de Textos en Losa TCG y Nueva Jerarquía de Facciones (20/08/2026)
+
+- **Hitos**: Diseño e implementación de la disposición independiente por tarjeta TCG en base a una losa de piedra unificada, posicionamiento de la categorización de criatura por debajo de la descripción/lore, reubicación de la placa de poder especial libre de colisiones con los blasones centrales e integración sincronizada tanto en la interfaz React DOM como en el motor de exportación Canvas 2D HD.
+- **Estado**: ✅ COMPLETADO Y VERIFICADO
+- **Logros Técnicos**:
+  - **Estructuración en Losa Unificada (`TradingCardModal.tsx`)**: Agrupación de la Placa de Poder (`⚡ PODER`), el Flavor Lore Canónico y la Categorización del Tipo en una única caja de piedra contenedora con desenfoque de fondo y sombra profunda, garantizando un área de visualización de la ilustración 100% limpia.
+  - **Categorización de Tipo Bajo la Descripción**: Reubicación del texto de tipo (ej: `Criatura Legendaria — Guerrero Heroico`) a la base de la losa, funcionando como firma divisoria antes de las estadísticas de combate RPG.
+  - **Matriz de Coordenadas de Facción (`FACTION_CARD_LAYOUTS`)**: Parametrización individual de coordenadas para cada una de las 6 plantillas de facción (Castle Grayskull, Snake Mountain, Evil Horde, Snake Men, Great Rebellion, Cosmic Enforcers) para solucionar de raíz superposiciones con los escudos centrales.
+  - **Motor de Exportación Sincronizado**: Traslado de la lógica de coordenadas a la función `generateTradingCardDataUrl` del Canvas 2D, asegurando que el PNG HD exportado sea idéntico al renderizado web interactivo.
+  - **Compilación y Robustez**: Suite completa del backend aprobada al 100% (67/67 tests) y frontend compilado con `npm run build` en 8.14s con 0 errores.
+
+
 
 
 
