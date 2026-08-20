@@ -61,20 +61,20 @@ export const DEFAULT_FACTION_CARD_LAYOUTS: Record<string, FactionCardLayout> = {
         },
         lore: { fontSize: '9.5px', lineHeight: '1.45' },
         typeLine: { fontSize: '8px', color: '#fef08a' },
-        statFue: { top: '87.2%', left: '21.2%', fontSize: '11.5px', labelFontSize: '7px' },
-        statMag: { top: '87.2%', left: '34.4%', fontSize: '11.5px', labelFontSize: '7px' },
-        statDef: { top: '87.2%', left: '65.6%', fontSize: '11.5px', labelFontSize: '7px' },
-        statAgi: { top: '87.2%', left: '78.8%', fontSize: '11.5px', labelFontSize: '7px' },
+        statFue: { top: '87.5%', left: '21.0%', fontSize: '11.5px', labelFontSize: '7px' },
+        statMag: { top: '87.5%', left: '35.0%', fontSize: '11.5px', labelFontSize: '7px' },
+        statDef: { top: '87.5%', left: '76.3%', fontSize: '11.5px', labelFontSize: '7px' },
+        statAgi: { top: '87.5%', left: '90.0%', fontSize: '11.5px', labelFontSize: '7px' },
         canvas: {
             header: { x: 120, y: 126 },
             powerBox: { x: 130, y: 655, w: 636, h: 48 },
             powerText: { y: 686, fontSize: 18 },
             loreText: { y: 730, maxW: 600, lineH: 26, fontSize: 17 },
             typeLine: { y: 840, fontSize: 15 },
-            statFue: { x: 190, y: 1046 },
-            statMag: { x: 308, y: 1046 },
-            statDef: { x: 588, y: 1046 },
-            statAgi: { x: 706, y: 1046 }
+            statFue: { x: 188, y: 1050 },
+            statMag: { x: 314, y: 1050 },
+            statDef: { x: 684, y: 1050 },
+            statAgi: { x: 806, y: 1050 }
         }
     },
     snake_mountain: {
@@ -88,20 +88,20 @@ export const DEFAULT_FACTION_CARD_LAYOUTS: Record<string, FactionCardLayout> = {
         },
         lore: { fontSize: '9.5px', lineHeight: '1.45' },
         typeLine: { fontSize: '8px', color: '#fed7aa' },
-        statFue: { top: '87.2%', left: '21.2%', fontSize: '11.5px', labelFontSize: '7px' },
-        statMag: { top: '87.2%', left: '34.4%', fontSize: '11.5px', labelFontSize: '7px' },
-        statDef: { top: '87.2%', left: '65.6%', fontSize: '11.5px', labelFontSize: '7px' },
-        statAgi: { top: '87.2%', left: '78.8%', fontSize: '11.5px', labelFontSize: '7px' },
+        statFue: { top: '87.7%', left: '28.1%', fontSize: '11.5px', labelFontSize: '7px' },
+        statMag: { top: '87.7%', left: '49.1%', fontSize: '11.5px', labelFontSize: '7px' },
+        statDef: { top: '87.7%', left: '69.8%', fontSize: '11.5px', labelFontSize: '7px' },
+        statAgi: { top: '87.7%', left: '90.6%', fontSize: '11.5px', labelFontSize: '7px' },
         canvas: {
             header: { x: 124, y: 126 },
             powerBox: { x: 130, y: 658, w: 636, h: 48 },
             powerText: { y: 689, fontSize: 18 },
             loreText: { y: 732, maxW: 600, lineH: 26, fontSize: 17 },
             typeLine: { y: 840, fontSize: 15 },
-            statFue: { x: 190, y: 1046 },
-            statMag: { x: 308, y: 1046 },
-            statDef: { x: 588, y: 1046 },
-            statAgi: { x: 706, y: 1046 }
+            statFue: { x: 252, y: 1052 },
+            statMag: { x: 440, y: 1052 },
+            statDef: { x: 626, y: 1052 },
+            statAgi: { x: 812, y: 1052 }
         }
     },
     evil_horde: {
@@ -115,20 +115,20 @@ export const DEFAULT_FACTION_CARD_LAYOUTS: Record<string, FactionCardLayout> = {
         },
         lore: { fontSize: '9.5px', lineHeight: '1.45' },
         typeLine: { fontSize: '8px', color: '#fecaca' },
-        statFue: { top: '87.0%', left: '21.2%', fontSize: '11.5px', labelFontSize: '7px' },
-        statMag: { top: '87.0%', left: '34.4%', fontSize: '11.5px', labelFontSize: '7px' },
-        statDef: { top: '87.0%', left: '65.6%', fontSize: '11.5px', labelFontSize: '7px' },
-        statAgi: { top: '87.0%', left: '78.8%', fontSize: '11.5px', labelFontSize: '7px' },
+        statFue: { top: '86.8%', left: '23.2%', fontSize: '11.5px', labelFontSize: '7px' },
+        statMag: { top: '86.8%', left: '44.4%', fontSize: '11.5px', labelFontSize: '7px' },
+        statDef: { top: '86.8%', left: '66.3%', fontSize: '11.5px', labelFontSize: '7px' },
+        statAgi: { top: '86.8%', left: '87.9%', fontSize: '11.5px', labelFontSize: '7px' },
         canvas: {
             header: { x: 120, y: 123 },
             powerBox: { x: 130, y: 648, w: 636, h: 48 },
             powerText: { y: 679, fontSize: 18 },
             loreText: { y: 722, maxW: 600, lineH: 26, fontSize: 17 },
             typeLine: { y: 835, fontSize: 15 },
-            statFue: { x: 190, y: 1044 },
-            statMag: { x: 308, y: 1044 },
-            statDef: { x: 588, y: 1044 },
-            statAgi: { x: 706, y: 1044 }
+            statFue: { x: 208, y: 1042 },
+            statMag: { x: 398, y: 1042 },
+            statDef: { x: 594, y: 1042 },
+            statAgi: { x: 788, y: 1042 }
         }
     },
     snake_men: {
@@ -142,20 +142,20 @@ export const DEFAULT_FACTION_CARD_LAYOUTS: Record<string, FactionCardLayout> = {
         },
         lore: { fontSize: '9.5px', lineHeight: '1.45' },
         typeLine: { fontSize: '8px', color: '#d9f99d' },
-        statFue: { top: '87.2%', left: '21.2%', fontSize: '11.5px', labelFontSize: '7px' },
-        statMag: { top: '87.2%', left: '34.4%', fontSize: '11.5px', labelFontSize: '7px' },
-        statDef: { top: '87.2%', left: '65.6%', fontSize: '11.5px', labelFontSize: '7px' },
-        statAgi: { top: '87.2%', left: '78.8%', fontSize: '11.5px', labelFontSize: '7px' },
+        statFue: { top: '87.7%', left: '27.5%', fontSize: '11.5px', labelFontSize: '7px' },
+        statMag: { top: '87.7%', left: '46.4%', fontSize: '11.5px', labelFontSize: '7px' },
+        statDef: { top: '87.7%', left: '65.2%', fontSize: '11.5px', labelFontSize: '7px' },
+        statAgi: { top: '87.7%', left: '84.2%', fontSize: '11.5px', labelFontSize: '7px' },
         canvas: {
             header: { x: 120, y: 126 },
             powerBox: { x: 130, y: 655, w: 636, h: 48 },
             powerText: { y: 686, fontSize: 18 },
             loreText: { y: 730, maxW: 600, lineH: 26, fontSize: 17 },
             typeLine: { y: 840, fontSize: 15 },
-            statFue: { x: 190, y: 1046 },
-            statMag: { x: 308, y: 1046 },
-            statDef: { x: 588, y: 1046 },
-            statAgi: { x: 706, y: 1046 }
+            statFue: { x: 246, y: 1052 },
+            statMag: { x: 416, y: 1052 },
+            statDef: { x: 584, y: 1052 },
+            statAgi: { x: 754, y: 1052 }
         }
     },
     great_rebellion: {
@@ -169,20 +169,20 @@ export const DEFAULT_FACTION_CARD_LAYOUTS: Record<string, FactionCardLayout> = {
         },
         lore: { fontSize: '9.5px', lineHeight: '1.45' },
         typeLine: { fontSize: '8px', color: '#fce7f3' },
-        statFue: { top: '87.2%', left: '21.2%', fontSize: '11.5px', labelFontSize: '7px' },
-        statMag: { top: '87.2%', left: '34.4%', fontSize: '11.5px', labelFontSize: '7px' },
+        statFue: { top: '87.2%', left: '21.8%', fontSize: '11.5px', labelFontSize: '7px' },
+        statMag: { top: '87.2%', left: '45.8%', fontSize: '11.5px', labelFontSize: '7px' },
         statDef: { top: '87.2%', left: '65.6%', fontSize: '11.5px', labelFontSize: '7px' },
-        statAgi: { top: '87.2%', left: '78.8%', fontSize: '11.5px', labelFontSize: '7px' },
+        statAgi: { top: '87.2%', left: '89.8%', fontSize: '11.5px', labelFontSize: '7px' },
         canvas: {
             header: { x: 120, y: 126 },
             powerBox: { x: 130, y: 652, w: 636, h: 48 },
             powerText: { y: 683, fontSize: 18 },
             loreText: { y: 726, maxW: 600, lineH: 26, fontSize: 17 },
             typeLine: { y: 838, fontSize: 15 },
-            statFue: { x: 190, y: 1046 },
-            statMag: { x: 308, y: 1046 },
+            statFue: { x: 195, y: 1046 },
+            statMag: { x: 410, y: 1046 },
             statDef: { x: 588, y: 1046 },
-            statAgi: { x: 706, y: 1046 }
+            statAgi: { x: 805, y: 1046 }
         }
     },
     cosmic_enforcers: {
@@ -196,31 +196,33 @@ export const DEFAULT_FACTION_CARD_LAYOUTS: Record<string, FactionCardLayout> = {
         },
         lore: { fontSize: '9.5px', lineHeight: '1.45' },
         typeLine: { fontSize: '8px', color: '#bae6fd' },
-        statFue: { top: '87.2%', left: '21.2%', fontSize: '11.5px', labelFontSize: '7px' },
-        statMag: { top: '87.2%', left: '34.4%', fontSize: '11.5px', labelFontSize: '7px' },
-        statDef: { top: '87.2%', left: '65.6%', fontSize: '11.5px', labelFontSize: '7px' },
-        statAgi: { top: '87.2%', left: '78.8%', fontSize: '11.5px', labelFontSize: '7px' },
+        statFue: { top: '86.8%', left: '23.7%', fontSize: '11.5px', labelFontSize: '7px' },
+        statMag: { top: '86.8%', left: '44.9%', fontSize: '11.5px', labelFontSize: '7px' },
+        statDef: { top: '86.8%', left: '66.3%', fontSize: '11.5px', labelFontSize: '7px' },
+        statAgi: { top: '86.8%', left: '87.5%', fontSize: '11.5px', labelFontSize: '7px' },
         canvas: {
             header: { x: 120, y: 126 },
             powerBox: { x: 130, y: 650, w: 636, h: 48 },
             powerText: { y: 681, fontSize: 18 },
             loreText: { y: 724, maxW: 600, lineH: 26, fontSize: 17 },
             typeLine: { y: 836, fontSize: 15 },
-            statFue: { x: 190, y: 1046 },
-            statMag: { x: 308, y: 1046 },
-            statDef: { x: 588, y: 1046 },
-            statAgi: { x: 706, y: 1046 }
+            statFue: { x: 212, y: 1042 },
+            statMag: { x: 402, y: 1042 },
+            statDef: { x: 594, y: 1042 },
+            statAgi: { x: 784, y: 1042 }
         }
     }
 };
 
+const FRAME_CACHE_VERSION = 'v=4cavities_3d_v2';
+
 const FACTION_OPTIONS = [
-    { key: 'castle_grayskull', name: 'Guerreros Heroicos', icon: '🏰', frame: '/frames/frame_castle_grayskull.webp', color: 'text-amber-400', border: 'border-amber-500/40' },
-    { key: 'snake_mountain', name: 'Guerreros del Mal', icon: '🌋', frame: '/frames/frame_snake_mountain.webp', color: 'text-orange-400', border: 'border-orange-500/40' },
-    { key: 'evil_horde', name: 'La Horda del Terror', icon: '🦇', frame: '/frames/frame_evil_horde.webp', color: 'text-red-400', border: 'border-red-500/40' },
-    { key: 'snake_men', name: 'Los Hombres Serpiente', icon: '🐍', frame: '/frames/frame_snake_men.webp', color: 'text-lime-400', border: 'border-lime-500/40' },
-    { key: 'great_rebellion', name: 'La Gran Rebelión', icon: '✨', frame: '/frames/frame_great_rebellion.webp', color: 'text-pink-400', border: 'border-pink-500/40' },
-    { key: 'cosmic_enforcers', name: 'Guardianes Cósmicos', icon: '🌌', frame: '/frames/frame_cosmic_enforcers.webp', color: 'text-sky-400', border: 'border-sky-500/40' }
+    { key: 'castle_grayskull', name: 'Guerreros Heroicos', icon: '🏰', frame: `/frames/frame_castle_grayskull.webp?${FRAME_CACHE_VERSION}`, color: 'text-amber-400', border: 'border-amber-500/40' },
+    { key: 'snake_mountain', name: 'Guerreros del Mal', icon: '🌋', frame: `/frames/frame_snake_mountain.webp?${FRAME_CACHE_VERSION}`, color: 'text-orange-400', border: 'border-orange-500/40' },
+    { key: 'evil_horde', name: 'La Horda del Terror', icon: '🦇', frame: `/frames/frame_evil_horde.webp?${FRAME_CACHE_VERSION}`, color: 'text-red-400', border: 'border-red-500/40' },
+    { key: 'snake_men', name: 'Los Hombres Serpiente', icon: '🐍', frame: `/frames/frame_snake_men.webp?${FRAME_CACHE_VERSION}`, color: 'text-lime-400', border: 'border-lime-500/40' },
+    { key: 'great_rebellion', name: 'La Gran Rebelión', icon: '✨', frame: `/frames/frame_great_rebellion.webp?${FRAME_CACHE_VERSION}`, color: 'text-pink-400', border: 'border-pink-500/40' },
+    { key: 'cosmic_enforcers', name: 'Guardianes Cósmicos', icon: '🌌', frame: `/frames/frame_cosmic_enforcers.webp?${FRAME_CACHE_VERSION}`, color: 'text-sky-400', border: 'border-sky-500/40' }
 ];
 
 const SAMPLE_CHARACTERS: Record<string, { name: string; sub: string; power: string; lore: string; typeLine: string; stats: { fue: number; mag: number; def: number; agi: number } }> = {

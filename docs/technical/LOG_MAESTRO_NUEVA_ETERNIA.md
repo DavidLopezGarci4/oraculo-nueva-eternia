@@ -1428,16 +1428,16 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
     - 🔵 **Defensa (`DEF`)**: Marco azul escudo `border-sky-500/50` y etiqueta en cian.
     - 🟢 **Agilidad (`AGI`)**: Marco verde esmeralda `border-emerald-500/50` y etiqueta en menta.
   - **Sincronización Total con el Taller TCG Studio (`TcgConfigTab.tsx`)**: El simulador a 60fps renderiza las 4 mini-cápsulas en tiempo real y permite a los administradores ajustar los sliders de posición, altura y anchura (`leftSocket` / `rightSocket`) para cada una de las 6 facciones.
-### ⚡ Fase 95: Engarces de Orbes 3D Nativos en Marcos TCG y Calibrador Cuádruple Independiente (20/08/2026)
+### ⚡ Fase 95: Integración de 4 Cavidades 3D Nativas en Marcos TCG y Calibración Milimétrica (20/08/2026)
 
-- **Hitos**: Reconfiguración integral y eliminación de parches/cajas CSS en la barra inferior de las cartas TCG. Se esculpieron **4 engarces y orbes circulares 3D nativos horneados directamente en el arte de los 6 marcos WebP** con los materiales de cada facción (bronce forjado en Grayskull, basalto volcánico en Snake Mountain, biometal carmesí en la Horda, oro ofídico en Snake Men, oro rosa en la Gran Rebelión y titanio cósmico en Zodac). Se desacopló la calibración en **4 controladores independientes (`statFue`, `statMag`, `statDef`, `statAgi`)** para mover y posicionar al milímetro cada valor en su orbe correspondiente.
+- **Hitos**: Reconfiguración integral y horneado definitivo de **4 cavidades esféricas y gemas 3D esculpidas de forma nativa en el arte de los 6 marcos WebP** (`/public/frames/*.webp`). Eliminación total de parches y cajas CSS, calibración milimétrica de las 4 estadísticas (`FUE`, `MAG`, `DEF`, `AGI`) sobre los centros físicos de cada cavidad y habilitación de cache-busting (`?v=4cavities_3d_v2`) para refresco inmediato en navegador.
 - **Estado**: ✅ COMPLETADO Y VERIFICADO
 - **Logros Técnicos**:
-  - **Escultura 3D Horneada en Marcos WebP (`frontend/public/frames/`)**: Renderizado en alta resolución a 4x con antialiasing Lanczos de 4 medallones/orbes con sombras arrojadas, biseles metálicos direccionales, lechos profundos con colores identitarios (Rojo, Púrpura, Azul, Verde) y reflejos especulares.
-  - **Calibración Cuádruple Independiente (`TcgConfigTab.tsx`)**: 4 sub-paneles con sliders de coordenadas X e Y y tamaños de fuente para situar cada estadística en el centro de su orbe para cada una de las 6 plantillas de bando.
-  - **Eliminación Total de Cajas Planas CSS (`TradingCardModal.tsx`)**: La tipografía vectorial se proyecta de forma pura y limpia con relieve de oro/blanco (`tcg-gold-emboss`) sobre el propio arte 3D.
-  - **Sincronización Canvas 2D HD (`generateTradingCardDataUrl`)**: Motor de exportación adaptado para renderizar con máxima resolución sobre las coordenadas de los 4 orbes esculpidos.
-  - **Verificación Automatizada**: Tests unitarios aprobados (7/7 pasados) y compilación del frontend completada con `npm run build` en 9.52s con 0 errores.
+  - **Escultura 3D Horneada por Bando (`frontend/public/frames/`)**: 4 cavidades esculpidas para cada facción (oro envejecido en Grayskull, basalto volcánico en Snake Mountain, bio-metal carmesí en Hordak, oro ofídico en Snake Men, filigrana de oro rosa en She-Ra y titanio espacial en Zodac).
+  - **Calibración Cuádruple de Alta Precisión (`TcgConfigTab.tsx` & `TradingCardModal.tsx`)**: Coordenadas exactas por bando con controladores independientes para `statFue`, `statMag`, `statDef`, `statAgi`.
+  - **Eliminación Total de Cajas Planas CSS**: La tipografía vectorial se proyecta de forma pura y limpia con relieve de oro/blanco (`tcg-gold-emboss`) en el centro de cada cavidad esculpida.
+  - **Sincronización Canvas 2D HD (`generateTradingCardDataUrl`)**: Motor de exportación adaptado para renderizar con máxima resolución sobre las coordenadas de las 4 cavidades esculpidas.
+  - **Verificación Automatizada**: Tests unitarios aprobados (7/7 pasados) y compilación del frontend completada con `npm run build` en 9.74s con 0 errores.
 
 
 

@@ -57,46 +57,48 @@ interface FactionVisualTheme {
     loreTextColor: string;
 }
 
+const FRAME_CACHE_VERSION = 'v=4cavities_3d_v2';
+
 const FACTION_VISUAL_THEMES: Record<string, FactionVisualTheme> = {
     castle_grayskull: {
         faction: 'Guerreros Heroicos',
         typeLine: 'Criatura Legendaria — Guerrero Heroico',
-        frameAsset: '/frames/frame_castle_grayskull.webp',
+        frameAsset: `/frames/frame_castle_grayskull.webp?${FRAME_CACHE_VERSION}`,
         specialMoveColor: '#ffdb70',
         loreTextColor: '#e2eedd'
     },
     snake_mountain: {
         faction: 'Guerreros del Mal',
         typeLine: 'Criatura Legendaria — Guerrero del Mal',
-        frameAsset: '/frames/frame_snake_mountain.webp',
+        frameAsset: `/frames/frame_snake_mountain.webp?${FRAME_CACHE_VERSION}`,
         specialMoveColor: '#ff8a3d',
         loreTextColor: '#eedac5'
     },
     evil_horde: {
         faction: 'La Horda del Terror',
         typeLine: 'Tirano Legendario — Soldado de la Horda',
-        frameAsset: '/frames/frame_evil_horde.webp',
+        frameAsset: `/frames/frame_evil_horde.webp?${FRAME_CACHE_VERSION}`,
         specialMoveColor: '#fca5a5',
         loreTextColor: '#fee2e2'
     },
     snake_men: {
         faction: 'Los Hombres Serpiente',
         typeLine: 'Monarca Ofídico — Hombre Serpiente',
-        frameAsset: '/frames/frame_snake_men.webp',
+        frameAsset: `/frames/frame_snake_men.webp?${FRAME_CACHE_VERSION}`,
         specialMoveColor: '#bef264',
         loreTextColor: '#ecfccb'
     },
     great_rebellion: {
         faction: 'La Gran Rebelión',
         typeLine: 'Princesa del Poder — Gran Rebelión',
-        frameAsset: '/frames/frame_great_rebellion.webp',
+        frameAsset: `/frames/frame_great_rebellion.webp?${FRAME_CACHE_VERSION}`,
         specialMoveColor: '#fbcfe8',
         loreTextColor: '#fdf2f8'
     },
     cosmic_enforcers: {
         faction: 'Guardianes Cósmicos',
         typeLine: 'Ejecutor Cósmico — Juez del Equilibrio',
-        frameAsset: '/frames/frame_cosmic_enforcers.webp',
+        frameAsset: `/frames/frame_cosmic_enforcers.webp?${FRAME_CACHE_VERSION}`,
         specialMoveColor: '#7dd3fc',
         loreTextColor: '#e0f2fe'
     }
@@ -116,20 +118,20 @@ export const FACTION_CARD_LAYOUTS: Record<string, FactionCardLayout> = {
         },
         lore: { fontSize: '9px', lineHeight: '1.42' },
         typeLine: { fontSize: '8px', color: '#fef08a' },
-        statFue: { top: '87.2%', left: '21.2%', fontSize: '11.5px', labelFontSize: '7px' },
-        statMag: { top: '87.2%', left: '34.4%', fontSize: '11.5px', labelFontSize: '7px' },
-        statDef: { top: '87.2%', left: '65.6%', fontSize: '11.5px', labelFontSize: '7px' },
-        statAgi: { top: '87.2%', left: '78.8%', fontSize: '11.5px', labelFontSize: '7px' },
+        statFue: { top: '87.5%', left: '21.0%', fontSize: '11.5px', labelFontSize: '7px' },
+        statMag: { top: '87.5%', left: '35.0%', fontSize: '11.5px', labelFontSize: '7px' },
+        statDef: { top: '87.5%', left: '76.3%', fontSize: '11.5px', labelFontSize: '7px' },
+        statAgi: { top: '87.5%', left: '90.0%', fontSize: '11.5px', labelFontSize: '7px' },
         canvas: {
             header: { x: 120, y: 126 },
             powerBox: { x: 130, y: 655, w: 636, h: 48 },
             powerText: { y: 686, fontSize: 18 },
             loreText: { y: 730, maxW: 600, lineH: 26, fontSize: 17 },
             typeLine: { y: 840, fontSize: 15 },
-            statFue: { x: 190, y: 1046 },
-            statMag: { x: 308, y: 1046 },
-            statDef: { x: 588, y: 1046 },
-            statAgi: { x: 706, y: 1046 }
+            statFue: { x: 188, y: 1050 },
+            statMag: { x: 314, y: 1050 },
+            statDef: { x: 684, y: 1050 },
+            statAgi: { x: 806, y: 1050 }
         }
     },
     snake_mountain: {
@@ -143,20 +145,20 @@ export const FACTION_CARD_LAYOUTS: Record<string, FactionCardLayout> = {
         },
         lore: { fontSize: '9px', lineHeight: '1.42' },
         typeLine: { fontSize: '8px', color: '#fed7aa' },
-        statFue: { top: '87.2%', left: '21.2%', fontSize: '11.5px', labelFontSize: '7px' },
-        statMag: { top: '87.2%', left: '34.4%', fontSize: '11.5px', labelFontSize: '7px' },
-        statDef: { top: '87.2%', left: '65.6%', fontSize: '11.5px', labelFontSize: '7px' },
-        statAgi: { top: '87.2%', left: '78.8%', fontSize: '11.5px', labelFontSize: '7px' },
+        statFue: { top: '87.7%', left: '28.1%', fontSize: '11.5px', labelFontSize: '7px' },
+        statMag: { top: '87.7%', left: '49.1%', fontSize: '11.5px', labelFontSize: '7px' },
+        statDef: { top: '87.7%', left: '69.8%', fontSize: '11.5px', labelFontSize: '7px' },
+        statAgi: { top: '87.7%', left: '90.6%', fontSize: '11.5px', labelFontSize: '7px' },
         canvas: {
             header: { x: 124, y: 126 },
             powerBox: { x: 130, y: 658, w: 636, h: 48 },
             powerText: { y: 689, fontSize: 18 },
             loreText: { y: 732, maxW: 600, lineH: 26, fontSize: 17 },
             typeLine: { y: 840, fontSize: 15 },
-            statFue: { x: 190, y: 1046 },
-            statMag: { x: 308, y: 1046 },
-            statDef: { x: 588, y: 1046 },
-            statAgi: { x: 706, y: 1046 }
+            statFue: { x: 252, y: 1052 },
+            statMag: { x: 440, y: 1052 },
+            statDef: { x: 626, y: 1052 },
+            statAgi: { x: 812, y: 1052 }
         }
     },
     evil_horde: {
@@ -170,20 +172,20 @@ export const FACTION_CARD_LAYOUTS: Record<string, FactionCardLayout> = {
         },
         lore: { fontSize: '9px', lineHeight: '1.42' },
         typeLine: { fontSize: '8px', color: '#fecaca' },
-        statFue: { top: '87.0%', left: '21.2%', fontSize: '11.5px', labelFontSize: '7px' },
-        statMag: { top: '87.0%', left: '34.4%', fontSize: '11.5px', labelFontSize: '7px' },
-        statDef: { top: '87.0%', left: '65.6%', fontSize: '11.5px', labelFontSize: '7px' },
-        statAgi: { top: '87.0%', left: '78.8%', fontSize: '11.5px', labelFontSize: '7px' },
+        statFue: { top: '86.8%', left: '23.2%', fontSize: '11.5px', labelFontSize: '7px' },
+        statMag: { top: '86.8%', left: '44.4%', fontSize: '11.5px', labelFontSize: '7px' },
+        statDef: { top: '86.8%', left: '66.3%', fontSize: '11.5px', labelFontSize: '7px' },
+        statAgi: { top: '86.8%', left: '87.9%', fontSize: '11.5px', labelFontSize: '7px' },
         canvas: {
             header: { x: 120, y: 123 },
             powerBox: { x: 130, y: 648, w: 636, h: 48 },
             powerText: { y: 679, fontSize: 18 },
             loreText: { y: 722, maxW: 600, lineH: 26, fontSize: 17 },
             typeLine: { y: 835, fontSize: 15 },
-            statFue: { x: 190, y: 1044 },
-            statMag: { x: 308, y: 1044 },
-            statDef: { x: 588, y: 1044 },
-            statAgi: { x: 706, y: 1044 }
+            statFue: { x: 208, y: 1042 },
+            statMag: { x: 398, y: 1042 },
+            statDef: { x: 594, y: 1042 },
+            statAgi: { x: 788, y: 1042 }
         }
     },
     snake_men: {
@@ -197,20 +199,20 @@ export const FACTION_CARD_LAYOUTS: Record<string, FactionCardLayout> = {
         },
         lore: { fontSize: '9px', lineHeight: '1.42' },
         typeLine: { fontSize: '8px', color: '#d9f99d' },
-        statFue: { top: '87.2%', left: '21.2%', fontSize: '11.5px', labelFontSize: '7px' },
-        statMag: { top: '87.2%', left: '34.4%', fontSize: '11.5px', labelFontSize: '7px' },
-        statDef: { top: '87.2%', left: '65.6%', fontSize: '11.5px', labelFontSize: '7px' },
-        statAgi: { top: '87.2%', left: '78.8%', fontSize: '11.5px', labelFontSize: '7px' },
+        statFue: { top: '87.7%', left: '27.5%', fontSize: '11.5px', labelFontSize: '7px' },
+        statMag: { top: '87.7%', left: '46.4%', fontSize: '11.5px', labelFontSize: '7px' },
+        statDef: { top: '87.7%', left: '65.2%', fontSize: '11.5px', labelFontSize: '7px' },
+        statAgi: { top: '87.7%', left: '84.2%', fontSize: '11.5px', labelFontSize: '7px' },
         canvas: {
             header: { x: 120, y: 126 },
             powerBox: { x: 130, y: 655, w: 636, h: 48 },
             powerText: { y: 686, fontSize: 18 },
             loreText: { y: 730, maxW: 600, lineH: 26, fontSize: 17 },
             typeLine: { y: 840, fontSize: 15 },
-            statFue: { x: 190, y: 1046 },
-            statMag: { x: 308, y: 1046 },
-            statDef: { x: 588, y: 1046 },
-            statAgi: { x: 706, y: 1046 }
+            statFue: { x: 246, y: 1052 },
+            statMag: { x: 416, y: 1052 },
+            statDef: { x: 584, y: 1052 },
+            statAgi: { x: 754, y: 1052 }
         }
     },
     great_rebellion: {
@@ -224,20 +226,20 @@ export const FACTION_CARD_LAYOUTS: Record<string, FactionCardLayout> = {
         },
         lore: { fontSize: '9px', lineHeight: '1.42' },
         typeLine: { fontSize: '8px', color: '#fce7f3' },
-        statFue: { top: '87.2%', left: '21.2%', fontSize: '11.5px', labelFontSize: '7px' },
-        statMag: { top: '87.2%', left: '34.4%', fontSize: '11.5px', labelFontSize: '7px' },
+        statFue: { top: '87.2%', left: '21.8%', fontSize: '11.5px', labelFontSize: '7px' },
+        statMag: { top: '87.2%', left: '45.8%', fontSize: '11.5px', labelFontSize: '7px' },
         statDef: { top: '87.2%', left: '65.6%', fontSize: '11.5px', labelFontSize: '7px' },
-        statAgi: { top: '87.2%', left: '78.8%', fontSize: '11.5px', labelFontSize: '7px' },
+        statAgi: { top: '87.2%', left: '89.8%', fontSize: '11.5px', labelFontSize: '7px' },
         canvas: {
             header: { x: 120, y: 126 },
             powerBox: { x: 130, y: 652, w: 636, h: 48 },
             powerText: { y: 683, fontSize: 18 },
             loreText: { y: 726, maxW: 600, lineH: 26, fontSize: 17 },
             typeLine: { y: 838, fontSize: 15 },
-            statFue: { x: 190, y: 1046 },
-            statMag: { x: 308, y: 1046 },
+            statFue: { x: 195, y: 1046 },
+            statMag: { x: 410, y: 1046 },
             statDef: { x: 588, y: 1046 },
-            statAgi: { x: 706, y: 1046 }
+            statAgi: { x: 805, y: 1046 }
         }
     },
     cosmic_enforcers: {
@@ -251,20 +253,20 @@ export const FACTION_CARD_LAYOUTS: Record<string, FactionCardLayout> = {
         },
         lore: { fontSize: '9px', lineHeight: '1.42' },
         typeLine: { fontSize: '8px', color: '#bae6fd' },
-        statFue: { top: '87.2%', left: '21.2%', fontSize: '11.5px', labelFontSize: '7px' },
-        statMag: { top: '87.2%', left: '34.4%', fontSize: '11.5px', labelFontSize: '7px' },
-        statDef: { top: '87.2%', left: '65.6%', fontSize: '11.5px', labelFontSize: '7px' },
-        statAgi: { top: '87.2%', left: '78.8%', fontSize: '11.5px', labelFontSize: '7px' },
+        statFue: { top: '86.8%', left: '23.7%', fontSize: '11.5px', labelFontSize: '7px' },
+        statMag: { top: '86.8%', left: '44.9%', fontSize: '11.5px', labelFontSize: '7px' },
+        statDef: { top: '86.8%', left: '66.3%', fontSize: '11.5px', labelFontSize: '7px' },
+        statAgi: { top: '86.8%', left: '87.5%', fontSize: '11.5px', labelFontSize: '7px' },
         canvas: {
             header: { x: 120, y: 126 },
             powerBox: { x: 130, y: 650, w: 636, h: 48 },
             powerText: { y: 681, fontSize: 18 },
             loreText: { y: 724, maxW: 600, lineH: 26, fontSize: 17 },
             typeLine: { y: 836, fontSize: 15 },
-            statFue: { x: 190, y: 1046 },
-            statMag: { x: 308, y: 1046 },
-            statDef: { x: 588, y: 1046 },
-            statAgi: { x: 706, y: 1046 }
+            statFue: { x: 212, y: 1042 },
+            statMag: { x: 402, y: 1042 },
+            statDef: { x: 594, y: 1042 },
+            statAgi: { x: 784, y: 1042 }
         }
     }
 };
@@ -843,7 +845,7 @@ const generateTradingCardDataUrl = async (
             const rawLore = aiLore || profileData?.lore || '¡Por el poder de Grayskull, la justicia siempre prevalecerá!';
             const loreText = rawLore.replace(/^["';\s]+/, '').replace(/["';\s]+$/, '');
             const stats = profileData?.stats || { fuerza: 99, magia: 88, defensa: 95, agilidad: 90 };
-            const frameSrc = profileData?.frameAsset || '/frames/frame_castle_grayskull.webp';
+            const frameSrc = profileData?.frameAsset || `/frames/frame_castle_grayskull.webp?${FRAME_CACHE_VERSION}`;
 
             // 1. Fondo base
             ctx.fillStyle = '#060a0f';
