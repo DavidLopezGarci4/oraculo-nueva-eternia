@@ -915,15 +915,59 @@ const generateTradingCardDataUrl = async (
                     ctx.textAlign = 'center';
                     ctx.fillText(`— ${profileData?.typeLine || `CRIATURA LEGENDARIA • ${faction.toUpperCase()}`} —`, width / 2, layout.canvas.typeLine.y);
 
-                    // 6. Sockets de Combate Centrados
-                    // Izquierdo: FUE | MAG
-                    ctx.textAlign = 'center';
-                    ctx.fillStyle = '#fef08a';
-                    ctx.font = 'bold 20px serif';
-                    ctx.fillText(`FUE ${stats.fuerza}  |  MAG ${stats.magia}`, layout.canvas.leftSocket.x, layout.canvas.leftSocket.y);
+                    // 6. Sockets de Combate Centrados (4 Mini-Cápsulas con Estilo Temático y 2 Niveles)
+                    const drawStatBox = (
+                        bx: number,
+                        by: number,
+                        bw: number,
+                        bh: number,
+                        statLabel: string,
+                        statVal: number,
+                        labelColor: string,
+                        borderColor: string,
+                        bgColor: string
+                    ) => {
+                        ctx.save();
+                        ctx.fillStyle = bgColor;
+                        ctx.strokeStyle = borderColor;
+                        ctx.lineWidth = 1.5;
+                        ctx.beginPath();
+                        if (typeof (ctx as any).roundRect === 'function') {
+                            (ctx as any).roundRect(bx, by, bw, bh, 6);
+                        } else {
+                            ctx.rect(bx, by, bw, bh);
+                        }
+                        ctx.fill();
+                        ctx.stroke();
 
-                    // Derecho: DEF | AGI
-                    ctx.fillText(`DEF ${stats.defensa}  |  AGI ${stats.agilidad}`, layout.canvas.rightSocket.x, layout.canvas.rightSocket.y);
+                        // Nivel 1: Etiqueta pequeña
+                        ctx.fillStyle = labelColor;
+                        ctx.font = '900 11px sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(statLabel, bx + bw / 2, by + 14);
+
+                        // Nivel 2: Valor numérico grande
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = '900 19px serif';
+                        ctx.fillText(String(statVal), bx + bw / 2, by + 34);
+                        ctx.restore();
+                    };
+
+                    const boxW = 86;
+                    const boxH = 42;
+                    const boxGap = 8;
+
+                    // Izquierdo: FUE y MAG
+                    const leftCenterX = layout.canvas.leftSocket.x;
+                    const leftY = layout.canvas.leftSocket.y - 21;
+                    drawStatBox(leftCenterX - boxW - boxGap / 2, leftY, boxW, boxH, 'FUE', stats.fuerza, '#f87171', 'rgba(239,68,68,0.7)', 'rgba(127,29,29,0.55)');
+                    drawStatBox(leftCenterX + boxGap / 2, leftY, boxW, boxH, 'MAG', stats.magia, '#c084fc', 'rgba(168,85,247,0.7)', 'rgba(88,28,135,0.55)');
+
+                    // Derecho: DEF y AGI
+                    const rightCenterX = layout.canvas.rightSocket.x;
+                    const rightY = layout.canvas.rightSocket.y - 21;
+                    drawStatBox(rightCenterX - boxW - boxGap / 2, rightY, boxW, boxH, 'DEF', stats.defensa, '#38bdf8', 'rgba(14,165,233,0.7)', 'rgba(12,74,110,0.55)');
+                    drawStatBox(rightCenterX + boxGap / 2, rightY, boxW, boxH, 'AGI', stats.agilidad, '#4ade80', 'rgba(34,197,94,0.7)', 'rgba(20,83,45,0.55)');
 
                     resolve(canvas.toDataURL('image/png'));
                 };
@@ -1971,10 +2015,10 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                 </div>
                             </div>
 
-                            {/* 3. SOCKETS DE COMBATE CENTRADOS EN LAS CASILLAS DE PIEDRA */}
-                            {/* Sockets Izquierdo: FUE | MAG */}
+                            {/* 3. SOCKETS DE COMBATE CENTRADOS (4 Mini-Cápsulas con Estilo Temático y 2 Niveles) */}
+                            {/* Sockets Izquierdo: FUE y MAG */}
                             <div
-                                className="absolute z-20 flex items-center justify-center pointer-events-none"
+                                className="absolute z-20 flex items-center justify-between pointer-events-none gap-1 px-0.5"
                                 style={{
                                     top: layout.leftSocket.top,
                                     left: layout.leftSocket.left,
@@ -1982,16 +2026,21 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                     height: layout.leftSocket.height
                                 }}
                             >
-                                <div className="flex items-center justify-center gap-1.5 text-[9px] sm:text-[9.5px] font-bold text-amber-200">
-                                    <span>FUE <strong className="text-white text-[11px] font-black">{statsData.fuerza}</strong></span>
-                                    <span className="text-amber-400/40">|</span>
-                                    <span>MAG <strong className="text-white text-[11px] font-black">{statsData.magia}</strong></span>
+                                {/* FUE */}
+                                <div className="flex-1 h-full flex flex-col items-center justify-center rounded-md bg-red-950/75 border border-red-500/50 shadow-[0_2px_4px_rgba(0,0,0,0.8)] px-0.5 py-0.5">
+                                    <span className="text-[6.5px] sm:text-[7.5px] font-black text-red-300 uppercase tracking-widest leading-none">FUE</span>
+                                    <span className="text-[10px] sm:text-[11.5px] font-black text-white leading-none tcg-gold-emboss mt-0.5">{statsData.fuerza}</span>
+                                </div>
+                                {/* MAG */}
+                                <div className="flex-1 h-full flex flex-col items-center justify-center rounded-md bg-purple-950/75 border border-purple-500/50 shadow-[0_2px_4px_rgba(0,0,0,0.8)] px-0.5 py-0.5">
+                                    <span className="text-[6.5px] sm:text-[7.5px] font-black text-purple-300 uppercase tracking-widest leading-none">MAG</span>
+                                    <span className="text-[10px] sm:text-[11.5px] font-black text-white leading-none tcg-gold-emboss mt-0.5">{statsData.magia}</span>
                                 </div>
                             </div>
 
-                            {/* Sockets Derecho: DEF | AGI */}
+                            {/* Sockets Derecho: DEF y AGI */}
                             <div
-                                className="absolute z-20 flex items-center justify-center pointer-events-none"
+                                className="absolute z-20 flex items-center justify-between pointer-events-none gap-1 px-0.5"
                                 style={{
                                     top: layout.rightSocket.top,
                                     right: layout.rightSocket.right,
@@ -1999,10 +2048,15 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                     height: layout.rightSocket.height
                                 }}
                             >
-                                <div className="flex items-center justify-center gap-1.5 text-[9px] sm:text-[9.5px] font-bold text-amber-200">
-                                    <span>DEF <strong className="text-white text-[11px] font-black">{statsData.defensa}</strong></span>
-                                    <span className="text-amber-400/40">|</span>
-                                    <span>AGI <strong className="text-white text-[11px] font-black">{statsData.agilidad}</strong></span>
+                                {/* DEF */}
+                                <div className="flex-1 h-full flex flex-col items-center justify-center rounded-md bg-sky-950/75 border border-sky-500/50 shadow-[0_2px_4px_rgba(0,0,0,0.8)] px-0.5 py-0.5">
+                                    <span className="text-[6.5px] sm:text-[7.5px] font-black text-sky-300 uppercase tracking-widest leading-none">DEF</span>
+                                    <span className="text-[10px] sm:text-[11.5px] font-black text-white leading-none tcg-gold-emboss mt-0.5">{statsData.defensa}</span>
+                                </div>
+                                {/* AGI */}
+                                <div className="flex-1 h-full flex flex-col items-center justify-center rounded-md bg-emerald-950/75 border border-emerald-500/50 shadow-[0_2px_4px_rgba(0,0,0,0.8)] px-0.5 py-0.5">
+                                    <span className="text-[6.5px] sm:text-[7.5px] font-black text-emerald-300 uppercase tracking-widest leading-none">AGI</span>
+                                    <span className="text-[10px] sm:text-[11.5px] font-black text-white leading-none tcg-gold-emboss mt-0.5">{statsData.agilidad}</span>
                                 </div>
                             </div>
 

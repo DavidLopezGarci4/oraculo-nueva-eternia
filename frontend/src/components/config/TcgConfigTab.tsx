@@ -538,10 +538,10 @@ export default function TcgConfigTab() {
                             </div>
                         </div>
 
-                        {/* 3. Sockets de Combate */}
-                        {/* Izquierdo: FUE | MAG */}
+                        {/* 3. Sockets de Combate (4 Mini-Cápsulas con Estilo Temático y 2 Niveles) */}
+                        {/* Izquierdo: FUE y MAG */}
                         <div
-                            className="absolute z-20 flex items-center justify-center pointer-events-none"
+                            className="absolute z-20 flex items-center justify-between pointer-events-none gap-1 px-0.5"
                             style={{
                                 top: activeLayout.leftSocket.top,
                                 left: activeLayout.leftSocket.left,
@@ -549,19 +549,21 @@ export default function TcgConfigTab() {
                                 height: activeLayout.leftSocket.height
                             }}
                         >
-                            <div
-                                className="flex items-center justify-center gap-1 font-bold text-amber-200 drop-shadow-[0_1px_2px_rgba(0,0,0,1)]"
-                                style={{ fontSize: activeLayout.leftSocket.fontSize || '9px' }}
-                            >
-                                <span>FUE <strong className="text-white font-black">{sampleChar.stats.fue}</strong></span>
-                                <span className="text-amber-400/40">|</span>
-                                <span>MAG <strong className="text-white font-black">{sampleChar.stats.mag}</strong></span>
+                            {/* FUE */}
+                            <div className="flex-1 h-full flex flex-col items-center justify-center rounded-md bg-red-950/75 border border-red-500/50 shadow-[0_2px_4px_rgba(0,0,0,0.8)] px-0.5 py-0.5">
+                                <span className="text-[6.5px] sm:text-[7px] font-black text-red-300 uppercase tracking-widest leading-none">FUE</span>
+                                <span className="text-[10px] sm:text-[11px] font-black text-white leading-none tcg-gold-emboss mt-0.5">{sampleChar.stats.fue}</span>
+                            </div>
+                            {/* MAG */}
+                            <div className="flex-1 h-full flex flex-col items-center justify-center rounded-md bg-purple-950/75 border border-purple-500/50 shadow-[0_2px_4px_rgba(0,0,0,0.8)] px-0.5 py-0.5">
+                                <span className="text-[6.5px] sm:text-[7px] font-black text-purple-300 uppercase tracking-widest leading-none">MAG</span>
+                                <span className="text-[10px] sm:text-[11px] font-black text-white leading-none tcg-gold-emboss mt-0.5">{sampleChar.stats.mag}</span>
                             </div>
                         </div>
 
-                        {/* Derecho: DEF | AGI */}
+                        {/* Derecho: DEF y AGI */}
                         <div
-                            className="absolute z-20 flex items-center justify-center pointer-events-none"
+                            className="absolute z-20 flex items-center justify-between pointer-events-none gap-1 px-0.5"
                             style={{
                                 top: activeLayout.rightSocket.top,
                                 right: activeLayout.rightSocket.right,
@@ -569,13 +571,15 @@ export default function TcgConfigTab() {
                                 height: activeLayout.rightSocket.height
                             }}
                         >
-                            <div
-                                className="flex items-center justify-center gap-1 font-bold text-amber-200 drop-shadow-[0_1px_2px_rgba(0,0,0,1)]"
-                                style={{ fontSize: activeLayout.rightSocket.fontSize || '9px' }}
-                            >
-                                <span>DEF <strong className="text-white font-black">{sampleChar.stats.def}</strong></span>
-                                <span className="text-amber-400/40">|</span>
-                                <span>AGI <strong className="text-white font-black">{sampleChar.stats.agi}</strong></span>
+                            {/* DEF */}
+                            <div className="flex-1 h-full flex flex-col items-center justify-center rounded-md bg-sky-950/75 border border-sky-500/50 shadow-[0_2px_4px_rgba(0,0,0,0.8)] px-0.5 py-0.5">
+                                <span className="text-[6.5px] sm:text-[7px] font-black text-sky-300 uppercase tracking-widest leading-none">DEF</span>
+                                <span className="text-[10px] sm:text-[11px] font-black text-white leading-none tcg-gold-emboss mt-0.5">{sampleChar.stats.def}</span>
+                            </div>
+                            {/* AGI */}
+                            <div className="flex-1 h-full flex flex-col items-center justify-center rounded-md bg-emerald-950/75 border border-emerald-500/50 shadow-[0_2px_4px_rgba(0,0,0,0.8)] px-0.5 py-0.5">
+                                <span className="text-[6.5px] sm:text-[7px] font-black text-emerald-300 uppercase tracking-widest leading-none">AGI</span>
+                                <span className="text-[10px] sm:text-[11px] font-black text-white leading-none tcg-gold-emboss mt-0.5">{sampleChar.stats.agi}</span>
                             </div>
                         </div>
                     </div>

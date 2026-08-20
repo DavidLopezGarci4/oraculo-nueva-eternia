@@ -1417,9 +1417,19 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
     - **Apreciación Histórica de Fábrica**: Muestra en una cápsula informativa el PVP oficial de salida (`retail_price`), la cotización actual ajustada a conservación y la plusvalía histórica acumulada por el coleccionable desde su lanzamiento.
   - **Enriquecimiento del Salón de la Fama (`Dashboard.tsx` y `dashboard.py`)**:
     - **Mayores Reliquias (Valor)**: Despliega el `PVP Salida` original frente a la cotización actual, permitiendo identificar de un vistazo las piezas con mayor valor de mercado acumulado.
-    - **Mayor Retorno (ROI)**: Despliega el `Coste` real pagado frente al valor de mercado actual, premiando las mejores adquisiciones y compras por debajo de mercado de la colección.
-  - **Ampliación de Esquemas API (`schemas.py` y `collection.py`)**: Expuestos `retail_price`, `avg_p2p_price`, `p25_p2p_price` y `roi_retail` en `ProductOutput` y `HallOfFameItemOutput`.
-  - **Verificación Automatizada**: Tests unitarios aprobados y build de frontend con Vite exitoso en 8.78s con 0 errores.
+### ⚡ Fase 93: Micro-Cápsulas de Poder Dual-Level TCG y Calibración Profesional (20/08/2026)
+
+- **Hitos**: Sustitución del formato de texto plano de los zócalos de combate por **4 mini-cápsulas individuales con esquinas redondeadas, cromatismo identitario y formato en dos niveles** (etiqueta superior de poder + valor numérico destacado con relieve), respetando la distribución simétrica **(2 + Gema + 2)** y garantizando la calibración milimétrica en el Taller TCG Studio y en el exportador Canvas 2D HD.
+- **Estado**: ✅ COMPLETADO Y VERIFICADO
+- **Logros Técnicos**:
+  - **Mini-Cápsulas Temáticas (`TradingCardModal.tsx`)**:
+    - 🔴 **Fuerza (`FUE`)**: Marco carmesí translúcido `border-red-500/50` y etiqueta en rojo suave con valor grande blanco.
+    - 🟣 **Magia (`MAG`)**: Marco violeta místico `border-purple-500/50` y etiqueta en púrpura.
+    - 🔵 **Defensa (`DEF`)**: Marco azul escudo `border-sky-500/50` y etiqueta en cian.
+    - 🟢 **Agilidad (`AGI`)**: Marco verde esmeralda `border-emerald-500/50` y etiqueta en menta.
+  - **Sincronización Total con el Taller TCG Studio (`TcgConfigTab.tsx`)**: El simulador a 60fps renderiza las 4 mini-cápsulas en tiempo real y permite a los administradores ajustar los sliders de posición, altura y anchura (`leftSocket` / `rightSocket`) para cada una de las 6 facciones.
+  - **Motor Vectorial Canvas 2D HD (`generateTradingCardDataUrl`)**: Dibuja las 4 cápsulas con `roundRect`, fondos translúcidos y tipografía de doble altura para asegurar una exportación PNG de calidad profesional idéntica a la vista interactiva.
+  - **Verificación Automatizada**: Tests unitarios aprobados y build de producción con Vite completado con éxito en 10.20s con 0 errores.
 
 
 
