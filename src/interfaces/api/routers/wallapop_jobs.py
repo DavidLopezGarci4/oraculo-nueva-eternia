@@ -97,26 +97,29 @@ async def submit_wallapop_job_results(job_id: int, request: WallapopJobResultsRe
             db.commit()
             return {"status": "success", "job_status": job.status, "new_items": 0}
 
-        offers_payload = [
-            {
+        offers_payload = []
+        for o in request.offers:
+            # Detectar tienda basada en la URL del producto
+            shop_name = "SmythsToys" if "smythstoys" in o.url.lower() else "WallapopManual"
+            offers_payload.append({
                 "product_name": o.product_name,
                 "price": o.price,
                 "currency": o.currency,
                 "url": o.url,
-                "shop_name": "WallapopManual",
+                "shop_name": shop_name,
                 "image_url": o.image_url,
                 "source_type": o.source_type,
                 "sale_type": o.sale_type,
-            }
-            for o in request.offers
-        ]
+            })
 
         new_items = 0
         if offers_payload:
             from src.infrastructure.scrapers.pipeline import ScrapingPipeline
 
             pipeline = ScrapingPipeline([])
-            new_items = pipeline.update_database(offers_payload, shop_names=["WallapopManual"]) or 0
+            # Extraer las tiendas únicas presentes en las ofertas
+            unique_shops = list(set(o["shop_name"] for o in offers_payload))
+            new_items = pipeline.update_database(offers_payload, shop_names=unique_shops) or 0
 
         job.status = "error" if (request.blocked and not offers_payload) else "done"
         if job.status == "error" and not job.error_message:
@@ -125,15 +128,26 @@ async def submit_wallapop_job_results(job_id: int, request: WallapopJobResultsRe
         job.completed_at = datetime.now(timezone.utc)
         db.commit()
 
-        # Notificar a Telegram
+        # Notificar a Telegram con desglose de tiendas
         try:
             import asyncio
             from src.infrastructure.services.telegram_service import telegram_service
             if job.status == "done":
+                wallapop_count = sum(1 for o in offers_payload if o["shop_name"] == "WallapopManual")
+                smyths_count = sum(1 for o in offers_payload if o["shop_name"] == "SmythsToys")
+                
+                parts = []
+                if wallapop_count > 0:
+                    parts.append(f"Wallapop: {wallapop_count}")
+                if smyths_count > 0:
+                    parts.append(f"Smyths Toys: {smyths_count}")
+                details_str = f" ({', '.join(parts)})" if parts else ""
+
                 asyncio.create_task(telegram_service.send_message(
                     f"⚡ <b>[Nexus Bridge: PC Local]</b> Trabajo #{job_id} completado con éxito.\n"
                     f"• Búsqueda: <b>{job.query}</b>\n"
-                    f"• Reliquias extraídas: <b>{len(offers_payload)}</b> (<b>{new_items}</b> nuevas en el Purgatorio)."
+                    f"• Reliquias extraídas: <b>{len(offers_payload)}</b>{details_str}\n"
+                    f"• <b>{new_items}</b> nuevas en el Purgatorio."
                 ))
             elif job.status == "error":
                 asyncio.create_task(telegram_service.send_message(

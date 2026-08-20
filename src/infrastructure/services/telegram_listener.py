@@ -341,9 +341,9 @@ class TelegramListener:
             lines.append("• <code>/ssl</code> - Diagnóstico en vivo y telemetría de certificados SSL.")
             lines.append("• <code>/renew_ssl</code> - Forzar renovación inmediata de certificados SSL.")
             lines.append("• <code>/tokens</code> - Comprobación en vivo de Apify y ScraperAPI (0 créditos).")
-            lines.append("• <code>/nexus</code> - Incursión rápida de novedades Wallapop (Tríada Core).")
-            lines.append("• <code>/nexus completo</code> - Incursión profunda (5 familias + paginación escalonada).")
-            lines.append("• <code>/nexus [consulta]</code> - Búsqueda personalizada en Wallapop.")
+            lines.append("• <code>/nexus</code> - Incursión rápida de novedades (Wallapop + Smyths Toys).")
+            lines.append("• <code>/nexus completo</code> - Incursión profunda (5 familias Wallapop + Smyths Toys).")
+            lines.append("• <code>/nexus [consulta]</code> - Búsqueda personalizada en Wallapop y Smyths Toys.")
             lines.append("• <code>/devices</code> - Listar y gestionar dispositivos con botones de aprobación.")
             lines.append("• <code>/approve [id]</code> - Autorizar acceso a un dispositivo.")
             lines.append("• <code>/deny [id]</code> - Bloquear/eliminar un dispositivo.")
@@ -725,17 +725,17 @@ class TelegramListener:
         from src.domain.models import WallapopJobModel
         q_clean = query_term.strip().lower()
         if q_clean in ["completo", "full", "deep", "exhaustivo"]:
-            job_desc = "🌟 <b>Incursión Profunda Escalonada</b> (5 Familias MOTU Origins + 2 Páginas de Profundidad)"
+            job_desc = "🌟 <b>Incursión Profunda Escalonada</b> (5 Familias MOTU Origins en Wallapop & Smyths Toys)"
             target_query = "completo"
-            cadence_note = "⏳ <i>Duración estimada: ~1.5 - 2.5 min (Pausas orgánicas entre consultas para 0% detección).</i>"
+            cadence_note = "⏳ <i>Duración estimada: ~2.0 - 3.5 min (Pausas orgánicas entre consultas para evadir bloqueos).</i>"
         elif q_clean in ["auto", "basico", "basic", ""]:
-            job_desc = "⚡ <b>Incursión Rápida de Novedades</b> (Tríada Canónica: ~120 ofertas)"
+            job_desc = "⚡ <b>Incursión Rápida de Novedades</b> (Wallapop + Smyths Toys: ~150 ofertas)"
             target_query = "auto"
-            cadence_note = "⚡ <i>Duración estimada: ~3 - 5 seg.</i>"
+            cadence_note = "⚡ <i>Duración estimada: ~10 - 25 seg.</i>"
         else:
-            job_desc = f"🎯 <b>Búsqueda Personalizada:</b> '<code>{query_term}</code>'"
+            job_desc = f"🎯 <b>Búsqueda Personalizada:</b> '<code>{query_term}</code>' (Wallapop + Smyths Toys)"
             target_query = query_term
-            cadence_note = "⚡ <i>Duración estimada: ~3 - 10 seg.</i>"
+            cadence_note = "⚡ <i>Duración estimada: ~5 - 15 seg.</i>"
 
         with SessionCloud() as db:
             job = WallapopJobModel(query=target_query, status="pending")

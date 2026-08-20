@@ -76,7 +76,6 @@ class MarketAnalyticsService:
 
             current_index = round(total_market_sum / max(1, total_count), 2)
             base_msrp = round(total_msrp_sum / max(1, total_count), 2)
-            trend_pct = round(((current_index - base_msrp) / max(1.0, base_msrp)) * 100, 1)
 
             # 3. Construir serie histórica temporal
             # Consultamos variaciones de precio en PriceHistoryModel
@@ -111,13 +110,17 @@ class MarketAnalyticsService:
                         "index_value": round(current_index * factor, 2)
                     })
 
-            # Estado general
-            if trend_pct >= 10.0:
+            # Calcular la tendencia real comparando contra el inicio de la serie del período seleccionado
+            start_index = historical_series[0]["index_value"] if historical_series else current_index
+            trend_pct = round(((current_index - start_index) / max(1.0, start_index)) * 100, 1)
+
+            # Estado general basado en la tendencia del periodo
+            if trend_pct >= 5.0:
                 direction = "bullish"
-                status_label = "Mercado Alcista (Fuerte Revalorización)"
-            elif trend_pct <= -10.0:
+                status_label = "Mercado Alcista (Revalorización del Periodo)"
+            elif trend_pct <= -5.0:
                 direction = "bearish"
-                status_label = "Mercado de Liquidación (Precios en Descenso)"
+                status_label = "Mercado Bajista (Precios en Descenso)"
             else:
                 direction = "stable"
                 status_label = "Mercado Estable y Saludable"

@@ -1,3 +1,7 @@
+param (
+    [switch]$Backup
+)
+
 # ===================================================================
 # EL ORACULO DE NUEVA ETERNIA - CENTRO DE CONTROL UNIFICADO
 # ===================================================================
@@ -82,15 +86,51 @@ function Invoke-BackupDb {
     Write-Host "[4] REALIZANDO COPIA DE SEGURIDAD INMEDIATA..." -ForegroundColor Green
     Write-Host ""
     
-    $BackupScript = Join-Path $PSScriptRoot "backup_db.ps1"
-    if (Test-Path $BackupScript) {
-        & $BackupScript
-    } else {
-        Write-Host "No se encontro backup_db.ps1." -ForegroundColor Red
+    $BackupDir = Join-Path $PSScriptRoot "backups"
+    if (!(Test-Path $BackupDir)) {
+        New-Item -ItemType Directory -Path $BackupDir | Out-Null
+    }
+
+    $Timestamp = Get-Date -Format "yyyyMMdd_HHmm"
+    $SourceDB = Join-Path $PSScriptRoot "oraculo.db"
+    $DestDB = Join-Path $BackupDir "oraculo_$Timestamp.db"
+
+    if (Test-Path $SourceDB) {
+        $PythonExe = Join-Path $PSScriptRoot ".venv\Scripts\python.exe"
+        if (!(Test-Path $PythonExe)) { $PythonExe = "python" }
+
+        $BackupScript = @"
+import sqlite3
+src = sqlite3.connect(r'$SourceDB')
+dst = sqlite3.connect(r'$DestDB')
+src.backup(dst)
+dst.close()
+src.close()
+"@
+
+        & $PythonExe -c $BackupScript
+
+        if ($LASTEXITCODE -eq 0 -and (Test-Path $DestDB)) {
+            Write-Host "✅ Backup creado con exito: oraculo_$Timestamp.db" -ForegroundColor Green
+            
+            # Limpieza: Mantener solo los últimos 10 backups
+            $Backups = Get-ChildItem $BackupDir -File | Sort-Object LastWriteTime -Descending
+            if ($Backups.Count -gt 10) {
+                $Backups[10..($Backups.Count - 1)] | Remove-Item -Force
+                Write-Host "🧹 Backups antiguos eliminados (mantenemos los 10 mas recientes)." -ForegroundColor Gray
+            }
+        } else {
+            Write-Host "❌ Error: el backup via sqlite3.backup() fallo." -ForegroundColor Red
+        }
+    }
+    else {
+        Write-Host "❌ Error: No se encontro oraculo.db para copiar." -ForegroundColor Red
     }
 
     Write-Host ""
-    Read-Host "Presiona [Enter] para volver al menu principal..."
+    if (!$Backup) {
+        Read-Host "Presiona [Enter] para volver al menu principal..."
+    }
 }
 
 function Invoke-ChromeDebug {
@@ -189,10 +229,9 @@ function Invoke-CreateShortcuts {
     Write-Host "Acceso directo creado: 'Oraculo - Centro de Control.lnk'" -ForegroundColor Green
 
     $BackupShortcut = Join-Path $DesktopPath "Oraculo - Guardian de Backups.lnk"
-    $BackupTarget = Join-Path $PSScriptRoot "backup_db.ps1"
     $s2 = $WScriptShell.CreateShortcut($BackupShortcut)
     $s2.TargetPath = "powershell.exe"
-    $s2.Arguments = "-ExecutionPolicy Bypass -NoExit -File `"$BackupTarget`""
+    $s2.Arguments = "-ExecutionPolicy Bypass -NoExit -File `"$TargetScript`" -Backup"
     $s2.WorkingDirectory = $PSScriptRoot
     $s2.Description = "Crear Copia de Seguridad Inmediata de oraculo.db"
     $s2.IconLocation = "shell32.dll,44"
@@ -272,6 +311,11 @@ function Invoke-RenewSslCloud {
     Write-Host ""
     Write-Host "Proceso de renovacion SSL completado." -ForegroundColor Green
     Read-Host "Presiona [Enter] para volver al menu principal..."
+}
+
+if ($Backup) {
+    Invoke-BackupDb
+    exit
 }
 
 do {
