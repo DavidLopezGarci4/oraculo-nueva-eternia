@@ -583,6 +583,14 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
   - [x] **Asistente de Presupuesto Matrix Cart (`BudgetOptimizerService` & `BudgetOptimizerModal.tsx`)**: Calculadora inteligente para optimizar compras por presupuesto y agrupar gastos de envío sin alterar el carrito manual.
   - [x] **Índice Bursátil MOTU (`MarketAnalyticsService` & `EterniaMarketIndexWidget.tsx`)**: Gráfico táctil responsivo para móvil y PC del valor medio ponderado de mercado por Waves (EMI).
   - [x] **Asistente Conversacional en Telegram (`OracleAssistantAI`)**: Consultas en lenguaje natural sobre la colección, precios y chollos mediante llamadas de función seguras de solo lectura y blindadas a tu `chat_id`.
+- [x] **Phase 87: Motor Gráfico TCG Magic Showcase, Homogeneización Geométrica de 6 Facciones y Placa de Poder de Alto Impacto (20/08/2026)**
+  - [x] **3-Layer TCG Frame Engine (`TradingCardModal.tsx`)**: Motor de cromos coleccionables en 3 capas (Capa 1: Ilustración con framing interactivo pan & zoom; Capa 2: Marco HD esculpido WebP transparente; Capa 3: Frente tipográfico vectorial en relieve de oro).
+  - [x] **Homogeneización Geométrica Unificada**: Estandarización de la plantilla maestra de 896 × 1200 px para las 6 facciones (`Castle Grayskull`, `Snake Mountain`, `Evil Horde`, `Snake Men`, `Great Rebellion`, `Cosmic Enforcers`), eliminando anomalías y textos horneados en losas.
+  - [x] **Sockets de Combate Centrados**: Estadísticas (`FUE | MAG` y `DEF | AGI`) asentadas exactamente a `top: 86.5%` en el interior de las casillas rectangulares esculpidas a los costados del sello holográfico 3D.
+  - [x] **Placa de Poder / Habilidad de Alto Impacto**: Placa prominente con borde dorado y fondo traslúcido (`⚡ PODER: [HABILIDAD]`) en relieve metálico `tcg-gold-emboss` a `top: 56.8%`.
+  - [x] **Legibilidad y Formateador Inteligente**: Formateo automático de títulos largos (`formatCardTitle`), texto de tipo 100% completo y losa de lore con panel difuminado sutil.
+  - [x] **Exportador Dual Sincronizado**: Sincronización del motor Canvas 2D HD con el renderizado React DOM para descargas PNG idénticas en alta definición.
+
 
 ---
 

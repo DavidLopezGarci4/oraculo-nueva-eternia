@@ -161,6 +161,20 @@ const getLocalMotuProfile = (productName: string, _subCategory?: string) => {
     };
 };
 
+// Formateador inteligente de título para cartas coleccionables
+const formatCardTitle = (rawName: string) => {
+    if (!rawName) return { main: 'FIGURA MOTU', sub: '' };
+    const clean = rawName.trim();
+    const match = clean.match(/^(.*?)\s*[\(\-\[]\s*(200x|cartoon|origins|masterverse|vintage|new eternia|revelation|club grayskull|commemorative|classics|cgc|moc|loose|deluxe).*?[\)\-\]]?$/i);
+    if (match && match[1].trim().length >= 3) {
+        return {
+            main: match[1].trim(),
+            sub: clean.substring(match[1].length).replace(/^[\s\(\-\[]+|[\s\)\-\]]+$/g, '').trim()
+        };
+    }
+    return { main: clean, sub: '' };
+};
+
 // Convertidor de DataURL base64 a Blob nativo
 const dataUrlToBlob = async (dataUrl: string): Promise<Blob> => {
     const res = await fetch(dataUrl);
@@ -256,7 +270,7 @@ const generateTradingCardDataUrl = async (
             canvas.width = width;
             canvas.height = height;
 
-            const name = item.product_name || item.name || 'HE-MAN';
+            const titleParts = formatCardTitle(item.product_name || item.name || 'HE-MAN');
             const faction = profileData?.faction || 'Guerreros Heroicos';
             const specialMove = profileData?.specialMove || 'Furia del Relámpago de Grayskull';
             const loreText = aiLore || profileData?.lore || '¡Por el poder de Grayskull, la justicia siempre prevalecerá!';
@@ -274,51 +288,65 @@ const generateTradingCardDataUrl = async (
                 frameImg.onload = () => {
                     ctx.drawImage(frameImg, 0, 0, width, height);
 
-                    // 2. Tipografía en placa de cabecera
+                    // 2. Tipografía en placa de cabecera (y=92)
                     ctx.fillStyle = '#ffffff';
-                    ctx.font = '900 32px serif';
+                    ctx.font = '900 28px serif';
                     ctx.textAlign = 'left';
-                    ctx.fillText(name.toUpperCase(), 112, 98);
+                    ctx.fillText(titleParts.main.toUpperCase(), 120, 92);
 
-                    // 3. Barra de Tipo y Facción
+                    if (titleParts.sub) {
+                        ctx.fillStyle = '#fde68a';
+                        ctx.font = 'bold 16px serif';
+                        ctx.fillText(`• ${titleParts.sub.toUpperCase()}`, 120 + ctx.measureText(titleParts.main.toUpperCase()).width + 12, 92);
+                    }
+
+                    // 3. Barra de Tipo y Facción (y=573)
                     ctx.fillStyle = '#fde68a';
-                    ctx.font = 'bold 22px serif';
+                    ctx.font = 'bold 17px serif';
                     ctx.textAlign = 'center';
-                    ctx.fillText(profileData?.typeLine || `CRIATURA LEGENDARIA — ${faction.toUpperCase()}`, width / 2, 690);
+                    ctx.fillText(profileData?.typeLine || `CRIATURA LEGENDARIA — ${faction.toUpperCase()}`, width / 2, 573);
 
-                    // 4. Losa de Texto (Lore Canónico & Técnica)
+                    // 4. Placa de Poder de Alto Impacto (y=675..730)
+                    ctx.fillStyle = 'rgba(20, 10, 15, 0.9)';
+                    ctx.fillRect(135, 675, 626, 55);
+                    ctx.strokeStyle = '#eab308';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(135, 675, 626, 55);
+
+                    ctx.textAlign = 'center';
+                    ctx.fillStyle = profileData?.specialMoveColor || '#ff8a3d';
+                    ctx.font = '900 22px serif';
+                    ctx.fillText(`⚡ PODER: ${specialMove.toUpperCase()}`, width / 2, 710);
+
+                    // 5. Flavor Lore Canónico en Cursiva (y=755..880)
                     ctx.textAlign = 'left';
-                    ctx.fillStyle = profileData?.specialMoveColor || '#ffdb70';
-                    ctx.font = '900 24px serif';
-                    ctx.fillText(`⚡ ${specialMove}`, 125, 765);
-
-                    // Flavor Text en cursiva
-                    ctx.fillStyle = '#e2eedd';
-                    ctx.font = 'italic 20px serif';
+                    ctx.fillStyle = profileData?.loreTextColor || '#f5f5f0';
+                    ctx.font = 'italic 19px serif';
                     const words = `"${loreText}"`.split(' ');
                     let line = '';
-                    let yPos = 810;
+                    let yPos = 765;
                     for (let n = 0; n < words.length; n++) {
                         const testLine = line + words[n] + ' ';
                         const metrics = ctx.measureText(testLine);
-                        if (metrics.width > 640 && n > 0) {
-                            ctx.fillText(line, 125, yPos);
+                        if (metrics.width > 610 && n > 0) {
+                            ctx.fillText(line, 140, yPos);
                             line = words[n] + ' ';
                             yPos += 30;
                         } else {
                             line = testLine;
                         }
                     }
-                    ctx.fillText(line, 125, yPos);
+                    ctx.fillText(line, 140, yPos);
 
-                    // 5. Placa de Combate Inferior
+                    // 6. Sockets de Combate Centrados (y=1045)
+                    // Izquierdo: FUE | MAG
+                    ctx.textAlign = 'center';
                     ctx.fillStyle = '#fef08a';
-                    ctx.font = 'bold 22px serif';
-                    ctx.textAlign = 'left';
-                    ctx.fillText(`FUE ${stats.fuerza}   |   MAG ${stats.magia}`, 120, 1140);
+                    ctx.font = 'bold 20px serif';
+                    ctx.fillText(`FUE ${stats.fuerza}  |  MAG ${stats.magia}`, 240, 1045);
 
-                    ctx.textAlign = 'right';
-                    ctx.fillText(`DEF ${stats.defensa}   |   AGI ${stats.agilidad}`, width - 120, 1140);
+                    // Derecho: DEF | AGI
+                    ctx.fillText(`DEF ${stats.defensa}  |  AGI ${stats.agilidad}`, 660, 1045);
 
                     resolve(canvas.toDataURL('image/png'));
                 };
@@ -334,11 +362,10 @@ const generateTradingCardDataUrl = async (
                 img.crossOrigin = 'anonymous';
                 img.onload = () => {
                     try {
-                        // Posicionar dentro de la ventana de arte
-                        const drawX = 130;
-                        const drawY = 165;
-                        const drawW = 636;
-                        const drawH = 495;
+                        const drawX = 135;
+                        const drawY = 160;
+                        const drawW = 626;
+                        const drawH = 390;
                         ctx.drawImage(img, drawX, drawY, drawW, drawH);
                     } catch {}
                     renderOverlayAndText();
@@ -873,11 +900,11 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                     isDraggingImg ? 'cursor-grabbing' : 'cursor-grab'
                                 }`}
                                 style={{
-                                    top: '14%',
+                                    top: '13.5%',
                                     left: '14.5%',
                                     width: '71%',
-                                    height: '42%',
-                                    borderRadius: '16px 16px 8px 8px'
+                                    height: '33%',
+                                    borderRadius: '16px 16px 6px 6px'
                                 }}
                                 title="Arrastra con el ratón o usa la rueda para ampliar y encuadrar"
                             >
@@ -899,12 +926,12 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                             style={{
                                                 width: '320px',
                                                 height: 'auto',
-                                                minHeight: '220px',
+                                                minHeight: '200px',
                                                 display: 'block'
                                             }}
                                         />
                                     ) : (
-                                        <div className="flex items-center justify-center pointer-events-none select-none" style={{ width: '320px', height: '220px' }}>
+                                        <div className="flex items-center justify-center pointer-events-none select-none" style={{ width: '320px', height: '200px' }}>
                                             <MOTUImage
                                                 productId={item.id}
                                                 src={item.image_url}
@@ -975,105 +1002,117 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                             />
 
                             {/* CAPA 3 (Frente): Tipografía Vectorial Nítida y Datos Canónicos */}
-                            {/* 1. TÍTULO EN LA CABECERA */}
-                            <div
-                                className="absolute z-20 flex items-center justify-start pointer-events-none overflow-hidden px-1"
-                                style={{
-                                    top: '7.4%',
-                                    left: '12.5%',
-                                    width: '63%',
-                                    height: '4%'
-                                }}
-                            >
-                                <h3 className="text-[13px] sm:text-[14px] font-black text-white uppercase tracking-wider truncate tcg-gold-emboss">
-                                    {name}
-                                </h3>
-                            </div>
+                            {/* 1. TÍTULO EN LA CABECERA (Nombre + Subtítulo con formato de lujo) */}
+                            {(() => {
+                                const titleParts = formatCardTitle(name);
+                                return (
+                                    <div
+                                        className="absolute z-20 flex items-center justify-start pointer-events-none overflow-hidden px-1"
+                                        style={{
+                                            top: '7.4%',
+                                            left: '13.5%',
+                                            width: '58%',
+                                            height: '4.5%'
+                                        }}
+                                    >
+                                        <div className="flex items-center gap-1.5 min-w-0">
+                                            <h3 className="text-[12px] sm:text-[13px] font-black text-white uppercase tracking-wider truncate tcg-gold-emboss">
+                                                {titleParts.main}
+                                            </h3>
+                                            {titleParts.sub && (
+                                                <span className="text-[8px] sm:text-[8.5px] font-semibold text-amber-200 uppercase tracking-tight truncate shrink-0 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+                                                    • {titleParts.sub}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })()}
 
-                            {/* 2. BARRA DE TIPO Y FACCIÓN */}
+                            {/* 2. BARRA DE TIPO Y FACCIÓN (Texto completo con espaciado sin cortes) */}
                             <div
-                                className="absolute z-20 flex items-center justify-center text-center pointer-events-none overflow-hidden px-2"
+                                className="absolute z-20 flex items-center justify-center text-center pointer-events-none px-1"
                                 style={{
-                                    top: '56.8%',
-                                    left: '14%',
-                                    width: '72%',
-                                    height: '3.6%'
+                                    top: '47.5%',
+                                    left: '14.5%',
+                                    width: '71%',
+                                    height: '3.5%'
                                 }}
                             >
-                                <span className="text-[9px] sm:text-[10px] font-bold text-amber-100 uppercase tracking-wider truncate tcg-gold-emboss">
+                                <span className="text-[7.5px] sm:text-[8.5px] font-black text-amber-100 uppercase tracking-wider truncate drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]">
                                     {typeLineText}
                                 </span>
                             </div>
 
-                            {/* 3. CAJA DE TEXTO (HABILIDAD ESPECIAL + LORE CANÓNICO) */}
+                            {/* 3. PLACA DE PODER / HABILIDAD ESPECIAL DE ALTO IMPACTO */}
                             <div
-                                className="absolute z-20 flex flex-col justify-start pointer-events-none px-2 py-1 overflow-hidden"
+                                className="absolute z-20 flex items-center justify-center gap-1.5 px-2 py-0.5 rounded-md border border-amber-400/90 bg-gradient-to-r from-black/85 via-amber-950/85 to-black/85 shadow-[0_2px_8px_rgba(0,0,0,0.9)] pointer-events-none overflow-hidden"
                                 style={{
-                                    top: '62.5%',
-                                    left: '13.5%',
-                                    width: '73%',
-                                    height: '24%'
+                                    top: '56.8%',
+                                    left: '14%',
+                                    width: '72%',
+                                    height: '5%'
                                 }}
                             >
-                                {/* Habilidad / Técnica Especial */}
-                                <div
-                                    className="flex items-center gap-1 text-[10.5px] sm:text-[11.5px] font-black uppercase tracking-wider truncate mb-1"
-                                    style={{
-                                        color: theme.specialMoveColor,
-                                        textShadow: '0 1px 0 rgba(255,255,255,0.25), 0 -1px 2px rgba(0,0,0,0.95), 0 2px 4px rgba(0,0,0,0.8)'
-                                    }}
-                                >
-                                    <Zap className="h-3 w-3 fill-current shrink-0" />
-                                    <span className="truncate">{specialMoveText}</span>
-                                </div>
+                                <Zap className="h-3 w-3 fill-amber-400 text-amber-400 shrink-0 animate-pulse" />
+                                <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-amber-300 truncate tcg-gold-emboss">
+                                    PODER: {specialMoveText}
+                                </span>
+                            </div>
 
-                                {/* Línea Divisoria Sutil */}
-                                <div className="w-full h-px bg-gradient-to-r from-transparent via-amber-400/30 to-transparent my-0.5 shrink-0" />
-
-                                {/* Cita de Lore Canónico en Cursiva */}
+                            {/* 4. LOSA DE LORE CANÓNICO (MÁXIMA LEGIBILIDAD) */}
+                            <div
+                                className="absolute z-20 flex flex-col justify-start pointer-events-none px-2 py-1 overflow-hidden bg-black/25 backdrop-blur-[1px] rounded-lg"
+                                style={{
+                                    top: '63.2%',
+                                    left: '14%',
+                                    width: '72%',
+                                    height: '21.5%'
+                                }}
+                            >
                                 <p
-                                    className="text-[8.5px] sm:text-[9px] italic leading-snug line-clamp-4 text-slate-200 mt-0.5"
+                                    className="text-[9px] sm:text-[9.5px] italic leading-relaxed text-stone-100 line-clamp-4 drop-shadow-[0_1px_3px_rgba(0,0,0,1)]"
                                     style={{
                                         color: theme.loreTextColor,
-                                        textShadow: '0 1px 2px rgba(0,0,0,0.95)'
+                                        textShadow: '0 1px 2px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,0.8)'
                                     }}
                                 >
                                     "{loreText}"
                                 </p>
                             </div>
 
-                            {/* 4. PLACA DE COMBATE INFERIOR (FUE | MAG y DEF | AGI) */}
-                            {/* Lado Izquierdo: FUE | MAG */}
+                            {/* 5. SOCKETS DE COMBATE CENTRADOS EN LAS CASILLAS DE PIEDRA */}
+                            {/* Sockets Izquierdo: FUE | MAG */}
                             <div
-                                className="absolute z-20 flex items-center justify-start pointer-events-none"
+                                className="absolute z-20 flex items-center justify-center pointer-events-none"
                                 style={{
-                                    bottom: '4.8%',
+                                    top: '86.5%',
                                     left: '13.5%',
-                                    width: '32%',
-                                    height: '3.5%'
+                                    width: '27%',
+                                    height: '4.8%'
                                 }}
                             >
-                                <div className="flex items-center gap-1 text-[9.5px] sm:text-[10.5px] font-bold text-amber-100 tcg-gold-emboss">
-                                    <span>FUE <strong className="text-white text-xs">{statsData.fuerza}</strong></span>
-                                    <span className="text-amber-400/60">|</span>
-                                    <span>MAG <strong className="text-white text-xs">{statsData.magia}</strong></span>
+                                <div className="flex items-center justify-center gap-1.5 text-[9px] sm:text-[9.5px] font-bold text-amber-200">
+                                    <span>FUE <strong className="text-white text-[11px] font-black">{statsData.fuerza}</strong></span>
+                                    <span className="text-amber-400/40">|</span>
+                                    <span>MAG <strong className="text-white text-[11px] font-black">{statsData.magia}</strong></span>
                                 </div>
                             </div>
 
-                            {/* Lado Derecho: DEF | AGI */}
+                            {/* Sockets Derecho: DEF | AGI */}
                             <div
-                                className="absolute z-20 flex items-center justify-end pointer-events-none"
+                                className="absolute z-20 flex items-center justify-center pointer-events-none"
                                 style={{
-                                    bottom: '4.8%',
+                                    top: '86.5%',
                                     right: '13.5%',
-                                    width: '32%',
-                                    height: '3.5%'
+                                    width: '27%',
+                                    height: '4.8%'
                                 }}
                             >
-                                <div className="flex items-center gap-1 text-[9.5px] sm:text-[10.5px] font-bold text-amber-100 tcg-gold-emboss">
-                                    <span>DEF <strong className="text-white text-xs">{statsData.defensa}</strong></span>
-                                    <span className="text-amber-400/60">|</span>
-                                    <span>AGI <strong className="text-white text-xs">{statsData.agilidad}</strong></span>
+                                <div className="flex items-center justify-center gap-1.5 text-[9px] sm:text-[9.5px] font-bold text-amber-200">
+                                    <span>DEF <strong className="text-white text-[11px] font-black">{statsData.defensa}</strong></span>
+                                    <span className="text-amber-400/40">|</span>
+                                    <span>AGI <strong className="text-white text-[11px] font-black">{statsData.agilidad}</strong></span>
                                 </div>
                             </div>
 

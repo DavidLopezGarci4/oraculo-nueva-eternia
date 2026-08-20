@@ -1360,6 +1360,20 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
   - **Matriz Térmica de Oportunidades (`OpportunityHeatMatrix.tsx`)**: Termómetro táctil interactivo en 3 niveles (🔥 Fuego >40%, ⚡ Rayo 20-40%, 🛡️ Escudo <20%) integrado en el Dashboard.
   - **Validación Automatizada**: 6 nuevas suites de tests unitarios aprobadas (`tests/unit/test_budget_optimizer.py`, `test_market_analytics.py`, `test_telegram_oracle_ai.py`), suite completa de 73 tests superada al 100% y frontend compilado con `npm run build` en 9.48s con 0 errores.
 
+### ⚡ Fase 87: Motor Gráfico TCG Magic Showcase, Homogeneización Geométrica de 6 Facciones y Placa de Poder de Alto Impacto (20/08/2026)
+
+- **Hitos**: Desarrollo del motor gráfico de cromos TCG inspirados en Magic Showcase de 3 capas reales (Fondo de ilustración interactivo con pan & zoom, marco esculpido HD en WebP transparente y frente tipográfico vectorial en relieve de oro), homogeneización de cuadrícula canónica unificada entre las 6 facciones, eliminación de anomalías/textos en inglés horneados en losas y placa de poder de alto impacto.
+- **Estado**: ✅ COMPLETADO Y VERIFICADO
+- **Logros Técnicos**:
+  - **3-Layer TCG Frame Engine (`TradingCardModal.tsx`)**: Reescritura completa del modal de tarjetas coleccionables. Capa 1: Ventana de arte interactiva con arrastre de ratón/táctil y zoom con rueda (0.4x - 3.5x). Capa 2: Plantilla HD esculpida en WebP transparente (`/frames/frame_[theme].webp`). Capa 3: Tipografía vectorial `Cinzel` nítida, formateo inteligente de títulos largos (`formatCardTitle`) y datos canónicos.
+  - **Homogeneización Geométrica Unificada entre 6 Facciones**: Se diseñaron y procesaron las 6 plantillas de facción bajo una cuadrícula maestra exacta (896 × 1200 px): `Castle Grayskull` (Piedra musgosa & Oro), `Snake Mountain` (Basalto & Cráneo Havoc), `Evil Horde` (Bio-metal carmesí & Murciélago), `Snake Men` (Escamas & Corona de Cobra), `Great Rebellion` (Mármol cristalino & Corazón Alado) y `Cosmic Enforcers` (Titanio estelar & Ojo Cósmico de Zodac).
+  - **Centrado Milimétrico de Sockets de Combate**: Los valores de combate (`FUE | MAG` y `DEF | AGI`) a `top: 86.5%` se asentaron milimétricamente en el interior de las casillas rectangulares esculpidas a los lados del sello holográfico 3D irisado.
+  - **Placa de Poder / Habilidad de Alto Impacto**: Diseño de una placa física prominente con borde dorado y fondo traslúcido (`⚡ PODER: [HABILIDAD]`) en relieve metálico `tcg-gold-emboss` a `top: 56.8%`.
+  - **Legibilidad y Tipografía Sin Cortes**: Eliminación total de truncamientos en la línea de tipo (`top: 47.5%`) y optimización del lore canónico (`top: 63.2%`) mediante panel difuminado sutil y sombras proyectadas (`drop-shadow`).
+  - **Exportador Dual Sincronizado**: El motor de exportación gráfica por Canvas 2D HD comparte exactamente la misma cuadrícula porcentual que la interfaz React DOM, asegurando descargas PNG en alta resolución calcadas a la pantalla.
+  - **Compilación de Producción Validada**: `npm run build` ejecutado y aprobado con 0 errores en 8.69s.
+
+
 
 
 
