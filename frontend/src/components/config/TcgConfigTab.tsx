@@ -506,7 +506,7 @@ export default function TcgConfigTab() {
                                     className="font-black uppercase tracking-wider whitespace-nowrap overflow-hidden text-ellipsis text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,1)]"
                                     style={{ fontSize: activeLayout.powerPlate.fontSize }}
                                 >
-                                    PODER: {sampleChar.power}
+                                    {sampleChar.power}
                                 </span>
                             </div>
 

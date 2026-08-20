@@ -877,7 +877,7 @@ const generateTradingCardDataUrl = async (
 
                     ctx.textAlign = 'center';
                     ctx.fillStyle = profileData?.specialMoveColor || '#ffdb70';
-                    const powerText = `⚡ PODER: ${specialMove.toUpperCase()}`;
+                    const powerText = `⚡ ${specialMove.toUpperCase()}`;
                     ctx.font = `900 ${layout.canvas.powerText.fontSize}px serif`;
                     if (ctx.measureText(powerText).width > 590) {
                         ctx.font = '900 15px serif';
@@ -1682,7 +1682,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                             color: theme.specialMoveColor
                                         }}
                                     >
-                                        PODER: {specialMoveText}
+                                        {specialMoveText}
                                     </span>
                                 </div>
 

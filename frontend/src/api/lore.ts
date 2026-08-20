@@ -1,4 +1,4 @@
-import axios from 'axios';
+import { apiClient as axios } from './client';
 
 export interface CharacterLore {
     slug: string;
