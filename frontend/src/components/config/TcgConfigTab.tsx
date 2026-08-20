@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Sparkles, Save, RotateCcw, Copy, Check, Zap, Eye, Swords, Info } from 'lucide-react';
+import { Sparkles, Save, RotateCcw, Copy, Check, Eye, Swords, Info } from 'lucide-react';
 import { getSystemTcgLayouts, saveSystemTcgLayouts } from '../../api/admin';
 
 export interface StatSocketCoord {
@@ -490,10 +490,18 @@ export default function TcgConfigTab() {
 
                     {/* Cromo Renderizado en Vivo */}
                     <div className="relative w-[300px] sm:w-[320px] h-[400px] sm:h-[426px] rounded-2xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.9)] border border-white/10 select-none bg-[#060a0f]">
-                        {/* Capa 1: Fondo e Ilustración Simulada */}
-                        <div className="absolute inset-0 z-0 flex items-center justify-center bg-gradient-to-b from-slate-900 via-indigo-950 to-black overflow-hidden">
-                            <div className="w-[230px] h-[210px] rounded-2xl bg-amber-500/10 border border-amber-400/20 flex flex-col items-center justify-center text-center p-3 mt-[-40px]">
-                                <Swords className="h-10 w-10 text-amber-400/40 mb-1" />
+                        {/* Capa 1: Fondo e Ilustración Simulada (Abarca todo el Arco Libre hasta la cúspide) */}
+                        <div className="absolute inset-0 z-0 bg-gradient-to-b from-slate-900 via-indigo-950 to-black overflow-hidden">
+                            <div
+                                className="absolute flex flex-col items-center justify-center text-center p-3 rounded-t-3xl bg-amber-500/10 border border-amber-400/20 shadow-inner"
+                                style={{
+                                    top: '5.5%',
+                                    left: '8.0%',
+                                    width: '84%',
+                                    height: '50%'
+                                }}
+                            >
+                                <Swords className="h-10 w-10 text-amber-400/40 mb-1 animate-pulse" />
                                 <span className="text-[10px] font-bold text-amber-200/60 uppercase">Ilustración MOTU</span>
                             </div>
                         </div>
@@ -529,9 +537,9 @@ export default function TcgConfigTab() {
                             </div>
                         </div>
 
-                        {/* 2. Losa de Piedra Unificada (Poder + Lore + Categorización) */}
+                        {/* 2. Losa de Piedra Unificada (Lore Canónico) */}
                         <div
-                            className="absolute z-20 flex flex-col justify-between pointer-events-none px-2.5 py-1.5 overflow-hidden rounded-xl bg-black/40 backdrop-blur-[1px] shadow-inner"
+                            className="absolute z-20 flex flex-col items-center justify-center text-center pointer-events-none px-3 py-2 overflow-hidden rounded-xl bg-black/40 backdrop-blur-[1px] shadow-inner"
                             style={{
                                 top: activeLayout.textBox.top,
                                 left: activeLayout.textBox.left,
@@ -539,46 +547,17 @@ export default function TcgConfigTab() {
                                 height: activeLayout.textBox.height
                             }}
                         >
-                            {/* 2a. Placa de Poder */}
-                            <div
-                                className={`flex items-center justify-center gap-1 px-2 py-0.5 rounded-lg border ${activeLayout.powerPlate.border} bg-gradient-to-r ${activeLayout.powerPlate.bg} shadow-[0_2px_8px_rgba(0,0,0,0.9)] shrink-0`}
-                                style={{ minHeight: activeLayout.powerPlate.height }}
+                            {/* Texto de Lore Canónico Centrado */}
+                            <p
+                                className="italic leading-relaxed text-stone-100 line-clamp-4 drop-shadow-[0_1px_3px_rgba(0,0,0,1)] text-center my-auto"
+                                style={{
+                                    fontSize: activeLayout.lore.fontSize,
+                                    lineHeight: activeLayout.lore.lineHeight,
+                                    textShadow: '0 1px 2px rgba(0,0,0,1), 0 0 4px rgba(0,0,0,0.8)'
+                                }}
                             >
-                                <Zap className="h-2.5 w-2.5 fill-amber-400 text-amber-400 shrink-0" />
-                                <span
-                                    className="font-black uppercase tracking-wider whitespace-nowrap overflow-hidden text-ellipsis text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,1)]"
-                                    style={{ fontSize: activeLayout.powerPlate.fontSize }}
-                                >
-                                    {sampleChar.power}
-                                </span>
-                            </div>
-
-                            {/* 2b. Texto de Lore Canónico */}
-                            <div className="flex-1 flex items-center justify-center text-center my-0.5 overflow-hidden">
-                                <p
-                                    className="italic leading-tight text-stone-100 line-clamp-3 drop-shadow-[0_1px_3px_rgba(0,0,0,1)]"
-                                    style={{
-                                        fontSize: activeLayout.lore.fontSize,
-                                        lineHeight: activeLayout.lore.lineHeight,
-                                        textShadow: '0 1px 2px rgba(0,0,0,1), 0 0 4px rgba(0,0,0,0.8)'
-                                    }}
-                                >
-                                    "{sampleChar.lore}"
-                                </p>
-                            </div>
-
-                            {/* 2c. Categorización / Tipo (Pie de Losa) */}
-                            <div className="flex items-center justify-center text-center shrink-0 pt-0.5 border-t border-amber-500/20">
-                                <span
-                                    className="font-black uppercase tracking-wider truncate drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]"
-                                    style={{
-                                        fontSize: activeLayout.typeLine.fontSize,
-                                        color: activeLayout.typeLine.color
-                                    }}
-                                >
-                                    — {sampleChar.typeLine} —
-                                </span>
-                            </div>
+                                "{sampleChar.lore}"
+                            </p>
                         </div>
 
                         {/* 3. Engarces de Combate 3D Nativos (4 Orbes Calibrados Individualmente) */}
@@ -841,63 +820,47 @@ export default function TcgConfigTab() {
                         </div>
                     </div>
 
-                    {/* SECCIÓN 3: PLACA DE PODER, LORE Y TIPO */}
+                    {/* SECCIÓN 3: TIPOGRAFÍA Y ESTILO DEL LORE */}
                     <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/10 space-y-4">
                         <div className="flex items-center justify-between">
                             <h4 className="text-sm font-black text-white flex items-center gap-2">
                                 <span className="h-2 w-2 rounded-full bg-purple-400" />
-                                3. Placa de Poder, Lore y Categorización
+                                3. Tipografía y Estilo del Lore Canónico
                             </h4>
-                            <span className="text-[10px] font-mono text-purple-400/70">power / lore / typeLine</span>
+                            <span className="text-[10px] font-mono text-purple-400/70">lore</span>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            {/* Placa de Poder: Font Size */}
-                            <div className="space-y-1">
-                                <div className="flex justify-between text-xs text-white/60 font-bold">
-                                    <span>Fuente Poder</span>
-                                    <span className="text-purple-300 font-mono">{activeLayout.powerPlate.fontSize}</span>
-                                </div>
-                                <input
-                                    type="range"
-                                    min="7.5"
-                                    max="13.0"
-                                    step="0.5"
-                                    value={parseFloat(activeLayout.powerPlate.fontSize)}
-                                    onChange={(e) => updateActiveCoord('powerPlate', 'fontSize', `${e.target.value}px`)}
-                                    className="w-full accent-purple-400"
-                                />
-                            </div>
-
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             {/* Lore: Font Size */}
                             <div className="space-y-1">
                                 <div className="flex justify-between text-xs text-white/60 font-bold">
-                                    <span>Fuente Lore</span>
+                                    <span>Tamaño Fuente Lore</span>
                                     <span className="text-purple-300 font-mono">{activeLayout.lore.fontSize}</span>
                                 </div>
                                 <input
                                     type="range"
                                     min="7.5"
-                                    max="13.0"
-                                    step="0.5"
+                                    max="14.0"
+                                    step="0.2"
                                     value={parseFloat(activeLayout.lore.fontSize)}
                                     onChange={(e) => updateActiveCoord('lore', 'fontSize', `${e.target.value}px`)}
                                     className="w-full accent-purple-400"
                                 />
                             </div>
 
-                            {/* TypeLine: Font Size */}
+                            {/* Lore: Line Height */}
                             <div className="space-y-1">
                                 <div className="flex justify-between text-xs text-white/60 font-bold">
-                                    <span>Fuente Tipo</span>
-                                    <span className="text-purple-300 font-mono">{activeLayout.typeLine.fontSize}</span>
+                                    <span>Interlineado (Line Height)</span>
+                                    <span className="text-purple-300 font-mono">{activeLayout.lore.lineHeight}</span>
                                 </div>
                                 <input
                                     type="range"
-                                    min="6.5"
-                                    max="11.5"
-                                    value={parseFloat(activeLayout.typeLine.fontSize)}
-                                    onChange={(e) => updateActiveCoord('typeLine', 'fontSize', `${e.target.value}px`)}
+                                    min="1.1"
+                                    max="2.0"
+                                    step="0.05"
+                                    value={parseFloat(activeLayout.lore.lineHeight)}
+                                    onChange={(e) => updateActiveCoord('lore', 'lineHeight', e.target.value)}
                                     className="w-full accent-purple-400"
                                 />
                             </div>

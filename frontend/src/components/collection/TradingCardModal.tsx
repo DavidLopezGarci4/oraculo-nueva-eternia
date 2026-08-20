@@ -840,8 +840,6 @@ const generateTradingCardDataUrl = async (
             const titleParts = formatCardTitle(rawCardTitle);
             const themeKey = profileData?.themeKey || 'castle_grayskull';
             const layout = profileData?.layout || FACTION_CARD_LAYOUTS[themeKey] || FACTION_CARD_LAYOUTS.castle_grayskull;
-            const faction = profileData?.faction || 'Guerreros Heroicos';
-            const specialMove = profileData?.specialMove || 'Furia del Relámpago de Grayskull';
             const rawLore = aiLore || profileData?.lore || '¡Por el poder de Grayskull, la justicia siempre prevalecerá!';
             const loreText = rawLore.replace(/^["';\s]+/, '').replace(/["';\s]+$/, '');
             const stats = profileData?.stats || { fuerza: 99, magia: 88, defensa: 95, agilidad: 90 };
@@ -870,27 +868,10 @@ const generateTradingCardDataUrl = async (
                         ctx.fillText(`• ${titleParts.sub.toUpperCase()}`, layout.canvas.header.x + ctx.measureText(titleParts.main.toUpperCase()).width + 12, layout.canvas.header.y);
                     }
 
-                    // 3. Placa de Poder de Alto Impacto (En la parte superior de la losa de piedra)
-                    const pb = layout.canvas.powerBox;
-                    ctx.fillStyle = 'rgba(15, 20, 25, 0.90)';
-                    ctx.fillRect(pb.x, pb.y, pb.w, pb.h);
-                    ctx.strokeStyle = '#eab308';
-                    ctx.lineWidth = 2;
-                    ctx.strokeRect(pb.x, pb.y, pb.w, pb.h);
-
-                    ctx.textAlign = 'center';
-                    ctx.fillStyle = profileData?.specialMoveColor || '#ffdb70';
-                    const powerText = `⚡ ${specialMove.toUpperCase()}`;
-                    ctx.font = `900 ${layout.canvas.powerText.fontSize}px serif`;
-                    if (ctx.measureText(powerText).width > 590) {
-                        ctx.font = '900 15px serif';
-                    }
-                    ctx.fillText(powerText, width / 2, layout.canvas.powerText.y);
-
-                    // 4. Flavor Lore Canónico en Cursiva (En el centro de la losa de texto)
+                    // 3. Flavor Lore Canónico en Cursiva (En el centro de la losa de texto)
                     ctx.textAlign = 'center';
                     ctx.fillStyle = profileData?.loreTextColor || '#f5f5f0';
-                    ctx.font = `italic ${layout.canvas.loreText.fontSize}px serif`;
+                    ctx.font = `italic ${layout.canvas.loreText.fontSize || 17}px serif`;
                     const words = `"${loreText}"`.split(' ');
                     let line = '';
                     let yPos = layout.canvas.loreText.y;
@@ -907,13 +888,7 @@ const generateTradingCardDataUrl = async (
                     }
                     ctx.fillText(line.trim(), width / 2, yPos);
 
-                    // 5. Barra de Categorización / Tipo (DEBAJO del texto de descripción)
-                    ctx.fillStyle = layout.typeLine.color || '#fde68a';
-                    ctx.font = `bold ${layout.canvas.typeLine.fontSize}px serif`;
-                    ctx.textAlign = 'center';
-                    ctx.fillText(`— ${profileData?.typeLine || `CRIATURA LEGENDARIA • ${faction.toUpperCase()}`} —`, width / 2, layout.canvas.typeLine.y);
-
-                    // 6. Engarces de Combate 3D Nativos (4 Orbes Esculpidos en el Marco)
+                    // 4. Engarces de Combate 3D Nativos (4 Orbes Esculpidos en el Marco)
                     const drawStatOnOrb = (
                         cx: number,
                         cy: number,
@@ -964,10 +939,10 @@ const generateTradingCardDataUrl = async (
                 img.crossOrigin = 'anonymous';
                 img.onload = () => {
                     try {
-                        const drawX = 100;
-                        const drawY = 145;
-                        const drawW = 696;
-                        const drawH = 510;
+                        const drawX = 72;
+                        const drawY = 66;
+                        const drawW = 752;
+                        const drawH = 600;
                         ctx.drawImage(img, drawX, drawY, drawW, drawH);
                     } catch {}
                     renderOverlayAndText();
@@ -1882,11 +1857,11 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                     isDraggingImg ? 'cursor-grabbing' : 'cursor-grab'
                                 }`}
                                 style={{
-                                    top: '12.0%',
-                                    left: '11.0%',
-                                    width: '78%',
-                                    height: '43.5%',
-                                    borderRadius: '20px 20px 0 0'
+                                    top: '5.5%',
+                                    left: '8.0%',
+                                    width: '84%',
+                                    height: '50%',
+                                    borderRadius: '24px 24px 0 0'
                                 }}
                                 title="Arrastra con el ratón o usa la rueda para ampliar y mover libremente"
                             >
@@ -2011,9 +1986,9 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                 );
                             })()}
 
-                            {/* 2. CAJA DE TEXTO UNIFICADA (Losa de Piedra: Poder + Lore + Categorización de Tipo) */}
+                            {/* 2. CAJA DE TEXTO UNIFICADA (Losa de Piedra: Lore Canónico) */}
                             <div
-                                className="absolute z-20 flex flex-col justify-between pointer-events-none px-2.5 py-1.5 overflow-hidden rounded-xl bg-black/35 backdrop-blur-[1px] shadow-inner"
+                                className="absolute z-20 flex flex-col items-center justify-center text-center pointer-events-none px-3 py-2 overflow-hidden rounded-xl bg-black/35 backdrop-blur-[1px] shadow-inner"
                                 style={{
                                     top: layout.textBox.top,
                                     left: layout.textBox.left,
@@ -2021,50 +1996,18 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                     height: layout.textBox.height
                                 }}
                             >
-                                {/* 2a. PLACA DE PODER / HABILIDAD ESPECIAL DE ALTO IMPACTO (Arriba en la losa) */}
-                                <div
-                                    className={`flex items-center justify-center gap-1.5 px-2 py-0.5 rounded-lg border ${layout.powerPlate.border} bg-gradient-to-r ${layout.powerPlate.bg} shadow-[0_2px_8px_rgba(0,0,0,0.9)] shrink-0`}
-                                    style={{ minHeight: '24px' }}
+                                {/* TEXTO DE DESCRIPCIÓN / LORE CANÓNICO */}
+                                <p
+                                    className="italic leading-relaxed text-stone-100 line-clamp-4 drop-shadow-[0_1px_3px_rgba(0,0,0,1)] text-center my-auto"
+                                    style={{
+                                        fontSize: layout.lore.fontSize,
+                                        lineHeight: layout.lore.lineHeight,
+                                        color: theme.loreTextColor,
+                                        textShadow: '0 1px 2px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,0.8)'
+                                    }}
                                 >
-                                    <Zap className="h-3 w-3 fill-amber-400 text-amber-400 shrink-0 animate-pulse" />
-                                    <span
-                                        className="font-black uppercase tracking-wider whitespace-nowrap overflow-hidden text-ellipsis tcg-gold-emboss"
-                                        style={{
-                                            fontSize: layout.powerPlate.fontSize,
-                                            color: theme.specialMoveColor
-                                        }}
-                                    >
-                                        {specialMoveText}
-                                    </span>
-                                </div>
-
-                                {/* 2b. TEXTO DE DESCRIPCIÓN / LORE CANÓNICO (En el cuerpo central) */}
-                                <div className="flex-1 flex items-center justify-center text-center my-1 overflow-hidden">
-                                    <p
-                                        className="italic leading-relaxed text-stone-100 line-clamp-3 drop-shadow-[0_1px_3px_rgba(0,0,0,1)]"
-                                        style={{
-                                            fontSize: layout.lore.fontSize,
-                                            lineHeight: layout.lore.lineHeight,
-                                            color: theme.loreTextColor,
-                                            textShadow: '0 1px 2px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,0.8)'
-                                        }}
-                                    >
-                                        "{loreText}"
-                                    </p>
-                                </div>
-
-                                {/* 2c. CATEGORIZACIÓN DE TIPO (Debajo del texto de descripción) */}
-                                <div className="flex items-center justify-center text-center shrink-0 pt-0.5 border-t border-amber-500/20">
-                                    <span
-                                        className="font-black uppercase tracking-wider truncate drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)]"
-                                        style={{
-                                            fontSize: layout.typeLine.fontSize,
-                                            color: layout.typeLine.color
-                                        }}
-                                    >
-                                        — {typeLineText} —
-                                    </span>
-                                </div>
+                                    "{loreText}"
+                                </p>
                             </div>
 
                             {/* 3. ENGARCES DE COMBATE 3D NATIVOS (4 Orbes Esculpidos en el Marco) */}
