@@ -449,7 +449,7 @@ export default function TcgConfigTab() {
                     <div className="relative w-[300px] sm:w-[320px] h-[400px] sm:h-[426px] rounded-2xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.9)] border border-white/10 select-none bg-[#060a0f]">
                         {/* Capa 1: Fondo e Ilustración Simulada */}
                         <div className="absolute inset-0 z-0 flex items-center justify-center bg-gradient-to-b from-slate-900 via-indigo-950 to-black overflow-hidden">
-                            <div className="w-[180px] h-[190px] rounded-2xl bg-amber-500/10 border border-amber-400/20 flex flex-col items-center justify-center text-center p-3 mt-[-80px]">
+                            <div className="w-[230px] h-[210px] rounded-2xl bg-amber-500/10 border border-amber-400/20 flex flex-col items-center justify-center text-center p-3 mt-[-40px]">
                                 <Swords className="h-10 w-10 text-amber-400/40 mb-1" />
                                 <span className="text-[10px] font-bold text-amber-200/60 uppercase">Ilustración MOTU</span>
                             </div>

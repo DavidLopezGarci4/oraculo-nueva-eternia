@@ -934,10 +934,10 @@ const generateTradingCardDataUrl = async (
                 img.crossOrigin = 'anonymous';
                 img.onload = () => {
                     try {
-                        const drawX = 135;
-                        const drawY = 160;
-                        const drawW = 626;
-                        const drawH = 390;
+                        const drawX = 100;
+                        const drawY = 145;
+                        const drawW = 696;
+                        const drawH = 510;
                         ctx.drawImage(img, drawX, drawY, drawW, drawH);
                     } catch {}
                     renderOverlayAndText();
@@ -1115,12 +1115,12 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
         }
     };
 
-    // Control de Zoom con Rueda del Ratón
+    // Control de Zoom con Rueda del Ratón (PC / Scroll)
     const handleImgWheel = (e: React.WheelEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        const delta = e.deltaY < 0 ? 0.08 : -0.08;
-        setImgZoom((prev) => Math.min(3.5, Math.max(0.4, +(prev + delta).toFixed(2))));
+        const delta = e.deltaY < 0 ? 0.15 : -0.15;
+        setImgZoom((prev) => Math.min(6.0, Math.max(0.2, +(prev + delta).toFixed(2))));
     };
 
     // Control Táctil (Móvil)
@@ -1168,7 +1168,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                 e.touches[0].clientY - e.touches[1].clientY
             );
             const scale = currentDist / touchStartRef.current.dist;
-            setImgZoom(Math.min(3.5, Math.max(0.4, +(touchStartRef.current.startZoom * scale).toFixed(2))));
+            setImgZoom(Math.min(6.0, Math.max(0.2, +(touchStartRef.current.startZoom * scale).toFixed(2))));
         }
     };
 
@@ -1530,13 +1530,13 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                     isDraggingImg ? 'cursor-grabbing' : 'cursor-grab'
                                 }`}
                                 style={{
-                                    top: '13.5%',
-                                    left: '14.5%',
-                                    width: '71%',
-                                    height: '33%',
-                                    borderRadius: '16px 16px 6px 6px'
+                                    top: '12.0%',
+                                    left: '11.0%',
+                                    width: '78%',
+                                    height: '43.5%',
+                                    borderRadius: '20px 20px 0 0'
                                 }}
-                                title="Arrastra con el ratón o usa la rueda para ampliar y encuadrar"
+                                title="Arrastra con el ratón o usa la rueda para ampliar y mover libremente"
                             >
                                 {/* Capa de la Imagen con Zoom y Desplazamiento */}
                                 <div
@@ -1554,14 +1554,14 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                             draggable={false}
                                             className="max-w-none max-h-none select-none pointer-events-none animate-in fade-in duration-300"
                                             style={{
-                                                width: '320px',
+                                                width: '100%',
+                                                minWidth: '280px',
                                                 height: 'auto',
-                                                minHeight: '200px',
                                                 display: 'block'
                                             }}
                                         />
                                     ) : (
-                                        <div className="flex items-center justify-center pointer-events-none select-none" style={{ width: '320px', height: '200px' }}>
+                                        <div className="flex items-center justify-center pointer-events-none select-none" style={{ width: '300px', height: '240px' }}>
                                             <MOTUImage
                                                 productId={item.id}
                                                 src={item.image_url}
@@ -1579,7 +1579,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                             type="button"
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                setImgZoom((prev) => Math.min(3.5, +(prev + 0.15).toFixed(2)));
+                                                setImgZoom((prev) => Math.min(6.0, +(prev + 0.25).toFixed(2)));
                                             }}
                                             title="Ampliar Imagen (+)"
                                             className="p-1 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition active:scale-90"
@@ -1590,7 +1590,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                             type="button"
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                setImgZoom((prev) => Math.max(0.4, +(prev - 0.15).toFixed(2)));
+                                                setImgZoom((prev) => Math.max(0.2, +(prev - 0.25).toFixed(2)));
                                             }}
                                             title="Reducir Imagen (-)"
                                             className="p-1 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition active:scale-90"
@@ -1617,7 +1617,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                     <div className="export-exclude absolute bottom-2 left-2 z-20 pointer-events-none opacity-60 group-hover:opacity-100 transition-opacity">
                                         <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/75 border border-slate-800 text-[8px] font-mono text-slate-300">
                                             <Move className="h-2.5 w-2.5 text-amber-400" />
-                                            {imgZoom !== 1 ? `${Math.round(imgZoom * 100)}%` : 'Arrastra / Zoom'}
+                                            {imgZoom !== 1 ? `${Math.round(imgZoom * 100)}%` : 'Arrastra / Rueda Zoom'}
                                         </span>
                                     </div>
                                 )}
