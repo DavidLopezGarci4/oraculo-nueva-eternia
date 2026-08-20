@@ -359,4 +359,15 @@ export const downloadExecutionLogsCsv = async (): Promise<void> => {
     window.URL.revokeObjectURL(url);
 };
 
+export const getSystemTcgLayouts = async (): Promise<Record<string, any>> => {
+    const response = await adminAxios.get('/system/tcg-layouts');
+    return response.data;
+};
+
+export const saveSystemTcgLayouts = async (layouts: Record<string, any>): Promise<{ status: string; message: string }> => {
+    const response = await adminAxios.post('/system/tcg-layouts', layouts);
+    return response.data;
+};
+
+
 

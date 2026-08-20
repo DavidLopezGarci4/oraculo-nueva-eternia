@@ -106,5 +106,38 @@ Para recibir alertas personalizadas directamente en tu móvil:
     *   `/caza`: Dispara una incursión manual inmediata con el cuarteto canónico oficial MOTU (*"motu origins"*, *"masters del universo"*, *"masters of the universe"*, *"he-man origins"*).
     *   `/caza [figura]`: Ejecuta una búsqueda personalizada en tiempo real.
 
+---
+
+## 5. Grimorio de Lore Canónico MOTU (Pestaña "Grimorio Lore")
+
+Esta sección permite auditar, editar y validar las historias, técnicas especiales y estadísticas canónicas de combate de todos los personajes del multiverso MOTU vinculados al catálogo:
+
+*   **Buscador y Filtro por Facciones:** Localiza al instante cualquier héroe o villano por nombre o texto de lore, filtrando por facciones (*Guerreros Heroicos*, *Guerreros del Mal*, *La Horda del Terror*, *Los Hombres Serpiente*, *La Gran Rebelión*, *Guardianes Cósmicos*).
+*   **Filtro de Pendientes de Revisión:** Permite aislar con 1 clic los personajes recién descubiertos por el Daily Scan que requieren revisión humana.
+*   **Editor Visual:** Modal interactivo para ajustar el nombre de la habilidad especial, estadísticas de combate (FUE, MAG, DEF, AGI) y el texto de historia con contador de caracteres integrado (máximo 180 caracteres para garantizar un encaje perfecto en el cromo TCG).
+*   **Regla de Inmutabilidad:** Una vez verificado o sembrado un personaje en base de datos (`is_verified = True`), jamás se sobreescribirá automáticamente por la web, garantizando 0 consumo de tokens y lecturas ultra-rápidas a 0ms.
+
+---
+
+## 6. Taller de Calibración de Cromos Digitales (Pestaña "Cromos TCG")
+
+Herramienta WYSIWYG de precisión milimétrica reservada para administradores que permite posicionar y formatear la geometría de cada una de las 6 plantillas de cromos coleccionables:
+
+*   **Selector de Plantilla:** Selecciona la facción a calibrar (*Castle Grayskull*, *Snake Mountain*, *Evil Horde*, *Snake Men*, *Great Rebellion*, *Cosmic Enforcers*).
+*   **Simulador en Vivo a 60fps:** Visualiza en tiempo real los cambios sobre un cromo a escala con figuras canónicas de prueba.
+*   **Controles Deslizantes por Secciones:**
+    *   **Cabecera:** Posición vertical (`top`), horizontal (`left`), ancho (`width`) y tamaño tipográfico del título.
+    *   **Losa de Piedra Unificada:** Ajuste del marco físico inferior (`top`, `left`, `width`, `height`) que aloja el poder, lore y tipo.
+    *   **Placa de Poder:** Altura y tamaño de fuente de la técnica especial.
+    *   **Lore Canónico:** Tamaño de fuente e interlineado (`line-height`).
+    *   **Categorización de Tipo:** Tamaño de fuente y color temático.
+    *   **Sockets de Combate:** Altura vertical y márgenes de las casillas de piedra `FUE|MAG` y `DEF|AGI`.
+*   **Gestión de Estados:**
+    *   `[ 💾 Guardar Coordenadas ]`: Persiste la configuración en Supabase y SQLite (`SystemConfigModel`).
+    *   `[ 🔄 Restablecer Facción ]`: Restaura la plantilla actual a sus valores canónicos por defecto.
+    *   `[ 🔁 Restablecer Todas ]`: Restablece las 6 facciones completas.
+    *   `[ 📋 Copiar JSON ]`: Copia la matriz de coordenadas al portapapeles.
+
+
 
 

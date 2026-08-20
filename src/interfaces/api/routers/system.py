@@ -137,6 +137,32 @@ async def save_sword_configs(configs: dict, current_user: UserModel = Depends(ge
         db.commit()
     return {"status": "success", "message": "Configuración de espadas guardada exitosamente."}
 
+@router.get("/api/system/tcg-layouts")
+async def get_tcg_layouts(current_user: UserModel = Depends(get_current_user)):
+    with SessionCloud() as db:
+        cfg = db.query(SystemConfigModel).filter(SystemConfigModel.key == "tcg_layouts").first()
+        if cfg:
+            try:
+                return json.loads(cfg.value)
+            except Exception:
+                return {}
+        return {}
+
+@router.post("/api/system/tcg-layouts", response_model=StatusMessageOutput)
+async def save_tcg_layouts(layouts: dict, current_user: UserModel = Depends(get_current_user)):
+    if not is_admin(current_user):
+        raise HTTPException(status_code=403, detail="No autorizado para modificar la configuración de cartas TCG.")
+        
+    with SessionCloud() as db:
+        cfg = db.query(SystemConfigModel).filter(SystemConfigModel.key == "tcg_layouts").first()
+        if not cfg:
+            cfg = SystemConfigModel(key="tcg_layouts")
+            db.add(cfg)
+        cfg.value = json.dumps(layouts)
+        db.commit()
+    return {"status": "success", "message": "Configuración de cartas TCG guardada exitosamente en la nube."}
+
+
 async def run_maintenance_task():
     from src.application.services.maintenance_service import MaintenanceService
     from src.core.security import SecurityShield

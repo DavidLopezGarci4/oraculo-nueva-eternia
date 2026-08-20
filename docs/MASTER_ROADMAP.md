@@ -590,6 +590,15 @@ Aunque la aplicación es **no agéntica** hoy, se diseña como un sistema modula
   - [x] **Persistencia Híbrida (`CharacterLoreModel` & `ProductModel.character_slug`)**: Esquema en SQLite local y Supabase Cloud sincronizado automáticamente vía `universal_migrator.py`.
   - [x] **Hook en Daily Scan (`daily_scan.py`)**: Auto-resolución de personajes para nuevos hallazgos; si el personaje es inédito, se cosecha como borrador (`is_verified = False`) sin interrumpir el escaneo.
   - [x] **Pestaña Grimorio de Lore en Configuración (`LoreTab.tsx` & `/api/lore`)**: Buscador, filtro por facciones, filtro de pendientes de revisión, editor de habilidades/stats/lore con contador de caracteres, re-cosecha manual y botón de aprobación rápida (`is_verified = True`).
+- [x] **Phase 89: Calibración Individual de Textos en Losa TCG y Nueva Jerarquía de Facciones (20/08/2026)**
+  - [x] **Estructuración en Losa Unificada (`TradingCardModal.tsx`)**: Reagrupación de la Placa de Poder, Lore Canónico y Categorización de Tipo en una losa física sin rozar el blasón dorado central.
+  - [x] **Categorización de Tipo Bajo la Descripción**: Reubicación de la línea de tipo a la base de la losa de texto antes de las estadísticas RPG.
+  - [x] **Matriz de Coordenadas Individuales (`FACTION_CARD_LAYOUTS`)**: Coordenadas independientes para las 6 facciones (Grayskull, Snake Mountain, Horde, Snake Men, Rebellion, Cosmic Enforcers).
+- [x] **Phase 90: Taller de Calibración TCG en Configuración (TCG Studio) y Selector Interactivo de Bando (20/08/2026)**
+  - [x] **Pestaña de Calibración TCG en Configuración (`TcgConfigTab.tsx`)**: Herramienta visual exclusiva de administración con simulador en tiempo real a 60fps, personajes de muestra y sliders para cada coordenada de texto, losa y zócalo.
+  - [x] **Persistencia en la Nube (`/api/system/tcg-layouts`)**: Almacenamiento seguro en `SystemConfigModel` sincronizado en Supabase y SQLite con botones de guardado, restablecimiento por facción/global y exportación JSON.
+  - [x] **Selector Dinámico de Bando en el Modal de Cromo (`TradingCardModal.tsx`)**: Pastillas de facción para cambiar en caliente de plantilla, adoptando inmediatamente su marco HD, colores, tipo y coordenadas calibradas.
+  - [x] **Saneamiento de Artefactos de Texto y Sincronización Canvas 2D**: Limpieza de comillas huérfanas (`";`) y alineación milimétrica del exportador de descarga PNG.
 
 
 

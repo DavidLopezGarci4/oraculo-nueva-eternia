@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Activity, Terminal, Settings, Users, Package, BookOpen } from 'lucide-react';
+import { Activity, Terminal, Settings, Users, Package, BookOpen, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { resetSmartMatches, runScrapers, stopScrapers, getScraperLogs, type ScraperExecutionLog, getWallapopIpLogs, downloadWallapopIpLogs, type WallapopIpLog, runWallaManualHtml } from '../api/purgatory';
@@ -18,6 +18,7 @@ import SystemTab from '../components/config/SystemTab';
 import InventoryTab from '../components/config/InventoryTab';
 import ScrapersTab from '../components/config/ScrapersTab';
 import { LoreTab } from '../components/config/LoreTab';
+import TcgConfigTab from '../components/config/TcgConfigTab';
 
 import { clearMOTURAMCache } from '../components/ui/MOTUImage';
 
@@ -57,7 +58,7 @@ interface ConfigProps {
 
 const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange }) => {
     const consoleRef = React.useRef<HTMLDivElement>(null);
-    const [activeTab, setActiveTab] = useState<'scrapers' | 'system' | 'users' | 'wallapop' | 'inventory' | 'lore'>('scrapers');
+    const [activeTab, setActiveTab] = useState<'scrapers' | 'system' | 'users' | 'wallapop' | 'inventory' | 'lore' | 'tcg'>('scrapers');
     const [statuses, setStatuses] = useState<ScraperStatus[]>([]);
     const [matchStats, setMatchStats] = useState<any[]>([]);
     const [syncingSensores, setSyncingSensores] = useState(false);
@@ -902,6 +903,13 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                             <BookOpen className="h-4 w-4" />
                             Grimorio Lore
                         </button>
+                        <button
+                            onClick={() => setActiveTab('tcg')}
+                            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 flex-1 sm:flex-initial min-w-[100px] sm:min-w-0 ${activeTab === 'tcg' ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-lg shadow-amber-500/25' : 'text-amber-300/80 hover:text-amber-200 hover:bg-amber-500/10'}`}
+                        >
+                            <Sparkles className="h-4 w-4" />
+                            Cromos TCG
+                        </button>
                     </div>
                 )}
             </div>
@@ -1020,6 +1028,15 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                         exit={{ opacity: 0, y: -10 }}
                     >
                         <LoreTab />
+                    </motion.div>
+                ) : activeTab === 'tcg' ? (
+                    <motion.div
+                        key="tcg"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                    >
+                        <TcgConfigTab />
                     </motion.div>
                 ) : null}
             </AnimatePresence>

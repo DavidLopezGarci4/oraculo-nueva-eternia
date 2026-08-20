@@ -1397,6 +1397,18 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
   - **Motor de Exportación Sincronizado**: Traslado de la lógica de coordenadas a la función `generateTradingCardDataUrl` del Canvas 2D, asegurando que el PNG HD exportado sea idéntico al renderizado web interactivo.
   - **Compilación y Robustez**: Suite completa del backend aprobada al 100% (67/67 tests) y frontend compilado con `npm run build` en 8.14s con 0 errores.
 
+### ⚡ Fase 90: Taller de Calibración TCG en Configuración (TCG Studio) y Selector Interactivo de Bando (20/08/2026)
+
+- **Hitos**: Creación de la pestaña de administración **"Cromos TCG"** en la sección de Configuración para calibrar visualmente al milímetro cada una de las 6 plantillas de cromos digitales con simulador en tiempo real a 60fps y persistencia en base de datos (`SystemConfigModel`), más selector interactivo de facción en el modal del cromo con conmutación dinámica de plantilla, tipografía y coordenadas.
+- **Estado**: ✅ COMPLETADO Y VERIFICADO
+- **Logros Técnicos**:
+  - **Taller de Calibración TCG (`TcgConfigTab.tsx`)**: Nueva herramienta visual exclusiva para administradores integrada en `Config.tsx`. Permite alternar entre las 6 facciones, previsualizar en directo un cromo a escala con personajes de muestra y manipular mediante sliders numéricos las posiciones exactas de cabecera (`header`), losa de texto (`textBox`), placa de poder (`powerPlate`), lore canónico, línea de tipo (`typeLine`) y zócalos de combate (`leftSocket` / `rightSocket`).
+  - **Persistencia en la Nube y Respaldo (`/api/system/tcg-layouts`)**: Endpoints seguros `GET` y `POST` en FastAPI para almacenar la matriz de coordenadas personalizada en `SystemConfigModel` (clave `tcg_layouts`) sincronizada entre SQLite y Supabase PostgreSQL, con botones de restablecimiento por facción o global a valores canónicos.
+  - **Selector Interactivo de Bando (`TradingCardModal.tsx`)**: Barra interactiva superior con pastillas de facción (Heroicos, Del Mal, Horda, Serpientes, Rebelión, Cósmicos) que permite cambiar en caliente la plantilla del cromo, actualizando instantáneamente el marco esculpido, los colores temáticos, el tipo y su disposición de coordenadas individual calibrada.
+  - **Saneamiento Tipográfico y Exportador HD**: Eliminación de artefactos de comillas huérfanas (`";`) en el texto de lore y sincronización total del motor de descarga PNG Canvas 2D con las coordenadas calibradas activas.
+  - **Verificación Automatizada y Build**: Creado test unitario `tests/unit/test_tcg_layouts_api.py` (3/3 pasados), tests del cosechador de lore aprobados (4/4 pasados) y compilación del frontend completada con `npm run build` con 0 errores en 9.57s.
+
+
 
 
 

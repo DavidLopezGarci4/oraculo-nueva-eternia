@@ -22,6 +22,8 @@ import {
 import { toPng } from 'html-to-image';
 import { MOTUImage } from '../ui/MOTUImage';
 import { enhanceCardWithAI, type CardAiEnhanceResult } from '../../api/cards';
+import { getSystemTcgLayouts } from '../../api/admin';
+import { DEFAULT_FACTION_CARD_LAYOUTS } from '../config/TcgConfigTab';
 
 interface TradingCardModalProps {
     isOpen: boolean;
@@ -834,10 +836,11 @@ const generateTradingCardDataUrl = async (
 
             const titleParts = formatCardTitle(item.product_name || item.name || 'HE-MAN');
             const themeKey = profileData?.themeKey || 'castle_grayskull';
-            const layout = FACTION_CARD_LAYOUTS[themeKey] || FACTION_CARD_LAYOUTS.castle_grayskull;
+            const layout = profileData?.layout || FACTION_CARD_LAYOUTS[themeKey] || FACTION_CARD_LAYOUTS.castle_grayskull;
             const faction = profileData?.faction || 'Guerreros Heroicos';
             const specialMove = profileData?.specialMove || 'Furia del Relámpago de Grayskull';
-            const loreText = aiLore || profileData?.lore || '¡Por el poder de Grayskull, la justicia siempre prevalecerá!';
+            const rawLore = aiLore || profileData?.lore || '¡Por el poder de Grayskull, la justicia siempre prevalecerá!';
+            const loreText = rawLore.replace(/^["';\s]+/, '').replace(/["';\s]+$/, '');
             const stats = profileData?.stats || { fuerza: 99, magia: 88, defensa: 95, agilidad: 90 };
             const frameSrc = profileData?.frameAsset || '/frames/frame_castle_grayskull.webp';
 
@@ -991,21 +994,40 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
         setImgPan({ x: 0, y: 0 });
     };
 
+    // Selector interactivo de bando y layouts dinámicos
+    const [userFactionOverride, setUserFactionOverride] = useState<string | null>(null);
+    const [customLayouts, setCustomLayouts] = useState<Record<string, any>>(DEFAULT_FACTION_CARD_LAYOUTS);
+
+    React.useEffect(() => {
+        if (!isOpen) return;
+        setUserFactionOverride(null);
+        const stored = localStorage.getItem('tcg_card_layouts');
+        if (stored) {
+            try { setCustomLayouts(JSON.parse(stored)); } catch {}
+        }
+        getSystemTcgLayouts().then(remote => {
+            if (remote && Object.keys(remote).length > 0) {
+                setCustomLayouts(prev => ({ ...prev, ...remote }));
+            }
+        }).catch(() => {});
+    }, [isOpen, item?.id]);
+
     if (!isOpen || !item) return null;
 
     const name = item.product_name || item.name || 'Figura MOTU';
     const condition = (item.condition || 'MOC').toUpperCase();
     const grade = item.grading || 10.0;
 
-    // Perfil canónico local y tema visual de facción
+    // Perfil canónico local y tema visual de facción dinámico
     const localProfile = getLocalMotuProfile(name, item.sub_category);
-    const themeKey = aiResult?.frame_theme || localProfile.themeKey;
+    const themeKey = userFactionOverride || aiResult?.frame_theme || localProfile.themeKey;
     const theme = FACTION_VISUAL_THEMES[themeKey] || FACTION_VISUAL_THEMES.castle_grayskull;
-    const layout = FACTION_CARD_LAYOUTS[themeKey] || FACTION_CARD_LAYOUTS.castle_grayskull;
-    const factionName = aiResult?.faction || localProfile.faction;
-    const typeLineText = aiResult?.type_line || localProfile.typeLine;
+    const layout = customLayouts[themeKey] || FACTION_CARD_LAYOUTS[themeKey] || FACTION_CARD_LAYOUTS.castle_grayskull;
+    const factionName = userFactionOverride ? theme.faction : (aiResult?.faction || localProfile.faction);
+    const typeLineText = userFactionOverride ? theme.typeLine : (aiResult?.type_line || localProfile.typeLine);
     const specialMoveText = aiResult?.special_move || localProfile.specialMove;
-    const loreText = aiResult?.lore || localProfile.lore;
+    const rawLore = aiResult?.lore || localProfile.lore;
+    const loreText = rawLore.replace(/^["';\s]+/, '').replace(/["';\s]+$/, '');
     const statsData = aiResult?.stats || localProfile.stats;
 
     // Manejo de giro 3D holográfico con el ratón
@@ -1177,7 +1199,9 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                     lore: loreText,
                     stats: statsData,
                     frameAsset: theme.frameAsset,
-                    specialMoveColor: theme.specialMoveColor
+                    specialMoveColor: theme.specialMoveColor,
+                    themeKey: themeKey,
+                    layout: layout
                 });
                 filename = `Carta_TCG_${name.replace(/\s+/g, '_')}${aiResult ? `_${aiResult.style}` : ''}.png`;
             } else {
@@ -1220,7 +1244,9 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                     lore: loreText,
                     stats: statsData,
                     frameAsset: theme.frameAsset,
-                    specialMoveColor: theme.specialMoveColor
+                    specialMoveColor: theme.specialMoveColor,
+                    themeKey: themeKey,
+                    layout: layout
                 });
             } else {
                 dataUrl = await getSingleIllustrationDataUrl(item, aiResult?.image_base64, imgZoom, imgPan);
@@ -1265,7 +1291,9 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                     lore: loreText,
                     stats: statsData,
                     frameAsset: theme.frameAsset,
-                    specialMoveColor: theme.specialMoveColor
+                    specialMoveColor: theme.specialMoveColor,
+                    themeKey: themeKey,
+                    layout: layout
                 });
                 filename = `Carta_TCG_${name.replace(/\s+/g, '_')}.png`;
             } else {
@@ -1429,6 +1457,38 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                 {aiError}
                             </div>
                         )}
+                    </div>
+
+                    {/* SELECTOR INTERACTIVO DE BANDO MOTU */}
+                    <div className="w-full mb-3 flex items-center gap-1.5 p-1 bg-slate-950/80 border border-amber-500/20 rounded-xl overflow-x-auto custom-scrollbar">
+                        <span className="text-[9px] font-black uppercase text-amber-400/90 pl-1.5 shrink-0 flex items-center gap-1">
+                            <Shield className="h-3 w-3 text-amber-400" /> Bando:
+                        </span>
+                        {[
+                            { key: 'castle_grayskull', label: 'Heroicos', icon: '🏰' },
+                            { key: 'snake_mountain', label: 'Del Mal', icon: '🌋' },
+                            { key: 'evil_horde', label: 'Horda', icon: '🦇' },
+                            { key: 'snake_men', label: 'Serpientes', icon: '🐍' },
+                            { key: 'great_rebellion', label: 'Rebelión', icon: '✨' },
+                            { key: 'cosmic_enforcers', label: 'Cósmicos', icon: '🌌' }
+                        ].map(f => {
+                            const isSelected = themeKey === f.key;
+                            return (
+                                <button
+                                    key={f.key}
+                                    onClick={() => setUserFactionOverride(f.key)}
+                                    className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9.5px] font-black uppercase tracking-wider transition shrink-0 cursor-pointer ${
+                                        isSelected
+                                            ? 'bg-amber-500/25 border border-amber-400 text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.3)]'
+                                            : 'bg-white/5 border border-transparent text-white/60 hover:text-white hover:bg-white/10'
+                                    }`}
+                                    title={`Cambiar plantilla a ${f.label}`}
+                                >
+                                    <span>{f.icon}</span>
+                                    <span>{f.label}</span>
+                                </button>
+                            );
+                        })}
                     </div>
 
                     {/* CONTENEDOR 3D DEL CROMO MAGIC SHOWCASE (3 CAPAS REALES) */}
