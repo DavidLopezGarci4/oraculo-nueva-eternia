@@ -177,16 +177,22 @@ async def get_dashboard_hall_of_fame(user_id: int = 1):
         for item in items:
             market_val = valuation_service.get_consolidated_value(item.product, user_location)
             
-            # Cálculo de precio original: purchase_price con fallbacks a retail_price u avg_market_price
-            invested = item.purchase_price or 0.0
-            if invested == 0.0 and item.product.retail_price:
-                invested = item.product.retail_price
-            if invested == 0.0 and item.product.avg_market_price:
-                invested = item.product.avg_market_price
+            user_paid = item.purchase_price or 0.0
+            retail_val = item.product.retail_price or 0.0
+            p2p_val = item.product.avg_p2p_price or item.product.avg_market_price or market_val
 
-            roi = 0.0
-            if invested > 0:
-                roi = ((market_val - invested) / invested) * 100
+            # ROI de adquisición (vs lo que pagó el usuario)
+            roi_purchase = 0.0
+            if user_paid > 0:
+                roi_purchase = ((market_val - user_paid) / user_paid) * 100
+
+            # ROI de revalorización histórica (vs PVP de lanzamiento)
+            roi_retail = 0.0
+            if retail_val > 0:
+                roi_retail = ((market_val - retail_val) / retail_val) * 100
+
+            effective_invested = user_paid if user_paid > 0 else (retail_val if retail_val > 0 else market_val)
+            effective_roi = roi_purchase if user_paid > 0 else roi_retail
 
             data = {
                 "id": item.product.id,
@@ -194,10 +200,13 @@ async def get_dashboard_hall_of_fame(user_id: int = 1):
                 "image_url": item.product.image_url,
                 "figure_id": item.product.figure_id,
                 "market_value": round(market_val, 2),
-                "purchase_price": round(invested, 2),
-                "invested_value": round(invested, 2),  # Compatibilidad frontend
-                "roi": round(roi, 1),
-                "roi_percentage": round(roi, 1),  # Compatibilidad frontend
+                "purchase_price": round(effective_invested, 2),
+                "invested_value": round(effective_invested, 2),  # Compatibilidad frontend
+                "retail_price": round(retail_val, 2),
+                "p2p_price": round(p2p_val, 2),
+                "roi": round(effective_roi, 1),
+                "roi_percentage": round(effective_roi, 1),  # Compatibilidad frontend
+                "roi_retail": round(roi_retail, 1),
             }
 
             if item.product.is_vintage:

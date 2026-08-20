@@ -76,8 +76,16 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
     const baseMarketVal = product.market_value || 0;
     const adjustedMarketVal = baseMarketVal * multiplier;
     const numericPrice = price === '' ? 0.0 : (parseFloat(price) || 0.0);
-    const profitLoss = adjustedMarketVal - numericPrice;
-    const roi = numericPrice > 0 ? (profitLoss / numericPrice) * 100 : 0;
+    
+    // 1. Métrica: Rendimiento de Adquisición (Tu Precio vs Mercado Secundario P2P Actual)
+    const p2pBenchmark = (product.avg_p2p_price && product.avg_p2p_price > 0 ? product.avg_p2p_price : baseMarketVal) * multiplier;
+    const buyProfitLoss = numericPrice > 0 ? (p2pBenchmark - numericPrice) : 0;
+    const buyRoi = numericPrice > 0 ? (buyProfitLoss / numericPrice) * 100 : 0;
+
+    // 2. Métrica: Revalorización Histórica de la Reliquia (PVP Salida vs Cotización Actual)
+    const retailPrice = product.retail_price || 0;
+    const historicalProfit = retailPrice > 0 ? (adjustedMarketVal - retailPrice) : 0;
+    const historicalRoi = retailPrice > 0 ? (historicalProfit / retailPrice) * 100 : 0;
 
     return (
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/90 backdrop-blur-xl p-2 md:p-10 animate-in fade-in duration-300">
@@ -140,41 +148,76 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
                     </div>
 
                     <div className="p-3 md:p-8 space-y-3 sm:space-y-4 md:space-y-6">
-                        {/* Financial Stats */}
-                        <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                            <div className="bg-white/[0.03] border border-white/5 p-2.5 sm:p-5 rounded-xl md:rounded-3xl space-y-1 md:space-y-2 flex flex-col justify-center">
-                                <span className="text-[7px] sm:text-[8px] font-black text-white/60 uppercase tracking-widest block">Inversión (Tu Precio)</span>
-                                <div className="flex items-baseline gap-1">
-                                    <input
-                                        type="text"
-                                        inputMode="decimal"
-                                        value={price}
-                                        onChange={(e) => {
-                                            const val = e.target.value;
-                                            if (val === '' || /^[0-9]*([.,][0-9]*)?$/.test(val)) {
-                                                setPrice(val.replace(',', '.'));
-                                            }
-                                        }}
-                                        placeholder="0"
-                                        className="bg-transparent text-base sm:text-2xl font-black text-white border-none focus:ring-0 w-12 sm:w-20 p-0 blur-incognito"
-                                    />
-                                    <span className="text-xs sm:text-lg font-bold text-white/70">€</span>
+                        {/* Financial Stats: Dual Engine */}
+                        <div className="space-y-2.5">
+                            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                                {/* Inversión (Tu Precio) */}
+                                <div className="bg-white/[0.03] border border-white/5 p-2.5 sm:p-5 rounded-xl md:rounded-3xl space-y-1 md:space-y-2 flex flex-col justify-center">
+                                    <span className="text-[7px] sm:text-[8px] font-black text-white/60 uppercase tracking-widest block">Inversión (Tu Precio)</span>
+                                    <div className="flex items-baseline gap-1">
+                                        <input
+                                            type="text"
+                                            inputMode="decimal"
+                                            value={price}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                if (val === '' || /^[0-9]*([.,][0-9]*)?$/.test(val)) {
+                                                    setPrice(val.replace(',', '.'));
+                                                }
+                                            }}
+                                            placeholder="0"
+                                            className="bg-transparent text-base sm:text-2xl font-black text-white border-none focus:ring-0 w-12 sm:w-20 p-0 blur-incognito"
+                                        />
+                                        <span className="text-xs sm:text-lg font-bold text-white/70">€</span>
+                                    </div>
+                                    <span className="text-[8px] text-white/40 font-mono">Coste pagado</span>
+                                </div>
+
+                                {/* Rendimiento de Adquisición vs Mercado P2P Actual */}
+                                <div className={`border p-2.5 sm:p-5 rounded-xl md:rounded-3xl space-y-1 md:space-y-2 transition-all flex flex-col justify-center ${numericPrice === 0 ? 'bg-white/[0.02] border-white/5' : buyProfitLoss >= 0 ? 'bg-green-500/5 border-green-500/20' : 'bg-brand-primary/5 border-brand-primary/20'}`}>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[7px] sm:text-[8px] font-black text-white/60 uppercase tracking-widest block">vs Mercado P2P Actual</span>
+                                        {numericPrice > 0 && (
+                                            <span className={`text-[7.5px] font-black uppercase px-1.5 py-0.5 rounded ${buyProfitLoss >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-brand-primary/20 text-brand-primary'}`}>
+                                                {buyProfitLoss >= 0 ? 'Ahorro' : 'Sobreprecio'}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-1.5">
+                                        <div className="flex items-baseline gap-1">
+                                            <h4 className={`text-base sm:text-2xl font-black ${numericPrice === 0 ? 'text-white/80' : buyProfitLoss >= 0 ? 'text-green-400' : 'text-brand-primary'}`}>
+                                                {numericPrice > 0 ? `${buyProfitLoss >= 0 ? '+' : ''}${buyProfitLoss.toFixed(2)}` : `${p2pBenchmark.toFixed(2)}`}
+                                            </h4>
+                                            <span className="text-xs sm:text-lg font-bold text-white/40">€</span>
+                                        </div>
+                                        {numericPrice > 0 && (
+                                            <div className={`flex w-fit items-center gap-1 sm:gap-1.5 px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-[8px] sm:text-[10px] font-black ${buyProfitLoss >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-brand-primary/20 text-brand-primary'}`}>
+                                                {buyProfitLoss >= 0 ? <TrendingUp className="h-2 w-2 sm:h-3 sm:w-3" /> : <TrendingDown className="h-2 w-2 sm:h-3 sm:w-3" />}
+                                                {buyRoi.toFixed(1)}%
+                                            </div>
+                                        )}
+                                    </div>
+                                    <span className="text-[8px] text-white/40 font-mono">Media 2ª mano: ~{p2pBenchmark.toFixed(2)}€</span>
                                 </div>
                             </div>
-                            <div className={`border p-2.5 sm:p-5 rounded-xl md:rounded-3xl space-y-1 md:space-y-2 transition-all flex flex-col justify-center ${profitLoss >= 0 ? 'bg-green-500/5 border-green-500/20' : 'bg-brand-primary/5 border-brand-primary/20'}`}>
-                                <span className="text-[7px] sm:text-[8px] font-black text-white/60 uppercase tracking-widest block">Revalorización (ROI)</span>
-                                <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-1.5">
-                                    <div className="flex items-baseline gap-1">
-                                        <h4 className={`text-base sm:text-2xl font-black ${profitLoss >= 0 ? 'text-green-400' : 'text-brand-primary'}`}>
-                                            {profitLoss >= 0 ? '+' : ''}{profitLoss.toFixed(2)}
-                                        </h4>
-                                        <span className={`text-xs sm:text-lg font-bold ${profitLoss >= 0 ? 'text-green-400/40' : 'text-brand-primary/40'}`}>€</span>
-                                    </div>
-                                    <div className={`flex w-fit items-center gap-1 sm:gap-1.5 px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-[8px] sm:text-[10px] font-black ${profitLoss >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-brand-primary/20 text-brand-primary'}`}>
-                                        {profitLoss >= 0 ? <TrendingUp className="h-2 w-2 sm:h-3 sm:w-3" /> : <TrendingDown className="h-2 w-2 sm:h-3 sm:w-3" />}
-                                        {roi.toFixed(1)}%
-                                    </div>
+
+                            {/* Cápsula de Revalorización Histórica vs PVP de Salida */}
+                            <div className="flex items-center justify-between p-2.5 sm:p-3 rounded-xl bg-white/[0.02] border border-white/5 text-[9px] sm:text-[10px]">
+                                <div className="flex items-center gap-1.5 text-white/60">
+                                    <span className="font-bold text-white/90">PVP Salida:</span>
+                                    <span className="font-mono text-white/80">{retailPrice > 0 ? `${retailPrice.toFixed(2)}€` : 'N/A'}</span>
+                                    <span className="text-white/30">→</span>
+                                    <span className="font-bold text-white/90">Cotización:</span>
+                                    <span className="font-mono text-amber-300 font-bold">{adjustedMarketVal.toFixed(2)}€</span>
                                 </div>
+                                {retailPrice > 0 && (
+                                    <div className="flex items-center gap-1">
+                                        <span className="text-white/50 text-[8px] uppercase font-black">Apreciación:</span>
+                                        <span className={`font-black font-mono ${historicalProfit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                            {historicalProfit >= 0 ? '+' : ''}{historicalProfit.toFixed(2)}€ ({historicalRoi >= 0 ? '+' : ''}{historicalRoi.toFixed(0)}%)
+                                        </span>
+                                    </div>
+                                )}
                             </div>
                         </div>
 

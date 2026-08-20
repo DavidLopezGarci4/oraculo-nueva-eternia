@@ -117,8 +117,11 @@ export interface HallOfFameItem {
     market_value: number;
     invested_value: number;
     purchase_price?: number;
+    retail_price?: number;
+    p2p_price?: number;
     roi_percentage: number;
     roi?: number;
+    roi_retail?: number;
 }
 
 export interface HallOfFameResponse {

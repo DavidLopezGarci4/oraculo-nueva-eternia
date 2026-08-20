@@ -1407,7 +1407,20 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
   - **Persistencia Opcional en el Canon (`PUT /api/lore/{slug}`)**: Botón para que los cambios editados puedan guardarse como el estándar oficial de ese personaje en la base de datos cloud/local.
   - **Auto-Sembrado Canónico en Lifespan (`src/interfaces/api/main.py`)**: Inicialización automática y silenciosa al iniciar la API para asegurar que los 91+ personajes canónicos y 507 productos estén sembrados y enlazados sin requerir clicks manuales.
   - **Ampliación de `MOTU_LORE_ENCYCLOPEDIA`**: Añadido el perfil canónico para Fang-Or, Lady Slither y Battle Cat Man.
-  - **Verificación Automatizada**: Tests unitarios aprobados (7/7 pasados) y compilación del frontend completada con `npm run build` con 0 errores en 9.59s.
+### ⚡ Fase 92: Arquitectura Económica Dual: Rendimiento de Adquisición (vs P2P) y Apreciación Histórica (vs PVP) (20/08/2026)
+
+- **Hitos**: Reestructuración y desacoplamiento del motor financiero del coleccionista. Se establece una distinción clara y complementaria entre la *Apreciación Histórica de la Pieza* (PVP original de salida vs cotización actual) y la *Eficiencia de Compra / ROI de Cartera* (Precio pagado vs cotización media en el mercado secundario P2P actual), integrándose de forma simétrica tanto en el Dashboard (*Salón de la Fama*) como en el modal de detalle (*Tu Legado Personal*).
+- **Estado**: ✅ COMPLETADO Y VERIFICADO
+- **Logros Técnicos**:
+  - **Motor Dual en Detalle de Colección (`CollectionItemDetailModal.tsx`)**:
+    - **Inversión y Rendimiento P2P**: Compara el coste de adquisición registrado (`purchase_price`) contra el precio medio de segunda mano actual (`avg_p2p_price`), calculando el ahorro o sobreprecio real en euros y porcentaje de ROI.
+    - **Apreciación Histórica de Fábrica**: Muestra en una cápsula informativa el PVP oficial de salida (`retail_price`), la cotización actual ajustada a conservación y la plusvalía histórica acumulada por el coleccionable desde su lanzamiento.
+  - **Enriquecimiento del Salón de la Fama (`Dashboard.tsx` y `dashboard.py`)**:
+    - **Mayores Reliquias (Valor)**: Despliega el `PVP Salida` original frente a la cotización actual, permitiendo identificar de un vistazo las piezas con mayor valor de mercado acumulado.
+    - **Mayor Retorno (ROI)**: Despliega el `Coste` real pagado frente al valor de mercado actual, premiando las mejores adquisiciones y compras por debajo de mercado de la colección.
+  - **Ampliación de Esquemas API (`schemas.py` y `collection.py`)**: Expuestos `retail_price`, `avg_p2p_price`, `p25_p2p_price` y `roi_retail` en `ProductOutput` y `HallOfFameItemOutput`.
+  - **Verificación Automatizada**: Tests unitarios aprobados y build de frontend con Vite exitoso en 8.78s con 0 errores.
+
 
 
 

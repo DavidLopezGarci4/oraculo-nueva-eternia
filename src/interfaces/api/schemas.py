@@ -319,8 +319,11 @@ class HallOfFameItemOutput(BaseModel):
     market_value: float
     purchase_price: float
     invested_value: float
+    retail_price: float = 0.0
+    p2p_price: float = 0.0
     roi: float
     roi_percentage: float
+    roi_retail: float = 0.0
 
 
 class HallOfFameGroupOutput(BaseModel):

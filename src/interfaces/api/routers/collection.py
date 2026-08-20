@@ -125,6 +125,8 @@ async def get_collection(
                     retail_price=product.retail_price or 0.0,
                     market_value=round(market_val, 2),
                     avg_market_price=product.avg_market_price or 0.0,
+                    avg_p2p_price=product.avg_p2p_price or 0.0,
+                    p25_p2p_price=product.p25_p2p_price or 0.0,
                     p25_price=product.p25_price or 0.0,
                     landing_price=round(market_val, 2),
                     is_grail=is_grail,
