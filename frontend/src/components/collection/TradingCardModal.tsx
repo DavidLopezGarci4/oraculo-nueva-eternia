@@ -1058,15 +1058,38 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
     const [savingDbLore, setSavingDbLore] = useState<boolean>(false);
     const [loreSaveSuccess, setLoreSaveSuccess] = useState<boolean>(false);
 
+    // Cargar personalización persistente al abrir la carta
     React.useEffect(() => {
         if (!isOpen || !item) return;
-        setUserFactionOverride(null);
+
+        const savedKey = `tcg_custom_card_${item.id}`;
+        const savedCustom = localStorage.getItem(savedKey);
+        if (savedCustom) {
+            try {
+                const parsed = JSON.parse(savedCustom);
+                setCustomCardName(parsed.customCardName || '');
+                setCustomSpecialMove(parsed.customSpecialMove || '');
+                setCustomLore(parsed.customLore || '');
+                setCustomTypeLine(parsed.customTypeLine || '');
+                setCustomStats(parsed.customStats || null);
+                setUserFactionOverride(parsed.userFactionOverride || null);
+                if (typeof parsed.imgZoom === 'number') setImgZoom(parsed.imgZoom);
+                if (parsed.imgPan && typeof parsed.imgPan.x === 'number') setImgPan(parsed.imgPan);
+            } catch (e) {
+                console.error('Error cargando personalización guardada de la carta:', e);
+            }
+        } else {
+            setUserFactionOverride(null);
+            setCustomCardName('');
+            setCustomSpecialMove('');
+            setCustomLore('');
+            setCustomTypeLine('');
+            setCustomStats(null);
+            setImgZoom(1);
+            setImgPan({ x: 0, y: 0 });
+        }
+
         setIsEditingTexts(false);
-        setCustomCardName('');
-        setCustomSpecialMove('');
-        setCustomLore('');
-        setCustomTypeLine('');
-        setCustomStats(null);
         setDbLoreChar(null);
 
         const stored = localStorage.getItem('tcg_card_layouts');
@@ -1089,6 +1112,49 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
             }
         }).catch(() => {});
     }, [isOpen, item?.id]);
+
+    // Guardar automáticamente cualquier cambio en la carta para mantenerlo fijo
+    React.useEffect(() => {
+        if (!isOpen || !item) return;
+
+        const hasCustomization = Boolean(
+            customCardName ||
+            customSpecialMove ||
+            customLore ||
+            customTypeLine ||
+            customStats ||
+            userFactionOverride ||
+            imgZoom !== 1 ||
+            imgPan.x !== 0 ||
+            imgPan.y !== 0
+        );
+
+        const savedKey = `tcg_custom_card_${item.id}`;
+        if (hasCustomization) {
+            const dataToSave = {
+                customCardName,
+                customSpecialMove,
+                customLore,
+                customTypeLine,
+                customStats,
+                userFactionOverride,
+                imgZoom,
+                imgPan
+            };
+            localStorage.setItem(savedKey, JSON.stringify(dataToSave));
+        }
+    }, [
+        isOpen,
+        item?.id,
+        customCardName,
+        customSpecialMove,
+        customLore,
+        customTypeLine,
+        customStats,
+        userFactionOverride,
+        imgZoom,
+        imgPan
+    ]);
 
     if (!isOpen || !item) return null;
 
@@ -1146,11 +1212,16 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
     };
 
     const handleResetCustomTexts = () => {
+        if (item) {
+            localStorage.removeItem(`tcg_custom_card_${item.id}`);
+        }
         setCustomCardName('');
         setCustomSpecialMove('');
         setCustomLore('');
         setCustomTypeLine('');
         setCustomStats(null);
+        setUserFactionOverride(null);
+        resetFraming();
     };
 
     // Manejo de giro 3D holográfico con el ratón

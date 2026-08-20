@@ -1428,8 +1428,15 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
     - 🔵 **Defensa (`DEF`)**: Marco azul escudo `border-sky-500/50` y etiqueta en cian.
     - 🟢 **Agilidad (`AGI`)**: Marco verde esmeralda `border-emerald-500/50` y etiqueta en menta.
   - **Sincronización Total con el Taller TCG Studio (`TcgConfigTab.tsx`)**: El simulador a 60fps renderiza las 4 mini-cápsulas en tiempo real y permite a los administradores ajustar los sliders de posición, altura y anchura (`leftSocket` / `rightSocket`) para cada una de las 6 facciones.
-  - **Motor Vectorial Canvas 2D HD (`generateTradingCardDataUrl`)**: Dibuja las 4 cápsulas con `roundRect`, fondos translúcidos y tipografía de doble altura para asegurar una exportación PNG de calidad profesional idéntica a la vista interactiva.
-  - **Verificación Automatizada**: Tests unitarios aprobados y build de producción con Vite completado con éxito en 10.20s con 0 errores.
+### ⚡ Fase 94: Persistencia Fija Automática de Textos y Personalizaciones TCG (20/08/2026)
+
+- **Hitos**: Implementación del sistema de auto-guardado y persistencia fija para cada carta digital por `product.id`. Cualquier ajuste realizado por el usuario en el nombre de la carta, poder, descripción/lore, categoría libre, valores de estadísticas RPG, elección de bando o encuadre/zoom se conserva de manera inmutable y se restaura automáticamente cada vez que se abra el modal hasta ser modificado nuevamente o restablecido.
+- **Estado**: ✅ COMPLETADO Y VERIFICADO
+- **Logros Técnicos**:
+  - **Auto-Guardado Reactivo (`TradingCardModal.tsx`)**: Hook `useEffect` que detecta en caliente cualquier variación en `customCardName`, `customSpecialMove`, `customLore`, `customTypeLine`, `customStats`, `userFactionOverride`, `imgZoom` e `imgPan`, indexándolo bajo la clave persistente `tcg_custom_card_${item.id}`.
+  - **Restauración Transparente**: Al abrir la carta de cualquier figura, se cargan de inmediato todos sus textos y atributos previamente personalizados sin perderlos al cerrar o navegar.
+  - **Restablecimiento Limpio (`handleResetCustomTexts`)**: Permite limpiar la clave específica de la figura y devolverla al estado canónico original en un solo clic.
+  - **Verificación Automatizada**: Build de frontend con Vite completado con éxito en 8.42s con 0 errores.
 
 
 
