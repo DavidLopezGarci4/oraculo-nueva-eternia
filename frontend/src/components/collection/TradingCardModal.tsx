@@ -745,16 +745,13 @@ const dataUrlToBlob = async (dataUrl: string): Promise<Blob> => {
     return await res.blob();
 };
 
-// Obtiene la imagen individual pura con el encuadre y zoom personalizados como DataURL HD
+// Obtiene la imagen individual pura con el encuadre y zoom personalizados como DataURL HD sin márgenes
 const getSingleIllustrationDataUrl = async (
     item: any,
     aiImageBase64?: string | null,
     zoom: number = 1,
     pan: { x: number; y: number } = { x: 0, y: 0 }
 ): Promise<string> => {
-    if (zoom === 1 && pan.x === 0 && pan.y === 0 && aiImageBase64) {
-        return aiImageBase64;
-    }
     const targetSrc = aiImageBase64 || item.image_url;
     if (!targetSrc) return '';
 
@@ -762,28 +759,31 @@ const getSingleIllustrationDataUrl = async (
         const img = new window.Image();
         img.crossOrigin = 'anonymous';
         img.onload = () => {
+            // Si no hay transformaciones y es una imagen AI pura, exportamos directamente la imagen pura
+            if (zoom === 1 && pan.x === 0 && pan.y === 0 && aiImageBase64) {
+                resolve(aiImageBase64);
+                return;
+            }
+
             const canvas = document.createElement('canvas');
-            canvas.width = 900;
-            canvas.height = 1200;
+            // Usamos las dimensiones intrínsecas de la ilustración o un estándar HD 3:4 vertical
+            const outW = img.naturalWidth || 1024;
+            const outH = img.naturalHeight || 1365;
+            canvas.width = outW;
+            canvas.height = outH;
             const ctx = canvas.getContext('2d');
             if (ctx) {
-                ctx.fillStyle = '#090d16';
-                ctx.fillRect(0, 0, 900, 1200);
+                ctx.clearRect(0, 0, outW, outH);
 
                 ctx.save();
-                ctx.translate(450 + pan.x * (900 / 320), 600 + pan.y * (1200 / 224));
+                // Escalamos el paneo relativo a las dimensiones del contenedor en pantalla (~320px)
+                const scaleFactorX = outW / 320;
+                const scaleFactorY = outH / 240;
+                ctx.translate(outW / 2 + pan.x * scaleFactorX, outH / 2 + pan.y * scaleFactorY);
                 ctx.scale(zoom, zoom);
 
-                const imgAspect = img.width / img.height;
-                const canvasAspect = 900 / 1200;
-                let drawW = 900;
-                let drawH = 1200;
-                if (imgAspect > canvasAspect) {
-                    drawW = 1200 * imgAspect;
-                } else {
-                    drawH = 900 / imgAspect;
-                }
-                ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
+                // Dibujar la imagen centrada exactamente en sus dimensiones reales
+                ctx.drawImage(img, -outW / 2, -outH / 2, outW, outH);
                 ctx.restore();
 
                 try {
