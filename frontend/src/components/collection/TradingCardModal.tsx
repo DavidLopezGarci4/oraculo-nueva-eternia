@@ -27,7 +27,7 @@ import { MOTUImage } from '../ui/MOTUImage';
 import { enhanceCardWithAI, type CardAiEnhanceResult } from '../../api/cards';
 import { getSystemTcgLayouts } from '../../api/admin';
 import { fetchCharacterLoreList, updateCharacterLore, type CharacterLore } from '../../api/lore';
-import { DEFAULT_FACTION_CARD_LAYOUTS } from '../config/TcgConfigTab';
+import { DEFAULT_FACTION_CARD_LAYOUTS, type FactionCardLayout } from '../config/TcgConfigTab';
 
 interface TradingCardModalProps {
     isOpen: boolean;
@@ -102,35 +102,7 @@ const FACTION_VISUAL_THEMES: Record<string, FactionVisualTheme> = {
     }
 };
 
-export interface FactionCardLayout {
-    header: { top: string; left: string; width: string; height: string };
-    textBox: { top: string; left: string; width: string; height: string };
-    powerPlate: {
-        height: string;
-        fontSize: string;
-        border: string;
-        bg: string;
-    };
-    lore: {
-        fontSize: string;
-        lineHeight: string;
-    };
-    typeLine: {
-        fontSize: string;
-        color: string;
-    };
-    leftSocket: { top: string; left: string; width: string; height: string };
-    rightSocket: { top: string; right: string; width: string; height: string };
-    canvas: {
-        header: { x: number; y: number };
-        powerBox: { x: number; y: number; w: number; h: number };
-        powerText: { y: number; fontSize: number };
-        loreText: { y: number; maxW: number; lineH: number; fontSize: number };
-        typeLine: { y: number; fontSize: number };
-        leftSocket: { x: number; y: number };
-        rightSocket: { x: number; y: number };
-    };
-}
+export type { FactionCardLayout };
 
 export const FACTION_CARD_LAYOUTS: Record<string, FactionCardLayout> = {
     castle_grayskull: {
@@ -144,16 +116,20 @@ export const FACTION_CARD_LAYOUTS: Record<string, FactionCardLayout> = {
         },
         lore: { fontSize: '9px', lineHeight: '1.42' },
         typeLine: { fontSize: '8px', color: '#fef08a' },
-        leftSocket: { top: '86.8%', left: '14.5%', width: '31.5%', height: '4.5%' },
-        rightSocket: { top: '86.8%', right: '14.5%', width: '31.5%', height: '4.5%' },
+        statFue: { top: '87.2%', left: '21.2%', fontSize: '11.5px', labelFontSize: '7px' },
+        statMag: { top: '87.2%', left: '34.4%', fontSize: '11.5px', labelFontSize: '7px' },
+        statDef: { top: '87.2%', left: '65.6%', fontSize: '11.5px', labelFontSize: '7px' },
+        statAgi: { top: '87.2%', left: '78.8%', fontSize: '11.5px', labelFontSize: '7px' },
         canvas: {
             header: { x: 120, y: 126 },
             powerBox: { x: 130, y: 655, w: 636, h: 48 },
             powerText: { y: 686, fontSize: 18 },
             loreText: { y: 730, maxW: 600, lineH: 26, fontSize: 17 },
             typeLine: { y: 840, fontSize: 15 },
-            leftSocket: { x: 240, y: 1045 },
-            rightSocket: { x: 655, y: 1045 }
+            statFue: { x: 190, y: 1046 },
+            statMag: { x: 308, y: 1046 },
+            statDef: { x: 588, y: 1046 },
+            statAgi: { x: 706, y: 1046 }
         }
     },
     snake_mountain: {
@@ -167,16 +143,20 @@ export const FACTION_CARD_LAYOUTS: Record<string, FactionCardLayout> = {
         },
         lore: { fontSize: '9px', lineHeight: '1.42' },
         typeLine: { fontSize: '8px', color: '#fed7aa' },
-        leftSocket: { top: '86.8%', left: '14.0%', width: '32.0%', height: '4.5%' },
-        rightSocket: { top: '86.8%', right: '14.0%', width: '32.0%', height: '4.5%' },
+        statFue: { top: '87.2%', left: '21.2%', fontSize: '11.5px', labelFontSize: '7px' },
+        statMag: { top: '87.2%', left: '34.4%', fontSize: '11.5px', labelFontSize: '7px' },
+        statDef: { top: '87.2%', left: '65.6%', fontSize: '11.5px', labelFontSize: '7px' },
+        statAgi: { top: '87.2%', left: '78.8%', fontSize: '11.5px', labelFontSize: '7px' },
         canvas: {
             header: { x: 124, y: 126 },
             powerBox: { x: 130, y: 658, w: 636, h: 48 },
             powerText: { y: 689, fontSize: 18 },
             loreText: { y: 732, maxW: 600, lineH: 26, fontSize: 17 },
             typeLine: { y: 840, fontSize: 15 },
-            leftSocket: { x: 240, y: 1045 },
-            rightSocket: { x: 655, y: 1045 }
+            statFue: { x: 190, y: 1046 },
+            statMag: { x: 308, y: 1046 },
+            statDef: { x: 588, y: 1046 },
+            statAgi: { x: 706, y: 1046 }
         }
     },
     evil_horde: {
@@ -190,16 +170,20 @@ export const FACTION_CARD_LAYOUTS: Record<string, FactionCardLayout> = {
         },
         lore: { fontSize: '9px', lineHeight: '1.42' },
         typeLine: { fontSize: '8px', color: '#fecaca' },
-        leftSocket: { top: '86.6%', left: '14.0%', width: '32.0%', height: '4.5%' },
-        rightSocket: { top: '86.6%', right: '14.0%', width: '32.0%', height: '4.5%' },
+        statFue: { top: '87.0%', left: '21.2%', fontSize: '11.5px', labelFontSize: '7px' },
+        statMag: { top: '87.0%', left: '34.4%', fontSize: '11.5px', labelFontSize: '7px' },
+        statDef: { top: '87.0%', left: '65.6%', fontSize: '11.5px', labelFontSize: '7px' },
+        statAgi: { top: '87.0%', left: '78.8%', fontSize: '11.5px', labelFontSize: '7px' },
         canvas: {
             header: { x: 120, y: 123 },
             powerBox: { x: 130, y: 648, w: 636, h: 48 },
             powerText: { y: 679, fontSize: 18 },
             loreText: { y: 722, maxW: 600, lineH: 26, fontSize: 17 },
             typeLine: { y: 835, fontSize: 15 },
-            leftSocket: { x: 240, y: 1042 },
-            rightSocket: { x: 655, y: 1042 }
+            statFue: { x: 190, y: 1044 },
+            statMag: { x: 308, y: 1044 },
+            statDef: { x: 588, y: 1044 },
+            statAgi: { x: 706, y: 1044 }
         }
     },
     snake_men: {
@@ -213,16 +197,20 @@ export const FACTION_CARD_LAYOUTS: Record<string, FactionCardLayout> = {
         },
         lore: { fontSize: '9px', lineHeight: '1.42' },
         typeLine: { fontSize: '8px', color: '#d9f99d' },
-        leftSocket: { top: '86.8%', left: '14.0%', width: '32.0%', height: '4.5%' },
-        rightSocket: { top: '86.8%', right: '14.0%', width: '32.0%', height: '4.5%' },
+        statFue: { top: '87.2%', left: '21.2%', fontSize: '11.5px', labelFontSize: '7px' },
+        statMag: { top: '87.2%', left: '34.4%', fontSize: '11.5px', labelFontSize: '7px' },
+        statDef: { top: '87.2%', left: '65.6%', fontSize: '11.5px', labelFontSize: '7px' },
+        statAgi: { top: '87.2%', left: '78.8%', fontSize: '11.5px', labelFontSize: '7px' },
         canvas: {
             header: { x: 120, y: 126 },
             powerBox: { x: 130, y: 655, w: 636, h: 48 },
             powerText: { y: 686, fontSize: 18 },
             loreText: { y: 730, maxW: 600, lineH: 26, fontSize: 17 },
             typeLine: { y: 840, fontSize: 15 },
-            leftSocket: { x: 240, y: 1045 },
-            rightSocket: { x: 655, y: 1045 }
+            statFue: { x: 190, y: 1046 },
+            statMag: { x: 308, y: 1046 },
+            statDef: { x: 588, y: 1046 },
+            statAgi: { x: 706, y: 1046 }
         }
     },
     great_rebellion: {
@@ -236,16 +224,20 @@ export const FACTION_CARD_LAYOUTS: Record<string, FactionCardLayout> = {
         },
         lore: { fontSize: '9px', lineHeight: '1.42' },
         typeLine: { fontSize: '8px', color: '#fce7f3' },
-        leftSocket: { top: '86.8%', left: '14.0%', width: '32.0%', height: '4.5%' },
-        rightSocket: { top: '86.8%', right: '14.0%', width: '32.0%', height: '4.5%' },
+        statFue: { top: '87.2%', left: '21.2%', fontSize: '11.5px', labelFontSize: '7px' },
+        statMag: { top: '87.2%', left: '34.4%', fontSize: '11.5px', labelFontSize: '7px' },
+        statDef: { top: '87.2%', left: '65.6%', fontSize: '11.5px', labelFontSize: '7px' },
+        statAgi: { top: '87.2%', left: '78.8%', fontSize: '11.5px', labelFontSize: '7px' },
         canvas: {
             header: { x: 120, y: 126 },
             powerBox: { x: 130, y: 652, w: 636, h: 48 },
             powerText: { y: 683, fontSize: 18 },
             loreText: { y: 726, maxW: 600, lineH: 26, fontSize: 17 },
             typeLine: { y: 838, fontSize: 15 },
-            leftSocket: { x: 240, y: 1045 },
-            rightSocket: { x: 655, y: 1045 }
+            statFue: { x: 190, y: 1046 },
+            statMag: { x: 308, y: 1046 },
+            statDef: { x: 588, y: 1046 },
+            statAgi: { x: 706, y: 1046 }
         }
     },
     cosmic_enforcers: {
@@ -259,16 +251,20 @@ export const FACTION_CARD_LAYOUTS: Record<string, FactionCardLayout> = {
         },
         lore: { fontSize: '9px', lineHeight: '1.42' },
         typeLine: { fontSize: '8px', color: '#bae6fd' },
-        leftSocket: { top: '86.8%', left: '14.0%', width: '32.0%', height: '4.5%' },
-        rightSocket: { top: '86.8%', right: '14.0%', width: '32.0%', height: '4.5%' },
+        statFue: { top: '87.2%', left: '21.2%', fontSize: '11.5px', labelFontSize: '7px' },
+        statMag: { top: '87.2%', left: '34.4%', fontSize: '11.5px', labelFontSize: '7px' },
+        statDef: { top: '87.2%', left: '65.6%', fontSize: '11.5px', labelFontSize: '7px' },
+        statAgi: { top: '87.2%', left: '78.8%', fontSize: '11.5px', labelFontSize: '7px' },
         canvas: {
             header: { x: 120, y: 126 },
             powerBox: { x: 130, y: 650, w: 636, h: 48 },
             powerText: { y: 681, fontSize: 18 },
             loreText: { y: 724, maxW: 600, lineH: 26, fontSize: 17 },
             typeLine: { y: 836, fontSize: 15 },
-            leftSocket: { x: 240, y: 1045 },
-            rightSocket: { x: 655, y: 1045 }
+            statFue: { x: 190, y: 1046 },
+            statMag: { x: 308, y: 1046 },
+            statDef: { x: 588, y: 1046 },
+            statAgi: { x: 706, y: 1046 }
         }
     }
 };
@@ -915,59 +911,42 @@ const generateTradingCardDataUrl = async (
                     ctx.textAlign = 'center';
                     ctx.fillText(`— ${profileData?.typeLine || `CRIATURA LEGENDARIA • ${faction.toUpperCase()}`} —`, width / 2, layout.canvas.typeLine.y);
 
-                    // 6. Sockets de Combate Centrados (4 Mini-Cápsulas con Estilo Temático y 2 Niveles)
-                    const drawStatBox = (
-                        bx: number,
-                        by: number,
-                        bw: number,
-                        bh: number,
+                    // 6. Engarces de Combate 3D Nativos (4 Orbes Esculpidos en el Marco)
+                    const drawStatOnOrb = (
+                        cx: number,
+                        cy: number,
                         statLabel: string,
                         statVal: number,
-                        labelColor: string,
-                        borderColor: string,
-                        bgColor: string
+                        labelColor: string
                     ) => {
                         ctx.save();
-                        ctx.fillStyle = bgColor;
-                        ctx.strokeStyle = borderColor;
-                        ctx.lineWidth = 1.5;
-                        ctx.beginPath();
-                        if (typeof (ctx as any).roundRect === 'function') {
-                            (ctx as any).roundRect(bx, by, bw, bh, 6);
-                        } else {
-                            ctx.rect(bx, by, bw, bh);
-                        }
-                        ctx.fill();
-                        ctx.stroke();
+                        ctx.textAlign = 'center';
 
-                        // Nivel 1: Etiqueta pequeña
+                        // Nivel 1: Etiqueta superior
                         ctx.fillStyle = labelColor;
                         ctx.font = '900 11px sans-serif';
-                        ctx.textAlign = 'center';
-                        ctx.fillText(statLabel, bx + bw / 2, by + 14);
+                        ctx.shadowColor = 'rgba(0,0,0,1)';
+                        ctx.shadowBlur = 4;
+                        ctx.fillText(statLabel, cx, cy - 5);
 
-                        // Nivel 2: Valor numérico grande
+                        // Nivel 2: Número de Combate en Relieve Blanco / Oro
                         ctx.fillStyle = '#ffffff';
-                        ctx.font = '900 19px serif';
-                        ctx.fillText(String(statVal), bx + bw / 2, by + 34);
+                        ctx.font = '900 20px serif';
+                        ctx.shadowColor = 'rgba(0,0,0,0.95)';
+                        ctx.shadowBlur = 6;
+                        ctx.fillText(String(statVal), cx, cy + 15);
                         ctx.restore();
                     };
 
-                    const boxW = 86;
-                    const boxH = 42;
-                    const boxGap = 8;
+                    const posFue = layout.canvas.statFue || { x: 190, y: 1046 };
+                    const posMag = layout.canvas.statMag || { x: 308, y: 1046 };
+                    const posDef = layout.canvas.statDef || { x: 588, y: 1046 };
+                    const posAgi = layout.canvas.statAgi || { x: 706, y: 1046 };
 
-                    // Izquierdo: FUE y MAG
-                    const leftCenterX = layout.canvas.leftSocket.x;
-                    const leftY = layout.canvas.leftSocket.y - 21;
-                    drawStatBox(leftCenterX - boxW - boxGap / 2, leftY, boxW, boxH, 'FUE', stats.fuerza, '#f87171', 'rgba(239,68,68,0.7)', 'rgba(127,29,29,0.55)');
-                    drawStatBox(leftCenterX + boxGap / 2, leftY, boxW, boxH, 'MAG', stats.magia, '#c084fc', 'rgba(168,85,247,0.7)', 'rgba(88,28,135,0.55)');
-
-                    // Derecho: DEF y AGI
-                    const rightCenterX = layout.canvas.rightSocket.x;
-                    const rightY = layout.canvas.rightSocket.y - 21;
-                    drawStatBox(rightCenterX - boxW - boxGap / 2, rightY, boxW, boxH, 'DEF', stats.defensa, '#38bdf8', 'rgba(14,165,233,0.7)', 'rgba(12,74,110,0.55)');
-                    drawStatBox(rightCenterX + boxGap / 2, rightY, boxW, boxH, 'AGI', stats.agilidad, '#4ade80', 'rgba(34,197,94,0.7)', 'rgba(20,83,45,0.55)');
+                    drawStatOnOrb(posFue.x, posFue.y, 'FUE', stats.fuerza, '#fca5a5');
+                    drawStatOnOrb(posMag.x, posMag.y, 'MAG', stats.magia, '#d8b4fe');
+                    drawStatOnOrb(posDef.x, posDef.y, 'DEF', stats.defensa, '#7dd3fc');
+                    drawStatOnOrb(posAgi.x, posAgi.y, 'AGI', stats.agilidad, '#86efac');
 
                     resolve(canvas.toDataURL('image/png'));
                 };
@@ -2086,49 +2065,93 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                 </div>
                             </div>
 
-                            {/* 3. SOCKETS DE COMBATE CENTRADOS (4 Mini-Cápsulas con Estilo Temático y 2 Niveles) */}
-                            {/* Sockets Izquierdo: FUE y MAG */}
+                            {/* 3. ENGARCES DE COMBATE 3D NATIVOS (4 Orbes Esculpidos en el Marco) */}
+                            {/* Fuerza */}
                             <div
-                                className="absolute z-20 flex items-center justify-between pointer-events-none gap-1 px-0.5"
+                                className="absolute z-20 flex flex-col items-center justify-center pointer-events-none -translate-x-1/2 -translate-y-1/2"
                                 style={{
-                                    top: layout.leftSocket.top,
-                                    left: layout.leftSocket.left,
-                                    width: layout.leftSocket.width,
-                                    height: layout.leftSocket.height
+                                    top: layout.statFue?.top || '87.2%',
+                                    left: layout.statFue?.left || '21.2%'
                                 }}
                             >
-                                {/* FUE */}
-                                <div className="flex-1 h-full flex flex-col items-center justify-center rounded-md bg-red-950/75 border border-red-500/50 shadow-[0_2px_4px_rgba(0,0,0,0.8)] px-0.5 py-0.5">
-                                    <span className="text-[6.5px] sm:text-[7.5px] font-black text-red-300 uppercase tracking-widest leading-none">FUE</span>
-                                    <span className="text-[10px] sm:text-[11.5px] font-black text-white leading-none tcg-gold-emboss mt-0.5">{statsData.fuerza}</span>
-                                </div>
-                                {/* MAG */}
-                                <div className="flex-1 h-full flex flex-col items-center justify-center rounded-md bg-purple-950/75 border border-purple-500/50 shadow-[0_2px_4px_rgba(0,0,0,0.8)] px-0.5 py-0.5">
-                                    <span className="text-[6.5px] sm:text-[7.5px] font-black text-purple-300 uppercase tracking-widest leading-none">MAG</span>
-                                    <span className="text-[10px] sm:text-[11.5px] font-black text-white leading-none tcg-gold-emboss mt-0.5">{statsData.magia}</span>
-                                </div>
+                                <span
+                                    className="font-black text-red-300 uppercase tracking-widest leading-none drop-shadow-[0_1px_2px_rgba(0,0,0,1)]"
+                                    style={{ fontSize: layout.statFue?.labelFontSize || '7px' }}
+                                >
+                                    FUE
+                                </span>
+                                <span
+                                    className="font-black text-white leading-none tcg-gold-emboss mt-0.5"
+                                    style={{ fontSize: layout.statFue?.fontSize || '11.5px' }}
+                                >
+                                    {statsData.fuerza}
+                                </span>
                             </div>
 
-                            {/* Sockets Derecho: DEF y AGI */}
+                            {/* Magia */}
                             <div
-                                className="absolute z-20 flex items-center justify-between pointer-events-none gap-1 px-0.5"
+                                className="absolute z-20 flex flex-col items-center justify-center pointer-events-none -translate-x-1/2 -translate-y-1/2"
                                 style={{
-                                    top: layout.rightSocket.top,
-                                    right: layout.rightSocket.right,
-                                    width: layout.rightSocket.width,
-                                    height: layout.rightSocket.height
+                                    top: layout.statMag?.top || '87.2%',
+                                    left: layout.statMag?.left || '34.4%'
                                 }}
                             >
-                                {/* DEF */}
-                                <div className="flex-1 h-full flex flex-col items-center justify-center rounded-md bg-sky-950/75 border border-sky-500/50 shadow-[0_2px_4px_rgba(0,0,0,0.8)] px-0.5 py-0.5">
-                                    <span className="text-[6.5px] sm:text-[7.5px] font-black text-sky-300 uppercase tracking-widest leading-none">DEF</span>
-                                    <span className="text-[10px] sm:text-[11.5px] font-black text-white leading-none tcg-gold-emboss mt-0.5">{statsData.defensa}</span>
-                                </div>
-                                {/* AGI */}
-                                <div className="flex-1 h-full flex flex-col items-center justify-center rounded-md bg-emerald-950/75 border border-emerald-500/50 shadow-[0_2px_4px_rgba(0,0,0,0.8)] px-0.5 py-0.5">
-                                    <span className="text-[6.5px] sm:text-[7.5px] font-black text-emerald-300 uppercase tracking-widest leading-none">AGI</span>
-                                    <span className="text-[10px] sm:text-[11.5px] font-black text-white leading-none tcg-gold-emboss mt-0.5">{statsData.agilidad}</span>
-                                </div>
+                                <span
+                                    className="font-black text-purple-300 uppercase tracking-widest leading-none drop-shadow-[0_1px_2px_rgba(0,0,0,1)]"
+                                    style={{ fontSize: layout.statMag?.labelFontSize || '7px' }}
+                                >
+                                    MAG
+                                </span>
+                                <span
+                                    className="font-black text-white leading-none tcg-gold-emboss mt-0.5"
+                                    style={{ fontSize: layout.statMag?.fontSize || '11.5px' }}
+                                >
+                                    {statsData.magia}
+                                </span>
+                            </div>
+
+                            {/* Defensa */}
+                            <div
+                                className="absolute z-20 flex flex-col items-center justify-center pointer-events-none -translate-x-1/2 -translate-y-1/2"
+                                style={{
+                                    top: layout.statDef?.top || '87.2%',
+                                    left: layout.statDef?.left || '65.6%'
+                                }}
+                            >
+                                <span
+                                    className="font-black text-sky-300 uppercase tracking-widest leading-none drop-shadow-[0_1px_2px_rgba(0,0,0,1)]"
+                                    style={{ fontSize: layout.statDef?.labelFontSize || '7px' }}
+                                >
+                                    DEF
+                                </span>
+                                <span
+                                    className="font-black text-white leading-none tcg-gold-emboss mt-0.5"
+                                    style={{ fontSize: layout.statDef?.fontSize || '11.5px' }}
+                                >
+                                    {statsData.defensa}
+                                </span>
+                            </div>
+
+                            {/* Agilidad */}
+                            <div
+                                className="absolute z-20 flex flex-col items-center justify-center pointer-events-none -translate-x-1/2 -translate-y-1/2"
+                                style={{
+                                    top: layout.statAgi?.top || '87.2%',
+                                    left: layout.statAgi?.left || '78.8%'
+                                }}
+                            >
+                                <span
+                                    className="font-black text-emerald-300 uppercase tracking-widest leading-none drop-shadow-[0_1px_2px_rgba(0,0,0,1)]"
+                                    style={{ fontSize: layout.statAgi?.labelFontSize || '7px' }}
+                                >
+                                    AGI
+                                </span>
+                                <span
+                                    className="font-black text-white leading-none tcg-gold-emboss mt-0.5"
+                                    style={{ fontSize: layout.statAgi?.fontSize || '11.5px' }}
+                                >
+                                    {statsData.agilidad}
+                                </span>
                             </div>
 
                             {/* Brillo reflectivo holográfico dinámico */}

@@ -2,6 +2,13 @@ import { useState, useEffect } from 'react';
 import { Sparkles, Save, RotateCcw, Copy, Check, Zap, Eye, Swords, Info } from 'lucide-react';
 import { getSystemTcgLayouts, saveSystemTcgLayouts } from '../../api/admin';
 
+export interface StatSocketCoord {
+    top: string;
+    left: string;
+    fontSize: string;
+    labelFontSize?: string;
+}
+
 export interface FactionCardLayout {
     header: { top: string; left: string; width: string; height: string; fontSizeMain?: string };
     textBox: { top: string; left: string; width: string; height: string };
@@ -19,16 +26,26 @@ export interface FactionCardLayout {
         fontSize: string;
         color: string;
     };
-    leftSocket: { top: string; left: string; width: string; height: string; fontSize?: string };
-    rightSocket: { top: string; right: string; width: string; height: string; fontSize?: string };
+    // 4 Engarces de Orbes 3D Calibrables Individualmente
+    statFue: StatSocketCoord;
+    statMag: StatSocketCoord;
+    statDef: StatSocketCoord;
+    statAgi: StatSocketCoord;
+    // Compatibilidad
+    leftSocket?: { top: string; left: string; width: string; height: string; fontSize?: string };
+    rightSocket?: { top: string; right: string; width: string; height: string; fontSize?: string };
     canvas: {
         header: { x: number; y: number };
         powerBox: { x: number; y: number; w: number; h: number };
         powerText: { y: number; fontSize: number };
         loreText: { y: number; maxW: number; lineH: number; fontSize: number };
         typeLine: { y: number; fontSize: number };
-        leftSocket: { x: number; y: number };
-        rightSocket: { x: number; y: number };
+        statFue: { x: number; y: number };
+        statMag: { x: number; y: number };
+        statDef: { x: number; y: number };
+        statAgi: { x: number; y: number };
+        leftSocket?: { x: number; y: number };
+        rightSocket?: { x: number; y: number };
     };
 }
 
@@ -44,16 +61,20 @@ export const DEFAULT_FACTION_CARD_LAYOUTS: Record<string, FactionCardLayout> = {
         },
         lore: { fontSize: '9.5px', lineHeight: '1.45' },
         typeLine: { fontSize: '8px', color: '#fef08a' },
-        leftSocket: { top: '86.8%', left: '14.0%', width: '32.0%', height: '4.5%', fontSize: '9px' },
-        rightSocket: { top: '86.8%', right: '14.0%', width: '32.0%', height: '4.5%', fontSize: '9px' },
+        statFue: { top: '87.2%', left: '21.2%', fontSize: '11.5px', labelFontSize: '7px' },
+        statMag: { top: '87.2%', left: '34.4%', fontSize: '11.5px', labelFontSize: '7px' },
+        statDef: { top: '87.2%', left: '65.6%', fontSize: '11.5px', labelFontSize: '7px' },
+        statAgi: { top: '87.2%', left: '78.8%', fontSize: '11.5px', labelFontSize: '7px' },
         canvas: {
             header: { x: 120, y: 126 },
             powerBox: { x: 130, y: 655, w: 636, h: 48 },
             powerText: { y: 686, fontSize: 18 },
             loreText: { y: 730, maxW: 600, lineH: 26, fontSize: 17 },
             typeLine: { y: 840, fontSize: 15 },
-            leftSocket: { x: 240, y: 1045 },
-            rightSocket: { x: 655, y: 1045 }
+            statFue: { x: 190, y: 1046 },
+            statMag: { x: 308, y: 1046 },
+            statDef: { x: 588, y: 1046 },
+            statAgi: { x: 706, y: 1046 }
         }
     },
     snake_mountain: {
@@ -67,16 +88,20 @@ export const DEFAULT_FACTION_CARD_LAYOUTS: Record<string, FactionCardLayout> = {
         },
         lore: { fontSize: '9.5px', lineHeight: '1.45' },
         typeLine: { fontSize: '8px', color: '#fed7aa' },
-        leftSocket: { top: '86.8%', left: '14.0%', width: '32.0%', height: '4.5%', fontSize: '9px' },
-        rightSocket: { top: '86.8%', right: '14.0%', width: '32.0%', height: '4.5%', fontSize: '9px' },
+        statFue: { top: '87.2%', left: '21.2%', fontSize: '11.5px', labelFontSize: '7px' },
+        statMag: { top: '87.2%', left: '34.4%', fontSize: '11.5px', labelFontSize: '7px' },
+        statDef: { top: '87.2%', left: '65.6%', fontSize: '11.5px', labelFontSize: '7px' },
+        statAgi: { top: '87.2%', left: '78.8%', fontSize: '11.5px', labelFontSize: '7px' },
         canvas: {
             header: { x: 124, y: 126 },
             powerBox: { x: 130, y: 658, w: 636, h: 48 },
             powerText: { y: 689, fontSize: 18 },
             loreText: { y: 732, maxW: 600, lineH: 26, fontSize: 17 },
             typeLine: { y: 840, fontSize: 15 },
-            leftSocket: { x: 240, y: 1045 },
-            rightSocket: { x: 655, y: 1045 }
+            statFue: { x: 190, y: 1046 },
+            statMag: { x: 308, y: 1046 },
+            statDef: { x: 588, y: 1046 },
+            statAgi: { x: 706, y: 1046 }
         }
     },
     evil_horde: {
@@ -90,16 +115,20 @@ export const DEFAULT_FACTION_CARD_LAYOUTS: Record<string, FactionCardLayout> = {
         },
         lore: { fontSize: '9.5px', lineHeight: '1.45' },
         typeLine: { fontSize: '8px', color: '#fecaca' },
-        leftSocket: { top: '86.6%', left: '14.0%', width: '32.0%', height: '4.5%', fontSize: '9px' },
-        rightSocket: { top: '86.6%', right: '14.0%', width: '32.0%', height: '4.5%', fontSize: '9px' },
+        statFue: { top: '87.0%', left: '21.2%', fontSize: '11.5px', labelFontSize: '7px' },
+        statMag: { top: '87.0%', left: '34.4%', fontSize: '11.5px', labelFontSize: '7px' },
+        statDef: { top: '87.0%', left: '65.6%', fontSize: '11.5px', labelFontSize: '7px' },
+        statAgi: { top: '87.0%', left: '78.8%', fontSize: '11.5px', labelFontSize: '7px' },
         canvas: {
             header: { x: 120, y: 123 },
             powerBox: { x: 130, y: 648, w: 636, h: 48 },
             powerText: { y: 679, fontSize: 18 },
             loreText: { y: 722, maxW: 600, lineH: 26, fontSize: 17 },
             typeLine: { y: 835, fontSize: 15 },
-            leftSocket: { x: 240, y: 1042 },
-            rightSocket: { x: 655, y: 1042 }
+            statFue: { x: 190, y: 1044 },
+            statMag: { x: 308, y: 1044 },
+            statDef: { x: 588, y: 1044 },
+            statAgi: { x: 706, y: 1044 }
         }
     },
     snake_men: {
@@ -113,16 +142,20 @@ export const DEFAULT_FACTION_CARD_LAYOUTS: Record<string, FactionCardLayout> = {
         },
         lore: { fontSize: '9.5px', lineHeight: '1.45' },
         typeLine: { fontSize: '8px', color: '#d9f99d' },
-        leftSocket: { top: '86.8%', left: '14.0%', width: '32.0%', height: '4.5%', fontSize: '9px' },
-        rightSocket: { top: '86.8%', right: '14.0%', width: '32.0%', height: '4.5%', fontSize: '9px' },
+        statFue: { top: '87.2%', left: '21.2%', fontSize: '11.5px', labelFontSize: '7px' },
+        statMag: { top: '87.2%', left: '34.4%', fontSize: '11.5px', labelFontSize: '7px' },
+        statDef: { top: '87.2%', left: '65.6%', fontSize: '11.5px', labelFontSize: '7px' },
+        statAgi: { top: '87.2%', left: '78.8%', fontSize: '11.5px', labelFontSize: '7px' },
         canvas: {
             header: { x: 120, y: 126 },
             powerBox: { x: 130, y: 655, w: 636, h: 48 },
             powerText: { y: 686, fontSize: 18 },
             loreText: { y: 730, maxW: 600, lineH: 26, fontSize: 17 },
             typeLine: { y: 840, fontSize: 15 },
-            leftSocket: { x: 240, y: 1045 },
-            rightSocket: { x: 655, y: 1045 }
+            statFue: { x: 190, y: 1046 },
+            statMag: { x: 308, y: 1046 },
+            statDef: { x: 588, y: 1046 },
+            statAgi: { x: 706, y: 1046 }
         }
     },
     great_rebellion: {
@@ -136,16 +169,20 @@ export const DEFAULT_FACTION_CARD_LAYOUTS: Record<string, FactionCardLayout> = {
         },
         lore: { fontSize: '9.5px', lineHeight: '1.45' },
         typeLine: { fontSize: '8px', color: '#fce7f3' },
-        leftSocket: { top: '86.8%', left: '14.0%', width: '32.0%', height: '4.5%', fontSize: '9px' },
-        rightSocket: { top: '86.8%', right: '14.0%', width: '32.0%', height: '4.5%', fontSize: '9px' },
+        statFue: { top: '87.2%', left: '21.2%', fontSize: '11.5px', labelFontSize: '7px' },
+        statMag: { top: '87.2%', left: '34.4%', fontSize: '11.5px', labelFontSize: '7px' },
+        statDef: { top: '87.2%', left: '65.6%', fontSize: '11.5px', labelFontSize: '7px' },
+        statAgi: { top: '87.2%', left: '78.8%', fontSize: '11.5px', labelFontSize: '7px' },
         canvas: {
             header: { x: 120, y: 126 },
             powerBox: { x: 130, y: 652, w: 636, h: 48 },
             powerText: { y: 683, fontSize: 18 },
             loreText: { y: 726, maxW: 600, lineH: 26, fontSize: 17 },
             typeLine: { y: 838, fontSize: 15 },
-            leftSocket: { x: 240, y: 1045 },
-            rightSocket: { x: 655, y: 1045 }
+            statFue: { x: 190, y: 1046 },
+            statMag: { x: 308, y: 1046 },
+            statDef: { x: 588, y: 1046 },
+            statAgi: { x: 706, y: 1046 }
         }
     },
     cosmic_enforcers: {
@@ -159,16 +196,20 @@ export const DEFAULT_FACTION_CARD_LAYOUTS: Record<string, FactionCardLayout> = {
         },
         lore: { fontSize: '9.5px', lineHeight: '1.45' },
         typeLine: { fontSize: '8px', color: '#bae6fd' },
-        leftSocket: { top: '86.8%', left: '14.0%', width: '32.0%', height: '4.5%', fontSize: '9px' },
-        rightSocket: { top: '86.8%', right: '14.0%', width: '32.0%', height: '4.5%', fontSize: '9px' },
+        statFue: { top: '87.2%', left: '21.2%', fontSize: '11.5px', labelFontSize: '7px' },
+        statMag: { top: '87.2%', left: '34.4%', fontSize: '11.5px', labelFontSize: '7px' },
+        statDef: { top: '87.2%', left: '65.6%', fontSize: '11.5px', labelFontSize: '7px' },
+        statAgi: { top: '87.2%', left: '78.8%', fontSize: '11.5px', labelFontSize: '7px' },
         canvas: {
             header: { x: 120, y: 126 },
             powerBox: { x: 130, y: 650, w: 636, h: 48 },
             powerText: { y: 681, fontSize: 18 },
             loreText: { y: 724, maxW: 600, lineH: 26, fontSize: 17 },
             typeLine: { y: 836, fontSize: 15 },
-            leftSocket: { x: 240, y: 1045 },
-            rightSocket: { x: 655, y: 1045 }
+            statFue: { x: 190, y: 1046 },
+            statMag: { x: 308, y: 1046 },
+            statDef: { x: 588, y: 1046 },
+            statAgi: { x: 706, y: 1046 }
         }
     }
 };
@@ -538,49 +579,93 @@ export default function TcgConfigTab() {
                             </div>
                         </div>
 
-                        {/* 3. Sockets de Combate (4 Mini-Cápsulas con Estilo Temático y 2 Niveles) */}
-                        {/* Izquierdo: FUE y MAG */}
+                        {/* 3. Engarces de Combate 3D Nativos (4 Orbes Calibrados Individualmente) */}
+                        {/* Fuerza */}
                         <div
-                            className="absolute z-20 flex items-center justify-between pointer-events-none gap-1 px-0.5"
+                            className="absolute z-20 flex flex-col items-center justify-center pointer-events-none -translate-x-1/2 -translate-y-1/2"
                             style={{
-                                top: activeLayout.leftSocket.top,
-                                left: activeLayout.leftSocket.left,
-                                width: activeLayout.leftSocket.width,
-                                height: activeLayout.leftSocket.height
+                                top: activeLayout.statFue?.top || '87.2%',
+                                left: activeLayout.statFue?.left || '21.2%'
                             }}
                         >
-                            {/* FUE */}
-                            <div className="flex-1 h-full flex flex-col items-center justify-center rounded-md bg-red-950/75 border border-red-500/50 shadow-[0_2px_4px_rgba(0,0,0,0.8)] px-0.5 py-0.5">
-                                <span className="text-[6.5px] sm:text-[7px] font-black text-red-300 uppercase tracking-widest leading-none">FUE</span>
-                                <span className="text-[10px] sm:text-[11px] font-black text-white leading-none tcg-gold-emboss mt-0.5">{sampleChar.stats.fue}</span>
-                            </div>
-                            {/* MAG */}
-                            <div className="flex-1 h-full flex flex-col items-center justify-center rounded-md bg-purple-950/75 border border-purple-500/50 shadow-[0_2px_4px_rgba(0,0,0,0.8)] px-0.5 py-0.5">
-                                <span className="text-[6.5px] sm:text-[7px] font-black text-purple-300 uppercase tracking-widest leading-none">MAG</span>
-                                <span className="text-[10px] sm:text-[11px] font-black text-white leading-none tcg-gold-emboss mt-0.5">{sampleChar.stats.mag}</span>
-                            </div>
+                            <span
+                                className="font-black text-red-300 uppercase tracking-widest leading-none drop-shadow-[0_1px_2px_rgba(0,0,0,1)]"
+                                style={{ fontSize: activeLayout.statFue?.labelFontSize || '7px' }}
+                            >
+                                FUE
+                            </span>
+                            <span
+                                className="font-black text-white leading-none tcg-gold-emboss mt-0.5"
+                                style={{ fontSize: activeLayout.statFue?.fontSize || '11.5px' }}
+                            >
+                                {sampleChar.stats.fue}
+                            </span>
                         </div>
 
-                        {/* Derecho: DEF y AGI */}
+                        {/* Magia */}
                         <div
-                            className="absolute z-20 flex items-center justify-between pointer-events-none gap-1 px-0.5"
+                            className="absolute z-20 flex flex-col items-center justify-center pointer-events-none -translate-x-1/2 -translate-y-1/2"
                             style={{
-                                top: activeLayout.rightSocket.top,
-                                right: activeLayout.rightSocket.right,
-                                width: activeLayout.rightSocket.width,
-                                height: activeLayout.rightSocket.height
+                                top: activeLayout.statMag?.top || '87.2%',
+                                left: activeLayout.statMag?.left || '34.4%'
                             }}
                         >
-                            {/* DEF */}
-                            <div className="flex-1 h-full flex flex-col items-center justify-center rounded-md bg-sky-950/75 border border-sky-500/50 shadow-[0_2px_4px_rgba(0,0,0,0.8)] px-0.5 py-0.5">
-                                <span className="text-[6.5px] sm:text-[7px] font-black text-sky-300 uppercase tracking-widest leading-none">DEF</span>
-                                <span className="text-[10px] sm:text-[11px] font-black text-white leading-none tcg-gold-emboss mt-0.5">{sampleChar.stats.def}</span>
-                            </div>
-                            {/* AGI */}
-                            <div className="flex-1 h-full flex flex-col items-center justify-center rounded-md bg-emerald-950/75 border border-emerald-500/50 shadow-[0_2px_4px_rgba(0,0,0,0.8)] px-0.5 py-0.5">
-                                <span className="text-[6.5px] sm:text-[7px] font-black text-emerald-300 uppercase tracking-widest leading-none">AGI</span>
-                                <span className="text-[10px] sm:text-[11px] font-black text-white leading-none tcg-gold-emboss mt-0.5">{sampleChar.stats.agi}</span>
-                            </div>
+                            <span
+                                className="font-black text-purple-300 uppercase tracking-widest leading-none drop-shadow-[0_1px_2px_rgba(0,0,0,1)]"
+                                style={{ fontSize: activeLayout.statMag?.labelFontSize || '7px' }}
+                            >
+                                MAG
+                            </span>
+                            <span
+                                className="font-black text-white leading-none tcg-gold-emboss mt-0.5"
+                                style={{ fontSize: activeLayout.statMag?.fontSize || '11.5px' }}
+                            >
+                                {sampleChar.stats.mag}
+                            </span>
+                        </div>
+
+                        {/* Defensa */}
+                        <div
+                            className="absolute z-20 flex flex-col items-center justify-center pointer-events-none -translate-x-1/2 -translate-y-1/2"
+                            style={{
+                                top: activeLayout.statDef?.top || '87.2%',
+                                left: activeLayout.statDef?.left || '65.6%'
+                            }}
+                        >
+                            <span
+                                className="font-black text-sky-300 uppercase tracking-widest leading-none drop-shadow-[0_1px_2px_rgba(0,0,0,1)]"
+                                style={{ fontSize: activeLayout.statDef?.labelFontSize || '7px' }}
+                            >
+                                DEF
+                            </span>
+                            <span
+                                className="font-black text-white leading-none tcg-gold-emboss mt-0.5"
+                                style={{ fontSize: activeLayout.statDef?.fontSize || '11.5px' }}
+                            >
+                                {sampleChar.stats.def}
+                            </span>
+                        </div>
+
+                        {/* Agilidad */}
+                        <div
+                            className="absolute z-20 flex flex-col items-center justify-center pointer-events-none -translate-x-1/2 -translate-y-1/2"
+                            style={{
+                                top: activeLayout.statAgi?.top || '87.2%',
+                                left: activeLayout.statAgi?.left || '78.8%'
+                            }}
+                        >
+                            <span
+                                className="font-black text-emerald-300 uppercase tracking-widest leading-none drop-shadow-[0_1px_2px_rgba(0,0,0,1)]"
+                                style={{ fontSize: activeLayout.statAgi?.labelFontSize || '7px' }}
+                            >
+                                AGI
+                            </span>
+                            <span
+                                className="font-black text-white leading-none tcg-gold-emboss mt-0.5"
+                                style={{ fontSize: activeLayout.statAgi?.fontSize || '11.5px' }}
+                            >
+                                {sampleChar.stats.agi}
+                            </span>
                         </div>
                     </div>
 
@@ -809,7 +894,6 @@ export default function TcgConfigTab() {
                                     type="range"
                                     min="6.5"
                                     max="11.5"
-                                    step="0.5"
                                     value={parseFloat(activeLayout.typeLine.fontSize)}
                                     onChange={(e) => updateActiveCoord('typeLine', 'fontSize', `${e.target.value}px`)}
                                     className="w-full accent-purple-400"
@@ -818,75 +902,171 @@ export default function TcgConfigTab() {
                         </div>
                     </div>
 
-                    {/* SECCIÓN 4: SOCKETS DE COMBATE INFERIORES */}
-                    <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/10 space-y-4">
+                    {/* SECCIÓN 4: CALIBRACIÓN INDIVIDUAL DE LOS 4 ORBES 3D */}
+                    <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/10 space-y-5">
                         <div className="flex items-center justify-between">
                             <h4 className="text-sm font-black text-white flex items-center gap-2">
                                 <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                                4. Sockets de Combate Inferiores (FUE/MAG y DEF/AGI)
+                                4. Calibración Milimétrica de los 4 Orbes de Poder 3D
                             </h4>
-                            <span className="text-[10px] font-mono text-emerald-400/70">sockets</span>
+                            <span className="text-[10px] font-mono text-emerald-400/70">statFue / statMag / statDef / statAgi</span>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            {/* Top */}
-                            <div className="space-y-1">
-                                <div className="flex justify-between text-xs text-white/60 font-bold">
-                                    <span>Posición Vertical (Top)</span>
-                                    <span className="text-emerald-300 font-mono">{activeLayout.leftSocket.top}</span>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* ORBE 1: FUERZA (FUE) */}
+                            <div className="p-3.5 rounded-xl bg-red-950/30 border border-red-500/30 space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs font-black text-red-400 uppercase tracking-wider flex items-center gap-1.5">
+                                        <span className="h-2 w-2 rounded-full bg-red-500" />
+                                        🔴 Fuerza (FUE)
+                                    </span>
+                                    <span className="text-[10px] font-mono text-red-300">
+                                        {activeLayout.statFue?.left || '21.2%'} / {activeLayout.statFue?.top || '87.2%'}
+                                    </span>
                                 </div>
-                                <input
-                                    type="range"
-                                    min="82.0"
-                                    max="92.0"
-                                    step="0.1"
-                                    value={parseFloat(activeLayout.leftSocket.top)}
-                                    onChange={(e) => {
-                                        updateActiveCoord('leftSocket', 'top', `${e.target.value}%`);
-                                        updateActiveCoord('rightSocket', 'top', `${e.target.value}%`);
-                                    }}
-                                    className="w-full accent-emerald-400"
-                                />
+                                <div className="grid grid-cols-2 gap-2 text-[11px]">
+                                    <div>
+                                        <span className="text-white/60 font-bold block mb-1">Posición X (Left)</span>
+                                        <input
+                                            type="range"
+                                            min="14.0"
+                                            max="28.0"
+                                            step="0.1"
+                                            value={parseFloat(activeLayout.statFue?.left || '21.2%')}
+                                            onChange={(e) => updateActiveCoord('statFue', 'left', `${e.target.value}%`)}
+                                            className="w-full accent-red-400"
+                                        />
+                                    </div>
+                                    <div>
+                                        <span className="text-white/60 font-bold block mb-1">Posición Y (Top)</span>
+                                        <input
+                                            type="range"
+                                            min="82.0"
+                                            max="93.0"
+                                            step="0.1"
+                                            value={parseFloat(activeLayout.statFue?.top || '87.2%')}
+                                            onChange={(e) => updateActiveCoord('statFue', 'top', `${e.target.value}%`)}
+                                            className="w-full accent-red-400"
+                                        />
+                                    </div>
+                                </div>
                             </div>
 
-                            {/* Margen Lateral */}
-                            <div className="space-y-1">
-                                <div className="flex justify-between text-xs text-white/60 font-bold">
-                                    <span>Margen Lateral (Left/Right)</span>
-                                    <span className="text-emerald-300 font-mono">{activeLayout.leftSocket.left}</span>
+                            {/* ORBE 2: MAGIA (MAG) */}
+                            <div className="p-3.5 rounded-xl bg-purple-950/30 border border-purple-500/30 space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs font-black text-purple-400 uppercase tracking-wider flex items-center gap-1.5">
+                                        <span className="h-2 w-2 rounded-full bg-purple-500" />
+                                        🟣 Magia (MAG)
+                                    </span>
+                                    <span className="text-[10px] font-mono text-purple-300">
+                                        {activeLayout.statMag?.left || '34.4%'} / {activeLayout.statMag?.top || '87.2%'}
+                                    </span>
                                 </div>
-                                <input
-                                    type="range"
-                                    min="9.0"
-                                    max="20.0"
-                                    step="0.2"
-                                    value={parseFloat(activeLayout.leftSocket.left)}
-                                    onChange={(e) => {
-                                        updateActiveCoord('leftSocket', 'left', `${e.target.value}%`);
-                                        updateActiveCoord('rightSocket', 'right', `${e.target.value}%`);
-                                    }}
-                                    className="w-full accent-emerald-400"
-                                />
+                                <div className="grid grid-cols-2 gap-2 text-[11px]">
+                                    <div>
+                                        <span className="text-white/60 font-bold block mb-1">Posición X (Left)</span>
+                                        <input
+                                            type="range"
+                                            min="28.0"
+                                            max="42.0"
+                                            step="0.1"
+                                            value={parseFloat(activeLayout.statMag?.left || '34.4%')}
+                                            onChange={(e) => updateActiveCoord('statMag', 'left', `${e.target.value}%`)}
+                                            className="w-full accent-purple-400"
+                                        />
+                                    </div>
+                                    <div>
+                                        <span className="text-white/60 font-bold block mb-1">Posición Y (Top)</span>
+                                        <input
+                                            type="range"
+                                            min="82.0"
+                                            max="93.0"
+                                            step="0.1"
+                                            value={parseFloat(activeLayout.statMag?.top || '87.2%')}
+                                            onChange={(e) => updateActiveCoord('statMag', 'top', `${e.target.value}%`)}
+                                            className="w-full accent-purple-400"
+                                        />
+                                    </div>
+                                </div>
                             </div>
 
-                            {/* Font Size Stats */}
-                            <div className="space-y-1">
-                                <div className="flex justify-between text-xs text-white/60 font-bold">
-                                    <span>Tamaño Letra Stats</span>
-                                    <span className="text-emerald-300 font-mono">{activeLayout.leftSocket.fontSize || '9px'}</span>
+                            {/* ORBE 3: DEFENSA (DEF) */}
+                            <div className="p-3.5 rounded-xl bg-sky-950/30 border border-sky-500/30 space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs font-black text-sky-400 uppercase tracking-wider flex items-center gap-1.5">
+                                        <span className="h-2 w-2 rounded-full bg-sky-500" />
+                                        🔵 Defensa (DEF)
+                                    </span>
+                                    <span className="text-[10px] font-mono text-sky-300">
+                                        {activeLayout.statDef?.left || '65.6%'} / {activeLayout.statDef?.top || '87.2%'}
+                                    </span>
                                 </div>
-                                <input
-                                    type="range"
-                                    min="7.5"
-                                    max="12.0"
-                                    step="0.5"
-                                    value={parseFloat(activeLayout.leftSocket.fontSize || '9px')}
-                                    onChange={(e) => {
-                                        updateActiveCoord('leftSocket', 'fontSize', `${e.target.value}px`);
-                                        updateActiveCoord('rightSocket', 'fontSize', `${e.target.value}px`);
-                                    }}
-                                    className="w-full accent-emerald-400"
-                                />
+                                <div className="grid grid-cols-2 gap-2 text-[11px]">
+                                    <div>
+                                        <span className="text-white/60 font-bold block mb-1">Posición X (Left)</span>
+                                        <input
+                                            type="range"
+                                            min="58.0"
+                                            max="72.0"
+                                            step="0.1"
+                                            value={parseFloat(activeLayout.statDef?.left || '65.6%')}
+                                            onChange={(e) => updateActiveCoord('statDef', 'left', `${e.target.value}%`)}
+                                            className="w-full accent-sky-400"
+                                        />
+                                    </div>
+                                    <div>
+                                        <span className="text-white/60 font-bold block mb-1">Posición Y (Top)</span>
+                                        <input
+                                            type="range"
+                                            min="82.0"
+                                            max="93.0"
+                                            step="0.1"
+                                            value={parseFloat(activeLayout.statDef?.top || '87.2%')}
+                                            onChange={(e) => updateActiveCoord('statDef', 'top', `${e.target.value}%`)}
+                                            className="w-full accent-sky-400"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* ORBE 4: AGILIDAD (AGI) */}
+                            <div className="p-3.5 rounded-xl bg-emerald-950/30 border border-emerald-500/30 space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs font-black text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                                        <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                                        🟢 Agilidad (AGI)
+                                    </span>
+                                    <span className="text-[10px] font-mono text-emerald-300">
+                                        {activeLayout.statAgi?.left || '78.8%'} / {activeLayout.statAgi?.top || '87.2%'}
+                                    </span>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2 text-[11px]">
+                                    <div>
+                                        <span className="text-white/60 font-bold block mb-1">Posición X (Left)</span>
+                                        <input
+                                            type="range"
+                                            min="72.0"
+                                            max="86.0"
+                                            step="0.1"
+                                            value={parseFloat(activeLayout.statAgi?.left || '78.8%')}
+                                            onChange={(e) => updateActiveCoord('statAgi', 'left', `${e.target.value}%`)}
+                                            className="w-full accent-emerald-400"
+                                        />
+                                    </div>
+                                    <div>
+                                        <span className="text-white/60 font-bold block mb-1">Posición Y (Top)</span>
+                                        <input
+                                            type="range"
+                                            min="82.0"
+                                            max="93.0"
+                                            step="0.1"
+                                            value={parseFloat(activeLayout.statAgi?.top || '87.2%')}
+                                            onChange={(e) => updateActiveCoord('statAgi', 'top', `${e.target.value}%`)}
+                                            className="w-full accent-emerald-400"
+                                        />
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
