@@ -667,6 +667,42 @@ MOTU_LORE_ENCYCLOPEDIA: Dict[str, Dict[str, Any]] = {
         "special_move": "Estrangulamiento de Pitón Arcano",
         "weapon_type": "snake_venom"
     },
+    "fang-or": {
+        "canonical_name": "Fang-Or",
+        "faction": "Los Hombres Serpiente",
+        "type_line": "Ingeniero Ofídico — Armero Mecánico",
+        "frame_theme": "snake_men",
+        "emblem": "snake",
+        "mana_gems": ["snake", "venom", "metal"],
+        "lore": "Ingeniero y armero letal de los Hombres Serpiente. Sus colmillos crecen y se regeneran como dagas metálicas empapadas en toxinas corrosivas.",
+        "stats": {"fuerza": 90, "magia": 78, "defensa": 88, "agilidad": 92},
+        "special_move": "Mordedura Mecánica de Colmillo Venenoso",
+        "weapon_type": "snake_venom"
+    },
+    "lady slither": {
+        "canonical_name": "Lady Slither",
+        "faction": "Los Hombres Serpiente",
+        "type_line": "Emperatriz Ofidia — Reina de la Serpiente",
+        "frame_theme": "snake_men",
+        "emblem": "snake",
+        "mana_gems": ["snake", "magic", "shadow"],
+        "lore": "Emperatriz y hechicera suprema de los Hombres Serpiente. Comanda las legiones ofidias con magia oscura y una astucia maquiavélica.",
+        "stats": {"fuerza": 88, "magia": 96, "defensa": 90, "agilidad": 91},
+        "special_move": "Manto de Sombras Ofídicas",
+        "weapon_type": "snake_venom"
+    },
+    "battle cat man": {
+        "canonical_name": "Battle Cat Man",
+        "faction": "Guerreros Heroicos",
+        "type_line": "Furia Felina — Guardián de Eternia",
+        "frame_theme": "castle_grayskull",
+        "emblem": "shield",
+        "mana_gems": ["grayskull", "beast", "gold"],
+        "lore": "Poderoso avatar felino imbuido con la fuerza indomable de Battle Cat y la sabiduría de Grayskull. Protector implacable de los senderos eternianos.",
+        "stats": {"fuerza": 96, "magia": 75, "defensa": 92, "agilidad": 93},
+        "special_move": "Desgarro Feroz de la Selva Carmesí",
+        "weapon_type": "power_sword"
+    },
 
     # ── LA GRAN REBELIÓN (THE GREAT REBELLION) ──
     "she-ra": {

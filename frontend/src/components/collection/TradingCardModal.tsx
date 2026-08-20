@@ -17,12 +17,16 @@ import {
     Image as ImageIcon,
     Plus,
     Minus,
-    Move
+    Move,
+    Edit3,
+    Save,
+    CheckCircle2
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { MOTUImage } from '../ui/MOTUImage';
 import { enhanceCardWithAI, type CardAiEnhanceResult } from '../../api/cards';
 import { getSystemTcgLayouts } from '../../api/admin';
+import { fetchCharacterLoreList, updateCharacterLore, type CharacterLore } from '../../api/lore';
 import { DEFAULT_FACTION_CARD_LAYOUTS } from '../config/TcgConfigTab';
 
 interface TradingCardModalProps {
@@ -834,7 +838,8 @@ const generateTradingCardDataUrl = async (
             canvas.width = width;
             canvas.height = height;
 
-            const titleParts = formatCardTitle(item.product_name || item.name || 'HE-MAN');
+            const rawCardTitle = profileData?.cardTitle || item.product_name || item.name || 'HE-MAN';
+            const titleParts = formatCardTitle(rawCardTitle);
             const themeKey = profileData?.themeKey || 'castle_grayskull';
             const layout = profileData?.layout || FACTION_CARD_LAYOUTS[themeKey] || FACTION_CARD_LAYOUTS.castle_grayskull;
             const faction = profileData?.faction || 'Guerreros Heroicos';
@@ -998,9 +1003,28 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
     const [userFactionOverride, setUserFactionOverride] = useState<string | null>(null);
     const [customLayouts, setCustomLayouts] = useState<Record<string, any>>(DEFAULT_FACTION_CARD_LAYOUTS);
 
+    // Estado para edición libre de textos y atributos del cromo
+    const [isEditingTexts, setIsEditingTexts] = useState<boolean>(false);
+    const [customCardName, setCustomCardName] = useState<string>('');
+    const [customSpecialMove, setCustomSpecialMove] = useState<string>('');
+    const [customLore, setCustomLore] = useState<string>('');
+    const [customTypeLine, setCustomTypeLine] = useState<string>('');
+    const [customStats, setCustomStats] = useState<{ fuerza: number; magia: number; defensa: number; agilidad: number } | null>(null);
+    const [dbLoreChar, setDbLoreChar] = useState<CharacterLore | null>(null);
+    const [savingDbLore, setSavingDbLore] = useState<boolean>(false);
+    const [loreSaveSuccess, setLoreSaveSuccess] = useState<boolean>(false);
+
     React.useEffect(() => {
-        if (!isOpen) return;
+        if (!isOpen || !item) return;
         setUserFactionOverride(null);
+        setIsEditingTexts(false);
+        setCustomCardName('');
+        setCustomSpecialMove('');
+        setCustomLore('');
+        setCustomTypeLine('');
+        setCustomStats(null);
+        setDbLoreChar(null);
+
         const stored = localStorage.getItem('tcg_card_layouts');
         if (stored) {
             try { setCustomLayouts(JSON.parse(stored)); } catch {}
@@ -1008,6 +1032,16 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
         getSystemTcgLayouts().then(remote => {
             if (remote && Object.keys(remote).length > 0) {
                 setCustomLayouts(prev => ({ ...prev, ...remote }));
+            }
+        }).catch(() => {});
+
+        // Cargar ficha canónica de lore desde la BD
+        const rawName = item.product_name || item.name || '';
+        fetchCharacterLoreList({ search: rawName, limit: 5 }).then(res => {
+            if (res && res.items && res.items.length > 0) {
+                // Encontrar el match más preciso
+                const best = res.items[0];
+                setDbLoreChar(best);
             }
         }).catch(() => {});
     }, [isOpen, item?.id]);
@@ -1020,15 +1054,60 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
 
     // Perfil canónico local y tema visual de facción dinámico
     const localProfile = getLocalMotuProfile(name, item.sub_category);
-    const themeKey = userFactionOverride || aiResult?.frame_theme || localProfile.themeKey;
+    const effectiveDbLore = dbLoreChar;
+    const themeKey = userFactionOverride || aiResult?.frame_theme || effectiveDbLore?.theme_key || localProfile.themeKey;
     const theme = FACTION_VISUAL_THEMES[themeKey] || FACTION_VISUAL_THEMES.castle_grayskull;
     const layout = customLayouts[themeKey] || FACTION_CARD_LAYOUTS[themeKey] || FACTION_CARD_LAYOUTS.castle_grayskull;
-    const factionName = userFactionOverride ? theme.faction : (aiResult?.faction || localProfile.faction);
-    const typeLineText = userFactionOverride ? theme.typeLine : (aiResult?.type_line || localProfile.typeLine);
-    const specialMoveText = aiResult?.special_move || localProfile.specialMove;
-    const rawLore = aiResult?.lore || localProfile.lore;
+    const factionName = userFactionOverride ? theme.faction : (aiResult?.faction || effectiveDbLore?.faction || localProfile.faction);
+
+    // Textos computados con prioridad: Edición de usuario > IA > BD Lore > Perfil local
+    const displayCardName = customCardName.trim() ? customCardName : (effectiveDbLore?.canonical_name || name);
+    const typeLineText = customTypeLine.trim() ? customTypeLine : (userFactionOverride ? theme.typeLine : (aiResult?.type_line || effectiveDbLore?.type_line || localProfile.typeLine));
+    const specialMoveText = customSpecialMove.trim() ? customSpecialMove : (aiResult?.special_move || effectiveDbLore?.special_move || localProfile.specialMove);
+    const rawLore = customLore.trim() ? customLore : (aiResult?.lore || effectiveDbLore?.lore || localProfile.lore);
     const loreText = rawLore.replace(/^["';\s]+/, '').replace(/["';\s]+$/, '');
-    const statsData = aiResult?.stats || localProfile.stats;
+    const statsData = customStats || aiResult?.stats || (effectiveDbLore ? {
+        fuerza: effectiveDbLore.fuerza,
+        magia: effectiveDbLore.magia,
+        defensa: effectiveDbLore.defensa,
+        agilidad: effectiveDbLore.agilidad
+    } : localProfile.stats);
+
+    const handleSaveToLoreCanon = async () => {
+        if (!dbLoreChar && !effectiveDbLore) return;
+        const slug = dbLoreChar?.slug || effectiveDbLore?.slug;
+        if (!slug) return;
+        setSavingDbLore(true);
+        try {
+            const updated = await updateCharacterLore(slug, {
+                canonical_name: customCardName.trim() || undefined,
+                special_move: customSpecialMove.trim() || undefined,
+                lore: customLore.trim() || undefined,
+                type_line: customTypeLine.trim() || undefined,
+                fuerza: customStats?.fuerza,
+                magia: customStats?.magia,
+                defensa: customStats?.defensa,
+                agilidad: customStats?.agilidad,
+                theme_key: themeKey as any,
+                faction: factionName
+            });
+            setDbLoreChar(updated);
+            setLoreSaveSuccess(true);
+            setTimeout(() => setLoreSaveSuccess(false), 3000);
+        } catch (e) {
+            console.error('Error al guardar en el canon:', e);
+        } finally {
+            setSavingDbLore(false);
+        }
+    };
+
+    const handleResetCustomTexts = () => {
+        setCustomCardName('');
+        setCustomSpecialMove('');
+        setCustomLore('');
+        setCustomTypeLine('');
+        setCustomStats(null);
+    };
 
     // Manejo de giro 3D holográfico con el ratón
     const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -1193,6 +1272,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
             if (exportTarget === 'card') {
                 const activeImage = aiResult?.image_base64 || undefined;
                 dataUrl = await generateTradingCardDataUrl(cardRef.current, item, activeImage, aiResult?.lore, {
+                    cardTitle: displayCardName,
                     faction: factionName,
                     typeLine: typeLineText,
                     specialMove: specialMoveText,
@@ -1203,10 +1283,10 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                     themeKey: themeKey,
                     layout: layout
                 });
-                filename = `Carta_TCG_${name.replace(/\s+/g, '_')}${aiResult ? `_${aiResult.style}` : ''}.png`;
+                filename = `Carta_TCG_${displayCardName.replace(/\s+/g, '_')}${aiResult ? `_${aiResult.style}` : ''}.png`;
             } else {
                 dataUrl = await getSingleIllustrationDataUrl(item, aiResult?.image_base64, imgZoom, imgPan);
-                filename = `Ilustracion_${name.replace(/\s+/g, '_')}${aiResult ? `_${aiResult.style}` : ''}.png`;
+                filename = `Ilustracion_${displayCardName.replace(/\s+/g, '_')}${aiResult ? `_${aiResult.style}` : ''}.png`;
             }
 
             if (!dataUrl) return;
@@ -1238,6 +1318,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
             if (exportTarget === 'card') {
                 const activeImage = aiResult?.image_base64 || undefined;
                 dataUrl = await generateTradingCardDataUrl(cardRef.current, item, activeImage, aiResult?.lore, {
+                    cardTitle: displayCardName,
                     faction: factionName,
                     typeLine: typeLineText,
                     specialMove: specialMoveText,
@@ -1285,6 +1366,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
             if (exportTarget === 'card') {
                 const activeImage = aiResult?.image_base64 || undefined;
                 dataUrl = await generateTradingCardDataUrl(cardRef.current, item, activeImage, aiResult?.lore, {
+                    cardTitle: displayCardName,
                     faction: factionName,
                     typeLine: typeLineText,
                     specialMove: specialMoveText,
@@ -1295,10 +1377,10 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                     themeKey: themeKey,
                     layout: layout
                 });
-                filename = `Carta_TCG_${name.replace(/\s+/g, '_')}.png`;
+                filename = `Carta_TCG_${displayCardName.replace(/\s+/g, '_')}.png`;
             } else {
                 dataUrl = await getSingleIllustrationDataUrl(item, aiResult?.image_base64, imgZoom, imgPan);
-                filename = `Ilustracion_${name.replace(/\s+/g, '_')}.png`;
+                filename = `Ilustracion_${displayCardName.replace(/\s+/g, '_')}.png`;
             }
 
             if (!dataUrl) return;
@@ -1460,36 +1542,210 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                     </div>
 
                     {/* SELECTOR INTERACTIVO DE BANDO MOTU */}
-                    <div className="w-full mb-3 flex items-center gap-1.5 p-1 bg-slate-950/80 border border-amber-500/20 rounded-xl overflow-x-auto custom-scrollbar">
-                        <span className="text-[9px] font-black uppercase text-amber-400/90 pl-1.5 shrink-0 flex items-center gap-1">
-                            <Shield className="h-3 w-3 text-amber-400" /> Bando:
-                        </span>
-                        {[
-                            { key: 'castle_grayskull', label: 'Heroicos', icon: '🏰' },
-                            { key: 'snake_mountain', label: 'Del Mal', icon: '🌋' },
-                            { key: 'evil_horde', label: 'Horda', icon: '🦇' },
-                            { key: 'snake_men', label: 'Serpientes', icon: '🐍' },
-                            { key: 'great_rebellion', label: 'Rebelión', icon: '✨' },
-                            { key: 'cosmic_enforcers', label: 'Cósmicos', icon: '🌌' }
-                        ].map(f => {
-                            const isSelected = themeKey === f.key;
-                            return (
-                                <button
-                                    key={f.key}
-                                    onClick={() => setUserFactionOverride(f.key)}
-                                    className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9.5px] font-black uppercase tracking-wider transition shrink-0 cursor-pointer ${
-                                        isSelected
-                                            ? 'bg-amber-500/25 border border-amber-400 text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.3)]'
-                                            : 'bg-white/5 border border-transparent text-white/60 hover:text-white hover:bg-white/10'
-                                    }`}
-                                    title={`Cambiar plantilla a ${f.label}`}
-                                >
-                                    <span>{f.icon}</span>
-                                    <span>{f.label}</span>
-                                </button>
-                            );
-                        })}
+                    <div className="w-full mb-2 flex items-center justify-between gap-1.5 p-1 bg-slate-950/80 border border-amber-500/20 rounded-xl overflow-x-auto custom-scrollbar">
+                        <div className="flex items-center gap-1.5 shrink-0">
+                            <span className="text-[9px] font-black uppercase text-amber-400/90 pl-1.5 shrink-0 flex items-center gap-1">
+                                <Shield className="h-3 w-3 text-amber-400" /> Bando:
+                            </span>
+                            {[
+                                { key: 'castle_grayskull', label: 'Heroicos', icon: '🏰' },
+                                { key: 'snake_mountain', label: 'Del Mal', icon: '🌋' },
+                                { key: 'evil_horde', label: 'Horda', icon: '🦇' },
+                                { key: 'snake_men', label: 'Serpientes', icon: '🐍' },
+                                { key: 'great_rebellion', label: 'Rebelión', icon: '✨' },
+                                { key: 'cosmic_enforcers', label: 'Cósmicos', icon: '🌌' }
+                            ].map(f => {
+                                const isSelected = themeKey === f.key;
+                                return (
+                                    <button
+                                        key={f.key}
+                                        onClick={() => setUserFactionOverride(f.key)}
+                                        className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9.5px] font-black uppercase tracking-wider transition shrink-0 cursor-pointer ${
+                                            isSelected
+                                                ? 'bg-amber-500/25 border border-amber-400 text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.3)]'
+                                                : 'bg-white/5 border border-transparent text-white/60 hover:text-white hover:bg-white/10'
+                                        }`}
+                                        title={`Cambiar plantilla a ${f.label}`}
+                                    >
+                                        <span>{f.icon}</span>
+                                        <span>{f.label}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        {/* Botón de Abrir/Cerrar Editor de Textos y Poderes */}
+                        <button
+                            onClick={() => {
+                                if (!isEditingTexts) {
+                                    setCustomCardName(displayCardName);
+                                    setCustomSpecialMove(specialMoveText);
+                                    setCustomLore(loreText);
+                                    setCustomTypeLine(typeLineText);
+                                    setCustomStats({ ...statsData });
+                                }
+                                setIsEditingTexts(!isEditingTexts);
+                            }}
+                            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9.5px] font-black uppercase tracking-wider transition shrink-0 cursor-pointer border ${
+                                isEditingTexts
+                                    ? 'bg-amber-500 text-slate-950 border-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.5)]'
+                                    : 'bg-amber-500/15 border-amber-500/40 text-amber-300 hover:bg-amber-500/25'
+                            }`}
+                        >
+                            <Edit3 className="h-3 w-3" />
+                            <span>{isEditingTexts ? 'Cerrar Editor' : '✏️ Personalizar Textos'}</span>
+                        </button>
                     </div>
+
+                    {/* DRAWER INTERACTIVO DE EDICIÓN DE TEXTOS, CATEGORÍA Y PODERES */}
+                    <AnimatePresence>
+                        {isEditingTexts && (
+                            <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="w-full mb-3 p-3 bg-slate-900/95 border border-amber-500/40 rounded-xl shadow-2xl flex flex-col gap-2.5 overflow-hidden"
+                            >
+                                <div className="flex items-center justify-between border-b border-white/10 pb-1.5">
+                                    <span className="text-[11px] font-black uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
+                                        <Edit3 className="h-3.5 w-3.5 text-amber-400" />
+                                        Personalización de la Carta Digital
+                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={handleResetCustomTexts}
+                                            className="text-[9px] text-stone-400 hover:text-stone-200 underline flex items-center gap-1 cursor-pointer"
+                                        >
+                                            <RotateCcw className="h-2.5 w-2.5" />
+                                            Restablecer
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-left">
+                                    {/* 1. Nombre en la Carta */}
+                                    <div>
+                                        <label className="block text-[9px] font-bold uppercase text-amber-200/80 mb-0.5">
+                                            Nombre en Carta:
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={customCardName}
+                                            onChange={(e) => setCustomCardName(e.target.value)}
+                                            placeholder={name}
+                                            className="w-full px-2 py-1 rounded bg-black/60 border border-slate-700 text-white text-xs font-semibold focus:border-amber-400 focus:outline-none"
+                                        />
+                                    </div>
+
+                                    {/* 2. Poder / Habilidad Especial */}
+                                    <div>
+                                        <label className="block text-[9px] font-bold uppercase text-amber-200/80 mb-0.5">
+                                            Poder / Habilidad:
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={customSpecialMove}
+                                            onChange={(e) => setCustomSpecialMove(e.target.value)}
+                                            placeholder={specialMoveText}
+                                            className="w-full px-2 py-1 rounded bg-black/60 border border-slate-700 text-amber-300 text-xs font-semibold focus:border-amber-400 focus:outline-none"
+                                        />
+                                    </div>
+
+                                    {/* 3. Categoría / Línea de Tipo Libre */}
+                                    <div className="sm:col-span-2">
+                                        <label className="block text-[9px] font-bold uppercase text-amber-200/80 mb-0.5">
+                                            Categoría / Línea de Tipo (Libre):
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={customTypeLine}
+                                            onChange={(e) => setCustomTypeLine(e.target.value)}
+                                            placeholder={typeLineText}
+                                            className="w-full px-2 py-1 rounded bg-black/60 border border-slate-700 text-yellow-200 text-xs font-semibold focus:border-amber-400 focus:outline-none"
+                                        />
+                                    </div>
+
+                                    {/* 4. Descripción / Lore */}
+                                    <div className="sm:col-span-2">
+                                        <div className="flex justify-between items-center mb-0.5">
+                                            <label className="text-[9px] font-bold uppercase text-amber-200/80">
+                                                Descripción / Lore Canónico:
+                                            </label>
+                                            <span className={`text-[9px] font-mono ${customLore.length > 180 ? 'text-amber-400 font-bold' : 'text-stone-400'}`}>
+                                                {customLore.length}/180 car.
+                                            </span>
+                                        </div>
+                                        <textarea
+                                            value={customLore}
+                                            onChange={(e) => setCustomLore(e.target.value)}
+                                            placeholder={loreText}
+                                            rows={2}
+                                            className="w-full px-2 py-1 rounded bg-black/60 border border-slate-700 text-stone-200 text-xs leading-snug focus:border-amber-400 focus:outline-none resize-none"
+                                        />
+                                    </div>
+
+                                    {/* 5. Estadísticas de Combate RPG */}
+                                    <div className="sm:col-span-2 flex items-center justify-between gap-2 p-1.5 bg-black/40 rounded-lg border border-slate-800">
+                                        <span className="text-[9px] font-black uppercase text-amber-300 shrink-0">
+                                            ⚔️ Poderes / Stats:
+                                        </span>
+                                        {[
+                                            { key: 'fuerza', label: 'FUE', color: 'text-amber-300' },
+                                            { key: 'magia', label: 'MAG', color: 'text-cyan-300' },
+                                            { key: 'defensa', label: 'DEF', color: 'text-emerald-300' },
+                                            { key: 'agilidad', label: 'AGI', color: 'text-purple-300' }
+                                        ].map(stat => (
+                                            <div key={stat.key} className="flex items-center gap-1">
+                                                <span className={`text-[9px] font-bold ${stat.color}`}>{stat.label}:</span>
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    max="99"
+                                                    value={customStats ? (customStats as any)[stat.key] : (statsData as any)[stat.key]}
+                                                    onChange={(e) => {
+                                                        const val = Math.min(99, Math.max(1, parseInt(e.target.value) || 0));
+                                                        setCustomStats(prev => ({
+                                                            ...(prev || statsData),
+                                                            [stat.key]: val
+                                                        }));
+                                                    }}
+                                                    className="w-11 px-1 py-0.5 rounded bg-black border border-slate-700 text-white font-mono text-xs text-center focus:border-amber-400 focus:outline-none"
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Botón Guardar en el Canon */}
+                                {(dbLoreChar || effectiveDbLore) && (
+                                    <div className="flex items-center justify-between pt-1 border-t border-white/5">
+                                        <span className="text-[9px] text-stone-400">
+                                            Guardar estos textos para que todas las cartas de este personaje los hereden.
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={handleSaveToLoreCanon}
+                                            disabled={savingDbLore}
+                                            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-[9.5px] font-black uppercase tracking-wider transition ${
+                                                loreSaveSuccess
+                                                    ? 'bg-emerald-500 text-slate-950'
+                                                    : 'bg-amber-500/20 border border-amber-500/50 text-amber-300 hover:bg-amber-500 hover:text-slate-950'
+                                            }`}
+                                        >
+                                            {savingDbLore ? (
+                                                <Loader2 className="h-3 w-3 animate-spin" />
+                                            ) : loreSaveSuccess ? (
+                                                <CheckCircle2 className="h-3 w-3 text-slate-950" />
+                                            ) : (
+                                                <Save className="h-3 w-3" />
+                                            )}
+                                            <span>{loreSaveSuccess ? '¡Guardado en Canon!' : 'Guardar en Grimorio'}</span>
+                                        </button>
+                                    </div>
+                                )}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
 
                     {/* CONTENEDOR 3D DEL CROMO MAGIC SHOWCASE (3 CAPAS REALES) */}
                     <div
@@ -1634,7 +1890,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                             {/* CAPA 3 (Frente): Tipografía Vectorial Nítida y Datos Canónicos Individualizados */}
                             {/* 1. TÍTULO EN LA CABECERA (Nombre + Subtítulo con formato de lujo) */}
                             {(() => {
-                                const titleParts = formatCardTitle(name);
+                                const titleParts = formatCardTitle(displayCardName);
                                 return (
                                     <div
                                         className="absolute z-20 flex items-center justify-start pointer-events-none overflow-hidden px-1"

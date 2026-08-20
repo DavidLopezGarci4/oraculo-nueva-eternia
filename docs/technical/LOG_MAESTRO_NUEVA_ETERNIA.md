@@ -1397,17 +1397,17 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
   - **Motor de Exportación Sincronizado**: Traslado de la lógica de coordenadas a la función `generateTradingCardDataUrl` del Canvas 2D, asegurando que el PNG HD exportado sea idéntico al renderizado web interactivo.
   - **Compilación y Robustez**: Suite completa del backend aprobada al 100% (67/67 tests) y frontend compilado con `npm run build` en 8.14s con 0 errores.
 
-### ⚡ Fase 90: Taller de Calibración TCG en Configuración (TCG Studio) y Selector Interactivo de Bando (20/08/2026)
+### ⚡ Fase 91: Personalización Libre de Textos y Poderes TCG, Auto-Sembrado Canónico e Integración Total (20/08/2026)
 
-- **Hitos**: Creación de la pestaña de administración **"Cromos TCG"** en la sección de Configuración para calibrar visualmente al milímetro cada una de las 6 plantillas de cromos digitales con simulador en tiempo real a 60fps y persistencia en base de datos (`SystemConfigModel`), más selector interactivo de facción en el modal del cromo con conmutación dinámica de plantilla, tipografía y coordenadas.
+- **Hitos**: Incorporación de un panel de edición rápida (*"✏️ Personalizar Textos"*) en el modal de cromo para permitir modificar en caliente el nombre en carta, el poder, el lore, la categoría libre y las 4 estadísticas RPG; conexión directa del cromo con la API de lore canónico (`/api/lore`); ampliación de la enciclopedia MOTU con personajes clave (*Fang-Or, Lady Slither, Battle Cat Man*) y auto-sembrado idempotente en el arranque del servidor (`lifespan`).
 - **Estado**: ✅ COMPLETADO Y VERIFICADO
 - **Logros Técnicos**:
-  - **Taller de Calibración TCG (`TcgConfigTab.tsx`)**: Nueva herramienta visual exclusiva para administradores integrada en `Config.tsx`. Permite alternar entre las 6 facciones, previsualizar en directo un cromo a escala con personajes de muestra y manipular mediante sliders numéricos las posiciones exactas de cabecera (`header`), losa de texto (`textBox`), placa de poder (`powerPlate`), lore canónico, línea de tipo (`typeLine`) y zócalos de combate (`leftSocket` / `rightSocket`).
-  - **Persistencia en la Nube y Respaldo (`/api/system/tcg-layouts`)**: Endpoints seguros `GET` y `POST` en FastAPI para almacenar la matriz de coordenadas personalizada en `SystemConfigModel` (clave `tcg_layouts`) sincronizada entre SQLite y Supabase PostgreSQL, con botones de restablecimiento por facción o global a valores canónicos.
-  - **Selector Interactivo de Bando (`TradingCardModal.tsx`)**: Barra interactiva superior con pastillas de facción (Heroicos, Del Mal, Horda, Serpientes, Rebelión, Cósmicos) que permite cambiar en caliente la plantilla del cromo, actualizando instantáneamente el marco esculpido, los colores temáticos, el tipo y su disposición de coordenadas individual calibrada.
-  - **Saneamiento Tipográfico y Exportador HD**: Eliminación del prefijo redundante `"PODER:"` en la placa superior (quedando limpio como `⚡ [HABILIDAD]`) ganando espacio vital para nombres largos de técnicas, eliminación de comillas huérfanas (`";`), y corrección total de la exportación de "Solo Ilustración" (`getSingleIllustrationDataUrl`) eliminando bandas blancas superiores e inferiores para entregar una imagen de arte 100% pura y encuadrada.
-  - **Corrección de Autenticación en Grimorio de Lore (`frontend/src/api/lore.ts`)**: Migración de `axios` estándar a `apiClient` con interceptores JWT, permitiendo que la sincronización y sembrado masivo de los 507 muñecos funcione de forma fluida sin requerir incursiones de scraping.
-  - **Verificación Automatizada y Build**: Creado test unitario `tests/unit/test_tcg_layouts_api.py` (3/3 pasados), tests del cosechador de lore aprobados (4/4 pasados) y compilación del frontend completada con `npm run build` con 0 errores en 7.92s.
+  - **Panel de Edición Rápida en el Cromo (`TradingCardModal.tsx`)**: Drawer interactivo que permite al coleccionista ajustar el nombre en carta (sin alterar el producto en inventario), renombrar la habilidad, redactar lore libre con contador de 180 caracteres, definir cualquier categorización o línea de tipo, y alterar las 4 casillas numéricas de stats (FUE, MAG, DEF, AGI).
+  - **Reactividad Instantánea y Sincronización Canvas 2D HD**: Los textos y estadísticas personalizados se renderizan en directo a 60fps y se transfieren automáticamente al generador Canvas 2D para descargas o copias de alta fidelidad.
+  - **Persistencia Opcional en el Canon (`PUT /api/lore/{slug}`)**: Botón para que los cambios editados puedan guardarse como el estándar oficial de ese personaje en la base de datos cloud/local.
+  - **Auto-Sembrado Canónico en Lifespan (`src/interfaces/api/main.py`)**: Inicialización automática y silenciosa al iniciar la API para asegurar que los 91+ personajes canónicos y 507 productos estén sembrados y enlazados sin requerir clicks manuales.
+  - **Ampliación de `MOTU_LORE_ENCYCLOPEDIA`**: Añadido el perfil canónico para Fang-Or, Lady Slither y Battle Cat Man.
+  - **Verificación Automatizada**: Tests unitarios aprobados (7/7 pasados) y compilación del frontend completada con `npm run build` con 0 errores en 9.59s.
 
 
 
