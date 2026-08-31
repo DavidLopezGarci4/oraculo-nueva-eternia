@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, Sparkles, Flame } from 'lucide-react';
+import { Shield, Flame, Zap } from 'lucide-react';
 import { MOTUImage } from './MOTUImage';
 import type { RitualPayload } from '../../context/GrayskullRitualContext';
 import hemanLightningArt from '../../assets/heman-power-sword-lightning.png';
@@ -10,8 +10,25 @@ interface GrayskullRitualOverlayProps {
     onFinish: () => void;
 }
 
-// Motor de Efectos de Sonido Cinemáticos HD (Multicapa, Estéreo, Cero Dependencias Externas)
+// Reproductor de audio de alta fidelidad con clips reales masterizados y fallback WebAudio
 const playAudioEffect = (type: 'claim' | 'burn') => {
+    try {
+        const audioSrc = type === 'claim' ? '/audio/grayskull_claim.mp3' : '/audio/grayskull_burn.mp3';
+        const audio = new Audio(audioSrc);
+        audio.volume = 0.95;
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+            playPromise.catch(() => {
+                // Fallback a síntesis si la política del navegador bloquea el autoplay inicial
+                playSyntheticFallback(type);
+            });
+        }
+    } catch {
+        playSyntheticFallback(type);
+    }
+};
+
+const playSyntheticFallback = (type: 'claim' | 'burn') => {
     try {
         const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
         if (!AudioContextClass) return;
@@ -19,162 +36,96 @@ const playAudioEffect = (type: 'claim' | 'burn') => {
         const now = ctx.currentTime;
 
         if (type === 'claim') {
-            // === RITUAL DE PODER DE GRAYSKULL (CLAIM) ===
-            
-            // Capa 1: Sub-bass Rumble & Impacto del Castillo (60Hz -> 35Hz)
-            const subOsc = ctx.createOscillator();
-            const subGain = ctx.createGain();
-            subOsc.type = 'sine';
-            subOsc.frequency.setValueAtTime(80, now);
-            subOsc.frequency.exponentialRampToValueAtTime(35, now + 1.6);
-            subGain.gain.setValueAtTime(0.35, now);
-            subGain.gain.exponentialRampToValueAtTime(0.001, now + 2.2);
-            subOsc.connect(subGain);
-            subGain.connect(ctx.destination);
-            subOsc.start(now);
-            subOsc.stop(now + 2.3);
-
-            // Capa 2: Ascenso de Energía Cósmica de la Espada (Sawtooth + Triangle Shimmer)
-            const swordOsc = ctx.createOscillator();
-            const swordGain = ctx.createGain();
-            swordOsc.type = 'sawtooth';
-            swordOsc.frequency.setValueAtTime(140, now);
-            swordOsc.frequency.exponentialRampToValueAtTime(1450, now + 1.0);
-            swordOsc.frequency.exponentialRampToValueAtTime(120, now + 2.1);
-            swordGain.gain.setValueAtTime(0.01, now);
-            swordGain.gain.linearRampToValueAtTime(0.22, now + 0.9);
-            swordGain.gain.exponentialRampToValueAtTime(0.001, now + 2.3);
-            swordOsc.connect(swordGain);
-            swordGain.connect(ctx.destination);
-            swordOsc.start(now);
-            swordOsc.stop(now + 2.4);
-
-            // Capa 3: Trueno y Rayo de Plasma en el Clímax (1.0s)
-            setTimeout(() => {
-                try {
-                    const thunderBuffer = ctx.createBuffer(1, ctx.sampleRate * 1.5, ctx.sampleRate);
-                    const data = thunderBuffer.getChannelData(0);
-                    for (let i = 0; i < data.length; i++) {
-                        data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.4));
-                    }
-                    const noise = ctx.createBufferSource();
-                    noise.buffer = thunderBuffer;
-                    const bpf = ctx.createBiquadFilter();
-                    bpf.type = 'bandpass';
-                    bpf.frequency.setValueAtTime(600, ctx.currentTime);
-                    bpf.frequency.exponentialRampToValueAtTime(90, ctx.currentTime + 1.2);
-                    const tGain = ctx.createGain();
-                    tGain.gain.setValueAtTime(0.38, ctx.currentTime);
-                    tGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.4);
-                    noise.connect(bpf);
-                    bpf.connect(tGain);
-                    tGain.connect(ctx.destination);
-                    noise.start();
-                } catch {}
-            }, 900);
-
-            // Capa 4: Armónicos Sagrados de Grayskull (Campana Cósmica en Fa sostenido)
-            [554.37, 830.61, 1108.73, 1661.22].forEach((freq, idx) => {
-                const chimeOsc = ctx.createOscillator();
-                const chimeGain = ctx.createGain();
-                chimeOsc.type = 'triangle';
-                chimeOsc.frequency.setValueAtTime(freq, now + 0.95);
-                chimeGain.gain.setValueAtTime(0.0, now);
-                chimeGain.gain.setValueAtTime(0.08 / (idx + 1), now + 1.0);
-                chimeGain.gain.exponentialRampToValueAtTime(0.0001, now + 2.2);
-                chimeOsc.connect(chimeGain);
-                chimeGain.connect(ctx.destination);
-                chimeOsc.start(now + 0.95);
-                chimeOsc.stop(now + 2.3);
-            });
-
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(140, now);
+            osc.frequency.exponentialRampToValueAtTime(1200, now + 1.2);
+            gain.gain.setValueAtTime(0.3, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 2.4);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(now);
+            osc.stop(now + 2.5);
         } else {
-            // === RITUAL DE CREMACIÓN / LIBERACIÓN DE LA FORTALEZA (BURN) ===
-            
-            // Capa 1: Remolino de Vórtice y Succión (180Hz -> 45Hz)
-            const whooshOsc = ctx.createOscillator();
-            const whooshGain = ctx.createGain();
-            whooshOsc.type = 'sine';
-            whooshOsc.frequency.setValueAtTime(220, now);
-            whooshOsc.frequency.exponentialRampToValueAtTime(40, now + 1.8);
-            whooshGain.gain.setValueAtTime(0.25, now);
-            whooshGain.gain.exponentialRampToValueAtTime(0.001, now + 2.1);
-            whooshOsc.connect(whooshGain);
-            whooshGain.connect(ctx.destination);
-            whooshOsc.start(now);
-            whooshOsc.stop(now + 2.2);
-
-            // Capa 2: Combustión e Incineración (Ruido blanco modulado y filtrado)
-            const bufferSize = ctx.sampleRate * 2.3;
+            const bufferSize = ctx.sampleRate * 2.5;
             const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
             const data = buffer.getChannelData(0);
             for (let i = 0; i < bufferSize; i++) {
-                // Simulación de chispas y crepitar de fuego
-                const spark = Math.random() > 0.985 ? (Math.random() * 2 - 1) * 1.5 : 0;
-                data[i] = (Math.random() * 2 - 1) * 0.4 + spark;
+                data[i] = (Math.random() * 2 - 1) * 0.4;
             }
-
             const noise = ctx.createBufferSource();
             noise.buffer = buffer;
-
             const filter = ctx.createBiquadFilter();
             filter.type = 'lowpass';
-            filter.frequency.setValueAtTime(1100, now);
-            filter.frequency.linearRampToValueAtTime(120, now + 2.0);
-
+            filter.frequency.setValueAtTime(1000, now);
+            filter.frequency.linearRampToValueAtTime(100, now + 2.2);
             const gain = ctx.createGain();
-            gain.gain.setValueAtTime(0.22, now);
-            gain.gain.linearRampToValueAtTime(0.30, now + 0.7);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 2.2);
-
+            gain.gain.setValueAtTime(0.25, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 2.4);
             noise.connect(filter);
             filter.connect(gain);
             gain.connect(ctx.destination);
             noise.start(now);
-            noise.stop(now + 2.3);
+            noise.stop(now + 2.5);
         }
-    } catch {
-        // Fallback silencioso si las políticas del navegador bloquean audio no interactivo
-    }
+    } catch {}
 };
 
 export const GrayskullRitualOverlay: React.FC<GrayskullRitualOverlayProps> = ({ ritual, onFinish }) => {
     const { type, product } = ritual;
     const isClaim = type === 'claim';
 
-    const [phase, setPhase] = useState<'intro' | 'raising' | 'climax' | 'exit'>('intro');
-    const [burnProgress, setBurnProgress] = useState(0); // 0% a 100% para la cremación
+    // Fases del ritual:
+    // 'intro' (0-300ms) -> 'charging' (300-1000ms: rayos suben por los bordes) -> 'climax' (1000-2400ms: colisión + rayo al cielo / cenizas) -> 'exit'
+    const [phase, setPhase] = useState<'intro' | 'charging' | 'climax' | 'exit'>('intro');
+    const [burnProgress, setBurnProgress] = useState(0); // 0% a 100%
+
+    // Generar partículas de ceniza y ascuas flotantes con turbulencia
+    const ashParticles = useMemo(() => {
+        return Array.from({ length: 42 }).map((_, i) => ({
+            id: i,
+            xInit: Math.random() * 90 + 5, // %
+            yInit: Math.random() * 80 + 10, // %
+            xDrift: (Math.random() - 0.5) * 140, // px
+            yRise: -(Math.random() * 240 + 120), // px
+            size: Math.random() * 4.5 + 2, // px
+            delay: Math.random() * 0.9,
+            duration: Math.random() * 1.4 + 1.2,
+            isEmber: Math.random() > 0.4
+        }));
+    }, []);
 
     useEffect(() => {
         playAudioEffect(type);
 
-        // Fase 1: Intro (0s -> 0.3s)
-        const t1 = setTimeout(() => setPhase('raising'), 300);
+        // Fase 1: Inicio del ascenso de rayos por los laterales (0.3s)
+        const t1 = setTimeout(() => setPhase('charging'), 300);
 
-        // Si es cremación, animar la progresión del fuego de arriba a abajo
+        // Fase 2: Si es cremación, animar la progresión del fuego consumiendo la tarjeta
         let burnInterval: any = null;
         if (!isClaim) {
-            const startBurn = Date.now() + 300;
+            const startBurn = Date.now() + 250;
             burnInterval = setInterval(() => {
                 const elapsed = Date.now() - startBurn;
                 if (elapsed > 0) {
-                    const progress = Math.min(100, (elapsed / 1300) * 100);
+                    const progress = Math.min(100, (elapsed / 1600) * 100);
                     setBurnProgress(progress);
                 }
-            }, 30);
+            }, 25);
         }
 
-        // Fase 2: Clímax (1.0s -> Los rayos se unen en el centro superior y el gran rayo azul se dispara al cielo)
-        const t2 = setTimeout(() => setPhase('climax'), 1000);
+        // Fase 3: Clímax (1.05s) -> Rayos chocan en el centro superior y se dispara el haz masivo al cielo
+        const t2 = setTimeout(() => setPhase('climax'), 1050);
 
-        // Fase 3: Exit (2.1s)
-        const t3 = setTimeout(() => setPhase('exit'), 2100);
+        // Fase 4: Desvanecimiento y salida (2.6s)
+        const t3 = setTimeout(() => setPhase('exit'), 2600);
 
-        // Finalización (2.4s)
+        // Fase 5: Finalización y cierre (2.9s)
         const t4 = setTimeout(() => {
             if (burnInterval) clearInterval(burnInterval);
             onFinish();
-        }, 2400);
+        }, 2900);
 
         return () => {
             clearTimeout(t1);
@@ -183,44 +134,44 @@ export const GrayskullRitualOverlay: React.FC<GrayskullRitualOverlayProps> = ({ 
             clearTimeout(t4);
             if (burnInterval) clearInterval(burnInterval);
         };
-    }, [type, onFinish]);
+    }, [type, isClaim, onFinish]);
 
     return (
         <AnimatePresence>
             <div 
                 onClick={onFinish}
                 className="fixed inset-0 z-[300] flex flex-col items-center justify-center p-3 sm:p-6 bg-black/95 backdrop-blur-3xl overflow-hidden select-none cursor-pointer"
-                title="Toca o haz clic para omitir"
+                title="Toca o haz clic para continuar"
             >
-                {/* 1. FONDO ATMOSFÉRICO DE GRAYSKULL / INFIERNO */}
+                {/* 1. ATMÓSFERA Y FONDOS CÓSMICOS / RELÁMPAGOS */}
                 {isClaim ? (
                     <>
-                        {/* Cielo tormentoso azul eléctrico de Grayskull */}
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{
-                                opacity: phase === 'climax' ? 0.95 : 0.45,
-                                scale: phase === 'climax' ? [1, 1.15, 1.08] : 1
+                                opacity: phase === 'climax' ? [0.4, 0.95, 0.6, 0.9, 0.5] : 0.35,
+                                scale: phase === 'climax' ? [1, 1.12, 1.05] : 1
                             }}
-                            transition={{ duration: 0.6 }}
-                            className="absolute inset-0 bg-gradient-to-t from-slate-950 via-sky-950/60 to-black pointer-events-none"
+                            transition={{ duration: 0.8 }}
+                            className="absolute inset-0 bg-gradient-to-t from-slate-950 via-sky-950/70 to-black pointer-events-none"
                         />
-                        {/* Relámpagos celestes de fondo */}
-                        <motion.div
-                            animate={{
-                                opacity: phase === 'climax' ? [0, 1, 0.4, 1, 0] : [0, 0.2, 0]
-                            }}
-                            transition={{ duration: 0.7, repeat: phase === 'climax' ? 2 : Infinity }}
-                            className="absolute inset-0 bg-radial from-cyan-400/30 via-sky-300/10 to-transparent pointer-events-none"
-                        />
+                        {/* Destello de relámpago celestial de fondo */}
+                        {phase === 'climax' && (
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: [0, 0.8, 0.2, 0.9, 0] }}
+                                transition={{ duration: 0.6, repeat: 2 }}
+                                className="absolute inset-0 bg-cyan-400/25 pointer-events-none"
+                            />
+                        )}
                     </>
                 ) : (
                     <>
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{
-                                opacity: phase === 'climax' ? 0.9 : 0.5,
-                                scale: phase === 'climax' ? [1, 1.15, 1] : 1
+                                opacity: phase === 'climax' ? 0.9 : 0.45,
+                                scale: phase === 'climax' ? [1, 1.1, 1] : 1
                             }}
                             transition={{ duration: 0.8 }}
                             className="absolute inset-0 bg-gradient-to-t from-black via-red-950/40 to-orange-950/30 pointer-events-none"
@@ -228,37 +179,7 @@ export const GrayskullRitualOverlay: React.FC<GrayskullRitualOverlayProps> = ({ 
                     </>
                 )}
 
-                {/* 2. PARTÍCULAS CÓSMICAS AZULES / CENIZAS FLOTANTES */}
-                <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                    {Array.from({ length: 32 }).map((_, i) => (
-                        <motion.div
-                            key={i}
-                            initial={{
-                                x: `${(i * 13) % 100}vw`,
-                                y: isClaim ? '105vh' : '45vh',
-                                opacity: 0,
-                                scale: Math.random() * 0.9 + 0.4
-                            }}
-                            animate={{
-                                y: isClaim ? '-15vh' : '-20vh',
-                                opacity: [0, 0.9, 0],
-                                x: `calc(${(i * 13) % 100}vw + ${(i % 2 === 0 ? 1 : -1) * 60}px)`
-                            }}
-                            transition={{
-                                duration: Math.random() * 1.5 + 0.9,
-                                repeat: Infinity,
-                                delay: Math.random() * 0.6
-                            }}
-                            className={`absolute rounded-full ${
-                                isClaim
-                                    ? 'w-2 h-2 bg-cyan-300 blur-[0.5px] shadow-[0_0_12px_#38bdf8]'
-                                    : 'w-2.5 h-2.5 bg-orange-500 blur-[1px] shadow-[0_0_10px_#ea580c]'
-                            }`}
-                        />
-                    ))}
-                </div>
-
-                {/* 3. TÍTULO Y SUBTÍTULO DEL RITUAL (DESPEJADO ARRIBA) */}
+                {/* 2. TÍTULOS Y LEYENDA DEL RITUAL */}
                 <motion.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -267,45 +188,45 @@ export const GrayskullRitualOverlay: React.FC<GrayskullRitualOverlayProps> = ({ 
                     <div className="flex items-center justify-center gap-2 text-xs sm:text-sm font-black uppercase tracking-widest drop-shadow-lg">
                         {isClaim ? (
                             <>
-                                <Sparkles className="h-4 w-4 text-cyan-400 animate-spin" style={{ animationDuration: '3s' }} />
-                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-sky-100 to-blue-400 font-black tracking-widest">
+                                <Zap className="h-4 w-4 text-cyan-300 animate-pulse" />
+                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-white to-sky-400 font-black tracking-widest text-sm sm:text-base">
                                     ¡Por el Poder de Grayskull!
                                 </span>
-                                <Sparkles className="h-4 w-4 text-sky-300 animate-spin" style={{ animationDuration: '3s' }} />
+                                <Zap className="h-4 w-4 text-cyan-300 animate-pulse" />
                             </>
                         ) : (
                             <>
                                 <Flame className="h-4 w-4 text-orange-400 animate-bounce" />
-                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-red-400 to-amber-300 font-black">
-                                    Liberando de la Fortaleza
+                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-red-400 to-amber-300 font-black text-sm sm:text-base">
+                                    Liberando Reliquia en Cenizas
                                 </span>
                                 <Flame className="h-4 w-4 text-red-500 animate-bounce" />
                             </>
                         )}
                     </div>
                     <p className="text-[11px] text-cyan-200/90 font-bold tracking-widest mt-1">
-                        {isClaim ? '⚡ ¡YO TENGO EL PODER! ⚡' : '🔥 Desintegrando en cenizas de retorno'}
+                        {isClaim ? '⚡ ¡YO TENGO EL PODER! ⚡' : '🔥 Reduciendo la posesión a cenizas del tiempo'}
                     </p>
                 </motion.div>
 
-                {/* 4. CONTENEDOR PRINCIPAL: Tarjeta con Portal Detrás y Rayos en los Bordes */}
+                {/* 3. ESCENARIO CENTRAL: TARJETA + ARCOS DE RAYO + HAZ AL CIELO */}
                 <motion.div
-                    initial={{ scale: 0.75, opacity: 0, y: 30 }}
+                    initial={{ scale: 0.8, opacity: 0, y: 25 }}
                     animate={{
-                        scale: phase === 'climax' ? (isClaim ? 1.04 : 0.95) : 1,
+                        scale: phase === 'climax' ? (isClaim ? 1.05 : 0.95) : 1,
                         opacity: phase === 'exit' ? 0 : 1,
-                        y: phase === 'exit' ? (isClaim ? -40 : 30) : 0
+                        y: phase === 'exit' ? (isClaim ? -30 : 25) : 0
                     }}
-                    transition={{ type: 'spring', stiffness: 280, damping: 20 }}
+                    transition={{ type: 'spring', stiffness: 280, damping: 22 }}
                     className="relative w-full max-w-[310px] sm:max-w-[340px] flex flex-col items-center z-20"
                 >
-                    {/* 🛡️ FONDO ÉPICO DETRÁS DE LA TARJETA: He-Man alzando la Espada en Grayskull */}
+                    {/* 🛡️ FONDO ÉPICO DETRÁS DE LA TARJETA: He-Man alzando la Espada */}
                     {isClaim && (
                         <motion.div
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{
-                                opacity: phase === 'climax' ? 0.45 : 0.3,
-                                scale: phase === 'climax' ? 1.08 : 1
+                                opacity: phase === 'climax' ? 0.55 : 0.35,
+                                scale: phase === 'climax' ? 1.1 : 1
                             }}
                             transition={{ duration: 0.6 }}
                             className="absolute -inset-6 sm:-inset-10 rounded-3xl overflow-hidden -z-10 flex items-center justify-center pointer-events-none"
@@ -315,58 +236,72 @@ export const GrayskullRitualOverlay: React.FC<GrayskullRitualOverlayProps> = ({ 
                                 alt="He-Man y Castillo Grayskull"
                                 className="w-full h-full object-cover filter saturate-150 brightness-75 blur-[1px]"
                             />
-                            {/* Halo azul envolvente */}
                             <div className="absolute inset-0 bg-gradient-to-t from-black via-cyan-950/40 to-black/80" />
-                            <div className="absolute inset-0 border border-cyan-400/30 rounded-3xl shadow-[0_0_50px_rgba(6,182,212,0.3)]" />
+                            <div className="absolute inset-0 border border-cyan-400/30 rounded-3xl shadow-[0_0_50px_rgba(6,182,212,0.4)]" />
                         </motion.div>
                     )}
 
-                    {/* ⚡ 5. RAYO AZUL ELÉCTRICO BROTANDO DESDE EL CENTRO SUPERIOR AL CIELO */}
+                    {/* ⚡ 4. CONVERGENCIA EN LA CÚSPIDE: DESTELLO CÓSMICO Y CHIPAZO */}
+                    {isClaim && (phase === 'charging' || phase === 'climax') && (
+                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-50 pointer-events-none flex items-center justify-center">
+                            {/* Núcleo de energía estelar */}
+                            <motion.div
+                                initial={{ scale: 0, opacity: 0 }}
+                                animate={{
+                                    scale: phase === 'climax' ? [1.5, 3.2, 2.2] : [0.8, 1.4, 1],
+                                    opacity: 1
+                                }}
+                                transition={{ duration: 0.4 }}
+                                className="w-9 h-9 rounded-full bg-radial from-white via-cyan-200 to-blue-500 shadow-[0_0_40px_#00f3ff] blur-[1px]"
+                            />
+                            {/* Anillo de onda de choque expansiva al chocar los dos rayos */}
+                            {phase === 'climax' && (
+                                <motion.div
+                                    initial={{ scale: 0.2, opacity: 1 }}
+                                    animate={{ scale: 4.5, opacity: 0 }}
+                                    transition={{ duration: 0.7, ease: 'easeOut' }}
+                                    className="absolute w-20 h-20 rounded-full border-2 border-cyan-300 shadow-[0_0_30px_#00f3ff]"
+                                />
+                            )}
+                        </div>
+                    )}
+
+                    {/* ⚡ 5. MEGARRAYO VERTICAL DISPARADO AL CIELO DESDE LA CÚSPIDE */}
                     {isClaim && phase === 'climax' && (
                         <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: '65vh', opacity: [0.9, 1, 0.95] }}
-                            transition={{ duration: 0.35, ease: 'easeOut' }}
-                            className="absolute bottom-full left-1/2 -translate-x-1/2 w-12 sm:w-20 flex flex-col items-center pointer-events-none z-50 -mb-2"
+                            initial={{ scaleY: 0, opacity: 0 }}
+                            animate={{ scaleY: 1, opacity: [0.95, 1, 0.9] }}
+                            transition={{ duration: 0.25, ease: 'easeOut' }}
+                            style={{ transformOrigin: 'bottom center' }}
+                            className="absolute bottom-full left-1/2 -translate-x-1/2 w-16 sm:w-24 h-[80vh] flex flex-col items-center pointer-events-none z-50 -mb-2"
                         >
-                            {/* Columna central de plasma azul eléctrico y blanco */}
-                            <div className="w-full h-full bg-gradient-to-t from-white via-cyan-400 to-sky-300 blur-[2px] shadow-[0_0_90px_#00f0ff]" />
-                            {/* Haces exteriores de relámpago */}
-                            <div className="absolute inset-0 w-full h-full bg-gradient-to-t from-cyan-200 via-blue-500 to-transparent blur-md opacity-90 animate-pulse" />
-                            {/* Explosión cósmica en el cielo superior */}
+                            {/* Haz de plasma central blanco puro */}
+                            <div className="w-3.5 h-full bg-white blur-[1px] shadow-[0_0_50px_#ffffff]" />
+                            {/* Capa de energía cian/azul de Grayskull */}
+                            <div className="absolute inset-x-0 w-full h-full bg-gradient-to-t from-cyan-300 via-sky-400 to-blue-600 blur-md opacity-90 animate-pulse" />
+                            {/* Explosión y resplandor en la estratosfera */}
                             <motion.div
-                                initial={{ scale: 0 }}
-                                animate={{ scale: [1, 2.5, 2], opacity: [0.8, 1, 0.7] }}
-                                transition={{ duration: 0.4, repeat: Infinity }}
-                                className="absolute -top-12 w-56 sm:w-80 h-56 sm:h-80 rounded-full bg-radial from-white via-cyan-300/90 to-blue-600/0 blur-2xl"
+                                initial={{ scale: 0.5 }}
+                                animate={{ scale: [1.2, 2.5, 1.8], opacity: [0.8, 1, 0.7] }}
+                                transition={{ duration: 0.5, repeat: Infinity }}
+                                className="absolute -top-16 w-64 sm:w-96 h-64 sm:h-96 rounded-full bg-radial from-white via-cyan-300/80 to-blue-600/0 blur-3xl"
                             />
                         </motion.div>
                     )}
 
-                    {/* ⚡ NÚCLEO DE GRAYSKULL EN EL CENTRO DEL TOPE SUPERIOR */}
-                    {isClaim && (phase === 'raising' || phase === 'climax') && (
-                        <motion.div
-                            initial={{ scale: 0, opacity: 0 }}
-                            animate={{
-                                scale: phase === 'climax' ? [1.2, 2.2, 1.6] : 1,
-                                opacity: 1
-                            }}
-                            transition={{ duration: 0.3 }}
-                            className="absolute -top-3 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-radial from-white via-cyan-300 to-blue-600 blur-sm shadow-[0_0_35px_#00f0ff] z-50 pointer-events-none"
-                        />
-                    )}
-
-                    {/* LA TARJETA CINEMÁTICA */}
-                    <div className={`relative w-full aspect-[3/4] rounded-3xl overflow-hidden shadow-[0_0_60px_rgba(0,0,0,0.95)] border-2 bg-slate-950 flex flex-col justify-between p-3.5 sm:p-4 z-20 ${
+                    {/* 🎴 6. LA TARJETA PRINCIPAL DE LA RELIQUIA */}
+                    <div className={`relative w-full aspect-[3/4] rounded-3xl overflow-hidden shadow-[0_0_60px_rgba(0,0,0,0.95)] border-2 bg-slate-950 flex flex-col justify-between p-3.5 sm:p-4 z-20 transition-all ${
                         isClaim ? 'border-cyan-400/80 shadow-[0_0_45px_rgba(6,182,212,0.6)]' : 'border-white/20'
                     }`}>
                         {/* IMAGEN DE LA FIGURA */}
-                        <div className="relative w-full h-full flex items-center justify-center overflow-hidden rounded-2xl bg-black/75 border border-white/10">
+                        <div className="relative w-full h-full flex items-center justify-center overflow-hidden rounded-2xl bg-black/80 border border-white/10">
                             <MOTUImage
                                 productId={product.id}
                                 src={product.image_url}
                                 alt={product.name}
-                                className="max-h-[85%] max-w-[85%] object-contain drop-shadow-[0_20px_30px_rgba(0,0,0,0.95)]"
+                                className={`max-h-[85%] max-w-[85%] object-contain transition-all duration-300 ${
+                                    !isClaim && burnProgress > 15 ? 'filter grayscale contrast-200 brightness-50' : 'drop-shadow-[0_20px_30px_rgba(0,0,0,0.95)]'
+                                }`}
                             />
 
                             {/* Badge de Categoría */}
@@ -382,81 +317,126 @@ export const GrayskullRitualOverlay: React.FC<GrayskullRitualOverlayProps> = ({ 
                             </h4>
                         </div>
 
-                        {/* ⚡ ESCENA A: RAYOS AZULES FLUYENDO POR LOS BORDES HACIA EL TOPE SUPERIOR */}
-                        {isClaim && (
-                            <>
-                                {/* Rayo Borde Izquierdo (Sube de abajo hacia arriba) */}
-                                <motion.div
-                                    initial={{ height: 0 }}
-                                    animate={{ height: '100%' }}
-                                    transition={{ duration: 0.6, ease: 'easeOut' }}
-                                    className="absolute left-0 bottom-0 w-1.5 bg-gradient-to-t from-cyan-500 via-sky-300 to-white shadow-[0_0_15px_#00f0ff] pointer-events-none z-30"
+                        {/* ⚡ ESCENA A: RAYOS DE PLASMA RECORRIENDO LOS BORDES (CLAIM) */}
+                        {isClaim && (phase === 'charging' || phase === 'climax') && (
+                            <svg className="absolute inset-0 w-full h-full pointer-events-none z-30 overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none">
+                                <defs>
+                                    <filter id="lightningGlow" x="-50%" y="-50%" width="200%" height="200%">
+                                        <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="blur1" />
+                                        <feGaussianBlur in="SourceGraphic" stdDeviation="3.5" result="blur2" />
+                                        <feMerge>
+                                            <feMergeNode in="blur2" />
+                                            <feMergeNode in="blur1" />
+                                            <feMergeNode in="SourceGraphic" />
+                                        </feMerge>
+                                    </filter>
+                                </defs>
+
+                                {/* Rayo Izquierdo: Desde esquina inferior izquierda (0,100) sube a (0,0) y gira al centro superior (50,0) */}
+                                <motion.path
+                                    d="M 2 98 L 1 75 L 3 50 L 1 25 L 2 2 L 25 1 L 50 0"
+                                    fill="none"
+                                    stroke="#00f3ff"
+                                    strokeWidth="3.5"
+                                    filter="url(#lightningGlow)"
+                                    initial={{ pathLength: 0, opacity: 0 }}
+                                    animate={{ pathLength: 1, opacity: [0.8, 1, 0.9] }}
+                                    transition={{ duration: 0.7, ease: 'easeOut' }}
+                                />
+                                <motion.path
+                                    d="M 2 98 L 1 75 L 3 50 L 1 25 L 2 2 L 25 1 L 50 0"
+                                    fill="none"
+                                    stroke="#ffffff"
+                                    strokeWidth="1.5"
+                                    initial={{ pathLength: 0, opacity: 0 }}
+                                    animate={{ pathLength: 1, opacity: 1 }}
+                                    transition={{ duration: 0.7, ease: 'easeOut' }}
                                 />
 
-                                {/* Rayo Borde Derecho (Sube de abajo hacia arriba) */}
-                                <motion.div
-                                    initial={{ height: 0 }}
-                                    animate={{ height: '100%' }}
-                                    transition={{ duration: 0.6, ease: 'easeOut' }}
-                                    className="absolute right-0 bottom-0 w-1.5 bg-gradient-to-t from-cyan-500 via-sky-300 to-white shadow-[0_0_15px_#00f0ff] pointer-events-none z-30"
+                                {/* Rayo Derecho: Desde esquina inferior derecha (100,100) sube a (100,0) y gira al centro superior (50,0) */}
+                                <motion.path
+                                    d="M 98 98 L 99 75 L 97 50 L 99 25 L 98 2 L 75 1 L 50 0"
+                                    fill="none"
+                                    stroke="#00f3ff"
+                                    strokeWidth="3.5"
+                                    filter="url(#lightningGlow)"
+                                    initial={{ pathLength: 0, opacity: 0 }}
+                                    animate={{ pathLength: 1, opacity: [0.8, 1, 0.9] }}
+                                    transition={{ duration: 0.7, ease: 'easeOut' }}
                                 />
-
-                                {/* Rayo Borde Superior Izquierdo (Viaja hacia el centro) */}
-                                <motion.div
-                                    initial={{ width: 0 }}
-                                    animate={{ width: '50%' }}
-                                    transition={{ duration: 0.4, delay: 0.5, ease: 'easeOut' }}
-                                    className="absolute top-0 left-0 h-1.5 bg-gradient-to-r from-sky-400 via-cyan-300 to-white shadow-[0_0_20px_#00f0ff] pointer-events-none z-30"
+                                <motion.path
+                                    d="M 98 98 L 99 75 L 97 50 L 99 25 L 98 2 L 75 1 L 50 0"
+                                    fill="none"
+                                    stroke="#ffffff"
+                                    strokeWidth="1.5"
+                                    initial={{ pathLength: 0, opacity: 0 }}
+                                    animate={{ pathLength: 1, opacity: 1 }}
+                                    transition={{ duration: 0.7, ease: 'easeOut' }}
                                 />
-
-                                {/* Rayo Borde Superior Derecho (Viaja hacia el centro) */}
-                                <motion.div
-                                    initial={{ width: 0 }}
-                                    animate={{ width: '50%' }}
-                                    transition={{ duration: 0.4, delay: 0.5, ease: 'easeOut' }}
-                                    className="absolute top-0 right-0 h-1.5 bg-gradient-to-l from-sky-400 via-cyan-300 to-white shadow-[0_0_20px_#00f0ff] pointer-events-none z-30"
-                                />
-
-                                {/* Aura luminosa de plasma por toda la tarjeta */}
-                                <motion.div
-                                    animate={{ opacity: phase === 'climax' ? [0.6, 1, 0.8] : 0.4 }}
-                                    transition={{ duration: 0.3, repeat: Infinity }}
-                                    className="absolute inset-0 rounded-3xl border-2 border-cyan-400/70 shadow-[inset_0_0_25px_rgba(6,182,212,0.5)] pointer-events-none"
-                                />
-                            </>
+                            </svg>
                         )}
 
-                        {/* 🔥 ESCENA B: DESINTEGRACIÓN EN CENIZAS (BURN / RELEASE) */}
+                        {/* 🔥 ESCENA B: COMBUSTIÓN, FUEGO Y CENIZAS DESINTEGRÁNDOSE (BURN) */}
                         {!isClaim && (
                             <>
-                                {/* Máscara de fuego y cenizas que consume de arriba a abajo */}
+                                {/* Máscara de ceniza y disolución de arriba a abajo */}
                                 <div
                                     className="absolute inset-0 pointer-events-none z-20 overflow-hidden rounded-3xl"
                                     style={{
-                                        background: `linear-gradient(to bottom, rgba(10, 10, 10, 0.98) 0%, rgba(15, 15, 15, 0.95) ${burnProgress}%, transparent ${burnProgress + 6}%)`
+                                        background: `linear-gradient(to bottom, rgba(5, 5, 5, 0.98) 0%, rgba(15, 15, 15, 0.95) ${burnProgress}%, transparent ${Math.min(100, burnProgress + 8)}%)`
                                     }}
                                 >
-                                    {/* Borde de fuego vivo en la línea de combustión */}
-                                    {burnProgress > 0 && burnProgress < 100 && (
+                                    {/* Frente de llama viva al rojo vivo en la línea de combustión */}
+                                    {burnProgress > 0 && burnProgress < 98 && (
                                         <div
-                                            className="absolute w-full h-10 -translate-y-1/2 bg-gradient-to-b from-orange-500 via-yellow-200 to-red-600 shadow-[0_0_30px_#ea580c] opacity-95 flex items-center justify-around"
+                                            className="absolute w-full h-12 -translate-y-1/2 bg-gradient-to-b from-yellow-300 via-orange-500 to-red-600 shadow-[0_0_35px_#ff4500] opacity-95 flex items-center justify-around"
                                             style={{ top: `${burnProgress}%` }}
                                         >
-                                            <Flame className="h-6 w-6 text-yellow-100 fill-yellow-200 animate-bounce" />
-                                            <Flame className="h-7 w-7 text-amber-200 fill-orange-400 animate-pulse" />
-                                            <Flame className="h-6 w-6 text-yellow-100 fill-yellow-200 animate-bounce" />
+                                            <Flame className="h-7 w-7 text-yellow-200 fill-yellow-300 animate-bounce" />
+                                            <Flame className="h-8 w-8 text-amber-100 fill-orange-500 animate-pulse" />
+                                            <Flame className="h-7 w-7 text-yellow-200 fill-yellow-300 animate-bounce" />
                                         </div>
                                     )}
                                 </div>
 
-                                {/* Textura de carbón ardiente y humo sobre la parte consumida */}
-                                <div
-                                    className="absolute inset-0 pointer-events-none z-10"
-                                    style={{
-                                        opacity: Math.min(1, burnProgress / 50),
-                                        background: 'radial-gradient(circle, rgba(220, 38, 38, 0.35) 0%, rgba(0, 0, 0, 0.8) 75%)'
-                                    }}
-                                />
+                                {/* Partículas de ascuas ardientes y cenizas volando hacia arriba */}
+                                <div className="absolute inset-0 pointer-events-none z-30 overflow-hidden">
+                                    {ashParticles.map((p) => {
+                                        if (burnProgress < p.yInit) return null;
+                                        return (
+                                            <motion.div
+                                                key={p.id}
+                                                initial={{
+                                                    x: `${p.xInit}%`,
+                                                    y: `${p.yInit}%`,
+                                                    opacity: 1,
+                                                    scale: 1
+                                                }}
+                                                animate={{
+                                                    x: `calc(${p.xInit}% + ${p.xDrift}px)`,
+                                                    y: `calc(${p.yInit}% + ${p.yRise}px)`,
+                                                    opacity: [1, 0.8, 0],
+                                                    scale: [1, 0.6, 0.1],
+                                                    rotate: Math.random() * 360
+                                                }}
+                                                transition={{
+                                                    duration: p.duration,
+                                                    delay: p.delay,
+                                                    ease: 'easeOut'
+                                                }}
+                                                style={{
+                                                    width: p.size,
+                                                    height: p.size
+                                                }}
+                                                className={`absolute rounded-full ${
+                                                    p.isEmber
+                                                        ? 'bg-amber-300 shadow-[0_0_10px_#f59e0b]'
+                                                        : 'bg-neutral-400 opacity-70 blur-[0.4px]'
+                                                }`}
+                                            />
+                                        );
+                                    })}
+                                </div>
                             </>
                         )}
                     </div>
