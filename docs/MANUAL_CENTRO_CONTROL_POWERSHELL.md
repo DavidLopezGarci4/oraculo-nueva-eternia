@@ -34,10 +34,12 @@ Para abrirlo, simplemente abre PowerShell en la raíz del proyecto y escribe:
   [8] 🔗 Crear / Actualizar Accesos Directos en el Escritorio
   [9] ☁️ Desplegar y Actualizar en Oracle Cloud (1 Clic)
   [10] 💻 Conectar por SSH al Servidor en la Nube
+  [11] 🔒 Renovar Certificados SSL en Oracle Cloud
+  [12] 🛒 Incursión Directa Smyths Toys (Actualizar Importes y Nuevos Ítems)
 
   [0] 🚪 Salir
 -------------------------------------------------------------------
-  👉 Selecciona una opción [0-10]: _
+  👉 Selecciona una opción [0-12]: _
 ```
 
 ---
@@ -175,6 +177,18 @@ Para abrirlo, simplemente abre PowerShell en la raíz del proyecto y escribe:
 
 ---
 
+### 🛒 Opción [12] — Incursión Directa Smyths Toys (Actualizar Importes y Nuevos Ítems)
+* **Propósito:** Realizar la extracción dedicada de figuras MOTU en la tienda Smyths Toys (Alemania), sincronizar precios e importar nuevos ítems al Purgatorio y Supabase.
+* **⚠️ SECUENCIA DE EJECUCIÓN OBLIGATORIA (2 PASOS PARA EVITAR BLOQUEOS WAF):**
+  * Smyths Toys utiliza el firewall anti-bot **Imperva / Incapsula**. Para evitar el 100% de los bloqueos de WAF, es **imprescindible seguir este orden**:
+  1. **Paso 1:** Ejecuta la **Opción [5]** (`Abrir Google Chrome en Depuración (Puerto 9222)`). Esto iniciará tu navegador Chrome real en modo depuración.
+  2. **Paso 2:** Vuelve al menú y ejecuta la **Opción [12]**.
+* **Mecanismo de Ejecución:**
+  * Al tener la Opción [5] abierta, `SmythsToysScraper` se conecta directamente vía **CDP** a tu Chrome activo, abre la pestaña del catálogo de Smyths Toys con tu propia sesión limpia de navegador, extrae todos los productos y los guarda en la base de datos sin ningún obstáculo.
+  * *(Si la Opción [5] no está abierta, el scraper intentará utilizar la vía autónoma local de Playwright Antidetect como fallback).*
+
+---
+
 ## 🗺️ 4. Mapa de Flujos de Ejecución por Caso de Uso
 
 ### 🔄 Flujo A: Ciclo Diario de Desarrollo Local
@@ -195,7 +209,7 @@ graph LR
     A[Abrir oraculo.ps1] --> B[Pulsar Opción 3: Nexus Local Bridge]
     B --> C[Dejar worker corriendo en segundo plano]
     C --> D[Enviar /nexus origins desde Telegram]
-    D --> E[Worker extrae ofertas con IP de casa]
+    D --> E[Worker extrae ofertas con IP de casa (Etiquetadas como Wallapop)]
     E --> F[Ofertas listas en El Purgatorio]
 ```
 
@@ -205,7 +219,7 @@ graph LR
 ```mermaid
 graph LR
     A[Abrir oraculo.ps1] --> B[Pulsar Opción 5: Abrir Chrome en Depuración]
-    B --> C[Navegar en Chrome a Wallapop o Smyths Toys]
+    B --> C[Navegar en Chrome a Wallapop o Vinted]
     C --> D[Pulsar Opción 6: Incursión Asistida Universal]
     D --> E[Extracción instantánea hacia el Purgatorio]
 ```
@@ -218,4 +232,15 @@ graph LR
     A[Abrir oraculo.ps1] --> B[Pulsar Opción 4: Backup Inmediato]
     B --> C[Genera oraculo_YYYYMMDD_HHmm.db]
     C --> D[Aplica cambios / migraciones con tranquilidad]
+```
+
+---
+
+### 🛒 Flujo E: Incursión Dedicada en Smyths Toys (Bypass WAF Imperva)
+```mermaid
+graph LR
+    A[Abrir oraculo.ps1] --> B[Paso 1: Pulsar Opción 5 - Abrir Chrome en Depuración]
+    B --> C[Paso 2: Pulsar Opción 12 - Incursión Directa Smyths Toys]
+    C --> D[Conexión CDP a Chrome en puerto 9222]
+    D --> E[Extracción MOTU sin bloqueos e importación a Supabase / Purgatorio]
 ```

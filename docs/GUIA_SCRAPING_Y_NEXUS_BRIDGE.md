@@ -70,7 +70,26 @@ Para ejecuciones autónomas en el servidor sin PC encendido, el scraper utiliza 
 
 ---
 
-## 3. Extensión de Navegador Multitienda (`chrome-extension/`)
+## 3. Extracción Minorista: Smyths Toys (Alemania) y Evasión WAF Imperva
+
+Smyths Toys cuenta con el cortafuegos anti-bot **Imperva / Incapsula** que bloquea peticiones automáticas headless.
+
+### Procedimiento de 2 Pasos en el Centro de Control (`oraculo.ps1`):
+1. **Paso 1 — Opción [5]:** Iniciar Google Chrome en Depuración (`Puerto 9222`).
+2. **Paso 2 — Opción [12]:** Lanzar Incursión Directa Smyths Toys.
+- **Resultado:** `SmythsToysScraper` se conecta vía **CDP** a la ventana de Chrome abierta, navega a la sección MOTU de Smyths Toys sin ser detectado como bot por Imperva, extrae todas las figuras e importes y actualiza automáticamente los precios en Supabase y el Purgatorio.
+
+---
+
+## 4. Estandarización de Etiquetado: Nombre Canónico `Wallapop`
+
+Por directriz de negocio:
+- Todas las ofertas extraídas desde Wallapop (vía Nexus Local Bridge, API v3 firmada o importación asistida) quedan registradas bajo el nombre de tienda **`Wallapop`** (reemplazando a la etiqueta legacy `WallapopManual`).
+- Garantiza búsquedas homogéneas en el Purgatorio y notificaciones coherentes en Telegram.
+
+---
+
+## 5. Extensión de Navegador Multitienda (`chrome-extension/`)
 
 Permite capturar **páginas completas** de búsqueda (50-200 productos) de forma masiva con **CERO riesgo de baneo**:
 
@@ -81,7 +100,7 @@ Permite capturar **páginas completas** de búsqueda (50-200 productos) de forma
 
 ---
 
-## 4. Política de Persistencia: "Purgatorio Primero"
+## 6. Política de Persistencia: "Purgatorio Primero"
 
 Por directriz estricta del proyecto:
 - **Ninguna oferta nueva** de Wallapop, Vinted ni tiendas se auto-vincula a ciegas al catálogo de figuras.

@@ -1437,7 +1437,21 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
   - **Calibración Cuádruple de Alta Precisión (`TcgConfigTab.tsx` & `TradingCardModal.tsx`)**: Coordenadas exactas por bando con controladores independientes para `statFue`, `statMag`, `statDef`, `statAgi`.
   - **Eliminación Total de Cajas Planas CSS**: La tipografía vectorial se proyecta de forma pura y limpia con relieve de oro/blanco (`tcg-gold-emboss`) en el centro de cada cavidad esculpida.
   - **Sincronización Canvas 2D HD (`generateTradingCardDataUrl`)**: Motor de exportación adaptado para renderizar con máxima resolución sobre las coordenadas de las 4 cavidades esculpidas.
-  - **Verificación Automatizada**: Tests unitarios aprobados (7/7 pasados) y compilación del frontend completada con `npm run build` en 9.74s con 0 errores.
+### ⚡ Fase 96: Estandarización Nexus, Flujo Smyths Toys en 2 Pasos y Cinemáticas/Audio HD (31/08/2026)
+
+- **Hitos**: Homogeneización del etiquetado de tienda Wallapop en el worker local Nexus (`Wallapop` en vez de `WallapopManual`); reincorporación de la **Opción [12]** en el Centro de Control (`oraculo.ps1`) con secuencia obligatoria de 2 pasos (`[5]` Chrome Depuración + `[12]` Incursión Smyths) para bypass transparente del WAF Imperva vía CDP; implementación de cinemáticas HD de rayos plasma de la Espada de He-Man y combustión en cenizas con motor de reproducción de **audios reales MP3** masterizados (`"By the power of Grayskull!"` y fuego real).
+- **Estado**: ✅ COMPLETADO Y VERIFICADO
+- **Logros Técnicos**:
+  - **Estandarización Canónica de Tienda (`Wallapop`)**: Ajuste en `wallapop_manual_scraper.py`, `wallapop_jobs.py` y `nexus_local_worker.py` para asignar el identificador canónico `shop_name = "Wallapop"`, asegurando coincidencia exacta en el Purgatorio, base de datos y notificaciones Telegram.
+  - **Reincorporación de Opción [12] en Centro de Control (`oraculo.ps1`)**:
+    - **Paso 1:** Ejecución de Opción `[5]` (`Abrir Google Chrome en Depuración`).
+    - **Paso 2:** Ejecución de Opción `[12]` (`Incursión Directa Smyths Toys`).
+    - **Conexión CDP (Puerto 9222):** Conexión remota a la sesión activa del usuario para navegar por el catálogo MOTU de Smyths Toys Alemania e importar precios/ofertas superando el reto de Imperva/Incapsula sin errores.
+  - **Audios Reales Masterizados (`/public/audio/`)**: Extracción y optimización de clips de audio MP3 para los rituales: `grayskull_claim.mp3` (clamor *"By the power of Grayskull!"* de He-Man) y `grayskull_burn.mp3` (ignición y crepitar de fuego).
+  - **Cinemática He-Man Power Sword Lightning (`GrayskullRitualOverlay.tsx`)**: Arcos de plasma cian/blanco SVG (`stroke="#00f3ff"`, `stroke="#ffffff"`) que trepan por los bordes laterales de la tarjeta, colisionan en la cúspide central superior `(50, 0)` desatando una onda de choque estelar y disparan un haz vertical de plasma de 80vh directo al firmamento.
+  - **Cinemática de Incineración en Cenizas (`GrayskullRitualOverlay.tsx`)**: Máscara de combustión incandescente que consume la tarjeta de arriba a abajo, alterando la textura a carbón agrietado y desprendiendo 42 partículas dinámicas de cenizas y ascuas ardientes que flotan con turbulencia ascendente.
+  - **Documentación Integral**: Actualización del manual del Centro de Control (`MANUAL_CENTRO_CONTROL_POWERSHELL.md`), la guía de scraping (`GUIA_SCRAPING_Y_NEXUS_BRIDGE.md`) y el índice general (`docs/README.md`).
+  - **Verificación**: Tests unitarios aprobados (`pytest tests/unit/` 8/8 pasados) y compilación del frontend completada con Vite en 8.99s.
 
 
 
