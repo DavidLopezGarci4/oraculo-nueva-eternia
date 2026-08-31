@@ -10,37 +10,108 @@ interface GrayskullRitualOverlayProps {
     onFinish: () => void;
 }
 
-// Generador de efectos de sonido sintéticos mediante Web Audio API (100% nativo)
+// Motor de Efectos de Sonido Cinemáticos HD (Multicapa, Estéreo, Cero Dependencias Externas)
 const playAudioEffect = (type: 'claim' | 'burn') => {
     try {
         const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
         if (!AudioContextClass) return;
         const ctx = new AudioContextClass();
+        const now = ctx.currentTime;
 
         if (type === 'claim') {
-            // Creciente de energía cósmica de Grayskull y trueno masivo al cielo
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(120, ctx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(1400, ctx.currentTime + 1.1);
-            osc.frequency.exponentialRampToValueAtTime(90, ctx.currentTime + 1.8);
+            // === RITUAL DE PODER DE GRAYSKULL (CLAIM) ===
+            
+            // Capa 1: Sub-bass Rumble & Impacto del Castillo (60Hz -> 35Hz)
+            const subOsc = ctx.createOscillator();
+            const subGain = ctx.createGain();
+            subOsc.type = 'sine';
+            subOsc.frequency.setValueAtTime(80, now);
+            subOsc.frequency.exponentialRampToValueAtTime(35, now + 1.6);
+            subGain.gain.setValueAtTime(0.35, now);
+            subGain.gain.exponentialRampToValueAtTime(0.001, now + 2.2);
+            subOsc.connect(subGain);
+            subGain.connect(ctx.destination);
+            subOsc.start(now);
+            subOsc.stop(now + 2.3);
 
-            gain.gain.setValueAtTime(0.02, ctx.currentTime);
-            gain.gain.linearRampToValueAtTime(0.28, ctx.currentTime + 1.1);
-            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 2.2);
+            // Capa 2: Ascenso de Energía Cósmica de la Espada (Sawtooth + Triangle Shimmer)
+            const swordOsc = ctx.createOscillator();
+            const swordGain = ctx.createGain();
+            swordOsc.type = 'sawtooth';
+            swordOsc.frequency.setValueAtTime(140, now);
+            swordOsc.frequency.exponentialRampToValueAtTime(1450, now + 1.0);
+            swordOsc.frequency.exponentialRampToValueAtTime(120, now + 2.1);
+            swordGain.gain.setValueAtTime(0.01, now);
+            swordGain.gain.linearRampToValueAtTime(0.22, now + 0.9);
+            swordGain.gain.exponentialRampToValueAtTime(0.001, now + 2.3);
+            swordOsc.connect(swordGain);
+            swordGain.connect(ctx.destination);
+            swordOsc.start(now);
+            swordOsc.stop(now + 2.4);
 
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            osc.start();
-            osc.stop(ctx.currentTime + 2.3);
+            // Capa 3: Trueno y Rayo de Plasma en el Clímax (1.0s)
+            setTimeout(() => {
+                try {
+                    const thunderBuffer = ctx.createBuffer(1, ctx.sampleRate * 1.5, ctx.sampleRate);
+                    const data = thunderBuffer.getChannelData(0);
+                    for (let i = 0; i < data.length; i++) {
+                        data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.4));
+                    }
+                    const noise = ctx.createBufferSource();
+                    noise.buffer = thunderBuffer;
+                    const bpf = ctx.createBiquadFilter();
+                    bpf.type = 'bandpass';
+                    bpf.frequency.setValueAtTime(600, ctx.currentTime);
+                    bpf.frequency.exponentialRampToValueAtTime(90, ctx.currentTime + 1.2);
+                    const tGain = ctx.createGain();
+                    tGain.gain.setValueAtTime(0.38, ctx.currentTime);
+                    tGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.4);
+                    noise.connect(bpf);
+                    bpf.connect(tGain);
+                    tGain.connect(ctx.destination);
+                    noise.start();
+                } catch {}
+            }, 900);
+
+            // Capa 4: Armónicos Sagrados de Grayskull (Campana Cósmica en Fa sostenido)
+            [554.37, 830.61, 1108.73, 1661.22].forEach((freq, idx) => {
+                const chimeOsc = ctx.createOscillator();
+                const chimeGain = ctx.createGain();
+                chimeOsc.type = 'triangle';
+                chimeOsc.frequency.setValueAtTime(freq, now + 0.95);
+                chimeGain.gain.setValueAtTime(0.0, now);
+                chimeGain.gain.setValueAtTime(0.08 / (idx + 1), now + 1.0);
+                chimeGain.gain.exponentialRampToValueAtTime(0.0001, now + 2.2);
+                chimeOsc.connect(chimeGain);
+                chimeGain.connect(ctx.destination);
+                chimeOsc.start(now + 0.95);
+                chimeOsc.stop(now + 2.3);
+            });
+
         } else {
-            // Sonido de Cremación y Ceniza: Ruido blanco filtrado simulando fuego
-            const bufferSize = ctx.sampleRate * 2.5;
+            // === RITUAL DE CREMACIÓN / LIBERACIÓN DE LA FORTALEZA (BURN) ===
+            
+            // Capa 1: Remolino de Vórtice y Succión (180Hz -> 45Hz)
+            const whooshOsc = ctx.createOscillator();
+            const whooshGain = ctx.createGain();
+            whooshOsc.type = 'sine';
+            whooshOsc.frequency.setValueAtTime(220, now);
+            whooshOsc.frequency.exponentialRampToValueAtTime(40, now + 1.8);
+            whooshGain.gain.setValueAtTime(0.25, now);
+            whooshGain.gain.exponentialRampToValueAtTime(0.001, now + 2.1);
+            whooshOsc.connect(whooshGain);
+            whooshGain.connect(ctx.destination);
+            whooshOsc.start(now);
+            whooshOsc.stop(now + 2.2);
+
+            // Capa 2: Combustión e Incineración (Ruido blanco modulado y filtrado)
+            const bufferSize = ctx.sampleRate * 2.3;
             const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
             const data = buffer.getChannelData(0);
             for (let i = 0; i < bufferSize; i++) {
-                data[i] = Math.random() * 2 - 1;
+                // Simulación de chispas y crepitar de fuego
+                const spark = Math.random() > 0.985 ? (Math.random() * 2 - 1) * 1.5 : 0;
+                data[i] = (Math.random() * 2 - 1) * 0.4 + spark;
             }
 
             const noise = ctx.createBufferSource();
@@ -48,21 +119,22 @@ const playAudioEffect = (type: 'claim' | 'burn') => {
 
             const filter = ctx.createBiquadFilter();
             filter.type = 'lowpass';
-            filter.frequency.setValueAtTime(900, ctx.currentTime);
-            filter.frequency.linearRampToValueAtTime(100, ctx.currentTime + 2.2);
+            filter.frequency.setValueAtTime(1100, now);
+            filter.frequency.linearRampToValueAtTime(120, now + 2.0);
 
             const gain = ctx.createGain();
-            gain.gain.setValueAtTime(0.18, ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 2.2);
+            gain.gain.setValueAtTime(0.22, now);
+            gain.gain.linearRampToValueAtTime(0.30, now + 0.7);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 2.2);
 
             noise.connect(filter);
             filter.connect(gain);
             gain.connect(ctx.destination);
-            noise.start();
-            noise.stop(ctx.currentTime + 2.3);
+            noise.start(now);
+            noise.stop(now + 2.3);
         }
     } catch {
-        // Fallback silencioso si el navegador no permite audio inmediato
+        // Fallback silencioso si las políticas del navegador bloquean audio no interactivo
     }
 };
 
@@ -115,7 +187,11 @@ export const GrayskullRitualOverlay: React.FC<GrayskullRitualOverlayProps> = ({ 
 
     return (
         <AnimatePresence>
-            <div className="fixed inset-0 z-[300] flex flex-col items-center justify-center p-3 sm:p-6 bg-black/95 backdrop-blur-3xl overflow-hidden select-none">
+            <div 
+                onClick={onFinish}
+                className="fixed inset-0 z-[300] flex flex-col items-center justify-center p-3 sm:p-6 bg-black/95 backdrop-blur-3xl overflow-hidden select-none cursor-pointer"
+                title="Toca o haz clic para omitir"
+            >
                 {/* 1. FONDO ATMOSFÉRICO DE GRAYSKULL / INFIERNO */}
                 {isClaim ? (
                     <>

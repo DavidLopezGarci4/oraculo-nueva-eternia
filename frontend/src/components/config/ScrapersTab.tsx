@@ -182,6 +182,16 @@ export default function ScrapersTab({
                             </button>
 
                             <button
+                                onClick={() => runScrapersMutation.mutate('SmythsToys')}
+                                disabled={statuses.some(s => s.status === 'running')}
+                                className="bg-white/5 hover:bg-white/10 border border-amber-400/20 text-white px-4 py-2 rounded-xl font-bold text-[11px] transition-all flex items-center justify-center gap-2 hover:scale-105 active:scale-95 w-full sm:w-auto disabled:opacity-50"
+                                title="Incursión directa en Smyths Toys (Alemania)"
+                            >
+                                <Package className="h-4 w-4 text-amber-400" />
+                                <span className="uppercase tracking-wider text-amber-300">Smyths Toys</span>
+                            </button>
+
+                            <button
                                 onClick={() => {
                                     if (statuses.some(s => s.status === 'running')) return;
                                     const fileInput = document.createElement('input');

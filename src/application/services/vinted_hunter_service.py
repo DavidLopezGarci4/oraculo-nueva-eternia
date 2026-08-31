@@ -95,10 +95,25 @@ class VintedHunterService:
             rules_map = {f"{r.shop_name}_{r.country_code}": r for r in rules}
             products = db.query(ProductModel).filter(ProductModel.is_vintage == False).all()
             
+            # Palabras clave de despiece, piezas sueltas, accesorios o roturas a descartar en el Centinela
+            DISCARD_PART_KEYWORDS = [
+                "despiece", "piezas", "para piezas", "incompleto", "incompleta",
+                "roto", "rota", "dañado", "dañada", "loose", "solo figura",
+                "cabeza", "brazo", "pierna", "arma", "armas", "accesorio", "accesorios",
+                "sin caja", "sin blister", "vintage 80", "años 80", "1981", "1982",
+                "1983", "1984", "1985", "1986", "1987", "mattel 198"
+            ]
+
             for offer in offers:
-                if offer.price <= 0:
+                if offer.price < 9.0:
+                    # Suelo protector: ofertas < 9€ son piezas sueltas, catálogos o armas
                     continue
                 
+                title_lower = (offer.product_name or "").lower()
+                # Descartar ofertas con términos explícitos de despiece o piezas sueltas
+                if any(kw in title_lower for kw in DISCARD_PART_KEYWORDS):
+                    continue
+
                 # Descartar si el usuario la ha bloqueado o rechazado previamente
                 if offer.url in discarded_urls:
                     continue
@@ -111,7 +126,7 @@ class VintedHunterService:
                     rules_map=rules_map
                 )
                 
-                # Buscar matching contra el catálogo
+                # Buscar matching contra el catálogo de figuras modernas (Origins)
                 best_match_product = None
                 best_score = 0.0
                 
@@ -130,41 +145,44 @@ class VintedHunterService:
                 
                 if not best_match_product or best_score < 0.60:
                     continue
-                
-                # Determinar el precio de referencia de mercado (P25 o MSRP)
-                p25 = best_match_product.p25_price or 0.0
-                retail = best_match_product.retail_price or 0.0
-                benchmark = p25 if p25 > 0 else (retail if retail > 0 else 0.0)
-                
-                if benchmark > 0 and landed_price < benchmark:
-                    savings_pct = ((benchmark - landed_price) / benchmark) * 100
-                    # Alertar si el ahorro es de al menos un 10% respecto al suelo medio
-                    if savings_pct >= 10:
-                        bargain_data = {
-                            "product_name": best_match_product.name,
-                            "item_title": offer.product_name,
-                            "price": offer.price,
-                            "landed_price": landed_price,
-                            "benchmark_price": benchmark,
-                            "savings_pct": savings_pct,
-                            "url": offer.url,
-                            "image_url": offer.image_url,
-                            "shop_name": "Vinted"
-                        }
 
-                        # Comprobar si ya fue alertada hoy
-                        if offer.url in today_alerted_urls:
-                            recurring_bargains_count += 1
-                        else:
-                            new_bargains_to_alert.append(bargain_data)
-                            # Registrar en la base de datos para deduplicación diaria
-                            db.add(HunterAlertLogModel(
-                                url=offer.url,
-                                product_name=best_match_product.name,
-                                price=offer.price,
-                                sent_at=datetime.now(timezone.utc)
-                            ))
-                            today_alerted_urls.add(offer.url)
+                # Exclusión explícita de vintage en el Centinela (el vintage se gestiona en el Daily Scan)
+                if getattr(best_match_product, "is_vintage", False):
+                    continue
+                
+                # Determinar el precio de referencia de mercado: prioridad al PVP original de salida (MSRP/Retail)
+                retail = best_match_product.retail_price or 0.0
+                p25 = best_match_product.p25_price or 0.0
+                benchmark = retail if retail > 0 else (p25 if p25 > 0 else 0.0)
+                
+                # Alertar si el coste total está dentro o por debajo del precio original de mercado (+10% margen)
+                if benchmark > 0 and landed_price <= (benchmark * 1.10):
+                    savings_pct = max(0.0, ((benchmark - landed_price) / benchmark) * 100)
+                    bargain_data = {
+                        "product_name": best_match_product.name,
+                        "item_title": offer.product_name,
+                        "price": offer.price,
+                        "landed_price": landed_price,
+                        "benchmark_price": benchmark,
+                        "savings_pct": savings_pct,
+                        "url": offer.url,
+                        "image_url": offer.image_url,
+                        "shop_name": "Vinted"
+                    }
+
+                    # Comprobar si ya fue alertada hoy
+                    if offer.url in today_alerted_urls:
+                        recurring_bargains_count += 1
+                    else:
+                        new_bargains_to_alert.append(bargain_data)
+                        # Registrar en la base de datos para deduplicación diaria
+                        db.add(HunterAlertLogModel(
+                            url=offer.url,
+                            product_name=best_match_product.name,
+                            price=offer.price,
+                            sent_at=datetime.now(timezone.utc)
+                        ))
+                        today_alerted_urls.add(offer.url)
 
             db.commit()
 

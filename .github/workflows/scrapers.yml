@@ -91,8 +91,19 @@ jobs:
         run: |
           python scripts/check_and_renew_ssl_gh_actions.py
 
+      - name: Send Telegram Failure Alert
+        if: failure()
+        run: |
+          if [ -n "$TELEGRAM_BOT_TOKEN" ] && [ -n "$TELEGRAM_CHAT_ID" ]; then
+            TEXT=$'🚨 <b>[GitHub Actions: FALLO EN WORKFLOW]</b>\n\n❌ El flujo maestro del <b>Daily Scan</b> ha sufrido un error en GitHub Actions antes de completarse.\n\n⚠️ Por favor, revisa la pestaña de Actions en el repositorio para ver los logs detallados.'
+            curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+              --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
+              --data-urlencode "text=${TEXT}" \
+              --data-urlencode "parse_mode=HTML" > /dev/null
+          fi
+
       - name: Send Telegram Reminder
-        if: always()
+        if: success()
         run: |
           if [ -n "$TELEGRAM_BOT_TOKEN" ] && [ -n "$TELEGRAM_CHAT_ID" ]; then
             TEXT=$'🤖 <b>Oráculo de Nueva Eternia</b>\n\nEl proceso de importación y scrapers de GitHub Actions ha finalizado.\n\n⚠️ <b>Recordatorio:</b> No olvides lanzar el scraper de <b>Wallapop</b> desde la app para capturar las últimas ofertas.'

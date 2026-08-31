@@ -148,340 +148,314 @@ async def run_daily_scan(progress_callback=None):
             if target_shops:
                 logger.info(f"🎯 Target Execution: {target_shops}")
                 for s in all_scrapers:
-                    if any(t in s.spider_name.lower() for t in target_shops):
+                    if s.spider_name.lower() in target_shops or s.shop_name.lower() in target_shops:
                         scrapers.append(s)
             else:
                 scrapers = all_scrapers
         else:
             scrapers = all_scrapers
             
-    except Exception as e:
-        logger.error(f"Failed to initialize scrapers: {e}")
-        scrapers = []
-    
-    # --- PHASE 42: PURGE OLD LOGS (7 DAYS) ---
-    try:
-        from datetime import timedelta
-        cutoff = datetime.now() - timedelta(days=7)
-        with SessionLocal() as db_purge:
-            logger.info("🧹 Purging ancient logs (older than 7 days)...")
-            result = db_purge.query(ScraperExecutionLogModel).filter(
-                ScraperExecutionLogModel.start_time < cutoff
-            ).delete()
-            db_purge.commit()
-            logger.info(f"🧹 Purged {result} stale execution records. Systems optimized.")
-    except Exception as e:
-        logger.warning(f"⚠️ Failed to purge old logs: {e}")
+        if not scrapers and args.shops:
+            logger.warning(f"⚠️ No matching scrapers found for {args.shops}. Running none.")
+            scrapers = []
         
-    # --- FINOPS DATABASE COMPACTATION & MAINTENANCE ---
-    try:
-        from src.application.services.maintenance_service import MaintenanceService
-        with SessionLocal() as db_maint:
-            logger.info("🧹 Iniciando compactación y mantenimiento de base de datos FinOps...")
-            stats = MaintenanceService.compact_database(db_maint)
-            logger.info(f"🧹 Mantenimiento FinOps completado. Estadísticas: {stats}")
-    except Exception as e:
-        logger.warning(f"⚠️ Fallo en el mantenimiento de base de datos FinOps: {e}")
-    
-    results = {}
-    total_stats = {"found": 0, "new": 0, "errors": 0}
-    start_time = datetime.now()
-    
-    db = SessionLocal()
-    audit = AuditLogger(db)
-    notifier = NotifierService()
-
-    total_scrapers = len(scrapers)
-    
-    # User-Agent List for Rotation
-    user_agents = [
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/121.0",
-        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0"
-    ]
-    import random
-
-    for idx, scraper in enumerate(scrapers):
+        # --- PHASE 42: PURGE OLD LOGS (7 DAYS) ---
         try:
-            # Check for 3OX Stop Signal
-            # if check_stop_signal():
-            #     break
-                
-            logger.info(f"🕸️ Engaging {scraper.spider_name}...")
+            from datetime import timedelta
+            cutoff = datetime.now() - timedelta(days=7)
+            with SessionLocal() as db_purge:
+                logger.info("🧹 Purging ancient logs (older than 7 days)...")
+                result = db_purge.query(ScraperExecutionLogModel).filter(
+                    ScraperExecutionLogModel.start_time < cutoff
+                ).delete()
+                db_purge.commit()
+                logger.info(f"🧹 Purged {result} stale execution records. Systems optimized.")
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to purge old logs: {e}")
             
-            # Scrapers now manage their own stealth contexts for maximum robustness
-            
-            # Inject Audit Logger
-            scraper.audit_logger = audit
+        # --- FINOPS DATABASE COMPACTATION & MAINTENANCE ---
+        try:
+            from src.application.services.maintenance_service import MaintenanceService
+            with SessionLocal() as db_maint:
+                logger.info("🧹 Iniciando compactación y mantenimiento de base de datos FinOps...")
+                stats = MaintenanceService.compact_database(db_maint)
+                logger.info(f"🧹 Mantenimiento FinOps completado. Estadísticas: {stats}")
+        except Exception as e:
+            logger.warning(f"⚠️ Fallo en el mantenimiento de base de datos FinOps: {e}")
+        
+        results = {}
+        total_stats = {"found": 0, "new": 0, "errors": 0}
+        failed_spiders = []
+        blocked_spiders = []
+        start_time = datetime.now()
+        
+        db = SessionLocal()
+        audit = AuditLogger(db)
+        notifier = NotifierService()
 
-            # UI Progress Update
-            progress_val = int((idx / total_scrapers) * 100)
-            if progress_callback:
-                progress_callback(scraper.spider_name, progress_val)
-                
-            # DB Status Update (Running)
+        total_scrapers = len(scrapers)
+        
+        # User-Agent List for Rotation
+        user_agents = [
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/121.0",
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0"
+        ]
+        import random
+
+        for idx, scraper in enumerate(scrapers):
             try:
-                status_row = db.query(ScraperStatusModel).filter(ScraperStatusModel.spider_name == scraper.spider_name).first()
-                if not status_row:
-                    status_row = ScraperStatusModel(spider_name=scraper.spider_name)
-                    db.add(status_row)
-                status_row.status = "running"
-                status_row.progress = progress_val
-                status_row.last_update = datetime.now()
-                db.commit()
-            except Exception:
-                db.rollback()
-
-            # Heartbeat Log
-            logger.info(f"💓 Heartbeat: Attempting to engage {scraper.spider_name}...")
-
-            # Determine trigger type (Corrected Phase 50)
-            event_name = os.getenv("GITHUB_EVENT_NAME", "manual")
-            trigger = "scheduled" if event_name == "schedule" else "manual"
-            if args.shops and not os.getenv("GITHUB_EVENT_NAME"): trigger = "manual"
-
-            # Create Execution Log Entry
-            log_entry = ScraperExecutionLogModel(
-                spider_name=scraper.spider_name,
-                status="running",
-                start_time=datetime.now(),
-                trigger_type=trigger,
-                logs=f"[{datetime.now(ZoneInfo('Europe/Madrid')).strftime('%H:%M:%S')}] 🚀 Inicia incursion en {scraper.spider_name} ({trigger})\n"
-            )
-            try:
-                db.add(log_entry)
-                db.commit()
-                log_id = log_entry.id
-            except Exception as e:
-                logger.error(f"Failed to create execution log: {e}")
-                db.rollback()
-                log_id = None
-
-            # Helper to append logs to DB entry safely
-            def update_task_log(msg):
-                if not log_id: return
-                try:
-                    with SessionLocal() as db_log:
-                        entry = db_log.get(ScraperExecutionLogModel, log_id)
-                        if entry:
-                            ts = datetime.now(ZoneInfo("Europe/Madrid")).strftime("%H:%M:%S")
-                            new_line = f"[{ts}] {msg}"
-                            if entry.logs: entry.logs += "\n" + new_line
-                            else: entry.logs = new_line
-                            db_log.commit()
-                except Exception as ex:
-                    logger.warning(f"Log preservation failed: {ex}")
-
-            update_task_log(f"🕸️ Engaging {scraper.spider_name}...")
-
-            try: # Robustness Layer: Ensure loop continues even if a scraper crashes
-                # 1. Scrape (Modern scrapers use .search)
-                logger.info(f"🛡️  [START] Incursion {scraper.spider_name} initiated...")
-                update_task_log(f"🛡️  [START] Incursion {scraper.spider_name} initiated...")
+                logger.info(f"🕸️ Engaging {scraper.spider_name}...")
                 
-                try:
-                    offers = await asyncio.wait_for(scraper.search("auto"), timeout=600)
-                    update_task_log(f"📡 Encontradas {len(offers)} reliquias potenciales.")
+                # Inject Audit Logger
+                scraper.audit_logger = audit
 
-                    # PHASE 51: Post-Scraping Filter for Tradeinn (Techinn/Kidinn only)
-                    if scraper.spider_name.lower() == "tradeinn" and offers:
-                        original_count = len(offers)
-                        filtered_offers = []
-                        for item in offers:
-                            url = getattr(item, 'url', '').lower()
-                            title = getattr(item, 'product_name', '').lower()
-                            if "techinn" in url or "kidinn" in url or "techinn" in title or "kidinn" in title:
-                                filtered_offers.append(item)
-                        
-                        discarded = original_count - len(filtered_offers)
-                        offers = filtered_offers
-                        
-                        if discarded > 0:
-                            logger.info(f"🧹 [{scraper.spider_name}] Post-filter: Discarded {discarded} non-Techinn/Kidinn items. Keeping {len(offers)}.")
-                            update_task_log(f"🧹 Descartados {discarded} artículos fuera de Techinn/Kidinn.")
-
-                except asyncio.TimeoutError:
-                    logger.error(f"⌛ [TIMEOUT] {scraper.spider_name} exceeded 10-minute limit.")
-                    update_task_log("⌛ [TIMEOUT] Exceeded 10-minute limit.")
-                    offers = []
-                
-                # PHASE 19: Health & Block Alerts (Sentinel)
-                if not offers:
-                    if getattr(scraper, 'blocked', False):
-                        logger.error(f"[{scraper.spider_name}] 🚫 Blocked by anti-bot measures.")
-                        msg = f"🚫 **DESTIERRO DETECTADO**\n\nEl Oráculo ha sido bloqueado por **{scraper.spider_name}**."
-                        await notifier.send_message(msg)
-                        log_entry.status = "blocked"
-                        log_entry.error_message = "Anti-bot block detected"
-                    else:
-                        logger.warning(f"[{scraper.spider_name}] ⚠️ Empty scan results.")
-                        log_entry.status = "success_empty"
-                
-                # 2. Persist
-                new_items_found = 0
-                if offers:
-                    # PHASE 10: Deep Harvest (Precision)
-                    if args.deep_harvest and offers:
-                        logger.info(f"🔍 [{scraper.spider_name}] Deep Harvest active. Refining {len(offers)} items...")
-                        for item in offers:
-                            # Visit detail page if EAN is missing and we want precision
-                            if not getattr(item, 'ean', None):
-                                # Ensure the scraper has a _scrape_detail method
-                                if hasattr(scraper, '_scrape_detail') and callable(getattr(scraper, '_scrape_detail')):
-                                    logger.warning(f"⚠️ Deep harvest for {scraper.spider_name} skipped for {item.product_name} as 'context' is undefined.")
-                                else:
-                                    logger.warning(f"⚠️ Scraper {scraper.spider_name} does not implement _scrape_detail for deep harvest.")
-
-                    # Update Database & Return new items count
-                    # Phase 44: Pasamos el nombre de la tienda para sincronizar disponibilidad
-                    pipeline.log_callback = update_task_log
-                    new_items_found = pipeline.update_database(offers, shop_names=[scraper.shop_name])
-                    update_task_log(f"💾 {new_items_found} nuevas reliquias añadidas al Purgatorio.")
-                    total_stats["found"] += len(offers)
-                    total_stats["new"] += new_items_found
+                # UI Progress Update
+                progress_val = int((idx / total_scrapers) * 100)
+                if progress_callback:
+                    progress_callback(scraper.spider_name, progress_val)
                     
-                    # Log Update Success
-                    log_entry.items_found = len(offers)
-                    log_entry.new_items = new_items_found
-                    log_entry.status = "success"
-                else:
-                    if getattr(scraper, 'blocked', False):
-                        log_entry.status = "blocked"
-                    else:
-                        log_entry.status = "success_empty"
-                
-                # DB Status Update (Completed)
+                # DB Status Update (Running)
                 try:
-                    if getattr(scraper, 'blocked', False):
-                        status_row.status = "blocked"
-                    else:
-                        status_row.status = "completed"
-                    status_row.items_scraped = len(offers) if offers else 0
+                    status_row = db.query(ScraperStatusModel).filter(ScraperStatusModel.spider_name == scraper.spider_name).first()
+                    if not status_row:
+                        status_row = ScraperStatusModel(spider_name=scraper.spider_name)
+                        db.add(status_row)
+                    status_row.status = "running"
+                    status_row.progress = progress_val
                     status_row.last_update = datetime.now()
-                    
-                    # Finalize Log
-                    log_entry.end_time = datetime.now()
                     db.commit()
                 except Exception:
                     db.rollback()
 
-                results[scraper.spider_name] = {"items_found": len(offers), "new_items": new_items_found, "status": "Success"}
-                logger.info(f"✅ [END] {scraper.spider_name} Complete (New: {new_items_found})")
-                update_task_log(f"✅ [FIN] Completado: {len(offers)} encontradas, {new_items_found} nuevas.")
-                
-            except Exception as e:
-                logger.error(f"❌ Failed {scraper.spider_name}: {e}")
-                update_task_log(f"❌ ERROR: {str(e)}")
-                results[scraper.spider_name] = {"error": str(e)}
-                total_stats["errors"] += 1
-                
-                # DB Status Update (Error)
+                # Heartbeat Log
+                logger.info(f"💓 Heartbeat: Attempting to engage {scraper.spider_name}...")
+
+                # Determine trigger type (Corrected Phase 50)
+                event_name = os.getenv("GITHUB_EVENT_NAME", "manual")
+                trigger_type = "scheduled" if event_name == "schedule" else "manual"
+
+                # Log Entry (Running)
+                log_entry = ScraperExecutionLogModel(
+                    spider_name=scraper.spider_name,
+                    status="running",
+                    start_time=datetime.now(),
+                    trigger_type=trigger_type,
+                    logs=""
+                )
                 try:
-                    status_row.status = "error"
-                    
-                    # Finalize Log Error
-                    log_entry.status = "error"
-                    log_entry.error_message = str(e)[:500]
-                    log_entry.end_time = datetime.now()
-                    
+                    db.add(log_entry)
                     db.commit()
+                    db.refresh(log_entry)
                 except Exception:
                     db.rollback()
-        except Exception as crash:
-            logger.critical(f"🔥 Catastrophic Scraper Crash ({scraper.spider_name}): {crash}")
-            total_stats["errors"] += 1
-        
-    # Final Callback
-    if progress_callback:
-        progress_callback("Completado", 100)
-    
-    db.close()
 
-    # PHASE 18: Create Database Vault (Safe Backup)
-    try:
-        from src.core.backup_manager import BackupManager
-        logger.info("🏰 Sealing the Data Vault (Database Backup)...")
-        backup_db = SessionLocal()
-        bm = BackupManager()
-        backup_path = bm.create_database_backup(backup_db)
-        if backup_path:
-            logger.info(f"🛡️ Vault sealed at: {backup_path}")
-        backup_db.close()
-    # PHASE 88: Auto-resolución de Lore para productos nuevos (Caché permanente, 0 coste de red)
-    try:
-        from src.application.services.lore_harvester_service import LoreHarvesterService
-        with SessionLocal() as db_lore:
-            unlinked = db_lore.query(ProductModel).filter(ProductModel.character_slug == None).all()
-            if unlinked:
-                logger.info(f"🔮 Auto-resolviendo lore para {len(unlinked)} productos sin vincular...")
-                for p in unlinked:
-                    lore = LoreHarvesterService.get_or_create_character_lore(db_lore, p.name)
-                    p.character_slug = lore.slug
-                db_lore.commit()
-                logger.info("✨ Auto-resolución de lore finalizada.")
-    except Exception as e_lore:
-        logger.warning(f"⚠️ Error en la auto-asignación de lore durante Daily Scan: {e_lore}")
+                def update_task_log(msg: str):
+                    logger.info(f"[{scraper.spider_name}] {msg}")
+                    try:
+                        with SessionLocal() as db_l:
+                            l = db_l.query(ScraperExecutionLogModel).filter(ScraperExecutionLogModel.id == log_entry.id).first()
+                            if l:
+                                current = l.logs or ""
+                                l.logs = current + f"\n[{datetime.now().strftime('%H:%M:%S')}] {msg}"
+                                db_l.commit()
+                    except Exception:
+                        pass
 
-    duration = datetime.now() - start_time
-    logger.info(f"🏁 Daily Scan Complete in {duration}. Total: {total_stats}")
-    
-    # Notificación final por Telegram al administrador
-    try:
-        from src.core.security import SecurityShield
-        from src.domain.models import PendingMatchModel
-        
-        with SessionLocal() as db_purg:
-            purg_count = db_purg.query(PendingMatchModel).filter(
-                PendingMatchModel.first_seen_at >= start_time
-            ).count()
+                scraper.log_callback = update_task_log
+                
+                try:
+                    query = "motu"
+                    offers = await scraper.search(query=query)
+                    
+                    if getattr(scraper, 'blocked', False):
+                        logger.warning(f"🛡️ [{scraper.spider_name}] Scraper was marked as BLOCKED by target server.")
+                        blocked_spiders.append(scraper.spider_name)
+                    elif not offers:
+                        logger.info(f"⚪ [{scraper.spider_name}] Scrape completed with 0 items returned.")
+                        log_entry.status = "success_empty"
+                    
+                    # 2. Persist
+                    new_items_found = 0
+                    if offers:
+                        # PHASE 10: Deep Harvest (Precision)
+                        if args.deep_harvest and offers:
+                            logger.info(f"🔍 [{scraper.spider_name}] Deep Harvest active. Refining {len(offers)} items...")
+                            for item in offers:
+                                if not getattr(item, 'ean', None):
+                                    if hasattr(scraper, '_scrape_detail') and callable(getattr(scraper, '_scrape_detail')):
+                                        logger.warning(f"⚠️ Deep harvest for {scraper.spider_name} skipped for {item.product_name} as 'context' is undefined.")
+                                    else:
+                                        logger.warning(f"⚠️ Scraper {scraper.spider_name} does not implement _scrape_detail for deep harvest.")
+
+                        pipeline.log_callback = update_task_log
+                        new_items_found = pipeline.update_database(offers, shop_names=[scraper.shop_name])
+                        update_task_log(f"💾 {new_items_found} nuevas reliquias añadidas al Purgatorio.")
+                        total_stats["found"] += len(offers)
+                        total_stats["new"] += new_items_found
+                        
+                        # Log Update Success
+                        log_entry.items_found = len(offers)
+                        log_entry.new_items = new_items_found
+                        log_entry.status = "success"
+                    else:
+                        if getattr(scraper, 'blocked', False):
+                            log_entry.status = "blocked"
+                        else:
+                            log_entry.status = "success_empty"
+                    
+                    # DB Status Update (Completed)
+                    try:
+                        if getattr(scraper, 'blocked', False):
+                            status_row.status = "blocked"
+                        else:
+                            status_row.status = "completed"
+                        status_row.items_scraped = len(offers) if offers else 0
+                        status_row.last_update = datetime.now()
+                        
+                        # Finalize Log
+                        log_entry.end_time = datetime.now()
+                        db.commit()
+                    except Exception:
+                        db.rollback()
+
+                    results[scraper.spider_name] = {"items_found": len(offers), "new_items": new_items_found, "status": "Success"}
+                    logger.info(f"✅ [END] {scraper.spider_name} Complete (New: {new_items_found})")
+                    update_task_log(f"✅ [FIN] Completado: {len(offers)} encontradas, {new_items_found} nuevas.")
+                    
+                except Exception as e:
+                    logger.error(f"❌ Failed {scraper.spider_name}: {e}")
+                    update_task_log(f"❌ ERROR: {str(e)}")
+                    results[scraper.spider_name] = {"error": str(e)}
+                    total_stats["errors"] += 1
+                    failed_spiders.append(f"{scraper.spider_name} ({str(e)[:60]})")
+                    
+                    # DB Status Update (Error)
+                    try:
+                        status_row.status = "error"
+                        log_entry.status = "error"
+                        log_entry.error_message = str(e)[:500]
+                        log_entry.end_time = datetime.now()
+                        db.commit()
+                    except Exception:
+                        db.rollback()
+            except Exception as crash:
+                logger.critical(f"🔥 Catastrophic Scraper Crash ({scraper.spider_name}): {crash}")
+                total_stats["errors"] += 1
+                failed_spiders.append(f"{scraper.spider_name} ({str(crash)[:60]})")
             
-            tg_msg = (
-                "🏁 <b>Daily Scan Completado</b>\n\n"
-                f"⏱️ Duración: <b>{str(duration).split('.')[0]}</b>\n"
-                f"🔍 Ofertas Procesadas: <b>{total_stats['found']}</b>\n"
-                f"🆕 Nuevas Ofertas Inyectadas: <b>{total_stats['new']}</b>\n"
-                f"⚖️ Enviados al Purgatorio: <b>{purg_count}</b>\n"
-                f"❌ Errores en Scrapers: <b>{total_stats['errors']}</b>\n\n"
-                "🛡️ <i>¡El Oráculo de Nueva Eternia sigue vigilando!</i>"
-            )
-            await SecurityShield.send_telegram_alert(tg_msg)
-            logger.info("📡 Reporte final del Daily Scan enviado a Telegram.")
-    except Exception as tg_ex:
-        logger.error(f"⚠️ No se pudo enviar el reporte del Daily Scan a Telegram: {tg_ex}")
+        # Final Callback
+        if progress_callback:
+            progress_callback("Completado", 100)
+        
+        db.close()
 
-    # Registrar resumen global de ejecución en base de datos para métricas de cuota
-    try:
-        with SessionLocal() as db_summary:
-            event_name = os.getenv("GITHUB_EVENT_NAME", "manual")
-            trigger = "scheduled" if event_name == "schedule" else "manual"
-            db_summary.add(ScraperExecutionLogModel(
-                spider_name="DailyScan",
-                status="success" if total_stats["errors"] == 0 else "error",
-                items_found=total_stats["found"],
-                new_items=total_stats["new"],
-                errors=total_stats["errors"],
-                start_time=start_time,
-                end_time=datetime.now(),
-                trigger_type=trigger,
-                logs=f"Daily Scan completo finalizado en {str(duration).split('.')[0]}. Ofertas: {total_stats['found']}, Nuevas: {total_stats['new']}, Errores: {total_stats['errors']}."
-            ))
-            db_summary.commit()
-    except Exception as sum_ex:
-        logger.error(f"⚠️ Error guardando log global de DailyScan: {sum_ex}")
+        # PHASE 18: Create Database Vault (Safe Backup)
+        try:
+            from src.core.backup_manager import BackupManager
+            logger.info("🏰 Sealing the Data Vault (Database Backup)...")
+            backup_db = SessionLocal()
+            bm = BackupManager()
+            backup_path = bm.create_database_backup(backup_db)
+            if backup_path:
+                logger.info(f"🛡️ Vault sealed at: {backup_path}")
+            backup_db.close()
+        except Exception as e_bk:
+            logger.warning(f"⚠️ Error durante el sellado del vault de backup: {e_bk}")
+
+        # PHASE 88: Auto-resolución de Lore para productos nuevos (Caché permanente, 0 coste de red)
+        try:
+            from src.application.services.lore_harvester_service import LoreHarvesterService
+            with SessionLocal() as db_lore:
+                unlinked = db_lore.query(ProductModel).filter(ProductModel.character_slug == None).all()
+                if unlinked:
+                    logger.info(f"🔮 Auto-resolviendo lore para {len(unlinked)} productos sin vincular...")
+                    for p in unlinked:
+                        lore = LoreHarvesterService.get_or_create_character_lore(db_lore, p.name)
+                        p.character_slug = lore.slug
+                    db_lore.commit()
+                    logger.info("✨ Auto-resolución de lore finalizada.")
+        except Exception as e_lore:
+            logger.warning(f"⚠️ Error en la auto-asignación de lore durante Daily Scan: {e_lore}")
+
+        duration = datetime.now() - start_time
+        logger.info(f"🏁 Daily Scan Complete in {duration}. Total: {total_stats}")
         
-    # 3OX Reporting
-    # save_json_report(results, filename_prefix="daily_scan")
-        
-    # 3OX PID Cleanup
-    # manage_pid(action="remove")
+        # Notificación final por Telegram al administrador
+        try:
+            from src.core.security import SecurityShield
+            from src.domain.models import PendingMatchModel
+            
+            with SessionLocal() as db_purg:
+                purg_count = db_purg.query(PendingMatchModel).filter(
+                    PendingMatchModel.first_seen_at >= start_time
+                ).count()
+                
+                error_section = ""
+                if failed_spiders:
+                    failed_list = "\n".join([f"  • ⚠️ <code>{f}</code>" for f in failed_spiders[:5]])
+                    error_section = f"\n\n<b>Incidencias en Scrapers ({len(failed_spiders)}):</b>\n{failed_list}"
+                
+                blocked_section = ""
+                if blocked_spiders:
+                    blocked_list = ", ".join(blocked_spiders)
+                    blocked_section = f"\n🛡️ <i>Tiendas bloqueadas: {blocked_list}</i>"
+
+                tg_msg = (
+                    "🏁 <b>Daily Scan Completado</b>\n\n"
+                    f"⏱️ Duración: <b>{str(duration).split('.')[0]}</b>\n"
+                    f"🔍 Ofertas Procesadas: <b>{total_stats['found']}</b>\n"
+                    f"🆕 Nuevas Ofertas Inyectadas: <b>{total_stats['new']}</b>\n"
+                    f"⚖️ Enviados al Purgatorio: <b>{purg_count}</b>\n"
+                    f"❌ Errores en Scrapers: <b>{total_stats['errors']}</b>"
+                    f"{error_section}"
+                    f"{blocked_section}\n\n"
+                    "🛡️ <i>¡El Oráculo de Nueva Eternia sigue vigilando!</i>"
+                )
+                await SecurityShield.send_telegram_alert(tg_msg)
+                logger.info("📡 Reporte final del Daily Scan enviado a Telegram.")
+        except Exception as tg_ex:
+            logger.error(f"⚠️ No se pudo enviar el reporte del Daily Scan a Telegram: {tg_ex}")
+
+        # Registrar resumen global de ejecución en base de datos para métricas de cuota
+        try:
+            with SessionLocal() as db_summary:
+                event_name = os.getenv("GITHUB_EVENT_NAME", "manual")
+                trigger = "scheduled" if event_name == "schedule" else "manual"
+                db_summary.add(ScraperExecutionLogModel(
+                    spider_name="DailyScan",
+                    status="success" if total_stats["errors"] == 0 else "error",
+                    items_found=total_stats["found"],
+                    new_items=total_stats["new"],
+                    errors=total_stats["errors"],
+                    start_time=start_time,
+                    end_time=datetime.now(),
+                    trigger_type=trigger,
+                    logs=f"Daily Scan completo finalizado en {str(duration).split('.')[0]}. Ofertas: {total_stats['found']}, Nuevas: {total_stats['new']}, Errores: {total_stats['errors']}."
+                ))
+                db_summary.commit()
+        except Exception as sum_ex:
+            logger.error(f"⚠️ Error guardando log global de DailyScan: {sum_ex}")
+            
+    except Exception as fatal_e:
+        logger.critical(f"🔥 Error fatal en run_daily_scan: {fatal_e}")
+        try:
+            from src.core.security import SecurityShield
+            err_alert = (
+                "🚨 <b>[Daily Scan: FALLO CRÍTICO]</b>\n\n"
+                f"❌ <b>Motivo:</b> <code>{type(fatal_e).__name__}: {str(fatal_e)[:300]}</code>\n"
+                f"⏱️ <b>Hora:</b> {datetime.now().strftime('%H:%M:%S')}\n\n"
+                "🛡️ <i>El Oráculo ha registrado el incidente. Se requiere revisión.</i>"
+            )
+            await SecurityShield.send_telegram_alert(err_alert)
+        except Exception as tg_err:
+            logger.error(f"No se pudo enviar la alerta de fallo crítico a Telegram: {tg_err}")
+        raise fatal_e
 
 if __name__ == "__main__":
     try:
-        # if sys.platform == "win32":
-        #    asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
-        
         asyncio.run(run_daily_scan())
     except Exception as e:
         print(f"CRITICAL ERROR: {e}")
@@ -492,12 +466,12 @@ if __name__ == "__main__":
         try:
             db_err = SessionLocal()
             log_err = ScraperExecutionLogModel(
-                spider_name="Global_System", # Special name for script-wide errors
+                spider_name="Global_System",
                 status="critical_failure",
                 start_time=datetime.now(),
                 end_time=datetime.now(),
-                trigger_type="scheduled", # Assume scheduled if crashing
-                error_message=f"CRITICAL SCRIPT FAILURE: {str(e)}\n\n{traceback.format_exc()}"[:2000] # Truncate for safety
+                trigger_type="scheduled",
+                error_message=f"CRITICAL SCRIPT FAILURE: {str(e)}\n\n{traceback.format_exc()}"[:2000]
             )
             db_err.add(log_err)
             db_err.commit()

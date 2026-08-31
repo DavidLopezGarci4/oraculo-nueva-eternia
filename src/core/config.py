@@ -80,8 +80,8 @@ class Settings(BaseSettings):
 
     # Vinted Sentinel Autonomous Settings (Phase 84)
     VINTED_SENTINEL_ENABLED: bool = True
-    VINTED_SENTINEL_MIN_DELAY_MIN: int = 50
-    VINTED_SENTINEL_MAX_DELAY_MIN: int = 75
+    VINTED_SENTINEL_MIN_DELAY_MIN: int = 100
+    VINTED_SENTINEL_MAX_DELAY_MIN: int = 120
 
     # AI Conversational Assistant (Phase 86)
     GEMINI_API_KEY: str | None = None

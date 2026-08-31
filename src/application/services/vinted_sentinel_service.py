@@ -99,9 +99,9 @@ class VintedSentinelService:
         
         while self.is_running:
             try:
-                # 1. Calcular delay aleatorio entre MIN y MAX (ej: 50 a 75 min)
-                min_delay = getattr(settings, "VINTED_SENTINEL_MIN_DELAY_MIN", 50)
-                max_delay = getattr(settings, "VINTED_SENTINEL_MAX_DELAY_MIN", 75)
+                # 1. Calcular delay aleatorio entre MIN y MAX (ej: 100 a 120 min)
+                min_delay = getattr(settings, "VINTED_SENTINEL_MIN_DELAY_MIN", 100)
+                max_delay = getattr(settings, "VINTED_SENTINEL_MAX_DELAY_MIN", 120)
                 self.next_delay_minutes = random.randint(min_delay, max_delay)
                 self.next_run_eta = datetime.now(timezone.utc) + timedelta(minutes=self.next_delay_minutes)
                 

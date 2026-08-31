@@ -313,6 +313,22 @@ function Invoke-RenewSslCloud {
     Read-Host "Presiona [Enter] para volver al menu principal..."
 }
 
+function Invoke-SmythsToysIncursion {
+    Show-Header
+    Write-Host "[12] INICIANDO INCURSION LOCAL EN SMYTHS TOYS (ALEMANIA)..." -ForegroundColor Yellow
+    Write-Host "Este proceso extrae figuras MOTU, actualiza importes y añade nuevos items a Supabase directamente desde tu PC." -ForegroundColor Gray
+    Write-Host ""
+    
+    $PythonExe = Join-Path $PSScriptRoot ".venv\Scripts\python.exe"
+    if (!(Test-Path $PythonExe)) { $PythonExe = "python" }
+
+    & $PythonExe scripts\run_single_incursion.py SmythsToys auto
+    
+    Write-Host ""
+    Write-Host "Incursion de Smyths Toys finalizada con exito." -ForegroundColor Green
+    Read-Host "Presiona [Enter] para volver al menu principal..."
+}
+
 if ($Backup) {
     Invoke-BackupDb
     exit
@@ -331,10 +347,11 @@ do {
     Write-Host "  [9]  Desplegar y Actualizar en Oracle Cloud (1 Clic)" -ForegroundColor Cyan
     Write-Host "  [10] Conectar por SSH al Servidor en la Nube" -ForegroundColor Cyan
     Write-Host "  [11] Renovar Certificados SSL en Oracle Cloud" -ForegroundColor Cyan
+    Write-Host "  [12] Incursion Directa Smyths Toys (Actualizar Importes y Nuevos Items)" -ForegroundColor Yellow
     Write-Host ""
     Write-Host "  [0]  Salir" -ForegroundColor Red
     Write-Host "-------------------------------------------------------------------" -ForegroundColor DarkGray
-    $choice = Read-Host "  Selecciona una opcion [0-11]"
+    $choice = Read-Host "  Selecciona una opcion [0-12]"
 
     switch ($choice.Trim()) {
         "1" { Invoke-LocalStart }
@@ -348,6 +365,7 @@ do {
         "9" { Invoke-DeployCloud }
         "10" { Invoke-SshConnect }
         "11" { Invoke-RenewSslCloud }
+        "12" { Invoke-SmythsToysIncursion }
         "0" { 
             Clear-Host
             Write-Host "Hasta la proxima, Guardian de Nueva Eternia!" -ForegroundColor Cyan
@@ -359,3 +377,4 @@ do {
         }
     }
 } while ($true)
+

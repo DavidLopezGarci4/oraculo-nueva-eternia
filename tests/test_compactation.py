@@ -7,6 +7,7 @@ from src.domain.models import Base, ProductModel, OfferModel, PriceHistoryModel,
 from src.application.services.maintenance_service import MaintenanceService
 
 class TestDatabaseCompactation(unittest.TestCase):
+    def setUp(self):
         # Crear base de datos en memoria para pruebas
         self.engine = create_engine("sqlite:///:memory:")
         

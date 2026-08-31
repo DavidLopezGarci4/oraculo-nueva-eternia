@@ -332,7 +332,7 @@ class TelegramListener:
         lines.append("• <code>/caza</code> - Incursión instantánea en Vinted (4 consultas canónicas) con alerta push de gangas bajo precio medio.")
         lines.append("• <code>/caza [figura]</code> - Caza personalizada de una figura en Vinted.")
         lines.append("• <code>/centinela</code> - Consulta el estado del Centinela Autónomo 24/7 de Vinted.")
-        lines.append("• <code>/centinela [on|off]</code> - Activa o pausa las incursiones automáticas (50-75 min).")
+        lines.append("• <code>/centinela [on|off]</code> - Activa o pausa las incursiones automáticas (100-120 min).")
         lines.append("• <code>/help</code> - Muestra este menú de ayuda.")
         
         if is_admin:
@@ -836,7 +836,7 @@ class TelegramListener:
             f"🏹 <b>[Panel de Control: Centinela de Vinted]</b>\n\n"
             f"• <b>Estado:</b> {state_badge}\n"
             f"• <b>Infraestructura:</b> {using_az}\n"
-            f"• <b>Cadencia:</b> 50 - 75 minutos aleatorios\n"
+            f"• <b>Cadencia:</b> 100 - 120 minutos aleatorios\n"
             f"• <b>Próxima Incursión:</b> {'En ~' + str(mins_remaining) + ' min' if is_active else 'N/A'}\n"
             f"• <b>Incursiones Realizadas:</b> {total_hunts}\n"
             f"• <b>Chollos Detectados:</b> {total_bargains}\n\n"
