@@ -24,12 +24,30 @@ def _user_from_token(token: str | None) -> UserModel | None:
         user_id = int(payload["sub"])
     except (jwt.InvalidTokenError, KeyError, ValueError):
         return None
-    with SessionCloud() as db:
-        return (
-            db.query(UserModel)
-            .filter(UserModel.id == user_id, UserModel.is_active == True)  # noqa: E712
-            .first()
-        )
+    
+    try:
+        with SessionCloud() as db:
+            user = (
+                db.query(UserModel)
+                .filter(UserModel.id == user_id, UserModel.is_active == True)  # noqa: E712
+                .first()
+            )
+            if user:
+                return user
+    except Exception as e:
+        logger.warning(f"Error consultando usuario en Cloud DB: {e}")
+
+    try:
+        from src.infrastructure.database import SessionLocal
+        with SessionLocal() as db:
+            return (
+                db.query(UserModel)
+                .filter(UserModel.id == user_id, UserModel.is_active == True)  # noqa: E712
+                .first()
+            )
+    except Exception as e:
+        logger.error(f"Error consultando usuario en Local DB: {e}")
+        return None
 
 
 def _is_service_key(x_api_key: str | None) -> bool:
@@ -148,11 +166,24 @@ def get_current_user(token: str = Depends(_oauth2_scheme)) -> UserModel:
     except (jwt.InvalidTokenError, KeyError, ValueError):
         raise HTTPException(status_code=401, detail="Token inválido.")
 
-    with SessionCloud() as db:
-        user = db.query(UserModel).filter(UserModel.id == user_id, UserModel.is_active == True).first()  # noqa: E712
-        if not user:
-            raise HTTPException(status_code=401, detail="Usuario no encontrado.")
-        return user
+    try:
+        with SessionCloud() as db:
+            user = db.query(UserModel).filter(UserModel.id == user_id, UserModel.is_active == True).first()  # noqa: E712
+            if user:
+                return user
+    except Exception as e:
+        logger.warning(f"Error consultando usuario en Cloud DB (get_current_user): {e}")
+
+    try:
+        from src.infrastructure.database import SessionLocal
+        with SessionLocal() as db:
+            user = db.query(UserModel).filter(UserModel.id == user_id, UserModel.is_active == True).first()  # noqa: E712
+            if user:
+                return user
+    except Exception as e:
+        logger.error(f"Error consultando usuario en Local DB (get_current_user): {e}")
+
+    raise HTTPException(status_code=401, detail="Usuario no encontrado.")
 
 
 def require_admin(user: UserModel = Depends(get_current_user)) -> UserModel:
