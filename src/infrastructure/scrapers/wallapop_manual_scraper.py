@@ -81,7 +81,7 @@ class WallapopManualScraper(BaseScraper):
     }
 
     def __init__(self):
-        super().__init__(shop_name="WallapopManual", base_url="https://es.wallapop.com")
+        super().__init__(shop_name="Wallapop", base_url="https://es.wallapop.com")
         self.is_auction_source = True  # Peer-to-Peer -> Purgatorio
 
     async def _search_single(

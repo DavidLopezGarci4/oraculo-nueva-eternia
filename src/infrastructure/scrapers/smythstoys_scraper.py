@@ -110,28 +110,26 @@ class SmythsToysScraper(BaseScraper):
 
     async def _search_option_1(self, query: str) -> List[ScrapedOffer]:
         """
-        OPCIÓN 1: Playwright con perfil persistente, Chrome local, precarga de cookies de home y referer.
+        OPCIÓN 1: Playwright con perfil persistente, Chrome local, inyección profunda antidetect y resolución WAF.
         """
         from playwright.async_api import async_playwright
         
         # Determinar si se ejecuta de forma oculta o visible.
-        # En incursiones manuales locales, ejecutamos en modo visible (headless=False)
-        # para usar el motor gráfico real y evadir Imperva al 100% de forma segura.
-        is_headless = True
-        if os.environ.get("DAILY_SCAN_RUN") != "true" and os.environ.get("GITHUB_ACTIONS") != "true":
-            is_headless = False
-            self._log("👁️ Modo visible (headful) activo para incursion manual local.")
+        # En entornos locales y Nexus, usamos modo visible con canal Chrome para máxima evasión de WAF.
+        is_headless = False
+        if os.environ.get("DAILY_SCAN_RUN") == "true" or os.environ.get("GITHUB_ACTIONS") == "true":
+            is_headless = True
+            self._log("🛡️ Ejecutando OPCIÓN 1: Playwright con perfil persistente en modo headless")
         else:
-            self._log("🛡️ Ejecutando OPCIÓN 1: Playwright con perfil persistente en modo oculto (headless)")
+            self._log("👁️ Modo visible (headful) activo para incursión de alta confianza (anti-Imperva).")
             
         products: List[ScrapedOffer] = []
         seen_urls = set()
         
-        # Intento de conexión CDP asistida (si el usuario tiene su Chrome de depuración abierto)
-        if os.environ.get("DAILY_SCAN_RUN") != "true" and os.environ.get("GITHUB_ACTIONS") != "true":
+        # 1. Intento de conexión CDP asistida (si el usuario tiene su Chrome de depuración abierto en puerto 9222)
+        if not is_headless:
             try:
                 import urllib.request
-                # Timeout de 0.5s para continuar sin retrasos si el puerto está cerrado
                 urllib.request.urlopen("http://localhost:9222/json/version", timeout=0.5)
                 self._log("🔌 Puerto de depuracion 9222 abierto detectado. Conectando via CDP...")
                 
@@ -146,178 +144,123 @@ class SmythsToysScraper(BaseScraper):
                         if target_page:
                             break
                             
-                    if target_page:
-                        self._log(f"🎯 Pestaña activa de Smyths Toys hallada: {target_page.url}")
-                        html = await target_page.content()
-                        soup = BeautifulSoup(html, "html.parser")
-                        products = self._parse_html(soup, seen_urls)
+                    if not target_page:
+                        # Abrir pestaña en el navegador del usuario directamente vía CDP
+                        self._log("🧭 Abriendo pestaña en sesión activa de Chrome para Smyths Toys...")
+                        context = browser.contexts[0] if browser.contexts else await browser.new_context()
+                        target_page = await context.new_page()
+                        await target_page.goto(self.search_url, wait_until="domcontentloaded", timeout=45000)
+                        await asyncio.sleep(3)
+
+                    self._log(f"🎯 Pestaña activa de Smyths Toys obtenida: {target_page.url}")
+                    html = await target_page.content()
+                    soup = BeautifulSoup(html, "html.parser")
+                    products = self._parse_html(soup, seen_urls)
+                    if products:
                         self._log(f"✅ Extracción completada exitosamente vía CDP. Encontrados {len(products)} artículos.")
                         return products
-                    else:
-                        self._log("⚠️ Conectado a CDP, pero no se encontró pestaña abierta de Smyths Toys. Iniciando flujo estándar...", level="warning")
-            except Exception:
-                # Si el puerto está cerrado, continúa de forma transparente con el lanzamiento del navegador
-                pass
+            except Exception as e_cdp:
+                self._log(f"ℹ️ CDP no utilizado ({e_cdp}). Continuando con canal autónomo...")
                 
-        user_agent = random.choice(self.USER_AGENTS)
+        # Perfil persistente en el proyecto para conservar cookies de sesión de Imperva
+        user_data_dir = os.path.abspath(os.path.join(os.getcwd(), "data", "smyths_chrome_profile"))
+        os.makedirs(user_data_dir, exist_ok=True)
         
-        # Usar un directorio de perfil persistente en el proyecto para acumular cookies y confianza.
-        # De esta forma, una vez resuelto el reto, las cookies e historial se guardan para futuras ejecuciones.
-        user_data_dir = os.path.join(os.getcwd(), "data", "smyths_chrome_profile")
-        os.makedirs(os.path.dirname(user_data_dir), exist_ok=True)
+        target_url = self.category_url
+        if query and query.lower() not in ["auto", "completo", "full", "deep", "exhaustivo"]:
+            encoded_query = urllib.parse.quote_plus(query)
+            target_url = f"https://www.smythstoys.com/de/de-de/search/?text={encoded_query}"
         
         async with async_playwright() as p:
             browser_context = None
             try:
-                # Lanzar perfil persistente intentando usar el canal real de Google Chrome (ideal para Windows)
+                launch_args = [
+                    "--disable-blink-features=AutomationControlled",
+                    "--disable-infobars",
+                    "--no-sandbox",
+                    "--window-size=1366,768"
+                ]
+                
                 try:
-                    self._log("🌐 Lanzando Google Chrome (Canal Persistente)...")
+                    self._log("🌐 Lanzando Google Chrome (Canal Persistente con Antidetect)...")
                     browser_context = await p.chromium.launch_persistent_context(
                         user_data_dir=user_data_dir,
                         headless=is_headless,
                         channel="chrome",
-                        ignore_default_args=['--enable-automation', '--no-sandbox'],
-                        args=[
-                            '--disable-features=IsolateOrigins,site-per-process',
-                        ],
-                        viewport={'width': 1366, 'height': 768},
-                        locale='de-DE',
-                        timezone_id='Europe/Berlin',
-                        user_agent=user_agent
+                        ignore_default_args=["--enable-automation"],
+                        args=launch_args,
+                        viewport={"width": 1366, "height": 768},
+                        locale="de-DE",
+                        timezone_id="Europe/Berlin"
                     )
                 except Exception as e:
-                    self._log(f"⚠️ No se pudo lanzar canal 'chrome' ({e}). Usando Chromium por defecto...")
+                    self._log(f"⚠️ Fallback a Chromium por defecto ({e})...")
                     browser_context = await p.chromium.launch_persistent_context(
                         user_data_dir=user_data_dir,
                         headless=is_headless,
-                        ignore_default_args=['--enable-automation', '--no-sandbox'],
-                        args=[
-                            '--disable-features=IsolateOrigins,site-per-process',
-                        ],
-                        viewport={'width': 1366, 'height': 768},
-                        locale='de-DE',
-                        timezone_id='Europe/Berlin',
-                        user_agent=user_agent
+                        ignore_default_args=["--enable-automation"],
+                        args=launch_args,
+                        viewport={"width": 1366, "height": 768},
+                        locale="de-DE",
+                        timezone_id="Europe/Berlin"
                     )
-                
-                await browser_context.set_extra_http_headers({
-                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-                    'Accept-Language': 'de-DE,de;q=0.9,en;q=0.8',
-                    'Accept-Encoding': 'gzip, deflate, br',
-                    'Connection': 'keep-alive',
-                    'Upgrade-Insecure-Requests': '1',
-                })
                 
                 page = browser_context.pages[0] if browser_context.pages else await browser_context.new_page()
                 
-                # --- INYECCIÓN PROFUNDA DE ANTIDETECT (Evita la firma automatizada) ---
-                await page.add_init_script("delete navigator.__proto__.webdriver")
+                # Inyección de stealth para ocultar automatización
                 await page.add_init_script("""
-                    window.chrome = {
-                        runtime: {},
-                        loadTimes: function() {},
-                        csi: function() {},
-                        app: {}
-                    };
-                    Object.defineProperty(navigator, 'languages', {
-                        get: () => ['de-DE', 'de', 'en-US', 'en']
-                    });
-                    
-                    const mockPlugin = (name, filename, description) => {
-                        const plugin = Object.create(Plugin.prototype);
-                        Object.defineProperties(plugin, {
-                            name: { value: name, enumerable: true },
-                            filename: { value: filename, enumerable: true },
-                            description: { value: description, enumerable: true },
-                        });
-                        return plugin;
-                    };
-                    const pluginsList = [
-                        mockPlugin('PDF Viewer', 'internal-pdf-viewer', 'Portable Document Format'),
-                        mockPlugin('Chrome PDF Viewer', 'mhjfbgojcjbhgoocpbhnapeenohidgkm', 'Portable Document Format')
-                    ];
-                    Object.defineProperty(navigator, 'plugins', {
-                        get: () => pluginsList,
-                        enumerable: true,
-                        configurable: true
-                    });
+                    Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+                    window.chrome = { runtime: {} };
                 """)
                 
-                # Paso 1: Aterrizaje en la Home para establecer cookies de sesión
-                self._log("🏠 Aterrizando en la página de inicio para inicializar cookies...")
-                await page.goto("https://www.smythstoys.com/de/de-de", wait_until="commit", timeout=45000)
+                self._log(f"🧭 Navegando a catálogo de Smyths Toys...")
+                try:
+                    await page.goto(target_url, timeout=45000)
+                except Exception as nav_e:
+                    self._log(f"ℹ️ Conexión inicial: {nav_e}", level="debug")
                 
-                # Monitorear si aparece desafío e intentar darle tiempo para resolver
-                for i in range(30):
+                # Esperar resolución de reto / recarga automática de Imperva
+                for i in range(20):
+                    await asyncio.sleep(1.5)
                     try:
                         title = await page.title()
-                        if title and "Pardon Our Interruption" in title:
-                            self._log(f"⏳ [WAF] Desafío de Imperva detectado. Esperando resolución automática (segundo {i+1}/30)...")
-                            await asyncio.sleep(1)
-                        else:
+                        if title and "Pardon Our Interruption" not in title and len(title) > 0:
+                            self._log(f"✅ Acceso concedido a Smyths Toys: '{title[:55]}...'")
                             break
                     except Exception:
-                        await asyncio.sleep(1)
+                        # Recarga de contexto por redirección de WAF en curso
+                        pass
                 
-                # Espera aleatoria para asentamiento de cookies
-                await asyncio.sleep(random.uniform(2.5, 4.5))
-                
-                # Paso 2: Navegación a la categoría MOTU especificando referer de la home
-                self._log(f"🧭 Navegando a la categoría con referer de la home...")
-                resp = await page.goto(
-                    self.search_url,
-                    referer="https://www.smythstoys.com/de/de-de",
-                    wait_until="commit",
-                    timeout=60000
-                )
-                
-                # Esperar resolución de reto si existiera en la navegación secundaria
-                for i in range(30):
-                    try:
-                        title = await page.title()
-                        if title and "Pardon Our Interruption" in title:
-                            self._log(f"⏳ [WAF Category] Esperando resolución de WAF (segundo {i+1}/30)...")
-                            await asyncio.sleep(1)
-                        else:
-                            break
-                    except Exception:
-                        await asyncio.sleep(1)
-                
-                # --- EMULACIÓN DE COMPORTAMIENTO HUMANO ---
-                self._log("🖱️ Simulando lectura de usuario (scroll y movimientos)")
+                # Emulación de scroll humano para cargar elementos
+                self._log("🖱️ Simulando lectura de usuario y scroll orgánico...")
                 for _ in range(3):
-                    scroll_y = random.randint(350, 700)
-                    await page.mouse.wheel(0, scroll_y)
-                    await asyncio.sleep(random.uniform(1.0, 2.5))
+                    await page.mouse.wheel(0, random.randint(400, 750))
+                    await asyncio.sleep(random.uniform(0.8, 1.6))
                     
-                # Volver a subir levemente para simular comportamiento orgánico
-                await page.mouse.wheel(0, -random.randint(100, 250))
-                await asyncio.sleep(random.uniform(1.0, 2.0))
-                
+                await asyncio.sleep(2)
                 html = await page.content()
                 soup = BeautifulSoup(html, "html.parser")
                 body_text = soup.body.get_text() if soup.body else ""
                 
-                # Detección defensiva de bloqueo
-                if "pardon our interruption" in body_text.lower() or "incapsula" in html.lower() or "incident id" in html.lower():
-                    self._log("⚠️ Bloqueo de Imperva (Incapsula) detectado en la opción local.", level="warning")
+                products = self._parse_html(soup, seen_urls)
+                
+                if len(products) == 0 and ("pardon our interruption" in body_text.lower() or "incident id" in body_text.lower()):
+                    self._log("⚠️ Bloqueo de Imperva persistente en este intento.", level="warning")
                     self.blocked = True
                     return []
-                
-                # Parsear contenido
-                products = self._parse_html(soup, seen_urls)
+                    
+                if products:
+                    self._log(f"🎉 SmythsToys [Playwright]: ¡Éxito! Extraídas {len(products)} reliquias.")
                 
             except Exception as e:
                 self._log(f"❌ Error en Playwright (Opción 1): {e}", level="error")
                 self.errors += 1
             finally:
                 if browser_context:
-                    await browser_context.close()
-                # Eliminar carpeta del perfil de usuario temporal
-                try:
-                    shutil.rmtree(user_data_dir)
-                except Exception:
-                    pass
+                    try:
+                        await browser_context.close()
+                    except Exception:
+                        pass
                 
         return products
 

@@ -100,7 +100,7 @@ async def submit_wallapop_job_results(job_id: int, request: WallapopJobResultsRe
         offers_payload = []
         for o in request.offers:
             # Detectar tienda basada en la URL del producto
-            shop_name = "SmythsToys" if "smythstoys" in o.url.lower() else "WallapopManual"
+            shop_name = "SmythsToys" if "smythstoys" in o.url.lower() else "Wallapop"
             offers_payload.append({
                 "product_name": o.product_name,
                 "price": o.price,
@@ -133,7 +133,7 @@ async def submit_wallapop_job_results(job_id: int, request: WallapopJobResultsRe
             import asyncio
             from src.infrastructure.services.telegram_service import telegram_service
             if job.status == "done":
-                wallapop_count = sum(1 for o in offers_payload if o["shop_name"] == "WallapopManual")
+                wallapop_count = sum(1 for o in offers_payload if o["shop_name"] == "Wallapop")
                 smyths_count = sum(1 for o in offers_payload if o["shop_name"] == "SmythsToys")
                 
                 parts = []

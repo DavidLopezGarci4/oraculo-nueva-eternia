@@ -125,6 +125,7 @@ async def process_job(job: dict) -> None:
             "price": o.price,
             "currency": o.currency,
             "url": o.url,
+            "shop_name": o.shop_name or ("SmythsToys" if "smythstoys" in o.url.lower() else "Wallapop"),
             "image_url": o.image_url,
             "source_type": o.source_type,
             "sale_type": o.sale_type,

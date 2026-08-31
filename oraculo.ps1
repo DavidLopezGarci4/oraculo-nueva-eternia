@@ -315,8 +315,9 @@ function Invoke-RenewSslCloud {
 
 function Invoke-SmythsToysIncursion {
     Show-Header
-    Write-Host "[12] INICIANDO INCURSION LOCAL EN SMYTHS TOYS (ALEMANIA)..." -ForegroundColor Yellow
-    Write-Host "Este proceso extrae figuras MOTU, actualiza importes y añade nuevos items a Supabase directamente desde tu PC." -ForegroundColor Gray
+    Write-Host "[12] INICIANDO INCURSION EN SMYTHS TOYS (ALEMANIA)..." -ForegroundColor Yellow
+    Write-Host "Este proceso extrae las figuras MOTU, actualiza importes y añade nuevos items a Supabase." -ForegroundColor Gray
+    Write-Host "Tip: Si tienes abierta la opcion [5] (Chrome Depuracion), se conectara directamente a tu sesion." -ForegroundColor DarkCyan
     Write-Host ""
     
     $PythonExe = Join-Path $PSScriptRoot ".venv\Scripts\python.exe"
@@ -325,7 +326,7 @@ function Invoke-SmythsToysIncursion {
     & $PythonExe scripts\run_single_incursion.py SmythsToys auto
     
     Write-Host ""
-    Write-Host "Incursion de Smyths Toys finalizada con exito." -ForegroundColor Green
+    Write-Host "Incursion de Smyths Toys completada con exito." -ForegroundColor Green
     Read-Host "Presiona [Enter] para volver al menu principal..."
 }
 

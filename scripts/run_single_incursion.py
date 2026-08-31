@@ -44,6 +44,7 @@ async def main():
         
     print(f"🚀 Iniciando incursion local para {scraper_name} (query='{query}')...")
     scraper = scraper_cls()
+    scraper.log_callback = lambda msg: print(f"[{scraper_name}] {msg}")
     
     try:
         offers = await scraper.search(query)
