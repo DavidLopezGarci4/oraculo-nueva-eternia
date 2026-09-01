@@ -1465,10 +1465,20 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
   - **Salón de la Fama Interactivo (`Dashboard.tsx`)**:
     - Tarjetas interactivas con estados hover y active scale.
     - Clic sobre cualquier reliquia (*Origins* o *Vintage*, *Top Valor* o *Top ROI*) abre el modal completo de la figura en la Fortaleza (`CollectionItemDetailModal`), permitiendo inspeccionar notas, estado, precio pagado y tarjeta TCG, volviendo limpiamente al Dashboard al cerrar.
-  - **Automatización de Alertas Telegram en GitHub Actions (`scrapers.yml` & Base de Datos)**:
-    - Asignado `telegram_chat_id = '7931331'` para el usuario David en Supabase Cloud y SQLite Local.
-    - Inyectadas las variables `TELEGRAM_BOT_TOKEN` y `TELEGRAM_CHAT_ID` en el paso `Run Scrapers (Market Incursion)` de GitHub Actions para garantizar el envío del reporte con duración, ofertas rastreadas, nuevas inyecciones y estado del Purgatorio.
-  - **Verificación**: Suite de pruebas unitarias aprobada (`pytest` 8/8 pasados) y compilación Vite completada sin advertencias.
+### ⚡ Fase 98: Grimorio de Lore Canónico, Cinemática VFX 3:4, Desacoplamiento Gestual TCG e Hiper-Translucidez (01/09/2026)
+
+- **Hitos**: Ampliación del esquema `character_lore` (subtítulos, autores de citas, colores, versión y maná) en SQLite y Supabase PostgreSQL; renderizado a 3:4 de la cinemática de cremación (`grayskull_burn_vfx.webm`); optimización de cuota GitHub Actions y exención de Smyths Toys en CI/CD; actualización en la nube de la foto de Skeletor Movie (ID 1460); e implementación del desacoplamiento gestual de zoom en cromo TCG con marco inmóvil, encuadre adaptativo (fotos originales contenidas vs IA vertical full-bleed) y casillas de texto ultra-translúcidas glassmorphic.
+- **Estado**: ✅ COMPLETADO Y VERIFICADO
+- **Logros Técnicos**:
+  - **Grimorio de Lore Canónico & Migración Universal (`universal_migrator.py`)**: Incorporación de campos `subtitle`, `flavor_quote_author`, `text_color`, `card_version` y `mana_cost` a la tabla `character_lore` en ambas bases de datos. 507 figuras vinculadas a slugs canónicos y 94 perfiles verificados en la enciclopedia.
+  - **Optimizaciones de Scrapers y FinOps (`daily_scan.py` & `github_quota_service.py`)**: Exclusión condicional del scraper de Smyths Toys en ejecuciones headless en la nube para evitar bloqueos Imperva WAF en IPs de datacenters. Corrección del conteo en la telemetría de minutos de GitHub Actions.
+  - **Cinemática de Cremación 3:4 (`GrayskullRitualOverlay.tsx` & `grayskull_burn_vfx.webm`)**: Re-renderizado del efecto de fuego en cenizas a resolución 600x800 (ratio 3:4 exacto del cromo) con barrido orgánico de arriba a abajo y ajuste `inset-0 w-full h-full object-cover`.
+  - **Foto de Skeletor Movie (ID 1460 / #14038)**: Descarga, conversión a WebP y sustitución en Supabase Storage de la imagen del prototipo Tygra por la figura suelta limpia de Skeletor Masterverse (`skeletor-deluxe-5332.jpg`).
+  - **Desacoplamiento de Gestos y Marco Estático (`TradingCardModal.tsx`)**: Inmovilización del 3D Tilt durante gestos/arrastre (`isDraggingImg`). Incorporación de `touch-action: none` en la capa interactiva para que el marco de la carta permanezca 100% estático mientras se amplía o desplaza la imagen interior.
+  - **Encuadre Adaptativo de Imagen (Catálogo vs IA)**: Las fotos originales de la fortaleza (vehículos, castillos y piezas apaisadas) se presentan en ancho completo contenido (`object-contain`), mientras que las imágenes generadas por IA ocupan la totalidad de la carta en vertical full-bleed (`object-cover`).
+  - **Casillas de Texto Glassmorphism Ultra-Ligeras**: Reducción de opacidad en las cajas de texto (10%-25% alpha), desenfoque de fondo sutil (`backdrop-blur-[2px]`) y sombras tipográficas reforzadas para máxima legibilidad sin ocultar el arte.
+  - **Compilación Validada**: `npm run build` aprobado con 0 errores y suite de pruebas backend (4/4 tests de lore) superada.
+
 
 
 

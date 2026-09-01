@@ -1382,8 +1382,9 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
         resetFraming();
     };
 
-    // Manejo de giro 3D holográfico con el ratón
+    // Manejo de giro 3D holográfico con el ratón (se congela si el usuario manipula la imagen)
     const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (isDraggingImg) return;
         if (!cardRef.current) return;
         const rect = cardRef.current.getBoundingClientRect();
         const x = e.clientX - rect.left;
@@ -1434,12 +1435,14 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
         }
     };
 
-    // Control de Arrastre con Ratón
+    // Control de Arrastre con Ratón (Marco de la carta permanece estático)
     const handleImgMouseDown = (e: React.MouseEvent) => {
         if (e.button !== 0) return;
         e.preventDefault();
         e.stopPropagation();
         setIsDraggingImg(true);
+        setRotateX(0);
+        setRotateY(0);
         dragStartRef.current = {
             x: e.clientX,
             y: e.clientY,
@@ -1471,13 +1474,17 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
     const handleImgWheel = (e: React.WheelEvent) => {
         e.preventDefault();
         e.stopPropagation();
+        setRotateX(0);
+        setRotateY(0);
         const delta = e.deltaY < 0 ? 0.15 : -0.15;
         setImgZoom((prev) => Math.min(6.0, Math.max(0.2, +(prev + delta).toFixed(2))));
     };
 
-    // Control Táctil (Móvil)
+    // Control Táctil (Móvil / Gestos aislados)
     const handleImgTouchStart = (e: React.TouchEvent) => {
         e.stopPropagation();
+        setRotateX(0);
+        setRotateY(0);
         if (e.touches.length === 1) {
             setIsDraggingImg(true);
             touchStartRef.current = {
@@ -1507,6 +1514,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
     const handleImgTouchMove = (e: React.TouchEvent) => {
         if (!isDraggingImg) return;
         e.stopPropagation();
+        if (e.cancelable) e.preventDefault();
         if (e.touches.length === 1) {
             const dx = e.touches[0].clientX - touchStartRef.current.x;
             const dy = e.touches[0].clientY - touchStartRef.current.y;
@@ -2210,6 +2218,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                         onTouchEnd={handleImgTouchEnd}
                                         onContextMenu={(e) => { e.preventDefault(); resetFraming(); }}
                                         onDoubleClick={(e) => { e.preventDefault(); resetFraming(); }}
+                                        style={{ touchAction: 'none' }}
                                         className={`absolute inset-0 z-0 overflow-hidden flex items-center justify-center bg-[#070b10] rounded-[24px] ${
                                             isDraggingImg ? 'cursor-grabbing' : 'cursor-grab'
                                         }`}
@@ -2234,7 +2243,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                             )}
                                         </div>
 
-                                        {/* Ilustración Frontal Interactiva (100% Vertical Full-Bleed) */}
+                                        {/* Ilustración Frontal Interactiva: Foto Original contenida en ancho completo vs IA Full-Bleed Vertical */}
                                         <div
                                             className="absolute flex items-center justify-center pointer-events-none select-none w-full h-full z-10"
                                             style={{
@@ -2251,12 +2260,14 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                                     className="w-full h-full object-cover select-none pointer-events-none"
                                                 />
                                             ) : (
-                                                <MOTUImage
-                                                    productId={item.id}
-                                                    src={activeImage}
-                                                    alt={name}
-                                                    className="w-full h-full object-cover select-none pointer-events-none"
-                                                />
+                                                <div className="w-full h-full flex items-center justify-center p-3">
+                                                    <MOTUImage
+                                                        productId={item.id}
+                                                        src={activeImage}
+                                                        alt={name}
+                                                        className="max-h-full max-w-full w-auto h-auto object-contain select-none pointer-events-none drop-shadow-[0_15px_25px_rgba(0,0,0,0.95)]"
+                                                    />
+                                                </div>
                                             )}
                                         </div>
 
@@ -2289,8 +2300,8 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                                     <button
                                                         type="button"
                                                         onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            resetFraming();
+                                                             e.stopPropagation();
+                                                             resetFraming();
                                                         }}
                                                         title="Restablecer Encuadre Original"
                                                         className="p-1 hover:bg-rose-500/20 text-amber-400 hover:text-rose-300 rounded transition active:scale-90"
@@ -2302,9 +2313,9 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                         )}
                                     </div>
 
-                                    {/* 2. CINTA FLOTANTE DE TÍTULO + ALTER-EGO + COSTE DE MANÁ (CRISTAL ULTRA-TRANSLÚCIDO SECRET LAIR) */}
+                                    {/* 2. CINTA FLOTANTE DE TÍTULO (CRISTAL ULTRA-TRANSLÚCIDO SECRET LAIR) */}
                                     <div className="absolute top-3.5 left-3.5 right-3.5 z-20 pointer-events-none">
-                                        <div className="bg-gradient-to-r from-black/25 via-slate-950/20 to-black/25 backdrop-blur-[2px] border border-white/20 rounded-2xl px-3.5 py-1.5 shadow-[0_2px_12px_rgba(0,0,0,0.3)] flex items-center justify-between">
+                                        <div className="bg-gradient-to-r from-black/15 via-slate-950/15 to-black/15 backdrop-blur-[2px] border border-white/15 rounded-2xl px-3.5 py-1.5 shadow-[0_2px_12px_rgba(0,0,0,0.25)] flex items-center justify-between">
                                             <div className="flex flex-col justify-center min-w-0 pr-2">
                                                 <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-amber-200 font-cinzel truncate drop-shadow-[0_2px_4px_rgba(0,0,0,1)]">
                                                     {displayCardName}
@@ -2322,7 +2333,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
 
                                     {/* 3. CINTA FLOTANTE DE TIPO (CRISTAL ULTRA-TRANSLÚCIDO) */}
                                     <div className="absolute top-[56%] left-3.5 right-3.5 z-20 pointer-events-none">
-                                        <div className="bg-gradient-to-r from-black/20 via-slate-900/15 to-black/20 backdrop-blur-[2px] border border-white/20 rounded-xl px-3 py-1 shadow-[0_2px_10px_rgba(0,0,0,0.25)] flex items-center justify-between">
+                                        <div className="bg-gradient-to-r from-black/15 via-slate-900/12 to-black/15 backdrop-blur-[2px] border border-white/15 rounded-xl px-3 py-1 shadow-[0_2px_10px_rgba(0,0,0,0.2)] flex items-center justify-between">
                                             <span className="text-[10px] font-black uppercase tracking-wider font-cinzel truncate drop-shadow-[0_2px_4px_rgba(0,0,0,1)]" style={{ color: customTextColor }}>
                                                 {typeLineText}
                                             </span>
@@ -2330,10 +2341,10 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                         </div>
                                     </div>
 
-                                    {/* 4. CAJA TRANSLÚCIDA INFERIOR: REGLAS, CITA CÉLEBRE Y STATS (CRISTAL AHUMADO LIGERO SECRET LAIR) */}
+                                    {/* 4. CAJA TRANSLÚCIDA INFERIOR: REGLAS, CITA CÉLEBRE Y STATS (CRISTAL AHUMADO ULTRA-LIGERO SECRET LAIR) */}
                                     <div className="absolute top-[63%] left-3.5 right-3.5 bottom-6 z-20 pointer-events-none">
                                         <div
-                                            className="w-full h-full bg-gradient-to-b from-black/15 via-black/22 to-black/32 backdrop-blur-[2px] border border-white/20 rounded-2xl p-2.5 shadow-[0_4px_20px_rgba(0,0,0,0.35)] flex flex-col justify-between"
+                                            className="w-full h-full bg-gradient-to-b from-black/10 via-black/15 to-black/25 backdrop-blur-[2px] border border-white/15 rounded-2xl p-2.5 shadow-[0_4px_20px_rgba(0,0,0,0.25)] flex flex-col justify-between"
                                             style={{ color: customTextColor }}
                                         >
                                             {/* Reglas / Poder Especial */}
@@ -2343,7 +2354,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
 
                                             {/* Cita de Lore en Cursiva y Autor */}
                                             {loreText && (
-                                                <div className="border-t border-white/20 pt-1 mt-0.5">
+                                                <div className="border-t border-white/15 pt-1 mt-0.5">
                                                     <p className="text-[9px] sm:text-[9.5px] italic opacity-95 font-serif leading-tight drop-shadow-[0_2px_4px_rgba(0,0,0,1)]">
                                                         "{loreText}"
                                                     </p>
@@ -2357,7 +2368,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
 
                                             {/* Placa P/T de Combate Inferior Derecha */}
                                             <div className="flex justify-end pt-1">
-                                                <div className="px-2.5 py-0.5 rounded-lg bg-black/40 backdrop-blur-sm border border-amber-400/80 shadow-[0_2px_8px_rgba(0,0,0,0.5)] text-[10px] font-black font-cinzel tracking-wider text-amber-300 drop-shadow">
+                                                <div className="px-2.5 py-0.5 rounded-lg bg-black/25 backdrop-blur-sm border border-amber-400/70 shadow-[0_2px_8px_rgba(0,0,0,0.4)] text-[10px] font-black font-cinzel tracking-wider text-amber-300 drop-shadow">
                                                     {statsData.fuerza > 0 ? `${Math.round(statsData.fuerza / 15)} / ${Math.round(statsData.defensa / 15)}` : '5 / 4'}
                                                 </div>
                                             </div>
@@ -2395,12 +2406,13 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                             left: '8.0%',
                                             width: '84%',
                                             height: '50%',
-                                            borderRadius: '24px 24px 0 0'
+                                            borderRadius: '24px 24px 0 0',
+                                            touchAction: 'none'
                                         }}
                                         title="Arrastra con el ratón o usa la rueda para ampliar y mover libremente"
                                     >
                                         <div
-                                            className="absolute flex items-center justify-center pointer-events-none select-none"
+                                            className="absolute flex items-center justify-center pointer-events-none select-none w-full h-full"
                                             style={{
                                                 transform: `translate(${imgPan.x}px, ${imgPan.y}px) scale(${imgZoom})`,
                                                 transformOrigin: 'center center',
@@ -2412,16 +2424,15 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                                     src={aiResult.image_base64}
                                                     alt={name}
                                                     draggable={false}
-                                                    className="max-w-none max-h-none select-none pointer-events-none animate-in fade-in duration-300"
-                                                    style={{ width: '100%', minWidth: '280px', height: 'auto', display: 'block' }}
+                                                    className="w-full h-full object-cover select-none pointer-events-none animate-in fade-in duration-300"
                                                 />
                                             ) : (
-                                                <div className="flex items-center justify-center pointer-events-none select-none" style={{ width: '300px', height: '240px' }}>
+                                                <div className="flex items-center justify-center pointer-events-none select-none w-full h-full p-2">
                                                     <MOTUImage
                                                         productId={item.id}
                                                         src={activeImage}
                                                         alt={name}
-                                                        className="max-h-full max-w-full object-contain p-2 z-10 drop-shadow-[0_10px_20px_rgba(0,0,0,0.95)] pointer-events-none select-none"
+                                                        className="max-h-full max-w-full object-contain z-10 drop-shadow-[0_10px_20px_rgba(0,0,0,0.95)] pointer-events-none select-none"
                                                     />
                                                 </div>
                                             )}
@@ -2504,7 +2515,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                     })()}
 
                                     <div
-                                        className="absolute z-20 flex flex-col items-center justify-center text-center pointer-events-none px-3 py-2 overflow-hidden rounded-xl bg-black/35 backdrop-blur-[1px] shadow-inner"
+                                        className="absolute z-20 flex flex-col items-center justify-center text-center pointer-events-none px-3 py-2 overflow-hidden rounded-xl bg-black/20 backdrop-blur-[2px] border border-white/10 shadow-inner"
                                         style={{
                                             top: layout.textBox.top,
                                             left: layout.textBox.left,
