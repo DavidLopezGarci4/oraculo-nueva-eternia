@@ -228,14 +228,15 @@ class GeminiCardService:
 
         # Detección de packs multipersonaje (packs de 2, 3 o 4 figuras, duos, invasiones)
         name_low = product_name.lower()
-        is_multipack = any(w in name_low for w in ["pack", " 2 ", " 3 ", " 4 ", " and ", " & ", "invasion", "warriors", "duo", "trio", "set", "vs", "versus"])
+        is_multipack = any(w in name_low for w in ["pack", " 2 ", " 3 ", " 4 ", " and ", " & ", "invasion", "warriors", "duo", "trio", "set", "vs", "versus", "battle of eternia", "multipack"])
         multi_directive = ""
         if is_multipack:
             multi_directive = (
-                "\nCRITICAL MULTI-CHARACTER GROUP MANDATE: This item is a MULTI-CHARACTER PACK / SET featuring multiple characters or creatures. "
-                "You MUST include ALL distinct characters from this set together in the scene. "
-                "Proportionally arrange each character across the frame in a dynamic interactive battle scene or cooperative heroic/villainous group posing, "
-                "ensuring all figures occupy a balanced presence without anyone being cropped out, matching the composition of high-end Magic: The Gathering Secret Lair full-art cards."
+                "\nCRITICAL VERTICAL MULTI-CHARACTER GROUP MANDATE: This item is a MULTI-CHARACTER SET featuring 2, 3, or 4 distinct figures. "
+                "You MUST include ALL characters together in the scene without cropping anyone out. "
+                "CRITICAL COMPOSITION REQUIREMENT: Format as a vertical portrait (3:4 aspect ratio) with a dynamic staggered or pyramidal hierarchy: "
+                "distribute characters in distinct vertical depth planes in interactive combat or squad poses (e.g. 1-2 charging/jumping in upper plane, 2 grounded in mid/foreground) "
+                "so every single warrior is fully visible across the vertical Secret Lair card frame with natural breathing room on all 4 borders."
             )
 
         prompt_text = (
