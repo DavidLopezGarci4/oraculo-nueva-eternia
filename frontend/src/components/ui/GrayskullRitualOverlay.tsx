@@ -317,89 +317,77 @@ export const GrayskullRitualOverlay: React.FC<GrayskullRitualOverlayProps> = ({ 
                             </h4>
                         </div>
 
-                        {/* ⚡ ESCENA A: RAYOS DE PLASMA RECORRIENDO LOS BORDES (CLAIM) */}
-                        {isClaim && (phase === 'charging' || phase === 'climax') && (
-                            <svg className="absolute inset-0 w-full h-full pointer-events-none z-30 overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none">
-                                <defs>
-                                    <filter id="lightningGlow" x="-50%" y="-50%" width="200%" height="200%">
-                                        <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="blur1" />
-                                        <feGaussianBlur in="SourceGraphic" stdDeviation="3.5" result="blur2" />
-                                        <feMerge>
-                                            <feMergeNode in="blur2" />
-                                            <feMergeNode in="blur1" />
-                                            <feMergeNode in="SourceGraphic" />
-                                        </feMerge>
-                                    </filter>
-                                </defs>
-
-                                {/* Rayo Izquierdo: Desde esquina inferior izquierda (0,100) sube a (0,0) y gira al centro superior (50,0) */}
-                                <motion.path
-                                    d="M 2 98 L 1 75 L 3 50 L 1 25 L 2 2 L 25 1 L 50 0"
-                                    fill="none"
-                                    stroke="#00f3ff"
-                                    strokeWidth="3.5"
-                                    filter="url(#lightningGlow)"
-                                    initial={{ pathLength: 0, opacity: 0 }}
-                                    animate={{ pathLength: 1, opacity: [0.8, 1, 0.9] }}
-                                    transition={{ duration: 0.7, ease: 'easeOut' }}
-                                />
-                                <motion.path
-                                    d="M 2 98 L 1 75 L 3 50 L 1 25 L 2 2 L 25 1 L 50 0"
-                                    fill="none"
-                                    stroke="#ffffff"
-                                    strokeWidth="1.5"
-                                    initial={{ pathLength: 0, opacity: 0 }}
-                                    animate={{ pathLength: 1, opacity: 1 }}
-                                    transition={{ duration: 0.7, ease: 'easeOut' }}
+                        {/* ⚡ ESCENA A: RAYOS DE PLASMA Y MEGARRAYO (VÍDEO VFX WEBM ALFA TRANSPARENTE) */}
+                        {isClaim && (
+                            <>
+                                <video
+                                    autoPlay
+                                    muted
+                                    playsInline
+                                    src="/vfx/grayskull_lightning_vfx.webm"
+                                    className="absolute -inset-x-10 -bottom-2 -top-[50vh] w-[calc(100%+5rem)] h-[calc(100%+50vh+0.5rem)] object-contain pointer-events-none z-40 mix-blend-screen"
                                 />
 
-                                {/* Rayo Derecho: Desde esquina inferior derecha (100,100) sube a (100,0) y gira al centro superior (50,0) */}
-                                <motion.path
-                                    d="M 98 98 L 99 75 L 97 50 L 99 25 L 98 2 L 75 1 L 50 0"
-                                    fill="none"
-                                    stroke="#00f3ff"
-                                    strokeWidth="3.5"
-                                    filter="url(#lightningGlow)"
-                                    initial={{ pathLength: 0, opacity: 0 }}
-                                    animate={{ pathLength: 1, opacity: [0.8, 1, 0.9] }}
-                                    transition={{ duration: 0.7, ease: 'easeOut' }}
-                                />
-                                <motion.path
-                                    d="M 98 98 L 99 75 L 97 50 L 99 25 L 98 2 L 75 1 L 50 0"
-                                    fill="none"
-                                    stroke="#ffffff"
-                                    strokeWidth="1.5"
-                                    initial={{ pathLength: 0, opacity: 0 }}
-                                    animate={{ pathLength: 1, opacity: 1 }}
-                                    transition={{ duration: 0.7, ease: 'easeOut' }}
-                                />
-                            </svg>
+                                {/* Resplandor dinámico SVG de soporte en contorno */}
+                                {(phase === 'charging' || phase === 'climax') && (
+                                    <svg className="absolute inset-0 w-full h-full pointer-events-none z-30 overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none">
+                                        <defs>
+                                            <filter id="lightningGlow" x="-50%" y="-50%" width="200%" height="200%">
+                                                <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="blur1" />
+                                                <feGaussianBlur in="SourceGraphic" stdDeviation="3.5" result="blur2" />
+                                                <feMerge>
+                                                    <feMergeNode in="blur2" />
+                                                    <feMergeNode in="blur1" />
+                                                    <feMergeNode in="SourceGraphic" />
+                                                </feMerge>
+                                            </filter>
+                                        </defs>
+
+                                        <motion.path
+                                            d="M 2 98 L 1 75 L 3 50 L 1 25 L 2 2 L 25 1 L 50 0"
+                                            fill="none"
+                                            stroke="#00f3ff"
+                                            strokeWidth="2.5"
+                                            filter="url(#lightningGlow)"
+                                            initial={{ pathLength: 0, opacity: 0 }}
+                                            animate={{ pathLength: 1, opacity: [0.6, 0.9, 0.7] }}
+                                            transition={{ duration: 0.7, ease: 'easeOut' }}
+                                        />
+                                        <motion.path
+                                            d="M 98 98 L 99 75 L 97 50 L 99 25 L 98 2 L 75 1 L 50 0"
+                                            fill="none"
+                                            stroke="#00f3ff"
+                                            strokeWidth="2.5"
+                                            filter="url(#lightningGlow)"
+                                            initial={{ pathLength: 0, opacity: 0 }}
+                                            animate={{ pathLength: 1, opacity: [0.6, 0.9, 0.7] }}
+                                            transition={{ duration: 0.7, ease: 'easeOut' }}
+                                        />
+                                    </svg>
+                                )}
+                            </>
                         )}
 
-                        {/* 🔥 ESCENA B: COMBUSTIÓN, FUEGO Y CENIZAS DESINTEGRÁNDOSE (BURN) */}
+                        {/* 🔥 ESCENA B: COMBUSTIÓN, FUEGO Y CENIZAS (VÍDEO VFX WEBM ALFA TRANSPARENTE) */}
                         {!isClaim && (
                             <>
-                                {/* Máscara de ceniza y disolución de arriba a abajo */}
+                                <video
+                                    autoPlay
+                                    muted
+                                    playsInline
+                                    src="/vfx/grayskull_burn_vfx.webm"
+                                    className="absolute -inset-x-8 -inset-y-6 w-[calc(100%+4rem)] h-[calc(100%+3rem)] object-contain pointer-events-none z-40 mix-blend-screen"
+                                />
+
+                                {/* Máscara de carbonización y disolución sincronizada de arriba a abajo */}
                                 <div
                                     className="absolute inset-0 pointer-events-none z-20 overflow-hidden rounded-3xl"
                                     style={{
                                         background: `linear-gradient(to bottom, rgba(5, 5, 5, 0.98) 0%, rgba(15, 15, 15, 0.95) ${burnProgress}%, transparent ${Math.min(100, burnProgress + 8)}%)`
                                     }}
-                                >
-                                    {/* Frente de llama viva al rojo vivo en la línea de combustión */}
-                                    {burnProgress > 0 && burnProgress < 98 && (
-                                        <div
-                                            className="absolute w-full h-12 -translate-y-1/2 bg-gradient-to-b from-yellow-300 via-orange-500 to-red-600 shadow-[0_0_35px_#ff4500] opacity-95 flex items-center justify-around"
-                                            style={{ top: `${burnProgress}%` }}
-                                        >
-                                            <Flame className="h-7 w-7 text-yellow-200 fill-yellow-300 animate-bounce" />
-                                            <Flame className="h-8 w-8 text-amber-100 fill-orange-500 animate-pulse" />
-                                            <Flame className="h-7 w-7 text-yellow-200 fill-yellow-300 animate-bounce" />
-                                        </div>
-                                    )}
-                                </div>
+                                />
 
-                                {/* Partículas de ascuas ardientes y cenizas volando hacia arriba */}
+                                {/* Partículas dinámicas de ascuas ardientes y cenizas volando hacia arriba */}
                                 <div className="absolute inset-0 pointer-events-none z-30 overflow-hidden">
                                     {ashParticles.map((p) => {
                                         if (burnProgress < p.yInit) return null;
