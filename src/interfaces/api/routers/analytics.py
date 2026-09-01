@@ -15,9 +15,12 @@ class BudgetOptimizeRequest(BaseModel):
     user_location: str = "ES"
 
 @router.get("/analytics/market-index")
-async def get_market_index(period: str = Query(default="3M", description="1M, 3M, 6M, 1A, ALL")):
+async def get_market_index(
+    period: str = Query(default="3M", description="1M, 3M, 6M, 1A, ALL"),
+    user_id: int = Query(default=2)
+):
     """Calcula y devuelve el Índice Bursátil MOTU (EMI) por Waves con serie histórica."""
-    return MarketAnalyticsService.get_market_index(period=period)
+    return MarketAnalyticsService.get_market_index(period=period, user_id=user_id)
 
 @router.post("/cart/budget-optimize")
 async def optimize_cart_budget(request: BudgetOptimizeRequest):

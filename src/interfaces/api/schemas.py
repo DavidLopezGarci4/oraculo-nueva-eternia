@@ -324,6 +324,13 @@ class HallOfFameItemOutput(BaseModel):
     roi: float
     roi_percentage: float
     roi_retail: float = 0.0
+    category: str | None = None
+    sub_category: str | None = None
+    condition: str | None = None
+    grading: float | None = None
+    notes: str | None = None
+    acquired_at: str | None = None
+    is_vintage: bool | None = False
 
 
 class HallOfFameGroupOutput(BaseModel):

@@ -1448,10 +1448,27 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
     - **Paso 2:** Ejecución de Opción `[12]` (`Incursión Directa Smyths Toys`).
     - **Conexión CDP (Puerto 9222):** Conexión remota a la sesión activa del usuario para navegar por el catálogo MOTU de Smyths Toys Alemania e importar precios/ofertas superando el reto de Imperva/Incapsula sin errores.
   - **Audios Reales Masterizados (`/public/audio/`)**: Extracción y optimización de clips de audio MP3 para los rituales: `grayskull_claim.mp3` (clamor *"By the power of Grayskull!"* de He-Man) y `grayskull_burn.mp3` (ignición y crepitar de fuego).
-  - **Cinemática He-Man Power Sword Lightning (`GrayskullRitualOverlay.tsx`)**: Arcos de plasma cian/blanco SVG (`stroke="#00f3ff"`, `stroke="#ffffff"`) que trepan por los bordes laterales de la tarjeta, colisionan en la cúspide central superior `(50, 0)` desatando una onda de choque estelar y disparan un haz vertical de plasma de 80vh directo al firmamento.
-  - **Cinemática de Incineración en Cenizas (`GrayskullRitualOverlay.tsx`)**: Máscara de combustión incandescente que consume la tarjeta de arriba a abajo, alterando la textura a carbón agrietado y desprendiendo 42 partículas dinámicas de cenizas y ascuas ardientes que flotan con turbulencia ascendente.
-  - **Documentación Integral**: Actualización del manual del Centro de Control (`MANUAL_CENTRO_CONTROL_POWERSHELL.md`), la guía de scraping (`GUIA_SCRAPING_Y_NEXUS_BRIDGE.md`) y el índice general (`docs/README.md`).
-  - **Verificación**: Tests unitarios aprobados (`pytest tests/unit/` 8/8 pasados) y compilación del frontend completada con Vite en 8.99s.
+### ⚡ Fase 97: Estándar Cuantitativo EMI, Salón de la Fama Interactivo y Alertas Telegram CI/CD (01/09/2026)
+
+- **Hitos**: Implementación del **estándar cuantitativo financiero para el Índice Bursátil MOTU (EMI)** con media móvil de decaimiento exponencial continuo (Half-Life = 30 días), filtrado robusto de *outliers* mediante rango intercuartílico (IQR), cálculo de *Fair Market Value* (FMV) vs MSRP oficial e integración de métricas de cartera personal del coleccionista (plusvalía latente, ROI y Alpha); rediseño vectorial responsivo de la gráfica temporal con fechas reales en el eje horizontal y tooltips interactivos; habilitación de interactividad en el **Salón de la Fama (Joyas de la Corona)** con apertura directa de la ficha de la figura en la Fortaleza; y corrección integral de las alertas de Telegram automáticas tras el **Daily Scan en GitHub Actions**.
+- **Estado**: ✅ COMPLETADO Y VERIFICADO
+- **Logros Técnicos**:
+  - **Motor Cuantitativo EMI (`MarketAnalyticsService.py`)**:
+    - **Exponential Decay Weighting (EMA)**: Ponderación continua suave según antigüedad de la oferta ($w_i = e^{-\lambda \Delta t}$, Half-Life = 30 días), dando mayor peso a las transacciones recientes sin escalones artificiales.
+    - **Filtro IQR / Winsorización**: Descarte de ofertas anómalas (cajas vacías a 3€ o especulación desmedida) para consolidar el *Fair Market Value*.
+    - **Revalorización Real por Waves**: Corrección del cálculo `revaluation_pct` comparando el FMV contra el MSRP oficial de salida (desbloqueando métricas reales como +131.2% en *Origins Exclusives* o +64.7% en *WWE Universe* en lugar del 0% plano previo).
+    - **Métricas de Cartera del Coleccionista**: Cálculo automático de Plusvalía Neta (€), Retorno de Inversión (`+109.8% ROI`), detección de Gangas (`44 gangas / 782,50€ ahorrados`) y ratio *Alpha*.
+  - **Gráfico Vectorial Responsivo e Interactivo (`EterniaMarketIndexWidget.tsx`)**:
+    - Trazado SVG dinámico de ancho completo con gradiente cian, líneas guía y filtros de resplandor.
+    - Eje X con marcas de fechas formateadas (`DD/MM`) para rangos `1M`, `3M`, `6M`, `1A`, `ALL`.
+    - Cursor vertical y Tooltip HUD interactivo táctil/hover que detalla fecha, cotización y volumen de ofertas.
+  - **Salón de la Fama Interactivo (`Dashboard.tsx`)**:
+    - Tarjetas interactivas con estados hover y active scale.
+    - Clic sobre cualquier reliquia (*Origins* o *Vintage*, *Top Valor* o *Top ROI*) abre el modal completo de la figura en la Fortaleza (`CollectionItemDetailModal`), permitiendo inspeccionar notas, estado, precio pagado y tarjeta TCG, volviendo limpiamente al Dashboard al cerrar.
+  - **Automatización de Alertas Telegram en GitHub Actions (`scrapers.yml` & Base de Datos)**:
+    - Asignado `telegram_chat_id = '7931331'` para el usuario David en Supabase Cloud y SQLite Local.
+    - Inyectadas las variables `TELEGRAM_BOT_TOKEN` y `TELEGRAM_CHAT_ID` en el paso `Run Scrapers (Market Incursion)` de GitHub Actions para garantizar el envío del reporte con duración, ofertas rastreadas, nuevas inyecciones y estado del Purgatorio.
+  - **Verificación**: Suite de pruebas unitarias aprobada (`pytest` 8/8 pasados) y compilación Vite completada sin advertencias.
 
 
 

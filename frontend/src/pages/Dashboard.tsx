@@ -29,6 +29,7 @@ import guardianRoleImg from '../assets/role-guardian.webp';
 import { MOTUImage } from '../components/ui/MOTUImage';
 import OpportunityHeatMatrix, { type HeatFilterType, getDealDiscount } from '../components/dashboard/OpportunityHeatMatrix';
 import EterniaMarketIndexWidget from '../components/dashboard/EterniaMarketIndexWidget';
+import CollectionItemDetailModal from '../components/CollectionItemDetailModal';
 
 // Recharts & Collection API Imports for Arsenal Analytics & Completitud
 import {
@@ -53,6 +54,27 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
     const [manualSearchTerm, setManualSearchTerm] = React.useState('');
     const [searchResults, setSearchResults] = React.useState<any[]>([]);
     const [showOpportunitiesModal, setShowOpportunitiesModal] = React.useState(false);
+    const [selectedHallOfFameItem, setSelectedHallOfFameItem] = React.useState<Product | null>(null);
+
+    const handleOpenHallOfFameItem = (item: any) => {
+        const prod: Product = {
+            id: item.id,
+            name: item.name,
+            figure_id: item.figure_id || '',
+            image_url: item.image_url,
+            category: item.category || (item.is_vintage ? 'Vintage' : 'Origins'),
+            sub_category: item.sub_category || '',
+            retail_price: item.retail_price || 0,
+            purchase_price: item.purchase_price || item.invested_value || 0,
+            market_value: item.market_value,
+            condition: item.condition || 'MOC',
+            grading: item.grading || 10.0,
+            notes: item.notes || '',
+            acquired_at: item.acquired_at || null,
+            is_vintage: item.is_vintage ?? false,
+        };
+        setSelectedHallOfFameItem(prod);
+    };
 
     // Mutations
     const revertMutation = useMutation({
@@ -391,9 +413,16 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                                 <h5 className="text-[9px] font-black uppercase tracking-widest text-white/60">Mayores Reliquias (Valor)</h5>
                                 <div className="space-y-2">
                                     {hallOfFame?.origins?.top_value?.map((item) => (
-                                        <div key={item.id} className="group flex items-center gap-2.5 rounded-xl bg-white/[0.02] p-2 border border-white/5 hover:border-brand-primary/20 hover:bg-white/[0.04] transition-all duration-300">
+                                        <div 
+                                            key={item.id} 
+                                            onClick={() => handleOpenHallOfFameItem(item)}
+                                            role="button"
+                                            tabIndex={0}
+                                            title="Ver configuración de la reliquia en tu Fortaleza"
+                                            className="group flex items-center gap-2.5 rounded-xl bg-white/[0.02] p-2 border border-white/5 hover:border-brand-primary/40 hover:bg-white/[0.06] active:scale-[0.98] transition-all duration-300 cursor-pointer shadow-sm hover:shadow-[0_0_15px_rgba(0,163,255,0.1)]"
+                                        >
                                             <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-black/40">
-                                                <MOTUImage productId={item.id} src={item.image_url || undefined} alt="" className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                                                <MOTUImage productId={item.id} src={item.image_url || undefined} alt="" className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-300" />
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <h5 className="truncate text-[11px] font-bold text-white/95 group-hover:text-brand-primary transition-colors">{item.name}</h5>
@@ -415,9 +444,16 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                                 <h5 className="text-[9px] font-black uppercase tracking-widest text-white/60">Mayor Retorno (ROI)</h5>
                                 <div className="space-y-2">
                                     {hallOfFame?.origins?.top_roi?.map((item) => (
-                                        <div key={item.id} className="group flex items-center gap-2.5 rounded-xl bg-white/[0.02] p-2 border border-white/5 hover:border-brand-primary/20 hover:bg-white/[0.04] transition-all duration-300">
+                                        <div 
+                                            key={item.id} 
+                                            onClick={() => handleOpenHallOfFameItem(item)}
+                                            role="button"
+                                            tabIndex={0}
+                                            title="Ver configuración de la reliquia en tu Fortaleza"
+                                            className="group flex items-center gap-2.5 rounded-xl bg-white/[0.02] p-2 border border-white/5 hover:border-brand-primary/40 hover:bg-white/[0.06] active:scale-[0.98] transition-all duration-300 cursor-pointer shadow-sm hover:shadow-[0_0_15px_rgba(0,163,255,0.1)]"
+                                        >
                                             <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-black/40">
-                                                <MOTUImage productId={item.id} src={item.image_url || undefined} alt="" className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                                                <MOTUImage productId={item.id} src={item.image_url || undefined} alt="" className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-300" />
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <h5 className="truncate text-[11px] font-bold text-white/95 group-hover:text-brand-primary transition-colors">{item.name}</h5>
@@ -453,9 +489,16 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                                 <h5 className="text-[9px] font-black uppercase tracking-widest text-amber-500/60">Mayores Reliquias (Valor)</h5>
                                 <div className="space-y-2">
                                     {hallOfFame?.vintage?.top_value?.map((item) => (
-                                        <div key={item.id} className="group flex items-center gap-2.5 rounded-xl bg-white/[0.02] p-2 border border-white/5 hover:border-amber-500/20 hover:bg-white/[0.04] transition-all duration-300">
+                                        <div 
+                                            key={item.id} 
+                                            onClick={() => handleOpenHallOfFameItem(item)}
+                                            role="button"
+                                            tabIndex={0}
+                                            title="Ver configuración de la reliquia en tu Fortaleza"
+                                            className="group flex items-center gap-2.5 rounded-xl bg-white/[0.02] p-2 border border-white/5 hover:border-amber-500/40 hover:bg-white/[0.06] active:scale-[0.98] transition-all duration-300 cursor-pointer shadow-sm hover:shadow-[0_0_15px_rgba(245,158,11,0.1)]"
+                                        >
                                             <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-black/40">
-                                                <MOTUImage productId={item.id} src={item.image_url || undefined} alt="" className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                                                <MOTUImage productId={item.id} src={item.image_url || undefined} alt="" className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-300" />
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <h5 className="truncate text-[11px] font-bold text-white/95 group-hover:text-amber-500 transition-colors">{item.name}</h5>
@@ -477,9 +520,16 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                                 <h5 className="text-[9px] font-black uppercase tracking-widest text-amber-500/60">Mayor Retorno (ROI)</h5>
                                 <div className="space-y-2">
                                     {hallOfFame?.vintage?.top_roi?.map((item) => (
-                                        <div key={item.id} className="group flex items-center gap-2.5 rounded-xl bg-white/[0.02] p-2 border border-white/5 hover:border-amber-500/20 hover:bg-white/[0.04] transition-all duration-300">
+                                        <div 
+                                            key={item.id} 
+                                            onClick={() => handleOpenHallOfFameItem(item)}
+                                            role="button"
+                                            tabIndex={0}
+                                            title="Ver configuración de la reliquia en tu Fortaleza"
+                                            className="group flex items-center gap-2.5 rounded-xl bg-white/[0.02] p-2 border border-white/5 hover:border-amber-500/40 hover:bg-white/[0.06] active:scale-[0.98] transition-all duration-300 cursor-pointer shadow-sm hover:shadow-[0_0_15px_rgba(245,158,11,0.1)]"
+                                        >
                                             <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-black/40">
-                                                <MOTUImage productId={item.id} src={item.image_url || undefined} alt="" className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                                                <MOTUImage productId={item.id} src={item.image_url || undefined} alt="" className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-300" />
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <h5 className="truncate text-[11px] font-bold text-white/95 group-hover:text-amber-500 transition-colors">{item.name}</h5>
@@ -894,6 +944,20 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* Modal de Detalle / Tarjeta de la Reliquia desde el Salón de la Fama */}
+            {selectedHallOfFameItem && (
+                <CollectionItemDetailModal
+                    product={selectedHallOfFameItem}
+                    userId={user?.id || 2}
+                    isIncognito={false}
+                    onClose={() => {
+                        setSelectedHallOfFameItem(null);
+                        queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+                        queryClient.invalidateQueries({ queryKey: ['hall-of-fame'] });
+                    }}
+                />
             )}
         </div>
     );

@@ -114,6 +114,7 @@ export interface HallOfFameItem {
     id: number;
     name: string;
     image_url: string | null;
+    figure_id?: string | null;
     market_value: number;
     invested_value: number;
     purchase_price?: number;
@@ -122,6 +123,13 @@ export interface HallOfFameItem {
     roi_percentage: number;
     roi?: number;
     roi_retail?: number;
+    category?: string;
+    sub_category?: string;
+    condition?: string;
+    grading?: number;
+    notes?: string;
+    acquired_at?: string | null;
+    is_vintage?: boolean;
 }
 
 export interface HallOfFameResponse {

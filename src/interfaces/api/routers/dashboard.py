@@ -207,6 +207,13 @@ async def get_dashboard_hall_of_fame(user_id: int = 1):
                 "roi": round(effective_roi, 1),
                 "roi_percentage": round(effective_roi, 1),  # Compatibilidad frontend
                 "roi_retail": round(roi_retail, 1),
+                "category": item.product.category or ("Vintage" if item.product.is_vintage else "Origins"),
+                "sub_category": item.product.sub_category or "",
+                "condition": item.condition or "MOC",
+                "grading": item.grading or 10.0,
+                "notes": item.notes or "",
+                "acquired_at": item.acquired_at.isoformat() if item.acquired_at else None,
+                "is_vintage": bool(item.product.is_vintage),
             }
 
             if item.product.is_vintage:
