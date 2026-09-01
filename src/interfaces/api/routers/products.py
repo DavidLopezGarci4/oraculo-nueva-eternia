@@ -661,3 +661,18 @@ async def get_vintage_miscellaneous():
         return output
 
 
+@router.post("/products/{identifier}/refresh-image")
+async def refresh_product_image(identifier: str):
+    """
+    Descarga la imagen actualizada de una figura desde ActionFigure411 (por ID de figura o producto)
+    y la sincroniza en Supabase Storage y Base de Datos.
+    """
+    from src.application.services.catalog_refresh_service import CatalogRefreshService
+    with SessionCloud() as db:
+        res = CatalogRefreshService.refresh_figure_image(db, identifier)
+        if not res.get("success"):
+            raise HTTPException(status_code=400, detail=res.get("error", "Error actualizando imagen"))
+        return res
+
+
+

@@ -149,60 +149,179 @@ class LoreHarvesterService:
     @classmethod
     def harvest_from_wiki_grayskull(cls, character_name: str) -> Dict[str, Any]:
         """
-        Consulta la API pública y gratuita de MediaWiki de Wiki Grayskull (Fandom).
-        0 tokens, 0 coste.
+        Consulta la Wiki Grayskull (Fandom) de forma determinista usando curl_cffi (Chrome impersonation).
+        Coste 0 tokens, 0 llamadas a LLM. Evasión transparente de bloqueos Cloudflare 403.
         """
+        from bs4 import BeautifulSoup
+
         clean_title = re.sub(r'[\(\[\{].*?[\)\]\}]', '', character_name).strip()
-        encoded_title = urllib.parse.quote(clean_title)
-        api_url = f"https://he-man.fandom.com/api.php?action=query&prop=extracts|info&inprop=url&explaintext=1&exintro=1&titles={encoded_title}&format=json"
+        clean_title = re.sub(r'\b(origins|masterverse|vintage|deluxe|wave \d+|cartoon|crossover|pack)\b', '', clean_title, flags=re.IGNORECASE).strip()
+        if not clean_title:
+            clean_title = character_name.strip()
+
+        encoded_title = urllib.parse.quote(clean_title.replace(' ', '_'))
+        source_url = f"https://he-man.fandom.com/wiki/{encoded_title}"
 
         faction = "Guerreros Heroicos"
         theme_key = "castle_grayskull"
-        lore_text = f"Valiente guerrero de Eternia al servicio de la justicia cósmica."
-        source_url = f"https://he-man.fandom.com/wiki/{encoded_title}"
+        type_line = "Criatura Legendaria — Guerrero Heroico"
+        subtitle = "Campeón de Eternia"
+        special_move = f"Poder de {clean_title.title()}"
+        lore_text = f"Valiente defensor de Eternia y guardián de los secretos de Grayskull."
+        best_quote = None
+        quote_author = clean_title.title()
 
         try:
-            import requests
-            res = requests.get(api_url, timeout=5, headers={"User-Agent": "OraculoNuevaEternia/3.0"})
+            from curl_cffi import requests as cffi_requests
+            # 1. Intentar página directa
+            res = cffi_requests.get(source_url, impersonate="chrome120", timeout=8)
+            
+            # Si no es 200, buscar vía API de búsqueda
+            if res.status_code != 200:
+                search_api = f"https://he-man.fandom.com/api.php?action=query&list=search&srsearch={urllib.parse.quote(clean_title)}&format=json"
+                s_res = cffi_requests.get(search_api, impersonate="chrome120", timeout=8)
+                if s_res.status_code == 200:
+                    search_data = s_res.json().get("query", {}).get("search", [])
+                    if search_data:
+                        best_t = search_data[0]["title"]
+                        source_url = f"https://he-man.fandom.com/wiki/{best_t.replace(' ', '_')}"
+                        res = cffi_requests.get(source_url, impersonate="chrome120", timeout=8)
+
             if res.status_code == 200:
-                data = res.json()
-                pages = data.get("query", {}).get("pages", {})
-                for page_id, page_info in pages.items():
-                    if page_id != "-1":
-                        extract = page_info.get("extract", "").strip()
-                        if extract:
-                            # Limpiar referencias y acortar a máx 180 caracteres limpios
-                            first_sentence = extract.split("\n")[0]
-                            first_sentence = re.sub(r'\s+', ' ', first_sentence).strip()
-                            if len(first_sentence) > 175:
-                                first_sentence = first_sentence[:172] + "..."
-                            lore_text = first_sentence
-                            source_url = page_info.get("fullurl", source_url)
+                soup = BeautifulSoup(res.text, "html.parser")
+                
+                # Extraer párrafos limpios
+                content = soup.select_one(".mw-parser-output") or soup
+                p_elements = [
+                    re.sub(r'\[\d+\]', '', p.get_text().strip())
+                    for p in content.find_all("p")
+                    if len(p.get_text().strip()) > 35
+                ]
 
-                            # Detección determinista de facción por palabras clave
-                            ext_lower = extract.lower()
-                            for k, (fac, thm) in cls.FACTION_MAPPING.items():
-                                if k in ext_lower:
-                                    faction = fac
-                                    theme_key = thm
-                                    break
+                if p_elements:
+                    # Usar el primer párrafo descriptivo
+                    first_p = p_elements[0]
+                    first_p = re.sub(r'\s+', ' ', first_p).strip()
+                    if len(first_p) > 220:
+                        # Cortar en el primer punto si es razonable
+                        sentences = first_p.split(". ")
+                        if len(sentences[0]) > 60:
+                            first_p = sentences[0] + "."
+                        else:
+                            first_p = first_p[:210].rsplit(' ', 1)[0] + "..."
+                    lore_text = first_p
+
+                # Extraer citas icónicas
+                quotes = [
+                    re.sub(r'\[\d+\]', '', q.get_text().strip())
+                    for q in soup.find_all(["blockquote", "i", "em"])
+                    if 15 < len(q.get_text().strip()) < 130 and any(c in q.get_text() for c in ['"', '«', '!', '¡'])
+                ]
+                if quotes:
+                    best_quote = quotes[0].strip('"\n ')
+
+                # Extraer información del Infobox (Afiliación, Armas, Rol)
+                infobox = soup.select_one(".portable-infobox")
+                if infobox:
+                    for row in infobox.select(".pi-item"):
+                        lbl = row.select_one(".pi-data-label")
+                        val = row.select_one(".pi-data-value")
+                        if lbl and val:
+                            label_str = lbl.get_text().lower()
+                            val_str = val.get_text().strip()
+                            if any(w in label_str for w in ["group", "affiliation", "alignment", "allegiance"]):
+                                v_low = val_str.lower()
+                                for k, (fac, thm) in cls.FACTION_MAPPING.items():
+                                    if k in v_low:
+                                        faction = fac
+                                        theme_key = thm
+                                        break
+                            elif any(w in label_str for w in ["title", "alias", "alter"]):
+                                subtitle = val_str.split(",")[0].strip()
+
         except Exception as e:
-            logger.warning(f"No se pudo consultar Wiki Grayskull para {character_name}: {e}")
+            logger.warning(f"Error consultando Wiki Grayskull para {character_name}: {e}")
 
-        # Comprobación de regla fija para He-Man
-        if "he-man" in character_name.lower() and "anti" not in character_name.lower():
-            lore_text = "¡Por el poder de Grayskull, yo tengo el poder! El hombre más poderoso del universo y defensor eterno de los secretos sagrados del castillo."
+        # Reglas canónicas directas para personajes legendarios clave
+        name_lower = character_name.lower()
+        if "he-man" in name_lower and "anti" not in name_lower and "skeletor" not in name_lower:
+            canonical_name = "He-Man"
+            subtitle = "Campeón de Eternia"
             faction = "Guerreros Heroicos"
             theme_key = "castle_grayskull"
+            type_line = "Criatura Legendaria — Guerrero Humano"
+            special_move = "Por el Poder de Grayskull"
+            best_quote = "¡Por el poder de Grayskull... yo tengo el poder!"
+            quote_author = "He-Man"
+            lore_text = "El hombre más poderoso del universo y eterno defensor de los secretos sagrados del Castillo Grayskull."
+        elif "skeletor" in name_lower and "he-skeletor" not in name_lower:
+            canonical_name = "Skeletor"
+            subtitle = "Señor de la Destrucción"
+            faction = "Guerreros del Mal"
+            theme_key = "snake_mountain"
+            type_line = "Criatura Legendaria — Hechicero Esqueleto"
+            special_move = "Rayo del Báculo del Caos"
+            best_quote = "¡Toda Eternia será mía, aunque tenga que destrozar el universo!"
+            quote_author = "Skeletor"
+            lore_text = "Tirano de la Montaña Serpiente y maestro de las artes oscuras empeñado en conquistar el poder de Grayskull."
+        elif "hordak" in name_lower:
+            canonical_name = "Hordak"
+            subtitle = "Líder Supremo de la Horda"
+            faction = "La Horda del Terror"
+            theme_key = "evil_horde"
+            type_line = "Criatura Legendaria — Conquistador Cyborg"
+            special_move = "Cañón de Bio-Materia"
+            best_quote = "¡La Horda no conoce la piedad ni la derrota!"
+            quote_author = "Hordak"
+            lore_text = "Cruel amo supremo de la Zona del Terror y conquistador de múltiples mundos mediante magia y cibernética."
+        elif "king hiss" in name_lower or "king hsss" in name_lower:
+            canonical_name = "King Hiss"
+            subtitle = "Señor de los Hombres Serpiente"
+            faction = "Los Hombres Serpiente"
+            theme_key = "snake_men"
+            type_line = "Criatura Legendaria — Ofidio Ancestral"
+            special_move = "Metamorfosis Viperina"
+            best_quote = "¡La era de los hombres terminará bajo el veneno de la serpiente!"
+            quote_author = "King Hiss"
+            lore_text = "Gobernante ancestral de los Hombres Serpiente que oculta una masa de víboras bajo su piel humana."
+        elif "she-ra" in name_lower:
+            canonical_name = "She-Ra"
+            subtitle = "Princesa del Poder"
+            faction = "La Gran Rebelión"
+            theme_key = "great_rebellion"
+            type_line = "Criatura Legendaria — Guerrera de la Luz"
+            special_move = "Espada de Protección"
+            best_quote = "¡Por el honor de Grayskull... soy She-Ra!"
+            quote_author = "She-Ra"
+            lore_text = "Líder de la Gran Rebelión de Etheria y defensora de la paz empuñando la Espada de Protección."
+        else:
+            canonical_name = clean_title.title()
+
+        mana_map = {
+            "castle_grayskull": "{2}{W}{W}",
+            "snake_mountain": "{2}{B}{B}",
+            "evil_horde": "{3}{B}{R}",
+            "snake_men": "{2}{B}{G}",
+            "great_rebellion": "{2}{G}{W}",
+            "cosmic_enforcers": "{2}{W}{U}"
+        }
+        mana_cost = mana_map.get(theme_key, "{2}{W}{W}")
+        if "artefacto" in (type_line or "").lower() or "vehículo" in (type_line or "").lower():
+            mana_cost = "{3}"
 
         return {
-            "canonical_name": clean_title.title(),
+            "canonical_name": canonical_name,
+            "subtitle": subtitle,
             "faction": faction,
             "theme_key": theme_key,
-            "type_line": f"Criatura Legendaria — {faction}",
-            "special_move": f"Furia de {clean_title.title()}",
-            "quote": None,
+            "type_line": type_line,
+            "special_move": special_move,
+            "quote": best_quote,
+            "flavor_quote_author": quote_author,
             "lore": lore_text,
+            "text_color": "#FFFFFF",
+            "card_version": "showcase",
+            "mana_cost": mana_cost,
             "fuerza": 88,
             "magia": 80,
             "defensa": 88,
@@ -295,7 +414,11 @@ class LoreHarvesterService:
         if not char:
             return None
 
-        for field in ["canonical_name", "faction", "theme_key", "type_line", "special_move", "quote", "lore", "fuerza", "magia", "defensa", "agilidad"]:
+        for field in [
+            "canonical_name", "subtitle", "faction", "theme_key", "type_line",
+            "special_move", "quote", "flavor_quote_author", "lore",
+            "text_color", "card_version", "fuerza", "magia", "defensa", "agilidad"
+        ]:
             if field in data:
                 setattr(char, field, data[field])
 
@@ -304,3 +427,58 @@ class LoreHarvesterService:
         db.commit()
         db.refresh(char)
         return char
+
+    @classmethod
+    def harvest_for_product(cls, db: Session, product_id: int) -> Optional[CharacterLoreModel]:
+        """
+        Cosecha o actualiza el lore para un producto específico desde Wiki Fandom.
+        """
+        product = db.query(ProductModel).filter(ProductModel.id == product_id).first()
+        if not product:
+            return None
+
+        slug = cls.resolve_character_slug(product.name)
+        product.character_slug = slug
+
+        harvested = cls.harvest_from_wiki_grayskull(product.name)
+        existing = db.query(CharacterLoreModel).filter(CharacterLoreModel.slug == slug).first()
+
+        if existing:
+            for field in [
+                "canonical_name", "subtitle", "faction", "theme_key", "type_line",
+                "special_move", "quote", "flavor_quote_author", "lore",
+                "text_color", "card_version", "mana_cost", "fuerza", "magia", "defensa", "agilidad", "source_url"
+            ]:
+                if field in harvested and harvested[field] is not None:
+                    setattr(existing, field, harvested[field])
+            existing.updated_at = datetime.now(timezone.utc)
+            db.commit()
+            db.refresh(existing)
+            return existing
+        else:
+            new_lore = CharacterLoreModel(
+                slug=slug,
+                canonical_name=harvested.get("canonical_name", product.name.title()),
+                subtitle=harvested.get("subtitle", "Campeón de Eternia"),
+                faction=harvested.get("faction", "Guerreros Heroicos"),
+                theme_key=harvested.get("theme_key", "castle_grayskull"),
+                type_line=harvested.get("type_line", "Criatura Legendaria — Guerrero Heroico"),
+                special_move=harvested.get("special_move", f"Poder de {product.name.title()}"),
+                quote=harvested.get("quote"),
+                flavor_quote_author=harvested.get("flavor_quote_author", product.name.title()),
+                lore=harvested.get("lore", "Guerrero descubierto en los confines del multiverso de Eternia."),
+                text_color=harvested.get("text_color", "#FFFFFF"),
+                card_version=harvested.get("card_version", "showcase"),
+                mana_cost=harvested.get("mana_cost", "{2}{W}{W}"),
+                fuerza=harvested.get("fuerza", 85),
+                magia=harvested.get("magia", 75),
+                defensa=harvested.get("defensa", 85),
+                agilidad=harvested.get("agilidad", 85),
+                is_verified=True,
+                source_url=harvested.get("source_url")
+            )
+            db.add(new_lore)
+            db.commit()
+            db.refresh(new_lore)
+            return new_lore
+

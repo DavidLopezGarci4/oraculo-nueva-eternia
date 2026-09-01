@@ -21,3 +21,8 @@ export const getUniqueShops = async (): Promise<string[]> => {
     const response = await axios.get(`${API_BASE}/products/shops`);
     return response.data;
 };
+
+export const refreshProductImage = async (identifier: string | number): Promise<any> => {
+    const response = await axios.post(`${API_BASE}/products/${identifier}/refresh-image`);
+    return response.data;
+};

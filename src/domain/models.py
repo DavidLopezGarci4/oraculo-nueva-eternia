@@ -560,12 +560,19 @@ class CharacterLoreModel(Base):
     
     slug: Mapped[str] = mapped_column(String, primary_key=True, index=True) # ej. "he_man", "anti_eternia_he_man", "clawful"
     canonical_name: Mapped[str] = mapped_column(String, index=True)
+    subtitle: Mapped[Optional[str]] = mapped_column(String, nullable=True) # ej. "Champion of Eternia", "Lord of Destruction"
     faction: Mapped[str] = mapped_column(String, index=True) # "Guerreros Heroicos", "Guerreros del Mal", etc.
     theme_key: Mapped[str] = mapped_column(String, default="castle_grayskull") # "castle_grayskull", "snake_mountain", etc.
-    type_line: Mapped[str] = mapped_column(String) # "Campeón Legendario — Guerrero Heroico"
+    type_line: Mapped[str] = mapped_column(String) # "Criatura Legendaria — Guerrero Humano"
     special_move: Mapped[str] = mapped_column(String) # "Por el Poder de Grayskull"
     quote: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    flavor_quote_author: Mapped[Optional[str]] = mapped_column(String, nullable=True) # ej. "He-Man", "Skeletor"
     lore: Mapped[str] = mapped_column(Text)
+    
+    # Personalización Visual
+    text_color: Mapped[Optional[str]] = mapped_column(String, default="#FFFFFF", nullable=True) # Color de texto en zonas translúcidas
+    card_version: Mapped[Optional[str]] = mapped_column(String, default="showcase", nullable=True) # "showcase" o "classic"
+    mana_cost: Mapped[Optional[str]] = mapped_column(String, default="{2}{W}{W}", nullable=True) # ej. "{2}{W}{W}", "{3}{B}{B}"
     
     # Matriz de Combate RPG
     fuerza: Mapped[int] = mapped_column(Integer, default=85)

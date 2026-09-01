@@ -265,6 +265,10 @@ class TelegramListener:
             await self.cmd_caza(chat_id, args)
         elif command in ["/centinela", "/sentinel"]:
             await self.cmd_centinela(chat_id, args)
+        elif command in ["/update_image", "/actualizar_imagen", "/af411_image"]:
+            await self.cmd_update_image(chat_id, args)
+        elif command in ["/harvest_lore", "/lore"]:
+            await self.cmd_harvest_lore(chat_id, args)
             
         # --- Comandos de Administrador Only ---
         elif is_admin:
@@ -846,6 +850,60 @@ class TelegramListener:
             f"• <code>/caza</code> - Forzar incursión inmediata"
         )
         await telegram_service.send_message(msg, chat_id=chat_id)
+
+    async def cmd_update_image(self, chat_id: int, args: list):
+        """Descarga la imagen actualizada de una figura desde ActionFigure411."""
+        if not args:
+            await telegram_service.send_message("❌ Uso: <code>/update_image [ID_figura_o_producto]</code> (ej. <code>/update_image 14038</code>)", chat_id=chat_id)
+            return
+
+        target_id = args[0].strip()
+        await telegram_service.send_message(f"🔄 Conectando con ActionFigure411 para actualizar la imagen de la figura <b>{target_id}</b>...", chat_id=chat_id)
+        
+        from src.application.services.catalog_refresh_service import CatalogRefreshService
+        with SessionCloud() as db:
+            result = CatalogRefreshService.refresh_figure_image(db, target_id)
+            if result.get("success"):
+                msg = (
+                    f"✅ <b>[Imagen Actualizada con Éxito]</b>\n\n"
+                    f"• <b>Figura:</b> {result.get('name')}\n"
+                    f"• <b>ID Figura:</b> <code>{result.get('figure_id')}</code>\n"
+                    f"• <b>ID Catálogo:</b> #{result.get('product_id')}\n"
+                    f"• <b>Nueva URL:</b> {result.get('new_image_url')}"
+                )
+                await telegram_service.send_message(msg, chat_id=chat_id)
+            else:
+                err = result.get("error", "Error desconocido")
+                await telegram_service.send_message(f"❌ No se pudo actualizar la imagen: {err}", chat_id=chat_id)
+
+    async def cmd_harvest_lore(self, chat_id: int, args: list):
+        """Cosecha lore desde Wiki Fandom para una figura o personaje."""
+        if not args:
+            await telegram_service.send_message("❌ Uso: <code>/lore [nombre_personaje_o_id]</code> (ej. <code>/lore He-Man</code> o <code>/lore 1460</code>)", chat_id=chat_id)
+            return
+
+        query_str = " ".join(args).strip()
+        from src.application.services.lore_harvester_service import LoreHarvesterService
+        with SessionCloud() as db:
+            char = None
+            if query_str.isdigit():
+                char = LoreHarvesterService.harvest_for_product(db, int(query_str))
+            else:
+                char = LoreHarvesterService.get_or_create_character_lore(db, query_str)
+
+            if char:
+                msg = (
+                    f"📜 <b>[Grimorio de Grayskull: Lore Cosechado]</b>\n\n"
+                    f"• <b>Nombre:</b> <b>{char.canonical_name}</b>\n"
+                    f"• <b>Subtítulo:</b> <i>{char.subtitle or 'Campeón de Eternia'}</i>\n"
+                    f"• <b>Facción:</b> {char.faction}\n"
+                    f"• <b>Tipo:</b> {char.type_line}\n"
+                    f"• <b>Cita:</b> <i>\"{char.quote or 'Por el poder de Grayskull!'}\"</i> — {char.flavor_quote_author or char.canonical_name}\n"
+                    f"• <b>Biografía:</b> {char.lore[:200]}..."
+                )
+                await telegram_service.send_message(msg, chat_id=chat_id)
+            else:
+                await telegram_service.send_message(f"❌ No se pudo cosechar lore para '<b>{query_str}</b>'.", chat_id=chat_id)
 
 # Instancia única del listener
 telegram_listener = TelegramListener()

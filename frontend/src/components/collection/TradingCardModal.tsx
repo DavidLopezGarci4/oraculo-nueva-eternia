@@ -17,16 +17,19 @@ import {
     Image as ImageIcon,
     Plus,
     Minus,
-    Move,
     Edit3,
     Save,
-    CheckCircle2
+    CheckCircle2,
+    RefreshCw,
+    Globe,
+    Palette
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { MOTUImage } from '../ui/MOTUImage';
 import { enhanceCardWithAI, type CardAiEnhanceResult } from '../../api/cards';
 import { getSystemTcgLayouts } from '../../api/admin';
-import { fetchCharacterLoreList, updateCharacterLore, type CharacterLore } from '../../api/lore';
+import { fetchCharacterLoreList, updateCharacterLore, harvestProductLore, type CharacterLore } from '../../api/lore';
+import { refreshProductImage } from '../../api/products';
 import { DEFAULT_FACTION_CARD_LAYOUTS, type FactionCardLayout } from '../config/TcgConfigTab';
 
 interface TradingCardModalProps {
@@ -1003,16 +1006,26 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
     const [userFactionOverride, setUserFactionOverride] = useState<string | null>(null);
     const [customLayouts, setCustomLayouts] = useState<Record<string, any>>(DEFAULT_FACTION_CARD_LAYOUTS);
 
+    // Selector de versión de carta (Showcase Full-Art por defecto vs Clásica 3D)
+    const [cardVersion, setCardVersion] = useState<'showcase' | 'classic'>('showcase');
+
     // Estado para edición libre de textos y atributos del cromo
     const [isEditingTexts, setIsEditingTexts] = useState<boolean>(false);
     const [customCardName, setCustomCardName] = useState<string>('');
+    const [customSubtitle, setCustomSubtitle] = useState<string>('');
+    const [customManaCost, setCustomManaCost] = useState<string>('');
     const [customSpecialMove, setCustomSpecialMove] = useState<string>('');
     const [customLore, setCustomLore] = useState<string>('');
+    const [customQuoteAuthor, setCustomQuoteAuthor] = useState<string>('');
     const [customTypeLine, setCustomTypeLine] = useState<string>('');
+    const [customTextColor, setCustomTextColor] = useState<string>('#FFFFFF');
     const [customStats, setCustomStats] = useState<{ fuerza: number; magia: number; defensa: number; agilidad: number } | null>(null);
     const [dbLoreChar, setDbLoreChar] = useState<CharacterLore | null>(null);
     const [savingDbLore, setSavingDbLore] = useState<boolean>(false);
     const [loreSaveSuccess, setLoreSaveSuccess] = useState<boolean>(false);
+    const [isHarvestingLore, setIsHarvestingLore] = useState<boolean>(false);
+    const [isRefreshingImage, setIsRefreshingImage] = useState<boolean>(false);
+    const [activeImageOverride, setActiveImageOverride] = useState<string | null>(null);
 
     // Cargar personalización persistente al abrir la carta
     React.useEffect(() => {
@@ -1023,10 +1036,15 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
         if (savedCustom) {
             try {
                 const parsed = JSON.parse(savedCustom);
+                setCardVersion(parsed.cardVersion || 'showcase');
                 setCustomCardName(parsed.customCardName || '');
+                setCustomSubtitle(parsed.customSubtitle || '');
+                setCustomManaCost(parsed.customManaCost || '');
                 setCustomSpecialMove(parsed.customSpecialMove || '');
                 setCustomLore(parsed.customLore || '');
+                setCustomQuoteAuthor(parsed.customQuoteAuthor || '');
                 setCustomTypeLine(parsed.customTypeLine || '');
+                setCustomTextColor(parsed.customTextColor || '#FFFFFF');
                 setCustomStats(parsed.customStats || null);
                 setUserFactionOverride(parsed.userFactionOverride || null);
                 if (typeof parsed.imgZoom === 'number') setImgZoom(parsed.imgZoom);
@@ -1035,11 +1053,27 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                 console.error('Error cargando personalización guardada de la carta:', e);
             }
         } else {
+            // Predeterminados según categoría de la línea
+            const subCat = (item.sub_category || '').toLowerCase();
+            let defaultType = 'Criatura Legendaria — Guerrero';
+            let defaultMove = 'Poder de Ataque Épico';
+            if (subCat.includes('beast') || subCat.includes('vehicle') || subCat.includes('playset')) {
+                defaultType = 'Artefacto — Equipo / Vehículo';
+                defaultMove = 'Aporta asistencia táctica y +2/+0 a criaturas aliadas.';
+            } else if (subCat.includes('deluxe') || subCat.includes('exclusive')) {
+                defaultType = 'Criatura Legendaria Mítica — Campeón de Grayskull';
+            }
+
+            setCardVersion('showcase');
             setUserFactionOverride(null);
             setCustomCardName('');
-            setCustomSpecialMove('');
+            setCustomSubtitle('');
+            setCustomManaCost('');
+            setCustomSpecialMove(defaultMove);
             setCustomLore('');
-            setCustomTypeLine('');
+            setCustomQuoteAuthor('');
+            setCustomTypeLine(defaultType);
+            setCustomTextColor('#FFFFFF');
             setCustomStats(null);
             setImgZoom(1);
             setImgPan({ x: 0, y: 0 });
@@ -1062,9 +1096,12 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
         const rawName = item.product_name || item.name || '';
         fetchCharacterLoreList({ search: rawName, limit: 5 }).then(res => {
             if (res && res.items && res.items.length > 0) {
-                // Encontrar el match más preciso
                 const best = res.items[0];
                 setDbLoreChar(best);
+                if (best.subtitle && !customSubtitle) setCustomSubtitle(best.subtitle);
+                if (best.flavor_quote_author && !customQuoteAuthor) setCustomQuoteAuthor(best.flavor_quote_author);
+                if (best.text_color && customTextColor === '#FFFFFF') setCustomTextColor(best.text_color);
+                if (best.mana_cost && !customManaCost) setCustomManaCost(best.mana_cost);
             }
         }).catch(() => {});
     }, [isOpen, item?.id]);
@@ -1074,10 +1111,15 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
         if (!isOpen || !item) return;
 
         const hasCustomization = Boolean(
+            cardVersion !== 'showcase' ||
             customCardName ||
+            customSubtitle ||
+            customManaCost ||
             customSpecialMove ||
             customLore ||
+            customQuoteAuthor ||
             customTypeLine ||
+            customTextColor !== '#FFFFFF' ||
             customStats ||
             userFactionOverride ||
             imgZoom !== 1 ||
@@ -1088,10 +1130,15 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
         const savedKey = `tcg_custom_card_${item.id}`;
         if (hasCustomization) {
             const dataToSave = {
+                cardVersion,
                 customCardName,
+                customSubtitle,
+                customManaCost,
                 customSpecialMove,
                 customLore,
+                customQuoteAuthor,
                 customTypeLine,
+                customTextColor,
                 customStats,
                 userFactionOverride,
                 imgZoom,
@@ -1102,10 +1149,15 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
     }, [
         isOpen,
         item?.id,
+        cardVersion,
         customCardName,
+        customSubtitle,
+        customManaCost,
         customSpecialMove,
         customLore,
+        customQuoteAuthor,
         customTypeLine,
+        customTextColor,
         customStats,
         userFactionOverride,
         imgZoom,
@@ -1128,16 +1180,155 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
 
     // Textos computados con prioridad: Edición de usuario > IA > BD Lore > Perfil local
     const displayCardName = customCardName.trim() ? customCardName : (effectiveDbLore?.canonical_name || name);
+    const displaySubtitle = customSubtitle.trim() ? customSubtitle : (effectiveDbLore?.subtitle || (item.sub_category ? `${item.sub_category} Edition` : 'Champion of Eternia'));
     const typeLineText = customTypeLine.trim() ? customTypeLine : (userFactionOverride ? theme.typeLine : (aiResult?.type_line || effectiveDbLore?.type_line || localProfile.typeLine));
     const specialMoveText = customSpecialMove.trim() ? customSpecialMove : (aiResult?.special_move || effectiveDbLore?.special_move || localProfile.specialMove);
     const rawLore = customLore.trim() ? customLore : (aiResult?.lore || effectiveDbLore?.lore || localProfile.lore);
     const loreText = rawLore.replace(/^["';\s]+/, '').replace(/["';\s]+$/, '');
+    const displayQuoteAuthor = customQuoteAuthor.trim() ? customQuoteAuthor : (effectiveDbLore?.flavor_quote_author || effectiveDbLore?.canonical_name || displayCardName);
+    const activeImage = activeImageOverride || aiResult?.image_base64 || item.image_url;
+
+    // Coste de maná computado según facción y tipo
+    const defaultManaCostByTheme: Record<string, string> = {
+        castle_grayskull: '{2}{W}{W}',
+        snake_mountain: '{2}{B}{B}',
+        evil_horde: '{3}{B}{R}',
+        snake_men: '{2}{B}{G}',
+        great_rebellion: '{2}{G}{W}',
+        cosmic_enforcers: '{2}{W}{U}'
+    };
+    const computedDefaultCost = (typeLineText.toLowerCase().includes('artefacto') || typeLineText.toLowerCase().includes('vehículo'))
+        ? '{3}'
+        : (defaultManaCostByTheme[themeKey] || '{2}{W}{W}');
+    const displayManaCost = customManaCost.trim() ? customManaCost : (effectiveDbLore?.mana_cost || computedDefaultCost);
+
     const statsData = customStats || aiResult?.stats || (effectiveDbLore ? {
         fuerza: effectiveDbLore.fuerza,
         magia: effectiveDbLore.magia,
         defensa: effectiveDbLore.defensa,
         agilidad: effectiveDbLore.agilidad
     } : localProfile.stats);
+
+    // Renderizador de Orbes de Maná de alta fidelidad estilo Secret Lair
+    const renderManaCostPips = (costString: string) => {
+        if (!costString) return null;
+        const matches = costString.match(/\{[^}]+\}|[0-9]+|[WUBRGCwubrgc]/g);
+        if (!matches) return null;
+
+        return (
+            <div className="flex items-center gap-1 shrink-0">
+                {matches.map((pip, idx) => {
+                    const clean = pip.replace(/[{}]/g, '').toUpperCase();
+                    if (clean === 'W') {
+                        return (
+                            <div
+                                key={idx}
+                                className="w-4 h-4 rounded-full bg-gradient-to-br from-amber-100 via-amber-200 to-amber-400 border border-amber-300 shadow-[0_0_6px_rgba(251,191,36,0.6)] flex items-center justify-center text-[9px] font-black text-amber-950 leading-none select-none"
+                                title="Maná Blanco / Grayskull (W)"
+                            >
+                                ☀️
+                            </div>
+                        );
+                    }
+                    if (clean === 'U') {
+                        return (
+                            <div
+                                key={idx}
+                                className="w-4 h-4 rounded-full bg-gradient-to-br from-sky-200 via-sky-400 to-blue-600 border border-sky-300 shadow-[0_0_6px_rgba(56,189,248,0.6)] flex items-center justify-center text-[9px] font-black text-white leading-none select-none"
+                                title="Maná Azul / Místico (U)"
+                            >
+                                💧
+                            </div>
+                        );
+                    }
+                    if (clean === 'B') {
+                        return (
+                            <div
+                                key={idx}
+                                className="w-4 h-4 rounded-full bg-gradient-to-br from-stone-900 via-purple-950 to-black border border-purple-400 shadow-[0_0_6px_rgba(168,85,247,0.6)] flex items-center justify-center text-[9px] font-black text-purple-300 leading-none select-none"
+                                title="Maná Negro / Mal (B)"
+                            >
+                                💀
+                            </div>
+                        );
+                    }
+                    if (clean === 'R') {
+                        return (
+                            <div
+                                key={idx}
+                                className="w-4 h-4 rounded-full bg-gradient-to-br from-orange-400 via-red-500 to-red-700 border border-red-300 shadow-[0_0_6px_rgba(239,68,68,0.6)] flex items-center justify-center text-[9px] font-black text-white leading-none select-none"
+                                title="Maná Rojo / Horda (R)"
+                            >
+                                🔥
+                            </div>
+                        );
+                    }
+                    if (clean === 'G') {
+                        return (
+                            <div
+                                key={idx}
+                                className="w-4 h-4 rounded-full bg-gradient-to-br from-emerald-300 via-green-500 to-emerald-800 border border-emerald-300 shadow-[0_0_6px_rgba(34,197,94,0.6)] flex items-center justify-center text-[9px] font-black text-white leading-none select-none"
+                                title="Maná Verde / Serpiente (G)"
+                            >
+                                🌲
+                            </div>
+                        );
+                    }
+                    return (
+                        <div
+                            key={idx}
+                            className="w-4 h-4 rounded-full bg-gradient-to-b from-stone-700 to-stone-900 border border-stone-400/80 shadow-[0_0_4px_rgba(0,0,0,0.8)] flex items-center justify-center text-[10px] font-black font-sans text-stone-100 leading-none select-none"
+                            title={`Maná Genérico: ${clean}`}
+                        >
+                            {clean}
+                        </div>
+                    );
+                })}
+            </div>
+        );
+    };
+
+    const handleHarvestLoreFromWiki = async () => {
+        if (!item) return;
+        setIsHarvestingLore(true);
+        try {
+            const harvested = await harvestProductLore(item.id);
+            if (harvested) {
+                setDbLoreChar(harvested);
+                setCustomCardName(harvested.canonical_name);
+                if (harvested.subtitle) setCustomSubtitle(harvested.subtitle);
+                if (harvested.type_line) setCustomTypeLine(harvested.type_line);
+                if (harvested.special_move) setCustomSpecialMove(harvested.special_move);
+                if (harvested.lore) setCustomLore(harvested.lore);
+                if (harvested.flavor_quote_author) setCustomQuoteAuthor(harvested.flavor_quote_author);
+                if (harvested.text_color) setCustomTextColor(harvested.text_color);
+                if (harvested.mana_cost) setCustomManaCost(harvested.mana_cost);
+                if (harvested.theme_key) setUserFactionOverride(harvested.theme_key);
+                setLoreSaveSuccess(true);
+                setTimeout(() => setLoreSaveSuccess(false), 3000);
+            }
+        } catch (e) {
+            console.error('Error cosechando lore de Wiki Fandom:', e);
+        } finally {
+            setIsHarvestingLore(false);
+        }
+    };
+
+    const handleRefreshImageFromAF411 = async () => {
+        if (!item) return;
+        setIsRefreshingImage(true);
+        try {
+            const res = await refreshProductImage(item.id);
+            if (res && res.new_image_url) {
+                setActiveImageOverride(res.new_image_url);
+                resetFraming();
+            }
+        } catch (e) {
+            console.error('Error refrescando imagen desde AF411:', e);
+        } finally {
+            setIsRefreshingImage(false);
+        }
+    };
 
     const handleSaveToLoreCanon = async () => {
         if (!dbLoreChar && !effectiveDbLore) return;
@@ -1147,9 +1338,14 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
         try {
             const updated = await updateCharacterLore(slug, {
                 canonical_name: customCardName.trim() || undefined,
+                subtitle: customSubtitle.trim() || undefined,
                 special_move: customSpecialMove.trim() || undefined,
                 lore: customLore.trim() || undefined,
+                flavor_quote_author: customQuoteAuthor.trim() || undefined,
                 type_line: customTypeLine.trim() || undefined,
+                text_color: customTextColor,
+                card_version: cardVersion,
+                mana_cost: customManaCost.trim() || undefined,
                 fuerza: customStats?.fuerza,
                 magia: customStats?.magia,
                 defensa: customStats?.defensa,
@@ -1171,12 +1367,18 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
         if (item) {
             localStorage.removeItem(`tcg_custom_card_${item.id}`);
         }
+        setCardVersion('showcase');
         setCustomCardName('');
+        setCustomSubtitle('');
+        setCustomManaCost('');
         setCustomSpecialMove('');
         setCustomLore('');
+        setCustomQuoteAuthor('');
         setCustomTypeLine('');
+        setCustomTextColor('#FFFFFF');
         setCustomStats(null);
         setUserFactionOverride(null);
+        setActiveImageOverride(null);
         resetFraming();
     };
 
@@ -1501,19 +1703,49 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                     {/* Botón cerrar */}
                     <button
                         onClick={onClose}
-                        className="absolute top-3 right-3 p-2 rounded-full bg-slate-800/90 hover:bg-red-500 text-slate-300 hover:text-white transition z-30 shadow-lg"
+                        className="absolute top-3 right-3 p-2 rounded-full bg-slate-800/90 hover:bg-red-500 text-slate-300 hover:text-white transition z-30 shadow-lg cursor-pointer"
                         title="Cerrar Cromo"
                     >
                         <X className="h-4 w-4" />
                     </button>
 
-                    {/* Título de la Ficha */}
-                    <div className="flex items-center gap-2 mb-2.5 text-center">
-                        <Sparkles className="h-4 w-4 text-amber-400" />
-                        <h2 className="text-xs sm:text-sm font-black uppercase tracking-widest text-amber-300 font-cinzel">
-                            Cromo Coleccionista Digital
-                        </h2>
-                        <Sparkles className="h-4 w-4 text-amber-400" />
+                    {/* Título y Selector de Formato de Carta */}
+                    <div className="w-full flex flex-col items-center gap-2 mb-2.5">
+                        <div className="flex items-center gap-2 text-center">
+                            <Sparkles className="h-4 w-4 text-amber-400" />
+                            <h2 className="text-xs sm:text-sm font-black uppercase tracking-widest text-amber-300 font-cinzel">
+                                Cromo Coleccionista Digital
+                            </h2>
+                            <Sparkles className="h-4 w-4 text-amber-400" />
+                        </div>
+
+                        {/* SELECTOR DE EDICIÓN: SHOWCASE FULL-ART VS CLÁSICO 3D */}
+                        <div className="w-full flex items-center justify-center p-1 rounded-xl bg-slate-950/90 border border-amber-500/30 gap-1.5 shadow-inner">
+                            <button
+                                type="button"
+                                onClick={() => setCardVersion('showcase')}
+                                className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-[10.5px] font-black uppercase tracking-wider transition-all font-cinzel cursor-pointer ${
+                                    cardVersion === 'showcase'
+                                        ? 'bg-gradient-to-r from-amber-500 to-yellow-600 text-slate-950 shadow-md shadow-amber-500/30 font-black'
+                                        : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                                }`}
+                            >
+                                <Sparkles className="h-3.5 w-3.5" />
+                                <span>🌟 Full-Art Showcase</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setCardVersion('classic')}
+                                className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-[10.5px] font-black uppercase tracking-wider transition-all font-cinzel cursor-pointer ${
+                                    cardVersion === 'classic'
+                                        ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-md shadow-cyan-500/30 font-black'
+                                        : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                                }`}
+                            >
+                                <Shield className="h-3.5 w-3.5" />
+                                <span>🛡️ Marco Clásico 3D</span>
+                            </button>
+                        </div>
                     </div>
 
                     {/* BARRA DE TRANSFORMACIÓN CON GEMINI */}
@@ -1650,8 +1882,10 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                             onClick={() => {
                                 if (!isEditingTexts) {
                                     setCustomCardName(displayCardName);
+                                    setCustomSubtitle(displaySubtitle);
                                     setCustomSpecialMove(specialMoveText);
                                     setCustomLore(loreText);
+                                    setCustomQuoteAuthor(displayQuoteAuthor);
                                     setCustomTypeLine(typeLineText);
                                     setCustomStats({ ...statsData });
                                 }
@@ -1678,7 +1912,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                 className="w-full mb-3 p-3 bg-slate-900/95 border border-amber-500/40 rounded-xl shadow-2xl flex flex-col gap-2.5 overflow-hidden"
                             >
                                 <div className="flex items-center justify-between border-b border-white/10 pb-1.5">
-                                    <span className="text-[11px] font-black uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
+                                    <span className="text-[11px] font-black uppercase tracking-wider text-amber-300 flex items-center gap-1.5 font-cinzel">
                                         <Edit3 className="h-3.5 w-3.5 text-amber-400" />
                                         Personalización de la Carta Digital
                                     </span>
@@ -1708,7 +1942,35 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                         />
                                     </div>
 
-                                    {/* 2. Poder / Habilidad Especial */}
+                                    {/* 2. Subtítulo / Alter-Ego en Cursiva */}
+                                    <div>
+                                        <label className="block text-[9px] font-bold uppercase text-amber-200/80 mb-0.5">
+                                            Subtítulo / Alter-Ego (Cursiva):
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={customSubtitle}
+                                            onChange={(e) => setCustomSubtitle(e.target.value)}
+                                            placeholder="Champion of Eternia / Lord of Destruction"
+                                            className="w-full px-2 py-1 rounded bg-black/60 border border-slate-700 text-amber-300 text-xs italic font-serif focus:border-amber-400 focus:outline-none"
+                                        />
+                                    </div>
+
+                                    {/* 3. Categoría / Línea de Tipo Libre */}
+                                    <div>
+                                        <label className="block text-[9px] font-bold uppercase text-amber-200/80 mb-0.5">
+                                            Categoría / Línea de Tipo:
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={customTypeLine}
+                                            onChange={(e) => setCustomTypeLine(e.target.value)}
+                                            placeholder={typeLineText}
+                                            className="w-full px-2 py-1 rounded bg-black/60 border border-slate-700 text-yellow-200 text-xs font-semibold focus:border-amber-400 focus:outline-none"
+                                        />
+                                    </div>
+
+                                    {/* 4. Poder / Habilidad Especial */}
                                     <div>
                                         <label className="block text-[9px] font-bold uppercase text-amber-200/80 mb-0.5">
                                             Poder / Habilidad:
@@ -1722,28 +1984,14 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                         />
                                     </div>
 
-                                    {/* 3. Categoría / Línea de Tipo Libre */}
-                                    <div className="sm:col-span-2">
-                                        <label className="block text-[9px] font-bold uppercase text-amber-200/80 mb-0.5">
-                                            Categoría / Línea de Tipo (Libre):
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={customTypeLine}
-                                            onChange={(e) => setCustomTypeLine(e.target.value)}
-                                            placeholder={typeLineText}
-                                            className="w-full px-2 py-1 rounded bg-black/60 border border-slate-700 text-yellow-200 text-xs font-semibold focus:border-amber-400 focus:outline-none"
-                                        />
-                                    </div>
-
-                                    {/* 4. Descripción / Lore */}
+                                    {/* 5. Cita Célebre / Lore */}
                                     <div className="sm:col-span-2">
                                         <div className="flex justify-between items-center mb-0.5">
                                             <label className="text-[9px] font-bold uppercase text-amber-200/80">
-                                                Descripción / Lore Canónico:
+                                                Cita Célebre / Lore Canónico:
                                             </label>
-                                            <span className={`text-[9px] font-mono ${customLore.length > 180 ? 'text-amber-400 font-bold' : 'text-stone-400'}`}>
-                                                {customLore.length}/180 car.
+                                            <span className={`text-[9px] font-mono ${customLore.length > 200 ? 'text-amber-400 font-bold' : 'text-stone-400'}`}>
+                                                {customLore.length}/200 car.
                                             </span>
                                         </div>
                                         <textarea
@@ -1751,11 +1999,98 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                             onChange={(e) => setCustomLore(e.target.value)}
                                             placeholder={loreText}
                                             rows={2}
-                                            className="w-full px-2 py-1 rounded bg-black/60 border border-slate-700 text-stone-200 text-xs leading-snug focus:border-amber-400 focus:outline-none resize-none"
+                                            className="w-full px-2 py-1 rounded bg-black/60 border border-slate-700 text-stone-200 text-xs leading-snug focus:border-amber-400 focus:outline-none resize-none italic font-serif"
                                         />
                                     </div>
 
-                                    {/* 5. Estadísticas de Combate RPG */}
+                                    {/* 6. Autor de la Cita */}
+                                    <div className="sm:col-span-2">
+                                        <label className="block text-[9px] font-bold uppercase text-amber-200/80 mb-0.5">
+                                            Autor de la Cita:
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={customQuoteAuthor}
+                                            onChange={(e) => setCustomQuoteAuthor(e.target.value)}
+                                            placeholder={displayCardName}
+                                            className="w-full px-2 py-1 rounded bg-black/60 border border-slate-700 text-stone-300 text-xs font-semibold focus:border-amber-400 focus:outline-none"
+                                        />
+                                    </div>
+
+                                    {/* 7. Coste de Maná */}
+                                    <div className="sm:col-span-2 flex flex-col gap-1.5 p-2 rounded-lg bg-black/50 border border-slate-700">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-[9px] font-bold uppercase text-amber-200/90 flex items-center gap-1">
+                                                ✨ Coste de Maná:
+                                            </span>
+                                            <div className="flex items-center gap-1">
+                                                <span className="text-[9px] text-stone-400 font-mono">Actual:</span>
+                                                {renderManaCostPips(displayManaCost)}
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-1.5">
+                                            <input
+                                                type="text"
+                                                value={customManaCost}
+                                                onChange={(e) => setCustomManaCost(e.target.value)}
+                                                placeholder={computedDefaultCost}
+                                                className="flex-1 px-2 py-1 rounded bg-black/60 border border-slate-700 text-white font-mono text-xs focus:border-amber-400 focus:outline-none"
+                                            />
+                                            <div className="flex items-center gap-1 shrink-0">
+                                                {['{1}', '{2}', '{3}', '{W}', '{U}', '{B}', '{R}', '{G}'].map((sym) => (
+                                                    <button
+                                                        key={sym}
+                                                        type="button"
+                                                        onClick={() => setCustomManaCost((prev) => (prev ? `${prev}${sym}` : sym))}
+                                                        className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-amber-500 hover:text-slate-950 border border-slate-700 text-[9px] font-bold font-mono transition cursor-pointer"
+                                                        title={`Añadir ${sym}`}
+                                                    >
+                                                        {sym.replace(/[{}]/g, '')}
+                                                    </button>
+                                                ))}
+                                                {customManaCost && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setCustomManaCost('')}
+                                                        className="px-1.5 py-0.5 rounded bg-red-500/20 hover:bg-red-500/30 text-red-300 text-[9px] font-bold border border-red-500/40 transition cursor-pointer"
+                                                        title="Limpiar coste"
+                                                    >
+                                                        ✕
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* 8. Paleta de Colores para Zonas Translúcidas */}
+                                    <div className="sm:col-span-2 flex items-center justify-between p-2 rounded-lg bg-black/50 border border-slate-700">
+                                        <span className="text-[9px] font-bold uppercase text-amber-200/90 flex items-center gap-1">
+                                            <Palette className="h-3 w-3 text-amber-400" /> Color de Texto Translúcido:
+                                        </span>
+                                        <div className="flex items-center gap-2">
+                                            {[
+                                                { label: 'Blanco Puro', color: '#FFFFFF' },
+                                                { label: 'Oro Grayskull', color: '#FDE047' },
+                                                { label: 'Cian Plasma', color: '#22D3EE' },
+                                                { label: 'Violeta Skeletor', color: '#C084FC' },
+                                                { label: 'Carmesí Hordak', color: '#F87171' },
+                                                { label: 'Verde Serpiente', color: '#4ADE80' }
+                                            ].map(p => (
+                                                <button
+                                                    key={p.color}
+                                                    type="button"
+                                                    onClick={() => setCustomTextColor(p.color)}
+                                                    className={`w-5 h-5 rounded-full border-2 transition-transform cursor-pointer ${
+                                                        customTextColor === p.color ? 'scale-125 border-white shadow-[0_0_8px_white]' : 'border-transparent opacity-75 hover:opacity-100'
+                                                    }`}
+                                                    style={{ backgroundColor: p.color }}
+                                                    title={p.label}
+                                                />
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* 8. Estadísticas de Combate RPG */}
                                     <div className="sm:col-span-2 flex items-center justify-between gap-2 p-1.5 bg-black/40 rounded-lg border border-slate-800">
                                         <span className="text-[9px] font-black uppercase text-amber-300 shrink-0">
                                             ⚔️ Poderes / Stats:
@@ -1785,6 +2120,29 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                             </div>
                                         ))}
                                     </div>
+
+                                    {/* 9. Botones de Acción Instantánea: Wiki Fandom & AF411 */}
+                                    <div className="sm:col-span-2 flex items-center gap-2 pt-1">
+                                        <button
+                                            type="button"
+                                            onClick={handleHarvestLoreFromWiki}
+                                            disabled={isHarvestingLore}
+                                            className="flex-1 py-1.5 px-2 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/50 text-emerald-300 text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition active:scale-95 disabled:opacity-50 cursor-pointer"
+                                        >
+                                            {isHarvestingLore ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Globe className="h-3.5 w-3.5" />}
+                                            <span>🌐 Cosechar Lore Fandom (Coste 0)</span>
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={handleRefreshImageFromAF411}
+                                            disabled={isRefreshingImage}
+                                            className="flex-1 py-1.5 px-2 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/50 text-cyan-300 text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition active:scale-95 disabled:opacity-50 cursor-pointer"
+                                        >
+                                            {isRefreshingImage ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                                            <span>📸 Refrescar Imagen AF411</span>
+                                        </button>
+                                    </div>
                                 </div>
 
                                 {/* Botón Guardar en el Canon */}
@@ -1797,7 +2155,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                             type="button"
                                             onClick={handleSaveToLoreCanon}
                                             disabled={savingDbLore}
-                                            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-[9.5px] font-black uppercase tracking-wider transition ${
+                                            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-[9.5px] font-black uppercase tracking-wider transition cursor-pointer ${
                                                 loreSaveSuccess
                                                     ? 'bg-emerald-500 text-slate-950'
                                                     : 'bg-amber-500/20 border border-amber-500/50 text-amber-300 hover:bg-amber-500 hover:text-slate-950'
@@ -1818,7 +2176,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                         )}
                     </AnimatePresence>
 
-                    {/* CONTENEDOR 3D DEL CROMO MAGIC SHOWCASE (3 CAPAS REALES) */}
+                    {/* CONTENEDOR 3D DEL CROMO (SHOWCASE FULL-ART O MARCO CLÁSICO) */}
                     <div
                         className="w-full flex justify-center cursor-grab active:cursor-grabbing"
                         style={{ perspective: 1100 }}
@@ -1833,271 +2191,354 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                 transition: 'transform 0.1s ease-out',
                                 aspectRatio: '896 / 1200'
                             }}
-                            className="relative w-full max-w-[340px] sm:max-w-[360px] rounded-[24px] select-none overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.95)] bg-slate-950 font-cinzel"
+                            className="relative w-full max-w-[340px] sm:max-w-[360px] rounded-[24px] select-none overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.95)] bg-slate-950 font-cinzel border-2 border-stone-800"
                         >
-                            {/* CAPA 1 (Fondo): Ventana Interactiva de Ilustración / Foto */}
-                            <div
-                                onMouseDown={handleImgMouseDown}
-                                onMouseMove={handleImgMouseMove}
-                                onMouseUp={handleImgMouseUp}
-                                onMouseLeave={handleImgMouseUp}
-                                onWheel={handleImgWheel}
-                                onTouchStart={handleImgTouchStart}
-                                onTouchMove={handleImgTouchMove}
-                                onTouchEnd={handleImgTouchEnd}
-                                onContextMenu={(e) => {
-                                    e.preventDefault();
-                                    resetFraming();
-                                }}
-                                onDoubleClick={(e) => {
-                                    e.preventDefault();
-                                    resetFraming();
-                                }}
-                                className={`absolute z-0 overflow-hidden flex items-center justify-center bg-[#070b10] ${
-                                    isDraggingImg ? 'cursor-grabbing' : 'cursor-grab'
-                                }`}
-                                style={{
-                                    top: '5.5%',
-                                    left: '8.0%',
-                                    width: '84%',
-                                    height: '50%',
-                                    borderRadius: '24px 24px 0 0'
-                                }}
-                                title="Arrastra con el ratón o usa la rueda para ampliar y mover libremente"
-                            >
-                                {/* Capa de la Imagen con Zoom y Desplazamiento */}
-                                <div
-                                    className="absolute flex items-center justify-center pointer-events-none select-none"
-                                    style={{
-                                        transform: `translate(${imgPan.x}px, ${imgPan.y}px) scale(${imgZoom})`,
-                                        transformOrigin: 'center center',
-                                        transition: isDraggingImg ? 'none' : 'transform 0.1s ease-out'
-                                    }}
-                                >
-                                    {aiResult?.image_base64 ? (
-                                        <img
-                                            src={aiResult.image_base64}
-                                            alt={name}
-                                            draggable={false}
-                                            className="max-w-none max-h-none select-none pointer-events-none animate-in fade-in duration-300"
-                                            style={{
-                                                width: '100%',
-                                                minWidth: '280px',
-                                                height: 'auto',
-                                                display: 'block'
-                                            }}
-                                        />
-                                    ) : (
-                                        <div className="flex items-center justify-center pointer-events-none select-none" style={{ width: '300px', height: '240px' }}>
-                                            <MOTUImage
-                                                productId={item.id}
-                                                src={item.image_url}
-                                                alt={name}
-                                                className="max-h-full max-w-full object-contain p-2 z-10 drop-shadow-[0_10px_20px_rgba(0,0,0,0.95)] pointer-events-none select-none"
-                                            />
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Mini Barra de Zoom Flotante (OCULTA EN EXPORTACIÓN) */}
-                                {!exporting && (
-                                    <div className="export-exclude absolute top-2 right-2 z-30 flex items-center gap-1 bg-black/85 backdrop-blur-md px-1.5 py-1 rounded-lg border border-slate-700/80 shadow-md opacity-80 group-hover:opacity-100 transition-opacity">
-                                        <button
-                                            type="button"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setImgZoom((prev) => Math.min(6.0, +(prev + 0.25).toFixed(2)));
-                                            }}
-                                            title="Ampliar Imagen (+)"
-                                            className="p-1 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition active:scale-90"
-                                        >
-                                            <Plus className="h-3 w-3" />
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setImgZoom((prev) => Math.max(0.2, +(prev - 0.25).toFixed(2)));
-                                            }}
-                                            title="Reducir Imagen (-)"
-                                            className="p-1 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition active:scale-90"
-                                        >
-                                            <Minus className="h-3 w-3" />
-                                        </button>
-                                        {(imgZoom !== 1 || imgPan.x !== 0 || imgPan.y !== 0) && (
-                                            <button
-                                                type="button"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    resetFraming();
-                                                }}
-                                                title="Restablecer Encuadre Original"
-                                                className="p-1 hover:bg-rose-500/20 text-amber-400 hover:text-rose-300 rounded transition active:scale-90"
-                                            >
-                                                <RotateCcw className="h-3 w-3" />
-                                            </button>
-                                        )}
-                                    </div>
-                                )}
-
-                                {!exporting && (
-                                    <div className="export-exclude absolute bottom-2 left-2 z-20 pointer-events-none opacity-60 group-hover:opacity-100 transition-opacity">
-                                        <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/75 border border-slate-800 text-[8px] font-mono text-slate-300">
-                                            <Move className="h-2.5 w-2.5 text-amber-400" />
-                                            {imgZoom !== 1 ? `${Math.round(imgZoom * 100)}%` : 'Arrastra / Rueda Zoom'}
-                                        </span>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* CAPA 2 (Marco HD Esculpido): Plantilla WebP Transparente */}
-                            <img
-                                src={theme.frameAsset}
-                                alt="Marco TCG"
-                                draggable={false}
-                                className="absolute inset-0 w-full h-full object-fill pointer-events-none z-10 select-none drop-shadow-2xl"
-                            />
-
-                            {/* CAPA 3 (Frente): Tipografía Vectorial Nítida y Datos Canónicos Individualizados */}
-                            {/* 1. TÍTULO EN LA CABECERA (Nombre + Subtítulo con formato de lujo) */}
-                            {(() => {
-                                const titleParts = formatCardTitle(displayCardName);
-                                return (
+                            {cardVersion === 'showcase' ? (
+                                /* ========================================================================= */
+                                /* 🌟 REEDICIÓN FULL-ART SECRET LAIR SHOWCASE (100% ILUSTRACIÓN + CRISTAL)   */
+                                /* ========================================================================= */
+                                <>
+                                    {/* 1. CAPA 100% FULL-BLEED ARTWORK */}
                                     <div
-                                        className="absolute z-20 flex items-center justify-start pointer-events-none overflow-hidden px-1"
-                                        style={{
-                                            top: layout.header.top,
-                                            left: layout.header.left,
-                                            width: layout.header.width,
-                                            height: layout.header.height
-                                        }}
+                                        onMouseDown={handleImgMouseDown}
+                                        onMouseMove={handleImgMouseMove}
+                                        onMouseUp={handleImgMouseUp}
+                                        onMouseLeave={handleImgMouseUp}
+                                        onWheel={handleImgWheel}
+                                        onTouchStart={handleImgTouchStart}
+                                        onTouchMove={handleImgTouchMove}
+                                        onTouchEnd={handleImgTouchEnd}
+                                        onContextMenu={(e) => { e.preventDefault(); resetFraming(); }}
+                                        onDoubleClick={(e) => { e.preventDefault(); resetFraming(); }}
+                                        className={`absolute inset-0 z-0 overflow-hidden flex items-center justify-center bg-[#070b10] rounded-[24px] ${
+                                            isDraggingImg ? 'cursor-grabbing' : 'cursor-grab'
+                                        }`}
+                                        title="Arrastra con el ratón o usa la rueda para ampliar y mover libremente"
                                     >
-                                        <div className="flex items-center gap-1.5 min-w-0">
-                                            <h3 className="text-[11.5px] sm:text-[12.5px] font-black text-white uppercase tracking-wider truncate tcg-gold-emboss">
-                                                {titleParts.main}
-                                            </h3>
-                                            {titleParts.sub && (
-                                                <span className="text-[8px] sm:text-[8.5px] font-semibold text-amber-200 uppercase tracking-tight truncate shrink-0 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
-                                                    • {titleParts.sub}
-                                                </span>
+                                        <div
+                                            className="absolute flex items-center justify-center pointer-events-none select-none w-full h-full"
+                                            style={{
+                                                transform: `translate(${imgPan.x}px, ${imgPan.y}px) scale(${imgZoom})`,
+                                                transformOrigin: 'center center',
+                                                transition: isDraggingImg ? 'none' : 'transform 0.1s ease-out'
+                                            }}
+                                        >
+                                            {aiResult?.image_base64 ? (
+                                                <img
+                                                    src={aiResult.image_base64}
+                                                    alt={name}
+                                                    draggable={false}
+                                                    className="w-full h-full object-cover select-none pointer-events-none"
+                                                />
+                                            ) : (
+                                                <MOTUImage
+                                                    productId={item.id}
+                                                    src={activeImage}
+                                                    alt={name}
+                                                    className="w-full h-full object-cover select-none pointer-events-none drop-shadow-2xl"
+                                                />
                                             )}
                                         </div>
+
+                                        {/* Mini Barra de Zoom Flotante */}
+                                        {!exporting && (
+                                            <div className="export-exclude absolute top-3 right-3 z-30 flex items-center gap-1 bg-black/85 backdrop-blur-md px-1.5 py-1 rounded-lg border border-slate-700/80 shadow-md opacity-80 group-hover:opacity-100 transition-opacity">
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setImgZoom((prev) => Math.min(6.0, +(prev + 0.25).toFixed(2)));
+                                                    }}
+                                                    title="Ampliar Imagen (+)"
+                                                    className="p-1 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition active:scale-90"
+                                                >
+                                                    <Plus className="h-3 w-3" />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setImgZoom((prev) => Math.max(0.2, +(prev - 0.25).toFixed(2)));
+                                                    }}
+                                                    title="Reducir Imagen (-)"
+                                                    className="p-1 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition active:scale-90"
+                                                >
+                                                    <Minus className="h-3 w-3" />
+                                                </button>
+                                                {(imgZoom !== 1 || imgPan.x !== 0 || imgPan.y !== 0) && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            resetFraming();
+                                                        }}
+                                                        title="Restablecer Encuadre Original"
+                                                        className="p-1 hover:bg-rose-500/20 text-amber-400 hover:text-rose-300 rounded transition active:scale-90"
+                                                    >
+                                                        <RotateCcw className="h-3 w-3" />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
-                                );
-                            })()}
 
-                            {/* 2. CAJA DE TEXTO UNIFICADA (Losa de Piedra: Lore Canónico) */}
-                            <div
-                                className="absolute z-20 flex flex-col items-center justify-center text-center pointer-events-none px-3 py-2 overflow-hidden rounded-xl bg-black/35 backdrop-blur-[1px] shadow-inner"
-                                style={{
-                                    top: layout.textBox.top,
-                                    left: layout.textBox.left,
-                                    width: layout.textBox.width,
-                                    height: layout.textBox.height
-                                }}
-                            >
-                                {/* TEXTO DE DESCRIPCIÓN / LORE CANÓNICO */}
-                                <p
-                                    className="italic leading-relaxed text-stone-100 line-clamp-4 drop-shadow-[0_1px_3px_rgba(0,0,0,1)] text-center my-auto"
-                                    style={{
-                                        fontSize: layout.lore.fontSize,
-                                        lineHeight: layout.lore.lineHeight,
-                                        color: theme.loreTextColor,
-                                        textShadow: '0 1px 2px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,0.8)'
-                                    }}
-                                >
-                                    "{loreText}"
-                                </p>
-                            </div>
+                                    {/* 2. CINTA FLOTANTE DE TÍTULO + ALTER-EGO + COSTE DE MANÁ */}
+                                    <div className="absolute top-3.5 left-3.5 right-3.5 z-20 pointer-events-none">
+                                        <div className="bg-gradient-to-r from-black/90 via-slate-950/85 to-black/90 backdrop-blur-md border border-white/25 rounded-2xl px-3.5 py-1.5 shadow-2xl flex items-center justify-between">
+                                            <div className="flex flex-col justify-center min-w-0 pr-2">
+                                                <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-amber-200 font-cinzel truncate drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+                                                    {displayCardName}
+                                                </h3>
+                                                {displaySubtitle && (
+                                                    <span className="text-[9.5px] italic text-amber-300/80 font-serif -mt-0.5 truncate drop-shadow">
+                                                        {displaySubtitle}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            {/* Orbes de Coste de Maná */}
+                                            {renderManaCostPips(displayManaCost)}
+                                        </div>
+                                    </div>
 
-                            {/* 3. ENGARCES DE COMBATE 3D NATIVOS (4 Orbes Esculpidos en el Marco) */}
-                            {/* Fuerza */}
-                            <div
-                                className="absolute z-20 flex flex-col items-center justify-center pointer-events-none -translate-x-1/2 -translate-y-1/2"
-                                style={{
-                                    top: layout.statFue?.top || '87.2%',
-                                    left: layout.statFue?.left || '21.2%'
-                                }}
-                            >
-                                <span
-                                    className="font-black text-red-300 uppercase tracking-widest leading-none drop-shadow-[0_1px_2px_rgba(0,0,0,1)]"
-                                    style={{ fontSize: layout.statFue?.labelFontSize || '7px' }}
-                                >
-                                    FUE
-                                </span>
-                                <span
-                                    className="font-black text-white leading-none tcg-gold-emboss mt-0.5"
-                                    style={{ fontSize: layout.statFue?.fontSize || '11.5px' }}
-                                >
-                                    {statsData.fuerza}
-                                </span>
-                            </div>
+                                    {/* 3. CINTA FLOTANTE DE TIPO */}
+                                    <div className="absolute top-[56%] left-3.5 right-3.5 z-20 pointer-events-none">
+                                        <div className="bg-gradient-to-r from-black/85 via-slate-900/80 to-black/85 backdrop-blur-md border border-white/20 rounded-xl px-3 py-1 shadow-lg flex items-center justify-between">
+                                            <span className="text-[10px] font-black uppercase tracking-wider font-cinzel truncate drop-shadow" style={{ color: customTextColor }}>
+                                                {typeLineText}
+                                            </span>
+                                            <span className="text-[10px] text-amber-400 font-bold drop-shadow">★ M 2768</span>
+                                        </div>
+                                    </div>
 
-                            {/* Magia */}
-                            <div
-                                className="absolute z-20 flex flex-col items-center justify-center pointer-events-none -translate-x-1/2 -translate-y-1/2"
-                                style={{
-                                    top: layout.statMag?.top || '87.2%',
-                                    left: layout.statMag?.left || '34.4%'
-                                }}
-                            >
-                                <span
-                                    className="font-black text-purple-300 uppercase tracking-widest leading-none drop-shadow-[0_1px_2px_rgba(0,0,0,1)]"
-                                    style={{ fontSize: layout.statMag?.labelFontSize || '7px' }}
-                                >
-                                    MAG
-                                </span>
-                                <span
-                                    className="font-black text-white leading-none tcg-gold-emboss mt-0.5"
-                                    style={{ fontSize: layout.statMag?.fontSize || '11.5px' }}
-                                >
-                                    {statsData.magia}
-                                </span>
-                            </div>
+                                    {/* 4. CAJA TRANSLÚCIDA INFERIOR: REGLAS, CITA CÉLEBRE Y STATS */}
+                                    <div className="absolute top-[63%] left-3.5 right-3.5 bottom-6 z-20 pointer-events-none">
+                                        <div
+                                            className="w-full h-full bg-gradient-to-b from-black/75 via-black/85 to-black/95 backdrop-blur-md border border-white/25 rounded-2xl p-2.5 shadow-2xl flex flex-col justify-between"
+                                            style={{ color: customTextColor }}
+                                        >
+                                            {/* Reglas / Poder Especial */}
+                                            <div className="text-[10px] sm:text-[10.5px] leading-snug drop-shadow font-sans">
+                                                {specialMoveText}
+                                            </div>
 
-                            {/* Defensa */}
-                            <div
-                                className="absolute z-20 flex flex-col items-center justify-center pointer-events-none -translate-x-1/2 -translate-y-1/2"
-                                style={{
-                                    top: layout.statDef?.top || '87.2%',
-                                    left: layout.statDef?.left || '65.6%'
-                                }}
-                            >
-                                <span
-                                    className="font-black text-sky-300 uppercase tracking-widest leading-none drop-shadow-[0_1px_2px_rgba(0,0,0,1)]"
-                                    style={{ fontSize: layout.statDef?.labelFontSize || '7px' }}
-                                >
-                                    DEF
-                                </span>
-                                <span
-                                    className="font-black text-white leading-none tcg-gold-emboss mt-0.5"
-                                    style={{ fontSize: layout.statDef?.fontSize || '11.5px' }}
-                                >
-                                    {statsData.defensa}
-                                </span>
-                            </div>
+                                            {/* Cita de Lore en Cursiva y Autor */}
+                                            {loreText && (
+                                                <div className="border-t border-white/15 pt-1 mt-0.5">
+                                                    <p className="text-[9px] sm:text-[9.5px] italic opacity-90 font-serif leading-tight drop-shadow">
+                                                        "{loreText}"
+                                                    </p>
+                                                    {displayQuoteAuthor && (
+                                                        <p className="text-[8px] sm:text-[8.5px] text-right opacity-80 font-sans mt-0.5 font-bold">
+                                                            — {displayQuoteAuthor}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            )}
 
-                            {/* Agilidad */}
-                            <div
-                                className="absolute z-20 flex flex-col items-center justify-center pointer-events-none -translate-x-1/2 -translate-y-1/2"
-                                style={{
-                                    top: layout.statAgi?.top || '87.2%',
-                                    left: layout.statAgi?.left || '78.8%'
-                                }}
-                            >
-                                <span
-                                    className="font-black text-emerald-300 uppercase tracking-widest leading-none drop-shadow-[0_1px_2px_rgba(0,0,0,1)]"
-                                    style={{ fontSize: layout.statAgi?.labelFontSize || '7px' }}
-                                >
-                                    AGI
-                                </span>
-                                <span
-                                    className="font-black text-white leading-none tcg-gold-emboss mt-0.5"
-                                    style={{ fontSize: layout.statAgi?.fontSize || '11.5px' }}
-                                >
-                                    {statsData.agilidad}
-                                </span>
-                            </div>
+                                            {/* Placa P/T de Combate Inferior Derecha */}
+                                            <div className="flex justify-end pt-1">
+                                                <div className="px-2.5 py-0.5 rounded-lg bg-stone-900/90 border border-amber-400/60 shadow-lg text-[10px] font-black font-cinzel tracking-wider text-amber-300">
+                                                    {statsData.fuerza > 0 ? `${Math.round(statsData.fuerza / 15)} / ${Math.round(statsData.defensa / 15)}` : '5 / 4'}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* 5. PIE DE IMPRENTA DE COLECCIONISTA */}
+                                    <div className="absolute bottom-1 left-4 right-4 z-20 pointer-events-none flex items-center justify-between text-[7px] text-stone-400 font-mono">
+                                        <span>M 2768 | SLD • ES</span>
+                                        <span className="truncate">™ & © 2026 Mattel / Oráculo</span>
+                                    </div>
+                                </>
+                            ) : (
+                                /* ========================================================================= */
+                                /* 🛡️ MARCO CLÁSICO 3D (PLANTILLA ESCULPIDA Y 4 ENGARCES DE COMBATE NATIVOS) */
+                                /* ========================================================================= */
+                                <>
+                                    {/* CAPA 1 (Fondo): Ventana Interactiva de Ilustración / Foto */}
+                                    <div
+                                        onMouseDown={handleImgMouseDown}
+                                        onMouseMove={handleImgMouseMove}
+                                        onMouseUp={handleImgMouseUp}
+                                        onMouseLeave={handleImgMouseUp}
+                                        onWheel={handleImgWheel}
+                                        onTouchStart={handleImgTouchStart}
+                                        onTouchMove={handleImgTouchMove}
+                                        onTouchEnd={handleImgTouchEnd}
+                                        onContextMenu={(e) => { e.preventDefault(); resetFraming(); }}
+                                        onDoubleClick={(e) => { e.preventDefault(); resetFraming(); }}
+                                        className={`absolute z-0 overflow-hidden flex items-center justify-center bg-[#070b10] ${
+                                            isDraggingImg ? 'cursor-grabbing' : 'cursor-grab'
+                                        }`}
+                                        style={{
+                                            top: '5.5%',
+                                            left: '8.0%',
+                                            width: '84%',
+                                            height: '50%',
+                                            borderRadius: '24px 24px 0 0'
+                                        }}
+                                        title="Arrastra con el ratón o usa la rueda para ampliar y mover libremente"
+                                    >
+                                        <div
+                                            className="absolute flex items-center justify-center pointer-events-none select-none"
+                                            style={{
+                                                transform: `translate(${imgPan.x}px, ${imgPan.y}px) scale(${imgZoom})`,
+                                                transformOrigin: 'center center',
+                                                transition: isDraggingImg ? 'none' : 'transform 0.1s ease-out'
+                                            }}
+                                        >
+                                            {aiResult?.image_base64 ? (
+                                                <img
+                                                    src={aiResult.image_base64}
+                                                    alt={name}
+                                                    draggable={false}
+                                                    className="max-w-none max-h-none select-none pointer-events-none animate-in fade-in duration-300"
+                                                    style={{ width: '100%', minWidth: '280px', height: 'auto', display: 'block' }}
+                                                />
+                                            ) : (
+                                                <div className="flex items-center justify-center pointer-events-none select-none" style={{ width: '300px', height: '240px' }}>
+                                                    <MOTUImage
+                                                        productId={item.id}
+                                                        src={activeImage}
+                                                        alt={name}
+                                                        className="max-h-full max-w-full object-contain p-2 z-10 drop-shadow-[0_10px_20px_rgba(0,0,0,0.95)] pointer-events-none select-none"
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {!exporting && (
+                                            <div className="export-exclude absolute top-2 right-2 z-30 flex items-center gap-1 bg-black/85 backdrop-blur-md px-1.5 py-1 rounded-lg border border-slate-700/80 shadow-md opacity-80 group-hover:opacity-100 transition-opacity">
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setImgZoom((prev) => Math.min(6.0, +(prev + 0.25).toFixed(2)));
+                                                    }}
+                                                    title="Ampliar Imagen (+)"
+                                                    className="p-1 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition active:scale-90"
+                                                >
+                                                    <Plus className="h-3 w-3" />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setImgZoom((prev) => Math.max(0.2, +(prev - 0.25).toFixed(2)));
+                                                    }}
+                                                    title="Reducir Imagen (-)"
+                                                    className="p-1 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition active:scale-90"
+                                                >
+                                                    <Minus className="h-3 w-3" />
+                                                </button>
+                                                {(imgZoom !== 1 || imgPan.x !== 0 || imgPan.y !== 0) && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            resetFraming();
+                                                        }}
+                                                        title="Restablecer Encuadre Original"
+                                                        className="p-1 hover:bg-rose-500/20 text-amber-400 hover:text-rose-300 rounded transition active:scale-90"
+                                                    >
+                                                        <RotateCcw className="h-3 w-3" />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* CAPA 2 (Marco HD Esculpido) */}
+                                    <img
+                                        src={theme.frameAsset}
+                                        alt="Marco TCG"
+                                        draggable={false}
+                                        className="absolute inset-0 w-full h-full object-fill pointer-events-none z-10 select-none drop-shadow-2xl"
+                                    />
+
+                                    {/* CAPA 3: Cabecera, Texto y Stats */}
+                                    {(() => {
+                                        const titleParts = formatCardTitle(displayCardName);
+                                        return (
+                                            <div
+                                                className="absolute z-20 flex items-center justify-start pointer-events-none overflow-hidden px-1"
+                                                style={{
+                                                    top: layout.header.top,
+                                                    left: layout.header.left,
+                                                    width: layout.header.width,
+                                                    height: layout.header.height
+                                                }}
+                                            >
+                                                <div className="flex items-center gap-1.5 min-w-0">
+                                                    <h3 className="text-[11.5px] sm:text-[12.5px] font-black text-white uppercase tracking-wider truncate tcg-gold-emboss">
+                                                        {titleParts.main}
+                                                    </h3>
+                                                    {titleParts.sub && (
+                                                        <span className="text-[8px] sm:text-[8.5px] font-semibold text-amber-200 uppercase tracking-tight truncate shrink-0 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+                                                            • {titleParts.sub}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
+
+                                    <div
+                                        className="absolute z-20 flex flex-col items-center justify-center text-center pointer-events-none px-3 py-2 overflow-hidden rounded-xl bg-black/35 backdrop-blur-[1px] shadow-inner"
+                                        style={{
+                                            top: layout.textBox.top,
+                                            left: layout.textBox.left,
+                                            width: layout.textBox.width,
+                                            height: layout.textBox.height
+                                        }}
+                                    >
+                                        <p
+                                            className="italic leading-relaxed text-stone-100 line-clamp-4 drop-shadow-[0_1px_3px_rgba(0,0,0,1)] text-center my-auto"
+                                            style={{
+                                                fontSize: layout.lore.fontSize,
+                                                lineHeight: layout.lore.lineHeight,
+                                                color: theme.loreTextColor,
+                                                textShadow: '0 1px 2px rgba(0,0,0,1), 0 0 6px rgba(0,0,0,0.8)'
+                                            }}
+                                        >
+                                            "{loreText}"
+                                        </p>
+                                    </div>
+
+                                    {/* 4 Engarces */}
+                                    <div
+                                        className="absolute z-20 flex flex-col items-center justify-center pointer-events-none -translate-x-1/2 -translate-y-1/2"
+                                        style={{ top: layout.statFue?.top || '87.2%', left: layout.statFue?.left || '21.2%' }}
+                                    >
+                                        <span className="font-black text-red-300 uppercase tracking-widest leading-none drop-shadow-[0_1px_2px_rgba(0,0,0,1)]" style={{ fontSize: layout.statFue?.labelFontSize || '7px' }}>FUE</span>
+                                        <span className="font-black text-white leading-none tcg-gold-emboss mt-0.5" style={{ fontSize: layout.statFue?.fontSize || '11.5px' }}>{statsData.fuerza}</span>
+                                    </div>
+
+                                    <div
+                                        className="absolute z-20 flex flex-col items-center justify-center pointer-events-none -translate-x-1/2 -translate-y-1/2"
+                                        style={{ top: layout.statMag?.top || '87.2%', left: layout.statMag?.left || '34.4%' }}
+                                    >
+                                        <span className="font-black text-purple-300 uppercase tracking-widest leading-none drop-shadow-[0_1px_2px_rgba(0,0,0,1)]" style={{ fontSize: layout.statMag?.labelFontSize || '7px' }}>MAG</span>
+                                        <span className="font-black text-white leading-none tcg-gold-emboss mt-0.5" style={{ fontSize: layout.statMag?.fontSize || '11.5px' }}>{statsData.magia}</span>
+                                    </div>
+
+                                    <div
+                                        className="absolute z-20 flex flex-col items-center justify-center pointer-events-none -translate-x-1/2 -translate-y-1/2"
+                                        style={{ top: layout.statDef?.top || '87.2%', left: layout.statDef?.left || '65.6%' }}
+                                    >
+                                        <span className="font-black text-sky-300 uppercase tracking-widest leading-none drop-shadow-[0_1px_2px_rgba(0,0,0,1)]" style={{ fontSize: layout.statDef?.labelFontSize || '7px' }}>DEF</span>
+                                        <span className="font-black text-white leading-none tcg-gold-emboss mt-0.5" style={{ fontSize: layout.statDef?.fontSize || '11.5px' }}>{statsData.defensa}</span>
+                                    </div>
+
+                                    <div
+                                        className="absolute z-20 flex flex-col items-center justify-center pointer-events-none -translate-x-1/2 -translate-y-1/2"
+                                        style={{ top: layout.statAgi?.top || '87.2%', left: layout.statAgi?.left || '78.8%' }}
+                                    >
+                                        <span className="font-black text-emerald-300 uppercase tracking-widest leading-none drop-shadow-[0_1px_2px_rgba(0,0,0,1)]" style={{ fontSize: layout.statAgi?.labelFontSize || '7px' }}>AGI</span>
+                                        <span className="font-black text-white leading-none tcg-gold-emboss mt-0.5" style={{ fontSize: layout.statAgi?.fontSize || '11.5px' }}>{statsData.agilidad}</span>
+                                    </div>
+                                </>
+                            )}
 
                             {/* Brillo reflectivo holográfico dinámico */}
                             <div

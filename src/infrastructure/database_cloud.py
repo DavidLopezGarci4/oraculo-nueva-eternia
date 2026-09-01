@@ -64,11 +64,21 @@ def init_cloud_db():
                 session.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_chat_id VARCHAR;"))
                 session.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS pc_image_path VARCHAR;"))
                 session.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS mobile_image_path VARCHAR;"))
+                session.execute(text("ALTER TABLE character_lore ADD COLUMN IF NOT EXISTS subtitle VARCHAR;"))
+                session.execute(text("ALTER TABLE character_lore ADD COLUMN IF NOT EXISTS flavor_quote_author VARCHAR;"))
+                session.execute(text("ALTER TABLE character_lore ADD COLUMN IF NOT EXISTS text_color VARCHAR DEFAULT '#FFFFFF';"))
+                session.execute(text("ALTER TABLE character_lore ADD COLUMN IF NOT EXISTS card_version VARCHAR DEFAULT 'showcase';"))
+                session.execute(text("ALTER TABLE character_lore ADD COLUMN IF NOT EXISTS mana_cost VARCHAR DEFAULT '{2}{W}{W}';"))
             else:
                 _add_column_if_missing_sqlite(session, "users", "is_public_showcase BOOLEAN DEFAULT FALSE")
                 _add_column_if_missing_sqlite(session, "users", "telegram_chat_id VARCHAR")
                 _add_column_if_missing_sqlite(session, "users", "pc_image_path VARCHAR")
                 _add_column_if_missing_sqlite(session, "users", "mobile_image_path VARCHAR")
+                _add_column_if_missing_sqlite(session, "character_lore", "subtitle VARCHAR")
+                _add_column_if_missing_sqlite(session, "character_lore", "flavor_quote_author VARCHAR")
+                _add_column_if_missing_sqlite(session, "character_lore", "text_color VARCHAR DEFAULT '#FFFFFF'")
+                _add_column_if_missing_sqlite(session, "character_lore", "card_version VARCHAR DEFAULT 'showcase'")
+                _add_column_if_missing_sqlite(session, "character_lore", "mana_cost VARCHAR DEFAULT '{2}{W}{W}'")
             session.commit()
     except Exception as e:
         # Fase AAA-2.4: antes esto era `except: pass` (silenciaba TODO fallo de

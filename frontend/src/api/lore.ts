@@ -3,12 +3,17 @@ import { apiClient as axios } from './client';
 export interface CharacterLore {
     slug: string;
     canonical_name: string;
+    subtitle?: string;
     faction: string;
     theme_key: 'castle_grayskull' | 'snake_mountain' | 'evil_horde' | 'snake_men' | 'great_rebellion' | 'cosmic_enforcers';
     type_line: string;
     special_move: string;
     quote?: string;
+    flavor_quote_author?: string;
     lore: string;
+    text_color?: string;
+    card_version?: 'showcase' | 'classic';
+    mana_cost?: string;
     fuerza: number;
     magia: number;
     defensa: number;
@@ -46,6 +51,11 @@ export const harvestCharacterLore = async (characterName: string): Promise<Chara
     const res = await axios.post<CharacterLore>('/api/lore/harvest', {
         character_name: characterName
     });
+    return res.data;
+};
+
+export const harvestProductLore = async (productId: number): Promise<CharacterLore> => {
+    const res = await axios.post<CharacterLore>(`/api/lore/harvest-product/${productId}`);
     return res.data;
 };
 

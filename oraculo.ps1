@@ -330,6 +330,99 @@ function Invoke-SmythsToysIncursion {
     Read-Host "Presiona [Enter] para volver al menu principal..."
 }
 
+function Invoke-RefreshFigureImage {
+    Show-Header
+    Write-Host "[13] ACTUALIZAR IMAGEN DESDE ACTIONFIGURE411..." -ForegroundColor Magenta
+    Write-Host "Descarga la imagen actualizada en alta resolucion y sincroniza en Supabase Storage y BD." -ForegroundColor Gray
+    Write-Host ""
+    
+    $FigureId = Read-Host "Introduce el ID de figura o producto (ej. 14038 para Skeletor Movie)"
+    if ([string]::IsNullOrWhiteSpace($FigureId)) {
+        Write-Host "ID no valido. Operacion cancelada." -ForegroundColor Yellow
+        Start-Sleep -Seconds 1
+        return
+    }
+
+    $PythonExe = Join-Path $PSScriptRoot ".venv\Scripts\python.exe"
+    if (!(Test-Path $PythonExe)) { $PythonExe = "python" }
+
+    $ScriptCode = @"
+import sys, os
+sys.path.append(os.getcwd())
+from src.infrastructure.database_cloud import SessionCloud
+from src.application.services.catalog_refresh_service import CatalogRefreshService
+
+with SessionCloud() as db:
+    res = CatalogRefreshService.refresh_figure_image(db, '$FigureId')
+    print('RESULTADO:', res)
+"@
+
+    & $PythonExe -c $ScriptCode
+    Write-Host ""
+    Read-Host "Presiona [Enter] para volver al menu principal..."
+}
+
+function Invoke-HarvestLoreFandom {
+    Show-Header
+    Write-Host "[14] COSECHA CANONICA DE LORE (WIKI FANDOM - COSTE 0)..." -ForegroundColor Green
+    Write-Host "Extrae biografias canónicas, subtitulos, citas celebres y afiliaciones sin gastar tokens IA." -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "1. Cosechar lore para una figura o personaje especifico" -ForegroundColor White
+    Write-Host "2. Cosechar y enriquecer todo el catalogo (500+ figuras)" -ForegroundColor Cyan
+    Write-Host ""
+    $subChoice = Read-Host "Selecciona opcion [1 o 2]"
+
+    $PythonExe = Join-Path $PSScriptRoot ".venv\Scripts\python.exe"
+    if (!(Test-Path $PythonExe)) { $PythonExe = "python" }
+
+    if ($subChoice -eq "1") {
+        $CharQuery = Read-Host "Introduce el nombre del personaje o ID de figura (ej. He-Man, Skeletor, 1460)"
+        $ScriptCode = @"
+import sys, os
+sys.path.append(os.getcwd())
+from src.infrastructure.database_cloud import SessionCloud
+from src.application.services.lore_harvester_service import LoreHarvesterService
+
+with SessionCloud() as db:
+    q = '$CharQuery'
+    if q.isdigit():
+        char = LoreHarvesterService.harvest_for_product(db, int(q))
+    else:
+        char = LoreHarvesterService.get_or_create_character_lore(db, q)
+    if char:
+        print(f'✅ Lore obtenido: {char.canonical_name} ({char.faction})')
+        print(f'   Subtitulo: {char.subtitle}')
+        print(f'   Tipo: {char.type_line}')
+        print(f'   Cita: \"{char.quote}\" — {char.flavor_quote_author}')
+        print(f'   Lore: {char.lore[:160]}...')
+    else:
+        print('❌ No se encontro lore para:', q)
+"@
+        & $PythonExe -c $ScriptCode
+    } else {
+        $ScriptCode = @"
+import sys, os
+sys.path.append(os.getcwd())
+from src.infrastructure.database_cloud import SessionCloud
+from src.domain.models import ProductModel
+from src.application.services.lore_harvester_service import LoreHarvesterService
+
+with SessionCloud() as db:
+    prods = db.query(ProductModel).all()
+    print(f'Enriqueciendo lore para {len(prods)} figuras del catalogo...')
+    for idx, p in enumerate(prods, 1):
+        char = LoreHarvesterService.harvest_for_product(db, p.id)
+        if idx % 20 == 0 or idx == len(prods):
+            print(f'[{idx}/{len(prods)}] Procesado {p.name}')
+    print('✨ Cosecha masiva de lore completada con exito.')
+"@
+        & $PythonExe -c $ScriptCode
+    }
+    
+    Write-Host ""
+    Read-Host "Presiona [Enter] para volver al menu principal..."
+}
+
 if ($Backup) {
     Invoke-BackupDb
     exit
@@ -349,10 +442,12 @@ do {
     Write-Host "  [10] Conectar por SSH al Servidor en la Nube" -ForegroundColor Cyan
     Write-Host "  [11] Renovar Certificados SSL en Oracle Cloud" -ForegroundColor Cyan
     Write-Host "  [12] Incursion Directa Smyths Toys (Actualizar Importes y Nuevos Items)" -ForegroundColor Yellow
+    Write-Host "  [13] Actualizar Imagen desde ActionFigure411 (por ID de Figura/Producto)" -ForegroundColor Magenta
+    Write-Host "  [14] Cosechar Lore Canónico desde Wiki Fandom (Coste 0 Tokens)" -ForegroundColor Green
     Write-Host ""
     Write-Host "  [0]  Salir" -ForegroundColor Red
     Write-Host "-------------------------------------------------------------------" -ForegroundColor DarkGray
-    $choice = Read-Host "  Selecciona una opcion [0-12]"
+    $choice = Read-Host "  Selecciona una opcion [0-14]"
 
     switch ($choice.Trim()) {
         "1" { Invoke-LocalStart }
@@ -367,6 +462,8 @@ do {
         "10" { Invoke-SshConnect }
         "11" { Invoke-RenewSslCloud }
         "12" { Invoke-SmythsToysIncursion }
+        "13" { Invoke-RefreshFigureImage }
+        "14" { Invoke-HarvestLoreFandom }
         "0" { 
             Clear-Host
             Write-Host "Hasta la proxima, Guardian de Nueva Eternia!" -ForegroundColor Cyan
@@ -378,4 +475,5 @@ do {
         }
     }
 } while ($true)
+
 

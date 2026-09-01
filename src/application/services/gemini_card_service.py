@@ -225,9 +225,23 @@ class GeminiCardService:
 
         resolved_style = cls._resolve_style_key(style)
         style_cfg = cls.STYLES_CONFIG[resolved_style]
+
+        # Detección de packs multipersonaje (packs de 2, 3 o 4 figuras, duos, invasiones)
+        name_low = product_name.lower()
+        is_multipack = any(w in name_low for w in ["pack", " 2 ", " 3 ", " 4 ", " and ", " & ", "invasion", "warriors", "duo", "trio", "set", "vs", "versus"])
+        multi_directive = ""
+        if is_multipack:
+            multi_directive = (
+                "\nCRITICAL MULTI-CHARACTER GROUP MANDATE: This item is a MULTI-CHARACTER PACK / SET featuring multiple characters or creatures. "
+                "You MUST include ALL distinct characters from this set together in the scene. "
+                "Proportionally arrange each character across the frame in a dynamic interactive battle scene or cooperative heroic/villainous group posing, "
+                "ensuring all figures occupy a balanced presence without anyone being cropped out, matching the composition of high-end Magic: The Gathering Secret Lair full-art cards."
+            )
+
         prompt_text = (
             f"Masters of the Universe figure: '{product_name}' ({sub_category}).\n"
             f"{style_cfg['prompt']}"
+            f"{multi_directive}"
         )
 
         img_data = await cls._resolve_image_bytes(image_url, image_base64)
