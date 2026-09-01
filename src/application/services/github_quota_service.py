@@ -181,6 +181,7 @@ class GitHubQuotaService:
             ).all()
 
             total_billed = 0
+            total_runs = 0
             breakdown = {
                 "daily_scan": {"minutes": 0, "runs": 0},
                 "vinted_sentinel": {"minutes": 0, "runs": 0},
@@ -188,7 +189,16 @@ class GitHubQuotaService:
                 "others": {"minutes": 0, "runs": 0}
             }
 
+            has_daily_master = any((l.spider_name or "").lower() in ["dailyscan", "daily_scan", "daily scan"] for l in logs)
+
             for l in logs:
+                name = (l.spider_name or "").lower()
+                trigger = (l.trigger_type or "").lower()
+
+                # Si existe el registro maestro de DailyScan, omitir los sub-spiders de ese escaneo para no duplicar minutos
+                if has_daily_master and trigger == "scheduled" and name not in ["dailyscan", "daily_scan", "daily scan", "vintedhunter", "vinted_hunter"]:
+                    continue
+
                 if l.end_time and l.start_time:
                     dur_s = max(1, (l.end_time - l.start_time).total_seconds())
                 else:
@@ -196,15 +206,15 @@ class GitHubQuotaService:
                 
                 billed_m = max(1, math.ceil(dur_s / 60))
                 total_billed += billed_m
+                total_runs += 1
 
-                name = (l.spider_name or "").lower()
-                if "daily" in name or "scrapers" in name:
+                if "daily" in name or "scrapers" in name or (trigger == "scheduled" and "vinted" not in name):
                     breakdown["daily_scan"]["minutes"] += billed_m
                     breakdown["daily_scan"]["runs"] += 1
-                elif "vinted" in name or "hunter" in name or "sentinel" in name:
+                elif "vinted" in name or "hunter" in name or "sentinel" in name or trigger == "sentinel":
                     breakdown["vinted_sentinel"]["minutes"] += billed_m
                     breakdown["vinted_sentinel"]["runs"] += 1
-                elif "ci" in name:
+                elif "ci" in name or "test" in name:
                     breakdown["ci_tests"]["minutes"] += billed_m
                     breakdown["ci_tests"]["runs"] += 1
                 else:
@@ -213,7 +223,7 @@ class GitHubQuotaService:
 
             return {
                 "total_billed_minutes": total_billed,
-                "total_runs": len(logs),
+                "total_runs": total_runs,
                 "breakdown": breakdown
             }
 

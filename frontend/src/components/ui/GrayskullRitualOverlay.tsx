@@ -376,7 +376,7 @@ export const GrayskullRitualOverlay: React.FC<GrayskullRitualOverlayProps> = ({ 
                                     muted
                                     playsInline
                                     src="/vfx/grayskull_burn_vfx.webm"
-                                    className="absolute -inset-x-8 -inset-y-6 w-[calc(100%+4rem)] h-[calc(100%+3rem)] object-contain pointer-events-none z-40 mix-blend-screen"
+                                    className="absolute inset-0 w-full h-full object-cover pointer-events-none z-40 mix-blend-screen rounded-3xl"
                                 />
 
                                 {/* Máscara de carbonización y disolución sincronizada de arriba a abajo */}

@@ -307,6 +307,26 @@ def _sync_engine(engine, label: str):
                     logger.warning(f"Could not add telegram_chat_id to users: {e}")
                     conn.rollback()
 
+        # --- Table: character_lore ---
+        if "character_lore" in inspector.get_table_names():
+            columns_lore = [c['name'] for c in inspector.get_columns("character_lore")]
+            lore_cols = [
+                ("subtitle", "VARCHAR(255)"),
+                ("flavor_quote_author", "VARCHAR(255)"),
+                ("text_color", "VARCHAR(50) DEFAULT '#FFFFFF'"),
+                ("card_version", "VARCHAR(50) DEFAULT 'showcase'"),
+                ("mana_cost", "VARCHAR(50) DEFAULT '{2}{W}{W}'")
+            ]
+            for col_name, col_type in lore_cols:
+                if col_name not in columns_lore:
+                    logger.info(f"[{label}] Adding '{col_name}' to character_lore table...")
+                    try:
+                        conn.execute(text(f"ALTER TABLE character_lore ADD COLUMN {col_name} {col_type}"))
+                        conn.commit()
+                    except Exception as e:
+                        logger.warning(f"Could not add {col_name} to character_lore: {e}")
+                        conn.rollback()
+
         # --- Terminology Audit: Fix regressions and ensure 'spider_name' ---
         # Note: If someone accidentally renamed to scraper_name, we undo it here.
         rename_targets = [

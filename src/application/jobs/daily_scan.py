@@ -131,7 +131,6 @@ async def run_daily_scan(progress_callback=None):
             ToymiEUScraper(),
             Time4ActionToysDEScraper(),
             BigBadToyStoreScraper(),
-            SmythsToysScraper(),
             AmazonScraper(),
             EbayScraper(),
             VintedScraper(),
@@ -140,6 +139,11 @@ async def run_daily_scan(progress_callback=None):
             # DeToyboys at the end (User Request)
             DeToyboysNLScraper(),
         ]
+
+        # SmythsToys está protegido por WAF Imperva en GitHub Actions.
+        # Se incluye en escaneos locales o cuando se solicite explícitamente en --shops.
+        if not os.environ.get("GITHUB_ACTIONS") or (args.shops and any("smyths" in s.lower() for s in args.shops)):
+            all_scrapers.insert(10, SmythsToysScraper())
         
         # Filter Scrapers
         scrapers = []

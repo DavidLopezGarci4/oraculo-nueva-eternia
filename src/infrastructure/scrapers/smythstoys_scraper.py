@@ -7,6 +7,7 @@ import os
 import shutil
 import tempfile
 import urllib.parse
+import urllib.request
 from curl_cffi.requests import AsyncSession
 from bs4 import BeautifulSoup
 
@@ -129,7 +130,6 @@ class SmythsToysScraper(BaseScraper):
         # 1. Intento de conexión CDP asistida (si el usuario tiene su Chrome de depuración abierto en puerto 9222)
         if not is_headless:
             try:
-                import urllib.request
                 urllib.request.urlopen("http://localhost:9222/json/version", timeout=0.5)
                 self._log("🔌 Puerto de depuracion 9222 abierto detectado. Conectando via CDP...")
                 
