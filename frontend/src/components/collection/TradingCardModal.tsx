@@ -17,7 +17,6 @@ import {
     Image as ImageIcon,
     Plus,
     Minus,
-    Maximize2,
     Edit3,
     Save,
     CheckCircle2,
@@ -2235,7 +2234,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                             )}
                                         </div>
 
-                                        {/* Ilustración Frontal Interactiva */}
+                                        {/* Ilustración Frontal Interactiva (100% Vertical Full-Bleed) */}
                                         <div
                                             className="absolute flex items-center justify-center pointer-events-none select-none w-full h-full z-10"
                                             style={{
@@ -2249,21 +2248,21 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                                     src={aiResult.image_base64}
                                                     alt={name}
                                                     draggable={false}
-                                                    className="w-full h-full object-contain select-none pointer-events-none drop-shadow-2xl"
+                                                    className="w-full h-full object-cover select-none pointer-events-none"
                                                 />
                                             ) : (
                                                 <MOTUImage
                                                     productId={item.id}
                                                     src={activeImage}
                                                     alt={name}
-                                                    className="w-full h-full object-contain select-none pointer-events-none drop-shadow-2xl"
+                                                    className="w-full h-full object-cover select-none pointer-events-none"
                                                 />
                                             )}
                                         </div>
 
                                         {/* Mini Barra de Zoom y Encuadre Flotante */}
                                         {!exporting && (
-                                            <div className="export-exclude absolute top-3 right-3 z-30 flex items-center gap-1 bg-black/75 backdrop-blur-md px-1.5 py-1 rounded-lg border border-slate-700/80 shadow-lg opacity-85 hover:opacity-100 transition-opacity">
+                                            <div className="export-exclude absolute top-3 right-3 z-30 flex items-center gap-1 bg-black/60 backdrop-blur-md px-1.5 py-1 rounded-lg border border-slate-700/60 shadow-lg opacity-85 hover:opacity-100 transition-opacity">
                                                 <button
                                                     type="button"
                                                     onClick={(e) => {
@@ -2286,18 +2285,6 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                                 >
                                                     <Minus className="h-3 w-3" />
                                                 </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setImgZoom(0.65);
-                                                        setImgPan({ x: 0, y: -20 });
-                                                    }}
-                                                    title="Ajuste Multipack / Panorama (Ver 4 Figuras)"
-                                                    className="p-1 hover:bg-amber-500/20 text-amber-300 hover:text-amber-200 rounded transition active:scale-90 flex items-center gap-0.5 text-[9px] font-bold font-cinzel"
-                                                >
-                                                    <Maximize2 className="h-3 w-3" />
-                                                </button>
                                                 {(imgZoom !== 1 || imgPan.x !== 0 || imgPan.y !== 0) && (
                                                     <button
                                                         type="button"
@@ -2315,9 +2302,9 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                         )}
                                     </div>
 
-                                    {/* 2. CINTA FLOTANTE DE TÍTULO + ALTER-EGO + COSTE DE MANÁ (CRISTAL TRANSLÚCIDO SECRET LAIR) */}
+                                    {/* 2. CINTA FLOTANTE DE TÍTULO + ALTER-EGO + COSTE DE MANÁ (CRISTAL ULTRA-TRANSLÚCIDO SECRET LAIR) */}
                                     <div className="absolute top-3.5 left-3.5 right-3.5 z-20 pointer-events-none">
-                                        <div className="bg-gradient-to-r from-black/50 via-slate-950/40 to-black/50 backdrop-blur-[3px] border border-white/25 rounded-2xl px-3.5 py-1.5 shadow-[0_4px_20px_rgba(0,0,0,0.6)] flex items-center justify-between">
+                                        <div className="bg-gradient-to-r from-black/25 via-slate-950/20 to-black/25 backdrop-blur-[2px] border border-white/20 rounded-2xl px-3.5 py-1.5 shadow-[0_2px_12px_rgba(0,0,0,0.3)] flex items-center justify-between">
                                             <div className="flex flex-col justify-center min-w-0 pr-2">
                                                 <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-amber-200 font-cinzel truncate drop-shadow-[0_2px_4px_rgba(0,0,0,1)]">
                                                     {displayCardName}
@@ -2333,9 +2320,9 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                         </div>
                                     </div>
 
-                                    {/* 3. CINTA FLOTANTE DE TIPO (CRISTAL TRANSLÚCIDO) */}
+                                    {/* 3. CINTA FLOTANTE DE TIPO (CRISTAL ULTRA-TRANSLÚCIDO) */}
                                     <div className="absolute top-[56%] left-3.5 right-3.5 z-20 pointer-events-none">
-                                        <div className="bg-gradient-to-r from-black/45 via-slate-900/40 to-black/45 backdrop-blur-[3px] border border-white/20 rounded-xl px-3 py-1 shadow-[0_4px_16px_rgba(0,0,0,0.5)] flex items-center justify-between">
+                                        <div className="bg-gradient-to-r from-black/20 via-slate-900/15 to-black/20 backdrop-blur-[2px] border border-white/20 rounded-xl px-3 py-1 shadow-[0_2px_10px_rgba(0,0,0,0.25)] flex items-center justify-between">
                                             <span className="text-[10px] font-black uppercase tracking-wider font-cinzel truncate drop-shadow-[0_2px_4px_rgba(0,0,0,1)]" style={{ color: customTextColor }}>
                                                 {typeLineText}
                                             </span>
@@ -2343,10 +2330,10 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                         </div>
                                     </div>
 
-                                    {/* 4. CAJA TRANSLÚCIDA INFERIOR: REGLAS, CITA CÉLEBRE Y STATS (OBSIDIAN SMOKE GLASS) */}
+                                    {/* 4. CAJA TRANSLÚCIDA INFERIOR: REGLAS, CITA CÉLEBRE Y STATS (CRISTAL AHUMADO LIGERO SECRET LAIR) */}
                                     <div className="absolute top-[63%] left-3.5 right-3.5 bottom-6 z-20 pointer-events-none">
                                         <div
-                                            className="w-full h-full bg-gradient-to-b from-black/35 via-black/45 to-black/55 backdrop-blur-[3px] border border-white/25 rounded-2xl p-2.5 shadow-[0_8px_32px_rgba(0,0,0,0.7)] flex flex-col justify-between"
+                                            className="w-full h-full bg-gradient-to-b from-black/15 via-black/22 to-black/32 backdrop-blur-[2px] border border-white/20 rounded-2xl p-2.5 shadow-[0_4px_20px_rgba(0,0,0,0.35)] flex flex-col justify-between"
                                             style={{ color: customTextColor }}
                                         >
                                             {/* Reglas / Poder Especial */}
@@ -2370,7 +2357,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
 
                                             {/* Placa P/T de Combate Inferior Derecha */}
                                             <div className="flex justify-end pt-1">
-                                                <div className="px-2.5 py-0.5 rounded-lg bg-stone-950/80 backdrop-blur-sm border border-amber-400/80 shadow-[0_2px_8px_rgba(0,0,0,0.8)] text-[10px] font-black font-cinzel tracking-wider text-amber-300 drop-shadow">
+                                                <div className="px-2.5 py-0.5 rounded-lg bg-black/40 backdrop-blur-sm border border-amber-400/80 shadow-[0_2px_8px_rgba(0,0,0,0.5)] text-[10px] font-black font-cinzel tracking-wider text-amber-300 drop-shadow">
                                                     {statsData.fuerza > 0 ? `${Math.round(statsData.fuerza / 15)} / ${Math.round(statsData.defensa / 15)}` : '5 / 4'}
                                                 </div>
                                             </div>

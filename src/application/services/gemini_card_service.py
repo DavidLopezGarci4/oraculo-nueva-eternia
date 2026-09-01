@@ -239,9 +239,16 @@ class GeminiCardService:
                 "so every single warrior is fully visible across the vertical Secret Lair card frame with natural breathing room on all 4 borders."
             )
 
+        vertical_fullbleed_directive = (
+            "\nCRITICAL FORMAT REQUIREMENT: Full-bleed VERTICAL PORTRAIT artwork in 3:4 / 63:88 aspect ratio. "
+            "The illustration, sky, terrain, and background environment MUST completely fill the entire canvas from top to bottom and left to right without any black bars, letterboxing, or margins. "
+            "Characters must be positioned naturally with slight breathing room from all 4 borders."
+        )
+
         prompt_text = (
             f"Masters of the Universe figure: '{product_name}' ({sub_category}).\n"
             f"{style_cfg['prompt']}"
+            f"{vertical_fullbleed_directive}"
             f"{multi_directive}"
         )
 
