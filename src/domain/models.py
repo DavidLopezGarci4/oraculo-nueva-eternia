@@ -571,7 +571,7 @@ class CharacterLoreModel(Base):
     
     # Personalización Visual
     text_color: Mapped[Optional[str]] = mapped_column(String, default="#FFFFFF", nullable=True) # Color de texto en zonas translúcidas
-    card_version: Mapped[Optional[str]] = mapped_column(String, default="showcase", nullable=True) # "showcase" o "classic"
+    card_version: Mapped[Optional[str]] = mapped_column(String, default="showcase", nullable=True) # "showcase", "secret_lair" o "classic"
     mana_cost: Mapped[Optional[str]] = mapped_column(String, default="{2}{W}{W}", nullable=True) # ej. "{2}{W}{W}", "{3}{B}{B}"
     
     # Matriz de Combate RPG

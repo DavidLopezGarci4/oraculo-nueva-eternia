@@ -6,7 +6,6 @@ import datetime
 # Dynamic Sys Path injection for absolute safety - prioritizing .3ox to avoid local vec3 folder collision
 current_dir = os.path.dirname(os.path.abspath(__file__))
 root_dir = os.path.abspath(os.path.join(current_dir, "..", "..", ".."))
-sys.path.insert(0, os.path.join(root_dir, ".3ox"))
 sys.path.insert(1, root_dir)
 
 from src.infrastructure.scrapers.pipeline import ScrapingPipeline
@@ -17,12 +16,7 @@ from src.infrastructure.scrapers.vinted_scraper import VintedScraper
 from src.infrastructure.scrapers.wallapop_scraper import WallapopScraper
 from src.core.logger import logger
 
-try:
-    from vec3.dev.adapters import initialize_runtime
-    # Initialize 3OX Runtime
-    initialize_runtime()
-except ImportError:
-    logger.warning("⚠️ vec3.dev.adapters not found, continuing without initialize_runtime")
+# 3OX legacy decoupled
 
 
 

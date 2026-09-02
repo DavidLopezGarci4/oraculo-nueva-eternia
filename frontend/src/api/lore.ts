@@ -12,7 +12,7 @@ export interface CharacterLore {
     flavor_quote_author?: string;
     lore: string;
     text_color?: string;
-    card_version?: 'showcase' | 'classic';
+    card_version?: 'showcase' | 'classic' | 'secret_lair';
     mana_cost?: string;
     fuerza: number;
     magia: number;

@@ -107,6 +107,130 @@ const FACTION_VISUAL_THEMES: Record<string, FactionVisualTheme> = {
     }
 };
 
+// ⚔️ Configuración estética de la Generación 3: Secret Lair Framed (Reborde sutil en 4 costados y coronas MTG)
+export interface SecretLairTheme {
+    borderColor: string;
+    borderGlow: string;
+    headerGradient: [string, string];
+    headerStroke: string;
+    alterEgoGradient: [string, string];
+    alterEgoStroke: string;
+    typeGradient: [string, string];
+    typeStroke: string;
+    boxBorder: string;
+    boxBg: string;
+    ptGradient: [string, string];
+    ptStroke: string;
+    ptTextColor: string;
+    accentColor: string;
+    foilHue: string;
+}
+
+export const SECRET_LAIR_THEMES: Record<string, SecretLairTheme> = {
+    castle_grayskull: {
+        borderColor: 'rgba(218, 165, 32, 0.8)',
+        borderGlow: 'rgba(234, 179, 8, 0.3)',
+        headerGradient: ['#3e2a18', '#1c130b'],
+        headerStroke: '#d4af37',
+        alterEgoGradient: ['#181008', '#0d0804'],
+        alterEgoStroke: '#9a7322',
+        typeGradient: ['rgba(45, 30, 16, 0.92)', 'rgba(22, 14, 8, 0.88)'],
+        typeStroke: '#d4af37',
+        boxBorder: 'rgba(212, 175, 55, 0.75)',
+        boxBg: 'linear-gradient(180deg, rgba(20, 14, 8, 0.24) 0%, rgba(30, 20, 12, 0.32) 100%)',
+        ptGradient: ['#422a15', '#241609'],
+        ptStroke: '#d4af37',
+        ptTextColor: '#fef08a',
+        accentColor: '#eab308',
+        foilHue: '#eab308'
+    },
+    snake_mountain: {
+        borderColor: 'rgba(56, 189, 248, 0.75)',
+        borderGlow: 'rgba(56, 189, 248, 0.3)',
+        headerGradient: ['#0d2b45', '#061624'],
+        headerStroke: '#38bdf8',
+        alterEgoGradient: ['#061320', '#020910'],
+        alterEgoStroke: '#0284c7',
+        typeGradient: ['rgba(10, 32, 54, 0.92)', 'rgba(5, 18, 30, 0.88)'],
+        typeStroke: '#38bdf8',
+        boxBorder: 'rgba(56, 189, 248, 0.7)',
+        boxBg: 'linear-gradient(180deg, rgba(6, 24, 40, 0.24) 0%, rgba(10, 35, 60, 0.32) 100%)',
+        ptGradient: ['#0c3656', '#051c2e'],
+        ptStroke: '#38bdf8',
+        ptTextColor: '#bae6fd',
+        accentColor: '#38bdf8',
+        foilHue: '#38bdf8'
+    },
+    evil_horde: {
+        borderColor: 'rgba(244, 63, 94, 0.75)',
+        borderGlow: 'rgba(244, 63, 94, 0.3)',
+        headerGradient: ['#4c0b14', '#220408'],
+        headerStroke: '#f43f5e',
+        alterEgoGradient: ['#1e0307', '#0e0103'],
+        alterEgoStroke: '#be123c',
+        typeGradient: ['rgba(55, 8, 16, 0.92)', 'rgba(28, 4, 8, 0.88)'],
+        typeStroke: '#f43f5e',
+        boxBorder: 'rgba(244, 63, 94, 0.7)',
+        boxBg: 'linear-gradient(180deg, rgba(30, 4, 9, 0.24) 0%, rgba(45, 6, 13, 0.32) 100%)',
+        ptGradient: ['#520915', '#290309'],
+        ptStroke: '#f43f5e',
+        ptTextColor: '#fecdd3',
+        accentColor: '#fb7185',
+        foilHue: '#f43f5e'
+    },
+    snake_men: {
+        borderColor: 'rgba(132, 204, 22, 0.75)',
+        borderGlow: 'rgba(132, 204, 22, 0.3)',
+        headerGradient: ['#1c3306', '#0e1a02'],
+        headerStroke: '#84cc16',
+        alterEgoGradient: ['#0d1702', '#050a01'],
+        alterEgoStroke: '#4d7c0f',
+        typeGradient: ['rgba(24, 42, 6, 0.92)', 'rgba(12, 22, 3, 0.88)'],
+        typeStroke: '#84cc16',
+        boxBorder: 'rgba(132, 204, 22, 0.7)',
+        boxBg: 'linear-gradient(180deg, rgba(14, 24, 3, 0.24) 0%, rgba(22, 38, 5, 0.32) 100%)',
+        ptGradient: ['#284508', '#142303'],
+        ptStroke: '#84cc16',
+        ptTextColor: '#d9f99d',
+        accentColor: '#bef264',
+        foilHue: '#84cc16'
+    },
+    great_rebellion: {
+        borderColor: 'rgba(226, 232, 240, 0.8)',
+        borderGlow: 'rgba(244, 114, 182, 0.25)',
+        headerGradient: ['#384556', '#1e2632'],
+        headerStroke: '#cbd5e1',
+        alterEgoGradient: ['#1a212b', '#0d1117'],
+        alterEgoStroke: '#94a3b8',
+        typeGradient: ['rgba(44, 55, 70, 0.92)', 'rgba(24, 32, 42, 0.88)'],
+        typeStroke: '#cbd5e1',
+        boxBorder: 'rgba(203, 213, 225, 0.7)',
+        boxBg: 'linear-gradient(180deg, rgba(22, 28, 38, 0.24) 0%, rgba(34, 44, 58, 0.32) 100%)',
+        ptGradient: ['#3a4758', '#202832'],
+        ptStroke: '#e2e8f0',
+        ptTextColor: '#ffffff',
+        accentColor: '#f472b6',
+        foilHue: '#cbd5e1'
+    },
+    cosmic_enforcers: {
+        borderColor: 'rgba(6, 182, 212, 0.8)',
+        borderGlow: 'rgba(6, 182, 212, 0.3)',
+        headerGradient: ['#093350', '#041c2e'],
+        headerStroke: '#06b6d4',
+        alterEgoGradient: ['#041a2a', '#020e18'],
+        alterEgoStroke: '#0891b2',
+        typeGradient: ['rgba(7, 40, 64, 0.92)', 'rgba(4, 22, 36, 0.88)'],
+        typeStroke: '#06b6d4',
+        boxBorder: 'rgba(6, 182, 212, 0.7)',
+        boxBg: 'linear-gradient(180deg, rgba(5, 24, 40, 0.24) 0%, rgba(8, 38, 62, 0.32) 100%)',
+        ptGradient: ['#0c4266', '#052338'],
+        ptStroke: '#06b6d4',
+        ptTextColor: '#cffafe',
+        accentColor: '#38bdf8',
+        foilHue: '#06b6d4'
+    }
+};
+
 export type { FactionCardLayout };
 
 export const FACTION_CARD_LAYOUTS: Record<string, FactionCardLayout> = {
@@ -1006,8 +1130,8 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
     const [userFactionOverride, setUserFactionOverride] = useState<string | null>(null);
     const [customLayouts, setCustomLayouts] = useState<Record<string, any>>(DEFAULT_FACTION_CARD_LAYOUTS);
 
-    // Selector de versión de carta (Showcase Full-Art por defecto vs Clásica 3D)
-    const [cardVersion, setCardVersion] = useState<'showcase' | 'classic'>('showcase');
+    // Selector de versión de carta (Secret Lair Framed por defecto vs Showcase vs Clásica 3D)
+    const [cardVersion, setCardVersion] = useState<'showcase' | 'secret_lair' | 'classic'>('secret_lair');
 
     // Estado para edición libre de textos y atributos del cromo
     const [isEditingTexts, setIsEditingTexts] = useState<boolean>(false);
@@ -1036,7 +1160,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
         if (savedCustom) {
             try {
                 const parsed = JSON.parse(savedCustom);
-                setCardVersion(parsed.cardVersion || 'showcase');
+                setCardVersion(parsed.cardVersion || 'secret_lair');
                 setCustomCardName(parsed.customCardName || '');
                 setCustomSubtitle(parsed.customSubtitle || '');
                 setCustomManaCost(parsed.customManaCost || '');
@@ -1064,7 +1188,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                 defaultType = 'Criatura Legendaria Mítica — Campeón de Grayskull';
             }
 
-            setCardVersion('showcase');
+            setCardVersion('secret_lair');
             setUserFactionOverride(null);
             setCustomCardName('');
             setCustomSubtitle('');
@@ -1102,6 +1226,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                 if (best.flavor_quote_author && !customQuoteAuthor) setCustomQuoteAuthor(best.flavor_quote_author);
                 if (best.text_color && customTextColor === '#FFFFFF') setCustomTextColor(best.text_color);
                 if (best.mana_cost && !customManaCost) setCustomManaCost(best.mana_cost);
+                if (best.card_version && !savedCustom) setCardVersion(best.card_version as any);
             }
         }).catch(() => {});
     }, [isOpen, item?.id]);
@@ -1111,7 +1236,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
         if (!isOpen || !item) return;
 
         const hasCustomization = Boolean(
-            cardVersion !== 'showcase' ||
+            cardVersion !== 'secret_lair' ||
             customCardName ||
             customSubtitle ||
             customManaCost ||
@@ -1208,6 +1333,14 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
         defensa: effectiveDbLore.defensa,
         agilidad: effectiveDbLore.agilidad
     } : localProfile.stats);
+
+    // ⚔️ Tema dinámico para Secret Lair Framed
+    const slTheme = SECRET_LAIR_THEMES[themeKey] || SECRET_LAIR_THEMES.castle_grayskull;
+    const itemVal = item?.current_value || item?.purchase_price || 0;
+    const isMythic = Boolean((grade && grade >= 9.0) || itemVal >= 60);
+    const isRare = !isMythic && Boolean((grade && grade >= 7.5) || itemVal >= 30);
+    const rarityLetter = isMythic ? 'M' : isRare ? 'R' : 'U';
+    const rarityStarColor = isMythic ? '#f97316' : isRare ? '#eab308' : '#cbd5e1';
 
     // Renderizador de Orbes de Maná de alta fidelidad estilo Secret Lair
     const renderManaCostPips = (costString: string) => {
@@ -1367,7 +1500,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
         if (item) {
             localStorage.removeItem(`tcg_custom_card_${item.id}`);
         }
-        setCardVersion('showcase');
+        setCardVersion('secret_lair');
         setCustomCardName('');
         setCustomSubtitle('');
         setCustomManaCost('');
@@ -1727,31 +1860,43 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                             <Sparkles className="h-4 w-4 text-amber-400" />
                         </div>
 
-                        {/* SELECTOR DE EDICIÓN: SHOWCASE FULL-ART VS CLÁSICO 3D */}
-                        <div className="w-full flex items-center justify-center p-1 rounded-xl bg-slate-950/90 border border-amber-500/30 gap-1.5 shadow-inner">
+                        {/* SELECTOR DE EDICIÓN: SECRET LAIR FRAMED VS SHOWCASE FULL-ART VS CLÁSICO 3D */}
+                        <div className="w-full grid grid-cols-3 p-1 rounded-xl bg-slate-950/90 border border-amber-500/30 gap-1 shadow-inner">
                             <button
                                 type="button"
-                                onClick={() => setCardVersion('showcase')}
-                                className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-[10.5px] font-black uppercase tracking-wider transition-all font-cinzel cursor-pointer ${
-                                    cardVersion === 'showcase'
+                                onClick={() => setCardVersion('secret_lair')}
+                                className={`flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all font-cinzel cursor-pointer ${
+                                    cardVersion === 'secret_lair'
                                         ? 'bg-gradient-to-r from-amber-500 to-yellow-600 text-slate-950 shadow-md shadow-amber-500/30 font-black'
                                         : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
                                 }`}
                             >
-                                <Sparkles className="h-3.5 w-3.5" />
-                                <span>🌟 Full-Art Showcase</span>
+                                <Sparkles className="h-3 w-3 shrink-0" />
+                                <span className="truncate">⚔️ Secret Lair</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setCardVersion('showcase')}
+                                className={`flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all font-cinzel cursor-pointer ${
+                                    cardVersion === 'showcase'
+                                        ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-md shadow-purple-500/30 font-black'
+                                        : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                                }`}
+                            >
+                                <Sparkles className="h-3 w-3 shrink-0" />
+                                <span className="truncate">🌟 Full-Art</span>
                             </button>
                             <button
                                 type="button"
                                 onClick={() => setCardVersion('classic')}
-                                className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-[10.5px] font-black uppercase tracking-wider transition-all font-cinzel cursor-pointer ${
+                                className={`flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all font-cinzel cursor-pointer ${
                                     cardVersion === 'classic'
                                         ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-md shadow-cyan-500/30 font-black'
                                         : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
                                 }`}
                             >
-                                <Shield className="h-3.5 w-3.5" />
-                                <span>🛡️ Marco Clásico 3D</span>
+                                <Shield className="h-3 w-3 shrink-0" />
+                                <span className="truncate">🛡️ Clásico 3D</span>
                             </button>
                         </div>
                     </div>
@@ -2201,7 +2346,262 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                             }}
                             className="relative w-full max-w-[340px] sm:max-w-[360px] rounded-[24px] select-none overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.95)] bg-slate-950 font-cinzel border-2 border-stone-800"
                         >
-                            {cardVersion === 'showcase' ? (
+                            {cardVersion === 'secret_lair' ? (
+                                /* ========================================================================= */
+                                /* ⚔️ GENERACIÓN 3: SECRET LAIR FRAMED (BORDE FINO 4 COSTADOS + CORONA MTG) */
+                                /* ========================================================================= */
+                                <>
+                                    {/* 1. CAPA DE FONDO: SANGRADO AMBIENTAL + ILUSTRACIÓN INTERACTIVA */}
+                                    <div
+                                        onMouseDown={handleImgMouseDown}
+                                        onMouseMove={handleImgMouseMove}
+                                        onMouseUp={handleImgMouseUp}
+                                        onMouseLeave={handleImgMouseUp}
+                                        onWheel={handleImgWheel}
+                                        onTouchStart={handleImgTouchStart}
+                                        onTouchMove={handleImgTouchMove}
+                                        onTouchEnd={handleImgTouchEnd}
+                                        onContextMenu={(e) => { e.preventDefault(); resetFraming(); }}
+                                        onDoubleClick={(e) => { e.preventDefault(); resetFraming(); }}
+                                        style={{ touchAction: 'none' }}
+                                        className={`absolute inset-0 z-0 overflow-hidden flex items-center justify-center bg-[#070b10] rounded-[24px] ${
+                                            isDraggingImg ? 'cursor-grabbing' : 'cursor-grab'
+                                        }`}
+                                        title="Arrastra con el ratón o usa la rueda para ampliar y mover libremente"
+                                    >
+                                        {/* Capa de Sangrado Ambiental Difuso */}
+                                        <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none select-none">
+                                            {aiResult?.image_base64 ? (
+                                                <img
+                                                    src={aiResult.image_base64}
+                                                    alt="Ambient bleed"
+                                                    aria-hidden="true"
+                                                    className="w-full h-full object-cover scale-150 blur-xl opacity-50 brightness-75 select-none"
+                                                />
+                                            ) : (
+                                                <MOTUImage
+                                                    productId={item.id}
+                                                    src={activeImage}
+                                                    alt="Ambient bleed"
+                                                    className="w-full h-full object-cover scale-150 blur-xl opacity-50 brightness-75 select-none"
+                                                />
+                                            )}
+                                        </div>
+
+                                        {/* Ilustración Frontal Interactiva: Foto Original contenida vs IA Full-Bleed */}
+                                        <div
+                                            className="absolute flex items-center justify-center pointer-events-none select-none w-full h-full z-10"
+                                            style={{
+                                                transform: `translate(${imgPan.x}px, ${imgPan.y}px) scale(${imgZoom})`,
+                                                transformOrigin: 'center center',
+                                                transition: isDraggingImg ? 'none' : 'transform 0.1s ease-out'
+                                            }}
+                                        >
+                                            {aiResult?.image_base64 ? (
+                                                <img
+                                                    src={aiResult.image_base64}
+                                                    alt={name}
+                                                    draggable={false}
+                                                    className="w-full h-full object-cover select-none pointer-events-none"
+                                                />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center p-3">
+                                                    <MOTUImage
+                                                        productId={item.id}
+                                                        src={activeImage}
+                                                        alt={name}
+                                                        className="max-h-full max-w-full w-auto h-auto object-contain select-none pointer-events-none drop-shadow-[0_15px_25px_rgba(0,0,0,0.95)]"
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Mini Barra de Zoom y Encuadre Flotante */}
+                                        {!exporting && (
+                                            <div className="export-exclude absolute top-4 right-4 z-30 flex items-center gap-1 bg-black/70 backdrop-blur-md px-1.5 py-1 rounded-lg border border-slate-700/60 shadow-lg opacity-85 hover:opacity-100 transition-opacity">
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setImgZoom((prev) => Math.min(6.0, +(prev + 0.2).toFixed(2)));
+                                                    }}
+                                                    title="Ampliar Imagen (+)"
+                                                    className="p-1 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition active:scale-90"
+                                                >
+                                                    <Plus className="h-3 w-3" />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setImgZoom((prev) => Math.max(0.3, +(prev - 0.2).toFixed(2)));
+                                                    }}
+                                                    title="Reducir Imagen (-)"
+                                                    className="p-1 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition active:scale-90"
+                                                >
+                                                    <Minus className="h-3 w-3" />
+                                                </button>
+                                                {(imgZoom !== 1 || imgPan.x !== 0 || imgPan.y !== 0) && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            resetFraming();
+                                                        }}
+                                                        title="Restablecer Encuadre Original"
+                                                        className="p-1 hover:bg-rose-500/20 text-amber-400 hover:text-rose-300 rounded transition active:scale-90"
+                                                    >
+                                                        <RotateCcw className="h-3 w-3" />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* 2. REBORDE FINO QUE FLANQUEA LOS 4 COSTADOS (PINSTRIPE FRAME) */}
+                                    <div
+                                        className="absolute inset-[7px] pointer-events-none z-20 rounded-[18px] border-[1.5px]"
+                                        style={{
+                                            borderColor: slTheme.borderColor,
+                                            boxShadow: `inset 0 0 10px rgba(0,0,0,0.8), 0 0 6px ${slTheme.borderGlow}`
+                                        }}
+                                    >
+                                        {/* 4 Esquinas Biseladas / Filetes Ornamentales */}
+                                        <div className="absolute -top-[1px] -left-[1px] w-2.5 h-2.5 border-t-[2px] border-l-[2px]" style={{ borderColor: slTheme.accentColor }} />
+                                        <div className="absolute -top-[1px] -right-[1px] w-2.5 h-2.5 border-t-[2px] border-r-[2px]" style={{ borderColor: slTheme.accentColor }} />
+                                        <div className="absolute -bottom-[1px] -left-[1px] w-2.5 h-2.5 border-b-[2px] border-l-[2px]" style={{ borderColor: slTheme.accentColor }} />
+                                        <div className="absolute -bottom-[1px] -right-[1px] w-2.5 h-2.5 border-b-[2px] border-r-[2px]" style={{ borderColor: slTheme.accentColor }} />
+                                    </div>
+
+                                    {/* 3. CORONA ORNAMENTAL DE CABECERA (SECRET LAIR ARCH & ALTER-EGO) */}
+                                    <div className="absolute top-[10px] left-[11px] right-[11px] z-20 pointer-events-none flex flex-col items-center">
+                                        {/* Barra Principal de Título con Alas Biseladas */}
+                                        <div
+                                            className="w-full relative px-3 py-1 rounded-t-xl border-[1.5px] shadow-[0_4px_12px_rgba(0,0,0,0.6)] flex items-center justify-between"
+                                            style={{
+                                                background: `linear-gradient(180deg, ${slTheme.headerGradient[0]} 0%, ${slTheme.headerGradient[1]} 100%)`,
+                                                borderColor: slTheme.headerStroke
+                                            }}
+                                        >
+                                            {/* Cuernos/Alas decorativas en las esquinas */}
+                                            <div
+                                                className="absolute -top-[3px] left-1 w-2 h-2 rotate-45 border-t-2 border-l-2"
+                                                style={{ borderColor: slTheme.headerStroke, background: slTheme.headerGradient[0] }}
+                                            />
+                                            <div
+                                                className="absolute -top-[3px] right-1 w-2 h-2 rotate-45 border-t-2 border-r-2"
+                                                style={{ borderColor: slTheme.headerStroke, background: slTheme.headerGradient[0] }}
+                                            />
+
+                                            <div className="min-w-0 pr-1.5 z-10">
+                                                <h3 className="text-xs sm:text-[13px] font-black uppercase tracking-wider text-white font-cinzel truncate drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+                                                    {displayCardName}
+                                                </h3>
+                                            </div>
+
+                                            {/* Orbes de Coste de Maná */}
+                                            <div className="z-10 shrink-0">
+                                                {renderManaCostPips(displayManaCost)}
+                                            </div>
+                                        </div>
+
+                                        {/* Placa Encastrada Inferior de Alter-Ego / Subtítulo */}
+                                        {displaySubtitle && (
+                                            <div
+                                                className="relative -mt-[1px] px-4 py-0.5 rounded-b-lg border-b-[1.5px] border-x-[1.5px] shadow-md max-w-[85%]"
+                                                style={{
+                                                    background: `linear-gradient(180deg, ${slTheme.alterEgoGradient[0]} 0%, ${slTheme.alterEgoGradient[1]} 100%)`,
+                                                    borderColor: slTheme.alterEgoStroke
+                                                }}
+                                            >
+                                                <span className="text-[9px] sm:text-[9.5px] italic text-amber-200/95 font-serif truncate block drop-shadow">
+                                                    {displaySubtitle}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* 4. CINTA ESCULPIDA DE TIPO (CHAMFERED RIBBON + ESTRELLA SECRET LAIR) */}
+                                    <div className="absolute top-[54.5%] left-[12px] right-[12px] z-20 pointer-events-none">
+                                        <div
+                                            className="w-full px-3 py-1 rounded-lg border-[1.5px] shadow-[0_3px_10px_rgba(0,0,0,0.5)] flex items-center justify-between"
+                                            style={{
+                                                background: `linear-gradient(90deg, ${slTheme.typeGradient[0]} 0%, ${slTheme.typeGradient[1]} 100%)`,
+                                                borderColor: slTheme.typeStroke
+                                            }}
+                                        >
+                                            <span
+                                                className="text-[9.5px] sm:text-[10px] font-black uppercase tracking-wider font-cinzel truncate drop-shadow-[0_2px_4px_rgba(0,0,0,1)] text-white"
+                                            >
+                                                {typeLineText}
+                                            </span>
+
+                                            {/* Estrella Secret Lair con Estela Horizontal */}
+                                            <div className="flex items-center gap-0.5 shrink-0 ml-1.5">
+                                                <span className="text-[7.5px] font-mono tracking-tighter opacity-80" style={{ color: rarityStarColor }}>───</span>
+                                                <Sparkles className="h-3 w-3 drop-shadow" style={{ color: rarityStarColor }} />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* 5. CAJA DE REGLAS Y LORE HIPER-TRANSLÚCIDA */}
+                                    <div className="absolute top-[61.5%] left-[12px] right-[12px] bottom-[28px] z-20 pointer-events-none">
+                                        <div
+                                            className="w-full h-full backdrop-blur-[2px] rounded-xl p-2.5 border-[1.5px] shadow-[0_4px_20px_rgba(0,0,0,0.35)] flex flex-col justify-between"
+                                            style={{
+                                                background: slTheme.boxBg,
+                                                borderColor: slTheme.boxBorder
+                                            }}
+                                        >
+                                            {/* Reglas / Habilidad Especial */}
+                                            <div className="text-[9.5px] sm:text-[10px] leading-snug drop-shadow-[0_2px_4px_rgba(0,0,0,1)] font-sans font-semibold text-stone-100">
+                                                {specialMoveText}
+                                            </div>
+
+                                            {/* Cita de Lore Canónico */}
+                                            {loreText && (
+                                                <div className="border-t border-white/15 pt-1 mt-0.5">
+                                                    <p className="text-[8.5px] sm:text-[9px] italic opacity-95 font-serif leading-tight drop-shadow-[0_2px_4px_rgba(0,0,0,1)] text-stone-200">
+                                                        "{loreText}"
+                                                    </p>
+                                                    {displayQuoteAuthor && (
+                                                        <p className="text-[7.5px] sm:text-[8px] text-right opacity-90 font-sans mt-0.5 font-bold drop-shadow-[0_1px_3px_rgba(0,0,0,1)] text-amber-300">
+                                                            — {displayQuoteAuthor}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* 6. CARTELA P/T DE COMBATE INFERIOR DERECHA */}
+                                    <div className="absolute bottom-[20px] right-[14px] z-30 pointer-events-none">
+                                        <div
+                                            className="px-2.5 py-0.5 rounded-lg border-[1.5px] shadow-[0_2px_8px_rgba(0,0,0,0.7)] text-[10px] sm:text-[10.5px] font-black font-cinzel tracking-wider drop-shadow"
+                                            style={{
+                                                background: `linear-gradient(135deg, ${slTheme.ptGradient[0]} 0%, ${slTheme.ptGradient[1]} 100%)`,
+                                                borderColor: slTheme.ptStroke,
+                                                color: slTheme.ptTextColor
+                                            }}
+                                        >
+                                            {statsData.fuerza > 0 ? `${Math.round(statsData.fuerza / 15)} / ${Math.round(statsData.defensa / 15)}` : '5 / 4'}
+                                        </div>
+                                    </div>
+
+                                    {/* 7. SELLO HOLOGRÁFICO FOIL OVALADO (SECRET LAIR STAMP) */}
+                                    <div className="absolute bottom-[22px] left-1/2 -translate-x-1/2 z-30 pointer-events-none">
+                                        <div className="w-6 h-3.5 rounded-full border border-white/40 shadow-md flex items-center justify-center overflow-hidden bg-gradient-to-tr from-slate-400 via-amber-200 via-emerald-200 to-purple-300 opacity-90">
+                                            <span className="text-[6px] font-black text-slate-900/80 leading-none select-none font-cinzel">✦</span>
+                                        </div>
+                                    </div>
+
+                                    {/* 8. PIE DE IMPRENTA DE COLECCIONISTA */}
+                                    <div className="absolute bottom-1 left-4 right-4 z-20 pointer-events-none flex items-center justify-between text-[7px] text-stone-300 font-mono drop-shadow">
+                                        <span>{rarityLetter} 2789 | SLD • ES</span>
+                                        <span className="truncate">™ & © 2026 Mattel / Wizards of the Coast</span>
+                                    </div>
+                                </>
+                            ) : cardVersion === 'showcase' ? (
                                 /* ========================================================================= */
                                 /* 🌟 REEDICIÓN FULL-ART SECRET LAIR SHOWCASE (100% ILUSTRACIÓN + CRISTAL)   */
                                 /* ========================================================================= */

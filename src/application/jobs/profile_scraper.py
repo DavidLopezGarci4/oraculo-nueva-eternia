@@ -1,8 +1,6 @@
 import sys
 import asyncio
 import json
-from vec3.dev.adapters import initialize_runtime
-initialize_runtime()
 
 from src.infrastructure.scrapers.frikiverso_scraper import FrikiversoScraper
 from src.infrastructure.scrapers.fantasia_scraper import FantasiaScraper

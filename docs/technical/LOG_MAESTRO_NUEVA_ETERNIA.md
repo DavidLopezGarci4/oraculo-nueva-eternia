@@ -1477,7 +1477,17 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
   - **Desacoplamiento de Gestos y Marco Estático (`TradingCardModal.tsx`)**: Inmovilización del 3D Tilt durante gestos/arrastre (`isDraggingImg`). Incorporación de `touch-action: none` en la capa interactiva para que el marco de la carta permanezca 100% estático mientras se amplía o desplaza la imagen interior.
   - **Encuadre Adaptativo de Imagen (Catálogo vs IA)**: Las fotos originales de la fortaleza (vehículos, castillos y piezas apaisadas) se presentan en ancho completo contenido (`object-contain`), mientras que las imágenes generadas por IA ocupan la totalidad de la carta en vertical full-bleed (`object-cover`).
   - **Casillas de Texto Glassmorphism Ultra-Ligeras**: Reducción de opacidad en las cajas de texto (10%-25% alpha), desenfoque de fondo sutil (`backdrop-blur-[2px]`) y sombras tipográficas reforzadas para máxima legibilidad sin ocultar el arte.
-  - **Compilación Validada**: `npm run build` aprobado con 0 errores y suite de pruebas backend (4/4 tests de lore) superada.
+### ⚡ Fase 99: Generación 3 de Cartas TCG — Secret Lair Framed, Reborde Fino en 4 Costados y Selector Triple (02/09/2026)
+
+- **Hitos**: Creación y despliegue de la **Generación 3 de Cartas TCG (`secret_lair`)**, inspirada en la colección oficial de *Magic: The Gathering x Masters of the Universe*; implementación del **reborde sutil en los 4 costados** (pinstripe fino de 1.5px con cantos biselados) que encuadra la carta sin recortar la imagen; diseño de la **corona superior esculpida con alas angulares** y placa encastrada de alter-ego; cinta de tipo esculpida con **estrella Secret Lair de rareza dinámicamente tintada**; **caja de reglas y lore hiper-translúcida** (~20-25% opacidad); cartela de combate P/T; sello holográfico foil ovalado central; y selector de edición triple (`⚔️ Secret Lair`, `🌟 Full-Art`, `🛡️ Clásico 3D`).
+- **Estado**: ✅ COMPLETADO Y VERIFICADO
+- **Logros Técnicos**:
+  - **Paleta Estética Dinámica por Facción (`SECRET_LAIR_THEMES`)**: Definición de perfiles de gradientes, bordes y reflejos metálicos para las 6 facciones canónicas (*Castle Grayskull*, *Snake Mountain*, *Evil Horde*, *Snake Men*, *Great Rebellion*, *Cosmic Enforcers*).
+  - **Iconografía y Escala de Rareza MTG**: Cálculo automático de rareza (*Mítica M* en fuego dorado/naranja, *Rara R* en oro pulido, *Infrecuente U* en plata) asociado a la estrella Secret Lair de la cinta de tipo y al sello foil inferior.
+  - **Arquitectura DOM del Marco Gen 3 (`TradingCardModal.tsx`)**: Corona ornamental con alas, subtítulo/alter-ego curvado, pips de maná, caja de texto vidriada de alta transparencia que deja ver la armadura y fondo de la figura, cartela P/T en esquina inferior derecha y pie de imprenta de coleccionista.
+  - **Selector Triple en Interfaz**: Navegación fluida entre *Secret Lair Framed*, *Full-Art Showcase* y *Marco Clásico 3D*, con persistencia automática en `localStorage` y en el modelo de base de datos `character_lore`.
+  - **Validación de Compilación**: `npm run build` aprobado en 11.32s con 0 errores TypeScript/Vite.
+
 
 
 

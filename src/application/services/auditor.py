@@ -7,7 +7,7 @@ from src.infrastructure.repositories.product import ProductRepository
 class AuditorService:
     def __init__(self, product_repo: ProductRepository):
         self.repo = product_repo
-        self.receipts_dir = Path("vec3/var/receipts")
+        self.receipts_dir = Path("data/logs/audit_receipts")
         self.receipts_dir.mkdir(parents=True, exist_ok=True)
 
     def log_offer_event(self, action_type: str, offer_data: dict, details: str = None):
