@@ -7,45 +7,36 @@ interface ThemeConfig {
     plasma: string;
     glow: string;
     sparks: string;
-    jitter: number;
-    wobble: number;
+    ambient: string;
 }
 
 const THEMES: Record<LightningTheme, ThemeConfig> = {
     heman: {
         core: '#FFFFFF',
-        plasma: '#00F3FF',
+        plasma: '#38BDF8',
         glow: '#0284C7',
         sparks: '#BAE6FD',
-        jitter: 1.0,
-        wobble: 1.0,
+        ambient: 'rgba(56, 189, 248, 0.15)',
     },
     skeletor: {
         core: '#FFFFFF',
-        plasma: '#D946EF',
-        glow: '#7E22CE',
+        plasma: '#E879F9',
+        glow: '#9333EA',
         sparks: '#F5D0FE',
-        jitter: 1.45,
-        wobble: 1.4,
+        ambient: 'rgba(232, 121, 249, 0.15)',
     },
     vintage: {
         core: '#FFFBEB',
-        plasma: '#F59E0B',
+        plasma: '#FBBF24',
         glow: '#D97706',
         sparks: '#FDE68A',
-        jitter: 0.95,
-        wobble: 0.9,
+        ambient: 'rgba(251, 191, 36, 0.15)',
     },
 };
 
 interface Point {
     x: number;
     y: number;
-}
-
-interface Segment {
-    p1: Point;
-    p2: Point;
 }
 
 interface ProceduralLightningCanvasProps {
@@ -71,7 +62,8 @@ export const ProceduralLightningCanvas: React.FC<ProceduralLightningCanvasProps>
 }) => {
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const animFrameRef = useRef<number>(0);
-    const lastRenderTime = useRef<number>(0);
+    const starRotationRef = useRef<number>(0);
+    const ringPhaseRef = useRef<number>(0);
 
     const themeConfig = THEMES[theme] || THEMES.heman;
 
@@ -81,58 +73,117 @@ export const ProceduralLightningCanvas: React.FC<ProceduralLightningCanvasProps>
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        // Recursive Midpoint Displacement for fractal lightning
-        const generateFractalPath = (
+        // Recursive jagged bolt generator (no fishbones or straight trees)
+        const drawJaggedBolt = (
             p1: Point,
             p2: Point,
-            px: number,
-            py: number,
-            len: number,
-            ux: number,
-            uy: number,
-            maxDisplacement: number,
-            depth: number,
-            maxDepth: number,
-            segments: Segment[],
-            canBranch: boolean = true
+            perpX: number,
+            perpY: number,
+            displacement: number,
+            iterations: number,
+            plasmaWidth: number,
+            coreWidth: number
         ) => {
-            if (depth >= maxDepth) {
-                segments.push({ p1, p2 });
-                return;
+            let pts: Point[] = [p1, p2];
+
+            for (let i = 0; i < iterations; i++) {
+                const newPts: Point[] = [];
+                for (let j = 0; j < pts.length - 1; j++) {
+                    const a = pts[j];
+                    const b = pts[j + 1];
+                    const midX = (a.x + b.x) / 2;
+                    const midY = (a.y + b.y) / 2;
+                    const disp = (Math.random() - 0.5) * displacement * Math.pow(0.55, i);
+                    newPts.push(a);
+                    newPts.push({
+                        x: midX + perpX * disp,
+                        y: midY + perpY * disp,
+                    });
+                }
+                newPts.push(pts[pts.length - 1]);
+                pts = newPts;
             }
 
-            const midX = (p1.x + p2.x) / 2;
-            const midY = (p1.y + p2.y) / 2;
+            // Render Pass 1: Plasma Glow
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.strokeStyle = themeConfig.plasma;
+            ctx.shadowColor = themeConfig.glow;
+            ctx.shadowBlur = isFullScreen ? 20 : 12;
+            ctx.lineWidth = plasmaWidth;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
 
-            const displacement = (Math.random() - 0.5) * 2 * maxDisplacement;
-            const midPoint: Point = {
-                x: midX + px * displacement,
-                y: midY + py * displacement,
-            };
-
-            generateFractalPath(p1, midPoint, px, py, len, ux, uy, maxDisplacement * 0.58, depth + 1, maxDepth, segments, canBranch);
-            generateFractalPath(midPoint, p2, px, py, len, ux, uy, maxDisplacement * 0.58, depth + 1, maxDepth, segments, canBranch);
-
-            // Optional secondary branch splitting off
-            if (canBranch && depth === 2 && Math.random() < 0.35) {
-                const branchAngle = (Math.random() > 0.5 ? 1 : -1) * (0.3 + Math.random() * 0.4);
-                const branchLen = (len * 0.18 + Math.random() * 15) * (1 - depth / maxDepth);
-                const branchEnd: Point = {
-                    x: midPoint.x + (ux * Math.cos(branchAngle) - uy * Math.sin(branchAngle)) * branchLen,
-                    y: midPoint.y + (ux * Math.sin(branchAngle) + uy * Math.cos(branchAngle)) * branchLen,
-                };
-                generateFractalPath(midPoint, branchEnd, px, py, len, ux, uy, maxDisplacement * 0.45, depth + 1, maxDepth, segments, false);
+            ctx.beginPath();
+            ctx.moveTo(pts[0].x, pts[0].y);
+            for (let k = 1; k < pts.length; k++) {
+                ctx.lineTo(pts[k].x, pts[k].y);
             }
+            ctx.stroke();
+
+            // Render Pass 2: White Core
+            ctx.strokeStyle = themeConfig.core;
+            ctx.shadowColor = '#FFFFFF';
+            ctx.shadowBlur = 4;
+            ctx.lineWidth = coreWidth;
+
+            ctx.beginPath();
+            ctx.moveTo(pts[0].x, pts[0].y);
+            for (let k = 1; k < pts.length; k++) {
+                ctx.lineTo(pts[k].x, pts[k].y);
+            }
+            ctx.stroke();
+            ctx.restore();
         };
 
-        const render = (now: number) => {
-            // Regulate frame rate to ~40-60 FPS for an energetic crackle effect without overhead
-            if (now - lastRenderTime.current < 22) {
-                animFrameRef.current = requestAnimationFrame(render);
-                return;
-            }
-            lastRenderTime.current = now;
+        // Canonical Starburst at the tip of the sword
+        const drawStarburst = (cx: number, cy: number, radius: number, rotAngle: number) => {
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(rotAngle);
+            ctx.globalCompositeOperation = 'lighter';
 
+            // 1. Radial Energy Core
+            const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, radius);
+            grad.addColorStop(0, '#FFFFFF');
+            grad.addColorStop(0.25, themeConfig.core);
+            grad.addColorStop(0.55, themeConfig.plasma);
+            grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(0, 0, radius * 1.2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 2. Main 4 Long Diffraction Spikes
+            ctx.shadowColor = themeConfig.plasma;
+            ctx.shadowBlur = 18;
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = isFullScreen ? 3.2 : 2.2;
+
+            const longRay = radius * 3.2;
+            ctx.beginPath();
+            ctx.moveTo(0, -longRay);
+            ctx.lineTo(0, longRay);
+            ctx.moveTo(-longRay, 0);
+            ctx.lineTo(longRay, 0);
+            ctx.stroke();
+
+            // 3. Diagonal 4 Secondary Spikes
+            ctx.strokeStyle = themeConfig.plasma;
+            ctx.lineWidth = isFullScreen ? 2.0 : 1.4;
+            const shortRay = radius * 1.8;
+            ctx.beginPath();
+            ctx.moveTo(-shortRay, -shortRay);
+            ctx.lineTo(shortRay, shortRay);
+            ctx.moveTo(-shortRay, shortRay);
+            ctx.lineTo(shortRay, -shortRay);
+            ctx.stroke();
+
+            ctx.restore();
+        };
+
+        const render = () => {
             const dpr = window.devicePixelRatio || 1;
             const rect = canvas.getBoundingClientRect();
             const displayWidth = rect.width || (isFullScreen ? window.innerWidth : 250);
@@ -150,7 +201,6 @@ export const ProceduralLightningCanvas: React.FC<ProceduralLightningCanvasProps>
             ctx.scale(dpr, dpr);
             ctx.clearRect(0, 0, displayWidth, displayHeight);
 
-            // SVG equivalent viewBox mapping (0..250, 0..250)
             const preserveMode = isFullScreen ? 'slice' : 'meet';
             const scaleFactor = preserveMode === 'slice'
                 ? Math.max(displayWidth / 250, displayHeight / 250)
@@ -159,118 +209,125 @@ export const ProceduralLightningCanvas: React.FC<ProceduralLightningCanvasProps>
             const offsetX = (displayWidth - 250 * scaleFactor) / 2;
             const offsetY = (displayHeight - 250 * scaleFactor) / 2;
 
-            // Map coordinates from 250x250 space to display space
+            // Guard (Empuñadura) and Tip (Punta)
             const sX = offsetX + startX * scaleFactor;
             const sY = offsetY + startY * scaleFactor;
-            const eX = offsetX + endX * scaleFactor;
-            const eY = offsetY + endY * scaleFactor;
+            const tX = offsetX + endX * scaleFactor;
+            const tY = offsetY + endY * scaleFactor;
 
-            const dx = eX - sX;
-            const dy = eY - sY;
-            const len = Math.sqrt(dx * dx + dy * dy);
-            const ux = len > 0 ? dx / len : 0;
-            const uy = len > 0 ? dy / len : -1;
-            const px = -uy;
+            const dx = tX - sX;
+            const dy = tY - sY;
+            const bladeLen = Math.sqrt(dx * dx + dy * dy);
+            const ux = bladeLen > 0 ? dx / bladeLen : 0;
+            const uy = bladeLen > 0 ? dy / bladeLen : -1;
+            const px = -uy; // Perpendicular vector (normal to blade)
             const py = ux;
 
-            if (progress >= 4) {
-                const bladeStart = len * 0.08;
-                const activeBladeLen = bladeStart + (Math.min(100, progress) / 100) * (len - bladeStart);
+            // Blade half width in display pixels (approx 12-16 units in 250 space)
+            const bladeHalfWidth = 14 * scaleFactor;
 
-                const boltCount = isFullScreen
-                    ? (progress > 85 ? 12 : 7)
-                    : (progress > 85 ? 7 : 4);
+            if (progress >= 3) {
+                const activeRatio = Math.min(100, progress) / 100;
+                const currentBladeHeight = bladeLen * activeRatio;
 
-                const segments: Segment[] = [];
+                // --- 1. CELESTIAL STRIKE: Rayos que caen del cosmos sobre la punta ---
+                // En Filmation / MOTU, el relámpago celestial golpea la punta desde lo alto
+                const skyOriginY = Math.max(0, tY - (180 * scaleFactor));
+                const skyCount = progress > 70 ? 2 : 1;
 
-                // 1. Blade Lightning bolts (following the ridge)
-                for (let i = 0; i < boltCount; i++) {
-                    const startJitter = (Math.random() - 0.5) * 6 * scaleFactor * 0.03 * themeConfig.jitter;
-                    const bStartDist = Math.max(0, bladeStart + (Math.random() - 0.5) * 8 * scaleFactor * 0.02);
-
-                    const root: Point = {
-                        x: sX + bStartDist * ux + startJitter * px,
-                        y: sY + bStartDist * uy + startJitter * py,
-                    };
-
-                    const boltEndDist = Math.max(bStartDist + 8, activeBladeLen + (Math.random() - 0.5) * 12 * scaleFactor * 0.02);
-                    const tipJitter = (Math.random() - 0.5) * 8 * scaleFactor * 0.03 * themeConfig.jitter;
-
-                    const target: Point = {
-                        x: sX + boltEndDist * ux + tipJitter * px,
-                        y: sY + boltEndDist * uy + tipJitter * py,
-                    };
-
-                    const maxDisp = (7 + Math.random() * 10) * (scaleFactor / 1.5) * 0.03 * themeConfig.wobble * (isFullScreen ? 1.3 : 1.0);
-                    generateFractalPath(root, target, px, py, len, ux, uy, maxDisp, 0, 4, segments, true);
+                for (let c = 0; c < skyCount; c++) {
+                    const skyOriginX = tX + (Math.random() - 0.5) * 60 * scaleFactor;
+                    drawJaggedBolt(
+                        { x: skyOriginX, y: skyOriginY },
+                        { x: tX, y: tY },
+                        px,
+                        py,
+                        32 * scaleFactor,
+                        4,
+                        isFullScreen ? 4.5 : 3.0,
+                        isFullScreen ? 1.8 : 1.1
+                    );
                 }
 
-                // 2. Radial discharges around the guard / skull hilt
-                if (progress > 12) {
-                    const radialCount = isFullScreen ? 6 : 4;
-                    for (let j = 0; j < radialCount; j++) {
-                        const angle = (j * (Math.PI * 2 / radialCount)) + (Math.random() - 0.5) * 0.6;
-                        const rDist = (15 + Math.random() * 20) * (scaleFactor / 1.5) * 0.035 * (isFullScreen ? 1.4 : 1.0);
-                        const rTarget: Point = {
-                            x: sX + Math.cos(angle) * rDist,
-                            y: sY + Math.sin(angle) * rDist,
-                        };
-                        generateFractalPath({ x: sX, y: sY }, rTarget, px, py, len, ux, uy, 4 * themeConfig.wobble, 0, 3, segments, false);
-                    }
+                // --- 2. ENVELOPING BLADE ARCS: Arcos que abrazan la espada por fuera ---
+                // No son espinas ni ramas: son bucles eléctricos que envuelven los filos
+                const arcCount = isFullScreen ? 4 : 3;
+                for (let a = 0; a < arcCount; a++) {
+                    const side = a % 2 === 0 ? 1 : -1;
+                    const arcStartDist = Math.random() * (currentBladeHeight * 0.5);
+                    const arcEndDist = Math.min(currentBladeHeight, arcStartDist + (bladeLen * (0.3 + Math.random() * 0.35)));
+
+                    const p1: Point = {
+                        x: sX + arcStartDist * ux + side * (bladeHalfWidth * 0.7) * px,
+                        y: sY + arcStartDist * uy + side * (bladeHalfWidth * 0.7) * py,
+                    };
+
+                    const p2: Point = {
+                        x: sX + arcEndDist * ux + side * (bladeHalfWidth * 0.7) * px,
+                        y: sY + arcEndDist * uy + side * (bladeHalfWidth * 0.7) * py,
+                    };
+
+                    // Arco que sobresale por el exterior del filo
+                    const bulge = side * (bladeHalfWidth + (Math.random() * 18 + 8) * scaleFactor);
+                    const midDist = (arcStartDist + arcEndDist) / 2;
+                    const midPoint: Point = {
+                        x: sX + midDist * ux + bulge * px,
+                        y: sY + midDist * uy + bulge * py,
+                    };
+
+                    drawJaggedBolt(p1, midPoint, px, py, 14 * scaleFactor, 3, isFullScreen ? 3.2 : 2.2, 1.0);
+                    drawJaggedBolt(midPoint, p2, px, py, 14 * scaleFactor, 3, isFullScreen ? 3.2 : 2.2, 1.0);
                 }
 
-                // Additive blending creates real incandescence at overlaps
+                // --- 3. POWER SURGE RINGS: Anillos de energía que ascienden por la hoja ---
+                ringPhaseRef.current = (ringPhaseRef.current + 0.03) % 1;
+                const ringDist = (ringPhaseRef.current * currentBladeHeight);
+                if (ringDist > 10) {
+                    const ringCenterX = sX + ringDist * ux;
+                    const ringCenterY = sY + ringDist * uy;
+                    const ringRadiusX = bladeHalfWidth * 1.5;
+                    const ringRadiusY = 5 * scaleFactor;
+
+                    ctx.save();
+                    ctx.globalCompositeOperation = 'lighter';
+                    ctx.strokeStyle = themeConfig.plasma;
+                    ctx.shadowColor = themeConfig.glow;
+                    ctx.shadowBlur = 12;
+                    ctx.lineWidth = 2.0;
+
+                    ctx.beginPath();
+                    ctx.ellipse(ringCenterX, ringCenterY, ringRadiusX, ringRadiusY, 0, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.restore();
+                }
+
+                // --- 4. CANONICAL STARBURST AT THE TIP (Fulgur estelar de Grayskull) ---
+                starRotationRef.current += 0.025;
+                const starBaseRadius = (8 + (progress / 100) * 14) * scaleFactor;
+                // Pulso vibratorio
+                const pulse = 1 + Math.sin(Date.now() * 0.015) * 0.22;
+                drawStarburst(tX, tY, starBaseRadius * pulse, starRotationRef.current);
+
+                // --- 5. SPARK DETONATIONS IN GUARD & TIP ---
+                const sparkCount = progress > 50 ? 6 : 3;
+                ctx.save();
                 ctx.globalCompositeOperation = 'lighter';
-                ctx.lineCap = 'round';
-                ctx.lineJoin = 'round';
+                ctx.fillStyle = themeConfig.sparks;
+                ctx.shadowColor = themeConfig.plasma;
+                ctx.shadowBlur = 8;
 
-                // --- PASS 1: PLASMA AURA GLOW ---
-                ctx.strokeStyle = themeConfig.plasma;
-                ctx.shadowColor = themeConfig.glow;
-                ctx.shadowBlur = isFullScreen ? 22 : 12;
-                ctx.lineWidth = isFullScreen ? 3.8 : 2.4;
+                for (let s = 0; s < sparkCount; s++) {
+                    const sparkDist = Math.random() * currentBladeHeight;
+                    const sparkOffset = (Math.random() - 0.5) * (bladeHalfWidth * 3.5);
+                    const spX = sX + sparkDist * ux + sparkOffset * px;
+                    const spY = sY + sparkDist * uy + sparkOffset * py;
+                    const r = Math.random() * 2.2 + 0.8;
 
-                ctx.beginPath();
-                for (let k = 0; k < segments.length; k++) {
-                    const seg = segments[k];
-                    ctx.moveTo(seg.p1.x, seg.p1.y);
-                    ctx.lineTo(seg.p2.x, seg.p2.y);
+                    ctx.beginPath();
+                    ctx.arc(spX, spY, r, 0, Math.PI * 2);
+                    ctx.fill();
                 }
-                ctx.stroke();
-
-                // --- PASS 2: PURE INCANDESCENT WHITE CORE ---
-                ctx.strokeStyle = themeConfig.core;
-                ctx.shadowColor = '#FFFFFF';
-                ctx.shadowBlur = 4;
-                ctx.lineWidth = isFullScreen ? 1.5 : 0.9;
-
-                ctx.beginPath();
-                for (let k = 0; k < segments.length; k++) {
-                    const seg = segments[k];
-                    ctx.moveTo(seg.p1.x, seg.p1.y);
-                    ctx.lineTo(seg.p2.x, seg.p2.y);
-                }
-                ctx.stroke();
-
-                // --- PASS 3: MICRO-SPARKS ---
-                if (progress > 20) {
-                    const sparkCount = progress > 80 ? 10 : 5;
-                    ctx.fillStyle = themeConfig.sparks;
-                    ctx.shadowColor = themeConfig.plasma;
-                    ctx.shadowBlur = 8;
-
-                    for (let s = 0; s < sparkCount; s++) {
-                        const sparkDist = bladeStart + Math.random() * (activeBladeLen - bladeStart);
-                        const sparkOffset = (Math.random() - 0.5) * 35 * (scaleFactor / 1.5) * 0.03 * themeConfig.wobble;
-                        const sparkX = sX + sparkDist * ux + sparkOffset * px;
-                        const sparkY = sY + sparkDist * uy + sparkOffset * py;
-                        const radius = Math.random() * 1.8 + 0.6;
-
-                        ctx.beginPath();
-                        ctx.arc(sparkX, sparkY, radius, 0, Math.PI * 2);
-                        ctx.fill();
-                    }
-                }
+                ctx.restore();
             }
 
             ctx.restore();
@@ -291,7 +348,7 @@ export const ProceduralLightningCanvas: React.FC<ProceduralLightningCanvasProps>
             ref={canvasRef}
             className={`pointer-events-none absolute inset-0 w-full h-full z-20 ${className}`}
             style={{
-                filter: `drop-shadow(0 0 10px ${themeConfig.glow})`,
+                filter: `drop-shadow(0 0 15px ${themeConfig.glow})`,
             }}
         />
     );
