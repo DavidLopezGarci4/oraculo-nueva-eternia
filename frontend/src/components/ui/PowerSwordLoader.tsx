@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import swordAsset from '../../assets/HemanGlassmorphSword.webp';
 import vintageSwordAsset from '../../assets/GlassmorphSwordHeMan.webp';
 import { getSystemSwordConfigs } from '../../api/admin';
+import ProceduralLightningCanvas, { type LightningTheme } from './ProceduralLightningCanvas';
 
 interface PowerSwordLoaderProps {
     className?: string;
@@ -54,9 +55,10 @@ const PowerSwordLoader: React.FC<PowerSwordLoaderProps> = ({
     // Random choice on mount between Vintage He-Man (vintage) and Modern He-Man (modern)
     const [randomTheme] = useState(() => Math.random() < 0.5 ? 'vintage' : 'modern');
 
-    const activeIsSkeletor = disableRandom ? isSkeletor : false;
+    const activeIsSkeletor = disableRandom ? isSkeletor : (randomTheme === 'modern');
     const activeIsVintage = disableRandom ? isVintage : (randomTheme === 'vintage');
     const activeIsViolet = activeIsSkeletor || (!activeIsVintage);
+    const lightningTheme: LightningTheme = activeIsSkeletor ? 'skeletor' : 'heman';
 
     const isFullScreen = variant === 'fullScreen';
     const activeSwordAsset = activeIsVintage ? vintageSwordAsset : swordAsset;
@@ -174,15 +176,6 @@ const PowerSwordLoader: React.FC<PowerSwordLoaderProps> = ({
             ? (vintageTipY !== undefined ? vintageTipY : vintageCoords.tY) 
             : (modernTipY !== undefined ? modernTipY : modernCoords.tY));
 
-    // Vector calculations for the sword axis (from guard to tip)
-    const dx = activeTipX - activeGuardX;
-    const dy = activeTipY - activeGuardY;
-    const len = Math.sqrt(dx * dx + dy * dy);
-    const ux = len > 0 ? dx / len : 0;
-    const uy = len > 0 ? dy / len : -1;
-    const px = -uy; // Perpendicular vector x
-    const py = ux;  // Perpendicular vector y
-
     // Intelligent Progress Simulation (Trickle Strategy)
     useEffect(() => {
         if (manualProgress !== undefined) {
@@ -216,84 +209,6 @@ const PowerSwordLoader: React.FC<PowerSwordLoaderProps> = ({
     }, [manualProgress]);
 
     const progress = manualProgress !== undefined ? manualProgress : internalProgress;
-
-    // Lightning rays generation following the central ridge
-    const renderLightning = () => {
-        if (progress < 5) return null;
-        const count = isFullScreen ? (progress > 80 ? 20 : 10) : (progress > 80 ? 12 : 6);
-
-        // Blade lightning starts ~9% along the length to leave guard clean, extending to current progress
-        const startDist = len * 0.09;
-        const maxBladeLen = len - startDist;
-        const currentLength = startDist + (progress / 100) * maxBladeLen;
-
-        return [...Array(count)].map((_, i) => {
-            const side = i % 2 === 0 ? 1 : -1;
-
-            // Randomize start and end points slightly around the sword axis
-            const rayStartDist = startDist + (Math.random() * 4 - 2);
-            const startX = activeGuardX + rayStartDist * ux + (Math.random() * 1.5 - 0.75) * px;
-            const startY = activeGuardY + rayStartDist * uy + (Math.random() * 1.5 - 0.75) * py;
-
-            const rayEndDist = Math.max(startDist + 2, currentLength + (Math.random() * 6 - 3));
-            const endX = activeGuardX + rayEndDist * ux + (Math.random() * 1.5 - 0.75) * px;
-            const endY = activeGuardY + rayEndDist * uy + (Math.random() * 1.5 - 0.75) * py;
-
-            // Wobble control point
-            const midDist = startDist + Math.random() * (rayEndDist - startDist);
-            const wobble = side * (5 + Math.random() * 10) * (isFullScreen ? 1.5 : 1);
-            const cx = activeGuardX + midDist * ux + wobble * px;
-            const cy = activeGuardY + midDist * uy + wobble * py;
-
-             return (
-                <motion.path
-                    key={`blade-${i}`}
-                    d={`M ${startX} ${startY} Q ${cx} ${cy} ${endX} ${endY}`}
-                    stroke={activeIsViolet ? (i % 3 === 0 ? "#F5D0FE" : "#D946EF") : (i % 3 === 0 ? "#BAE6FD" : "#38BDF8")}
-                    strokeWidth={isFullScreen ? 2.5 : (Math.random() * 1.5 + 0.5)}
-                    fill="none"
-                    initial={{ pathLength: 0, opacity: 0 }}
-                    animate={{
-                        pathLength: [0, 1, 0.4],
-                        opacity: [0, 1, 0],
-                    }}
-                    transition={{
-                        duration: 0.12 + (Math.random() * 0.15),
-                        repeat: Infinity,
-                        repeatDelay: Math.random() * 0.2
-                    }}
-                />
-            );
-        });
-    };
-
-    // New Central Lightning (around the guard)
-    const renderCentralLightning = () => {
-        if (progress < 10) return null;
-        const count = isFullScreen ? 8 : 4;
-        return [...Array(count)].map((_, i) => {
-            const angle = (i * (360 / count)) + (Math.random() * 20 - 10);
-            const rad = angle * Math.PI / 180;
-            const distance = isFullScreen ? 60 : 40;
-            const x2 = activeGuardX + Math.cos(rad) * distance;
-            const y2 = activeGuardY + Math.sin(rad) * distance;
-            return (
-                <motion.path
-                    key={`central-${i}`}
-                    d={`M ${activeGuardX} ${activeGuardY} L ${x2} ${y2}`}
-                    stroke={activeIsViolet ? "#E9D5FF" : "#7DD3FC"}
-                    strokeWidth={isFullScreen ? 3 : 1.5}
-                    initial={{ pathLength: 0, opacity: 0 }}
-                    animate={{ pathLength: [0, 1, 0], opacity: [0, 1, 0] }}
-                    transition={{
-                        duration: 0.2,
-                        repeat: Infinity,
-                        repeatDelay: Math.random() * 0.5
-                    }}
-                />
-            );
-        });
-    };
 
     const containerClasses = isFullScreen
         ? `fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#050608]`
@@ -365,12 +280,6 @@ const PowerSwordLoader: React.FC<PowerSwordLoaderProps> = ({
                         className="opacity-100"
                     />
 
-                    {/* 2. Lightning Effects (With Glow) */}
-                    <g filter="url(#power-glow-v7)">
-                        {renderLightning()}
-                        {renderCentralLightning()}
-                    </g>
-
                     {/* Progress Text - Only if NOT fullScreen or explicitly desired */}
                     {!isFullScreen && (
                         <text
@@ -386,6 +295,17 @@ const PowerSwordLoader: React.FC<PowerSwordLoaderProps> = ({
                         </text>
                     )}
                 </svg>
+
+                {/* 2. Procedural Lightning Canvas (Fractal 2D Multi-Pass Engine) */}
+                <ProceduralLightningCanvas
+                    startX={activeGuardX}
+                    startY={activeGuardY}
+                    endX={activeTipX}
+                    endY={activeTipY}
+                    progress={progress}
+                    theme={lightningTheme}
+                    isFullScreen={isFullScreen}
+                />
             </div>
 
             {/* Overlay Content (Text and Progress Bar) */}
