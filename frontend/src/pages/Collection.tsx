@@ -167,10 +167,15 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
         
         const filtered = collection.filter(product => {
             const query = searchQuery.toLowerCase();
+            const rawQuery = searchQuery.trim();
+            const idOnlyQuery = rawQuery.replace(/^#/, '');
+            const matchesId = idOnlyQuery.length > 0 && !isNaN(Number(idOnlyQuery)) && product.id.toString().includes(idOnlyQuery);
+
             const matchesQuery = (
+                matchesId ||
                 product.name.toLowerCase().includes(query) ||
-                product.figure_id.toLowerCase().includes(query) ||
-                product.sub_category?.toLowerCase().includes(query)
+                (product.figure_id?.toLowerCase().includes(query) ?? false) ||
+                (product.sub_category?.toLowerCase().includes(query) ?? false)
             );
 
             if (!matchesQuery) return false;
@@ -314,37 +319,45 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                             <option value="LOOSE" className="bg-[#121212] text-white">Loose</option>
                         </select>
 
-                        <div className="grid grid-cols-3 gap-1 sm:gap-2 p-1 rounded-xl bg-white/[0.03] border border-white/5 flex-1 sm:flex-initial">
+                        <div className="h-[38px] sm:h-[42px] p-1 rounded-xl bg-black/40 border border-white/10 grid grid-cols-3 gap-1 flex-1 sm:flex-initial sm:min-w-[190px] items-center">
                             <button
                                 onClick={() => setSortBy('name')}
-                                className={`py-1.5 px-2.5 sm:px-4 rounded-lg text-[8px] sm:text-[10px] font-black uppercase tracking-[0.05em] transition-all ${
+                                className={`h-full px-2 sm:px-3 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center whitespace-nowrap ${
                                     sortBy === 'name' 
-                                        ? (isVintageOnly ? 'bg-amber-500 text-white shadow-[0_0_15px_rgba(245,158,11,0.3)]' : 'bg-brand-primary text-white shadow-[0_0_15px_rgba(14,165,233,0.3)]') 
-                                        : 'text-white/20 hover:text-white/45'
+                                        ? (isVintageOnly 
+                                            ? 'bg-amber-500 text-black font-black shadow-sm' 
+                                            : 'bg-brand-primary text-white font-black shadow-sm border border-cyan-300/30') 
+                                        : 'text-white/40 hover:text-white/80 hover:bg-white/[0.04] border border-transparent'
                                 }`}
+                                title="Ordenar por Nombre"
                             >
-                                Nombre
+                                NOM
                             </button>
                             <button
                                 onClick={() => setSortBy('id')}
-                                className={`py-1.5 px-2.5 sm:px-4 rounded-lg text-[8px] sm:text-[10px] font-black uppercase tracking-[0.05em] transition-all ${
+                                className={`h-full px-2 sm:px-3 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center whitespace-nowrap ${
                                     sortBy === 'id' 
-                                        ? (isVintageOnly ? 'bg-amber-500 text-white shadow-[0_0_15px_rgba(245,158,11,0.3)]' : 'bg-brand-primary text-white shadow-[0_0_15px_rgba(14,165,233,0.3)]') 
-                                        : 'text-white/20 hover:text-white/45'
+                                        ? (isVintageOnly 
+                                            ? 'bg-amber-500 text-black font-black shadow-sm' 
+                                            : 'bg-brand-primary text-white font-black shadow-sm border border-cyan-300/30') 
+                                        : 'text-white/40 hover:text-white/80 hover:bg-white/[0.04] border border-transparent'
                                 }`}
+                                title="Ordenar por ID"
                             >
                                 ID
                             </button>
                             <button
                                 onClick={() => setSortBy('acquired_at')}
-                                className={`py-1.5 px-2.5 sm:px-4 rounded-lg text-[8px] sm:text-[10px] font-black uppercase tracking-[0.05em] transition-all ${
+                                className={`h-full px-2 sm:px-3 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center whitespace-nowrap ${
                                     sortBy === 'acquired_at' 
-                                        ? (isVintageOnly ? 'bg-amber-500 text-white shadow-[0_0_15px_rgba(245,158,11,0.3)]' : 'bg-brand-primary text-white shadow-[0_0_15px_rgba(14,165,233,0.3)]') 
-                                        : 'text-white/20 hover:text-white/45'
+                                        ? (isVintageOnly 
+                                            ? 'bg-amber-500 text-black font-black shadow-sm' 
+                                            : 'bg-brand-primary text-white font-black shadow-sm border border-cyan-300/30') 
+                                        : 'text-white/40 hover:text-white/80 hover:bg-white/[0.04] border border-transparent'
                                 }`}
                                 title="Ordenar por Fecha de Agregado"
                             >
-                                Fecha
+                                FECHA
                             </button>
                         </div>
 

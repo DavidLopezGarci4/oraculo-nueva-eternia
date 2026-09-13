@@ -163,6 +163,29 @@ async def save_tcg_layouts(layouts: dict, current_user: UserModel = Depends(get_
     return {"status": "success", "message": "Configuración de cartas TCG guardada exitosamente en la nube."}
 
 
+@router.get("/api/system/telegram-config")
+async def get_telegram_config(current_user: UserModel = Depends(get_current_user)):
+    from src.application.services.telegram_filter_service import is_telegram_only_missing_enabled
+    with SessionCloud() as db:
+        only_missing = is_telegram_only_missing_enabled(db)
+        return {"only_missing": only_missing}
+
+
+@router.post("/api/system/telegram-config", response_model=StatusMessageOutput)
+async def update_telegram_config(payload: dict, current_user: UserModel = Depends(get_current_user)):
+    from src.application.services.telegram_filter_service import set_telegram_only_missing_enabled
+    only_missing = bool(payload.get("only_missing", True))
+    with SessionCloud() as db:
+        success = set_telegram_only_missing_enabled(db, only_missing)
+        if not success:
+            raise HTTPException(status_code=500, detail="Error guardando configuración de Telegram.")
+    status_text = "activado" if only_missing else "desactivado"
+    return {
+        "status": "success",
+        "message": f"Filtro de Telegram {status_text}: solo se alertarán figuras no poseídas." if only_missing else "Filtro de Telegram desactivado: se alertarán todas las ofertas."
+    }
+
+
 async def run_maintenance_task():
     from src.application.services.maintenance_service import MaintenanceService
     from src.core.security import SecurityShield

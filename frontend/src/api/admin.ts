@@ -369,5 +369,15 @@ export const saveSystemTcgLayouts = async (layouts: Record<string, any>): Promis
     return response.data;
 };
 
+export const getTelegramConfig = async (): Promise<{ only_missing: boolean }> => {
+    const response = await adminAxios.get('/system/telegram-config');
+    return response.data;
+};
+
+export const saveTelegramConfig = async (only_missing: boolean): Promise<{ status: string; message: string }> => {
+    const response = await adminAxios.post('/system/telegram-config', { only_missing });
+    return response.data;
+};
+
 
 

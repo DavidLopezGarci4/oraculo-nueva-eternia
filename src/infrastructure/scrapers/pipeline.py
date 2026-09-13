@@ -643,21 +643,23 @@ class ScrapingPipeline:
                     )
 
                     # --- PHASE 8.5 & 18: NOTIFICATIONS ---
-                    if DealScorer.is_mandatory_buy(best_match_product, landed_price, opp_score):
-                        asyncio.create_task(telegram_service.send_mandatory_buy_alert(
-                            product_name=best_match_product.name,
-                            price=offer.get('price'),
-                            landed_price=landed_price,
-                            shop_name=offer.get('shop_name'),
-                            url=url_str
-                        ))
-                    elif best_match_score >= 0.90:
-                        asyncio.create_task(telegram_service.send_deal_alert(
-                            product_name=best_match_product.name,
-                            price=offer.get('price'),
-                            shop_name=offer.get('shop_name'),
-                            url=url_str
-                        ))
+                    from src.application.services.telegram_filter_service import should_send_product_push
+                    if should_send_product_push(db, best_match_product.id):
+                        if DealScorer.is_mandatory_buy(best_match_product, landed_price, opp_score):
+                            asyncio.create_task(telegram_service.send_mandatory_buy_alert(
+                                product_name=best_match_product.name,
+                                price=offer.get('price'),
+                                landed_price=landed_price,
+                                shop_name=offer.get('shop_name'),
+                                url=url_str
+                            ))
+                        elif best_match_score >= 0.90:
+                            asyncio.create_task(telegram_service.send_deal_alert(
+                                product_name=best_match_product.name,
+                                price=offer.get('price'),
+                                shop_name=offer.get('shop_name'),
+                                url=url_str
+                            ))
                     
                     # Alertas multi-usuario (Wishlist / Price Alerts) para items auto-vinculados
                     check_and_send_multiuser_alerts(

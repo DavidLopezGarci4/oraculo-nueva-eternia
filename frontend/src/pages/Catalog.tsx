@@ -46,7 +46,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
     const [selectedProduct, setSelectedProduct] = React.useState<Product | null>(null);
     const [editingProduct, setEditingProduct] = React.useState<Product | null>(null);
     const [expandedImage, setExpandedImage] = React.useState<string | null>(null);
-    const [sortBy, setSortBy] = React.useState<'name' | 'offers' | 'completion'>('name');
+    const [sortBy, setSortBy] = React.useState<'name' | 'id' | 'offers' | 'completion'>('name');
     const [sortOrder, setSortOrder] = React.useState<'asc' | 'desc'>('asc');
 
     // Cronos Standalone states
@@ -346,7 +346,12 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                 }
             }
 
+            const rawQuery = searchQuery.trim();
+            const idOnlyQuery = rawQuery.replace(/^#/, '');
+            const matchesId = idOnlyQuery.length > 0 && !isNaN(Number(idOnlyQuery)) && product.id.toString().includes(idOnlyQuery);
+
             return (
+                matchesId ||
                 product.name.toLowerCase().includes(query) ||
                 (product.figure_id?.toLowerCase().includes(query) ?? false) ||
                 (product.sub_category?.toLowerCase().includes(query) ?? false)
@@ -357,6 +362,8 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
             let comparison = 0;
             if (sortBy === 'name') {
                 comparison = a.name.localeCompare(b.name);
+            } else if (sortBy === 'id') {
+                comparison = a.id - b.id;
             } else if (sortBy === 'offers') {
                 comparison = (a.purgatory_match_count || 0) - (b.purgatory_match_count || 0);
             } else if (sortBy === 'completion') {
@@ -580,36 +587,58 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                     )}
 
                     <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
-                        <div className="grid grid-cols-3 gap-1 sm:gap-2 p-1 rounded-xl bg-white/[0.03] border border-white/5 flex-1 sm:flex-initial">
+                        <div className="h-[38px] sm:h-[42px] p-1 rounded-xl bg-black/40 border border-white/10 grid grid-cols-4 gap-1 flex-1 sm:flex-initial sm:min-w-[240px] items-center">
                             <button
                                 onClick={() => setSortBy('name')}
-                                className={`py-1.5 px-2.5 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-[0.05em] transition-all ${
+                                className={`h-full px-1.5 sm:px-2.5 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center whitespace-nowrap ${
                                     sortBy === 'name' 
-                                        ? (isVintageOnly ? 'bg-amber-500 text-white shadow-[0_0_15px_rgba(245,158,11,0.3)]' : 'bg-brand-primary text-white shadow-[0_0_15px_rgba(14,165,233,0.3)]') 
-                                        : 'text-white/20 hover:text-white/40'
+                                        ? (isVintageOnly 
+                                            ? 'bg-amber-500 text-black font-black shadow-sm' 
+                                            : 'bg-brand-primary text-white font-black shadow-sm border border-cyan-300/30') 
+                                        : 'text-white/40 hover:text-white/80 hover:bg-white/[0.04] border border-transparent'
                                 }`}
+                                title="Ordenar por Nombre"
                             >
-                                Nombre
+                                NOM
+                            </button>
+                            <button
+                                onClick={() => setSortBy('id')}
+                                className={`h-full px-1.5 sm:px-2.5 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center whitespace-nowrap ${
+                                    sortBy === 'id' 
+                                        ? (isVintageOnly 
+                                            ? 'bg-amber-500 text-black font-black shadow-sm' 
+                                            : 'bg-brand-primary text-white font-black shadow-sm border border-cyan-300/30') 
+                                        : 'text-white/40 hover:text-white/80 hover:bg-white/[0.04] border border-transparent'
+                                }`}
+                                title="Ordenar por ID"
+                            >
+                                ID
                             </button>
                             <button
                                 onClick={() => setSortBy('offers')}
-                                className={`py-1.5 px-2.5 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-[0.05em] transition-all ${
+                                className={`h-full px-1.5 sm:px-2.5 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center whitespace-nowrap ${
                                     sortBy === 'offers' 
-                                        ? (isVintageOnly ? 'bg-amber-500 text-white shadow-[0_0_15px_rgba(245,158,11,0.3)]' : 'bg-brand-primary text-white shadow-[0_0_15px_rgba(14,165,233,0.3)]') 
-                                        : 'text-white/20 hover:text-white/40'
+                                        ? (isVintageOnly 
+                                            ? 'bg-amber-500 text-black font-black shadow-sm' 
+                                            : 'bg-brand-primary text-white font-black shadow-sm border border-cyan-300/30') 
+                                        : 'text-white/40 hover:text-white/80 hover:bg-white/[0.04] border border-transparent'
                                 }`}
+                                title="Ordenar por Número de Ofertas"
                             >
-                                Ofertas
+                                OFERTAS
                             </button>
                             <button
                                 onClick={() => setSortBy('completion')}
-                                className={`py-1.5 px-2.5 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-[0.05em] transition-all ${
+                                className={`h-full px-1.5 sm:px-2.5 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center whitespace-nowrap ${
                                     sortBy === 'completion' 
-                                        ? (isVintageOnly ? 'bg-amber-500 text-white shadow-[0_0_15px_rgba(245,158,11,0.3)]' : 'bg-brand-primary text-white shadow-[0_0_15px_rgba(14,165,233,0.3)]') 
-                                        : 'text-white/20 hover:text-white/40'
+                                        ? (isVintageOnly 
+                                            ? 'bg-amber-500 text-black font-black shadow-sm' 
+                                            : 'bg-brand-primary text-white font-black shadow-sm border border-cyan-300/30') 
+                                        : 'text-white/40 hover:text-white/80 hover:bg-white/[0.04] border border-transparent'
                                 }`}
+                                title="Ordenar por Colección del Set"
                             >
-                                Set
+                                SET
                             </button>
                         </div>
 

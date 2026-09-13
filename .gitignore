@@ -74,10 +74,12 @@ oraculo.db
 
 # Local Backups & Data
 backups/
-data/
-!data/MOTU/
-data/MOTU/*_backup_*.xlsx
-!data/MOTU/lista_MOTU.xlsx
+/data/
+src/data/
+!/data/MOTU/
+/data/MOTU/*_backup_*.xlsx
+!/data/MOTU/lista_MOTU.xlsx
+!frontend/src/data/
 .env*
 node_modules/
 dist/

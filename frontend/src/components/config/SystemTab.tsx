@@ -2,10 +2,10 @@ import { motion } from 'framer-motion';
 import {
     Database, Lock, AlertCircle, Target, Clock, Globe, Repeat, ChevronDown,
     CheckCircle2, RefreshCw, Download, Package, Sparkles, Settings, ShieldAlert,
-    FileSpreadsheet, Trash2, Zap, Copy, Check, X, ShieldCheck
+    FileSpreadsheet, Trash2, Zap, Copy, Check, X, ShieldCheck, Bell
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { downloadImagesZip, getSSLStatus, renewSSLCertificate, type SSLStatus, type Hero } from '../../api/admin';
+import { downloadImagesZip, getSSLStatus, renewSSLCertificate, getTelegramConfig, saveTelegramConfig, type SSLStatus, type Hero } from '../../api/admin';
 
 interface ImageDownloadFailure {
     id: number;
@@ -110,6 +110,39 @@ export default function SystemTab({
     useEffect(() => {
         loadSSL();
     }, [isAdmin]);
+
+    const [telegramOnlyMissing, setTelegramOnlyMissing] = useState(true);
+    const [loadingTelegramConfig, setLoadingTelegramConfig] = useState(false);
+    const [updatingTelegramConfig, setUpdatingTelegramConfig] = useState(false);
+
+    useEffect(() => {
+        const loadTelegram = async () => {
+            try {
+                setLoadingTelegramConfig(true);
+                const data = await getTelegramConfig();
+                setTelegramOnlyMissing(data.only_missing ?? true);
+            } catch (err) {
+                console.error('Error cargando config de Telegram:', err);
+            } finally {
+                setLoadingTelegramConfig(false);
+            }
+        };
+        loadTelegram();
+    }, []);
+
+    const handleToggleTelegramOnlyMissing = async () => {
+        try {
+            setUpdatingTelegramConfig(true);
+            const nextVal = !telegramOnlyMissing;
+            setTelegramOnlyMissing(nextVal);
+            await saveTelegramConfig(nextVal);
+        } catch (err) {
+            console.error('Error guardando config de Telegram:', err);
+            setTelegramOnlyMissing(!telegramOnlyMissing);
+        } finally {
+            setUpdatingTelegramConfig(false);
+        }
+    };
 
     const handleRenewSSL = async () => {
         if (!confirm('🔒 RENOVACIÓN DE CERTIFICADOS SSL (Let\'s Encrypt)\n\nEsta acción invocará el proceso de renovación forzada del certificado SSL para oraculo-eternia.duckdns.org y recargará Nginx de forma segura.\n\n¿Deseas proceder con la renovación forzada?')) return;
@@ -245,6 +278,53 @@ export default function SystemTab({
                 </div>
             )}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {/* Telegram Push Smart Filter */}
+                <div className="glass border border-cyan-500/30 p-6 rounded-3xl space-y-4 bg-cyan-500/[0.03] relative">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3 text-cyan-400 font-bold uppercase tracking-widest text-xs">
+                            <Bell className="h-4 w-4" />
+                            Alertas Push de Telegram
+                        </div>
+                        <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-300">
+                            FILTRO INTELIGENTE
+                        </span>
+                    </div>
+
+                    <p className="text-[10px] text-white/65 font-medium leading-relaxed">
+                        Controla qué oportunidades y compras obligatorias se despachan a tu móvil por Telegram.
+                    </p>
+
+                    <div className="p-4 bg-black/40 border border-white/5 rounded-2xl space-y-3">
+                        <div className="flex items-center justify-between gap-3">
+                            <div className="space-y-0.5">
+                                <span className="text-xs text-white font-bold block">Solo Figuras NO Poseídas</span>
+                                <span className="text-[10px] text-white/40 block leading-tight">
+                                    {telegramOnlyMissing 
+                                        ? 'Silencia ofertas de figuras ya aseguradas en tu Fortaleza.'
+                                        : 'Recibes alertas de todas las ofertas destacadas del mercado.'}
+                                </span>
+                            </div>
+                            <button
+                                onClick={handleToggleTelegramOnlyMissing}
+                                disabled={updatingTelegramConfig || loadingTelegramConfig}
+                                className={`w-12 h-6 rounded-full transition-all duration-300 relative shrink-0 cursor-pointer ${
+                                    telegramOnlyMissing ? 'bg-cyan-500 shadow-[0_0_12px_rgba(6,182,212,0.4)]' : 'bg-white/10'
+                                }`}
+                                title={telegramOnlyMissing ? 'Desactivar filtro' : 'Activar filtro'}
+                            >
+                                <div className={`h-4 w-4 rounded-full bg-white transition-all duration-300 absolute top-1 ${
+                                    telegramOnlyMissing ? 'left-7' : 'left-1'
+                                }`} />
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="text-[9px] text-cyan-400/80 font-bold uppercase tracking-wider flex items-center gap-1.5 pt-1">
+                        <Check className="h-3 w-3" />
+                        <span>Sincronizado con el bot /alertas de Telegram</span>
+                    </div>
+                </div>
+
                 {/* Sentinel Settings */}
                 <div className="glass border border-white/10 p-6 rounded-3xl space-y-4 opacity-60 relative group">
                     <div className="absolute right-4 top-4 text-white/30 group-hover:text-white/60 transition-colors cursor-help" title="Configuración de solo lectura en .env">

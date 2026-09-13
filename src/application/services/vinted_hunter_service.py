@@ -174,7 +174,12 @@ class VintedHunterService:
                     if offer.url in today_alerted_urls:
                         recurring_bargains_count += 1
                     else:
-                        new_bargains_to_alert.append(bargain_data)
+                        from src.application.services.telegram_filter_service import should_send_product_push
+                        if should_send_product_push(db, best_match_product.id, chat_id=chat_id):
+                            new_bargains_to_alert.append(bargain_data)
+                        else:
+                            recurring_bargains_count += 1
+
                         # Registrar en la base de datos para deduplicación diaria
                         db.add(HunterAlertLogModel(
                             url=offer.url,

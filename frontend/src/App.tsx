@@ -23,6 +23,7 @@ const Auctions = lazy(() => import('./pages/Auctions'));
 const VintageMiscellaneous = lazy(() => import('./pages/VintageMiscellaneous'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const Showcase = lazy(() => import('./pages/Showcase'));
+const Faq = lazy(() => import('./pages/Faq'));
 
 // Fase AAA-3.1: router real en vez de activeTab + "visitedTabs" mantenidos
 // vivos para siempre. Cada tab-id sigue existiendo (Sidebar/Navbar no se
@@ -38,6 +39,7 @@ const TAB_PATHS: Record<string, string> = {
   vintage_miscellaneous: '/vintage_miscellaneous',
   purgatory: '/purgatory',
   settings: '/settings',
+  faq: '/faq',
 };
 
 const PATH_TO_TAB: Record<string, string> = Object.fromEntries(
@@ -57,6 +59,7 @@ const TAB_PREFETCH: Record<string, () => Promise<unknown>> = {
   vintage_miscellaneous: () => import('./pages/VintageMiscellaneous'),
   purgatory: () => import('./pages/Purgatory'),
   settings: () => import('./pages/Config'),
+  faq: () => import('./pages/Faq'),
 };
 const _prefetched = new Set<string>();
 
@@ -441,6 +444,7 @@ function App() {
                         />
                       )}
                     />
+                    <Route path={TAB_PATHS.faq} element={<Faq />} />
                     <Route path="*" element={<Navigate to={TAB_PATHS.dashboard} replace />} />
                   </Routes>
                 </Suspense>

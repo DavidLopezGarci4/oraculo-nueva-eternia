@@ -1,5 +1,5 @@
 
-import { Globe, Store, Sparkles, Database, Box, ShieldAlert, Settings, LogOut, X } from 'lucide-react';
+import { Globe, Store, Sparkles, Database, Box, ShieldAlert, Settings, LogOut, X, HelpCircle } from 'lucide-react';
 import masterRoleImg from '../../assets/role-master.webp';
 import guardianRoleImg from '../../assets/role-guardian.webp';
 
@@ -174,6 +174,20 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen
 
                 {/* Footer */}
                 <div className="border-t border-glass-border p-4 space-y-2 mt-auto">
+                    <button
+                        onClick={() => {
+                            setActiveTab('faq');
+                            onCloseMobile();
+                        }}
+                        onMouseEnter={() => onPrefetch?.('faq')}
+                        className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all ${activeTab === 'faq'
+                            ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.15)]'
+                            : 'text-white/50 hover:bg-white/5 hover:text-white'
+                            }`}
+                    >
+                        <HelpCircle className={`h-5 w-5 ${activeTab === 'faq' ? 'text-amber-400 animate-pulse' : ''}`} />
+                        Guía & FAQ
+                    </button>
                     {user && (
                         <button
                             onClick={() => {

@@ -147,6 +147,15 @@ class TelegramListener:
             )
             from src.application.services.ssl_service import SSLService
             asyncio.create_task(SSLService.renew_ssl_certificate(force=True))
+        elif data == "alerts:toggle":
+            from src.application.services.telegram_filter_service import is_telegram_only_missing_enabled, set_telegram_only_missing_enabled
+            with SessionCloud() as db:
+                current_val = is_telegram_only_missing_enabled(db)
+                new_val = not current_val
+                set_telegram_only_missing_enabled(db, new_val)
+            mode_text = "SOLO figuras que NO posees" if new_val else "TODAS las ofertas destacadas"
+            await self.answer_callback_query(cq_id, f"✅ Modo cambiado: {mode_text}")
+            await self.cmd_alertas(chat_id)
         elif data == "ssl:status":
             await self.answer_callback_query(cq_id, "🔍 Consultando estado SSL...")
             await self.cmd_ssl_status(chat_id)
@@ -269,6 +278,8 @@ class TelegramListener:
             await self.cmd_update_image(chat_id, args)
         elif command in ["/harvest_lore", "/lore"]:
             await self.cmd_harvest_lore(chat_id, args)
+        elif command in ["/alertas", "/notificaciones"]:
+            await self.cmd_alertas(chat_id)
             
         # --- Comandos de Administrador Only ---
         elif is_admin:
@@ -337,6 +348,7 @@ class TelegramListener:
         lines.append("• <code>/caza [figura]</code> - Caza personalizada de una figura en Vinted.")
         lines.append("• <code>/centinela</code> - Consulta el estado del Centinela Autónomo 24/7 de Vinted.")
         lines.append("• <code>/centinela [on|off]</code> - Activa o pausa las incursiones automáticas (100-120 min).")
+        lines.append("• <code>/alertas</code> - Configurar filtro de alertas push (solo figuras que no poseo).")
         lines.append("• <code>/help</code> - Muestra este menú de ayuda.")
         
         if is_admin:
@@ -355,6 +367,33 @@ class TelegramListener:
             lines.append("• <code>/stop</code> - Protocolo de parada de emergencia para detener scrapers.")
             
         await telegram_service.send_message("\n".join(lines), chat_id=chat_id)
+
+    async def cmd_alertas(self, chat_id: int):
+        from src.application.services.telegram_filter_service import is_telegram_only_missing_enabled
+        with SessionCloud() as db:
+            only_missing = is_telegram_only_missing_enabled(db)
+
+        status_badge = "🟢 <b>ACTIVADO (Recomendado)</b>" if only_missing else "⚪ <b>DESACTIVADO</b>"
+        explanation = (
+            "Solo recibirás notificaciones push de ofertas y gangas para figuras que <b>NO tengas ya aseguradas</b> en tu Fortaleza."
+            if only_missing else
+            "Recibirás notificaciones push de <b>TODAS las ofertas y gangas destacadas</b>, incluso si ya posees la figura en tu colección."
+        )
+
+        msg = (
+            "🔔 <b>[Filtro de Notificaciones Push de Telegram]</b>\n\n"
+            f"• <b>Estado:</b> {status_badge}\n\n"
+            f"📝 <i>{explanation}</i>\n\n"
+            "Puedes alternar este ajuste pulsando el botón a continuación o desde la Web en <b>Ajustes del Sistema</b>."
+        )
+
+        btn_text = "⚪ Cambiar a: Notificar TODO" if only_missing else "🟢 Cambiar a: Solo NO Poseídos"
+        keyboard = {
+            "inline_keyboard": [
+                [{"text": btn_text, "callback_data": "alerts:toggle"}]
+            ]
+        }
+        await telegram_service.send_message(msg, chat_id=chat_id, reply_markup=keyboard)
 
     async def cmd_purgatorio(self, chat_id: int):
         with SessionCloud() as db:
