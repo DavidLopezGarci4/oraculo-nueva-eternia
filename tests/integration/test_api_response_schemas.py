@@ -118,25 +118,32 @@ def test_scrapers_status_logs_ip_logs_match_schema(client):
     from src.domain.models import ScraperStatusModel, ScraperExecutionLogModel, WallapopIpLogModel
     from src.interfaces.api.routers.scrapers import SessionCloud
 
-    with SessionCloud() as db:
-        db.add(ScraperStatusModel(spider_name="SchemaTestSpider", status="completed"))
-        db.add(ScraperExecutionLogModel(spider_name="SchemaTestSpider", status="success", trigger_type="manual"))
-        db.add(WallapopIpLogModel(ip_address="127.0.0.1", status="allowed", environment="Test"))
-        db.commit()
+    try:
+        with SessionCloud() as db:
+            db.add(ScraperStatusModel(spider_name="SchemaTestSpider", status="completed"))
+            db.add(ScraperExecutionLogModel(spider_name="SchemaTestSpider", status="success", trigger_type="manual"))
+            db.add(WallapopIpLogModel(ip_address="127.0.0.1", status="allowed", environment="Test"))
+            db.commit()
 
-    headers = {"X-API-Key": API_KEY}
+        headers = {"X-API-Key": API_KEY}
 
-    status_resp = client.get("/api/scrapers/status", headers=headers)
-    assert status_resp.status_code == 200, status_resp.text
-    assert any(s["spider_name"] == "SchemaTestSpider" for s in status_resp.json())
+        status_resp = client.get("/api/scrapers/status", headers=headers)
+        assert status_resp.status_code == 200, status_resp.text
+        assert any(s["spider_name"] == "SchemaTestSpider" for s in status_resp.json())
 
-    logs_resp = client.get("/api/scrapers/logs", headers=headers)
-    assert logs_resp.status_code == 200, logs_resp.text
-    assert any(l["spider_name"] == "SchemaTestSpider" and l["trigger_type"] == "manual" for l in logs_resp.json())
+        logs_resp = client.get("/api/scrapers/logs", headers=headers)
+        assert logs_resp.status_code == 200, logs_resp.text
+        assert any(l["spider_name"] == "SchemaTestSpider" and l["trigger_type"] == "manual" for l in logs_resp.json())
 
-    ip_logs_resp = client.get("/api/scrapers/wallapop/ip-logs", headers=headers)
-    assert ip_logs_resp.status_code == 200, ip_logs_resp.text
-    assert any(l["ip_address"] == "127.0.0.1" and l["status"] == "allowed" for l in ip_logs_resp.json())
+        ip_logs_resp = client.get("/api/scrapers/wallapop/ip-logs", headers=headers)
+        assert ip_logs_resp.status_code == 200, ip_logs_resp.text
+        assert any(l["ip_address"] == "127.0.0.1" and l["status"] == "allowed" for l in ip_logs_resp.json())
+    finally:
+        with SessionCloud() as db:
+            db.query(ScraperStatusModel).filter(ScraperStatusModel.spider_name == "SchemaTestSpider").delete()
+            db.query(ScraperExecutionLogModel).filter(ScraperExecutionLogModel.spider_name == "SchemaTestSpider").delete()
+            db.query(WallapopIpLogModel).filter(WallapopIpLogModel.environment == "Test").delete()
+            db.commit()
 
 
 def test_purgatory_list_matches_schema(client):

@@ -303,8 +303,7 @@ async def get_scrapers_status():
                 ScraperStatusModel.spider_name.notin_(
                     [
                         "Nexus", "NexusVintage", "Harvester", "harvester", "all",
-                        "idealo.es", "Idealo.es", "Amazon", "amazon", "Tradeinn", "tradeinn",
-                        "SchemaTestSpider", "schematestspider"
+                        "idealo.es", "Idealo.es", "Amazon", "amazon", "Tradeinn", "tradeinn"
                     ]
                 )
             )

@@ -222,7 +222,7 @@ export default function ScrapersTab({
                     </div>
 
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-                        {statuses.filter(s => !['all', 'nexus', 'harvester'].includes(s.spider_name.toLowerCase())).map((s) => (
+                        {statuses.filter(s => !['all', 'nexus', 'harvester', 'schematestspider'].includes(s.spider_name.toLowerCase())).map((s) => (
                             <div
                                 key={s.spider_name}
                                 className={`group relative flex items-center justify-between rounded-xl border px-3 py-2 transition-all ${s.status === 'running'
