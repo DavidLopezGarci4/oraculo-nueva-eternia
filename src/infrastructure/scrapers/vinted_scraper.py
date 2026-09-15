@@ -1,9 +1,11 @@
 import asyncio
 import logging
 import random
+import re
 import time
 from typing import List, Optional
 from datetime import datetime, timezone
+from bs4 import BeautifulSoup
 from curl_cffi.requests import AsyncSession
 from src.infrastructure.scrapers.base import BaseScraper, ScrapedOffer
 
@@ -11,11 +13,11 @@ logger = logging.getLogger(__name__)
 
 class VintedScraper(BaseScraper):
     """
-    Scraper de Vinted basado en la API interna v2.
-    Requiere inicialización de sesión para evitar bloqueos.
+    Scraper de Vinted basado en la vista de catálogo SSR web.
+    Requiere inicialización de sesión para evitar bloqueos y evasión perimetral.
     """
     
-    API_URL = "https://www.vinted.es/api/v2/catalog/items"
+    CATALOG_URL = "https://www.vinted.es/catalog"
     
     USER_AGENTS = [
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
@@ -67,8 +69,8 @@ class VintedScraper(BaseScraper):
             
             headers = {
                 "User-Agent": random.choice(self.USER_AGENTS),
-                "Accept": "application/json, text/plain, */*",
-                "X-Requested-With": "XMLHttpRequest"
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+                "Accept-Language": "es-ES,es;q=0.8,en-US;q=0.5,en;q=0.3"
             }
             
             for search_query, pages_limit in queries_config:
@@ -76,57 +78,92 @@ class VintedScraper(BaseScraper):
                     self._log("🛡️ Bloqueo activo. Saltando consultas restantes.", level="warning")
                     break
                     
-                params = {
-                    "search_text": search_query,
-                    "order": "newest_first",
-                    "per_page": 50,
-                    "currency": "EUR"
-                }
-                
                 self._log(f"🕵️ Vinted Master Nexus: Buscando: {search_query} (Límite: {pages_limit} páginas)")
                 
                 try:
                     for page in range(1, pages_limit + 1):
-                        params["page"] = page
+                        params = {
+                            "search_text": search_query,
+                            "order": "newest_first",
+                            "page": page
+                        }
                         self._log(f"📄 Vinted: Escaneando '{search_query}' - Página {page}...")
                         
-                        response = await self._session.get(self.API_URL, params=params, headers=headers, timeout=30)
+                        response = await self._session.get(self.CATALOG_URL, params=params, headers=headers, timeout=30)
                         
                         if response.status_code != 200:
-                            self._log(f"⚠️ Vinted API Error ({search_query} - Página {page}): {response.status_code}", level="warning")
+                            self._log(f"⚠️ Vinted Error ({search_query} - Página {page}): {response.status_code}", level="warning")
                             if response.status_code in [403, 429]:
                                 self.blocked = True
                                 self._log("🛡️ Bloqueo detectado durante la búsqueda. Abortando esta consulta.", level="error")
                                 break
                             break
                             
-                        data = response.json()
-                        items = data.get("items", [])
+                        soup = BeautifulSoup(response.text, "html.parser")
+                        overlay_links = soup.find_all("a", attrs={"data-testid": re.compile(r"^product-item-id-\d+--overlay-link$")})
                         
-                        if not items:
+                        if not overlay_links:
                             self._log(f"🏁 Vinted: No hay más items para '{search_query}' en página {page}.")
                             break
                             
-                        self._log(f"🎁 Vinted: Hallados {len(items)} items en página {page} para '{search_query}'.")
+                        self._log(f"🎁 Vinted: Hallados {len(overlay_links)} items en página {page} para '{search_query}'.")
                         
-                        for item in items:
+                        for link in overlay_links:
                             try:
-                                title = item.get("title", "Figura MOTU")
-                                price_data = item.get("price")
-                                if isinstance(price_data, dict):
-                                    price = float(price_data.get("amount", 0))
+                                href = link.get("href", "")
+                                title_attr = link.get("title", "")
+                                test_id = link.get("data-testid", "")
+                                
+                                item_id_match = re.search(r"product-item-id-(\d+)", test_id)
+                                item_id = item_id_match.group(1) if item_id_match else None
+                                
+                                # Extracción limpia de título
+                                if ", Marca:" in title_attr:
+                                    title = title_attr.split(", Marca:")[0].strip()
+                                elif ", Estado:" in title_attr:
+                                    title = title_attr.split(", Estado:")[0].strip()
                                 else:
-                                    price = float(str(price_data).replace("€", "").replace(",", ".").replace(" ", "").strip())
+                                    slug_match = re.search(r"/items/\d+-([a-zA-Z0-9\-]+)", href)
+                                    if slug_match:
+                                        title = slug_match.group(1).replace("-", " ").title()
+                                    else:
+                                        title = title_attr.strip() or "Figura MOTU"
+                                        
+                                # Extracción de precio
+                                price = None
+                                if item_id:
+                                    price_elem = soup.find(attrs={"data-testid": f"product-item-id-{item_id}--price-text"})
+                                    if price_elem:
+                                        raw_p = price_elem.get_text(strip=True).replace("€", "").replace("\xa0", "").strip()
+                                        raw_p = raw_p.replace(",", ".")
+                                        try:
+                                            price = float(raw_p)
+                                        except ValueError:
+                                            pass
+                                            
+                                if price is None and title_attr:
+                                    p_matches = re.findall(r"(\d+(?:[.,]\d+)?)\s*€", title_attr)
+                                    if p_matches:
+                                        try:
+                                            price = float(p_matches[0].replace(",", "."))
+                                        except ValueError:
+                                            pass
+                                            
+                                if not price or price <= 0:
+                                    continue
+                                    
+                                clean_href = href.split("?")[0]
+                                url = f"https://www.vinted.es{clean_href}" if clean_href.startswith("/") else clean_href
                                 
-                                if price <= 0: continue
-                                
-                                item_id = item.get("id")
-                                url = f"https://www.vinted.es/items/{item_id}"
-                                
-                                # Imagen
-                                photos = item.get("photos", [])
-                                image_url = photos[0].get("url") if photos else None
-                                
+                                # Extracción de imagen
+                                image_url = None
+                                if item_id:
+                                    img_elem = soup.find("div", attrs={"data-testid": f"product-item-id-{item_id}--image"})
+                                    if img_elem:
+                                        img_tag = img_elem.find("img")
+                                        if img_tag:
+                                            image_url = img_tag.get("src")
+                                            
                                 offers.append(ScrapedOffer(
                                     product_name=title,
                                     price=price,
