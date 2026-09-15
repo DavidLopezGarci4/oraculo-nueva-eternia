@@ -351,6 +351,14 @@ def test_dashboard_top_deals_matches_schema(client, authorized_device_headers):
     assert resp.status_code == 200
     assert isinstance(resp.json(), list)
 
+    resp_base = client.get("/api/dashboard/top-deals?mode=base", headers=authorized_device_headers)
+    assert resp_base.status_code == 200
+    assert isinstance(resp_base.json(), list)
+
+    resp_landed = client.get("/api/dashboard/top-deals?mode=landed", headers=authorized_device_headers)
+    assert resp_landed.status_code == 200
+    assert isinstance(resp_landed.json(), list)
+
 
 def test_dashboard_match_stats_matches_schema(client, authorized_device_headers):
     # No se asume lista vacia: otros tests de la suite (p.ej.

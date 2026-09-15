@@ -149,6 +149,13 @@ class LogisticsService:
             total_landing = (total_items + shipping_cost) * rule.vat_multiplier + rule.custom_fees
             return round(total_landing / item_count, 2)
 
+        # 3b. ToymiEU: Tarifa plana fija de 15€ por pedido completo
+        if strategy == "toymieu_flat_rate" or rule.shop_name == "ToymiEU":
+            total_items = current_price * item_count
+            shipping_cost = 15.00
+            total_landing = (total_items + shipping_cost) * rule.vat_multiplier + rule.custom_fees
+            return round(total_landing / item_count, 2)
+
         # 4. Tiendas estándar con posible umbral de envío gratis
         total_items_price = current_price * item_count
         shipping_cost = base_shipping
@@ -274,6 +281,12 @@ class LogisticsService:
                 # Caso C: Triguetech (7.00€ tarifa plana fija por pedido)
                 elif strategy == "triguetech_flat_rate" or rule.shop_name == "Triguetech":
                     shipping_eur = 7.00
+                    tax_amount = 0.0
+                    total_final = base_total + shipping_eur + rule.custom_fees
+
+                # Caso C2: ToymiEU (15.00€ tarifa plana fija por pedido)
+                elif strategy == "toymieu_flat_rate" or rule.shop_name == "ToymiEU":
+                    shipping_eur = 15.00
                     tax_amount = 0.0
                     total_final = base_total + shipping_eur + rule.custom_fees
 

@@ -2,7 +2,7 @@ import json
 from datetime import datetime, timedelta, timezone
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from loguru import logger
 from sqlalchemy import and_, desc, func
 
@@ -241,7 +241,7 @@ async def get_dashboard_hall_of_fame(user_id: int = 1):
 
 
 @router.get("/top-deals", response_model=List[TopDealOutput], dependencies=[Depends(verify_device)])
-async def get_top_deals(user_id: int = 2):
+async def get_top_deals(user_id: int = 2, mode: str = Query("landed", description="'landed' or 'base'")):
     with SessionCloud() as db:
         owned_ids = [
             p[0]
@@ -277,7 +277,7 @@ async def get_top_deals(user_id: int = 2):
 
         all_candidate_offers = query.all()
 
-        # Agrupar por producto y seleccionar la oferta con el menor Landed Price real
+        # Agrupar por producto y seleccionar la mejor oferta según el modo
         best_by_product = {}
         for o in all_candidate_offers:
             if not o.product:
@@ -285,16 +285,18 @@ async def get_top_deals(user_id: int = 2):
             landing_p = LogisticsService.optimized_get_landing_price(o.price, o.shop_name, user_location, rules_map)
             retail = float(o.product.retail_price or 19.99)
             base_p = float(o.price)
-            # Calcular descuento respecto al PVP oficial usando el precio base de tienda o landed
-            ref_price = min(landing_p, base_p)
+
+            # En modo "base", el cálculo de descuento se basa en el precio puro de tienda sin envío
+            # En modo "landed", se basa en el precio puesto en casa
+            ref_price = base_p if mode == "base" else landing_p
             discount = max(0.0, round(((retail - ref_price) / retail) * 100, 1)) if retail > 0 else 0.0
 
             item_data = {
                 "id": o.id,
                 "product_id": o.product_id,
                 "product_name": o.product.name,
-                "price": o.price,
-                "landing_price": landing_p,
+                "price": round(base_p, 2),
+                "landing_price": round(landing_p, 2),
                 "shop_name": o.shop_name,
                 "url": o.url,
                 "opportunity_score": o.opportunity_score,
@@ -307,13 +309,24 @@ async def get_top_deals(user_id: int = 2):
                 best_by_product[o.product_id] = item_data
             else:
                 current_best = best_by_product[o.product_id]
-                if landing_p < current_best["landing_price"] or (
-                    abs(landing_p - current_best["landing_price"]) < 0.01 and o.opportunity_score > current_best["opportunity_score"]
-                ):
-                    best_by_product[o.product_id] = item_data
+                if mode == "base":
+                    # Comparación por precio base de tienda
+                    if base_p < current_best["price"] or (
+                        abs(base_p - current_best["price"]) < 0.01 and o.opportunity_score > current_best["opportunity_score"]
+                    ):
+                        best_by_product[o.product_id] = item_data
+                else:
+                    # Comparación por landed price
+                    if landing_p < current_best["landing_price"] or (
+                        abs(landing_p - current_best["landing_price"]) < 0.01 and o.opportunity_score > current_best["opportunity_score"]
+                    ):
+                        best_by_product[o.product_id] = item_data
 
         deals = list(best_by_product.values())
-        deals.sort(key=lambda x: (x["landing_price"], -x["opportunity_score"]))
+        if mode == "base":
+            deals.sort(key=lambda x: (x["price"], -x["opportunity_score"]))
+        else:
+            deals.sort(key=lambda x: (x["landing_price"], -x["opportunity_score"]))
 
         seen_names = set()
         final_deals = []

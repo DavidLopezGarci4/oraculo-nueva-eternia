@@ -31,10 +31,13 @@ export interface TopDeal {
     product_name: string;
     price: number;
     landing_price: number;
-    currency: string;
+    currency?: string;
     shop_name: string;
     url: string;
     image_url?: string;
+    retail_price?: number;
+    discount_pct?: number;
+    opportunity_score?: number;
 }
 
 export interface P2POpportunity {
@@ -84,9 +87,9 @@ export const getDashboardStats = async (userId: number): Promise<DashboardStats>
     return response.data;
 };
 
-export const getTopDeals = async (userId: number): Promise<TopDeal[]> => {
+export const getTopDeals = async (userId: number, mode: 'landed' | 'base' = 'landed'): Promise<TopDeal[]> => {
     const response = await axios.get(`${API_BASE}/dashboard/top-deals`, {
-        params: { user_id: userId }
+        params: { user_id: userId, mode }
     });
     return response.data;
 };

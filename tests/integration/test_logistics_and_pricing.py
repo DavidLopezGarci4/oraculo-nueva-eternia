@@ -41,9 +41,11 @@ def test_smythstoys_shipping(client):
     assert LogisticsService.get_landing_price(30.0, 'SmythsToys', 'ES') == 34.00
 
 def test_shop_aliases_normalization(client):
-    # Toymi maps to ToymiEU (5.50€)
-    assert LogisticsService.get_landing_price(20.0, 'Toymi', 'ES') == 25.50
-    assert LogisticsService.get_landing_price(20.0, 'ToymiEU', 'ES') == 25.50
+    # Toymi maps to ToymiEU (15.00€ tarifa plana)
+    assert LogisticsService.get_landing_price(20.0, 'Toymi', 'ES') == 35.00
+    assert LogisticsService.get_landing_price(20.0, 'ToymiEU', 'ES') == 35.00
+    # 2 items in bulk calculation: (40 + 15) / 2 = 27.50 per unit
+    assert LogisticsService.get_landing_price(20.0, 'ToymiEU', 'ES', item_count=2) == 27.50
 
     # WallapopManual maps to Wallapop (20 * 1.02 + 5 = 25.40)
     assert LogisticsService.get_landing_price(20.0, 'WallapopManual', 'ES') == 25.40

@@ -13,71 +13,198 @@ logger = logging.getLogger(__name__)
 class FantasiaScraper(BaseScraper):
     """
     Scraper for Fantasia Personajes (PrestaShop).
-    Uses 'content' attribute for price reliability.
+    Uses fast curl-cffi impersonation with automatic fallback to Playwright,
+    focused MOTU Origins search query, and direct tracking of catalog items.
     """
+    KNOWN_PRODUCT_URLS: List[str] = [
+        "https://fantasiapersonajes.es/masters-of-the-universe-origins-man-at-arms-14-cm-mattel"
+    ]
+
     def __init__(self):
-        super().__init__(shop_name="Fantasia Personajes", base_url="https://fantasiapersonajes.es/busqueda?controller=search&s=masters+of+the+universe")
+        super().__init__(
+            shop_name="Fantasia Personajes",
+            base_url="https://fantasiapersonajes.es/busqueda?controller=search&s=masters+of+the+universe+origins&resultsPerPage=36"
+        )
 
     async def search(self, query: str = "auto") -> List[ScrapedOffer]:
+        import urllib.parse
+        products: List[ScrapedOffer] = []
+        seen_urls = set()
+
+        # 1. Resolve search URL
+        if query and query not in ("auto", "*"):
+            encoded = urllib.parse.quote_plus(query)
+            search_url = f"https://fantasiapersonajes.es/busqueda?controller=search&s={encoded}&resultsPerPage=36"
+        else:
+            search_url = self.base_url
+
+        # 2. Try fast stealth crawl via curl-cffi
+        try:
+            current_url = search_url
+            page_num = 1
+            max_pages = 10
+
+            while current_url and page_num <= max_pages:
+                logger.info(f"[{self.spider_name}] Fast-crawling page {page_num}: {current_url}")
+                html = await self._curl_get(current_url)
+                if not html:
+                    break
+
+                soup = BeautifulSoup(html, 'html.parser')
+                items = soup.select('article.product-miniature, .product-miniature')
+                if not items:
+                    # Check JSON-LD fallback
+                    json_prods = self._extract_from_json_ld(soup)
+                    for jp in json_prods:
+                        if jp.url not in seen_urls:
+                            seen_urls.add(jp.url)
+                            products.append(jp)
+                            self.items_scraped += 1
+                else:
+                    for item in items:
+                        prod = self._parse_html_item(item)
+                        if prod and prod.url not in seen_urls:
+                            seen_urls.add(prod.url)
+                            products.append(prod)
+                            self.items_scraped += 1
+
+                # Pagination
+                next_tag = soup.select_one('a.next.js-search-link, li.next a')
+                if next_tag and next_tag.get('href') and 'javascript:void' not in next_tag.get('href'):
+                    next_url = next_tag.get('href')
+                    if next_url.startswith('/'):
+                        next_url = f"https://fantasiapersonajes.es{next_url}"
+                    current_url = next_url
+                    page_num += 1
+                    await asyncio.sleep(0.5)
+                else:
+                    break
+
+            # 3. Process known catalog items that might be hidden from search
+            for direct_url in self.KNOWN_PRODUCT_URLS:
+                if direct_url not in seen_urls:
+                    p_html = await self._curl_get(direct_url)
+                    if p_html:
+                        p_soup = BeautifulSoup(p_html, 'html.parser')
+                        p_prod = self._parse_product_page(p_soup, direct_url)
+                        if p_prod and p_prod.url not in seen_urls:
+                            seen_urls.add(p_prod.url)
+                            products.append(p_prod)
+                            self.items_scraped += 1
+
+            if products:
+                logger.info(f"[{self.spider_name}] Fast crawl finished. Total items: {len(products)}")
+                return products
+
+        except Exception as e:
+            logger.warning(f"[{self.spider_name}] Fast crawl encountered error: {e}. Falling back to Playwright.")
+
+        # Fallback to Playwright if curl-cffi yielded no results or was blocked
+        return await self._search_playwright(search_url)
+
+    async def _search_playwright(self, search_url: str) -> List[ScrapedOffer]:
         from playwright.async_api import async_playwright
         products: List[ScrapedOffer] = []
-        
+        seen_urls = set()
+
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=True)
             context = await browser.new_context(user_agent=self._get_random_header()["User-Agent"])
             page = await context.new_page()
-            
+
             try:
-                current_url = self.base_url
+                current_url = search_url
                 page_num = 1
-                max_pages = 20 # Increased limit for sanity, 8+ seen by user
-                
+                max_pages = 10
+
                 while current_url and page_num <= max_pages:
-                    logger.info(f"[{self.spider_name}] Scraping page {page_num}: {current_url}")
-                    
+                    logger.info(f"[{self.spider_name}] [Playwright] Scraping page {page_num}: {current_url}")
+
                     if not await self._safe_navigate(page, current_url):
                         break
-                    
+
                     await self._handle_popups(page)
-                    await asyncio.sleep(1.5)
-                    
+                    await asyncio.sleep(1.0)
+
                     html_content = await page.content()
                     soup = BeautifulSoup(html_content, 'html.parser')
-                    
-                    # Strategy 1: Verified CSS Selectors (Primary for results)
-                    items = soup.select('article.product-miniature')
-                    logger.info(f"[{self.spider_name}] Found {len(items)} items using CSS.")
-                    
-                    if not items:
-                        # Fallback to secondary container pattern
-                        items = soup.select('.product-miniature')
-                        
+
+                    items = soup.select('article.product-miniature, .product-miniature')
                     for item in items:
                         prod = self._parse_html_item(item)
-                        if prod:
+                        if prod and prod.url not in seen_urls:
+                            seen_urls.add(prod.url)
                             products.append(prod)
                             self.items_scraped += 1
-                    
-                    # Pagination: PrestaShop .next.js-search-link
+
                     next_tag = soup.select_one('a.next.js-search-link, li.next a')
                     if next_tag and next_tag.get('href') and 'javascript:void' not in next_tag.get('href'):
-                        current_url = next_tag.get('href')
-                        # PrestaShop relative link check
-                        if current_url.startswith('/'):
-                            current_url = f"https://fantasiapersonajes.es{current_url}"
+                        next_url = next_tag.get('href')
+                        if next_url.startswith('/'):
+                            next_url = f"https://fantasiapersonajes.es{next_url}"
+                        current_url = next_url
                         page_num += 1
                     else:
-                        logger.info(f"[{self.spider_name}] End of pagination.")
                         break
-                        
+
             except Exception as e:
-                logger.error(f"[{self.spider_name}] Critical Error: {e}", exc_info=True)
+                logger.error(f"[{self.spider_name}] Playwright Critical Error: {e}", exc_info=True)
                 self.errors += 1
             finally:
                 await browser.close()
-                
-            logger.info(f"[{self.spider_name}] Finished. Total items: {len(products)}")
-            return products
+
+        logger.info(f"[{self.spider_name}] Playwright Finished. Total items: {len(products)}")
+        return products
+
+    def _parse_product_page(self, soup: BeautifulSoup, url: str) -> Optional[ScrapedOffer]:
+        try:
+            h1 = soup.select_one('h1[itemprop="name"], h1.h1, h1')
+            if not h1:
+                return None
+            name = h1.get_text(strip=True)
+
+            price_val = 0.0
+            price_el = soup.select_one('span[itemprop="price"], .current-price span[itemprop="price"], .current-price span, .product-prices span')
+            if price_el:
+                if price_el.has_attr('content'):
+                    try:
+                        price_val = float(price_el['content'].replace(',', '.'))
+                    except:
+                        pass
+                if price_val == 0.0:
+                    price_val = self._normalize_price(price_el.get_text(strip=True))
+
+            if price_val == 0.0:
+                return None
+
+            is_avl = True
+            if soup.select_one('.product-flags .out-of-stock, .product-unavailable'):
+                is_avl = False
+
+            item_text = soup.get_text(strip=True).lower()
+            if any(term in item_text for term in ["agotado", "no disponible", "sin existencias"]):
+                if soup.select_one('.product-unavailable, .out-of-stock'):
+                    is_avl = False
+
+            img = soup.select_one('.product-cover img, img[itemprop="image"]')
+            img_url = None
+            if img:
+                img_url = img.get('data-src') or img.get('src')
+                if img_url and img_url.startswith('/'):
+                    img_url = f"https://fantasiapersonajes.es{img_url}"
+
+            return ScrapedOffer(
+                product_name=name,
+                price=price_val,
+                currency="EUR",
+                url=url,
+                shop_name=self.spider_name,
+                is_available=is_avl,
+                image_url=img_url
+            )
+        except Exception as e:
+            logger.warning(f"[{self.spider_name}] Direct product page parse error: {e}")
+            return None
 
     def _parse_html_item(self, item) -> Optional[ScrapedOffer]:
         try:

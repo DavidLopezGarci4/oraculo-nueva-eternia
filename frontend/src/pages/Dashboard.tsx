@@ -120,9 +120,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
         refetchInterval: 300000 // 5 min
     });
 
+    const [dealsMode, setDealsMode] = React.useState<'landed' | 'base'>('landed');
+
     const { data: topDeals } = useQuery({
-        queryKey: ['top-deals', user?.id],
-        queryFn: () => getTopDeals(user?.id || 2),
+        queryKey: ['top-deals', user?.id, dealsMode],
+        queryFn: () => getTopDeals(user?.id || 2, dealsMode),
         refetchInterval: 600000 // 10 min
     });
 
@@ -766,13 +768,40 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                 <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/90 backdrop-blur-xl p-2 md:p-10 animate-in fade-in duration-300">
                     <div className="relative w-full max-w-7xl rounded-[3rem] border border-white/10 bg-gradient-to-br from-white/[0.05] to-transparent overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
                         {/* Header */}
-                        <div className="p-6 border-b border-white/5 flex items-center justify-between">
+                        <div className="p-6 border-b border-white/5 flex flex-wrap items-center justify-between gap-4">
                             <div className="flex items-center gap-3">
                                 <Target className="h-6 w-6 text-brand-primary" />
                                 <h3 className="text-white font-black text-lg uppercase tracking-wider">
                                     {isAdmin ? 'Oportunidades Bajo Seguimiento' : 'Oportunidades de Captura'}
                                 </h3>
                             </div>
+
+                            {/* Selector Dual de Modo: Puesto en Casa vs Puro Catálogo */}
+                            <div className="flex items-center gap-1 bg-white/5 p-1 rounded-2xl border border-white/10">
+                                <button
+                                    onClick={() => setDealsMode('landed')}
+                                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                                        dealsMode === 'landed'
+                                            ? 'bg-brand-primary text-black shadow-lg font-black'
+                                            : 'text-white/60 hover:text-white'
+                                    }`}
+                                    title="Ordenar considerando gastos de envío hasta tu casa (compras individuales)"
+                                >
+                                    🚚 Puesto en Casa
+                                </button>
+                                <button
+                                    onClick={() => setDealsMode('base')}
+                                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                                        dealsMode === 'base'
+                                            ? 'bg-brand-primary text-black shadow-lg font-black'
+                                            : 'text-white/60 hover:text-white'
+                                    }`}
+                                    title="Ordenar por precio puro de tienda (ideal para pedidos combinados con envío único)"
+                                >
+                                    🏷️ Puro Catálogo
+                                </button>
+                            </div>
+
                             <button 
                                 onClick={() => {
                                     setShowOpportunitiesModal(false);
@@ -830,8 +859,17 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
 
                                                         <div className="flex items-center gap-3 shrink-0">
                                                             <div className="text-right">
-                                                                <div className="text-xs font-black text-brand-primary">{deal.landing_price} € <span className="text-[8px] opacity-40">LANDED</span></div>
-                                                                <div className="text-[10px] font-bold text-white/60">{deal.price} € <span className="text-[8px] opacity-50">LIST</span></div>
+                                                                {dealsMode === 'base' ? (
+                                                                    <>
+                                                                        <div className="text-xs font-black text-brand-primary">{deal.price} € <span className="text-[8px] opacity-70">CATÁLOGO</span></div>
+                                                                        <div className="text-[10px] font-bold text-white/60">{deal.landing_price} € <span className="text-[8px] opacity-40">LANDED</span></div>
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <div className="text-xs font-black text-brand-primary">{deal.landing_price} € <span className="text-[8px] opacity-70">LANDED</span></div>
+                                                                        <div className="text-[10px] font-bold text-white/60">{deal.price} € <span className="text-[8px] opacity-40">CATÁLOGO</span></div>
+                                                                    </>
+                                                                )}
                                                             </div>
                                                             <button
                                                                 onClick={() => addToCart({
@@ -870,8 +908,17 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                                                             <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
                                                                 <span className="text-[10px] font-black text-white/60 uppercase">{deal.shop_name}</span>
                                                                 <span className="text-white/20">•</span>
-                                                                <span className="text-xs font-black text-brand-primary">{deal.landing_price} € <span className="text-[8px] opacity-40 font-bold">LANDED</span></span>
-                                                                <span className="text-[10px] font-bold text-white/40">({deal.price} € base)</span>
+                                                                {dealsMode === 'base' ? (
+                                                                    <>
+                                                                        <span className="text-xs font-black text-brand-primary">{deal.price} € <span className="text-[8px] opacity-70 font-bold">CATÁLOGO</span></span>
+                                                                        <span className="text-[10px] font-bold text-white/40">({deal.landing_price} € landed)</span>
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <span className="text-xs font-black text-brand-primary">{deal.landing_price} € <span className="text-[8px] opacity-70 font-bold">LANDED</span></span>
+                                                                        <span className="text-[10px] font-bold text-white/40">({deal.price} € base)</span>
+                                                                    </>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     </div>
