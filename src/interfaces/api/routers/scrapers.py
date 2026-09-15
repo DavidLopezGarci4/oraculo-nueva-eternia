@@ -7,7 +7,7 @@ from zoneinfo import ZoneInfo
 import psutil
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response, File, UploadFile
 from loguru import logger
-from sqlalchemy import desc
+from sqlalchemy import desc, func
 
 from src.domain.models import ScraperExecutionLogModel, ScraperStatusModel, WallapopIpLogModel
 from src.infrastructure.database_cloud import SessionCloud
@@ -28,6 +28,33 @@ router = APIRouter(prefix="/api/scrapers", tags=["scrapers"])
 # 🛡️ Flag global de cancelación cooperativa
 scraper_cancel_event = threading.Event()
 
+CANONICAL_SPIDER_NAMES = {
+    "fantasia": "Fantasia Personajes",
+    "fantasia personajes": "Fantasia Personajes",
+    "frikiverso": "Frikiverso",
+    "frikimaz": "Frikimaz",
+    "electropolis": "Electropolis",
+    "pixelatoy": "Pixelatoy",
+    "amazon": "Amazon.es",
+    "amazon.es": "Amazon.es",
+    "detoyboys": "DeToyboys",
+    "ebay": "Ebay.es",
+    "ebay.es": "Ebay.es",
+    "vinted": "Vinted",
+    "wallapop": "Wallapop",
+    "wallapopmanual": "Wallapop",
+    "wallamanual": "Wallapop",
+    "toymieu": "ToymiEU",
+    "time4actiontoysde": "Time4ActionToysDE",
+    "bigbadtoystore": "BigBadToyStore",
+    "smythstoys": "SmythsToys",
+    "dvdstorespain": "DVDStoreSpain",
+    "triguetech": "Triguetech",
+    "lamansiondelterror": "LaMansionDelTerror",
+    "actiontoys": "ActionToys",
+    "all": "all",
+}
+
 
 def run_scraper_task(
     spider_name: str = "all",
@@ -37,6 +64,9 @@ def run_scraper_task(
 ):
     """Wrapper para ejecutar recolectores y actualizar el estado en BD"""
     scraper_cancel_event.clear()
+
+    # Canonicalizar nombre del spider para evitar duplicidades por mayúsculas/minúsculas
+    canonical_spider_name = CANONICAL_SPIDER_NAMES.get(spider_name.lower().strip(), spider_name)
 
     # PHASE 42: PURGE OLD LOGS (7 DAYS)
     try:
@@ -54,21 +84,23 @@ def run_scraper_task(
         with SessionCloud() as db:
             status = (
                 db.query(ScraperStatusModel)
-                .filter(ScraperStatusModel.spider_name == spider_name)
+                .filter(func.lower(ScraperStatusModel.spider_name) == canonical_spider_name.lower())
                 .first()
             )
             if not status:
-                status = ScraperStatusModel(spider_name=spider_name)
+                status = ScraperStatusModel(spider_name=canonical_spider_name)
                 db.add(status)
+            else:
+                status.spider_name = canonical_spider_name
             status.status = "running"
             status.start_time = datetime.now(timezone.utc).replace(tzinfo=None)
 
             execution_log = ScraperExecutionLogModel(
-                spider_name=spider_name,
+                spider_name=canonical_spider_name,
                 status="running",
                 start_time=status.start_time,
                 trigger_type=trigger_type,
-                logs=f"[{datetime.now(ZoneInfo('Europe/Madrid')).strftime('%H:%M:%S')}] 🚀 Desplegando incursión manual: {spider_name}\n",
+                logs=f"[{datetime.now(ZoneInfo('Europe/Madrid')).strftime('%H:%M:%S')}] 🚀 Desplegando incursión manual: {canonical_spider_name}\n",
             )
             db.add(execution_log)
             db.commit()
@@ -118,6 +150,7 @@ def run_scraper_task(
         from src.infrastructure.scrapers.wallapop_manual_scraper import WallapopManualScraper
         from src.infrastructure.scrapers.triguetech_scraper import TriguetechScraper
 
+        wallapop_instance = WallapopManualScraper()
         spiders_map = {
             "Fantasia Personajes": FantasiaScraper(),
             "Frikiverso": FrikiversoScraper(),
@@ -128,8 +161,8 @@ def run_scraper_task(
             "DeToyboys": DeToyboysNLScraper(),
             "Ebay.es": EbayScraper(),
             "Vinted": VintedScraper(),
-            "Wallapop": WallapopScraper(), # CON PROBE LOG PROTEGIDO
-            "WallapopManual": WallapopManualScraper(), # ALTERNATIVO: API v3 firmada + proxy residencial (anti-bloqueo)
+            "Wallapop": wallapop_instance, # API v3 firmada (0 tokens, 100% gratuita)
+            "WallapopManual": wallapop_instance, # Alias compatible
             "ToymiEU": ToymiEUScraper(),
             "Time4ActionToysDE": Time4ActionToysDEScraper(),
             "BigBadToyStore": BigBadToyStoreScraper(),
@@ -140,14 +173,20 @@ def run_scraper_task(
             "LaMansionDelTerror": LaMansionDelTerrorScraper(),
         }
 
-        lookup_name = spider_name.lower()
+        lookup_name = canonical_spider_name.lower()
         matching_key = next(
             (k for k in spiders_map.keys() if k.lower() == lookup_name), None
         )
 
         spiders_to_run = []
-        if spider_name == "all":
-            spiders_to_run = list(spiders_map.values())
+        if canonical_spider_name == "all":
+            unique_spiders = []
+            seen_spiders = set()
+            for s in spiders_map.values():
+                if s not in seen_spiders:
+                    seen_spiders.add(s)
+                    unique_spiders.append(s)
+            spiders_to_run = unique_spiders
         elif matching_key:
             s = spiders_map[matching_key]
             s.log_callback = update_live_log
@@ -169,7 +208,7 @@ def run_scraper_task(
                 search_term = "auto"
 
             update_live_log(
-                f"📡 Buscando reliquias para '{search_term}' en {spider_name}..."
+                f"📡 Buscando reliquias para '{search_term}' en {canonical_spider_name}..."
             )
 
             try:
@@ -198,7 +237,7 @@ def run_scraper_task(
             new_items = new_items if new_items is not None else 0
             items_found = len(results)
             logger.info(
-                f"💾 Persistidas {items_found} ofertas tras incursión de {spider_name}."
+                f"💾 Persistidas {items_found} ofertas tras incursión de {canonical_spider_name}."
             )
             update_live_log(
                 f"✅ Incursión completada con éxito. {items_found} reliquias encontradas."
@@ -207,10 +246,11 @@ def run_scraper_task(
         with SessionCloud() as db:
             status = (
                 db.query(ScraperStatusModel)
-                .filter(ScraperStatusModel.spider_name == spider_name)
+                .filter(func.lower(ScraperStatusModel.spider_name) == canonical_spider_name.lower())
                 .first()
             )
             if status:
+                status.spider_name = canonical_spider_name
                 status.status = "completed"
                 status.end_time = datetime.now(timezone.utc).replace(tzinfo=None)
 
@@ -228,15 +268,16 @@ def run_scraper_task(
             db.commit()
 
     except Exception as e:
-        logger.error(f"Scraper Error ({spider_name}): {e}")
+        logger.error(f"Scraper Error ({canonical_spider_name}): {e}")
         update_live_log(f"❌ FALLO CRÍTICO: {str(e)}")
         with SessionCloud() as db:
             status = (
                 db.query(ScraperStatusModel)
-                .filter(ScraperStatusModel.spider_name == spider_name)
+                .filter(func.lower(ScraperStatusModel.spider_name) == canonical_spider_name.lower())
                 .first()
             )
             if status:
+                status.spider_name = canonical_spider_name
                 status.status = f"error: {str(e)}"
 
             log = (
@@ -256,15 +297,28 @@ def run_scraper_task(
 async def get_scrapers_status():
     """Retorna el estado actual de los recolectores (Admin Only)"""
     with SessionCloud() as db:
-        return (
+        statuses = (
             db.query(ScraperStatusModel)
             .filter(
                 ScraperStatusModel.spider_name.notin_(
-                    ["Nexus", "NexusVintage", "Harvester", "harvester", "all", "idealo.es", "Idealo.es", "Amazon", "amazon", "Tradeinn", "tradeinn"]
+                    [
+                        "Nexus", "NexusVintage", "Harvester", "harvester", "all",
+                        "idealo.es", "Idealo.es", "Amazon", "amazon", "Tradeinn", "tradeinn",
+                        "SchemaTestSpider", "schematestspider"
+                    ]
                 )
             )
             .all()
         )
+        unique_statuses = {}
+        for s in statuses:
+            canonical = CANONICAL_SPIDER_NAMES.get(s.spider_name.lower().strip(), s.spider_name)
+            key = canonical.lower()
+            if key not in unique_statuses or s.spider_name == canonical:
+                # Asegurar nombre canónico en la respuesta
+                s.spider_name = canonical
+                unique_statuses[key] = s
+        return list(unique_statuses.values())
 
 
 @router.get("/logs", response_model=List[ScraperExecutionLogOutput], dependencies=[Depends(verify_api_key)])
