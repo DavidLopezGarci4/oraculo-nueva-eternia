@@ -423,7 +423,7 @@ function App() {
               <ErrorBoundary>
                 <Suspense fallback={<PowerSwordLoader variant="fullScreen" text="Canalizando Poder..." />}>
                   <Routes>
-                    <Route path={TAB_PATHS.dashboard} element={<Dashboard user={currentUser} />} />
+                    <Route path={TAB_PATHS.dashboard} element={<Dashboard user={currentUser} isIncognito={isIncognito} />} />
                     <Route path={TAB_PATHS.catalog} element={<Catalog user={currentUser} searchQuery={searchQuery} isIncognito={isIncognito} />} />
                     <Route path={TAB_PATHS.eternia} element={<Catalog user={currentUser} isVintageOnly={true} searchQuery={searchQuery} isIncognito={isIncognito} />} />
                     <Route path={TAB_PATHS.auctions} element={<Auctions user={currentUser} />} />

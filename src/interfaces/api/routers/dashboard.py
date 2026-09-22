@@ -32,7 +32,7 @@ router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 
 
 @router.get("/stats", response_model=DashboardStatsOutput, dependencies=[Depends(verify_device)])
-async def get_dashboard_stats(user_id: int = 1):
+def get_dashboard_stats(user_id: int = 1):
     try:
         with SessionCloud() as db:
             # Total products counts (Agrupado por is_vintage para ahorrar 1 query)
@@ -124,12 +124,14 @@ async def get_dashboard_stats(user_id: int = 1):
                 "financial": {
                     "total_invested": round(total_invested, 2),
                     "market_value": round(market_value, 2),
+                    "landed_market_value": round(market_value, 2),
                     "profit_loss": round(profit_loss, 2),
                     "roi": round(roi, 1),
                 },
                 "financial_vintage": {
                     "total_invested": round(total_invested_v, 2),
                     "market_value": round(market_value_v, 2),
+                    "landed_market_value": round(market_value_v, 2),
                     "profit_loss": round(profit_loss_v, 2),
                     "roi": round(roi_v, 1),
                 },

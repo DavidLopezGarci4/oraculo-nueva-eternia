@@ -84,7 +84,7 @@ class OfferModel(Base):
     product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), index=True)
     
     shop_name: Mapped[str] = mapped_column(String, index=True)
-    price: Mapped[float] = mapped_column(Float)
+    price: Mapped[float] = mapped_column(Float, index=True)
     currency: Mapped[str] = mapped_column(String, default="EUR")
     url: Mapped[str] = mapped_column(String, index=True)
     is_available: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
@@ -283,11 +283,11 @@ class PriceAlertModel(Base):
     __tablename__ = "price_alerts"
     
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    product_id: Mapped[int] = mapped_column(ForeignKey("products.id"))
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
     
     target_price: Mapped[float] = mapped_column(Float)
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
     last_notified_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
@@ -327,7 +327,7 @@ class ScraperStatusModel(Base):
     __tablename__ = "scraper_status"
     
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    spider_name: Mapped[str] = mapped_column(String)
+    spider_name: Mapped[str] = mapped_column(String, index=True)
     status: Mapped[str] = mapped_column(String) # running, completed, error
     items_scraped: Mapped[int] = mapped_column(Integer, default=0)
     progress: Mapped[int] = mapped_column(Integer, default=0) # 0-100
@@ -430,7 +430,7 @@ class SyncQueueModel(Base):
     action_type: Mapped[str] = mapped_column(String) # LINK, DISCARD, ADD_PRODUCT, UPDATE_PRICE
     payload: Mapped[str] = mapped_column(String) # JSON string with all metadata
     
-    status: Mapped[str] = mapped_column(String, default="PENDING") # PENDING, SYNCED, FAILED
+    status: Mapped[str] = mapped_column(String, default="PENDING", index=True) # PENDING, SYNCED, FAILED
     retry_count: Mapped[int] = mapped_column(Integer, default=0)
     error_msg: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     

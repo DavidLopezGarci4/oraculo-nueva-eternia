@@ -53,7 +53,9 @@ def clear_purgatory_counts_cache():
 @event.listens_for(ProductModel, 'after_insert')
 @event.listens_for(ProductModel, 'after_delete')
 def on_db_change(mapper, connection, target):
-    clear_purgatory_counts_cache()
+    # Throttle: solo invalidar si han transcurrido más de 60s para no degradar consultas durante scraping masivo
+    if time.time() - _purgatory_counts_timestamp > 60:
+        clear_purgatory_counts_cache()
 
 
 def get_purgatory_counts(db) -> dict[int, int]:
@@ -106,7 +108,7 @@ def get_purgatory_counts(db) -> dict[int, int]:
 
 
 @router.get("/api/products", response_model=List[ProductOutput])
-async def get_products(
+def get_products(
     is_vintage: bool = False, 
     shop: Optional[str] = None,
     limit: Optional[int] = None,

@@ -291,6 +291,7 @@ class FinancialHealthOutput(BaseModel):
     market_value: float
     profit_loss: float
     roi: float
+    landed_market_value: float = 0.0
 
 
 class ShopDistributionOutput(BaseModel):

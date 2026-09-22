@@ -56,7 +56,7 @@ router = APIRouter(tags=["collection"])
 
 
 @router.get("/api/collection", response_model=List[ProductOutput])
-async def get_collection(
+def get_collection(
     user_id: int,
     is_vintage: bool = False,
     limit: Optional[int] = None,
@@ -94,10 +94,20 @@ async def get_collection(
                 ProductModel.asin.ilike(search_term)
             )
 
+        query = query.order_by(ProductModel.name.asc())
+        if offset is not None:
+            query = query.offset(offset)
+        if limit is not None:
+            query = query.limit(limit)
+
         results = db.execute(query).all()
 
         if not results:
             return []
+
+        # Preload active offers for all fetched products to eradicate N+1 queries
+        product_ids = [p.id for p, _ in results]
+        valuation_service.preload_offers_for_products(product_ids)
 
         output_list = []
         for product, collection_item in results:
@@ -140,16 +150,11 @@ async def get_collection(
                 )
             )
 
-        if offset is not None or limit is not None:
-            start = offset or 0
-            end = start + limit if limit is not None else len(output_list)
-            return output_list[start:end]
-
         return output_list
 
 
 @router.get("/api/guardian/export/excel")
-async def export_excel(user_id: int = 1, current_user: UserModel = Depends(get_current_user)):
+def export_excel(user_id: int = 1, current_user: UserModel = Depends(get_current_user)):
     user_id = _scope_user_id(current_user, user_id)
     try:
         from src.application.services.guardian_service import GuardianService
@@ -171,7 +176,7 @@ async def export_excel(user_id: int = 1, current_user: UserModel = Depends(get_c
 
 
 @router.get("/api/guardian/export/excel/vintage")
-async def export_excel_vintage(user_id: int = 1, current_user: UserModel = Depends(get_current_user)):
+def export_excel_vintage(user_id: int = 1, current_user: UserModel = Depends(get_current_user)):
     user_id = _scope_user_id(current_user, user_id)
     try:
         from src.application.services.guardian_service import GuardianService
@@ -194,7 +199,7 @@ async def export_excel_vintage(user_id: int = 1, current_user: UserModel = Depen
 
 
 @router.get("/api/guardian/export/sqlite")
-async def export_sqlite(user_id: int = 1, current_user: UserModel = Depends(get_current_user)):
+def export_sqlite(user_id: int = 1, current_user: UserModel = Depends(get_current_user)):
     user_id = _scope_user_id(current_user, user_id)
     try:
         from src.application.services.guardian_service import GuardianService
@@ -216,7 +221,7 @@ async def export_sqlite(user_id: int = 1, current_user: UserModel = Depends(get_
 
 
 @router.post("/api/collection/toggle", response_model=CollectionToggleOutput)
-async def toggle_collection(
+def toggle_collection(
     request: CollectionToggleRequest,
     background_tasks: BackgroundTasks,
     current_user: UserModel = Depends(get_current_user),
@@ -250,7 +255,7 @@ async def toggle_collection(
 
 
 @router.patch("/api/collection/{product_id}", response_model=StatusMessageOutput)
-async def update_collection_item(
+def update_collection_item(
     product_id: int,
     request: CollectionItemUpdateRequest,
     background_tasks: BackgroundTasks,

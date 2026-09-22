@@ -40,7 +40,6 @@ interface CatalogProps {
 }
 
 const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintageOnly = false, user, isIncognito = false }) => {
-    void isIncognito;
     const queryClient = useQueryClient();
     const { addToCart } = useCart();
     const [selectedProduct, setSelectedProduct] = React.useState<Product | null>(null);
@@ -822,6 +821,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                 selectedProduct={selectedProduct}
                 setSelectedProduct={setSelectedProduct}
                 isVintageOnly={isVintageOnly}
+                isIncognito={isIncognito}
                 setExpandedImage={setExpandedImage}
                 isAdmin={isAdmin}
                 showMergePanel={showMergePanel}

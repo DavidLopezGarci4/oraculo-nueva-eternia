@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, lazy, Suspense } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
     X,
@@ -18,8 +17,9 @@ import type { Product } from '../api/collection';
 import { getOptimizedImageUrl } from '../utils/imageUtils';
 import { MOTUImage } from './ui/MOTUImage';
 import { useModalA11y } from '../hooks/useModalA11y';
-import TradingCardModal from './collection/TradingCardModal';
 import { Sparkles } from 'lucide-react';
+
+const TradingCardModal = lazy(() => import('./collection/TradingCardModal'));
 
 
 interface CollectionItemDetailModalProps {
@@ -30,7 +30,6 @@ interface CollectionItemDetailModalProps {
 }
 
 const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ product, userId, isIncognito = false, onClose }) => {
-    void isIncognito;
     const containerRef = React.useRef<HTMLDivElement>(null);
     useModalA11y(true, onClose, containerRef);
     const queryClient = useQueryClient();
@@ -166,7 +165,8 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
                                                 }
                                             }}
                                             placeholder="0"
-                                            className="bg-transparent text-base sm:text-2xl font-black text-white border-none focus:ring-0 w-12 sm:w-20 p-0 blur-incognito"
+                                            className={`bg-transparent text-base sm:text-2xl font-black text-white border-none focus:ring-0 w-12 sm:w-20 p-0 ${isIncognito ? 'blur-incognito opacity-30 select-none pointer-events-none' : ''}`}
+                                            title={isIncognito ? "•••" : undefined}
                                         />
                                         <span className="text-xs sm:text-lg font-bold text-white/70">€</span>
                                     </div>
@@ -178,26 +178,26 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
                                     <div className="flex items-center justify-between">
                                         <span className="text-[7px] sm:text-[8px] font-black text-white/60 uppercase tracking-widest block">vs Mercado P2P Actual</span>
                                         {numericPrice > 0 && (
-                                            <span className={`text-[7.5px] font-black uppercase px-1.5 py-0.5 rounded ${buyProfitLoss >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-brand-primary/20 text-brand-primary'}`}>
+                                            <span className={`text-[7.5px] font-black uppercase px-1.5 py-0.5 rounded blur-incognito ${buyProfitLoss >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-brand-primary/20 text-brand-primary'}`}>
                                                 {buyProfitLoss >= 0 ? 'Ahorro' : 'Sobreprecio'}
                                             </span>
                                         )}
                                     </div>
                                     <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-1.5">
                                         <div className="flex items-baseline gap-1">
-                                            <h4 className={`text-base sm:text-2xl font-black ${numericPrice === 0 ? 'text-white/80' : buyProfitLoss >= 0 ? 'text-green-400' : 'text-brand-primary'}`}>
+                                            <h4 className={`text-base sm:text-2xl font-black blur-incognito ${numericPrice === 0 ? 'text-white/80' : buyProfitLoss >= 0 ? 'text-green-400' : 'text-brand-primary'}`}>
                                                 {numericPrice > 0 ? `${buyProfitLoss >= 0 ? '+' : ''}${buyProfitLoss.toFixed(2)}` : `${p2pBenchmark.toFixed(2)}`}
                                             </h4>
                                             <span className="text-xs sm:text-lg font-bold text-white/40">€</span>
                                         </div>
                                         {numericPrice > 0 && (
-                                            <div className={`flex w-fit items-center gap-1 sm:gap-1.5 px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-[8px] sm:text-[10px] font-black ${buyProfitLoss >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-brand-primary/20 text-brand-primary'}`}>
+                                            <div className={`flex w-fit items-center gap-1 sm:gap-1.5 px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-[8px] sm:text-[10px] font-black blur-incognito ${buyProfitLoss >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-brand-primary/20 text-brand-primary'}`}>
                                                 {buyProfitLoss >= 0 ? <TrendingUp className="h-2 w-2 sm:h-3 sm:w-3" /> : <TrendingDown className="h-2 w-2 sm:h-3 sm:w-3" />}
                                                 {buyRoi.toFixed(1)}%
                                             </div>
                                         )}
                                     </div>
-                                    <span className="text-[8px] text-white/40 font-mono">Media 2ª mano: ~{p2pBenchmark.toFixed(2)}€</span>
+                                    <span className="text-[8px] text-white/40 font-mono blur-incognito">Media 2ª mano: ~{p2pBenchmark.toFixed(2)}€</span>
                                 </div>
                             </div>
 
@@ -205,15 +205,15 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
                             <div className="flex items-center justify-between p-2.5 sm:p-3 rounded-xl bg-white/[0.02] border border-white/5 text-[9px] sm:text-[10px]">
                                 <div className="flex items-center gap-1.5 text-white/60">
                                     <span className="font-bold text-white/90">PVP Salida:</span>
-                                    <span className="font-mono text-white/80">{retailPrice > 0 ? `${retailPrice.toFixed(2)}€` : 'N/A'}</span>
+                                    <span className="font-mono text-white/80 blur-incognito">{retailPrice > 0 ? `${retailPrice.toFixed(2)}€` : 'N/A'}</span>
                                     <span className="text-white/30">→</span>
                                     <span className="font-bold text-white/90">Cotización:</span>
-                                    <span className="font-mono text-amber-300 font-bold">{adjustedMarketVal.toFixed(2)}€</span>
+                                    <span className="font-mono text-amber-300 font-bold blur-incognito">{adjustedMarketVal.toFixed(2)}€</span>
                                 </div>
                                 {retailPrice > 0 && (
                                     <div className="flex items-center gap-1">
                                         <span className="text-white/50 text-[8px] uppercase font-black">Apreciación:</span>
-                                        <span className={`font-black font-mono ${historicalProfit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                        <span className={`font-black font-mono blur-incognito ${historicalProfit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                                             {historicalProfit >= 0 ? '+' : ''}{historicalProfit.toFixed(2)}€ ({historicalRoi >= 0 ? '+' : ''}{historicalRoi.toFixed(0)}%)
                                         </span>
                                     </div>
@@ -330,23 +330,27 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
                             </button>
                         </div>
 
-                        {/* Trading Card Modal */}
-                        <TradingCardModal
-                            isOpen={showTradingCard}
-                            onClose={() => setShowTradingCard(false)}
-                            item={{
-                                id: product.id,
-                                name: product.name,
-                                image_url: product.image_url || undefined,
-                                condition: condition,
-                                grading: grading,
-                                purchase_price: price === '' ? 0.0 : (parseFloat(price) || 0.0),
-                                current_value: product.p25_price || product.retail_price || 19.99,
-                                sub_category: product.sub_category,
-                                release_year: (product as any).release_year,
-                                sku: (product as any).sku || (product as any).ean
-                            }}
-                        />
+                        {/* Trading Card Modal (Carga Diferida / Lazy Loaded) */}
+                        {showTradingCard && (
+                            <Suspense fallback={null}>
+                                <TradingCardModal
+                                    isOpen={showTradingCard}
+                                    onClose={() => setShowTradingCard(false)}
+                                    item={{
+                                        id: product.id,
+                                        name: product.name,
+                                        image_url: product.image_url || undefined,
+                                        condition: condition,
+                                        grading: grading,
+                                        purchase_price: price === '' ? 0.0 : (parseFloat(price) || 0.0),
+                                        current_value: product.p25_price || product.retail_price || 19.99,
+                                        sub_category: product.sub_category,
+                                        release_year: (product as any).release_year,
+                                        sku: (product as any).sku || (product as any).ean
+                                    }}
+                                />
+                            </Suspense>
+                        )}
 
                         {/* Collapsible Grading Guide Section */}
                         <div className="w-full border-t border-white/5 pt-3">

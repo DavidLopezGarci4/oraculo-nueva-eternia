@@ -40,7 +40,12 @@ interface MarketIndexData {
     portfolio_metrics?: PortfolioMetrics | null;
 }
 
-export const EterniaMarketIndexWidget: React.FC = () => {
+interface EterniaMarketIndexWidgetProps {
+    isIncognito?: boolean;
+}
+
+export const EterniaMarketIndexWidget: React.FC<EterniaMarketIndexWidgetProps> = ({ isIncognito = false }) => {
+    void isIncognito;
     const [period, setPeriod] = useState<string>('3M');
     const [data, setData] = useState<MarketIndexData | null>(null);
     const [loading, setLoading] = useState(true);
@@ -212,11 +217,11 @@ export const EterniaMarketIndexWidget: React.FC = () => {
                             Cotización Media Actual
                         </span>
                         <div className="flex items-baseline gap-2">
-                            <span className="text-xl font-black text-white">{data.current_index_value.toFixed(2)} €</span>
-                            <span className="text-[11px] font-bold text-slate-500 line-through">PVP {data.base_msrp_value.toFixed(2)}€</span>
+                            <span className="text-xl font-black text-white blur-incognito">{data.current_index_value.toFixed(2)} €</span>
+                            <span className="text-[11px] font-bold text-slate-500 line-through blur-incognito">PVP {data.base_msrp_value.toFixed(2)}€</span>
                         </div>
                     </div>
-                    <div className={`px-2 py-1 rounded-lg text-xs font-mono font-bold ${trendColor} ${badgeBg}`}>
+                    <div className={`px-2 py-1 rounded-lg text-xs font-mono font-bold blur-incognito ${trendColor} ${badgeBg}`}>
                         {data.trend_pct >= 0 ? '+' : ''}{data.trend_pct}%
                     </div>
                 </div>
@@ -358,7 +363,7 @@ export const EterniaMarketIndexWidget: React.FC = () => {
                             <Calendar className="h-3 w-3" />
                             <span>{hoverPoint.date}</span>
                         </div>
-                        <div className="text-sm font-black text-white">
+                        <div className="text-sm font-black text-white blur-incognito">
                             {hoverPoint.index_value.toFixed(2)} €
                         </div>
                         {hoverPoint.volume !== undefined && (
@@ -392,11 +397,11 @@ export const EterniaMarketIndexWidget: React.FC = () => {
                                     {w.category}
                                 </div>
                                 <div className="flex items-baseline justify-between gap-1 mb-1">
-                                    <span className="font-black text-white text-sm">{w.avg_market.toFixed(2)} €</span>
-                                    <span className="text-[10px] font-bold text-slate-500">PVP {w.avg_msrp.toFixed(2)}€</span>
+                                    <span className="font-black text-white text-sm blur-incognito">{w.avg_market.toFixed(2)} €</span>
+                                    <span className="text-[10px] font-bold text-slate-500 blur-incognito">PVP {w.avg_msrp.toFixed(2)}€</span>
                                 </div>
                                 <div className="flex items-center justify-between">
-                                    <span className={`text-[10px] font-black font-mono ${isPos ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                    <span className={`text-[10px] font-black font-mono blur-incognito ${isPos ? 'text-emerald-400' : 'text-rose-400'}`}>
                                         {isPos ? '+' : ''}{w.revaluation_pct}% vs salida
                                     </span>
                                     <span className="text-[9px] text-slate-500 font-bold">

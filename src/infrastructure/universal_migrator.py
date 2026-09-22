@@ -327,27 +327,5 @@ def _sync_engine(engine, label: str):
                         logger.warning(f"Could not add {col_name} to character_lore: {e}")
                         conn.rollback()
 
-        # --- Terminology Audit: Fix regressions and ensure 'spider_name' ---
-        # Note: If someone accidentally renamed to scraper_name, we undo it here.
-        rename_targets = [
-            ("scraper_status", "scraper_name", "spider_name"),
-            ("scraper_execution_logs", "scraper_name", "spider_name"),
-            ("kaizen_insights", "scraper_name", "spider_name")
-        ]
-
-        for table, old_col, new_col in rename_targets:
-            if table in inspector.get_table_names():
-                cols = [c['name'] for c in inspector.get_columns(table)]
-                if old_col in cols and new_col not in cols:
-                    logger.info(f"[{label}] Renaming column in '{table}': '{old_col}' -> '{new_col}'...")
-                    try:
-                        # Standard SQL for renaming (Works on Postgres and recent SQLite)
-                        conn.execute(text(f'ALTER TABLE "{table}" RENAME COLUMN "{old_col}" TO "{new_col}"'))
-                        conn.commit()
-                        logger.info(f"[{label}] Table '{table}' column '{new_col}' rename successful.")
-                    except Exception as e:
-                        logger.error(f"[{label}] Failed to rename column in '{table}': {e}")
-                        conn.rollback()
-
 if __name__ == "__main__":
     migrate()

@@ -146,7 +146,6 @@ def run_scraper_task(
         from src.infrastructure.scrapers.smythstoys_scraper import SmythsToysScraper
         # from src.infrastructure.scrapers.tradeinn_scraper import TradeinnScraper
         from src.infrastructure.scrapers.vinted_scraper import VintedScraper
-        from src.infrastructure.scrapers.wallapop_scraper import WallapopScraper
         from src.infrastructure.scrapers.wallapop_manual_scraper import WallapopManualScraper
         from src.infrastructure.scrapers.triguetech_scraper import TriguetechScraper
 

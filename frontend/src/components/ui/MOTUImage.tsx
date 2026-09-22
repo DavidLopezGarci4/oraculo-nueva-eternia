@@ -5,10 +5,38 @@ interface MOTUImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   fallbackSrc?: string;
 }
 
+const MAX_BLOB_CACHE_SIZE = 150;
 const globalBlobUrlMap = new Map<string, string>();
 let motuCachePromise: Promise<Cache> | null = null;
 
+function setBlobCache(key: string, url: string) {
+  if (globalBlobUrlMap.has(key)) {
+    const prev = globalBlobUrlMap.get(key);
+    if (prev && prev !== url) {
+      try { URL.revokeObjectURL(prev); } catch { /* ignore */ }
+    }
+    globalBlobUrlMap.delete(key);
+  } else if (globalBlobUrlMap.size >= MAX_BLOB_CACHE_SIZE) {
+    const oldestKey = globalBlobUrlMap.keys().next().value;
+    if (oldestKey) {
+      const oldestUrl = globalBlobUrlMap.get(oldestKey);
+      if (oldestUrl) {
+        try { URL.revokeObjectURL(oldestUrl); } catch { /* ignore */ }
+      }
+      globalBlobUrlMap.delete(oldestKey);
+    }
+  }
+  globalBlobUrlMap.set(key, url);
+}
+
 export function clearMOTURAMCache() {
+  for (const url of globalBlobUrlMap.values()) {
+    try {
+      URL.revokeObjectURL(url);
+    } catch {
+      /* ignore */
+    }
+  }
   globalBlobUrlMap.clear();
 }
 
@@ -68,7 +96,7 @@ export function MOTUImage({ productId, fallbackSrc = '', src, className = '', ..
             if (cachedResponse) {
               const blob = await cachedResponse.blob();
               const objectUrl = URL.createObjectURL(blob);
-              globalBlobUrlMap.set(cacheKey, objectUrl);
+              setBlobCache(cacheKey, objectUrl);
               if (active) setCurrentSrc(objectUrl);
               return;
             }
@@ -87,7 +115,7 @@ export function MOTUImage({ productId, fallbackSrc = '', src, className = '', ..
                   await cache.put(cacheKey, response.clone());
                   const blob = await response.blob();
                   const objectUrl = URL.createObjectURL(blob);
-                  globalBlobUrlMap.set(cacheKey, objectUrl);
+                  setBlobCache(cacheKey, objectUrl);
                   if (active) setCurrentSrc(objectUrl);
                 }
               }

@@ -20,11 +20,15 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
-    op.execute("ALTER TABLE staged_imports ENABLE ROW LEVEL SECURITY;")
-    op.execute("ALTER TABLE authorized_devices ENABLE ROW LEVEL SECURITY;")
+    bind = op.get_bind()
+    if bind.dialect.name == "postgresql":
+        op.execute("ALTER TABLE staged_imports ENABLE ROW LEVEL SECURITY;")
+        op.execute("ALTER TABLE authorized_devices ENABLE ROW LEVEL SECURITY;")
 
 
 def downgrade() -> None:
     """Downgrade schema."""
-    op.execute("ALTER TABLE staged_imports DISABLE ROW LEVEL SECURITY;")
-    op.execute("ALTER TABLE authorized_devices DISABLE ROW LEVEL SECURITY;")
+    bind = op.get_bind()
+    if bind.dialect.name == "postgresql":
+        op.execute("ALTER TABLE staged_imports DISABLE ROW LEVEL SECURITY;")
+        op.execute("ALTER TABLE authorized_devices DISABLE ROW LEVEL SECURITY;")

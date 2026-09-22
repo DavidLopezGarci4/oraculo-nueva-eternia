@@ -68,7 +68,7 @@ def _build_product_index(products: list) -> tuple[dict, dict]:
 
 
 @router.get("/api/purgatory", response_model=List[PurgatoryItemOutput], dependencies=[Depends(verify_api_key)])
-async def get_purgatory(page: int = 1, limit: int = 500):
+def get_purgatory(page: int = 1, limit: int = 500):
     from src.core.brain_engine import engine
     from src.infrastructure.scrapers.pipeline import clean_purgatory_globally
 

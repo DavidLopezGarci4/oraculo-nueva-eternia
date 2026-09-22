@@ -387,6 +387,7 @@ class ScrapingPipeline:
             price_updates_count = 0
             unchanged_count = 0
             discarded_count = 0
+            items_in_tx = 0
             
             for offer in offers:
                 url_str = str(offer.get('url', ''))
@@ -763,6 +764,11 @@ class ScrapingPipeline:
                             logger.debug(f"⏳ Duplicate URL skipped (SaveMode): {url_str}")
                         else:
                             logger.warning(f"⚠️ Item insertion error ({url_str}): {e}")
+
+                items_in_tx += 1
+                if items_in_tx >= 50:
+                    db.commit()
+                    items_in_tx = 0
             
             # Limpieza global proactiva del purgatorio al finalizar la actualización
             clean_purgatory_globally(db)

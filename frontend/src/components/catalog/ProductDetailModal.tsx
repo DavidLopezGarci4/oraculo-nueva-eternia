@@ -13,6 +13,7 @@ interface ProductDetailModalProps {
     selectedProduct: Product | null;
     setSelectedProduct: (product: Product | null) => void;
     isVintageOnly: boolean;
+    isIncognito?: boolean;
     setExpandedImage: (url: string | null) => void;
     isAdmin: boolean;
     showMergePanel: boolean;
@@ -35,6 +36,7 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
     selectedProduct,
     setSelectedProduct,
     isVintageOnly,
+    isIncognito = false,
     setExpandedImage,
     isAdmin,
     showMergePanel,
@@ -274,16 +276,16 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
                                         <div className="flex flex-row items-center justify-between w-full md:w-auto md:justify-end gap-5">
                                             <div className="text-left md:text-right space-y-0.5">
-                                                <div className={`text-xl font-black ${offer.is_best ? (isVintageOnly ? 'text-amber-500' : 'text-brand-primary') : 'text-white'}`}>{offer.price} €</div>
+                                                <div className={`text-xl font-black ${isIncognito ? 'blur-incognito' : ''} ${offer.is_best ? (isVintageOnly ? 'text-amber-500' : 'text-brand-primary') : 'text-white'}`}>{offer.price} €</div>
                                                 {offer.landing_price && offer.landing_price !== offer.price && (
                                                     <div className="text-[10px] font-black text-brand-secondary/80 flex flex-col items-start md:items-end">
-                                                        <span className="flex items-center gap-1">
+                                                        <span className={`flex items-center gap-1 ${isIncognito ? 'blur-incognito' : ''}`}>
                                                             <Package className="h-2.5 w-2.5" />
                                                             <span>{offer.landing_price} €</span>
                                                         </span>
                                                     </div>
                                                 )}
-                                                <div className="text-[9px] font-black uppercase tracking-tighter text-white/10">Mín: <span>{offer.min_historical}€</span></div>
+                                                <div className="text-[9px] font-black uppercase tracking-tighter text-white/10">Mín: <span className={isIncognito ? 'blur-incognito' : ''}>{offer.min_historical}€</span></div>
                                             </div>
 
                                             <div className="flex items-center gap-2 shrinks-0">

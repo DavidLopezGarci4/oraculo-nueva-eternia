@@ -28,6 +28,21 @@ engine_cloud = create_engine(
     pool_recycle=1800,  # Recicla conexiones cada 30 min (previene desconexiones de Supabase)
     connect_args={"check_same_thread": False, "timeout": 30} if "sqlite" in cloud_url else {}
 )
+
+if "sqlite" in (cloud_url or ""):
+    try:
+        from sqlalchemy import event
+        @event.listens_for(engine_cloud, "connect")
+        def set_sqlite_pragma_cloud(dbapi_connection, connection_record):
+            cursor = dbapi_connection.cursor()
+            cursor.execute("PRAGMA journal_mode=WAL")
+            cursor.execute("PRAGMA synchronous=NORMAL")
+            cursor.execute("PRAGMA busy_timeout=30000")
+            cursor.execute("PRAGMA foreign_keys=ON")
+            cursor.close()
+    except Exception:
+        pass
+
 SessionCloud = sessionmaker(autocommit=False, autoflush=False, bind=engine_cloud)
 
 

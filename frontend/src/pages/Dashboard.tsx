@@ -43,9 +43,10 @@ import { getCollection, type Product } from '../api/collection';
 
 interface DashboardProps {
     user: Hero | null;
+    isIncognito?: boolean;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ user }) => {
+const Dashboard: React.FC<DashboardProps> = ({ user, isIncognito = false }) => {
     const { addToCart } = useCart();
     const isAdmin = user?.role?.toLowerCase() === 'admin' || user?.username?.toLowerCase() === 'david' || user?.id === 2;
 
@@ -554,7 +555,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
 
             {/* Widget del Índice Bursátil MOTU (EMI) */}
             <div className="mt-6">
-                <EterniaMarketIndexWidget />
+                <EterniaMarketIndexWidget isIncognito={isIncognito} />
             </div>
 
             {/* Pareto features: Completitud and Donut Chart */}
@@ -998,7 +999,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                 <CollectionItemDetailModal
                     product={selectedHallOfFameItem}
                     userId={user?.id || 2}
-                    isIncognito={false}
+                    isIncognito={isIncognito}
                     onClose={() => {
                         setSelectedHallOfFameItem(null);
                         queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });

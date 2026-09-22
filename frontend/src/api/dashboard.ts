@@ -6,7 +6,7 @@ const API_BASE = '/api';
 export interface FinancialHealth {
     total_invested: number;
     market_value: number;
-    landed_market_value: number;
+    landed_market_value?: number;
     profit_loss: number;
     roi: number;
 }
@@ -14,6 +14,7 @@ export interface FinancialHealth {
 export interface DashboardStats {
     total_products: number;
     owned_count: number;
+    wish_count?: number;
     match_count: number;
     financial: FinancialHealth;
     shop_distribution: {
@@ -22,6 +23,7 @@ export interface DashboardStats {
     }[];
     total_products_vintage: number;
     owned_count_vintage: number;
+    wish_count_vintage?: number;
     financial_vintage: FinancialHealth;
 }
 
