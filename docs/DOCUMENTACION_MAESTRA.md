@@ -5,43 +5,43 @@
 
 Este documento es la **Fuente de Verdad Absoluta** del proyecto "El Oráculo de Nueva Eternia". Se ha redactado tras una auditoría profunda del código fuente (`src/`, `frontend/`, `docker-compose.yml`), asegurando que describe **exactamente cómo funciona la aplicación hoy en día**, sin suposiciones ni elementos obsoletos.
 
-Cualquier desarrollador, arquitecto o auditor que necesite entender el proyecto, debe empezar por aquÃ­.
+Cualquier desarrollador, arquitecto o auditor que necesite entender el proyecto, debe empezar por aquí.
 
 ---
 
-## 1. VisiÃ³n General y PropÃ³sito
+## 1. Visión General y Propósito
 
-**El OrÃ¡culo de Nueva Eternia** es una plataforma integral de inteligencia de mercado y gestiÃ³n patrimonial para coleccionistas (especÃ­ficamente enfocada en la lÃ­nea de figuras *Masters of the Universe: Origins*).
+**El Oráculo de Nueva Eternia** es una plataforma integral de inteligencia de mercado y gestión patrimonial para coleccionistas (específicamente enfocada en la línea de figuras *Masters of the Universe: Origins*).
 
-### Â¿QuÃ© hace?
+### ¿Qué hace?
 
-1. **Inteligencia de Mercado (Scraping):** Extrae automÃ¡ticamente precios y disponibilidad de 15 tiendas de Europa y plataformas P2P (Wallapop, Vinted, eBay).
-2. **Filtrado y VinculaciÃ³n (El Purgatorio):** Procesa los datos crudos, detecta anomalÃ­as, y sugiere a quÃ© figura del catÃ¡logo pertenece cada oferta (SmartMatch), dejÃ¡ndolo en un estado de "espera" hasta su validaciÃ³n humana.
-3. **AnÃ¡lisis Financiero (DealScorer):** Calcula el coste real de una figura (Landed Price = Precio + EnvÃ­o + Aduanas/IVA) y asigna una puntuaciÃ³n de "Oportunidad" (1-100) frente al mercado secundario y el MSRP (Precio de salida).
-4. **GestiÃ³n de ColecciÃ³n (La Fortaleza):** Permite al usuario llevar un control estricto de su colecciÃ³n personal (inversiÃ³n, estado MOC/Loose, Shelf Wear) y calcular el retorno de inversiÃ³n (ROI) en tiempo real.
+1. **Inteligencia de Mercado (Scraping):** Extrae automáticamente precios y disponibilidad de 15 tiendas de Europa y plataformas P2P (Wallapop, Vinted, eBay).
+2. **Filtrado y Vinculación (El Purgatorio):** Procesa los datos crudos, detecta anomalías, y sugiere a qué figura del catálogo pertenece cada oferta (SmartMatch), dejándolo en un estado de "espera" hasta su validación humana.
+3. **Análisis Financiero (DealScorer):** Calcula el coste real de una figura (Landed Price = Precio + Envío + Aduanas/IVA) y asigna una puntuación de "Oportunidad" (1-100) frente al mercado secundario y el MSRP (Precio de salida).
+4. **Gestión de Colección (La Fortaleza):** Permite al usuario llevar un control estricto de su colección personal (inversión, estado MOC/Loose, Shelf Wear) y calcular el retorno de inversión (ROI) en tiempo real.
 
 ---
 
-## 2. Arquitectura Global y TopologÃ­a
+## 2. Arquitectura Global y Topología
 
-La aplicaciÃ³n sigue los principios de **Clean Architecture** (Arquitectura de Cebolla) y opera bajo el estÃ¡ndar interno de resiliencia **3OX (Tier 3)**.
+La aplicación sigue los principios de **Clean Architecture** (Arquitectura de Cebolla) y opera bajo el estándar interno de resiliencia **3OX (Tier 3)**.
 
-### 2.1 Stack TecnolÃ³gico Definitivo
+### 2.1 Stack Tecnológico Definitivo
 
-| Capa | TecnologÃ­a | JustificaciÃ³n |
+| Capa | Tecnología | Justificación |
 | :--- | :--- | :--- |
 | **Frontend UI** | **React 19** + Vite | Velocidad de recarga, estado reactivo concurrente. |
-| **Estilos** | **Tailwind CSS 4.0** + Framer Motion | EstÃ©tica *Glassmorphism* sin configuraciones pesadas. |
-| **Peticiones/Estado** | **TanStack Query** (React Query) | Cacheo, re-fetching inteligente y gestiÃ³n de carga de la API. |
-| **Backend API (Broker)**| **FastAPI** (Python 3.12+) | AltÃ­simo rendimiento, tipado estricto (Pydantic V2) y asincronÃ­a. |
-| **Persistencia (Local)**| **SQLite** (`oraculo.db`) | Buffer de alta velocidad para sincronizaciÃ³n *Out-of-Band* y offline. |
+| **Estilos** | **Tailwind CSS 4.0** + Framer Motion | Estética *Glassmorphism* sin configuraciones pesadas. |
+| **Peticiones/Estado** | **TanStack Query** (React Query) | Cacheo, re-fetching inteligente y gestión de carga de la API. |
+| **Backend API (Broker)**| **FastAPI** (Python 3.12+) | Altísimo rendimiento, tipado estricto (Pydantic V2) y asincronía. |
+| **Persistencia (Local)**| **SQLite** (`oraculo.db`) | Buffer de alta velocidad para sincronización *Out-of-Band* y offline. |
 | **Persistencia (Cloud)**| **PostgreSQL** (Supabase) | Fuente de verdad global, respaldada por RLS (Row Level Security). |
-| **Motor de ExtracciÃ³n** | **Playwright** + BeautifulSoup4 | Capacidad de saltar bloqueos (403, 503) mediante simulaciÃ³n humana. |
-| **Infraestructura** | **Docker** + Docker Compose | Despliegue industrializado, consistente entre desarrollo y producciÃ³n. |
+| **Motor de Extracción** | **Playwright** + BeautifulSoup4 | Capacidad de saltar bloqueos (403, 503) mediante simulación humana. |
+| **Infraestructura** | **Docker** + Docker Compose | Despliegue industrializado, consistente entre desarrollo y producción. |
 
-### 2.2 TopologÃ­a de Conexiones
+### 2.2 Topología de Conexiones
 
-1. **El Frontend** se comunica **exclusivamente** con el **API Broker (FastAPI)** a travÃ©s del puerto 8000 usando JWT para autenticaciÃ³n.
+1. **El Frontend** se comunica **exclusivamente** con el **API Broker (FastAPI)** a través del puerto 8000 usando JWT para autenticación.
 2. **El API Broker** valida reglas de negocio y delega las operaciones de guardado al **Módulo de Infraestructura (SQLAlchemy)**.
 3. Las operaciones pesadas (ej. Incursiones masivas) se lanzan mediante `BackgroundTasks` en FastAPI, devolviendo inmediatamente un `200 OK` al Frontend para no bloquear la UI.
 
@@ -49,21 +49,21 @@ La aplicaciÃ³n sigue los principios de **Clean Architecture** (Arquitectura de
 
 ## 3. Flujo de Datos (El Ciclo de Vida de una Oferta)
 
-Entender cÃ³mo viaja un dato desde una tienda hasta el "Dashboard" es vital para dominar la aplicaciÃ³n. El sistema emplea una polÃ­tica de **"Purgatory-First"** (RevisiÃ³n humana obligatoria para Ã­tems nuevos).
+Entender cómo viaja un dato desde una tienda hasta el "Dashboard" es vital para dominar la aplicación. El sistema emplea una política de **"Purgatory-First"** (Revisión humana obligatoria para ítems nuevos).
 
-### FASE A: IncursiÃ³n (El Pipeline)
+### FASE A: Incursión (El Pipeline)
 
-1. El usuario (o un *cron job*) dispara la "IncursiÃ³n Total" (`POST /api/scrapers/run`).
-2. El `ScrapingPipeline` inicia la recolecciÃ³n de manera **secuencial**. (Se implementÃ³ en Fase 56 para permitir **cancelaciÃ³n cooperativa** y timeouts individuales precisos de 5 minutos).
-3. Cada araÃ±a (*Scraper*) devuelve objetos en bruto que pasan por un **Adapter**, generando un `receipt_id` forense.
+1. El usuario (o un *cron job*) dispara la "Incursión Total" (`POST /api/scrapers/run`).
+2. El `ScrapingPipeline` inicia la recolección de manera **secuencial**. (Se implementó en Fase 56 para permitir **cancelación cooperativa** y timeouts individuales precisos de 5 minutos).
+3. Cada araña (*Scraper*) devuelve objetos en bruto que pasan por un **Adapter**, generando un `receipt_id` forense.
 
 ### FASE B: Bulk Pre-Filtering & Purgatorio
 
-El orquestador realiza una consulta masiva para evitar el temido error "N+1" (consultar la base de datos por cada Ã­tem):
+El orquestador realiza una consulta masiva para evitar el temido error "N+1" (consultar la base de datos por cada ítem):
 
-1. Si el Ã­tem estÃ¡ en **Lista Negra**, se descarta silenciosamente.
-2. Si el Ã­tem **ya estÃ¡ vinculado** en el catÃ¡logo, se actualiza su precio y se recalcula su puntuaciÃ³n financiera al instante.
-3. Si el Ã­tem es **nuevo**, pasa directamente al **Purgatorio** (`PendingMatchModel`), guardando todos sus datos (precio, nombre, URL, imagen).
+1. Si el ítem está en **Lista Negra**, se descarta silenciosamente.
+2. Si el ítem **ya está vinculado** en el catálogo, se actualiza su precio y se recalcula su puntuación financiera al instante.
+3. Si el ítem es **nuevo**, pasa directamente al **Purgatorio** (`PendingMatchModel`), guardando todos sus datos (precio, nombre, URL, imagen).
 
 # 📜 El Oráculo de Nueva Eternia: Documentación Maestra
 
@@ -72,43 +72,43 @@ El orquestador realiza una consulta masiva para evitar el temido error "N+1" (co
 
 Este documento es la **Fuente de Verdad Absoluta** del proyecto "El Oráculo de Nueva Eternia". Se ha redactado tras una auditoría profunda del código fuente (`src/`, `frontend/`, `docker-compose.yml`), asegurando que describe **exactamente cómo funciona la aplicación hoy en día**, sin suposiciones ni elementos obsoletos.
 
-Cualquier desarrollador, arquitecto o auditor que necesite entender el proyecto, debe empezar por aquÃ­.
+Cualquier desarrollador, arquitecto o auditor que necesite entender el proyecto, debe empezar por aquí.
 
 ---
 
-## 1. VisiÃ³n General y PropÃ³sito
+## 1. Visión General y Propósito
 
-**El OrÃ¡culo de Nueva Eternia** es una plataforma integral de inteligencia de mercado y gestiÃ³n patrimonial para coleccionistas (especÃ­ficamente enfocada en la lÃ­nea de figuras *Masters of the Universe: Origins*).
+**El Oráculo de Nueva Eternia** es una plataforma integral de inteligencia de mercado y gestión patrimonial para coleccionistas (específicamente enfocada en la línea de figuras *Masters of the Universe: Origins*).
 
-### Â¿QuÃ© hace?
+### ¿Qué hace?
 
-1. **Inteligencia de Mercado (Scraping):** Extrae automÃ¡ticamente precios y disponibilidad de 15 tiendas de Europa y plataformas P2P (Wallapop, Vinted, eBay).
-2. **Filtrado y VinculaciÃ³n (El Purgatorio):** Procesa los datos crudos, detecta anomalÃ­as, y sugiere a quÃ© figura del catÃ¡logo pertenece cada oferta (SmartMatch), dejÃ¡ndolo en un estado de "espera" hasta su validaciÃ³n humana.
-3. **AnÃ¡lisis Financiero (DealScorer):** Calcula el coste real de una figura (Landed Price = Precio + EnvÃ­o + Aduanas/IVA) y asigna una puntuaciÃ³n de "Oportunidad" (1-100) frente al mercado secundario y el MSRP (Precio de salida).
-4. **GestiÃ³n de ColecciÃ³n (La Fortaleza):** Permite al usuario llevar un control estricto de su colecciÃ³n personal (inversiÃ³n, estado MOC/Loose, Shelf Wear) y calcular el retorno de inversiÃ³n (ROI) en tiempo real.
+1. **Inteligencia de Mercado (Scraping):** Extrae automáticamente precios y disponibilidad de 15 tiendas de Europa y plataformas P2P (Wallapop, Vinted, eBay).
+2. **Filtrado y Vinculación (El Purgatorio):** Procesa los datos crudos, detecta anomalías, y sugiere a qué figura del catálogo pertenece cada oferta (SmartMatch), dejándolo en un estado de "espera" hasta su validación humana.
+3. **Análisis Financiero (DealScorer):** Calcula el coste real de una figura (Landed Price = Precio + Envío + Aduanas/IVA) y asigna una puntuación de "Oportunidad" (1-100) frente al mercado secundario y el MSRP (Precio de salida).
+4. **Gestión de Colección (La Fortaleza):** Permite al usuario llevar un control estricto de su colección personal (inversión, estado MOC/Loose, Shelf Wear) y calcular el retorno de inversión (ROI) en tiempo real.
 
 ---
 
-## 2. Arquitectura Global y TopologÃ­a
+## 2. Arquitectura Global y Topología
 
-La aplicaciÃ³n sigue los principios de **Clean Architecture** (Arquitectura de Cebolla) y opera bajo el estÃ¡ndar interno de resiliencia **3OX (Tier 3)**.
+La aplicación sigue los principios de **Clean Architecture** (Arquitectura de Cebolla) y opera bajo el estándar interno de resiliencia **3OX (Tier 3)**.
 
-### 2.1 Stack TecnolÃ³gico Definitivo
+### 2.1 Stack Tecnológico Definitivo
 
-| Capa | TecnologÃ­a | JustificaciÃ³n |
+| Capa | Tecnología | Justificación |
 | :--- | :--- | :--- |
 | **Frontend UI** | **React 19** + Vite | Velocidad de recarga, estado reactivo concurrente. |
-| **Estilos** | **Tailwind CSS 4.0** + Framer Motion | EstÃ©tica *Glassmorphism* sin configuraciones pesadas. |
-| **Peticiones/Estado** | **TanStack Query** (React Query) | Cacheo, re-fetching inteligente y gestiÃ³n de carga de la API. |
+| **Estilos** | **Tailwind CSS 4.0** + Framer Motion | Estética *Glassmorphism* sin configuraciones pesadas. |
+| **Peticiones/Estado** | **TanStack Query** (React Query) | Cacheo, re-fetching inteligente y gestión de carga de la API. |
 | **Backend API (Broker)**| **FastAPI** (Python 3.12+) | Altísimo rendimiento, tipado estricto (Pydantic V2) y delegación a threadpool (`def`) para operaciones DB sin congelar el Event Loop asyncio. |
 | **Persistencia (Local)**| **SQLite** (`oraculo.db`) | Buffer de alta velocidad en modo WAL (`PRAGMA journal_mode = WAL;`, `busy_timeout = 30000`) e indexación masiva en Alembic. |
 | **Persistencia (Cloud)**| **PostgreSQL** (Supabase) | Fuente de verdad global, respaldada por RLS (Row Level Security). |
-| **Motor de ExtracciÃ³n** | **Playwright** + BeautifulSoup4 | Capacidad de saltar bloqueos (403, 503) mediante simulaciÃ³n humana. |
-| **Infraestructura** | **Docker** + Docker Compose | Despliegue industrializado, consistente entre desarrollo y producciÃ³n. |
+| **Motor de Extracción** | **Playwright** + BeautifulSoup4 | Capacidad de saltar bloqueos (403, 503) mediante simulación humana. |
+| **Infraestructura** | **Docker** + Docker Compose | Despliegue industrializado, consistente entre desarrollo y producción. |
 
-### 2.2 TopologÃ­a de Conexiones
+### 2.2 Topología de Conexiones
 
-1. **El Frontend** se comunica **exclusivamente** con el **API Broker (FastAPI)** a travÃ©s del puerto 8000 usando JWT para autenticaciÃ³n.
+1. **El Frontend** se comunica **exclusivamente** con el **API Broker (FastAPI)** a través del puerto 8000 usando JWT para autenticación.
 2. **El API Broker** valida reglas de negocio y delega las operaciones de guardado al **Módulo de Infraestructura (SQLAlchemy)**.
 3. Las operaciones pesadas (ej. Incursiones masivas) se lanzan mediante `BackgroundTasks` en FastAPI, devolviendo inmediatamente un `200 OK` al Frontend para no bloquear la UI.
 
@@ -116,29 +116,29 @@ La aplicaciÃ³n sigue los principios de **Clean Architecture** (Arquitectura de
 
 ## 3. Flujo de Datos (El Ciclo de Vida de una Oferta)
 
-Entender cÃ³mo viaja un dato desde una tienda hasta el "Dashboard" es vital para dominar la aplicaciÃ³n. El sistema emplea una polÃ­tica de **"Purgatory-First"** (RevisiÃ³n humana obligatoria para Ã­tems nuevos).
+Entender cómo viaja un dato desde una tienda hasta el "Dashboard" es vital para dominar la aplicación. El sistema emplea una política de **"Purgatory-First"** (Revisión humana obligatoria para ítems nuevos).
 
-### FASE A: IncursiÃ³n (El Pipeline)
+### FASE A: Incursión (El Pipeline)
 
-1. El usuario (o un *cron job*) dispara la "IncursiÃ³n Total" (`POST /api/scrapers/run`).
-2. El `ScrapingPipeline` inicia la recolecciÃ³n de manera **secuencial**. (Se implementÃ³ en Fase 56 para permitir **cancelaciÃ³n cooperativa** y timeouts individuales precisos de 5 minutos).
-3. Cada araÃ±a (*Scraper*) devuelve objetos en bruto que pasan por un **Adapter**, generando un `receipt_id` forense.
+1. El usuario (o un *cron job*) dispara la "Incursión Total" (`POST /api/scrapers/run`).
+2. El `ScrapingPipeline` inicia la recolección de manera **secuencial**. (Se implementó en Fase 56 para permitir **cancelación cooperativa** y timeouts individuales precisos de 5 minutos).
+3. Cada araña (*Scraper*) devuelve objetos en bruto que pasan por un **Adapter**, generando un `receipt_id` forense.
 
 ### FASE B: Bulk Pre-Filtering & Purgatorio
 
-El orquestador realiza una consulta masiva para evitar el temido error "N+1" (consultar la base de datos por cada Ã­tem):
+El orquestador realiza una consulta masiva para evitar el temido error "N+1" (consultar la base de datos por cada ítem):
 
-1. Si el Ã­tem estÃ¡ en **Lista Negra**, se descarta silenciosamente.
-2. Si el Ã­tem **ya estÃ¡ vinculado** en el catÃ¡logo, se actualiza su precio y se recalcula su puntuaciÃ³n financiera al instante.
-3. Si el Ã­tem es **nuevo**, pasa directamente al **Purgatorio** (`PendingMatchModel`), guardando todos sus datos (precio, nombre, URL, imagen).
+1. Si el ítem está en **Lista Negra**, se descarta silenciosamente.
+2. Si el ítem **ya está vinculado** en el catálogo, se actualiza su precio y se recalcula su puntuación financiera al instante.
+3. Si el ítem es **nuevo**, pasa directamente al **Purgatorio** (`PendingMatchModel`), guardando todos sus datos (precio, nombre, URL, imagen).
 
 ### FASE C: SmartMatch (Identidad)
 
-El `SmartMatcher` (`matching.py`) analiza los Ã­tems del Purgatorio intentando adivinar de quÃ© figura se trata. ActÃºa como un tribunal:
+El `SmartMatcher` (`matching.py`) analiza los ítems del Purgatorio intentando adivinar de qué figura se trata. Actúa como un tribunal:
 
-- **Prueba Irrefutable (EAN):** Si hay código de barras, el match es 100% automÃ¡tico.
-- **Test de Velocidad (Rust Kernel):** Realiza bÃºsquedas hiper-rÃ¡pidas mediante lÃ³gica de cercanÃ­a de strings.
-- **El Juez SemÃ¡ntico (Python Brain & VETO):** Un motor con "pesos" IDF. Sabe que la palabra "Origins" vale mÃ¡s que "Figura". Si detecta una contradicciÃ³n flagrante (ej. coinciden en "Skeletor" pero uno es "Masterverse" y otro "Origins"), **Python aplica VETO y bloquea el Match** por seguridad.
+- **Prueba Irrefutable (EAN):** Si hay código de barras, el match es 100% automático.
+- **Test de Velocidad (Rust Kernel):** Realiza búsquedas hiper-rápidas mediante lógica de cercanía de strings.
+- **El Juez Semántico (Python Brain & VETO):** Un motor con "pesos" IDF. Sabe que la palabra "Origins" vale más que "Figura". Si detecta una contradicción flagrante (ej. coinciden en "Skeletor" pero uno es "Masterverse" y otro "Origins"), **Python aplica VETO y bloquea el Match** por seguridad.
 
 ### FASE D: Consolidación Financiera (DealScorer)
 
@@ -227,81 +227,81 @@ Para añadir un nuevo motor de búsqueda (por ejemplo, Triguetech):
 - **Motor de Landed Price y Logística por Tienda**: El motor de valoración (`LogisticsService` y `ValuationService`) computa el coste final real puesto en casa de cada oferta activa. Se integran tarifas de plataformas P2P (5€ envío + 2% de seguro), recargos de importación de BigBadToyStore ($8 USD + 21% IVA en aduanas convertidos a EUR), umbrales de gratuidad de Frikimaz (5€ / gratis ≥69€), Smyths Toys (4€) y Triguetech (7€ fijo). El panel de oportunidades (`/api/dashboard/top-deals`) y el selector de ofertas en catálogo determinan las gangas reales en base a dicho coste total puesto en casa, erradicando los sesgos del precio base de catálogo.
 - **Resolución de Inconsistencias de Código (Auditoría code-error-analyzer)**: Se ha implementado un saneamiento global para unificar y estrucutrar importaciones estáticas en el frontend (evitando advertencias de Rollup sobre dynamic imports en Catalog y Collection), alinear el auto-registro de scrapers al arrancar el servidor (`deps.py`), erradicar warnings de deprecación de fecha/hora en pytest (`product.py`) y homogeneizar por completo la ocultación de datos en modo incógnito (Grayskull) en el Dashboard.
 
-Para entender verdaderamente Nueva Eternia, no basta con mirar el código local. El sistema es un ecosistema vivo que respira gracias a la interacciÃ³n coordinada entre **GitHub**, **Oracle Cloud (OCI)** y **Docker**.
+Para entender verdaderamente Nueva Eternia, no basta con mirar el código local. El sistema es un ecosistema vivo que respira gracias a la interacción coordinada entre **GitHub**, **Oracle Cloud (OCI)** y **Docker**.
 
-### 8.1 El Motor AutÃ³nomo (GitHub Actions)
+### 8.1 El Motor Autónomo (GitHub Actions)
 
-GitHub no es solo un repositorio de código, actÃºa como el "cerebro cronometrado" de la aplicaciÃ³n mediante sus *Workflows* (ej. `.github/workflows/scrapers.yml`).
+GitHub no es solo un repositorio de código, actúa como el "cerebro cronometrado" de la aplicación mediante sus *Workflows* (ej. `.github/workflows/scrapers.yml`).
 
-1. **Daily Scan (El Cronjob):** Dos veces al dÃ­a (02:00 y 14:30 UTC), GitHub levanta una mÃ¡quina efÃ­mera (`ubuntu-latest`).
-2. **Nexo Maestro:** Ejecuta la sincronizaciÃ³n del catÃ¡logo (`NexusService`), inyectando las imÃ¡genes locales en **Supabase Storage**.
-3. **SincronizaciÃ³n Inversa (Reverse Sync):** GitHub hace una copia de seguridad de tu base de datos de Supabase y la convierte en un archivo Excel local (`lista_MOTU.xlsx`).
-4. **El Bot GuardiÃ¡n (Git Commit AutomÃ¡tico):** Un bot automatizado (`Oracle Guardian Bot`) hace `git commit` y empuja ese Excel de vuelta a tu repositorio. De este modo, siempre tienes un backup fÃ­sico versionado de tu colecciÃ³n.
-5. **IncursiÃ³n de Mercado:** Finalmente, dispara `daily_scan.py` para correr los scrapers (con un `random-delay` para evitar ser baneado).
+1. **Daily Scan (El Cronjob):** Dos veces al día (02:00 y 14:30 UTC), GitHub levanta una máquina efímera (`ubuntu-latest`).
+2. **Nexo Maestro:** Ejecuta la sincronización del catálogo (`NexusService`), inyectando las imágenes locales en **Supabase Storage**.
+3. **Sincronización Inversa (Reverse Sync):** GitHub hace una copia de seguridad de tu base de datos de Supabase y la convierte en un archivo Excel local (`lista_MOTU.xlsx`).
+4. **El Bot Guardián (Git Commit Automático):** Un bot automatizado (`Oracle Guardian Bot`) hace `git commit` y empuja ese Excel de vuelta a tu repositorio. De este modo, siempre tienes un backup físico versionado de tu colección.
+5. **Incursión de Mercado:** Finalmente, dispara `daily_scan.py` para correr los scrapers (con un `random-delay` para evitar ser baneado).
 
 ### 8.2 La Fortaleza de Cristal (Oracle Cloud - OCI)
 
-El código en producciÃ³n no vive en tu PC, vive en una instancia **ARM A1 (Always Free)** en Oracle Cloud.
+El código en producción no vive en tu PC, vive en una instancia **ARM A1 (Always Free)** en Oracle Cloud.
 
-- **TÃºnel SSH y Firewalls:** La mÃ¡quina estÃ¡ cerrada a cal y canto. Solo permite trÃ¡fico por los puertos `80` (HTTP), `443` (HTTPS) y `22` (SSH con tu llave privada). El firewall interno de Linux (firewalld) estÃ¡ configurado en concordancia.
-- **DNS DinÃ¡mico (DuckDNS):** Un script cron (`duckdns_update.sh`) se ejecuta cada 5 minutos en el servidor de Oracle para mantener el dominio `oraculo-eternia.duckdns.org` siempre apuntando a la IP pÃºblica de la mÃ¡quina.
+- **Túnel SSH y Firewalls:** La máquina está cerrada a cal y canto. Solo permite tráfico por los puertos `80` (HTTP), `443` (HTTPS) y `22` (SSH con tu llave privada). El firewall interno de Linux (firewalld) está configurado en concordancia.
+- **DNS Dinámico (DuckDNS):** Un script cron (`duckdns_update.sh`) se ejecuta cada 5 minutos en el servidor de Oracle para mantener el dominio `oraculo-eternia.duckdns.org` siempre apuntando a la IP pública de la máquina.
 
 ### 8.3 La Red Contenerizada (Docker Compose Prod)
 
 El despliegue en Oracle Cloud se realiza mediante `docker-compose.prod.yml`, que encapsula toda la complejidad:
 
-1. **Backend (FastAPI):** Se despliega bajo un contenedor con la instrucciÃ³n `uvicorn --workers 1 (reducido a 1 para evitar conflictos de webhook 409 con el bot listener de Telegram)`, optimizando el rendimiento para producciÃ³n en la arquitectura ARM. Consume el archivo `.env` que le inyectas en el servidor.
-2. **Frontend (Nginx Proxy):** El contenedor de React no se sirve directamente. Se sirve a travÃ©s de **Nginx** (puertos 80/443), el cual intercepta el trÃ¡fico.
-3. **Blindaje SSL (Certbot):** Nginx utiliza certificados SSL generados por *Certbot* (Let's Encrypt), los cuales estÃ¡n mapeados en volÃºmenes (`/etc/letsencrypt`) entre la mÃ¡quina host y el contenedor.
+1. **Backend (FastAPI):** Se despliega bajo un contenedor con la instrucción `uvicorn --workers 1 (reducido a 1 para evitar conflictos de webhook 409 con el bot listener de Telegram)`, optimizando el rendimiento para producción en la arquitectura ARM. Consume el archivo `.env` que le inyectas en el servidor.
+2. **Frontend (Nginx Proxy):** El contenedor de React no se sirve directamente. Se sirve a través de **Nginx** (puertos 80/443), el cual intercepta el tráfico.
+3. **Blindaje SSL (Certbot):** Nginx utiliza certificados SSL generados por *Certbot* (Let's Encrypt), los cuales están mapeados en volúmenes (`/etc/letsencrypt`) entre la máquina host y el contenedor.
 
 ### 8.4 El Flujo de Vida Horizontal (End-to-End)
 
-Si observamos el ecosistema desde arriba, la interacciÃ³n completa funciona asÃ­:
+Si observamos el ecosistema desde arriba, la interacción completa funciona así:
 
 1. **Desarrollo**: Programas una mejora en local (Windows) y haces `git push` a `main`.
-2. **ValidaciÃ³n**: GitHub Actions (`ci.yml`) corre los tests unitarios en Python 3.10/3.11 para asegurar que no has roto nada.
+2. **Validación**: GitHub Actions (`ci.yml`) corre los tests unitarios en Python 3.10/3.11 para asegurar que no has roto nada.
 3. **Despliegue**: Entras a tu servidor Oracle por SSH, haces `git pull` y ejecutas `docker compose -f docker-compose.prod.yml up -d --build`. Docker reconstruye la imagen Nginx y FastAPI en minutos.
-4. **AlimentaciÃ³n**: A las 02:00 AM, GitHub despierta por su cuenta, busca ofertas, actualiza Supabase, descarga el backup en Excel y lo sube de vuelta al código fuente.
-5. **Consumo**: Al despertar, abres `oraculo-eternia.duckdns.org` en tu mÃ³vil. Nginx verifica el SSL, el Frontend carga la UI desde cachÃ© y pide datos a FastAPI. FastAPI conecta con Supabase (donde GitHub dejÃ³ los datos nuevos de la noche) y te muestra las nuevas gangas, listas para ser validadas en el Purgatorio.
+4. **Alimentación**: A las 02:00 AM, GitHub despierta por su cuenta, busca ofertas, actualiza Supabase, descarga el backup en Excel y lo sube de vuelta al código fuente.
+5. **Consumo**: Al despertar, abres `oraculo-eternia.duckdns.org` en tu móvil. Nginx verifica el SSL, el Frontend carga la UI desde caché y pide datos a FastAPI. FastAPI conecta con Supabase (donde GitHub dejó los datos nuevos de la noche) y te muestra las nuevas gangas, listas para ser validadas en el Purgatorio.
 
 ---
 
 ## 9. Ecosistema de Actores y Dependencias Externas
 
-Para que la aplicaciÃ³n viva, se requiere la colaboraciÃ³n de diferentes actores en dos entornos diferenciados: Local y ProducciÃ³n. A continuaciÃ³n, se detalla quÃ© "fichas" intervienen en cada tablero y de quÃ© aplicaciones web externas dependemos para no colapsar.
+Para que la aplicación viva, se requiere la colaboración de diferentes actores en dos entornos diferenciados: Local y Producción. A continuación, se detalla qué "fichas" intervienen en cada tablero y de qué aplicaciones web externas dependemos para no colapsar.
 
 ### 9.1 Actores en Entorno Local (Modo Arca / Desarrollo)
 
 Cuando el arquitecto programa en su PC (Windows), este es el ecosistema activo:
 
-- **TÃº (El Desarrollador/IA):** Edita código en VSCode o cursor.
-- **SQLite Local (`oraculo.db`):** El motor de base de datos de escritorio. Permite trabajar ultrarrÃ¡pido y offline sin gastar cuota de la nube.
+- **Tú (El Desarrollador/IA):** Edita código en VSCode o cursor.
+- **SQLite Local (`oraculo.db`):** El motor de base de datos de escritorio. Permite trabajar ultrarrápido y offline sin gastar cuota de la nube.
 - **Docker Compose Local (`docker-compose.yml`):**
   - Contenedor *Frontend* (React con Vite exponiendo localhost:3001).
   - Contenedor *Backend* (FastAPI en modo `--reload`, escuchando cambios en el código para reiniciarse en tiempo real).
 
-### 9.2 Actores y Servicios Activos en ProducciÃ³n (Dependencias CrÃ­ticas)
+### 9.2 Actores y Servicios Activos en Producción (Dependencias Críticas)
 
-Para que el entorno en producciÃ³n funcione de forma autÃ³noma (mientras tÃº duermes o tu PC estÃ¡ apagado), **TODOS** estos servicios web/aplicaciones deben estar activos y sanos:
+Para que el entorno en producción funcione de forma autónoma (mientras tú duermes o tu PC está apagado), **TODOS** estos servicios web/aplicaciones deben estar activos y sanos:
 
 1. **Oracle Cloud (OCI):**
-   - *Rol:* El mÃºsculo fÃ­sico. Es el servidor ARM A1 que ejecuta el Docker de producciÃ³n. Si tu tarjeta de crÃ©dito o cuenta de Oracle se suspende, la web se cae por completo.
+   - *Rol:* El músculo físico. Es el servidor ARM A1 que ejecuta el Docker de producción. Si tu tarjeta de crédito o cuenta de Oracle se suspende, la web se cae por completo.
 2. **Supabase (PostgreSQL Cloud):**
-   - *Rol:* La Fuente de Verdad. Almacena todos los usuarios, sesiones (RLS) y ofertas. Si el proyecto de Supabase se pausa (por inactividad o lÃ­mites del plan Free), FastAPI lanzarÃ¡ errores 500 y no se podrÃ¡ hacer login ni ver el catÃ¡logo.
+   - *Rol:* La Fuente de Verdad. Almacena todos los usuarios, sesiones (RLS) y ofertas. Si el proyecto de Supabase se pausa (por inactividad o límites del plan Free), FastAPI lanzará errores 500 y no se podrá hacer login ni ver el catálogo.
 3. **DuckDNS:**
-   - *Rol:* Enrutamiento. Mantiene el nombre `oraculo-eternia.duckdns.org` apuntando a la IP pÃºblica de Oracle. Si la web de DuckDNS cae, el dominio no resolverÃ¡ y los navegadores dirÃ¡n "Sitio no encontrado".
+   - *Rol:* Enrutamiento. Mantiene el nombre `oraculo-eternia.duckdns.org` apuntando a la IP pública de Oracle. Si la web de DuckDNS cae, el dominio no resolverá y los navegadores dirán "Sitio no encontrado".
 4. **GitHub (Repositorio y Actions):**
-   - *Rol:* AutomatizaciÃ³n e Historia. Alberga el código. Si los Runners gratuitos de GitHub se agotan, los "Daily Scans" nocturnos no se ejecutarÃ¡n.
+   - *Rol:* Automatización e Historia. Alberga el código. Si los Runners gratuitos de GitHub se agotan, los "Daily Scans" nocturnos no se ejecutarán.
 5. **Telegram Bot API:**
-   - *Rol:* Comunicador. Los servidores de Telegram reciben los mensajes HTTP de FastAPI para enviarte alertas al mÃ³vil de *Mandatory Buy*.
+   - *Rol:* Comunicador. Los servidores de Telegram reciben los mensajes HTTP de FastAPI para enviarte alertas al móvil de *Mandatory Buy*.
 6. **Certbot (Let's Encrypt):**
-   - *Rol:* Identidad Segura. Otorga los candados verdes HTTPS gratis. Debe poder validar el puerto 80 cada 3 meses para renovarse automÃ¡ticamente.
+   - *Rol:* Identidad Segura. Otorga los candados verdes HTTPS gratis. Debe poder validar el puerto 80 cada 3 meses para renovarse automáticamente.
 
-### 9.3 Flujos de ActualizaciÃ³n a ProducciÃ³n (Las 3 VÃ­as)
+### 9.3 Flujos de Actualización a Producción (Las 3 Vías)
 
-Â¿CÃ³mo hago que un cambio en local aparezca en el mÃ³vil cuando entro a la web? Depende del tipo de cambio:
+¿Cómo hago que un cambio en local aparezca en el móvil cuando entro a la web? Depende del tipo de cambio:
 
-#### VÃ­a 1: Cambios en el CÃ³digo (Nuevos Scrapers, Cambios Visuales en UI)
+#### Vía 1: Cambios en el Código (Nuevos Scrapers, Cambios Visuales en UI)
 
 1. Modificas el código en tu PC (VSCode/Local).
 2. Haces un `git commit` y `git push origin main` para enviarlo a GitHub.
@@ -313,56 +313,55 @@ Para que el entorno en producciÃ³n funcione de forma autÃ³noma (mientras tÃ
    sudo docker compose -f docker-compose.prod.yml up -d --build
    ```
 
-#### VÃ­a 2: Cambios en el CatÃ¡logo de Origen (Nuevas figuras anunciadas por Mattel)
+#### Vía 2: Cambios en el Catálogo de Origen (Nuevas figuras anunciadas por Mattel)
 
 1. Actualizas tus listados / el scraper base lee `actionfigure411`.
-2. Desde la interfaz web en ProducciÃ³n, pulsas el botÃ³n **"Sincro Nexo Maestro"** en ConfiguraciÃ³n.
-3. El backend actualiza la nube (Supabase) al instante. Todos los mÃ³viles/PCs conectados a la web en producciÃ³n verÃ¡n las nuevas figuras inmediatamente sin tocar código.
+2. Desde la interfaz web en Producción, pulsas el botón **"Sincro Nexo Maestro"** en Configuración.
+3. El backend actualiza la nube (Supabase) al instante. Todos los móviles/PCs conectados a la web en producción verán las nuevas figuras inmediatamente sin tocar código.
 
-#### VÃ­a 3: Modificaciones AutomÃ¡ticas (Scraping de Ofertas Diarias)
+#### Vía 3: Modificaciones Automáticas (Scraping de Ofertas Diarias)
 
 1. No haces nada.
 2. A las 02:00 AM, GitHub ejecuta el código.
 3. Encuentra nuevos precios en Wallapop, y hace `INSERT` directamente a la base de datos de Supabase.
-4. Cuando entras en producciÃ³n al dÃ­a siguiente, el Frontend pide los datos a FastAPI, y FastAPI lee Supabase, mostrando los Ã­tems en el Purgatorio. Â¡ProducciÃ³n se ha actualizado de forma invisible y autÃ³noma!
+4. Cuando entras en producción al día siguiente, el Frontend pide los datos a FastAPI, y FastAPI lee Supabase, mostrando los ítems en el Purgatorio. ¡Producción se ha actualizado de forma invisible y autónoma!
 
-### 9.4 Troubleshootings CrÃ­ticos (Emergencias)
+### 9.4 Troubleshootings Críticos (Emergencias)
 
-#### A) PÃ©rdida de Acceso SSH a Oracle Cloud (Firewall/Llaves rotas)
+#### A) Pérdida de Acceso SSH a Oracle Cloud (Firewall/Llaves rotas)
 
-Si pierdes el acceso a tu servidor OCI a travÃ©s de tu terminal de Windows por problemas con las llaves SSH o el firewall, **no reinstales la mÃ¡quina**. Usa la consola de emergencia del navegador:
+Si pierdes el acceso a tu servidor OCI a través de tu terminal de Windows por problemas con las llaves SSH o el firewall, **no reinstales la máquina**. Usa la consola de emergencia del navegador:
 
-1. Entra en `cloud.oracle.com` y ve a la pÃ¡gina de tu instancia `nueva_eternia_produccion` (o `oraculo-eternia`).
-2. Baja haciendo scroll hasta el apartado **"Recursos"** (en la columna inferior izquierda de la pÃ¡gina de la instancia, no en el menú global).
-3. Haz clic en **"Conexiones de consola"**.
-4. Haz clic en **"Iniciar conexiÃ³n de consola en Cloud Shell"**.
-5. Se abrirÃ¡ una terminal negra en la parte inferior de tu navegador web conectada directamente al corazÃ³n del servidor, saltÃ¡ndose las reglas SSH. Desde ahÃ­ podrÃ¡s arreglar los permisos, hacer `git pull` o relanzar Docker.
+1. Entra en `cloud.oracle.com` y ve a la página de tu instancia `nueva_eternia_produccion` (o `oraculo-eternia`).
+2. Baja haciendo scroll hasta el apartado **"Recursos"** (en la columna inferior izquierda de la página de la instancia).
+3. Haz clic en **"Conexiones de consola"** -> **"Iniciar conexión de consola en Cloud Shell"**.
+4. Se abrirá una terminal web conectada directamente al corazón del servidor, saltándose el firewall SSH para que puedas reparar permisos, hacer `git pull` o relanzar Docker.
 
-#### B) Advertencia CrÃ­tica sobre el Despliegue Docker (Prod vs Local-Prod)
+#### B) Advertencia Crítica sobre el Despliegue Docker (Prod vs Local-Prod)
 
-En la raÃ­z del proyecto existen dos archivos de orquestaciÃ³n de producciÃ³n. Es vital **no confundirlos** al ejecutar comandos en la terminal del servidor:
+En la raíz del proyecto existen dos archivos de orquestación de producción:
 
-- â�Œ **`docker-compose.local-prod.yml`**: Esta versiÃ³n estÃ¡ mutilada a propÃ³sito. **NO TIENE SSL (HTTPS)**. EstÃ¡ diseÃ±ada Ãºnicamente para que puedas probar la compilaciÃ³n de la imagen de producciÃ³n en tu ordenador local de Windows sin que Nginx se queje por no encontrar los certificados de Let's Encrypt.
-- âœ… **`docker-compose.prod.yml`**: Este es el **ÃšNICO** archivo que debe ejecutarse en Oracle Cloud. Incluye los volÃºmenes de *Certbot* para encriptar la web y garantizar su seguridad pÃºblica.
-Si por error levantas el `local-prod.yml` en la nube, la web cargarÃ¡, pero los navegadores la bloquearÃ¡n por insegura al carecer de certificados SSL.
+- ❌ **`docker-compose.local-prod.yml`**: Esta versión está mutilada a propósito. **NO TIENE SSL (HTTPS)**. Está diseñada únicamente para que puedas probar la compilación de la imagen de producción en tu ordenador local de Windows sin que Nginx se queje por no encontrar los certificados de Let's Encrypt.
+- ✅ **`docker-compose.prod.yml`**: Este es el **ÚNICO** archivo que debe ejecutarse en Oracle Cloud. Incluye los volúmenes de *Certbot* para encriptar la web y garantizar su seguridad pública.
 
-## 9.5 Protocolo de Actualización Rápida (PowerShell)
+### 9.5 Protocolo de Actualización Rápida (PowerShell)
 
-Para actualizar la web desde tu ordenador de forma efectiva, sigue estos pasos:
+Para actualizar la web desde tu ordenador de forma efectiva:
 
-### 1. Acceso al Servidor
-
-Ejecuta esto en tu PowerShell sustituyendo tu IP:
-
+#### 1. Acceso al Servidor
+```powershell
 ssh -i "C:\Users\dace8\OneDrive\Documentos\Antigravity\oraculo-nueva-eternia\tu_llave.key" opc@TU_IP_PUBLICA
-2. Actualización Estándar (Si no hay conflictos)
-Una vez dentro del servidor:
+```
 
+#### 2. Actualización Estándar (Si no hay conflictos)
+```bash
 cd ~/oraculo-nueva-eternia && git pull origin main && sudo docker compose -f docker-compose.prod.yml up -d --build
-3. Actualización Forzada (Si hay errores de Git o archivos modificados)
-Usa este comando si el git pull falla o quieres limpiar el servidor y forzar la versión de GitHub:
+```
 
+#### 3. Actualización Forzada (Si hay errores de Git o archivos modificados)
+```bash
 cd ~/oraculo-nueva-eternia && git reset --hard origin/main && git pull origin main && sudo docker compose -f docker-compose.prod.yml up -d --build
+```
 
 ---
 
@@ -408,17 +407,14 @@ Para gestionar adecuadamente ofertas que no corresponden a una única figura (co
 
 La versión 2.2.0 del Oráculo implementa un blindaje de calidad de datos en el Purgatorio y una experiencia visual altamente calibrable en el Frontend:
 
-### 12.1 Normalización Universal de URLs (Deduplicaci�n)
-Para evitar la duplicaci�n de ofertas en el Purgatorio debido a parámetros de tracking o barras diagonales finales, se ha implementado la normalizaci�n universal mediante la función 
-ormalize_url(url: str):
-* **Remoci�n de parámetros**: Elimina todos los query parameters de tracking (ej. ?utm_source=..., ?utm_medium=...).
-* **Sanaci�n de barras**: Asegura que las URLs terminen sin barras diagonales / redundantes.
-* **Integridad de Datos**: Tanto los scrapers en segundo plano (pipeline.py) como la extensi�n de navegador para importaciones manuales normalizan la URL antes de intentar la inserci�n en base de datos.
-* **Manejo de Colisiones**: El backend intercepta colisiones de clave �nica en base de datos (IntegrityError) y actualiza o de-duplica los registros correspondientes sin perturbar el flujo de usuario.
+### 12.1 Normalización Universal de URLs (Deduplicación)
+Para evitar la duplicación de ofertas en el Purgatorio debido a parámetros de tracking o barras diagonales finales, se ha implementado la normalización universal mediante la función `normalize_url(url: str)`:
+* **Remoción de parámetros**: Elimina todos los query parameters de tracking (ej. `?utm_source=...`, `?utm_medium=...`).
+* **Sanación de barras**: Asegura que las URLs terminen sin barras diagonales `/` redundantes.
+* **Integridad de Datos**: Tanto los scrapers en segundo plano (`pipeline.py`) como la extensión de navegador para importaciones manuales normalizan la URL antes de intentar la inserción en base de datos.
+* **Manejo de Colisiones**: El backend intercepta colisiones de clave única en base de datos (`IntegrityError`) y actualiza o de-duplica los registros correspondientes sin perturbar el flujo de usuario.
 
 ### 12.2 Filtro de Relevancia MOTU (Inteligencia del Purgatorio)
-El pipeline incorpora un filtro autom�tico de relevancia (alidate_motu_relevance) que analiza t�tulos y descripciones de las ofertas extra�das:
-* **Lista de Exclusi�n (Blacklist)**: Se descartan autom�ticamente ofertas de marcas ajenas al foco de la aplicaci�n como unko, pop (palabra completa), ig jim, masterverse, gi joe, star wars, ction man, madelman, geyperman, max steel y arbie.
 El pipeline incorpora un filtro automático de relevancia (validate_motu_relevance) que analiza títulos y descripciones de las ofertas extraídas:
 * **Lista de Exclusión (Blacklist)**: Se descartan automáticamente ofertas de marcas ajenas al foco de la aplicación como Funko, pop (palabra completa), Big jim, masterverse, gi joe, star wars, Action man, madelman, geyperman, max steel y Barbie.
 * **Excepciones para Crossovers Oficiales**: Marcas que tienen crossovers oficiales con la línea Origins (ej. Transformers, Thundercats, stranger things, TMNT, Turtles) no son excluidas de forma fulminante si vienen acompañadas de términos de He-Man/MOTU (ej. motu, origins, grayskull, he-man). Si no los contienen, se descartan de forma estándar.

@@ -4,7 +4,29 @@ Este documento unifica la visión estratégica y el plan técnico de ejecución 
 
 ---
 
-## 🏗️ Visión Arquitectónica y Datos
+## 📊 Matriz de Estado del Roadmap (Visión Ejecutiva)
+
+```
+┌──────────────────────────────────────┬──────────────────────────────────────┬──────────────────────────────────────┐
+│  🟢 CONSOLIDADO (100 Fases OK)       │  🟡 OPERACIONES EN VIVO / GUARDIÁN   │  🔵 PRÓXIMA FRONTERA (Backlog SMART) │
+├──────────────────────────────────────┼──────────────────────────────────────┼──────────────────────────────────────┤
+│ • Modo Incógnito Universal           │ • Centinela Vinted 24/7 (anti-ban)   │ • Endpoint WebP Local (/api/images)  │
+│ • FastAPI Threadpool + SQLite WAL    │ • Telemetría FinOps GitHub (2.000m)  │ • Retiro Definitivo SyncWorker batch │
+│ • Erradicación N+1 en Colección      │ • Auto-Renovación SSL (DuckDNS)      │ • Agente LLM para Purgatorio (P&P)   │
+│ • FoilTiltCard 60 FPS + TCG Lazy     │ • Bypass WAF Smyths (Chrome CDP)     │ • Auditoría periódica dependencias   │
+│ • Índices de Rendimiento Alembic     │ • Cosecha Living Lore (0 tokens)     │ • Búsquedas Vintage (inactivas)      │
+└──────────────────────────────────────┴──────────────────────────────────────┴──────────────────────────────────────┘
+```
+
+| Estado | Bloque / Área | Descripción y Hito Reciente |
+| :--- | :--- | :--- |
+| 🟢 **Producción** | **Fase 100: Auditoría Gentle AI** | Rendimiento global, erradicación de fugas de precios, WAL en SQLite y lazy loading de cromos. |
+| 🟢 **Producción** | **Fase 99: TCG Secret Lair** | Generación 3 de cartas coleccionables, reborde pinstripe 4 lados y selector dinámico de marcos. |
+| 🟢 **Producción** | **Fase 97: Motor Cuantitativo EMI** | Índice Bursátil MOTU con EMA de decaimiento temporal (Half-Life 30d) y filtro IQR de outliers. |
+| 🟡 **Vigilancia** | **FinOps & Guardián CI/CD** | Control de cadencia de escaneos para no exceder cuotas gratuitas de Azure y GitHub Actions. |
+| 🔵 **Backlog** | **Optimización Multimedia Local** | Generación de thumbnails WebP en servidor local con coste 0 € (Decisión Q2 aprobada). |
+
+---
 
 ### Estado no Agéntico (Puerta Abierta)
 

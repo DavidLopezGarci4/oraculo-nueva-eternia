@@ -1,6 +1,23 @@
 # 📚 Índice de Documentación: El Oráculo de Nueva Eternia
 
-Bienvenido al centro de documentación oficial del proyecto. La documentación ha sido consolidada para proporcionar una estructura clara, organizada y libre de redundancias.
+> Para la puesta en marcha rápida del proyecto en 3 pasos, consulta el **[README Principal](../../README.md)**.
+
+Bienvenido al centro de documentación oficial del proyecto. La documentación ha sido consolidada bajo el estándar **3OX Tier 3** y las directrices de diseño cognitivo de **Gentle AI** para proporcionar una estructura clara, organizada y libre de redundancias.
+
+---
+
+## ⚡ Verificación Rápida de Salud (Health Checklist)
+
+```powershell
+# 1. Tests backend (67 tests unitarios/integración)
+python -m pytest tests/
+
+# 2. Migraciones de base de datos consolidadas
+python -m alembic heads
+
+# 3. Compilación limpia del frontend (TypeScript + Vite 7)
+cd frontend && npm run build
+```
 
 ---
 
