@@ -1488,6 +1488,31 @@ El Oráculo ahora monitoriza 11 fuentes de datos con tecnologías específicas p
   - **Selector Triple en Interfaz**: Navegación fluida entre *Secret Lair Framed*, *Full-Art Showcase* y *Marco Clásico 3D*, con persistencia automática en `localStorage` y en el modelo de base de datos `character_lore`.
   - **Validación de Compilación**: `npm run build` aprobado en 11.32s con 0 errores TypeScript/Vite.
 
+### ⚡ Fase 100: Auditoría Gentle AI — Rendimiento Global, Privacidad Incógnito e Integridad del Ecosistema (22/09/2026)
+
+- **Hitos**: Auditoría global y ejecución estructurada en 4 unidades de trabajo (**Gentle AI** + `code-error-analyzer` + `specification-driven-development`). Erradicación de fugas de precios en modo incógnito (modales y widgets); optimización de rendimiento backend (desbloqueo de Event Loop en FastAPI, eliminación de N+1 en colecciones con preloading en memoria, modo WAL y pragmas concurrentes en SQLite e indexación crítica en Alembic); optimización de rendimiento frontend (animación de FoilTiltCard a 60 FPS con variables CSS, Lazy loading de TradingCardModal y política LRU de 150 elementos con revocación de Blob URLs en MOTUImage); y homogeneización de integridad técnica (Alembic soberano sin DDL manual en arranque, esquemas Pydantic alineados con modelos ORM y sincronización de contratos TypeScript).
+- **Estado**: ✅ COMPLETADO Y VERIFICADO
+- **Logros Técnicos**:
+  - **Bloque 1 (Privacidad y Modo Incógnito)**: Propagación de `isIncognito` desde `App.tsx` al `Dashboard`, `Catalog`, `EterniaMarketIndexWidget`, `ProductDetailModal` y `CollectionItemDetailModal`. Ocultación y difuminado completo de valoraciones, ROI, mínimos históricos y cotizaciones. Blindaje de la casilla de inversión manual con opacidad y desactivación de tooltip nativo (`title="•••"`), imposibilitando la inspección al posar el cursor según las reglas de negocio del proyecto.
+  - **Bloque 2 (Rendimiento Backend y Base de Datos)**:
+    - Transformación de endpoints de base de datos a funciones síncronas estándar (`def`) para delegar la I/O bloqueante al pool de hilos de Starlette y desbloquear el bucle de eventos asyncio.
+    - Paginación `LIMIT`/`OFFSET` a nivel de motor SQL en `/api/collection`.
+    - Eliminación del antipatrón N+1 en colecciones integrando `valuation_service.preload_offers_for_products(product_ids)` (1 query masiva agrupada en vez de cientos de queries secuenciales).
+    - Configuración de listeners SQLite con `PRAGMA journal_mode = WAL;`, `PRAGMA synchronous = NORMAL;`, `PRAGMA busy_timeout = 30000;` y `PRAGMA foreign_keys = ON;`.
+    - Fragmentación de transacciones de scrapers en micro-lotes de 50 items (`items_in_tx >= 50: db.commit()`), eliminando bloqueos exclusivos de escritura.
+    - Migración formal de Alembic `8f1e2d3c4b5a_add_critical_performance_indexes.py` indexando `offers`, `collection_items`, `price_alerts`, `scraper_status` y `sync_queue`.
+  - **Bloque 3 (Rendimiento Frontend)**:
+    - Refactorización de `FoilTiltCard.tsx` eliminando 4 `useState` por movimiento del ratón; actualización directa de variables CSS en el DOM (`--rx`, `--ry`, `--fx`, `--fy`, `--foil-angle`, `--scale`) para fluidez a 60 FPS sin re-renders de React.
+    - Code splitting y lazy loading con `React.lazy` y `<Suspense fallback={null}>` para `TradingCardModal.tsx`, aislando 94.06 kB del chunk inicial.
+    - Gestión de memoria en `MOTUImage.tsx` con límite LRU de 150 Blob URLs y revocación preventiva mediante `URL.revokeObjectURL(oldUrl)`.
+  - **Bloque 4 (Integridad y Tipos)**:
+    - Retirado el bloque manual de renombrado de columnas en `universal_migrator.py`, garantizando que Alembic sea la única autoridad de esquemas.
+    - Actualizado `CollectionItemBase` y `CollectionItemSchema` para coincidir exactamente con los atributos reales de `CollectionItemModel` (`acquired`, `condition`, `grading`, `purchase_price`, `notes`, `acquired_at`).
+    - Interfaces TypeScript `FinancialHealth` y `DashboardStats` en `frontend/src/api/dashboard.ts` sincronizadas con los campos del backend (`landed_market_value`, `wish_count`, `wish_count_vintage`).
+    - Eliminación de la importación no utilizada de `WallapopScraper` en `scrapers.py`, operando exclusivamente con la API v3 gratuita de `WallapopManualScraper`.
+    - Corrección de prints con emojis en `migrations/env.py` para prevenir `UnicodeEncodeError` en terminales Windows (`cp1252`).
+  - **Verificación**: `npm run build` exitoso con 0 errores y separación óptima de chunks; suite de pruebas backend `pytest tests/` con 67/67 tests pasados (`100%`); grafo Alembic consolidado en `8f1e2d3c4b5a (head)`.
+
 
 
 

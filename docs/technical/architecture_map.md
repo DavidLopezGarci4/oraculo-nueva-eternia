@@ -35,7 +35,7 @@ Implementación de lógica de negocio siguiendo **Clean Architecture**.
 - **application/services/**: Servicios maestros (`Nexus`, `Sentinel`, `Logistics`, `DealScorer`).
 - **application/jobs/**: Tareas programadas (`daily_scan.py`).
 - **infrastructure/scrapers/**: Motores de incursión (Playwright, BeautifulSoup).
-- **infrastructure/database/**: Repositorios y sesión de base de datos (Supabase/PostgreSQL).
+- **infrastructure/database/**: Repositorios y sesión de base de datos (Supabase/PostgreSQL y SQLite local). SQLite configurado con modo concurrente WAL (`journal_mode = WAL`, `synchronous = NORMAL`, `busy_timeout = 30000`) e indexación formal de rendimiento vía Alembic (`ix_offers_product_available`, `ix_collection_items_owner_acquired`, `ix_price_alerts_user_product_active`, etc.).
 - **infrastructure/services/**: Adaptadores de servicios externos (`telegram_service.py` para despacho de alertas y telemetría, `telegram_listener.py` para escucha asíncrona de comandos mediante Long Polling).
 - **interfaces/api/**: Puerta de enlace API (FastAPI). Estructura modular completa:
   - `main.py` — startup con lifespan context manager, CORS, `include_router` únicamente.
@@ -67,11 +67,14 @@ Ecosistema moderno en React 19 + Vite 7, con `react-router-dom` para routing rea
   - **components/purgatory/** (5 archivos, extraídos de `Purgatory.tsx`): `SwipeCard` (modo mazo), `ForensicModal`, `VintageClassifyModal`, `PurgatoryToolbar`, `PurgatoryListView`.
   - **components/catalog/** (8 archivos, extraídos de `Catalog.tsx`): `CustomTooltip`, `catalogHelpers.ts`, `CronosView`, `ProductDetailModal`, `EditProductModal`, `FullscreenImageModal`, `VintageSyncModal`, `ProductCard`.
   - **components/admin/**, **components/auth/**, **components/cart/**, **components/layout/**, **components/products/**, **components/ui/**: componentes atómicos y tácticos preexistentes (`ItemCard`, `ScraperLogs`, `PowerSwordLoader`, `MOTUImage`, `FoilTiltCard`, `QuickPreviewModal`, etc.).
+    - `FoilTiltCard.tsx`: Optimizado para 60 FPS continuos mediante variables CSS directas en el nodo DOM (`--rx`, `--ry`, `--fx`, `--fy`, `--foil-angle`, `--scale`) eliminando re-renders de React durante `onMouseMove`.
+    - `CollectionItemDetailModal.tsx` / `TradingCardModal.tsx`: Lazy loading mediante `React.lazy` y `<Suspense fallback={null}>`, reduciendo 94 kB del bundle inicial de la app.
+    - `MOTUImage.tsx`: Prevención de fugas de memoria con caché LRU de 150 entradas y revocación explícita mediante `URL.revokeObjectURL(oldUrl)`.
   - Patrón de extracción usado en config/purgatory/catalog: mecánico 1:1 (mismo estado/handlers vía props, sin re-arquitecturar la lógica de negocio de la página padre) — deliberado, para minimizar riesgo de regresión. Detalle completo y gaps de verificación honestos en [REPORTE_MEJORAS_AAA.md](../REPORTE_MEJORAS_AAA.md) Ola 4a.
 - **src/hooks/**: Hooks compartidos, incluye `useModalA11y.ts` (foco atrapado, Escape, `role="dialog"`/`"alertdialog"` — aplicado a los 10 modales de la app en la Fase AAA 3c).
 - **src/api/**: Clientes para la comunicación con el FastAPI Broker. `client.ts` (Fase AAA-1) registra sus interceptores (`Authorization: Bearer <jwt>`, `X-Device-ID`, limpieza de sesión ante 401) sobre el objeto **`axios` global** — `main.tsx` lo importa una vez al arrancar (`import './api/client'`), así que **todo** módulo que haga `import axios from 'axios'` recibe la auth igual, aunque no importe `client.ts` explícitamente. Solo `dashboard.ts` y `wallapop.ts` usan hoy la instancia nombrada `apiClient` (con `baseURL: '/api'` preconfigurada); el resto (`collection.ts`, `products.ts`, `cart.ts`, etc.) siguen redeclarando `const API_BASE_URL = '/api'` y usando el axios plano — funciona igual, es cuestión de consistencia/DRY (Fase 3.4 del backlog AAA), **no un hueco de seguridad ni de autenticación**.
 - **public/frames/**: Plantillas HD comprimidas en WebP con canal alfa transparente para las 6 facciones TCG (`frame_castle_grayskull.webp`, `frame_snake_mountain.webp`, `frame_evil_horde.webp`, `frame_snake_men.webp`, `frame_great_rebellion.webp`, `frame_cosmic_enforcers.webp`) bajo la cuadrícula canónica unificada.
-- **App.tsx**: Nodo maestro de estado y gestión reactiva de identidad (User State Lifting), rutas (`react-router-dom`) y lazy-loading por página.
+- **App.tsx**: Nodo maestro de estado y gestión reactiva de identidad (User State Lifting), rutas (`react-router-dom`), propagación global de `isIncognito` y lazy-loading por página.
 
 ---
 

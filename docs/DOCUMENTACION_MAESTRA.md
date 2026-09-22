@@ -100,8 +100,8 @@ La aplicaciÃ³n sigue los principios de **Clean Architecture** (Arquitectura de
 | **Frontend UI** | **React 19** + Vite | Velocidad de recarga, estado reactivo concurrente. |
 | **Estilos** | **Tailwind CSS 4.0** + Framer Motion | EstÃ©tica *Glassmorphism* sin configuraciones pesadas. |
 | **Peticiones/Estado** | **TanStack Query** (React Query) | Cacheo, re-fetching inteligente y gestiÃ³n de carga de la API. |
-| **Backend API (Broker)**| **FastAPI** (Python 3.12+) | AltÃ­simo rendimiento, tipado estricto (Pydantic V2) y asincronÃ­a. |
-| **Persistencia (Local)**| **SQLite** (`oraculo.db`) | Buffer de alta velocidad para sincronizaciÃ³n *Out-of-Band* y offline. |
+| **Backend API (Broker)**| **FastAPI** (Python 3.12+) | Altísimo rendimiento, tipado estricto (Pydantic V2) y delegación a threadpool (`def`) para operaciones DB sin congelar el Event Loop asyncio. |
+| **Persistencia (Local)**| **SQLite** (`oraculo.db`) | Buffer de alta velocidad en modo WAL (`PRAGMA journal_mode = WAL;`, `busy_timeout = 30000`) e indexación masiva en Alembic. |
 | **Persistencia (Cloud)**| **PostgreSQL** (Supabase) | Fuente de verdad global, respaldada por RLS (Row Level Security). |
 | **Motor de ExtracciÃ³n** | **Playwright** + BeautifulSoup4 | Capacidad de saltar bloqueos (403, 503) mediante simulaciÃ³n humana. |
 | **Infraestructura** | **Docker** + Docker Compose | Despliegue industrializado, consistente entre desarrollo y producciÃ³n. |

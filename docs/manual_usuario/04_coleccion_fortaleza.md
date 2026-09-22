@@ -31,10 +31,13 @@ Al hacer clic en cualquier figura de tu colección se abre un modal de edición.
     *   Un valor del **1.0 al 10.0** que representa la calidad física de los elementos (cartón, burbuja, pintura de la figura).
 3.  **Precio de Compra / Coste Real**:
     *   Cuánto pagaste por ella (se recomienda incluir envíos y aranceles prorrateados).
+    *   *Blindaje Incógnito:* Si el Modo Incógnito está activado, este campo se ofusca (`blur-incognito opacity-30 select-none`), se deshabilita la interacción directa y se suprime el tooltip del ratón (`title="•••"`), garantizando privacidad absoluta ante miradas indiscretas.
 4.  **Precio Recomendado de Tienda (MSRP / Retail)**:
     *   El precio oficial de venta en tiendas físicas que sirve como referencia secundaria de salida al mercado.
 5.  **Notas del Guardián**:
     *   Un espacio libre para apuntar si la figura tiene shelf wear, firma del diseñador, variaciones de color en el plástico, etc.
+6.  **Cromo Coleccionable Digital (TCG Card)**:
+    *   Un botón exclusivo que carga de forma diferida e instantánea el cromo digital interactivo de la figura (*Secret Lair*, *Full-Art* o *Clásico 3D*), con inclinación táctil y reflejos foil a 60 FPS sin ralentizar la aplicación.
 
 ---
 

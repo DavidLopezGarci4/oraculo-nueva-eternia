@@ -19,6 +19,18 @@ En la parte superior de la pantalla se muestran las cuatro métricas clave del s
 4.  **Retorno de Inversión (ROI Real)**:
     *   La métrica de salud patrimonial de tu colección. Se muestra en forma de porcentaje e indica la revalorización acumulada de tus figuras respecto a lo que pagaste por ellas. Si tu colección vale más de lo que invertiste, el widget se ilumina en **verde esmeralda** con una tendencia positiva. Si el mercado ha bajado o compraste por encima del precio actual de mercado, se mostrará en **rojo** reflejando la depreciación.
 
+> [!TIP]
+> **Privacidad Financiera y Modo Incógnito**:
+> Al pulsar el icono `👁️` en la barra de navegación superior, todas las cifras monetarias del Tablero (inversión, valor de mercado, plusvalía, ROI, gráfico del Índice EMI y desglose de Waves) se difuminan inmediatamente con el filtro de seguridad `blur-incognito`, protegiendo tus datos al compartir pantalla o grabar vídeos.
+
+---
+
+## Salón de la Fama (Joyas de la Corona)
+
+Muestra de forma destacada las figuras más valiosas y con mayor rentabilidad de tu Sanctum:
+*   **Interactividad Total**: Al pulsar sobre cualquier tarjeta del Salón de la Fama se abre directamente la ficha completa de la figura (`CollectionItemDetailModal`), permitiéndote consultar o editar su estado, notas y cromo digital TCG sin abandonar el Tablero.
+*   **Protección de Incógnito**: Los precios de coste, cotización y porcentajes de rentabilidad respetan el estado de incógnito activo.
+
 ---
 
 ## Widgets de Control y Sincronización

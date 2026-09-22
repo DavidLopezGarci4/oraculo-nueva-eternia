@@ -22,9 +22,18 @@
 * **Liberar o Desvincular:** Si vendes o retiras una figura, al pasar el cursor o pulsar sobre el botón de posesión cambiará a `Liberar`, removiéndola inmediatamente de tu búnker.
 
 ### ¿Qué es el Modo Incógnito y cómo se activa?
-* **Propósito:** Oculta y difumina instantáneamente todos los precios de compra, valoraciones financieras y totales coleccionados.
+* **Propósito:** Oculta y difumina instantáneamente todos los precios de compra, valoraciones financieras, ROI y totales coleccionados.
 * **Activación:** Pulsa el icono del ojo `👁️` en la barra superior (Navbar) de la app.
+* **Cobertura Total:** Se aplica en toda la aplicación:
+  - **Dashboard:** Difumina el valor del Índice de Mercado (EMI), desgloses por Waves y valoraciones del Salón de la Fama.
+  - **Catálogo & Fortaleza:** Difumina precios de ofertas, mínimos históricos y costes puestos en casa (`Landed Price`).
+  - **Blindaje de Precios Manuales:** La casilla de "Tu Inversión / Coste pagado" en la ficha de la figura se bloquea, reduciendo su opacidad y desactivando tooltips (`title="•••"`), imposibilitando ver el precio real posando el cursor del ratón.
 * **Protección:** Ideal para capturas de pantalla, grabaciones o para mostrar tu colección a terceros sin revelar tu inversión monetaria.
+
+### ¿Cómo funcionan los Cromos TCG Digitales y las Tarjetas Foil?
+* **Apertura Bajo Demanda:** Pulsa el botón del cromo dentro de la ficha de cualquier figura para desplegar el modal interactivo de la carta coleccionable estilo *Magic: The Gathering / Secret Lair*.
+* **Carga Perezosa (Lazy Loading):** El generador de cromos se descarga exclusivamente al solicitarlo (ahorrando 94 kB en la carga inicial de la aplicación).
+* **Efecto Holográfico a 60 FPS:** Las tarjetas cuentan con inclinación 3D y reflejos foil acelerados por variables CSS directas en el navegador, garantizando máxima fluidez sin caídas de frames.
 
 ### ¿Cómo puedo exportar mi inventario?
 * **Exportación a Excel:** Pulsa el botón verde `📥 Excel` en la cabecera de Mi Fortaleza para descargar una hoja de cálculo con nombres, estados, valoraciones y costes.
