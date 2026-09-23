@@ -30,6 +30,7 @@ from src.infrastructure.scrapers.detoyboys_scraper import DeToyboysNLScraper
 
 # Phase 8.4b: Advanced Expansion Scrapers
 from src.infrastructure.scrapers.toymi_scraper import ToymiEUScraper
+from src.infrastructure.scrapers.bixoto_scraper import BixotoScraper
 from src.infrastructure.scrapers.time4actiontoys_scraper import Time4ActionToysDEScraper
 from src.infrastructure.scrapers.bbts_scraper import BigBadToyStoreScraper
 from src.infrastructure.scrapers.smythstoys_scraper import SmythsToysScraper
@@ -129,6 +130,7 @@ async def run_daily_scan(progress_callback=None):
             LaMansionDelTerrorScraper(),
             # European Expansion
             ToymiEUScraper(),
+            BixotoScraper(),
             Time4ActionToysDEScraper(),
             BigBadToyStoreScraper(),
             AmazonScraper(),

@@ -52,6 +52,7 @@ CANONICAL_SPIDER_NAMES = {
     "triguetech": "Triguetech",
     "lamansiondelterror": "LaMansionDelTerror",
     "actiontoys": "ActionToys",
+    "bixoto": "Bixoto",
     "all": "all",
 }
 
@@ -143,6 +144,7 @@ def run_scraper_task(
         from src.infrastructure.scrapers.pixelatoy_scraper import PixelatoyScraper
         from src.infrastructure.scrapers.time4actiontoys_scraper import Time4ActionToysDEScraper
         from src.infrastructure.scrapers.toymi_scraper import ToymiEUScraper
+        from src.infrastructure.scrapers.bixoto_scraper import BixotoScraper
         from src.infrastructure.scrapers.smythstoys_scraper import SmythsToysScraper
         # from src.infrastructure.scrapers.tradeinn_scraper import TradeinnScraper
         from src.infrastructure.scrapers.vinted_scraper import VintedScraper
@@ -163,6 +165,7 @@ def run_scraper_task(
             "Wallapop": wallapop_instance, # API v3 firmada (0 tokens, 100% gratuita)
             "WallapopManual": wallapop_instance, # Alias compatible
             "ToymiEU": ToymiEUScraper(),
+            "Bixoto": BixotoScraper(),
             "Time4ActionToysDE": Time4ActionToysDEScraper(),
             "BigBadToyStore": BigBadToyStoreScraper(),
             "SmythsToys": SmythsToysScraper(),

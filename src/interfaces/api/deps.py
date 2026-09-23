@@ -217,7 +217,7 @@ def ensure_scrapers_registered():
         "Pixelatoy", "Amazon.es", "DeToyboys", "Ebay.es",
         "Vinted", "Wallapop", "ToymiEU", "Time4ActionToysDE",
         "BigBadToyStore", "DVDStoreSpain", "Triguetech",
-        "LaMansionDelTerror", "SmythsToys",
+        "LaMansionDelTerror", "SmythsToys", "Bixoto",
     ]
 
     with SessionCloud() as db:

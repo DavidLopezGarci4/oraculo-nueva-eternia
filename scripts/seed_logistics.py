@@ -37,6 +37,7 @@ def seed_logistics(db_session=None):
         {"shop_name": "Time4ActionToysDE", "country_code": "ES", "base_shipping": 18.00, "free_shipping_threshold": 0.0, "vat_multiplier": 1.0, "custom_fees": 0.0, "strategy_key": None},
         {"shop_name": "MotuClassicsDE", "country_code": "ES", "base_shipping": 18.00, "free_shipping_threshold": 0.0, "vat_multiplier": 1.0, "custom_fees": 0.0, "strategy_key": None},
         {"shop_name": "VendiloshopIT", "country_code": "ES", "base_shipping": 12.00, "free_shipping_threshold": 150.0, "vat_multiplier": 1.0, "custom_fees": 0.0, "strategy_key": None},
+        {"shop_name": "Bixoto", "country_code": "ES", "base_shipping": 3.99, "free_shipping_threshold": 69.0, "vat_multiplier": 1.0, "custom_fees": 0.0, "strategy_key": None},
     ]
 
     deprecated_shops = ["ActionToys", "Toymi", "Fantasia"]
