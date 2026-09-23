@@ -3,7 +3,7 @@ import { Search, Menu, Repeat, Eye, EyeOff, Volume2, VolumeX } from 'lucide-reac
 import masterRoleImg from '../../assets/role-master.webp';
 import guardianRoleImg from '../../assets/role-guardian.webp';
 
-import { type Hero } from '../../api/admin';
+import { type Hero, isUserAdmin } from '../../api/admin';
 
 interface NavbarProps {
     onMenuClick: () => void;
@@ -57,7 +57,7 @@ const Navbar = ({ onMenuClick, showSearch = true, searchValue = "", onSearchChan
             });
         }
     };
-    const isAdmin = user?.role?.toLowerCase() === 'admin' || user?.username?.toLowerCase() === 'david' || user?.id === 2;
+    const isAdmin = isUserAdmin(user);
 
     return (
         <nav aria-label="Barra superior" className="sticky top-0 z-10 flex flex-col md:flex-row items-center justify-between border-b border-glass-border glass px-4 py-3 md:h-16 md:py-0 md:px-6 backdrop-blur-md gap-3 md:gap-4">

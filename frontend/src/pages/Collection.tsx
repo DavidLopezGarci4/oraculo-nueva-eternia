@@ -32,7 +32,7 @@ import { MOTUImage } from '../components/ui/MOTUImage';
 import CollectionItemDetailModal from '../components/CollectionItemDetailModal';
 import { FoilTiltCard } from '../components/ui/FoilTiltCard';
 import { useGrayskullRitual } from '../context/GrayskullRitualContext';
-import { updateProduct, exportCollectionExcel, exportCollectionExcelVintage, exportCollectionSqlite } from '../api/admin';
+import { updateProduct, exportCollectionExcel, exportCollectionExcelVintage, exportCollectionSqlite, isUserAdmin } from '../api/admin';
 import type { Hero } from '../api/admin';
 
 const getAdjustedStats = (product: Product, isOwned: boolean) => {
@@ -95,7 +95,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
 
     // Contexto de Autenticación (Fase 8.2)
     const activeUserId = parseInt(localStorage.getItem('active_user_id') || '2');
-    const isAdmin = user?.role === 'admin' || user?.username === 'David';
+    const isAdmin = isUserAdmin(user);
 
     const updateMutation = useMutation({
         mutationFn: ({ id, data }: { id: number, data: any }) => updateProduct(id, data),

@@ -3,7 +3,7 @@ import { Globe, Store, Sparkles, Database, Box, ShieldAlert, Settings, LogOut, X
 import masterRoleImg from '../../assets/role-master.webp';
 import guardianRoleImg from '../../assets/role-guardian.webp';
 
-import { type Hero } from '../../api/admin';
+import { type Hero, isUserAdmin } from '../../api/admin';
 
 interface SidebarProps {
     activeTab: string;
@@ -18,7 +18,7 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen, onCloseMobile, user, onLogout, onPrefetch }) => {
-    const isAdmin = user?.role === 'admin' || user?.username === 'David';
+    const isAdmin = isUserAdmin(user);
 
     const globalItems = [
         { id: 'dashboard', label: 'Orbe de Grayskull', icon: Globe },
@@ -61,7 +61,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen
                     <div className="flex items-center gap-3">
                         <div className={`h-9 w-9 rounded-xl overflow-hidden border bg-black/40 transition-all ${['eternia', 'fortaleza_vintage'].includes(activeTab) ? 'border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.3)]' : 'border-white/20 shadow-[0_0_15px_rgba(14,165,233,0.3)]'}`}>
                             <img
-                                src={(user?.role === 'admin' || user?.username === 'David') ? masterRoleImg : guardianRoleImg}
+                                src={isAdmin ? masterRoleImg : guardianRoleImg}
                                 alt="Role Logo"
                                 className="h-full w-full object-cover"
                             />
@@ -188,7 +188,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen
                         <HelpCircle className={`h-5 w-5 ${activeTab === 'faq' ? 'text-amber-400 animate-pulse' : ''}`} />
                         Guía & FAQ
                     </button>
-                    {user && (
+                    {isAdmin && (
                         <button
                             onClick={() => {
                                 setActiveTab('settings');

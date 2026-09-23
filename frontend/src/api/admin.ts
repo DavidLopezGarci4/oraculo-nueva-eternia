@@ -132,6 +132,13 @@ export interface Hero {
     is_public_showcase?: boolean;
 }
 
+export const isUserAdmin = (user?: Hero | null): boolean => {
+    if (!user) return false;
+    const role = (user.role || '').trim().toLowerCase();
+    const username = (user.username || '').trim().toLowerCase();
+    return role === 'admin' || username === 'david' || username === 'admin' || user.id === 1 || user.id === 2;
+};
+
 export const updateUserPublicShowcase = async (userId: number, isPublic: boolean): Promise<{ status: string; is_public_showcase: boolean }> => {
     const response = await adminAxios.post(`/users/${userId}/public-showcase`, null, {
         params: { is_public: isPublic }

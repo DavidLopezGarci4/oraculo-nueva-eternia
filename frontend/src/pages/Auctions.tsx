@@ -11,7 +11,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { getProductPriceHistory } from '../api/products';
 import PriceHistoryChart from '../components/products/PriceHistoryChart';
-import { unlinkOffer, type Hero } from '../api/admin';
+import { unlinkOffer, type Hero, isUserAdmin } from '../api/admin';
 import { getOptimizedImageUrl } from '../utils/imageUtils';
 import { parseUtcDate } from '../utils/dateUtils';
 import { MOTUImage } from '../components/ui/MOTUImage';
@@ -66,7 +66,7 @@ const Auctions: React.FC<AuctionsProps> = ({ user }) => {
     const [showOnlyWishlist, setShowOnlyWishlist] = React.useState(false);
 
     const activeUserId = parseInt(localStorage.getItem('active_user_id') || '2');
-    const isAdmin = user?.role === 'admin' || user?.username === 'David';
+    const isAdmin = isUserAdmin(user);
 
 
     // 1. Fetch de productos con subastas activas

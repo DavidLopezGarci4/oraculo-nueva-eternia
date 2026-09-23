@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Activity, Terminal, Settings, Users, Package, BookOpen, Sparkles } from 'lucide-react';
+import { Activity, Settings, Users, Package, BookOpen, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { resetSmartMatches, runScrapers, stopScrapers, getScraperLogs, type ScraperExecutionLog, getWallapopIpLogs, downloadWallapopIpLogs, type WallapopIpLog, runWallaManualHtml } from '../api/purgatory';
@@ -47,7 +47,8 @@ import {
     getDevices,
     authorizeDevice,
     deleteDevice,
-    type Device
+    type Device,
+    isUserAdmin
 } from '../api/admin';
 
 interface ConfigProps {
@@ -58,7 +59,18 @@ interface ConfigProps {
 
 const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange }) => {
     const consoleRef = React.useRef<HTMLDivElement>(null);
-    const [activeTab, setActiveTab] = useState<'scrapers' | 'system' | 'users' | 'wallapop' | 'inventory' | 'lore' | 'tcg'>('scrapers');
+    const [activeTab, setActiveTab] = useState<'system' | 'scrapers' | 'users' | 'wallapop' | 'inventory' | 'lore' | 'tcg'>(() => {
+        const saved = localStorage.getItem('motu_config_tab');
+        if (saved && ['system', 'scrapers', 'users', 'wallapop', 'inventory', 'lore', 'tcg'].includes(saved)) {
+            return saved as any;
+        }
+        return 'system';
+    });
+
+    const handleTabChange = (tab: 'system' | 'scrapers' | 'users' | 'wallapop' | 'inventory' | 'lore' | 'tcg') => {
+        setActiveTab(tab);
+        localStorage.setItem('motu_config_tab', tab);
+    };
     const [statuses, setStatuses] = useState<ScraperStatus[]>([]);
     const [matchStats, setMatchStats] = useState<any[]>([]);
     const [syncingSensores, setSyncingSensores] = useState(false);
@@ -140,7 +152,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
     const [freeMergeSourceQuery, setFreeMergeSourceQuery] = useState('');
     const [freeMergeSourceSuggestions, setFreeMergeSourceSuggestions] = useState<any[]>([]);
 
-    const isAdmin = user?.role === 'admin' || user?.username === 'David';
+    const isAdmin = isUserAdmin(user);
     const [showShowcaseGuide, setShowShowcaseGuide] = useState(false);
 
     const handleCardClick = (shop: string) => {
@@ -856,55 +868,53 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div className="flex flex-col gap-2">
                     <h2 className="text-3xl font-bold tracking-tight text-white flex items-center gap-3">
-                        <Terminal className="h-8 w-8 text-brand-primary" />
-                        Poderes del <span className="text-brand-primary">{isAdmin ? 'Arquitecto' : 'Guardián'} de Nueva Eternia</span>
+                        <Settings className="h-8 w-8 text-brand-primary" />
+                        Centro de Configuración y Mando
                     </h2>
                     <p className="text-white/50">
-                        {isAdmin 
-                            ? 'Administra los scrapers de incursión, el catálogo de reliquias, la gestión de héroes y la calibración del sistema.' 
-                            : 'Configura tu ubicación geográfica, el Santuario público y la caché de imágenes local.'}
+                        Ajustes del sistema, scrapers de incursión, catálogo de reliquias, héroes y calibración del Oráculo.
                     </p>
                 </div>
 
                 {isAdmin && (
                     <div className="flex flex-wrap items-center justify-center gap-1 bg-white/5 p-1 rounded-2xl border border-white/10 backdrop-blur-xl w-full md:w-auto shadow-lg">
                         <button
-                            onClick={() => setActiveTab('scrapers')}
-                            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 flex-1 sm:flex-initial min-w-[100px] sm:min-w-0 ${activeTab === 'scrapers' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'text-white/65 hover:text-white'}`}
-                        >
-                            <Activity className="h-3.5 w-3.5" />
-                            Scrapers
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('inventory')}
-                            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 flex-1 sm:flex-initial min-w-[100px] sm:min-w-0 ${activeTab === 'inventory' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'text-white/65 hover:text-white'}`}
-                        >
-                            <Package className="h-3.5 w-3.5" />
-                            Inventario
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('system')}
+                            onClick={() => handleTabChange('system')}
                             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 flex-1 sm:flex-initial min-w-[100px] sm:min-w-0 ${activeTab === 'system' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'text-white/65 hover:text-white'}`}
                         >
                             <Settings className="h-3.5 w-3.5" />
                             Ajustes
                         </button>
                         <button
-                            onClick={() => setActiveTab('users')}
+                            onClick={() => handleTabChange('scrapers')}
+                            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 flex-1 sm:flex-initial min-w-[100px] sm:min-w-0 ${activeTab === 'scrapers' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'text-white/65 hover:text-white'}`}
+                        >
+                            <Activity className="h-3.5 w-3.5" />
+                            Scrapers
+                        </button>
+                        <button
+                            onClick={() => handleTabChange('inventory')}
+                            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 flex-1 sm:flex-initial min-w-[100px] sm:min-w-0 ${activeTab === 'inventory' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'text-white/65 hover:text-white'}`}
+                        >
+                            <Package className="h-3.5 w-3.5" />
+                            Inventario
+                        </button>
+                        <button
+                            onClick={() => handleTabChange('users')}
                             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 flex-1 sm:flex-initial min-w-[100px] sm:min-w-0 ${activeTab === 'users' ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' : 'text-white/65 hover:text-white'}`}
                         >
                             <Users className="h-4 w-4" />
                             Héroes
                         </button>
                         <button
-                            onClick={() => setActiveTab('lore')}
+                            onClick={() => handleTabChange('lore')}
                             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 flex-1 sm:flex-initial min-w-[100px] sm:min-w-0 ${activeTab === 'lore' ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/20' : 'text-amber-400/80 hover:text-amber-300 hover:bg-amber-500/10'}`}
                         >
                             <BookOpen className="h-4 w-4" />
                             Grimorio Lore
                         </button>
                         <button
-                            onClick={() => setActiveTab('tcg')}
+                            onClick={() => handleTabChange('tcg')}
                             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 flex-1 sm:flex-initial min-w-[100px] sm:min-w-0 ${activeTab === 'tcg' ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-lg shadow-amber-500/25' : 'text-amber-300/80 hover:text-amber-200 hover:bg-amber-500/10'}`}
                         >
                             <Sparkles className="h-4 w-4" />

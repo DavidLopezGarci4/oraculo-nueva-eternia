@@ -6,7 +6,7 @@ import Navbar from './components/layout/Navbar';
 import ErrorBoundary from './components/ErrorBoundary';
 import ShieldBypass from './components/ShieldBypass';
 import MasterLogin from './components/auth/MasterLogin';
-import { getUserSettings, getSSLStatus, type Hero, type SSLStatus } from './api/admin';
+import { getUserSettings, getSSLStatus, isUserAdmin, type Hero, type SSLStatus } from './api/admin';
 import PowerSwordLoader from './components/ui/PowerSwordLoader';
 import axios from 'axios';
 import CacheWelcomeModal from './components/ui/CacheWelcomeModal';
@@ -298,7 +298,7 @@ function App() {
   // Fase AAA-3.1: antes esto forzaba el tab de vuelta a 'dashboard' con un
   // efecto reactivo; ahora es un guard declarativo directamente en la ruta
   // /purgatory (ver <Routes> más abajo), sin necesidad de useEffect.
-  const isAdminUser = currentUser?.role === 'admin' || currentUser?.username === 'David';
+  const isAdminUser = isUserAdmin(currentUser);
 
   // Comprobación preventiva de SSL para administradores (<= 14 días)
   useEffect(() => {
@@ -436,13 +436,17 @@ function App() {
                     />
                     <Route
                       path={TAB_PATHS.settings}
-                      element={(
-                        <Config
-                          user={currentUser}
-                          onUserUpdate={() => fetchUser(activeUserId)}
-                          onIdentityChange={handleIdentityChange}
-                        />
-                      )}
+                      element={
+                        isAdminUser ? (
+                          <Config
+                            user={currentUser}
+                            onUserUpdate={() => fetchUser(activeUserId)}
+                            onIdentityChange={handleIdentityChange}
+                          />
+                        ) : (
+                          <Navigate to={TAB_PATHS.dashboard} replace />
+                        )
+                      }
                     />
                     <Route path={TAB_PATHS.faq} element={<Faq />} />
                     <Route path="*" element={<Navigate to={TAB_PATHS.dashboard} replace />} />

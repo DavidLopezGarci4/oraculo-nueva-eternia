@@ -17,7 +17,7 @@ import {
 import { useCart } from '../context/CartContext';
 import OracleCart from '../components/cart/OracleCart';
 import { getDashboardStats, getTopDeals, getDashboardHistory, revertDashboardAction, getHallOfFame } from '../api/dashboard';
-import { unlinkOffer, relinkOffer, type Hero } from '../api/admin';
+import { unlinkOffer, relinkOffer, type Hero, isUserAdmin } from '../api/admin';
 import PowerSwordLoader from '../components/ui/PowerSwordLoader';
 import axios from 'axios';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -48,7 +48,7 @@ interface DashboardProps {
 
 const Dashboard: React.FC<DashboardProps> = ({ user, isIncognito = false }) => {
     const { addToCart } = useCart();
-    const isAdmin = user?.role?.toLowerCase() === 'admin' || user?.username?.toLowerCase() === 'david' || user?.id === 2;
+    const isAdmin = isUserAdmin(user);
 
     const queryClient = useQueryClient();
     const [selectedRelinkId, setSelectedRelinkId] = React.useState<number | null>(null);

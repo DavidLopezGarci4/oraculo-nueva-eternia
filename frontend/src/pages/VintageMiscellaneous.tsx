@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Bookmark, AlertCircle, Info, X, ExternalLink, RotateCcw, Box, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
 import PowerSwordLoader from '../components/ui/PowerSwordLoader';
 import { getMiscellaneousItems, revertMiscellaneousItem, deleteMiscellaneousItem, type VintageMiscellaneousItem } from '../api/purgatory';
-import type { Hero } from '../api/admin';
+import { type Hero, isUserAdmin } from '../api/admin';
 
 interface VintageMiscellaneousProps {
     user?: Hero | null;
@@ -16,7 +16,7 @@ const VintageMiscellaneous: React.FC<VintageMiscellaneousProps> = ({ user }) => 
     const [sortBy, setSortBy] = React.useState<'title' | 'price' | 'date'>('date');
     const [sortOrder, setSortOrder] = React.useState<'asc' | 'desc'>('desc');
 
-    const isAdmin = user?.role === 'admin' || user?.username === 'David';
+    const isAdmin = isUserAdmin(user);
 
     // 1. Fetch miscellaneous items
     const { data: items, isLoading, isError } = useQuery<VintageMiscellaneousItem[]>({
