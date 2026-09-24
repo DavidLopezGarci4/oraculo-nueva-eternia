@@ -66,11 +66,11 @@ interface ScrapersTabProps {
     statuses: ScraperStatus[];
     runScrapersMutation: UseMutationResult<any, any, string>;
     stopScrapersMutation: UseMutationResult<any, any, void>;
-    runWallaManualHtmlMutation: UseMutationResult<any, any, File | undefined, void>;
+    runWallaManualHtmlMutation?: UseMutationResult<any, any, File | undefined, void>;
     syncingNexus: boolean;
     handleSyncNexus: () => void;
     handleOpenIpLogs: () => void;
-    wallaManualLoading: boolean;
+    wallaManualLoading?: boolean;
     logFilter: 'all' | 'error';
     setLogFilter: (f: 'all' | 'error') => void;
     advancedLogs: ScraperExecutionLog[];
@@ -90,11 +90,11 @@ export default function ScrapersTab({
     statuses,
     runScrapersMutation,
     stopScrapersMutation,
-    runWallaManualHtmlMutation,
+    runWallaManualHtmlMutation: _runWallaManualHtmlMutation,
     syncingNexus,
     handleSyncNexus,
     handleOpenIpLogs,
-    wallaManualLoading,
+    wallaManualLoading: _wallaManualLoading,
     logFilter,
     setLogFilter,
     advancedLogs,
@@ -179,54 +179,6 @@ export default function ScrapersTab({
                             >
                                 <Globe className="h-4 w-4 text-brand-primary" />
                                 <span className="uppercase tracking-wider">Auditoría IP</span>
-                            </button>
-
-                            <button
-                                onClick={() => runScrapersMutation.mutate('SmythsToys')}
-                                disabled={statuses.some(s => s.status === 'running')}
-                                className="bg-white/5 hover:bg-white/10 border border-amber-400/20 text-white px-4 py-2 rounded-xl font-bold text-[11px] transition-all flex items-center justify-center gap-2 hover:scale-105 active:scale-95 w-full sm:w-auto disabled:opacity-50"
-                                title="Incursión directa en Smyths Toys (Alemania)"
-                            >
-                                <Package className="h-4 w-4 text-amber-400" />
-                                <span className="uppercase tracking-wider text-amber-300">Smyths Toys</span>
-                            </button>
-
-                            <button
-                                onClick={() => runScrapersMutation.mutate('Bixoto')}
-                                disabled={statuses.some(s => s.status === 'running')}
-                                className="bg-white/5 hover:bg-white/10 border border-blue-400/20 text-white px-4 py-2 rounded-xl font-bold text-[11px] transition-all flex items-center justify-center gap-2 hover:scale-105 active:scale-95 w-full sm:w-auto disabled:opacity-50"
-                                title="Incursión directa en Bixoto (Francia / España)"
-                            >
-                                <Package className="h-4 w-4 text-blue-400" />
-                                <span className="uppercase tracking-wider text-blue-300">Bixoto</span>
-                            </button>
-
-                            <button
-                                onClick={() => {
-                                    if (statuses.some(s => s.status === 'running')) return;
-                                    const fileInput = document.createElement('input');
-                                    fileInput.type = 'file';
-                                    fileInput.accept = '.html';
-                                    fileInput.onchange = (e: any) => {
-                                        const file = e.target.files?.[0];
-                                        if (file) {
-                                            runWallaManualHtmlMutation.mutate(file);
-                                        }
-                                    };
-                                    fileInput.click();
-                                }}
-                                disabled={wallaManualLoading || statuses.some(s => s.status === 'running')}
-                                className="bg-white/5 hover:bg-white/10 border border-white/10 text-white px-4 py-2 rounded-xl font-bold text-[11px] transition-all flex items-center justify-center gap-2 hover:scale-105 active:scale-95 w-full sm:w-auto disabled:opacity-50"
-                                title="Procesar archivo HTML guardado de Wallapop"
-                            >
-                                {wallaManualLoading ? (
-                                    <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: "linear" }}>
-                                        <Activity className="h-4 w-4 text-cyan-400" />
-                                    </motion.div>
-                                ) : (
-                                    <Database className="h-4 w-4 text-cyan-400" />
-                                )}
-                                <span className="uppercase tracking-wider">WallaManual</span>
                             </button>
                         </div>
                     </div>
