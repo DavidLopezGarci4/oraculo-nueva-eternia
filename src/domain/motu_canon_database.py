@@ -6,6 +6,7 @@ Contiene:
 - Mapeo de Facciones traducidas al castellano con temas de marco (Grayskull, Snake Mountain, Horda, etc.).
 """
 
+import re
 from typing import Dict, Any, Optional, List
 
 # 1. MATRIZ DE ATAQUES ESPECIALES MOTU POR TIPO DE ARMA / ACCESORIO
@@ -1261,14 +1262,1039 @@ MOTU_LORE_ENCYCLOPEDIA: Dict[str, Dict[str, Any]] = {
     }
 }
 
+
+# -------------------------------------------------------------
+# PERFILES CANÓNICOS MAESTROS DE CROMOS MOTU (FUENTE DE VERDAD)
+# Extraídos y unificados para sincronización total con el Grimorio Lore
+# -------------------------------------------------------------
+CANONICAL_CARD_PROFILES: List[Dict[str, Any]] = [
+    # ── MULTIVERSO OSCURO / ANTI-ETERNIA (Prioridad máxima sobre He-Man / Skeletor) ──
+    {
+        "pattern": re.compile(r"anti[\s\-]?eternia|anti[\s\-]?he[\s\-]?man", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "Anti-Eternia He-Man",
+            "subtitle": "Tirano del Multiverso Oscuro",
+            "theme_key": "snake_mountain",
+            "faction": "Guerreros del Mal",
+            "type_line": "Doble Oscuro — Multiverso Anti-Eternia",
+            "special_move": "Estallido de Sombras de Anti-Eternia",
+            "quote": "¡La oscuridad de Anti-Eternia consumirá el castillo de la luz!",
+            "flavor_quote_author": "Anti-Eternia He-Man",
+            "lore": "Nacido del reflejo infernal del World Converter en el Multiverso Oscuro, es un tirano implacable de ojos incandescentes cuyo poder busca aniquilar la luz de Eternia.",
+            "stats": {"fuerza": 99, "magia": 92, "defensa": 95, "agilidad": 92},
+            "emblem": "skull",
+            "mana_gems": ["havoc", "dark", "blood"],
+            "mana_cost": "{2}{B}{B}"
+        }
+    },
+    {
+        "pattern": re.compile(r"he[\s\-]?skeletor", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "He-Skeletor",
+            "subtitle": "Campeón Oscuro de Anti-Eternia",
+            "theme_key": "snake_mountain",
+            "faction": "Guerreros del Mal",
+            "type_line": "Campeón Oscuro — Multiverso Anti-Eternia",
+            "special_move": "Relámpago Destructor de Skeletor",
+            "quote": "¡Por el poder del cráneo de Grayskull, el caos me pertenece!",
+            "flavor_quote_author": "He-Skeletor",
+            "lore": "El Campeón del Multiverso Oscuro donde Keldor abrazó el poder del Relámpago de Grayskull combinándolo con la nigromancia tártara.",
+            "stats": {"fuerza": 96, "magia": 98, "defensa": 93, "agilidad": 88},
+            "emblem": "skull",
+            "mana_gems": ["havoc", "dark", "grayskull"],
+            "mana_cost": "{2}{B}{B}"
+        }
+    },
+
+    # ── PRETERNIA & GUARDIANES CÓSMICOS ──
+    {
+        "pattern": re.compile(r"great\s+black\s+wizard", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "Great Black Wizard",
+            "subtitle": "Hechicero Ancestral de Preternia",
+            "theme_key": "castle_grayskull",
+            "faction": "Guerreros Heroicos",
+            "type_line": "Hechicero Legendario — Guerrero Oscuro",
+            "special_move": "Conjuro Ancestral de Sombras Preternianas",
+            "quote": "Las sombras milenarias de Preternia despiertan ante mi conjuro.",
+            "flavor_quote_author": "Great Black Wizard",
+            "lore": "Antiguo y enigmático hechicero oscuro de la era preterniana, maestro de las artes arcanas prohibidas y guardián de hechizos milenarios.",
+            "stats": {"fuerza": 88, "magia": 99, "defensa": 85, "agilidad": 88},
+            "emblem": "sparkles",
+            "mana_gems": ["arcane", "magic", "grayskull"],
+            "mana_cost": "{2}{W}{U}"
+        }
+    },
+    {
+        "pattern": re.compile(r"\bhe[\s\-]?ro\b", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "He-Ro",
+            "subtitle": "El Mago Más Poderoso del Universo",
+            "theme_key": "cosmic_enforcers",
+            "faction": "Guardianes Cósmicos",
+            "type_line": "Mago Preterniano — Ancestro de Grayskull",
+            "special_move": "Magia Ancestral de Preternia",
+            "quote": "¡La magia de los Antiguos fluye a través de las eras!",
+            "flavor_quote_author": "He-Ro",
+            "lore": "El Mago más poderoso del Universo en la remota Preternia. Portador del báculo con la piedra de la sabiduría y ancestro del poder de Grayskull.",
+            "stats": {"fuerza": 92, "magia": 99, "defensa": 94, "agilidad": 93},
+            "emblem": "infinity",
+            "mana_gems": ["cosmic", "grayskull", "magic"],
+            "mana_cost": "{2}{W}{U}"
+        }
+    },
+    {
+        "pattern": re.compile(r"\beldor\b", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "Eldor",
+            "subtitle": "Sabio Custodio de Preternia",
+            "theme_key": "cosmic_enforcers",
+            "faction": "Guardianes Cósmicos",
+            "type_line": "Sabio de Preternia — Custodio del Libro",
+            "special_move": "Sabiduría de los Antiguos",
+            "quote": "El Libro de los Hechizos Vivientes custodia el pasado y el porvenir.",
+            "flavor_quote_author": "Eldor",
+            "lore": "Antiguo sabio de Preternia y mentor de He-Ro, guardián del Libro de los Hechizos Vivientes que salvaguarda la historia secreta.",
+            "stats": {"fuerza": 85, "magia": 98, "defensa": 90, "agilidad": 86},
+            "emblem": "infinity",
+            "mana_gems": ["cosmic", "arcane"],
+            "mana_cost": "{2}{W}{U}"
+        }
+    },
+    {
+        "pattern": re.compile(r"\bzodac\b|\bzodak\b", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "Zodac",
+            "subtitle": "Ejecutor Cósmico del Equilibrio",
+            "theme_key": "cosmic_enforcers",
+            "faction": "Guardianes Cósmicos",
+            "type_line": "Ejecutor Cósmico — Juez del Equilibrio",
+            "special_move": "Descarga Cósmica de Zodac",
+            "quote": "El equilibrio del universo debe prevalecer sobre todo conflicto.",
+            "flavor_quote_author": "Zodac",
+            "lore": "Enforcer Cósmico neutral que vela por el equilibrio universal entre la luz y las sombras con su sabiduría e intelecto infinitos.",
+            "stats": {"fuerza": 90, "magia": 95, "defensa": 92, "agilidad": 91},
+            "emblem": "infinity",
+            "mana_gems": ["cosmic", "neutral"],
+            "mana_cost": "{2}{W}{U}"
+        }
+    },
+
+    # ── GUERREROS HEROICOS (CASTLE GRAYSKULL) ──
+    {
+        "pattern": re.compile(r"battle\s+armor\s+he[\s\-]?man", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "He-Man (Battle Armor)",
+            "subtitle": "Campeón Acorazado de Grayskull",
+            "theme_key": "castle_grayskull",
+            "faction": "Guerreros Heroicos",
+            "type_line": "Campeón Acorazado — Guerrero Heroico",
+            "special_move": "Impacto Sísmico de Coraza",
+            "quote": "¡Ningún ataque atravesará la coraza forjada para la batalla!",
+            "flavor_quote_author": "He-Man",
+            "lore": "Equipado con una armadura mística indestructible que absorbe los golpes más devastadores de Skeletor. La última línea de defensa en el combate cuerpo a cuerpo.",
+            "stats": {"fuerza": 99, "magia": 86, "defensa": 99, "agilidad": 87},
+            "emblem": "shield",
+            "mana_gems": ["grayskull", "gold", "axe"],
+            "mana_cost": "{2}{W}{W}"
+        }
+    },
+    {
+        "pattern": re.compile(r"flying\s+fists\s+he[\s\-]?man", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "He-Man (Flying Fists)",
+            "subtitle": "Guerrero de los Puños Voladores",
+            "theme_key": "castle_grayskull",
+            "faction": "Guerreros Heroicos",
+            "type_line": "Guerrero Torbellino — Guerrero Heroico",
+            "special_move": "Torbellino de Puños Giratorios",
+            "quote": "¡Mis puños giran con la furia de una tormenta cósmica!",
+            "flavor_quote_author": "He-Man",
+            "lore": "Con su armadura voladora y su maza giratoria de doble filo, He-Man golpea a los esbirros del mal en un torbellino imparable de fuerza.",
+            "stats": {"fuerza": 98, "magia": 84, "defensa": 94, "agilidad": 92},
+            "emblem": "shield",
+            "mana_gems": ["grayskull", "gold"],
+            "mana_cost": "{2}{W}{W}"
+        }
+    },
+    {
+        "pattern": re.compile(r"thunder\s+punch\s+he[\s\-]?man", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "He-Man (Thunder Punch)",
+            "subtitle": "Titán del Trueno",
+            "theme_key": "castle_grayskull",
+            "faction": "Guerreros Heroicos",
+            "type_line": "Titán del Trueno — Guerrero Heroico",
+            "special_move": "Golpe del Trueno Devastador",
+            "quote": "¡Siente la conmoción del trueno de Eternia!",
+            "flavor_quote_author": "He-Man",
+            "lore": "Canalizando energía de relámpago puro en su mochila explosiva, cada impacto de su puño detona con la fuerza atronadora de un cataclismo.",
+            "stats": {"fuerza": 99, "magia": 89, "defensa": 96, "agilidad": 89},
+            "emblem": "shield",
+            "mana_gems": ["grayskull", "lightning"],
+            "mana_cost": "{2}{W}{W}"
+        }
+    },
+    {
+        "pattern": re.compile(r"laser\s+power\s+he[\s\-]?man", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "He-Man (Laser Power)",
+            "subtitle": "Guerrero de Luz Fotónica",
+            "theme_key": "castle_grayskull",
+            "faction": "Guerreros Heroicos",
+            "type_line": "Guerrero Fotónico — Guerrero Heroico",
+            "special_move": "Haz Láser Concentrado",
+            "quote": "¡La luz de Grayskull disipará todas las sombras!",
+            "flavor_quote_author": "He-Man",
+            "lore": "Armado con una espada translúcida alimentada por energía fotónica pura, diseñada para atravesar las tinieblas más densas de Snake Mountain.",
+            "stats": {"fuerza": 97, "magia": 92, "defensa": 95, "agilidad": 93},
+            "emblem": "shield",
+            "mana_gems": ["grayskull", "light"],
+            "mana_cost": "{2}{W}{W}"
+        }
+    },
+    {
+        "pattern": re.compile(r"\bhe[\s\-]?man\b|\bprince\s+adam\b", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "He-Man",
+            "subtitle": "El Hombre Más Poderoso del Universo",
+            "theme_key": "castle_grayskull",
+            "faction": "Guerreros Heroicos",
+            "type_line": "Campeón Legendario — Guerrero Heroico",
+            "special_move": "Por el Poder de Grayskull",
+            "quote": "¡Por el poder de Grayskull... Yo tengo el poder!",
+            "flavor_quote_author": "He-Man",
+            "lore": "¡Por el poder de Grayskull, yo tengo el poder! El hombre más poderoso del universo y defensor eterno de los secretos del castillo.",
+            "stats": {"fuerza": 99, "magia": 88, "defensa": 95, "agilidad": 90},
+            "emblem": "shield",
+            "mana_gems": ["grayskull", "grayskull", "gold", "sword"],
+            "mana_cost": "{2}{W}{W}"
+        }
+    },
+    {
+        "pattern": re.compile(r"\bsorceress\b|\bhechicera\b", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "La Hechicera",
+            "subtitle": "Guardiana Mística de Grayskull",
+            "theme_key": "castle_grayskull",
+            "faction": "Guerreros Heroicos",
+            "type_line": "Guardiana Mística — Guerrera Heroica",
+            "special_move": "Escudo del Halcón Místico",
+            "quote": "Los secretos del castillo sagrado perdurarán por siempre.",
+            "flavor_quote_author": "La Hechicera",
+            "lore": "Custodia inmortal del Castillo Grayskull y canalizadora de la magia más poderosa de Eternia bajo el manto de Zoar.",
+            "stats": {"fuerza": 80, "magia": 99, "defensa": 92, "agilidad": 89},
+            "emblem": "sparkles",
+            "mana_gems": ["grayskull", "arcane", "magic"],
+            "mana_cost": "{2}{W}{W}"
+        }
+    },
+    {
+        "pattern": re.compile(r"\bman[\s\-]?at[\s\-]?arms\b|\bduncan\b", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "Man-At-Arms",
+            "subtitle": "Maestro de Armas e Ingeniero Real",
+            "theme_key": "castle_grayskull",
+            "faction": "Guerreros Heroicos",
+            "type_line": "Maestro de Armas — Guerrero Heroico",
+            "special_move": "Ráfaga Fotónica Man-At-Arms",
+            "quote": "La ciencia y la estrategia ganan tantas batallas como el coraje.",
+            "flavor_quote_author": "Duncan",
+            "lore": "Duncan, maestro de armas de la corte real de Eternia e inventor genial de la tecnología defensiva de Grayskull.",
+            "stats": {"fuerza": 91, "magia": 75, "defensa": 94, "agilidad": 87},
+            "emblem": "shield",
+            "mana_gems": ["grayskull", "gold", "blaster"],
+            "mana_cost": "{2}{W}{W}"
+        }
+    },
+    {
+        "pattern": re.compile(r"\bteela\b", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "Teela",
+            "subtitle": "Capitana de la Guardia Real",
+            "theme_key": "castle_grayskull",
+            "faction": "Guerreros Heroicos",
+            "type_line": "Capitana de la Guardia — Guerrera Heroica",
+            "special_move": "Estocada Táctica de la Cobra",
+            "quote": "¡Nuestra lealtad a Grayskull es nuestro mayor escudo!",
+            "flavor_quote_author": "Teela",
+            "lore": "Capitana de la Guardia Real y prodigio del combate cuerpo a cuerpo, destinada a heredar los secretos arcanos de Grayskull.",
+            "stats": {"fuerza": 89, "magia": 85, "defensa": 90, "agilidad": 94},
+            "emblem": "shield",
+            "mana_gems": ["grayskull", "gold", "sword"],
+            "mana_cost": "{2}{W}{W}"
+        }
+    },
+    {
+        "pattern": re.compile(r"\bbattle\s+cat\b|\bcringer\b", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "Battle Cat",
+            "subtitle": "Tigre de Batalla Acorazado",
+            "theme_key": "castle_grayskull",
+            "faction": "Guerreros Heroicos",
+            "type_line": "Felino Blindado — Guerrero Heroico",
+            "special_move": "Desgarro Feroz de la Selva Carmesí",
+            "quote": "¡Ruge el defensor felino de Grayskull!",
+            "flavor_quote_author": "Battle Cat",
+            "lore": "El fiel corcel acorazado de He-Man, valiente tigre de combate de Grayskull dotado de garras y colmillos titánicos.",
+            "stats": {"fuerza": 95, "magia": 70, "defensa": 93, "agilidad": 95},
+            "emblem": "shield",
+            "mana_gems": ["grayskull", "beast"],
+            "mana_cost": "{3}{G}{W}"
+        }
+    },
+    {
+        "pattern": re.compile(r"\bram[\s\-]?man\b", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "Ram Man",
+            "subtitle": "El Ariete Humano",
+            "theme_key": "castle_grayskull",
+            "faction": "Guerreros Heroicos",
+            "type_line": "Ariete Humano — Guerrero Heroico",
+            "special_move": "Impacto de Ariete Inamovible",
+            "quote": "¡Abran paso o derribaré esta fortaleza con mi cabeza!",
+            "flavor_quote_author": "Ram Man",
+            "lore": "El ariete humano de Eternia, cuya armadura reforzada y coraje demoledor pueden derribar cualquier fortaleza enemiga.",
+            "stats": {"fuerza": 94, "magia": 60, "defensa": 98, "agilidad": 75},
+            "emblem": "shield",
+            "mana_gems": ["grayskull", "armor"],
+            "mana_cost": "{2}{W}{W}"
+        }
+    },
+    {
+        "pattern": re.compile(r"\bstratos\b", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "Stratos",
+            "subtitle": "Señor Alado de Avion",
+            "theme_key": "castle_grayskull",
+            "faction": "Guerreros Heroicos",
+            "type_line": "Señor de Avion — Guerrero Heroico",
+            "special_move": "Picado Aéreo de Avion",
+            "quote": "¡Desde las alturas, ningún enemigo escapa a los cielos de Avion!",
+            "flavor_quote_author": "Stratos",
+            "lore": "Líder de los guerreros alados de Avion y señor de las corrientes aéreas que vigila los cielos de Eternia.",
+            "stats": {"fuerza": 88, "magia": 72, "defensa": 87, "agilidad": 98},
+            "emblem": "shield",
+            "mana_gems": ["grayskull", "air"],
+            "mana_cost": "{2}{W}{W}"
+        }
+    },
+    {
+        "pattern": re.compile(r"\bfisto\b", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "Fisto",
+            "subtitle": "El Hombre del Puño de Acero",
+            "theme_key": "castle_grayskull",
+            "faction": "Guerreros Heroicos",
+            "type_line": "Guerrero Titánico — Guerrero Heroico",
+            "special_move": "Golpe Demoledor de Murallas",
+            "quote": "¡Un solo golpe de mi puño basta para quebrar cualquier defensa!",
+            "flavor_quote_author": "Fisto",
+            "lore": "Luchador legendario cuyo puño metálico gigante es capaz de quebrar montañas y aplastar la maquinaria del mal.",
+            "stats": {"fuerza": 96, "magia": 65, "defensa": 92, "agilidad": 84},
+            "emblem": "shield",
+            "mana_gems": ["grayskull", "iron"],
+            "mana_cost": "{2}{W}{W}"
+        }
+    },
+    {
+        "pattern": re.compile(r"\bmoss\s+man\b", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "Moss Man",
+            "subtitle": "Señor de la Naturaleza",
+            "theme_key": "castle_grayskull",
+            "faction": "Guerreros Heroicos",
+            "type_line": "Señor de la Naturaleza — Guerrero Heroico",
+            "special_move": "Crecimiento de Raíces Primitivas",
+            "quote": "La flora de Eternia escucha mi llamada.",
+            "flavor_quote_author": "Moss Man",
+            "lore": "Espíritu ancestral de la flora y los bosques eternianos, maestro del camuflaje y comunión con el mundo vegetal.",
+            "stats": {"fuerza": 90, "magia": 92, "defensa": 88, "agilidad": 89},
+            "emblem": "shield",
+            "mana_gems": ["grayskull", "nature"],
+            "mana_cost": "{2}{G}{W}"
+        }
+    },
+    {
+        "pattern": re.compile(r"\bclamp\s+champ\b", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "Clamp Champ",
+            "subtitle": "Guardián de la Tenaza de Captura",
+            "theme_key": "castle_grayskull",
+            "faction": "Guerreros Heroicos",
+            "type_line": "Guardián de la Tenaza — Guerrero Heroico",
+            "special_move": "Presa de Tenaza Hidráulica",
+            "quote": "¡Una vez atrapado en mi tenaza, no hay escapatoria!",
+            "flavor_quote_author": "Clamp Champ",
+            "lore": "Maestro del rastreo y el sigilo, designado como escolta de la realeza eterniana. Su arma de pinza inmoviliza a las criaturas más fieras.",
+            "stats": {"fuerza": 91, "magia": 70, "defensa": 92, "agilidad": 88},
+            "emblem": "shield",
+            "mana_gems": ["grayskull", "steel"],
+            "mana_cost": "{2}{W}{W}"
+        }
+    },
+    {
+        "pattern": re.compile(r"\bbuzz[\s\-]?off\b", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "Buzz-Off",
+            "subtitle": "Guerrero Insecto de Andreenos",
+            "theme_key": "castle_grayskull",
+            "faction": "Guerreros Heroicos",
+            "type_line": "Guerrero Abeja de Andreenos — Guerrero Heroico",
+            "special_move": "Aguijonazo Ácido Sónico",
+            "quote": "¡Nuestra colmena defiende la libertad de Eternia!",
+            "flavor_quote_author": "Buzz-Off",
+            "lore": "Líder de la raza de abejas humanoides de Andreenos. Sus ojos multifacetados y sus alas zumbantes le otorgan una puntería y vigilancia insuperables.",
+            "stats": {"fuerza": 87, "magia": 74, "defensa": 86, "agilidad": 96},
+            "emblem": "shield",
+            "mana_gems": ["grayskull", "amber"],
+            "mana_cost": "{2}{W}{W}"
+        }
+    },
+    {
+        "pattern": re.compile(r"\broboto\b", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "Roboto",
+            "subtitle": "Guerrero Mecánico Heroico",
+            "theme_key": "castle_grayskull",
+            "faction": "Guerreros Heroicos",
+            "type_line": "Guerrero Mecánico — Guerrero Heroico",
+            "special_move": "Rotación de Cañón Intercambiable",
+            "quote": "Sistemas ópticos y engranajes listos para el combate.",
+            "flavor_quote_author": "Roboto",
+            "lore": "Robot con conciencia construido por Man-At-Arms. Su torso transparente muestra sus engranajes en movimiento mientras intercambia manos de hacha, garra y láser.",
+            "stats": {"fuerza": 93, "magia": 60, "defensa": 95, "agilidad": 82},
+            "emblem": "shield",
+            "mana_gems": ["grayskull", "gear"],
+            "mana_cost": "{3}"
+        }
+    },
+
+    # ── GUERREROS DEL MAL (SNAKE MOUNTAIN) ──
+    {
+        "pattern": re.compile(r"battle\s+armor\s+skeletor", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "Skeletor (Battle Armor)",
+            "subtitle": "Tirano Acorazado de la Destrucción",
+            "theme_key": "snake_mountain",
+            "faction": "Guerreros del Mal",
+            "type_line": "Tirano Acorazado — Guerrero Diabólico",
+            "special_move": "Defensa de Hueso Maldito",
+            "quote": "¡Ni siquiera la Espada del Poder puede quebrar mi acero oscuro!",
+            "flavor_quote_author": "Skeletor",
+            "lore": "Protegido por una coraza encantada con hechicería infernal para resistir las acometidas directas de He-Man en el fragor de la guerra eterna.",
+            "stats": {"fuerza": 94, "magia": 98, "defensa": 97, "agilidad": 86},
+            "emblem": "skull",
+            "mana_gems": ["havoc", "dark", "bone"],
+            "mana_cost": "{2}{B}{B}"
+        }
+    },
+    {
+        "pattern": re.compile(r"dragon\s+blaster\s+skeletor", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "Skeletor (Dragon Blaster)",
+            "subtitle": "Amo del Dragón Venenoso",
+            "theme_key": "snake_mountain",
+            "faction": "Guerreros del Mal",
+            "type_line": "Señor Dracónico — Guerrero Diabólico",
+            "special_move": "Rociada de Ácido Dracónico",
+            "quote": "¡Huid ante el aliento abrasador de mi dragón cautivo!",
+            "flavor_quote_author": "Skeletor",
+            "lore": "Encadenando a una temible cría de dragón místico a su espalda, Skeletor dispara chorros paralizantes de agua ponzoñosa contra sus adversarios.",
+            "stats": {"fuerza": 93, "magia": 99, "defensa": 92, "agilidad": 87},
+            "emblem": "skull",
+            "mana_gems": ["havoc", "dragon"],
+            "mana_cost": "{2}{B}{B}"
+        }
+    },
+    {
+        "pattern": re.compile(r"terror\s+claws\s+skeletor", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "Skeletor (Terror Claws)",
+            "subtitle": "Monstruo de las Garras Asesinas",
+            "theme_key": "snake_mountain",
+            "faction": "Guerreros del Mal",
+            "type_line": "Cazador Desgarrador — Guerrero Diabólico",
+            "special_move": "Zarpazo de Acero Desgarrador",
+            "quote": "¡Mis garras desgarrarán el manto de Grayskull!",
+            "flavor_quote_author": "Skeletor",
+            "lore": "Equipado con enormes garras de combate biomecánicas y una calavera oscilante que aterroriza a quien se atreva a cruzar su camino.",
+            "stats": {"fuerza": 96, "magia": 95, "defensa": 93, "agilidad": 89},
+            "emblem": "skull",
+            "mana_gems": ["havoc", "steel"],
+            "mana_cost": "{2}{B}{B}"
+        }
+    },
+    {
+        "pattern": re.compile(r"\bskeletor\b|\bkeldor\b", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "Skeletor",
+            "subtitle": "Señor de la Destrucción",
+            "theme_key": "snake_mountain",
+            "faction": "Guerreros del Mal",
+            "type_line": "Señor de la Destrucción — Guerrero Diabólico",
+            "special_move": "Rayo Destructor del Báculo de Havoc",
+            "quote": "¡Pronto los secretos del Castillo Grayskull me pertenecerán!",
+            "flavor_quote_author": "Skeletor",
+            "lore": "Señor de la destrucción y tirano nigromántico de Snake Mountain cuya sed insaciable de conquista amenaza el multiverso.",
+            "stats": {"fuerza": 93, "magia": 99, "defensa": 91, "agilidad": 88},
+            "emblem": "skull",
+            "mana_gems": ["havoc", "dark", "blood"],
+            "mana_cost": "{2}{B}{B}"
+        }
+    },
+    {
+        "pattern": re.compile(r"\bevil[\s\-]?lyn\b", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "Evil-Lyn",
+            "subtitle": "Señora del Caos y la Magia Oscura",
+            "theme_key": "snake_mountain",
+            "faction": "Guerreros del Mal",
+            "type_line": "Hechicera de Subternia — Guerrera Diabólica",
+            "special_move": "Tormenta Ilusoria de Subternia",
+            "quote": "Los necios confían en la fuerza bruta; la verdadera reina es la magia.",
+            "flavor_quote_author": "Evil-Lyn",
+            "lore": "Nigromante y hechicera suprema de Subternia, cuyas profecías y magia oscura rivalizan con el poder de Grayskull.",
+            "stats": {"fuerza": 82, "magia": 98, "defensa": 86, "agilidad": 91},
+            "emblem": "skull",
+            "mana_gems": ["havoc", "arcane", "shadow"],
+            "mana_cost": "{2}{B}{B}"
+        }
+    },
+    {
+        "pattern": re.compile(r"\bbeast[\s\-]?man\b", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "Beast Man",
+            "subtitle": "Señor de las Fieras de Eternia",
+            "theme_key": "snake_mountain",
+            "faction": "Guerreros del Mal",
+            "type_line": "Señor de las Bestias — Guerrero Diabólico",
+            "special_move": "Zarpazo Titánico de la Jungla",
+            "quote": "¡Los monstruos salvajes de Eternia obedecen mi látigo!",
+            "flavor_quote_author": "Beast Man",
+            "lore": "Sus garras desgarran, su voluntad domina. El Señor de las Bestias de la Montaña de la Serpiente controla a las criaturas más temibles.",
+            "stats": {"fuerza": 93, "magia": 70, "defensa": 89, "agilidad": 87},
+            "emblem": "skull",
+            "mana_gems": ["havoc", "beast"],
+            "mana_cost": "{2}{B}{B}"
+        }
+    },
+    {
+        "pattern": re.compile(r"\btrap[\s\-]?jaw\b", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "Trap Jaw",
+            "subtitle": "Mago de las Armas con Mandíbula de Hierro",
+            "theme_key": "snake_mountain",
+            "faction": "Guerreros del Mal",
+            "type_line": "Ciborg de Combate — Guerrero Diabólico",
+            "special_move": "Mordisco de Mandíbula de Acero",
+            "quote": "¡Pruébate ante mi garra, mi gancho o mi cañón láser!",
+            "flavor_quote_author": "Trap Jaw",
+            "lore": "Ciborg armado con mandíbula de acero indestructible y brazo multifunción con armamento intercambiable letal.",
+            "stats": {"fuerza": 92, "magia": 65, "defensa": 95, "agilidad": 85},
+            "emblem": "skull",
+            "mana_gems": ["havoc", "steel"],
+            "mana_cost": "{2}{B}{B}"
+        }
+    },
+    {
+        "pattern": re.compile(r"\btri[\s\-]?klops\b", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "Tri-Klops",
+            "subtitle": "Espía Letal de los Tres Ojos",
+            "theme_key": "snake_mountain",
+            "faction": "Guerreros del Mal",
+            "type_line": "Cazador Letal — Guerrero Diabólico",
+            "special_move": "Láser Óptico de Rastreo Letal",
+            "quote": "¡Veo todo en la oscuridad, en infrarrojo y a través de los muros!",
+            "flavor_quote_author": "Tri-Klops",
+            "lore": "Visor omnisciente de Snake Mountain dotado de visión gamma, nocturna y rastreo óptico infrarrojo infalible.",
+            "stats": {"fuerza": 89, "magia": 78, "defensa": 88, "agilidad": 93},
+            "emblem": "skull",
+            "mana_gems": ["havoc", "laser"],
+            "mana_cost": "{2}{B}{B}"
+        }
+    },
+    {
+        "pattern": re.compile(r"\bmer[\s\-]?man\b", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "Mer-Man",
+            "subtitle": "Soberano de los Océanos de Eternia",
+            "theme_key": "snake_mountain",
+            "faction": "Guerreros del Mal",
+            "type_line": "Señor del Océano — Guerrero Diabólico",
+            "special_move": "Tsunami de las Profundidades de Rakash",
+            "quote": "¡Las profundidades abisales tragarán a la superficie!",
+            "flavor_quote_author": "Mer-Man",
+            "lore": "Soberano de los océanos de Rakash y señor de las profundidades acuáticas de Eternia, capaz de invocar bestias abisales.",
+            "stats": {"fuerza": 90, "magia": 85, "defensa": 89, "agilidad": 90},
+            "emblem": "skull",
+            "mana_gems": ["havoc", "water"],
+            "mana_cost": "{2}{B}{U}"
+        }
+    },
+    {
+        "pattern": re.compile(r"\bclawful\b", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "Clawful",
+            "subtitle": "Guerrero Crustáceo del Mal",
+            "theme_key": "snake_mountain",
+            "faction": "Guerreros del Mal",
+            "type_line": "Criatura Legendaria — Guerrero Diabólico",
+            "special_move": "Presa Hidráulica Trituradora",
+            "quote": "¡Una vez que mi pinza se cierra, nada en Eternia puede abrirla!",
+            "flavor_quote_author": "Clawful",
+            "lore": "Combatiente despiadado de las legiones oscuras de Snake Mountain al servicio de Skeletor. Su pinza titánica pulveriza cualquier aleación.",
+            "stats": {"fuerza": 92, "magia": 68, "defensa": 89, "agilidad": 86},
+            "emblem": "skull",
+            "mana_gems": ["havoc", "claw"],
+            "mana_cost": "{2}{B}{B}"
+        }
+    },
+    {
+        "pattern": re.compile(r"\bfaker\b", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "Faker",
+            "subtitle": "Gólem Cibernético del Engaño",
+            "theme_key": "snake_mountain",
+            "faction": "Guerreros del Mal",
+            "type_line": "Gólem Cibernético — Guerrero Diabólico",
+            "special_move": "Réplica Macabra de Combate",
+            "quote": "¡Réplica fría de acero y engaño contra Grayskull!",
+            "flavor_quote_author": "Faker",
+            "lore": "Gólem cibernético de piel azul creado por Skeletor como una réplica despiadada de He-Man para engañar al reino.",
+            "stats": {"fuerza": 98, "magia": 60, "defensa": 94, "agilidad": 89},
+            "emblem": "skull",
+            "mana_gems": ["havoc", "steel"],
+            "mana_cost": "{2}{B}{B}"
+        }
+    },
+    {
+        "pattern": re.compile(r"\bscare[\s\-]?glow\b", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "Scare Glow",
+            "subtitle": "Espectro de la Oscuridad",
+            "theme_key": "snake_mountain",
+            "faction": "Guerreros del Mal",
+            "type_line": "Espectro de la Oscuridad — Guerrero Diabólico",
+            "special_move": "Terror Paralizante de Subternia",
+            "quote": "¡Tiembla ante el brillo esquelético del más allá!",
+            "flavor_quote_author": "Scare Glow",
+            "lore": "Espectro no-muerto de la oscuridad eterna que infunde un terror paralizante en el corazón de cualquier guerrero.",
+            "stats": {"fuerza": 87, "magia": 97, "defensa": 85, "agilidad": 92},
+            "emblem": "skull",
+            "mana_gems": ["havoc", "ghost"],
+            "mana_cost": "{2}{B}{B}"
+        }
+    },
+    {
+        "pattern": re.compile(r"\bwhiplash\b", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "Whiplash",
+            "subtitle": "El Monstruo de la Cola Látigo",
+            "theme_key": "snake_mountain",
+            "faction": "Guerreros del Mal",
+            "type_line": "Reptil de Asalto — Guerrero Diabólico",
+            "special_move": "Azote Ofídico Venenoso",
+            "quote": "¡Un coletazo mío basta para quebrar las defensas de Grayskull!",
+            "flavor_quote_author": "Whiplash",
+            "lore": "Bruto reptiliano con una cola descomunal capaz de aplastar roca sólida y azotar batallones enteros en combate.",
+            "stats": {"fuerza": 94, "magia": 60, "defensa": 92, "agilidad": 86},
+            "emblem": "skull",
+            "mana_gems": ["havoc", "tail"],
+            "mana_cost": "{2}{B}{B}"
+        }
+    },
+    {
+        "pattern": re.compile(r"\bjitsu\b", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "Jitsu",
+            "subtitle": "Maestro del Golpe de Kárate Dorado",
+            "theme_key": "snake_mountain",
+            "faction": "Guerreros del Mal",
+            "type_line": "Maestro Marcial — Guerrero Diabólico",
+            "special_move": "Tajo de Kárate Destructor",
+            "quote": "¡Mi mano dorada parte el acero más templado!",
+            "flavor_quote_author": "Jitsu",
+            "lore": "Maestro de artes marciales diabólicas y rival jurado de Fisto. Su enorme mano derecha forjada en metal dorado puede quebrar cualquier armadura.",
+            "stats": {"fuerza": 93, "magia": 64, "defensa": 90, "agilidad": 91},
+            "emblem": "skull",
+            "mana_gems": ["havoc", "gold"],
+            "mana_cost": "{2}{B}{B}"
+        }
+    },
+    {
+        "pattern": re.compile(r"\bwebstor\b", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "Webstor",
+            "subtitle": "Amo de las Telarañas de Escape",
+            "theme_key": "snake_mountain",
+            "faction": "Guerreros del Mal",
+            "type_line": "Amo del Escape — Guerrero Diabólico",
+            "special_move": "Trampa de Seda Asfixiante",
+            "quote": "¡Nadie escapa de las redes que tejo en la oscuridad!",
+            "flavor_quote_author": "Webstor",
+            "lore": "Astuto humanoide arácnido con una mochila de tirolina retráctil que le permite escalar paredes verticales e infiltrarse en cualquier fortaleza.",
+            "stats": {"fuerza": 88, "magia": 75, "defensa": 87, "agilidad": 95},
+            "emblem": "skull",
+            "mana_gems": ["havoc", "web"],
+            "mana_cost": "{2}{B}{B}"
+        }
+    },
+    {
+        "pattern": re.compile(r"\bspikor\b", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "Spikor",
+            "subtitle": "El Herrero de las Espinas de Acero",
+            "theme_key": "snake_mountain",
+            "faction": "Guerreros del Mal",
+            "type_line": "Herrero de las Espinas — Guerrero Diabólico",
+            "special_move": "Erupción de Espinas Punzantes",
+            "quote": "¡Atrévete a tocarme y te perforarán mil púas!",
+            "flavor_quote_author": "Spikor",
+            "lore": "Guerrero cubierto de afiladas púas impenetrables y dotado de un tridente extensible en su brazo. Forja armas letales para el ejército de Skeletor.",
+            "stats": {"fuerza": 91, "magia": 65, "defensa": 96, "agilidad": 83},
+            "emblem": "skull",
+            "mana_gems": ["havoc", "spike"],
+            "mana_cost": "{2}{B}{B}"
+        }
+    },
+    {
+        "pattern": re.compile(r"\bstinkor\b", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "Stinkor",
+            "subtitle": "El Monstruo de la Pestilencia Diabólica",
+            "theme_key": "snake_mountain",
+            "faction": "Guerreros del Mal",
+            "type_line": "Mutante de la Pestilencia — Guerrero Diabólico",
+            "special_move": "Neblina Nauseabunda",
+            "quote": "¡Huid o asfixiaos en mi nube de gas insoportable!",
+            "flavor_quote_author": "Stinkor",
+            "lore": "Mutante con aspecto de zorrillo que emite un hedor tan asfixiante que incapacita al instante a los guerreros más experimentados de Grayskull.",
+            "stats": {"fuerza": 89, "magia": 72, "defensa": 88, "agilidad": 86},
+            "emblem": "skull",
+            "mana_gems": ["havoc", "gas"],
+            "mana_cost": "{2}{B}{B}"
+        }
+    },
+    {
+        "pattern": re.compile(r"\btwo[\s\-]?bad\b", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "Two-Bad",
+            "subtitle": "Estratega de Doble Cabeza",
+            "theme_key": "snake_mountain",
+            "faction": "Guerreros del Mal",
+            "type_line": "Estratega de Doble Cabeza — Guerrero Diabólico",
+            "special_move": "Doble Cabezazo Sincronizado",
+            "quote": "¡Doble fuerza para aplastar, aunque no nos pongamos de acuerdo!",
+            "flavor_quote_author": "Tuvar & Baddhra",
+            "lore": "Criatura fusionada con dos cabezas rivales (Tuvar y Baddhra) que riñen constantemente entre sí pero desatan una fuerza física devastadora.",
+            "stats": {"fuerza": 95, "magia": 60, "defensa": 93, "agilidad": 81},
+            "emblem": "skull",
+            "mana_gems": ["havoc", "brute"],
+            "mana_cost": "{2}{B}{B}"
+        }
+    },
+
+    # ── LA HORDA DEL TERROR (EVIL HORDE) ──
+    {
+        "pattern": re.compile(r"\bhordak\b", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "Hordak",
+            "subtitle": "Líder Supremo de la Horda del Terror",
+            "theme_key": "evil_horde",
+            "faction": "La Horda del Terror",
+            "type_line": "Tirano Legendario — Líder de la Horda",
+            "special_move": "Flecha de Plasma Carmesí de la Horda",
+            "quote": "¡Ni He-Man ni Skeletor podrán frenar la conquista de la Horda!",
+            "flavor_quote_author": "Hordak",
+            "lore": "Tirano supremo de la Zona del Terror y maestro de la tecno-magia oscura, capaz de transmutar su propio cuerpo en armamento mecánico mortal.",
+            "stats": {"fuerza": 95, "magia": 96, "defensa": 95, "agilidad": 87},
+            "emblem": "bat",
+            "mana_gems": ["horde", "plasma", "dark"],
+            "mana_cost": "{3}{B}{R}"
+        }
+    },
+    {
+        "pattern": re.compile(r"\bshadow\s+weaver\b", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "Shadow Weaver",
+            "subtitle": "Hechicera Oscura de la Horda",
+            "theme_key": "evil_horde",
+            "faction": "La Horda del Terror",
+            "type_line": "Hechicera de las Sombras — Horda del Terror",
+            "special_move": "Niebla de Sombras Eternas",
+            "quote": "Las sombras de Etheria tejerán tu perdición.",
+            "flavor_quote_author": "Shadow Weaver",
+            "lore": "Poderosa maga oscura de la Horda del Terror, capaz de manipular la oscuridad y tejer maleficios desde la Zona del Terror.",
+            "stats": {"fuerza": 78, "magia": 99, "defensa": 85, "agilidad": 88},
+            "emblem": "bat",
+            "mana_gems": ["horde", "shadow"],
+            "mana_cost": "{3}{B}{R}"
+        }
+    },
+    {
+        "pattern": re.compile(r"\bcatra\b", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "Catra",
+            "subtitle": "Capitana de Asalto Felino",
+            "theme_key": "evil_horde",
+            "faction": "La Horda del Terror",
+            "type_line": "Capitana de la Fuerza — Horda del Terror",
+            "special_move": "Transformación Felina de la Máscara",
+            "quote": "¡Mis garras felinas no conocen la piedad!",
+            "flavor_quote_author": "Catra",
+            "lore": "Líder de asalto de la Horda dotada de la máscara mágica que le permite transformarse en una pantera salvaje letal.",
+            "stats": {"fuerza": 88, "magia": 87, "defensa": 86, "agilidad": 98},
+            "emblem": "bat",
+            "mana_gems": ["horde", "beast"],
+            "mana_cost": "{3}{B}{R}"
+        }
+    },
+    {
+        "pattern": re.compile(r"\bgrizzlor\b", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "Grizzlor",
+            "subtitle": "La Bestia Peluda de la Horda",
+            "theme_key": "evil_horde",
+            "faction": "La Horda del Terror",
+            "type_line": "Bestia Brutal — Horda del Terror",
+            "special_move": "Furia Salvaje Destructora",
+            "quote": "¡Rugido salvaje que quiebra la roca viva!",
+            "flavor_quote_author": "Grizzlor",
+            "lore": "Monstruo fiero cubierto de pelaje con una fuerza física descomunal capaz de aplastar cualquier obstáculo.",
+            "stats": {"fuerza": 96, "magia": 50, "defensa": 94, "agilidad": 82},
+            "emblem": "bat",
+            "mana_gems": ["horde", "fury"],
+            "mana_cost": "{3}{B}{R}"
+        }
+    },
+    {
+        "pattern": re.compile(r"\bmantenna\b|\bleech\b|\bscorpia\b|\bmosquitor\b|\bmodulok\b|\bdragstor\b|\bmulti[\s\-]?bot\b", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "Soldado de la Horda",
+            "subtitle": "Guerrero Tecnológico de Hordak",
+            "theme_key": "evil_horde",
+            "faction": "La Horda del Terror",
+            "type_line": "Monstruo Tecnológico — Soldado de la Horda",
+            "special_move": "Descarga de Plasma de la Horda",
+            "quote": "¡Por la gloria y el dominio implacable del Imperio de la Horda!",
+            "flavor_quote_author": "Horda del Terror",
+            "lore": "Soldado aberrante y bio-mecánico forjado en los laboratorios oscuros de Hordak para conquistar Eternia y Etheria.",
+            "stats": {"fuerza": 91, "magia": 80, "defensa": 90, "agilidad": 88},
+            "emblem": "bat",
+            "mana_gems": ["horde", "plasma"],
+            "mana_cost": "{3}{B}{R}"
+        }
+    },
+
+    # ── LOS HOMBRES SERPIENTE (SNAKE MEN) ──
+    {
+        "pattern": re.compile(r"\bking\s+hiss\b|\bking\s+hsss\b", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "King Hiss",
+            "subtitle": "Temible Rey de los Hombres Serpiente",
+            "theme_key": "snake_men",
+            "faction": "Los Hombres Serpiente",
+            "type_line": "Monarca Ofídico — Rey de las Serpientes",
+            "special_move": "Mordisco Asfixiante del Rey Hiss",
+            "quote": "¡Bajo la piel humana duerme el verdadero terror ofídico!",
+            "flavor_quote_author": "Rey Hiss",
+            "lore": "Antiquísimo monarca ofídico cuyo disfraz oculta una masa de serpientes devoradoras. Regresa del pasado para dominar Eternia.",
+            "stats": {"fuerza": 93, "magia": 95, "defensa": 91, "agilidad": 93},
+            "emblem": "snake",
+            "mana_gems": ["snake", "poison", "ancient"],
+            "mana_cost": "{2}{B}{G}"
+        }
+    },
+    {
+        "pattern": re.compile(r"\bkobra\s+khan\b|\bkhan\b", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "Kobra Khan",
+            "subtitle": "La Serpiente del Aliento Somnífero",
+            "theme_key": "snake_men",
+            "faction": "Los Hombres Serpiente",
+            "type_line": "Guerrero Reptil — Hombre Serpiente",
+            "special_move": "Chorro Ácido Corrosivo",
+            "quote": "¡Inhala la bruma que apaga tu voluntad!",
+            "flavor_quote_author": "Kobra Khan",
+            "lore": "Astuto guerrero ofídico capaz de exhalar una niebla somnífera y corrosiva mortal para cualquier adversario.",
+            "stats": {"fuerza": 90, "magia": 82, "defensa": 88, "agilidad": 92},
+            "emblem": "snake",
+            "mana_gems": ["snake", "acid"],
+            "mana_cost": "{2}{B}{G}"
+        }
+    },
+    {
+        "pattern": re.compile(r"\brattlor\b|\btung\s+lashr\b|\bsssqueeze\b|\bsnake\s+face\b|\bnecro[\s\-]?conda\b|\blady\s+slither\b|\bfang[\s\-]?or\b", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "Guerrero Serpiente",
+            "subtitle": "Guerrero Ofídico del Foso",
+            "theme_key": "snake_men",
+            "faction": "Los Hombres Serpiente",
+            "type_line": "Guerrero Ofídico — Hombre Serpiente",
+            "special_move": "Picadura Venenosa Ancestral",
+            "quote": "¡La era de las serpientes resurgirá de entre las arenas!",
+            "flavor_quote_author": "Hombre Serpiente",
+            "lore": "Guerrero letal de las huestes ofídicas del Foso de las Serpientes devoto a la dominación reptiliana.",
+            "stats": {"fuerza": 91, "magia": 85, "defensa": 89, "agilidad": 91},
+            "emblem": "snake",
+            "mana_gems": ["snake", "poison"],
+            "mana_cost": "{2}{B}{G}"
+        }
+    },
+
+    # ── LA GRAN REBELIÓN (SHE-RA) ──
+    {
+        "pattern": re.compile(r"\bshe[\s\-]?ra\b", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "She-Ra",
+            "subtitle": "Princesa del Poder de Etheria",
+            "theme_key": "great_rebellion",
+            "faction": "La Gran Rebelión",
+            "type_line": "Princesa del Poder — Gran Rebelión",
+            "special_move": "Por el Honor de Grayskull",
+            "quote": "¡Por el honor de Grayskull... Soy She-Ra!",
+            "flavor_quote_author": "She-Ra",
+            "lore": "¡Por el honor de Grayskull, soy She-Ra! Princesa del Poder y líder invicta de la Gran Rebelión en Etheria con su fiel corcel Swift Wind.",
+            "stats": {"fuerza": 98, "magia": 94, "defensa": 95, "agilidad": 96},
+            "emblem": "sparkles",
+            "mana_gems": ["rebellion", "crystal", "light"],
+            "mana_cost": "{2}{G}{W}"
+        }
+    },
+    {
+        "pattern": re.compile(r"\bbow\b|\bglimmer\b|\bfrosta\b|\bangella\b|\bmermista\b|\bcastaspella\b|\bnetossa\b|\bkowl\b", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "Aliado de Etheria",
+            "subtitle": "Defensor de la Gran Rebelión",
+            "theme_key": "great_rebellion",
+            "faction": "La Gran Rebelión",
+            "type_line": "Aliado de la Luz — Gran Rebelión",
+            "special_move": "Ráfaga de Luz de Etheria",
+            "quote": "¡La luz de la Gran Rebelión triunfará sobre la opresión!",
+            "flavor_quote_author": "Gran Rebelión",
+            "lore": "Valiente protector de Etheria y miembro insigne de la Gran Rebelión que combate la tiranía de la Horda del Terror.",
+            "stats": {"fuerza": 88, "magia": 92, "defensa": 89, "agilidad": 92},
+            "emblem": "sparkles",
+            "mana_gems": ["rebellion", "light"],
+            "mana_cost": "{2}{G}{W}"
+        }
+    },
+
+    # ── TURTLES OF GRAYSKULL (CROSSOVER) ──
+    {
+        "pattern": re.compile(r"turtles\s+of\s+grayskull|leonardo|donatello|michelangelo|raphael|shredder|krang|splinter|2[\s\-]?bopsteady|casey\s+jones", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "Guerrero Ninja de Eternia",
+            "subtitle": "Héroe Ninja de Grayskull",
+            "theme_key": "castle_grayskull",
+            "faction": "Guerreros Heroicos",
+            "type_line": "Ninja Mutante — Turtles of Grayskull",
+            "special_move": "Torbellino Mutante de Grayskull",
+            "quote": "¡Cowabunga por el poder sagrado de Grayskull!",
+            "flavor_quote_author": "Turtles of Grayskull",
+            "lore": "Héroe reptiliano de dimensiones lejanas transportado a Eternia. Forjado con armaduras místicas y armas de poder para repeler a Krang y Skeletor.",
+            "stats": {"fuerza": 92, "magia": 80, "defensa": 92, "agilidad": 96},
+            "emblem": "shield",
+            "mana_gems": ["grayskull", "mutagen"],
+            "mana_cost": "{2}{G}{U}"
+        }
+    },
+
+    # ── RULERS OF THE SUN ──
+    {
+        "pattern": re.compile(r"sun[\s\-]?man|digitino|space\s+sumo|pig[\s\-]?head|bolt[\s\-]?man|kikkon|rulers\s+of\s+the\s+sun", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "Ruler of the Sun",
+            "subtitle": "Campeón de la Luz Solar",
+            "theme_key": "castle_grayskull",
+            "faction": "Guerreros Heroicos",
+            "type_line": "Campeón Solar — Rulers of the Sun",
+            "special_move": "Fulgor Solar Purificador",
+            "quote": "¡Que el resplandor de la justicia ilumine la oscuridad!",
+            "flavor_quote_author": "Sun-Man",
+            "lore": "Poderoso guerrero empoderado por la energía viva del Sol. Con su escudo solar y valor inquebrantable, combate la tiranía y defiende la armonía en todos los reinos.",
+            "stats": {"fuerza": 94, "magia": 88, "defensa": 93, "agilidad": 92},
+            "emblem": "shield",
+            "mana_gems": ["grayskull", "sun"],
+            "mana_cost": "{2}{W}{W}"
+        }
+    },
+
+    # ── MASTERS OF THE WWE UNIVERSE ──
+    {
+        "pattern": re.compile(r"wwe|macho\s+man|rowdy|stone\s+cold|fiend|undertaker|rey\s+mysterio|triple\s+h|john\s+cena|the\s+rock", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "Titán del Ring Eterniano",
+            "subtitle": "Leyenda del Cuadrilátero",
+            "theme_key": "castle_grayskull",
+            "faction": "Guerreros Heroicos",
+            "type_line": "Campeón del Cuadrilátero — WWE Universe",
+            "special_move": "Lariat Titánico de Eternia",
+            "quote": "¡En este ring nadie puede detener el poder de la leyenda!",
+            "flavor_quote_author": "WWE Universe",
+            "lore": "Leyenda colosal del combate cuerpo a cuerpo imbuida con la magia de Grayskull para batirse en el cuadrilátero supremo de Eternia.",
+            "stats": {"fuerza": 96, "magia": 75, "defensa": 94, "agilidad": 88},
+            "emblem": "shield",
+            "mana_gems": ["grayskull", "gold"],
+            "mana_cost": "{3}{R}{W}"
+        }
+    },
+
+    # ── THUNDERCATS CROSSOVER ──
+    {
+        "pattern": re.compile(r"thundercat|lion[\s\-]?o|mumm[\s\-]?ra|cheetara|panthro|battle\s+cat\s+man", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "Guerrero Felino del Augurio",
+            "subtitle": "Señor de los Thundercats",
+            "theme_key": "castle_grayskull",
+            "faction": "Guerreros Heroicos",
+            "type_line": "Guerrero Felino — Crossover de Thundera",
+            "special_move": "Furia del Ojo de Thundera",
+            "quote": "¡Thunder, Thunder, Thundercats, Ho!",
+            "flavor_quote_author": "Lion-O",
+            "lore": "Noble líder y guerrero de Thundera armado con la legendaria Espada del Augurio, aliándose con los campeones de Eternia contra la oscuridad.",
+            "stats": {"fuerza": 96, "magia": 90, "defensa": 92, "agilidad": 96},
+            "emblem": "shield",
+            "mana_gems": ["grayskull", "omens"],
+            "mana_cost": "{2}{W}{R}"
+        }
+    }
+]
+
+
 def resolve_motu_profile(product_name: str, sub_category: Optional[str] = "MOTU Origins") -> Dict[str, Any]:
     """
     Resuelve el perfil canónico exacto de forma determinista para cualquier figura.
+    Prioriza las expresiones regulares exactas de los cromos y luego la enciclopedia.
     """
     clean_name = product_name.lower().strip()
     sub_cat = sub_category or "MOTU Origins"
 
-    # 1. Búsqueda exacta y por inclusión en la enciclopedia
+    # 1. Búsqueda por perfiles canónicos prioritarios de cromos (Regex exactas de cartas)
+    for entry in CANONICAL_CARD_PROFILES:
+        if entry["pattern"].search(clean_name):
+            prof = entry["profile"]
+            return {
+                "canonical_name": prof.get("canonical_name", product_name),
+                "subtitle": prof.get("subtitle", f"Colección {sub_cat}"),
+                "faction": prof["faction"],
+                "type_line": prof["type_line"],
+                "frame_theme": prof.get("theme_key", "castle_grayskull"),
+                "theme_key": prof.get("theme_key", "castle_grayskull"),
+                "emblem": prof.get("emblem", "shield"),
+                "mana_gems": prof.get("mana_gems", ["grayskull", "gold"]),
+                "mana_cost": prof.get("mana_cost", "{2}{W}{W}"),
+                "lore": prof["lore"],
+                "quote": prof.get("quote"),
+                "flavor_quote_author": prof.get("flavor_quote_author", prof.get("canonical_name", product_name)),
+                "stats": prof["stats"],
+                "special_move": prof["special_move"],
+                "rarity_class": prof["faction"]
+            }
+
+    # 2. Búsqueda en enciclopedia canónica por inclusión de clave
     for key, data in MOTU_LORE_ENCYCLOPEDIA.items():
         if key in clean_name:
             return {

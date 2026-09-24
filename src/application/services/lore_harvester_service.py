@@ -404,7 +404,7 @@ class LoreHarvesterService:
             )
 
         total = query.count()
-        results = query.order_by(CharacterLoreModel.is_verified.asc(), CharacterLoreModel.canonical_name.asc()).offset(skip).limit(limit).all()
+        results = query.order_by(CharacterLoreModel.is_verified.desc(), CharacterLoreModel.canonical_name.asc()).offset(skip).limit(limit).all()
         return results, total
 
     @classmethod

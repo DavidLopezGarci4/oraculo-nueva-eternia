@@ -410,7 +410,28 @@ def seed_origins_lore(
     current_user: UserModel = Depends(get_current_user)
 ):
     """
-    Ejecuta el sembrado del Grimorio Lore para todas las figuras de MOTU Origins (is_vintage == False).
+    Ejecuta el sembrado del Grimorio Lore para todas las figuras de MOTU Origins (is_vintage == False)
+    y para todos los personajes arquetípicos con los textos canónicos de los cromos.
+    Sincroniza en la base de datos principal y en la base local.
     """
-    res = ProductLoreSeedService.seed_origins_products(db=db, force=force)
-    return {"status": "ok", "result": res}
+    chars_res = ProductLoreSeedService.seed_canonical_characters(db=db, force=force)
+    prods_res = ProductLoreSeedService.seed_origins_products(db=db, force=force)
+
+    # Sincronización en base local SQLite si la principal es Postgres
+    try:
+        with SessionLocal() as local_db:
+            ProductLoreSeedService.seed_canonical_characters(db=local_db, force=force)
+            ProductLoreSeedService.seed_origins_products(db=local_db, force=force)
+    except Exception as e:
+        logger.warning(f"Sincronización secundaria local en /api/lore/seed omitida: {e}")
+
+    return {
+        "status": "ok",
+        "result": {
+            "created": prods_res.get("created", 0),
+            "updated": prods_res.get("updated", 0),
+            "total_origins": prods_res.get("total_origins", 0),
+            "characters_seeded": chars_res.get("total_characters", 0)
+        }
+    }
+

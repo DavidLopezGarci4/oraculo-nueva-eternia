@@ -1177,26 +1177,15 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                 console.error('Error cargando personalización guardada de la carta:', e);
             }
         } else {
-            // Predeterminados según categoría de la línea
-            const subCat = (item.sub_category || '').toLowerCase();
-            let defaultType = 'Criatura Legendaria — Guerrero';
-            let defaultMove = 'Poder de Ataque Épico';
-            if (subCat.includes('beast') || subCat.includes('vehicle') || subCat.includes('playset')) {
-                defaultType = 'Artefacto — Equipo / Vehículo';
-                defaultMove = 'Aporta asistencia táctica y +2/+0 a criaturas aliadas.';
-            } else if (subCat.includes('deluxe') || subCat.includes('exclusive')) {
-                defaultType = 'Criatura Legendaria Mítica — Campeón de Grayskull';
-            }
-
             setCardVersion('secret_lair');
             setUserFactionOverride(null);
             setCustomCardName('');
             setCustomSubtitle('');
             setCustomManaCost('');
-            setCustomSpecialMove(defaultMove);
+            setCustomSpecialMove('');
             setCustomLore('');
             setCustomQuoteAuthor('');
-            setCustomTypeLine(defaultType);
+            setCustomTypeLine('');
             setCustomTextColor('#FFFFFF');
             setCustomStats(null);
             setImgZoom(1);
@@ -1224,12 +1213,14 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
             fetchProductLore(productId).then(res => {
                 if (res) {
                     setDbLoreChar(res as any);
+                    if (res.canonical_name && !customCardName) setCustomCardName(res.canonical_name);
                     if (res.subtitle && !customSubtitle) setCustomSubtitle(res.subtitle);
                     if (res.flavor_quote_author && !customQuoteAuthor) setCustomQuoteAuthor(res.flavor_quote_author);
                     if (res.text_color && customTextColor === '#FFFFFF') setCustomTextColor(res.text_color);
                     if (res.mana_cost && !customManaCost) setCustomManaCost(res.mana_cost);
                     if (res.card_version && !savedCustom) setCardVersion(res.card_version as any);
                     if (res.special_move && !customSpecialMove) setCustomSpecialMove(res.special_move);
+                    if (res.type_line && !customTypeLine) setCustomTypeLine(res.type_line);
                     if (res.lore && !customLore) setCustomLore(res.lore);
                 }
             }).catch(() => {
@@ -1329,12 +1320,12 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
     const layout = customLayouts[themeKey] || FACTION_CARD_LAYOUTS[themeKey] || FACTION_CARD_LAYOUTS.castle_grayskull;
     const factionName = userFactionOverride ? theme.faction : (aiResult?.faction || effectiveDbLore?.faction || localProfile.faction);
 
-    // Textos computados con prioridad: Edición de usuario > IA > BD Lore > Perfil local
+    // Textos computados con prioridad: Edición de usuario > BD Lore (Grimorio) > IA > Perfil local
     const displayCardName = customCardName.trim() ? customCardName : (effectiveDbLore?.canonical_name || name);
     const displaySubtitle = customSubtitle.trim() ? customSubtitle : (effectiveDbLore?.subtitle || (item.sub_category ? `${item.sub_category} Edition` : 'Champion of Eternia'));
-    const typeLineText = customTypeLine.trim() ? customTypeLine : (userFactionOverride ? theme.typeLine : (aiResult?.type_line || effectiveDbLore?.type_line || localProfile.typeLine));
-    const specialMoveText = customSpecialMove.trim() ? customSpecialMove : (aiResult?.special_move || effectiveDbLore?.special_move || localProfile.specialMove);
-    const rawLore = customLore.trim() ? customLore : (aiResult?.lore || effectiveDbLore?.lore || localProfile.lore);
+    const typeLineText = customTypeLine.trim() ? customTypeLine : (userFactionOverride ? theme.typeLine : (effectiveDbLore?.type_line || aiResult?.type_line || localProfile.typeLine));
+    const specialMoveText = customSpecialMove.trim() ? customSpecialMove : (effectiveDbLore?.special_move || aiResult?.special_move || localProfile.specialMove);
+    const rawLore = customLore.trim() ? customLore : (effectiveDbLore?.lore || aiResult?.lore || localProfile.lore);
     const loreText = rawLore.replace(/^["';\s]+/, '').replace(/["';\s]+$/, '');
     const displayQuoteAuthor = customQuoteAuthor.trim() ? customQuoteAuthor : (effectiveDbLore?.flavor_quote_author || effectiveDbLore?.canonical_name || displayCardName);
     const activeImage = activeImageOverride || aiResult?.image_base64 || item.image_url;

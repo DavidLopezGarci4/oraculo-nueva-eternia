@@ -5,14 +5,94 @@ y extractos de wiki oficiales.
 REGLA ESTRICTA: Aplica única y exclusivamente a la línea Origins (is_vintage == False).
 """
 
-from typing import Dict, Any, Optional
+import re
+from typing import Dict, Any, Optional, List
 from loguru import logger
 from sqlalchemy.orm import Session
 from src.domain.models import ProductModel, ProductLoreModel, CharacterLoreModel
-from src.domain.motu_canon_database import resolve_motu_profile
+from src.domain.motu_canon_database import resolve_motu_profile, CANONICAL_CARD_PROFILES
 
 # Biografías canónicas de reverso de blíster (Cardback Bios) y frases oficiales de Mattel en español
 CARDBACK_BIOS_ORIGINS: Dict[str, Dict[str, str]] = {
+    # ── MULTIVERSO OSCURO & PRETERNIA ──
+    "anti-eternia he-man": {
+        "subtitle": "Tirano del Multiverso Oscuro",
+        "quote": "¡La oscuridad de Anti-Eternia consumirá el castillo de la luz!",
+        "flavor_quote_author": "Anti-Eternia He-Man",
+        "special_move": "Estallido de Sombras de Anti-Eternia",
+        "lore": "Nacido del reflejo infernal del World Converter en el Multiverso Oscuro, es un tirano implacable de ojos incandescentes cuyo poder busca aniquilar la luz de Eternia.",
+        "source_url": "https://he-man.fandom.com/wiki/Anti-Eternia_He-Man",
+        "theme_key": "snake_mountain",
+        "faction": "Guerreros del Mal",
+        "type_line": "Doble Oscuro — Multiverso Anti-Eternia"
+    },
+    "anti-eternia": {
+        "subtitle": "Tirano del Multiverso Oscuro",
+        "quote": "¡La oscuridad de Anti-Eternia consumirá el castillo de la luz!",
+        "flavor_quote_author": "Anti-Eternia He-Man",
+        "special_move": "Estallido de Sombras de Anti-Eternia",
+        "lore": "Nacido del reflejo infernal del World Converter en el Multiverso Oscuro, es un tirano implacable de ojos incandescentes cuyo poder busca aniquilar la luz de Eternia.",
+        "source_url": "https://he-man.fandom.com/wiki/Anti-Eternia_He-Man",
+        "theme_key": "snake_mountain",
+        "faction": "Guerreros del Mal",
+        "type_line": "Doble Oscuro — Multiverso Anti-Eternia"
+    },
+    "he-skeletor": {
+        "subtitle": "Campeón Oscuro de Anti-Eternia",
+        "quote": "¡Por el poder del cráneo de Grayskull, el caos me pertenece!",
+        "flavor_quote_author": "He-Skeletor",
+        "special_move": "Relámpago Destructor de Skeletor",
+        "lore": "El Campeón del Multiverso Oscuro donde Keldor abrazó el poder del Relámpago de Grayskull combinándolo con la nigromancia tártara.",
+        "source_url": "https://he-man.fandom.com/wiki/He-Skeletor",
+        "theme_key": "snake_mountain",
+        "faction": "Guerreros del Mal",
+        "type_line": "Campeón Oscuro — Multiverso Anti-Eternia"
+    },
+    "great black wizard": {
+        "subtitle": "Hechicero Ancestral de Preternia",
+        "quote": "Las sombras milenarias de Preternia despiertan ante mi conjuro.",
+        "flavor_quote_author": "Great Black Wizard",
+        "special_move": "Conjuro Ancestral de Sombras Preternianas",
+        "lore": "Antiguo y enigmático hechicero oscuro de la era preterniana, maestro de las artes arcanas prohibidas y guardián de hechizos milenarios.",
+        "source_url": "https://he-man.fandom.com/wiki/Great_Black_Wizard",
+        "theme_key": "castle_grayskull",
+        "faction": "Guerreros Heroicos",
+        "type_line": "Hechicero Legendario — Guerrero Oscuro"
+    },
+    "he-ro": {
+        "subtitle": "El Mago Más Poderoso del Universo",
+        "quote": "¡La magia de los Antiguos fluye a través de las eras!",
+        "flavor_quote_author": "He-Ro",
+        "special_move": "Magia Ancestral de Preternia",
+        "lore": "El Mago más poderoso del Universo en la remota Preternia. Portador del báculo con la piedra de la sabiduría y ancestro del poder de Grayskull.",
+        "source_url": "https://he-man.fandom.com/wiki/He-Ro",
+        "theme_key": "cosmic_enforcers",
+        "faction": "Guardianes Cósmicos",
+        "type_line": "Mago Preterniano — Ancestro de Grayskull"
+    },
+    "eldor": {
+        "subtitle": "Sabio Custodio de Preternia",
+        "quote": "El Libro de los Hechizos Vivientes custodia el pasado y el porvenir.",
+        "flavor_quote_author": "Eldor",
+        "special_move": "Sabiduría de los Antiguos",
+        "lore": "Antiguo sabio de Preternia y mentor de He-Ro, guardián del Libro de los Hechizos Vivientes que salvaguarda la historia secreta.",
+        "source_url": "https://he-man.fandom.com/wiki/Eldor",
+        "theme_key": "cosmic_enforcers",
+        "faction": "Guardianes Cósmicos",
+        "type_line": "Sabio de Preternia — Custodio del Libro"
+    },
+    "she-ra": {
+        "subtitle": "Princesa del Poder de Etheria",
+        "quote": "¡Por el honor de Grayskull... Soy She-Ra!",
+        "flavor_quote_author": "She-Ra",
+        "special_move": "Por el Honor de Grayskull",
+        "lore": "¡Por el honor de Grayskull, soy She-Ra! Princesa del Poder y líder invicta de la Gran Rebelión en Etheria con su fiel corcel Swift Wind.",
+        "source_url": "https://he-man.fandom.com/wiki/She-Ra",
+        "theme_key": "great_rebellion",
+        "faction": "La Gran Rebelión",
+        "type_line": "Princesa del Poder — Gran Rebelión"
+    },
+
     # ── HE-MAN & VARIANTES ──
     "he-man": {
         "subtitle": "El Hombre Más Poderoso del Universo",
@@ -415,9 +495,14 @@ class ProductLoreSeedService:
         """Busca en el diccionario de cardbacks por aproximación inteligente de nombre."""
         p_name = product_name.lower().strip()
         
-        # 1. Búsqueda exacta / por clave de subcadena más larga
         matches = []
         for key, data in CARDBACK_BIOS_ORIGINS.items():
+            # Evitar colisión de "anti-eternia" o "anti-he-man" con "he-man" simple
+            if ("anti" in p_name) != ("anti" in key):
+                continue
+            # Evitar colisión de "he-skeletor" con "skeletor" simple
+            if ("he-skeletor" in p_name or "he skeletor" in p_name) and key == "skeletor":
+                continue
             if key in p_name:
                 matches.append((len(key), data))
         
@@ -431,72 +516,56 @@ class ProductLoreSeedService:
     @classmethod
     def generate_default_lore_for_product(cls, product: ProductModel, db: Session) -> Dict[str, Any]:
         """
-        Genera el paquete de lore completo combinando:
+        Genera el paquete de lore completo determinista combinando:
         1. Diccionario de cardbacks oficiales de Mattel en español.
-        2. Fallback a CharacterLoreModel mediante character_slug.
-        3. Fallback heurístico a la base de datos canónica motu_canon_database.
+        2. Perfil canónico maestro de cromo de motu_canon_database.
+        3. Fallback a CharacterLoreModel.
         """
         canon_profile = resolve_motu_profile(product.name, product.sub_category)
         cardback = cls.match_cardback_lore(product.name)
 
-        # Buscar si existe character_lore
-        char_lore: Optional[CharacterLoreModel] = None
-        if product.character_slug:
-            char_lore = db.query(CharacterLoreModel).filter(CharacterLoreModel.slug == product.character_slug).first()
+        # Consolidar campos con prioridad: Cardback oficial > Perfil Canónico de Cromo
+        subtitle = (
+            (cardback.get("subtitle") if cardback else None)
+            or canon_profile.get("subtitle")
+            or (f"Colección {product.sub_category}" if product.sub_category else "Campeón de Nueva Eternia")
+        )
 
-        # Consolidar campos con prioridad: Cardback oficial > Character Lore > Perfil Canónico
-        subtitle = None
-        if cardback and cardback.get("subtitle"):
-            subtitle = cardback["subtitle"]
-        elif char_lore and char_lore.subtitle:
-            subtitle = char_lore.subtitle
-        elif product.sub_category:
-            subtitle = f"Colección {product.sub_category}"
-        else:
-            subtitle = "Campeón de Nueva Eternia"
+        quote = (
+            (cardback.get("quote") if cardback else None)
+            or canon_profile.get("quote")
+            or f"¡Por la gloria y el destino de {canon_profile.get('canonical_name', 'Eternia')}!"
+        )
 
-        quote = None
-        if cardback and cardback.get("quote"):
-            quote = cardback["quote"]
-        elif char_lore and char_lore.quote:
-            quote = char_lore.quote
-        else:
-            quote = f"¡Por la gloria y el destino de {canon_profile.get('canonical_name', 'Eternia')}!"
+        flavor_quote_author = (
+            (cardback.get("flavor_quote_author") if cardback else None)
+            or canon_profile.get("flavor_quote_author")
+            or canon_profile.get("canonical_name", product.name)
+        )
 
-        flavor_quote_author = None
-        if cardback and cardback.get("flavor_quote_author"):
-            flavor_quote_author = cardback["flavor_quote_author"]
-        elif char_lore and (char_lore.flavor_quote_author or char_lore.canonical_name):
-            flavor_quote_author = char_lore.flavor_quote_author or char_lore.canonical_name
-        else:
-            flavor_quote_author = canon_profile.get("canonical_name", product.name)
+        lore_text = (
+            (cardback.get("lore") if cardback else None)
+            or canon_profile.get("lore")
+            or f"Figura coleccionable oficial de la línea {product.sub_category or 'Masters of the Universe Origins'}."
+        )
 
-        lore_text = ""
-        if cardback and cardback.get("lore"):
-            lore_text = cardback["lore"]
-        elif char_lore and char_lore.lore:
-            lore_text = char_lore.lore
-        else:
-            lore_text = canon_profile.get("lore", f"Figura coleccionable oficial de la línea {product.sub_category or 'Masters of the Universe Origins'}.")
-
-        special_move = ""
-        if cardback and cardback.get("special_move"):
-            special_move = cardback["special_move"]
-        elif char_lore and char_lore.special_move:
-            special_move = char_lore.special_move
-        else:
-            special_move = canon_profile.get("special_move", "Poder Ancestral de Grayskull")
+        special_move = (
+            (cardback.get("special_move") if cardback else None)
+            or canon_profile.get("special_move")
+            or "Poder Ancestral de Grayskull"
+        )
 
         stats = canon_profile.get("stats", {})
-        fuerza = char_lore.fuerza if char_lore else stats.get("fuerza", 85)
-        magia = char_lore.magia if char_lore else stats.get("magia", 75)
-        defensa = char_lore.defensa if char_lore else stats.get("defensa", 85)
-        agilidad = char_lore.agilidad if char_lore else stats.get("agilidad", 85)
+        fuerza = stats.get("fuerza", 85)
+        magia = stats.get("magia", 75)
+        defensa = stats.get("defensa", 85)
+        agilidad = stats.get("agilidad", 85)
 
-        faction = char_lore.faction if char_lore else canon_profile.get("faction", "Guerreros Heroicos")
-        theme_key = char_lore.theme_key if char_lore else canon_profile.get("frame_theme", "castle_grayskull")
-        type_line = char_lore.type_line if char_lore else canon_profile.get("type_line", "Criatura Legendaria — Guerrero")
-        source_url = cardback.get("source_url") if cardback else (char_lore.source_url if char_lore else None)
+        faction = (cardback.get("faction") if cardback else None) or canon_profile.get("faction", "Guerreros Heroicos")
+        theme_key = (cardback.get("theme_key") if cardback else None) or canon_profile.get("theme_key") or canon_profile.get("frame_theme", "castle_grayskull")
+        type_line = (cardback.get("type_line") if cardback else None) or canon_profile.get("type_line", "Criatura Legendaria — Guerrero")
+        source_url = (cardback.get("source_url") if cardback else None) or "Canon MOTU Origins"
+        mana_cost = canon_profile.get("mana_cost", "{2}{W}{W}")
 
         return {
             "product_id": product.id,
@@ -512,7 +581,7 @@ class ProductLoreSeedService:
             "source_url": source_url,
             "text_color": "#FFFFFF",
             "card_version": "showcase",
-            "mana_cost": "{2}{W}{W}",
+            "mana_cost": mana_cost,
             "fuerza": fuerza,
             "magia": magia,
             "defensa": defensa,
@@ -521,10 +590,73 @@ class ProductLoreSeedService:
         }
 
     @classmethod
+    def seed_canonical_characters(cls, db: Session, force: bool = False) -> Dict[str, int]:
+        """
+        Siembra y actualiza CharacterLoreModel con los textos canónicos en español
+        de los cromos de Masters of the Universe para todos los personajes arquetípicos.
+        """
+        total = 0
+        updated = 0
+        created = 0
+
+        for entry in CANONICAL_CARD_PROFILES:
+            prof = entry["profile"]
+            raw_slug = prof["canonical_name"].lower().replace(" ", "_").replace("-", "_")
+            slug = re.sub(r"[^a-z0-9_]", "", raw_slug)
+            existing = db.query(CharacterLoreModel).filter(CharacterLoreModel.slug == slug).first()
+            stats = prof.get("stats", {})
+
+            if existing:
+                if force or not existing.is_verified:
+                    existing.canonical_name = prof["canonical_name"]
+                    existing.subtitle = prof.get("subtitle")
+                    existing.faction = prof["faction"]
+                    existing.theme_key = prof.get("theme_key", "castle_grayskull")
+                    existing.type_line = prof["type_line"]
+                    existing.special_move = prof["special_move"]
+                    existing.quote = prof.get("quote")
+                    existing.flavor_quote_author = prof.get("flavor_quote_author")
+                    existing.lore = prof["lore"]
+                    existing.fuerza = stats.get("fuerza", 85)
+                    existing.magia = stats.get("magia", 75)
+                    existing.defensa = stats.get("defensa", 85)
+                    existing.agilidad = stats.get("agilidad", 85)
+                    existing.mana_cost = prof.get("mana_cost", "{2}{W}{W}")
+                    existing.is_verified = True
+                    updated += 1
+            else:
+                new_char = CharacterLoreModel(
+                    slug=slug,
+                    canonical_name=prof["canonical_name"],
+                    subtitle=prof.get("subtitle"),
+                    faction=prof["faction"],
+                    theme_key=prof.get("theme_key", "castle_grayskull"),
+                    type_line=prof["type_line"],
+                    special_move=prof["special_move"],
+                    quote=prof.get("quote"),
+                    flavor_quote_author=prof.get("flavor_quote_author"),
+                    lore=prof["lore"],
+                    fuerza=stats.get("fuerza", 85),
+                    magia=stats.get("magia", 75),
+                    defensa=stats.get("defensa", 85),
+                    agilidad=stats.get("agilidad", 85),
+                    mana_cost=prof.get("mana_cost", "{2}{W}{W}"),
+                    is_verified=True,
+                    source_url="Canon MOTU Oficial"
+                )
+                db.add(new_char)
+                created += 1
+            total += 1
+
+        db.commit()
+        logger.info(f"Grimorio Lore Personajes :: Sembrado de {total} arquetipos ({created} creados, {updated} actualizados).")
+        return {"total_characters": total, "created": created, "updated": updated}
+
+    @classmethod
     def seed_origins_products(cls, db: Session, force: bool = False) -> Dict[str, int]:
         """
         Siembra y asegura que el 100% de los muñecos de Origins (is_vintage == False)
-        tengan su registro de ProductLoreModel activo.
+        tengan su registro de ProductLoreModel activo con los textos canónicos de los cromos.
         """
         # REGLA ESTRICTA: Solo productos Origins (is_vintage == False)
         origins_products = db.query(ProductModel).filter(
@@ -543,7 +675,7 @@ class ProductLoreSeedService:
                 if existing.is_customized and not force:
                     skipped += 1
                     continue
-                # Actualizar si no fue personalizado a mano
+                # Actualizar si no fue personalizado a mano o si es force
                 data = cls.generate_default_lore_for_product(p, db)
                 for k, v in data.items():
                     if k != "is_customized":
