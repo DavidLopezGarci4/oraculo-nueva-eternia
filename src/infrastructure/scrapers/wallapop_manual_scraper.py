@@ -85,20 +85,37 @@ class WallapopManualScraper(BaseScraper):
         self.is_auction_source = True  # Peer-to-Peer -> Purgatorio
 
     async def _search_single(
-        self, session: AsyncSession, query: str, proxy: str | None, start: int = 0
-    ) -> List[ScrapedOffer]:
+        self, session: AsyncSession, query: str, proxy: str | None, start: int = 0, next_page: str | None = None
+    ) -> SignedSearchResult:
         result = await search_wallapop_v3_signed(
             session,
             query,
             proxy=proxy,
             max_items=40,
             start=start,
+            next_page=next_page,
             log_callback=self._log,
             shop_name_override=self.shop_name,
         )
         if result.blocked:
             self.blocked = True
-        return result.offers
+        return result
+
+    async def _search_with_pagination(
+        self, session: AsyncSession, query: str, proxy: str | None, max_pages: int = 3
+    ) -> List[ScrapedOffer]:
+        offers: List[ScrapedOffer] = []
+        next_page = None
+        for page_idx in range(max_pages):
+            res = await self._search_single(session, query, proxy, start=0, next_page=next_page)
+            if res.offers:
+                offers.extend(res.offers)
+            if res.blocked or not res.next_page:
+                break
+            next_page = res.next_page
+            if page_idx < max_pages - 1:
+                await asyncio.sleep(random.uniform(1.2, 1.8))
+        return offers
 
     async def search(self, query: str = "auto") -> List[ScrapedOffer]:
         self._log("⚔️ Wallapop: Extracción directa vía API v3 oficial (ingeniería inversa local, 100% gratuita sin APIs de terceros).")
@@ -120,24 +137,12 @@ class WallapopManualScraper(BaseScraper):
                 for family_name, terms in self.FULL_FAMILIES.items():
                     self._log(f"📂 Procesando Familia: {family_name}...")
                     for t in terms:
-                        # Página 1 (start=0)
-                        p1_offers = await self._search_single(session, t, proxy, start=0)
-                        all_offers.extend(p1_offers)
-                        
-                        # Pausa humana aleatoria entre páginas (1.2s - 2.0s)
-                        await asyncio.sleep(random.uniform(1.2, 2.0))
-                        
-                        # Página 2 (start=40)
-                        p2_offers = await self._search_single(session, t, proxy, start=40)
-                        all_offers.extend(p2_offers)
-                        
-                        # Pausa de seguridad entre términos (1.8s - 3.0s)
-                        await asyncio.sleep(random.uniform(1.8, 3.0))
-                        
-                    # Pausa extra entre familias (2.5s - 4.0s)
-                    await asyncio.sleep(random.uniform(2.5, 4.0))
+                        term_offers = await self._search_with_pagination(session, t, proxy, max_pages=3)
+                        all_offers.extend(term_offers)
+                        await asyncio.sleep(random.uniform(1.5, 2.5))
+                    await asyncio.sleep(random.uniform(2.0, 3.5))
         else:
-            # Modo básico o consultas personalizadas
+            # Modo estándar (auto): paginación profunda en la tríada canónica (hasta 3 páginas por término)
             if q_clean in ["auto", "basico", "basic", ""]:
                 queries = self.CORE_QUERIES
             elif "," in query:
@@ -147,9 +152,10 @@ class WallapopManualScraper(BaseScraper):
 
             async with AsyncSession() as session:
                 for idx, q in enumerate(queries):
-                    all_offers.extend(await self._search_single(session, q, proxy, start=0))
+                    term_offers = await self._search_with_pagination(session, q, proxy, max_pages=3)
+                    all_offers.extend(term_offers)
                     if idx < len(queries) - 1:
-                        await asyncio.sleep(random.uniform(1.0, 2.0))
+                        await asyncio.sleep(random.uniform(1.2, 2.0))
 
         # Deduplicar por URL
         seen = set()

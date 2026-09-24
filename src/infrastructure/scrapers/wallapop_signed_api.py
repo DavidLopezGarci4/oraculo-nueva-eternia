@@ -29,6 +29,7 @@ class SignedSearchResult:
     """Resultado de una búsqueda firmada, distinguiendo 'vacío' de 'bloqueado por WAF'."""
     offers: List[ScrapedOffer] = field(default_factory=list)
     blocked: bool = False
+    next_page: Optional[str] = None
 
 # Endpoint de búsqueda de la API v3 (host firmado, no la web)
 WALLAPOP_API_HOST = "https://api.wallapop.com"
@@ -93,12 +94,13 @@ async def search_wallapop_v3_signed(
     proxy: Optional[str] = None,
     max_items: int = 40,
     start: int = 0,
+    next_page: Optional[str] = None,
     log_callback: Optional[Callable[[str], None]] = None,
     shop_name_override: Optional[str] = None,
 ) -> SignedSearchResult:
     """
     Realiza una búsqueda firmada (X-Signature) contra la API v3 de Wallapop.
-    Soporta paginación escalonada mediante el parámetro start (start=0, start=40, etc.).
+    Soporta paginación escalonada mediante start o el token next_page de la API v3.
     """
     def _log(msg: str, level: str = "info"):
         lvl = getattr(logging, level.upper(), logging.INFO)
@@ -116,7 +118,9 @@ async def search_wallapop_v3_signed(
         "latitude": 40.416775,
         "longitude": -3.703790,
     }
-    if start > 0:
+    if next_page:
+        params["next_page"] = next_page
+    elif start > 0:
         params["start"] = start
     path_with_query = f"{WALLAPOP_SEARCH_PATH}?{urllib.parse.urlencode(params)}"
     target_url = f"{WALLAPOP_API_HOST}{path_with_query}"
@@ -172,6 +176,7 @@ async def search_wallapop_v3_signed(
     if shop_name_override:
         for o in offers:
             o.shop_name = shop_name_override
+    next_page_token = data.get("meta", {}).get("next_page")
     _log(f"🎉 '{query}': {len(offers)} reliquias extraídas vía API firmada.")
     _audit_ip_log(
         "proxy_bypass" if proxy else "allowed",
@@ -179,4 +184,4 @@ async def search_wallapop_v3_signed(
         resp.status_code,
         f"{len(offers)} ofertas extraídas vía API firmada para '{query}'.",
     )
-    return SignedSearchResult(offers=offers, blocked=False)
+    return SignedSearchResult(offers=offers, blocked=False, next_page=next_page_token)
