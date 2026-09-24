@@ -1,6 +1,13 @@
-param (
+﻿param (
     [switch]$Backup
 )
+# Forzar codificacion UTF-8 en consola y tuberias
+try {
+    [Console]::InputEncoding = [System.Text.Encoding]::UTF8
+    [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+    $OutputEncoding = [System.Text.Encoding]::UTF8
+} catch {}
+
 
 # ===================================================================
 # EL ORACULO DE NUEVA ETERNIA - CENTRO DE CONTROL UNIFICADO
