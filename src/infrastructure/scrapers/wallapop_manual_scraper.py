@@ -101,13 +101,13 @@ class WallapopManualScraper(BaseScraper):
         return result.offers
 
     async def search(self, query: str = "auto") -> List[ScrapedOffer]:
-        self._log("⚔️ WallapopManual: iniciando extracción (API v3 firmada).")
+        self._log("⚔️ Wallapop: Extracción directa vía API v3 oficial (ingeniería inversa local, 100% gratuita sin APIs de terceros).")
 
         proxy = os.environ.get("WALLAPOP_RESIDENTIAL_PROXY") or None
         if proxy:
             self._log("🛰️ Proxy residencial detectado. Ruteando por IP no vetada.")
         else:
-            self._log("ℹ️ Conexión directa residencial.")
+            self._log("ℹ️ Conexión directa residencial (coste 0€).")
 
         q_clean = (query or "").strip().lower()
         is_deep_mode = q_clean in ["completo", "full", "deep", "exhaustivo"]

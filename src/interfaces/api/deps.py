@@ -220,6 +220,9 @@ def ensure_scrapers_registered():
         "LaMansionDelTerror", "SmythsToys", "Bixoto",
     ]
 
+    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+
+    # 1. Registro en Supabase (Cloud)
     with SessionCloud() as db:
         try:
             for name in spiders_to_check:
@@ -229,9 +232,42 @@ def ensure_scrapers_registered():
                     .first()
                 )
                 if not exists:
-                    logger.info(f"🆕 Registrando nuevo scraper en sistema: {name}")
-                    db.add(ScraperStatusModel(spider_name=name, status="stopped"))
+                    logger.info(f"🆕 Registrando nuevo scraper en Cloud: {name}")
+                    db.add(ScraperStatusModel(
+                        spider_name=name,
+                        status="stopped",
+                        items_scraped=0,
+                        progress=0,
+                        total_items_estimated=0,
+                        start_time=now_utc,
+                        last_update=now_utc
+                    ))
             db.commit()
         except Exception as e:
             db.rollback()
-            logger.error(f"Failed to register scrapers: {e}")
+            logger.error(f"Failed to register scrapers in Cloud: {e}")
+
+    # 2. Registro en SQLite Local (oraculo.db)
+    try:
+        from src.infrastructure.database import SessionLocal
+        with SessionLocal() as db_loc:
+            for name in spiders_to_check:
+                exists = (
+                    db_loc.query(ScraperStatusModel)
+                    .filter(ScraperStatusModel.spider_name.ilike(name))
+                    .first()
+                )
+                if not exists:
+                    logger.info(f"🆕 Registrando nuevo scraper en SQLite local: {name}")
+                    db_loc.add(ScraperStatusModel(
+                        spider_name=name,
+                        status="stopped",
+                        items_scraped=0,
+                        progress=0,
+                        total_items_estimated=0,
+                        start_time=now_utc,
+                        last_update=now_utc
+                    ))
+            db_loc.commit()
+    except Exception as e:
+        logger.error(f"Failed to register scrapers in Local SQLite: {e}")
