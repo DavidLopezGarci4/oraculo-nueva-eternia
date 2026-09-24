@@ -9,15 +9,26 @@ import {
     Zap,
     Globe,
     X,
-    Save
+    Save,
+    ChevronDown,
+    ChevronUp,
+    Quote,
+    Package,
+    Users,
+    Sparkles
 } from 'lucide-react';
 import {
     fetchCharacterLoreList,
     updateCharacterLore,
     harvestCharacterLore,
     seedInitialLore,
-    type CharacterLore
+    fetchProductLoreList,
+    updateProductLore,
+    type CharacterLore,
+    type ProductLoreListItem
 } from '../../api/lore';
+import { MOTUImage } from '../ui/MOTUImage';
+import { getOptimizedImageUrl } from '../../utils/imageUtils';
 
 const FACTION_OPTIONS = [
     { value: 'ALL', label: 'Todas las Facciones' },
@@ -39,13 +50,26 @@ const THEME_OPTIONS = [
 ];
 
 export const LoreTab: React.FC = () => {
+    // Modo de vista: 'products' (Figuras Origins) o 'characters' (Personajes Canónicos)
+    const [activeView, setActiveView] = useState<'products' | 'characters'>('products');
+
+    // Estado para Figuras Origins
+    const [products, setProducts] = useState<ProductLoreListItem[]>([]);
+    const [expandedProductId, setExpandedProductId] = useState<number | null>(null);
+    const [editingProductId, setEditingProductId] = useState<number | null>(null);
+    const [prodEditForm, setProdEditForm] = useState<Partial<ProductLoreListItem>>({});
+    const [savingProd, setSavingProd] = useState(false);
+
+    // Estado para Personajes Arquetípicos
     const [characters, setCharacters] = useState<CharacterLore[]>([]);
+    const [editingChar, setEditingChar] = useState<CharacterLore | null>(null);
+    const [pendingOnly, setPendingOnly] = useState(false);
+    const [pendingCount, setPendingCount] = useState(0);
+
+    // Estados Comunes
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [factionFilter, setFactionFilter] = useState('ALL');
-    const [pendingOnly, setPendingOnly] = useState(false);
-    const [pendingCount, setPendingCount] = useState(0);
-    const [editingChar, setEditingChar] = useState<CharacterLore | null>(null);
     const [saving, setSaving] = useState(false);
     const [harvesting, setHarvesting] = useState(false);
     const [seeding, setSeeding] = useState(false);
@@ -54,13 +78,22 @@ export const LoreTab: React.FC = () => {
     const loadData = async () => {
         setLoading(true);
         try {
-            const data = await fetchCharacterLoreList({
-                search: search || undefined,
-                faction: factionFilter !== 'ALL' ? factionFilter : undefined,
-                pending_only: pendingOnly
-            });
-            setCharacters(data.items);
-            setPendingCount(data.pending_count);
+            if (activeView === 'products') {
+                const data = await fetchProductLoreList({
+                    search: search || undefined,
+                    faction: factionFilter !== 'ALL' ? factionFilter : undefined,
+                    limit: 150
+                });
+                setProducts(data.items);
+            } else {
+                const data = await fetchCharacterLoreList({
+                    search: search || undefined,
+                    faction: factionFilter !== 'ALL' ? factionFilter : undefined,
+                    pending_only: pendingOnly
+                });
+                setCharacters(data.items);
+                setPendingCount(data.pending_count);
+            }
         } catch (e) {
             console.error('Error al cargar lore:', e);
         } finally {
@@ -73,14 +106,15 @@ export const LoreTab: React.FC = () => {
             loadData();
         }, 300);
         return () => clearTimeout(timer);
-    }, [search, factionFilter, pendingOnly]);
+    }, [activeView, search, factionFilter, pendingOnly]);
 
     const showToast = (msg: string) => {
         setToastMessage(msg);
         setTimeout(() => setToastMessage(null), 3500);
     };
 
-    const handleSave = async () => {
+    // Guardado de Personaje Canónico
+    const handleSaveChar = async () => {
         if (!editingChar) return;
         setSaving(true);
         try {
@@ -97,6 +131,46 @@ export const LoreTab: React.FC = () => {
             showToast('❌ Error al guardar los cambios');
         } finally {
             setSaving(false);
+        }
+    };
+
+    // Guardado de Figura Origins
+    const handleSaveProductLore = async (productId: number) => {
+        setSavingProd(true);
+        try {
+            const updated = await updateProductLore(productId, {
+                canonical_name: prodEditForm.canonical_name,
+                subtitle: prodEditForm.subtitle,
+                faction: prodEditForm.faction,
+                quote: prodEditForm.quote,
+                flavor_quote_author: prodEditForm.flavor_quote_author,
+                lore: prodEditForm.lore,
+                special_move: prodEditForm.special_move
+            });
+            setProducts((prev) =>
+                prev.map((p) =>
+                    p.product_id === productId
+                        ? {
+                              ...p,
+                              canonical_name: updated.canonical_name,
+                              subtitle: updated.subtitle,
+                              faction: updated.faction,
+                              quote: updated.quote,
+                              flavor_quote_author: updated.flavor_quote_author,
+                              lore: updated.lore,
+                              special_move: updated.special_move,
+                              is_customized: true
+                          }
+                        : p
+                )
+            );
+            setEditingProductId(null);
+            showToast(`✅ Lore de "${updated.canonical_name}" persistido en base de datos`);
+        } catch (e) {
+            console.error('Error al guardar figura:', e);
+            showToast('❌ Error al persistir el lore de la figura');
+        } finally {
+            setSavingProd(false);
         }
     };
 
@@ -118,7 +192,7 @@ export const LoreTab: React.FC = () => {
         setSeeding(true);
         try {
             const res = await seedInitialLore();
-            showToast(`🎉 Sembrado completado: ${res.result.seeded_characters} personajes, ${res.result.linked_products} muñecos vinculados.`);
+            showToast(`🎉 Sembrado completado: ${res.result.created} figuras creadas, ${res.result.updated} actualizadas.`);
             loadData();
         } catch (e) {
             console.error('Error al sembrar lore:', e);
@@ -159,11 +233,11 @@ export const LoreTab: React.FC = () => {
                         <h2 className="text-xl font-bold text-white font-cinzel flex items-center gap-2">
                             Grimorio de Lore Canónico MOTU
                             <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-mono">
-                                Coste 0€ / Caché Fija
+                                Origins & Canon
                             </span>
                         </h2>
                         <p className="text-xs text-slate-400">
-                            Base de datos canónica de personajes, facciones, habilidades especiales y frases míticas para los cromos TCG.
+                            Base de datos canónica de figuras Origins, dorsos de blíster, lemas y personajes arquetípicos.
                         </p>
                     </div>
                 </div>
@@ -173,17 +247,45 @@ export const LoreTab: React.FC = () => {
                         onClick={handleSeedAll}
                         disabled={seeding}
                         className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-bold font-cinzel transition active:scale-95 disabled:opacity-50"
+                        title="Vuelve a sembrar los textos canónicos y de blíster para figuras Origins"
                     >
                         <RefreshCw className={`h-4 w-4 ${seeding ? 'animate-spin' : ''}`} />
-                        <span>Sincronizar 507 Muñecos</span>
+                        <span>Sincronizar Lore Origins</span>
                     </button>
                 </div>
             </div>
 
+            {/* Selector de Modo: Figuras Origins vs Personajes Canónicos */}
+            <div className="flex items-center gap-2 p-1.5 bg-slate-900/90 border border-slate-800 rounded-xl">
+                <button
+                    onClick={() => setActiveView('products')}
+                    className={`flex-1 py-2 px-4 rounded-lg text-xs font-bold font-cinzel uppercase tracking-wider flex items-center justify-center gap-2 transition ${
+                        activeView === 'products'
+                            ? 'bg-amber-500 text-slate-950 shadow-md font-black'
+                            : 'text-slate-400 hover:text-white hover:bg-white/5'
+                    }`}
+                >
+                    <Package className="h-4 w-4" />
+                    <span>📦 Figuras Origins del Catálogo ({products.length > 0 ? products.length : 'Origins'})</span>
+                </button>
+                <button
+                    onClick={() => setActiveView('characters')}
+                    className={`flex-1 py-2 px-4 rounded-lg text-xs font-bold font-cinzel uppercase tracking-wider flex items-center justify-center gap-2 transition ${
+                        activeView === 'characters'
+                            ? 'bg-amber-500 text-slate-950 shadow-md font-black'
+                            : 'text-slate-400 hover:text-white hover:bg-white/5'
+                    }`}
+                >
+                    <Users className="h-4 w-4" />
+                    <span>👤 Personajes Arquetípicos ({characters.length > 0 ? characters.length : 'Canónicos'})</span>
+                </button>
+            </div>
+
             {/* Notificación Toast */}
             {toastMessage && (
-                <div className="fixed bottom-6 right-6 z-50 px-4 py-2.5 rounded-xl bg-slate-900 border border-amber-500/50 shadow-2xl text-sm font-semibold text-white animate-fade-in">
-                    {toastMessage}
+                <div className="fixed bottom-6 right-6 z-50 px-4 py-2.5 rounded-xl bg-slate-900 border border-amber-500/50 shadow-2xl text-sm font-semibold text-white animate-fade-in flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                    <span>{toastMessage}</span>
                 </div>
             )}
 
@@ -194,7 +296,7 @@ export const LoreTab: React.FC = () => {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
                     <input
                         type="text"
-                        placeholder="Buscar personaje o frase..."
+                        placeholder={activeView === 'products' ? 'Buscar figura o frase de blíster...' : 'Buscar personaje canónico...'}
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         className="w-full pl-9 pr-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-white focus:border-amber-500/60 focus:outline-none transition"
@@ -214,168 +316,376 @@ export const LoreTab: React.FC = () => {
                     ))}
                 </select>
 
-                {/* 3. Filtro de Pendientes */}
-                <button
-                    onClick={() => setPendingOnly(!pendingOnly)}
-                    className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition ${
-                        pendingOnly
-                            ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/20'
-                            : 'bg-slate-950 border border-slate-800 text-slate-300 hover:border-slate-700'
-                    }`}
-                >
-                    <AlertTriangle className={`h-4 w-4 ${pendingOnly ? 'text-slate-950' : 'text-amber-400'}`} />
-                    <span>Pendientes de Revisión ({pendingCount})</span>
-                </button>
+                {/* 3. Filtro según modo */}
+                {activeView === 'characters' ? (
+                    <button
+                        onClick={() => setPendingOnly(!pendingOnly)}
+                        className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition ${
+                            pendingOnly
+                                ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/20'
+                                : 'bg-slate-950 border border-slate-800 text-slate-300 hover:border-slate-700'
+                        }`}
+                    >
+                        <AlertTriangle className={`h-4 w-4 ${pendingOnly ? 'text-slate-950' : 'text-amber-400'}`} />
+                        <span>Pendientes de Revisión ({pendingCount})</span>
+                    </button>
+                ) : (
+                    <div className="flex items-center justify-center px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs font-mono text-amber-400/80">
+                        <span>🛡️ Exclusivo MOTU Origins (Vintage excluido)</span>
+                    </div>
+                )}
             </div>
 
-            {/* Cuadrícula de Personajes */}
+            {/* Contenido según el modo activo */}
             {loading ? (
                 <div className="p-12 text-center text-slate-400 flex flex-col items-center gap-3">
                     <RefreshCw className="h-8 w-8 animate-spin text-amber-400" />
-                    <p className="text-sm font-cinzel">Consultando el Grimorio de Eternia...</p>
+                    <p className="text-sm font-cinzel">Consultando los Archivos del Oráculo...</p>
                 </div>
-            ) : characters.length === 0 ? (
-                <div className="p-12 text-center text-slate-500 rounded-xl bg-slate-900/40 border border-dashed border-slate-800">
-                    <BookOpen className="h-10 w-10 mx-auto mb-2 opacity-40 text-amber-400" />
-                    <p className="text-sm">No se encontraron personajes con los filtros seleccionados.</p>
-                </div>
-            ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {characters.map((char) => (
-                        <div
-                            key={char.slug}
-                            className="p-4 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-amber-500/40 transition-all group relative flex flex-col justify-between"
-                        >
-                            <div>
-                                {/* Cabecera de la Tarjeta */}
-                                <div className="flex items-start justify-between gap-2 mb-2">
-                                    <div>
-                                        <h3 className="text-base font-bold text-white font-cinzel group-hover:text-amber-300 transition">
-                                            {char.canonical_name}
-                                        </h3>
-                                        <span className="text-[10px] font-mono text-slate-400">
-                                            slug: {char.slug}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5 shrink-0">
-                                        {char.is_verified ? (
-                                            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px] font-semibold">
-                                                <CheckCircle2 className="h-3 w-3" /> Verificado
-                                            </span>
-                                        ) : (
-                                            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30 text-[10px] font-semibold animate-pulse">
-                                                <AlertTriangle className="h-3 w-3" /> Pendiente
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
+            ) : activeView === 'products' ? (
+                /* ─── VISTA 1: FIGURAS ORIGINS (CAJAS DE TÍTULO DESPLEGABLE) ─── */
+                products.length === 0 ? (
+                    <div className="p-12 text-center text-slate-500 rounded-xl bg-slate-900/40 border border-dashed border-slate-800">
+                        <Package className="h-10 w-10 mx-auto mb-2 opacity-40 text-amber-400" />
+                        <p className="text-sm">No se encontraron figuras Origins con los filtros seleccionados.</p>
+                    </div>
+                ) : (
+                    <div className="space-y-3">
+                        {products.map((prod) => {
+                            const isExpanded = expandedProductId === prod.product_id;
+                            const isEditingThis = editingProductId === prod.product_id;
 
-                                {/* Bando & Línea de Tipo */}
-                                <div className="flex flex-wrap items-center gap-1.5 mb-2.5">
-                                    <span
-                                        className={`px-2 py-0.5 rounded-md border text-[10px] font-bold ${getFactionBadgeColor(
-                                            char.faction
-                                        )}`}
-                                    >
-                                        {char.faction}
-                                    </span>
-                                    <span className="text-[10px] text-slate-400 truncate">
-                                        • {char.type_line}
-                                    </span>
-                                </div>
-
-                                {/* Poder Especial */}
-                                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/50 border border-amber-500/20 text-amber-300 text-xs font-bold mb-2.5">
-                                    <Zap className="h-3.5 w-3.5 text-amber-400 shrink-0" />
-                                    <span className="truncate">{char.special_move}</span>
-                                </div>
-
-                                {/* Lore Canónico */}
-                                <p className="text-xs text-slate-300 italic line-clamp-3 leading-relaxed mb-3">
-                                    "{char.lore}"
-                                </p>
-                            </div>
-
-                            {/* Stats & Botón de Edición */}
-                            <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between">
-                                <div className="flex items-center gap-2 text-[10px] font-mono text-slate-400">
-                                    <span>FUE <strong className="text-white">{char.fuerza}</strong></span>
-                                    <span>MAG <strong className="text-white">{char.magia}</strong></span>
-                                    <span>DEF <strong className="text-white">{char.defensa}</strong></span>
-                                    <span>AGI <strong className="text-white">{char.agilidad}</strong></span>
-                                </div>
-
-                                <button
-                                    onClick={() => setEditingChar({ ...char })}
-                                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-amber-500/20 text-slate-300 hover:text-amber-300 border border-slate-700 hover:border-amber-500/40 text-xs font-semibold transition"
+                            return (
+                                <div
+                                    key={prod.product_id}
+                                    className="rounded-xl border border-slate-800 bg-slate-900/80 hover:border-amber-500/30 transition shadow-sm overflow-hidden"
                                 >
-                                    <Edit3 className="h-3.5 w-3.5" />
-                                    <span>Editar</span>
-                                </button>
+                                    {/* Cabecera Desplegable del Ítem */}
+                                    <div
+                                        onClick={() => setExpandedProductId(isExpanded ? null : prod.product_id)}
+                                        className="p-3.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-white/[0.02] transition select-none"
+                                    >
+                                        <div className="flex items-center gap-3 min-w-0">
+                                            {/* Miniatura */}
+                                            <div className="h-12 w-12 rounded-lg bg-black/40 border border-white/10 shrink-0 overflow-hidden">
+                                                {prod.image_url ? (
+                                                    <MOTUImage
+                                                        productId={prod.product_id}
+                                                        src={getOptimizedImageUrl(prod.image_url, 150)}
+                                                        alt={prod.product_name}
+                                                        className="h-full w-full object-cover"
+                                                    />
+                                                ) : (
+                                                    <div className="h-full w-full flex items-center justify-center text-slate-600 text-xs">
+                                                        MOTU
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Textos Principales */}
+                                            <div className="min-w-0">
+                                                <div className="flex items-center gap-2">
+                                                    <h4 className="text-sm font-bold text-white truncate font-cinzel">
+                                                        {prod.canonical_name || prod.product_name}
+                                                    </h4>
+                                                    {prod.is_customized && (
+                                                        <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[8px] font-black uppercase tracking-wider border border-amber-500/30">
+                                                            Editado
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <p className="text-[11px] text-slate-400 truncate">
+                                                    {prod.subtitle || prod.product_name}
+                                                    {prod.sub_category ? ` • ${prod.sub_category}` : ''}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            <span
+                                                className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${getFactionBadgeColor(
+                                                    prod.faction
+                                                )}`}
+                                            >
+                                                {prod.faction}
+                                            </span>
+                                            {isExpanded ? (
+                                                <ChevronUp className="h-4 w-4 text-amber-400" />
+                                            ) : (
+                                                <ChevronDown className="h-4 w-4 text-slate-400" />
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Cuerpo Desplegado */}
+                                    {isExpanded && (
+                                        <div className="p-4 border-t border-slate-800 bg-slate-950/70 space-y-3">
+                                            {isEditingThis ? (
+                                                /* Formulario de Edición de Figura */
+                                                <div className="space-y-3 text-left">
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                        <div>
+                                                            <label className="block text-[9px] font-bold uppercase text-amber-300 mb-1">
+                                                                Nombre en Cromo / Lore:
+                                                            </label>
+                                                            <input
+                                                                type="text"
+                                                                value={prodEditForm.canonical_name || ''}
+                                                                onChange={(e) =>
+                                                                    setProdEditForm({ ...prodEditForm, canonical_name: e.target.value })
+                                                                }
+                                                                className="w-full px-2.5 py-1.5 rounded-lg bg-black border border-slate-700 text-white text-xs"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-[9px] font-bold uppercase text-amber-300 mb-1">
+                                                                Subtítulo / Rango:
+                                                            </label>
+                                                            <input
+                                                                type="text"
+                                                                value={prodEditForm.subtitle || ''}
+                                                                onChange={(e) =>
+                                                                    setProdEditForm({ ...prodEditForm, subtitle: e.target.value })
+                                                                }
+                                                                className="w-full px-2.5 py-1.5 rounded-lg bg-black border border-slate-700 text-white text-xs"
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                        <div>
+                                                            <label className="block text-[9px] font-bold uppercase text-amber-300 mb-1">
+                                                                Frase del Reverso de Blíster (Cardback Quote):
+                                                            </label>
+                                                            <input
+                                                                type="text"
+                                                                value={prodEditForm.quote || ''}
+                                                                onChange={(e) =>
+                                                                    setProdEditForm({ ...prodEditForm, quote: e.target.value })
+                                                                }
+                                                                className="w-full px-2.5 py-1.5 rounded-lg bg-black border border-slate-700 text-amber-200 text-xs italic font-serif"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-[9px] font-bold uppercase text-amber-300 mb-1">
+                                                                Poder / Habilidad Especial:
+                                                            </label>
+                                                            <input
+                                                                type="text"
+                                                                value={prodEditForm.special_move || ''}
+                                                                onChange={(e) =>
+                                                                    setProdEditForm({ ...prodEditForm, special_move: e.target.value })
+                                                                }
+                                                                className="w-full px-2.5 py-1.5 rounded-lg bg-black border border-slate-700 text-white text-xs"
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    <div>
+                                                        <label className="block text-[9px] font-bold uppercase text-amber-300 mb-1">
+                                                            Biografía Canónica de la Figura (Español):
+                                                        </label>
+                                                        <textarea
+                                                            value={prodEditForm.lore || ''}
+                                                            onChange={(e) =>
+                                                                setProdEditForm({ ...prodEditForm, lore: e.target.value })
+                                                            }
+                                                            rows={3}
+                                                            className="w-full px-2.5 py-1.5 rounded-lg bg-black border border-slate-700 text-stone-200 text-xs font-serif resize-none"
+                                                        />
+                                                    </div>
+
+                                                    <div className="flex justify-end gap-2 pt-1 border-t border-white/5">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setEditingProductId(null)}
+                                                            className="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-white/70 text-xs font-bold"
+                                                        >
+                                                            Cancelar
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleSaveProductLore(prod.product_id)}
+                                                            disabled={savingProd}
+                                                            className="px-4 py-1 rounded-lg bg-gradient-to-r from-amber-500 to-yellow-600 hover:brightness-110 text-slate-950 text-xs font-black uppercase flex items-center gap-1.5 shadow-md shadow-amber-500/20"
+                                                        >
+                                                            {savingProd ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                                                            <span>Guardar en BD</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                /* Vista Normal de la Figura */
+                                                <div className="space-y-2 text-left">
+                                                    {prod.quote && (
+                                                        <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-200">
+                                                            <div className="flex items-start gap-2">
+                                                                <Quote className="h-3.5 w-3.5 text-amber-400 shrink-0 mt-0.5" />
+                                                                <p className="text-xs italic font-serif">"{prod.quote}"</p>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    <p className="text-xs text-stone-300 font-serif leading-relaxed">
+                                                        {prod.lore}
+                                                    </p>
+
+                                                    <div className="flex items-center justify-between pt-2 border-t border-white/5 text-[11px]">
+                                                        <div className="flex items-center gap-2 text-stone-400">
+                                                            {prod.special_move && (
+                                                                <span className="flex items-center gap-1 font-semibold text-amber-300">
+                                                                    <Sparkles className="h-3 w-3 text-yellow-400" />
+                                                                    {prod.special_move}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setEditingProductId(prod.product_id);
+                                                                setProdEditForm({
+                                                                    canonical_name: prod.canonical_name,
+                                                                    subtitle: prod.subtitle,
+                                                                    faction: prod.faction,
+                                                                    quote: prod.quote,
+                                                                    flavor_quote_author: prod.flavor_quote_author,
+                                                                    lore: prod.lore,
+                                                                    special_move: prod.special_move
+                                                                });
+                                                            }}
+                                                            className="px-2.5 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 text-[10px] font-black uppercase tracking-wider flex items-center gap-1 transition"
+                                                        >
+                                                            <Edit3 className="h-3 w-3" />
+                                                            <span>Editar Lore</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                )
+            ) : (
+                /* ─── VISTA 2: PERSONAJES ARQUETÍPICOS ─── */
+                characters.length === 0 ? (
+                    <div className="p-12 text-center text-slate-500 rounded-xl bg-slate-900/40 border border-dashed border-slate-800">
+                        <BookOpen className="h-10 w-10 mx-auto mb-2 opacity-40 text-amber-400" />
+                        <p className="text-sm">No se encontraron personajes con los filtros seleccionados.</p>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {characters.map((char) => (
+                            <div
+                                key={char.slug}
+                                className="p-4 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-amber-500/40 transition-all group relative flex flex-col justify-between"
+                            >
+                                <div>
+                                    <div className="flex items-start justify-between gap-2 mb-2">
+                                        <div>
+                                            <h3 className="text-base font-bold text-white font-cinzel group-hover:text-amber-300 transition">
+                                                {char.canonical_name}
+                                            </h3>
+                                            <span className="text-[10px] font-mono text-slate-400">
+                                                slug: {char.slug}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-1.5 shrink-0">
+                                            <span
+                                                className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${getFactionBadgeColor(
+                                                    char.faction
+                                                )}`}
+                                            >
+                                                {char.faction}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {char.subtitle && (
+                                        <p className="text-xs italic text-amber-200/90 mb-2 font-serif">
+                                            "{char.subtitle}"
+                                        </p>
+                                    )}
+
+                                    <p className="text-xs text-slate-300 line-clamp-3 mb-3 leading-relaxed">
+                                        {char.lore}
+                                    </p>
+                                </div>
+
+                                <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2">
+                                    <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                                        <Zap className="h-3 w-3 text-amber-400" />
+                                        <span className="truncate">{char.special_move}</span>
+                                    </span>
+
+                                    <button
+                                        onClick={() => setEditingChar(char)}
+                                        className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 text-xs font-bold transition"
+                                    >
+                                        <Edit3 className="h-3 w-3" />
+                                        <span>Editar</span>
+                                    </button>
+                                </div>
                             </div>
-                        </div>
-                    ))}
-                </div>
+                        ))}
+                    </div>
+                )
             )}
 
-            {/* MODAL EDITOR DE LORE */}
+            {/* Modal de Edición de Personaje Canónico */}
             {editingChar && (
-                <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-                    <div className="w-full max-w-2xl bg-slate-900 border border-amber-500/40 rounded-2xl shadow-2xl p-6 relative max-h-[90vh] overflow-y-auto">
-                        <button
-                            onClick={() => setEditingChar(null)}
-                            className="absolute top-4 right-4 p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white transition"
-                        >
-                            <X className="h-5 w-5" />
-                        </button>
-
-                        <div className="flex items-center justify-between mb-4 pr-8">
-                            <div className="flex items-center gap-2">
-                                <BookOpen className="h-5 w-5 text-amber-400" />
-                                <h3 className="text-lg font-bold text-white font-cinzel">
-                                    Editar Lore: {editingChar.canonical_name}
-                                </h3>
-                            </div>
-
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+                    <div className="w-full max-w-2xl rounded-2xl bg-slate-900 border border-amber-500/40 shadow-2xl p-6 overflow-y-auto max-h-[90vh] space-y-4">
+                        <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                            <h3 className="text-lg font-bold text-white font-cinzel flex items-center gap-2">
+                                <Edit3 className="h-5 w-5 text-amber-400" />
+                                Editar Lore: {editingChar.canonical_name}
+                            </h3>
                             <button
-                                onClick={() => handleHarvest(editingChar.canonical_name)}
-                                disabled={harvesting}
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/40 text-xs font-semibold transition active:scale-95 disabled:opacity-50"
-                                title="Re-cosechar de Wiki Grayskull sin coste"
+                                onClick={() => setEditingChar(null)}
+                                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
                             >
-                                <Globe className={`h-3.5 w-3.5 ${harvesting ? 'animate-spin' : ''}`} />
-                                <span>{harvesting ? 'Consultando...' : 'Re-cosechar de Wiki'}</span>
+                                <X className="h-5 w-5" />
                             </button>
                         </div>
 
-                        <div className="space-y-4">
+                        <div className="space-y-3">
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                {/* Nombre */}
                                 <div>
-                                    <label className="text-xs font-semibold text-slate-300 mb-1 block">
-                                        Nombre Canónico
+                                    <label className="block text-xs font-bold text-slate-300 uppercase mb-1">
+                                        Nombre Canónico:
                                     </label>
                                     <input
                                         type="text"
                                         value={editingChar.canonical_name}
-                                        onChange={(e) =>
-                                            setEditingChar({ ...editingChar, canonical_name: e.target.value })
-                                        }
-                                        className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-white focus:border-amber-500 focus:outline-none"
+                                        onChange={(e) => setEditingChar({ ...editingChar, canonical_name: e.target.value })}
+                                        className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white text-sm"
                                     />
                                 </div>
-
-                                {/* Facción */}
                                 <div>
-                                    <label className="text-xs font-semibold text-slate-300 mb-1 block">
-                                        Facción
+                                    <label className="block text-xs font-bold text-slate-300 uppercase mb-1">
+                                        Subtítulo / Epíteto:
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={editingChar.subtitle || ''}
+                                        onChange={(e) => setEditingChar({ ...editingChar, subtitle: e.target.value })}
+                                        className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white text-sm"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-300 uppercase mb-1">
+                                        Facción:
                                     </label>
                                     <select
                                         value={editingChar.faction}
-                                        onChange={(e) =>
-                                            setEditingChar({ ...editingChar, faction: e.target.value })
-                                        }
-                                        className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-white focus:border-amber-500 focus:outline-none"
+                                        onChange={(e) => setEditingChar({ ...editingChar, faction: e.target.value })}
+                                        className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white text-sm"
                                     >
                                         {FACTION_OPTIONS.filter((f) => f.value !== 'ALL').map((f) => (
                                             <option key={f.value} value={f.value}>
@@ -384,23 +694,14 @@ export const LoreTab: React.FC = () => {
                                         ))}
                                     </select>
                                 </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                {/* Marco Visual TCG */}
                                 <div>
-                                    <label className="text-xs font-semibold text-slate-300 mb-1 block">
-                                        Marco Visual TCG
+                                    <label className="block text-xs font-bold text-slate-300 uppercase mb-1">
+                                        Tema Visual de Marco:
                                     </label>
                                     <select
                                         value={editingChar.theme_key}
-                                        onChange={(e) =>
-                                            setEditingChar({
-                                                ...editingChar,
-                                                theme_key: e.target.value as any
-                                            })
-                                        }
-                                        className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-white focus:border-amber-500 focus:outline-none"
+                                        onChange={(e) => setEditingChar({ ...editingChar, theme_key: e.target.value as any })}
+                                        className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white text-sm"
                                     >
                                         {THEME_OPTIONS.map((t) => (
                                             <option key={t.value} value={t.value}>
@@ -409,144 +710,60 @@ export const LoreTab: React.FC = () => {
                                         ))}
                                     </select>
                                 </div>
-
-                                {/* Poder Especial */}
-                                <div>
-                                    <label className="text-xs font-semibold text-slate-300 mb-1 block">
-                                        Poder / Habilidad de Alto Impacto
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={editingChar.special_move}
-                                        onChange={(e) =>
-                                            setEditingChar({ ...editingChar, special_move: e.target.value })
-                                        }
-                                        className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-white focus:border-amber-500 focus:outline-none"
-                                    />
-                                </div>
                             </div>
 
-                            {/* Línea de Tipo */}
                             <div>
-                                <label className="text-xs font-semibold text-slate-300 mb-1 block">
-                                    Línea de Tipo (Subtítulo en cromo)
+                                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">
+                                    Ataque o Poder Especial:
                                 </label>
                                 <input
                                     type="text"
-                                    value={editingChar.type_line}
-                                    onChange={(e) =>
-                                        setEditingChar({ ...editingChar, type_line: e.target.value })
-                                    }
-                                    className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-white focus:border-amber-500 focus:outline-none"
+                                    value={editingChar.special_move}
+                                    onChange={(e) => setEditingChar({ ...editingChar, special_move: e.target.value })}
+                                    className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white text-sm"
                                 />
                             </div>
 
-                            {/* Texto de Lore / Frase Mítica */}
                             <div>
-                                <div className="flex items-center justify-between mb-1">
-                                    <label className="text-xs font-semibold text-slate-300">
-                                        Lore Canónico & Frase Mítica (Espacio Losa TCG)
-                                    </label>
-                                    <span
-                                        className={`text-[11px] font-mono ${
-                                            editingChar.lore.length > 180 ? 'text-amber-400' : 'text-slate-500'
-                                        }`}
-                                    >
-                                        {editingChar.lore.length} / 180 caracteres
-                                    </span>
-                                </div>
-                                <textarea
-                                    rows={3}
-                                    value={editingChar.lore}
-                                    onChange={(e) =>
-                                        setEditingChar({ ...editingChar, lore: e.target.value })
-                                    }
-                                    className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-white focus:border-amber-500 focus:outline-none resize-none"
-                                />
-                            </div>
-
-                            {/* Estadísticas RPG */}
-                            <div>
-                                <label className="text-xs font-semibold text-slate-300 mb-2 block">
-                                    Matriz de Combate (FUE / MAG / DEF / AGI)
+                                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">
+                                    Biografía y Lore Canónico:
                                 </label>
-                                <div className="grid grid-cols-4 gap-2">
-                                    <div>
-                                        <span className="text-[10px] text-slate-400 block mb-1">FUE</span>
-                                        <input
-                                            type="number"
-                                            value={editingChar.fuerza}
-                                            onChange={(e) =>
-                                                setEditingChar({
-                                                    ...editingChar,
-                                                    fuerza: parseInt(e.target.value) || 0
-                                                })
-                                            }
-                                            className="w-full px-2 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-center text-sm font-bold text-amber-300"
-                                        />
-                                    </div>
-                                    <div>
-                                        <span className="text-[10px] text-slate-400 block mb-1">MAG</span>
-                                        <input
-                                            type="number"
-                                            value={editingChar.magia}
-                                            onChange={(e) =>
-                                                setEditingChar({
-                                                    ...editingChar,
-                                                    magia: parseInt(e.target.value) || 0
-                                                })
-                                            }
-                                            className="w-full px-2 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-center text-sm font-bold text-amber-300"
-                                        />
-                                    </div>
-                                    <div>
-                                        <span className="text-[10px] text-slate-400 block mb-1">DEF</span>
-                                        <input
-                                            type="number"
-                                            value={editingChar.defensa}
-                                            onChange={(e) =>
-                                                setEditingChar({
-                                                    ...editingChar,
-                                                    defensa: parseInt(e.target.value) || 0
-                                                })
-                                            }
-                                            className="w-full px-2 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-center text-sm font-bold text-amber-300"
-                                        />
-                                    </div>
-                                    <div>
-                                        <span className="text-[10px] text-slate-400 block mb-1">AGI</span>
-                                        <input
-                                            type="number"
-                                            value={editingChar.agilidad}
-                                            onChange={(e) =>
-                                                setEditingChar({
-                                                    ...editingChar,
-                                                    agilidad: parseInt(e.target.value) || 0
-                                                })
-                                            }
-                                            className="w-full px-2 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-center text-sm font-bold text-amber-300"
-                                        />
-                                    </div>
-                                </div>
+                                <textarea
+                                    value={editingChar.lore}
+                                    onChange={(e) => setEditingChar({ ...editingChar, lore: e.target.value })}
+                                    rows={4}
+                                    className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white text-sm resize-none"
+                                />
                             </div>
                         </div>
 
-                        {/* Botones de Acción */}
-                        <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-slate-800">
+                        <div className="flex items-center justify-between pt-4 border-t border-slate-800">
                             <button
-                                onClick={() => setEditingChar(null)}
-                                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold transition"
+                                type="button"
+                                onClick={() => handleHarvest(editingChar.canonical_name)}
+                                disabled={harvesting}
+                                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 text-xs font-bold hover:bg-indigo-500/30 transition disabled:opacity-50"
                             >
-                                Cancelar
+                                <Globe className="h-4 w-4" />
+                                <span>{harvesting ? 'Cosechando...' : 'Re-cosechar de Wiki'}</span>
                             </button>
-                            <button
-                                onClick={handleSave}
-                                disabled={saving}
-                                className="flex items-center gap-2 px-5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-400 hover:to-yellow-500 text-slate-950 text-sm font-bold font-cinzel transition shadow-lg shadow-amber-500/20 active:scale-95 disabled:opacity-50"
-                            >
-                                <Save className="h-4 w-4" />
-                                <span>{saving ? 'Guardando...' : 'Guardar y Verificar'}</span>
-                            </button>
+
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => setEditingChar(null)}
+                                    className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={handleSaveChar}
+                                    disabled={saving}
+                                    className="flex items-center gap-2 px-5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-600 hover:brightness-110 text-slate-950 text-xs font-black uppercase tracking-wider transition shadow-md shadow-amber-500/20"
+                                >
+                                    {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                                    <span>Guardar y Verificar</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -554,3 +771,5 @@ export const LoreTab: React.FC = () => {
         </div>
     );
 };
+
+export default LoreTab;

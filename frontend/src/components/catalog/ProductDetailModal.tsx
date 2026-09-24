@@ -8,6 +8,7 @@ import { MOTUImage } from '../ui/MOTUImage';
 import { parseUtcDate } from '../../utils/dateUtils';
 import { mergeProducts } from '../../api/admin';
 import type { Product } from '../../api/collection';
+import { ProductLoreAccordion } from '../lore/ProductLoreAccordion';
 
 interface ProductDetailModalProps {
     selectedProduct: Product | null;
@@ -229,6 +230,15 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                                 )}
                             </div>
                         )}
+                        {/* Grimorio Lore: Reverso de Blíster & Canon (Exclusivo Origins) */}
+                        {!isVintageOnly && !selectedProduct.is_vintage && (
+                            <ProductLoreAccordion
+                                productId={selectedProduct.id}
+                                productName={selectedProduct.name}
+                                isVintage={isVintageOnly || !!selectedProduct.is_vintage}
+                            />
+                        )}
+
                         <div className="flex items-center justify-between px-4">
                             <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20">La Verdad del Mercado</h5>
                             <span className={`text-[10px] font-black uppercase ${isVintageOnly ? 'text-amber-500' : 'text-brand-primary'}`}>Mejor Oferta Disponible</span>

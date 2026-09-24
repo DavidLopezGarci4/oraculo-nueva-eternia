@@ -20,6 +20,7 @@ import { useModalA11y } from '../hooks/useModalA11y';
 import { Sparkles } from 'lucide-react';
 
 const TradingCardModal = lazy(() => import('./collection/TradingCardModal'));
+import { ProductLoreAccordion } from './lore/ProductLoreAccordion';
 
 
 interface CollectionItemDetailModalProps {
@@ -294,6 +295,15 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
                                     className="w-full bg-white/5 border border-white/10 rounded-xl md:rounded-3xl p-3 text-white text-xs md:text-sm font-medium focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-all min-h-[50px] md:min-h-[120px] resize-none"
                                 />
                             </div>
+
+                            {/* Grimorio Lore: Reverso de Blíster & Canon (Exclusivo Origins) */}
+                            {!product.is_vintage && (
+                                <ProductLoreAccordion
+                                    productId={product.id}
+                                    productName={product.name}
+                                    isVintage={!!product.is_vintage}
+                                />
+                            )}
                         </div>
                     </div>
 

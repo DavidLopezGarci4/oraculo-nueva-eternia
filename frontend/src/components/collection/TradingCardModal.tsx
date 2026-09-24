@@ -28,7 +28,7 @@ import { toPng } from 'html-to-image';
 import { MOTUImage } from '../ui/MOTUImage';
 import { enhanceCardWithAI, type CardAiEnhanceResult } from '../../api/cards';
 import { getSystemTcgLayouts } from '../../api/admin';
-import { fetchCharacterLoreList, updateCharacterLore, harvestProductLore, type CharacterLore } from '../../api/lore';
+import { fetchCharacterLoreList, updateCharacterLore, harvestProductLore, fetchProductLore, updateProductLore, type CharacterLore } from '../../api/lore';
 import { refreshProductImage } from '../../api/products';
 import { DEFAULT_FACTION_CARD_LAYOUTS, type FactionCardLayout } from '../config/TcgConfigTab';
 
@@ -1216,19 +1216,45 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
             }
         }).catch(() => {});
 
-        // Cargar ficha canónica de lore desde la BD
-        const rawName = item.product_name || item.name || '';
-        fetchCharacterLoreList({ search: rawName, limit: 5 }).then(res => {
-            if (res && res.items && res.items.length > 0) {
-                const best = res.items[0];
-                setDbLoreChar(best);
-                if (best.subtitle && !customSubtitle) setCustomSubtitle(best.subtitle);
-                if (best.flavor_quote_author && !customQuoteAuthor) setCustomQuoteAuthor(best.flavor_quote_author);
-                if (best.text_color && customTextColor === '#FFFFFF') setCustomTextColor(best.text_color);
-                if (best.mana_cost && !customManaCost) setCustomManaCost(best.mana_cost);
-                if (best.card_version && !savedCustom) setCardVersion(best.card_version as any);
-            }
-        }).catch(() => {});
+        // Cargar ficha canónica de lore desde la BD (por Product ID si es Origins, o fallback)
+        const productId = item.id || (item as any).product_id;
+        const isVintageItem = (item as any).is_vintage;
+
+        if (productId && !isVintageItem) {
+            fetchProductLore(productId).then(res => {
+                if (res) {
+                    setDbLoreChar(res as any);
+                    if (res.subtitle && !customSubtitle) setCustomSubtitle(res.subtitle);
+                    if (res.flavor_quote_author && !customQuoteAuthor) setCustomQuoteAuthor(res.flavor_quote_author);
+                    if (res.text_color && customTextColor === '#FFFFFF') setCustomTextColor(res.text_color);
+                    if (res.mana_cost && !customManaCost) setCustomManaCost(res.mana_cost);
+                    if (res.card_version && !savedCustom) setCardVersion(res.card_version as any);
+                    if (res.special_move && !customSpecialMove) setCustomSpecialMove(res.special_move);
+                    if (res.lore && !customLore) setCustomLore(res.lore);
+                }
+            }).catch(() => {
+                const rawName = item.product_name || item.name || '';
+                fetchCharacterLoreList({ search: rawName, limit: 5 }).then(res => {
+                    if (res && res.items && res.items.length > 0) {
+                        const best = res.items[0];
+                        setDbLoreChar(best);
+                        if (best.subtitle && !customSubtitle) setCustomSubtitle(best.subtitle);
+                        if (best.flavor_quote_author && !customQuoteAuthor) setCustomQuoteAuthor(best.flavor_quote_author);
+                        if (best.text_color && customTextColor === '#FFFFFF') setCustomTextColor(best.text_color);
+                        if (best.mana_cost && !customManaCost) setCustomManaCost(best.mana_cost);
+                        if (best.card_version && !savedCustom) setCardVersion(best.card_version as any);
+                    }
+                }).catch(() => {});
+            });
+        } else {
+            const rawName = item.product_name || item.name || '';
+            fetchCharacterLoreList({ search: rawName, limit: 5 }).then(res => {
+                if (res && res.items && res.items.length > 0) {
+                    const best = res.items[0];
+                    setDbLoreChar(best);
+                }
+            }).catch(() => {});
+        }
     }, [isOpen, item?.id]);
 
     // Guardar automáticamente cualquier cambio en la carta para mantenerlo fijo
@@ -1464,33 +1490,57 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
     };
 
     const handleSaveToLoreCanon = async () => {
-        if (!dbLoreChar && !effectiveDbLore) return;
-        const slug = dbLoreChar?.slug || effectiveDbLore?.slug;
-        if (!slug) return;
+        const productId = item.id || (item as any).product_id;
+        const isVintage = (item as any).is_vintage;
         setSavingDbLore(true);
         try {
-            const updated = await updateCharacterLore(slug, {
-                canonical_name: customCardName.trim() || undefined,
-                subtitle: customSubtitle.trim() || undefined,
-                special_move: customSpecialMove.trim() || undefined,
-                lore: customLore.trim() || undefined,
-                flavor_quote_author: customQuoteAuthor.trim() || undefined,
-                type_line: customTypeLine.trim() || undefined,
-                text_color: customTextColor,
-                card_version: cardVersion,
-                mana_cost: customManaCost.trim() || undefined,
-                fuerza: customStats?.fuerza,
-                magia: customStats?.magia,
-                defensa: customStats?.defensa,
-                agilidad: customStats?.agilidad,
-                theme_key: themeKey as any,
-                faction: factionName
-            });
-            setDbLoreChar(updated);
+            if (productId && !isVintage) {
+                const updatedProductLore = await updateProductLore(productId, {
+                    canonical_name: customCardName.trim() || displayCardName,
+                    subtitle: customSubtitle.trim() || displaySubtitle,
+                    special_move: customSpecialMove.trim() || specialMoveText,
+                    lore: customLore.trim() || loreText,
+                    quote: specialMoveText || customSpecialMove.trim() || undefined,
+                    flavor_quote_author: customQuoteAuthor.trim() || displayQuoteAuthor,
+                    type_line: customTypeLine.trim() || typeLineText,
+                    text_color: customTextColor,
+                    card_version: cardVersion,
+                    mana_cost: customManaCost.trim() || defaultManaCostByTheme[themeKey],
+                    fuerza: customStats?.fuerza,
+                    magia: customStats?.magia,
+                    defensa: customStats?.defensa,
+                    agilidad: customStats?.agilidad,
+                    theme_key: themeKey as any,
+                    faction: factionName
+                });
+                setDbLoreChar(updatedProductLore as any);
+            } else {
+                const slug = dbLoreChar?.slug || (effectiveDbLore as any)?.slug;
+                if (slug) {
+                    const updated = await updateCharacterLore(slug, {
+                        canonical_name: customCardName.trim() || undefined,
+                        subtitle: customSubtitle.trim() || undefined,
+                        special_move: customSpecialMove.trim() || undefined,
+                        lore: customLore.trim() || undefined,
+                        flavor_quote_author: customQuoteAuthor.trim() || undefined,
+                        type_line: customTypeLine.trim() || undefined,
+                        text_color: customTextColor,
+                        card_version: cardVersion,
+                        mana_cost: customManaCost.trim() || undefined,
+                        fuerza: customStats?.fuerza,
+                        magia: customStats?.magia,
+                        defensa: customStats?.defensa,
+                        agilidad: customStats?.agilidad,
+                        theme_key: themeKey as any,
+                        faction: factionName
+                    });
+                    setDbLoreChar(updated);
+                }
+            }
             setLoreSaveSuccess(true);
             setTimeout(() => setLoreSaveSuccess(false), 3000);
         } catch (e) {
-            console.error('Error al guardar en el canon:', e);
+            console.error('Error al guardar lore en la base de datos:', e);
         } finally {
             setSavingDbLore(false);
         }
@@ -2298,20 +2348,20 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                     </div>
                                 </div>
 
-                                {/* Botón Guardar en el Canon */}
-                                {(dbLoreChar || effectiveDbLore) && (
-                                    <div className="flex items-center justify-between pt-1 border-t border-white/5">
+                                {/* Botón Guardar en Base de Datos */}
+                                {(dbLoreChar || effectiveDbLore || item) && (
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-white/10">
                                         <span className="text-[9px] text-stone-400">
-                                            Guardar estos textos para que todas las cartas de este personaje los hereden.
+                                            Guarda los textos permanentemente en la base de datos para esta figura de Origins.
                                         </span>
                                         <button
                                             type="button"
                                             onClick={handleSaveToLoreCanon}
                                             disabled={savingDbLore}
-                                            className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-[9.5px] font-black uppercase tracking-wider transition cursor-pointer ${
+                                            className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-[9.5px] font-black uppercase tracking-wider transition cursor-pointer shadow-md ${
                                                 loreSaveSuccess
-                                                    ? 'bg-emerald-500 text-slate-950'
-                                                    : 'bg-amber-500/20 border border-amber-500/50 text-amber-300 hover:bg-amber-500 hover:text-slate-950'
+                                                    ? 'bg-emerald-500 text-slate-950 font-bold'
+                                                    : 'bg-gradient-to-r from-amber-500 to-yellow-600 text-slate-950 hover:brightness-110 shadow-amber-500/20'
                                             }`}
                                         >
                                             {savingDbLore ? (
@@ -2321,7 +2371,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                             ) : (
                                                 <Save className="h-3 w-3" />
                                             )}
-                                            <span>{loreSaveSuccess ? '¡Guardado en Canon!' : 'Guardar en Grimorio'}</span>
+                                            <span>{savingDbLore ? 'Guardando en BD...' : loreSaveSuccess ? '¡Guardado con Éxito!' : '💾 Guardar Lore en BD'}</span>
                                         </button>
                                     </div>
                                 )}

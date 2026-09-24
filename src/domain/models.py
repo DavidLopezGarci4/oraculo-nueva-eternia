@@ -76,6 +76,13 @@ class ProductModel(Base):
         back_populates="product",
         cascade="all, delete-orphan"
     )
+    
+    lore_entry: Mapped[Optional["ProductLoreModel"]] = relationship(
+        "ProductLoreModel",
+        back_populates="product",
+        uselist=False,
+        cascade="all, delete-orphan"
+    )
 
 class OfferModel(Base):
     __tablename__ = "offers"
@@ -586,6 +593,43 @@ class CharacterLoreModel(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
+class ProductLoreModel(Base):
+    """
+    Entidad individual de Lore, Reverso de Blíster (Cardback Bio) y Lema oficial por figura de MOTU Origins.
+    Relación 1:1 con ProductModel (exclusivo para figuras de la línea Origins, is_vintage == False).
+    """
+    __tablename__ = "product_lore"
+
+    product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), primary_key=True, index=True)
+    canonical_name: Mapped[str] = mapped_column(String, index=True) # ej. "Battle Armor He-Man"
+    subtitle: Mapped[Optional[str]] = mapped_column(String, nullable=True) # ej. "Most Powerful Man in the Universe"
+    faction: Mapped[str] = mapped_column(String, default="Guerreros Heroicos", index=True)
+    theme_key: Mapped[str] = mapped_column(String, default="castle_grayskull")
+    type_line: Mapped[str] = mapped_column(String, default="Criatura Legendaria — Guerrero Humano")
+    special_move: Mapped[str] = mapped_column(String, default="Poder de Grayskull")
+    quote: Mapped[Optional[str]] = mapped_column(String, nullable=True) # Lema / Frase del reverso de blíster
+    flavor_quote_author: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    lore: Mapped[str] = mapped_column(Text) # Biografía concisa del reverso o wiki en español
+    source_url: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    
+    # Personalización Visual
+    text_color: Mapped[Optional[str]] = mapped_column(String, default="#FFFFFF", nullable=True)
+    card_version: Mapped[Optional[str]] = mapped_column(String, default="showcase", nullable=True)
+    mana_cost: Mapped[Optional[str]] = mapped_column(String, default="{2}{W}{W}", nullable=True)
+    
+    # Matriz de Combate RPG
+    fuerza: Mapped[int] = mapped_column(Integer, default=85)
+    magia: Mapped[int] = mapped_column(Integer, default=75)
+    defensa: Mapped[int] = mapped_column(Integer, default=85)
+    agilidad: Mapped[int] = mapped_column(Integer, default=85)
+    
+    is_customized: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+    product: Mapped["ProductModel"] = relationship("ProductModel", back_populates="lore_entry")
+
 __all__ = [
     "Base", 
     "ProductModel", 
@@ -611,6 +655,7 @@ __all__ = [
     "VintageMiscellaneousModel",
     "ProductMonthlyStatsModel",
     "CharacterLoreModel",
+    "ProductLoreModel",
     "DOMAIN_VERSION"
 ]
 
