@@ -65,31 +65,32 @@ Este documento detalla en profundidad el funcionamiento, utilidad, criticidad y 
 
 ---
 
-### [5] Abrir Google Chrome en Depuración (Puerto 9222)
+### [5] Abrir Google Chrome en Depuración (Puerto 9222 - Manual)
 * **¿Qué hace exactamente?**
   Localiza tu ejecutable de Google Chrome en Windows y lo abre con un perfil de usuario aislado (`scratch/chrome_dev`) escuchando en el puerto `--remote-debugging-port=9222` con las banderas de automatización desactivadas (`--disable-blink-features=AutomationControlled`).
-* **Utilidad:** Prepara el navegador para la "Incursión Asistida" (Opción 6). Te permite navegar manualmente por tiendas protegidas por Cloudflare o Datadome (Wallapop, Vinted, eBay, Smyths Toys), iniciar sesión con tu cuenta humana y resolver captchas con total tranquilidad.
-* **Criticidad:** **ALTA (para evasión antibot)**. Es el primer paso para raspar tiendas con bloqueos severos.
-* **Modo de Uso:** Pulsa `5` y Enter. Se abrirá una ventana limpia de Chrome. Navega a la tienda que desees consultar, entra en la sección de figuras MOTU y déjala abierta. Luego pasa a la Opción 6.
+* **Utilidad:** Utilidad avanzada opcional para inspeccionar manualmente el perfil de Chrome de depuración o instalar extensiones/cookies. *(Nota: Ya no es obligatorio ejecutarla antes de la Opción [6], ya que la Opción [6] ahora auto-inicia Chrome de forma automática si no está abierto).*
+* **Criticidad:** **BAJA-MEDIA (Utilidad manual)**.
+* **Modo de Uso:** Pulsa `5` si deseas abrir Chrome de forma anticipada.
 
 ---
 
 ### [6] Incursión Asistida Universal (CDP Multi-tienda)
 * **¿Qué hace exactamente?**
-  Ejecuta `scripts/scrape_multi_via_cdp.py`. Se conecta mediante Chrome DevTools Protocol (CDP) a la ventana de Chrome abierta previamente en el puerto 9222, detecta automáticamente la pestaña de la tienda que estás viendo (Smyths Toys, eBay, Amazon o BBTS) y extrae las figuras y precios renderizados directamente en el DOM real.
-* **Utilidad:** Es la "bala de plata" antibloqueo definitiva. Como la página ya fue cargada y aprobada por tu sesión de Chrome real, los firewalls antibot no pueden detectarlo.
+  Ejecuta `scripts/scrape_multi_via_cdp.py`. Comprueba si Chrome está activo en el puerto 9222; si no lo está, **lo inicia automáticamente**. Luego se conecta mediante Chrome DevTools Protocol (CDP), detecta la tienda abierta (Smyths Toys, eBay, Amazon o BBTS) o navega a ella si la pestaña está en blanco, y extrae las figuras y precios renderizados directamente en el DOM real.
+* **Utilidad:** Es la "bala de plata" antibloqueo definitiva. Como la página es cargada por un navegador Chrome real con tu sesión, los firewalls antibot severos (Datadome, Cloudflare Turnstile) no bloquean la extracción. Te permite además resolver cualquier captcha humano directamente en pantalla.
 * **Criticidad:** **ALTA**. Salvavidas cuando los scrapers automáticos puros son bloqueados por cambios de seguridad en las webs.
-* **Modo de Uso:** Primero abre la Opción 5 y ten abierta una pestaña en la tienda con los productos visibles. Luego pulsa `6` y Enter. El script leerá la pestaña activa y guardará las ofertas en la base de datos.
+* **Modo de Uso:** Pulsa `6` y Enter. Chrome se abrirá solo (si no estaba ya abierto), se conectará a la tienda y extraerá las ofertas directamente a Supabase.
 
 ---
 
 ### [7] Incursión Directa Multi-Tienda (Smyths, Wallapop, Vinted, eBay...)
 * **¿Qué hace exactamente?**
-  Presenta un submenú para elegir la tienda objetivo (`SmythsToys`, `Wallapop`, `Vinted`, `Ebay`, `Amazon`, `BBTS`), solicita opcionalmente un término de búsqueda (o pulsa Enter para automático) y ejecuta `scripts/run_single_incursion.py` desde tu IP residencial.
-* **Utilidad:** Permite lanzar extracciones rápidas de tiendas específicas sin necesidad de abrir Chrome manual ni esperar a los cronjobs de la nube.
-* **Criticidad:** **MEDIA-ALTA**. Ideal para actualizar el catálogo de Smyths Toys o rastrear ofertas frescas de Wallapop o Vinted en 30 segundos.
+  Es un extractor **100% autónomo** (no requiere Chrome ni el puerto 9222). Presenta un menú para elegir una tienda individual (`SmythsToys`, `Wallapop`, `Vinted`, `Ebay`, `Amazon`, `BBTS`) o la opción **`[A] TODAS las tiendas en cadena (Incursión Secuencial Completa)`**.
+* **Utilidad:** Permite lanzar extracciones rápidas de tiendas específicas en segundos o recorrer todo el mercado en cadena. En modo secuencial (`[A]`), ejecuta cada tienda con captura aislada de fallos (si una tienda sufre un timeout, las demás continúan) y genera una tabla resumen consolidada al finalizar.
+* **Criticidad:** **ALTA**. El motor de rastreo diario primario desde tu IP residencial.
 * **Restricción de Negocio:** *Las búsquedas vintage en scrapers de segunda mano están estrictamente inhabilitadas por normativa del proyecto.*
-* **Modo de Uso:** Pulsa `7`, elige el número de la tienda (1-6) y confirma la consulta de búsqueda. Las ofertas descubiertas se guardarán automáticamente en la base de datos.
+* **Modo de Uso:** Pulsa `7`, elige `[A]` para recorrer todas las tiendas secuencialmente o `[1-6]` para una tienda en particular.
+
 
 ---
 

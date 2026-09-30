@@ -2,6 +2,10 @@ import asyncio
 import sys
 import os
 import re
+import socket
+import subprocess
+import time
+from typing import Optional
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 
@@ -11,15 +15,85 @@ sys.path.append(os.getcwd())
 # Load environment
 load_dotenv(override=True)
 
+STORE_DEFAULT_URLS = {
+    "SmythsToys": "https://www.smythstoys.com/de/de-de/spielzeug/action-spielzeug/actionfiguren/masters-of-the-universe-figuren-und-sets/c/SM1001010408?sort=creationDate_dt+desc",
+    "Ebay": "https://www.ebay.es/sch/i.html?_nkw=motu+origins&_sacat=0",
+    "Amazon": "https://www.amazon.es/s?k=masters+of+the+universe+origins",
+    "BBTS": "https://www.bigbadtoystore.com/Search?SearchText=masters+of+the+universe+origins"
+}
+
+def find_chrome_executable() -> Optional[str]:
+    common_paths = [
+        r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+        r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+        os.path.expandvars(r"%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe"),
+        os.path.expandvars(r"%PROGRAMFILES%\Google\Chrome\Application\chrome.exe"),
+        os.path.expandvars(r"%PROGRAMFILES(X86)%\Google\Chrome\Application\chrome.exe"),
+    ]
+    for p in common_paths:
+        if p and os.path.exists(p):
+            return p
+    return None
+
+def is_chrome_debug_port_open(port: int = 9222) -> bool:
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(0.8)
+    try:
+        res = sock.connect_ex(('127.0.0.1', port))
+        return res == 0
+    finally:
+        sock.close()
+
+def ensure_chrome_debug_running(port: int = 9222) -> bool:
+    if is_chrome_debug_port_open(port):
+        print(f"⚡ Chrome ya está abierto y escuchando en el puerto {port}.")
+        return True
+        
+    print(f"🌐 Chrome no detectado en puerto {port}. Iniciándolo automáticamente en modo depuración...")
+    chrome_path = find_chrome_executable()
+    if not chrome_path:
+        print("❌ Error: No se encontró chrome.exe en las rutas estándar de Windows.")
+        return False
+        
+    user_data_dir = os.path.abspath(os.path.join(os.getcwd(), "scratch", "chrome_dev"))
+    os.makedirs(user_data_dir, exist_ok=True)
+    
+    args = [
+        chrome_path,
+        f"--remote-debugging-port={port}",
+        f"--user-data-dir={user_data_dir}",
+        "--disable-blink-features=AutomationControlled",
+        "--no-first-run",
+        "--no-default-browser-check",
+        "--start-maximized"
+    ]
+    
+    try:
+        subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        for _ in range(12):
+            time.sleep(0.5)
+            if is_chrome_debug_port_open(port):
+                print(f"✅ Chrome iniciado exitosamente en puerto {port}.")
+                return True
+        print(f"⚠️ Chrome fue lanzado pero tardó en abrir el puerto {port}. Intentando continuar...")
+        return True
+    except Exception as e:
+        print(f"❌ Error al iniciar Chrome automáticamente: {e}")
+        return False
+
 async def main():
     from playwright.async_api import async_playwright
     from src.infrastructure.scrapers.smythstoys_scraper import SmythsToysScraper
     from src.infrastructure.scrapers.ebay_scraper import EbayScraper
     from src.infrastructure.scrapers.bbts_scraper import BigBadToyStoreScraper
     from src.infrastructure.scrapers.pipeline import ScrapingPipeline
-    from src.infrastructure.scrapers.interface import ScrapedOffer
+    from src.infrastructure.scrapers.base import ScrapedOffer
 
     print("🔌 Conectando al navegador Chrome en el puerto 9222...")
+    ready = ensure_chrome_debug_running(9222)
+    if not ready:
+        print("❌ No se pudo iniciar ni conectar a Chrome.")
+        return
     
     async with async_playwright() as p:
         try:
@@ -33,9 +107,8 @@ async def main():
                     all_pages.append(page)
             
             if not all_pages:
-                print("❌ Error: No se encontraron pestañas abiertas en el navegador.")
-                await browser.close()
-                return
+                context = browser.contexts[0] if browser.contexts else await browser.new_context()
+                all_pages.append(await context.new_page())
 
             # Intentar auto-detectar la pestaña adecuada según la URL
             target_page = None
@@ -60,21 +133,21 @@ async def main():
                     detected_shop = "BBTS"
                     break
 
-            # Si no se auto-detectó, presentar un menú interactivo en la terminal
+            # Si no se auto-detectó, presentar menú interactivo
             if not target_page:
                 print("\n⚠️ No se detectó ninguna pestaña de tiendas conocidas de forma automática.")
                 print("Pestañas abiertas disponibles:")
                 for idx, page in enumerate(all_pages):
                     title = await page.title()
                     print(f"  [{idx}] {title[:40]} ({page.url[:50]}...)")
-                print("\nSelecciona una tienda para procesar la pestaña actual:")
-                print("  [1] Smyths Toys")
+                print("\nSelecciona una tienda para abrirla o procesarla:")
+                print("  [1] Smyths Toys (Alemania)")
                 print("  [2] eBay")
                 print("  [3] Amazon")
                 print("  [4] BigBadToyStore (BBTS)")
                 print("  [x] Cancelar")
                 
-                choice = input("\nIntroduce opción: ").strip()
+                choice = input("\nIntroduce opción [1-4]: ").strip()
                 if choice == "1":
                     detected_shop = "SmythsToys"
                 elif choice == "2":
@@ -88,17 +161,24 @@ async def main():
                     await browser.close()
                     return
                 
-                page_choice = input(f"Introduce el número de pestaña a procesar (0-{len(all_pages)-1}): ").strip()
-                try:
-                    target_page = all_pages[int(page_choice)]
-                except Exception:
-                    print("❌ Selección de pestaña inválida.")
-                    await browser.close()
-                    return
+                # Seleccionar la pestaña o usar la primera/crear una nueva
+                target_page = all_pages[0] if all_pages else await browser.contexts[0].new_page()
+                
+                # Si la pestaña es en blanco o no es de la tienda, navegar automáticamente
+                current_url = target_page.url.lower()
+                if "about:blank" in current_url or "chrome://" in current_url or detected_shop.lower() not in current_url:
+                    dest_url = STORE_DEFAULT_URLS.get(detected_shop)
+                    if dest_url:
+                        print(f"🌐 Navegando automáticamente a {detected_shop}: {dest_url}")
+                        await target_page.goto(dest_url, wait_until="domcontentloaded")
+                        await asyncio.sleep(2.0)
 
             print(f"\n🎯 Pestaña seleccionada: {await target_page.title()}")
             print(f"🔗 URL: {target_page.url}")
             print(f"🚀 Iniciando extracción asistida para: {detected_shop}")
+            
+            # Dar un momento si el usuario necesita resolver un captcha
+            print("💡 Tip: Si ves un captcha o aviso de cookies en Chrome, resuélvelo ahora.")
             
             # Simular scroll para asegurar renderizado de elementos perezosos
             print("🖱️ Realizando scroll táctico...")
@@ -119,7 +199,6 @@ async def main():
             elif detected_shop == "Ebay":
                 html = await target_page.content()
                 scraper = EbayScraper()
-                # Extraemos la query de búsqueda de la URL o usamos "auto"
                 match = re.search(r'_nkw=([^&]+)', target_page.url)
                 query = match.group(1) if match else "auto"
                 offers = scraper._parse_ebay_html(html, query)
@@ -128,9 +207,6 @@ async def main():
                 html = await target_page.content()
                 soup = BeautifulSoup(html, "html.parser")
                 scraper = BigBadToyStoreScraper()
-                # BBTS tiene una lista de elementos en la página
-                offers = []
-                # Reutilizar parsing interno de BBTS si es viable
                 product_elements = soup.find_all(class_='product-style') or soup.find_all(class_='product-card')
                 for item in product_elements:
                     parsed = scraper._parse_item(item)
@@ -138,7 +214,6 @@ async def main():
                         offers.append(parsed)
                         
             elif detected_shop == "Amazon":
-                # Inyectar script JS para extraer directamente del DOM de Amazon
                 print("🔍 Extrayendo catálogo de Amazon mediante inyección JS en el DOM...")
                 js_script = """
                 () => {
@@ -175,12 +250,10 @@ async def main():
                 """
                 extracted_items = await target_page.evaluate(js_script)
                 
-                # Normalizar precios en Python
                 for item in extracted_items:
                     try:
-                        # Limpiar precio: "25,99 €" -> 25.99
                         p_str = item["price_text"].replace("€", "").replace("$", "").replace("£", "").strip()
-                        p_str = p_str.replace(".", "").replace(",", ".") # Formato español
+                        p_str = p_str.replace(".", "").replace(",", ".")
                         price = float(p_str)
                         
                         offers.append(ScrapedOffer(
@@ -207,7 +280,6 @@ async def main():
             if offers:
                 print("\n💾 Inyectando ofertas directamente en Supabase (Producción)...")
                 pipeline = ScrapingPipeline([])
-                # Determinar nombre de la tienda para la sincronización
                 shop_name_mapping = {
                     "SmythsToys": "Smyths Toys",
                     "Ebay": "eBay",

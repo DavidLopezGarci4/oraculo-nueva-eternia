@@ -174,8 +174,8 @@ function Invoke-ChromeDebug {
 function Invoke-AssistedIncursion {
     Show-Header
     Write-Host "[6] EJECUTANDO INCURSION ASISTIDA UNIVERSAL (CDP)..." -ForegroundColor Cyan
+    Write-Host "Modo antibloqueo: conecta a Chrome (lo abre automaticamente en puerto 9222 si no esta activo)." -ForegroundColor Gray
     Write-Host ""
-    Write-Host "Conectando al Chrome abierto en el puerto 9222..." -ForegroundColor Gray
     
     $PythonExe = Get-PythonExe
     & $PythonExe scripts\scrape_multi_via_cdp.py
@@ -191,8 +191,9 @@ function Invoke-AssistedIncursion {
 function Invoke-MultiIncursion {
     Show-Header
     Write-Host "[7] INCURSION DIRECTA MULTI-TIENDA (IP RESIDENCIAL)..." -ForegroundColor Yellow
-    Write-Host "Extrae figuras, actualiza precios y alimenta el Purgatorio sin abrir el navegador manual." -ForegroundColor Gray
+    Write-Host "Extrae figuras, actualiza precios y alimenta el Purgatorio de forma 100% autonoma." -ForegroundColor Gray
     Write-Host ""
+    Write-Host "  [A] TODAS las tiendas en cadena (Incursion Secuencial Completa)" -ForegroundColor Green
     Write-Host "  [1] Smyths Toys (Alemania - Catalogo MOTU completo)" -ForegroundColor White
     Write-Host "  [2] Wallapop (Busqueda local residencial)" -ForegroundColor White
     Write-Host "  [3] Vinted (Ofertas de segunda mano Europa)" -ForegroundColor White
@@ -201,7 +202,20 @@ function Invoke-MultiIncursion {
     Write-Host "  [6] BigBadToyStore (BBTS - Importacion USA)" -ForegroundColor White
     Write-Host "  [x] Cancelar y volver" -ForegroundColor DarkGray
     Write-Host ""
-    $shopOpt = Read-Host "Selecciona tienda [1-6]"
+    $shopOpt = Read-Host "Selecciona opcion [A, 1-6]"
+
+    $PythonExe = Get-PythonExe
+
+    if ($shopOpt.Trim().ToUpper() -eq "A") {
+        $query = Read-Host "Introduce termino de busqueda (deja vacio para 'auto')"
+        if ([string]::IsNullOrWhiteSpace($query)) { $query = "auto" }
+
+        Write-Host ""
+        & $PythonExe scripts\run_single_incursion.py all $query
+        Write-Host ""
+        Read-Host "Presiona [Enter] para volver al menu principal..."
+        return
+    }
 
     $shopMap = @{
         "1" = "SmythsToys"
@@ -212,19 +226,18 @@ function Invoke-MultiIncursion {
         "6" = "BBTS"
     }
 
-    if (!$shopMap.ContainsKey($shopOpt)) {
+    if (!$shopMap.ContainsKey($shopOpt.Trim())) {
         Write-Host "Operacion cancelada." -ForegroundColor DarkGray
         Start-Sleep -Seconds 1
         return
     }
 
-    $shopName = $shopMap[$shopOpt]
+    $shopName = $shopMap[$shopOpt.Trim()]
     $query = Read-Host "Introduce termino de busqueda (deja vacio para 'auto')"
     if ([string]::IsNullOrWhiteSpace($query)) { $query = "auto" }
 
     Write-Host ""
     Write-Host "Ejecutando incursion en $shopName para: '$query'..." -ForegroundColor Cyan
-    $PythonExe = Get-PythonExe
     & $PythonExe scripts\run_single_incursion.py $shopName $query
 
     Write-Host ""
@@ -692,32 +705,34 @@ function Show-OptionFaqDetail {
             Write-Host "OPCION [6]: Incursion Asistida Universal (CDP Multi-tienda)" -ForegroundColor Green
             Write-Host "-------------------------------------------------------------------" -ForegroundColor DarkGray
             Write-Host "QUE HACE:" -ForegroundColor Yellow
-            Write-Host "   Conecta via Playwright CDP al Chrome de la opcion 5, lee la pestaña activa"
-            Write-Host "   y extrae las figuras y precios sin disparar protecciones antibot."
+            Write-Host "   Conecta via Playwright CDP al navegador Chrome en puerto 9222."
+            Write-Host "   Si Chrome no esta abierto, lo lanza automaticamente en modo depuracion."
+            Write-Host "   Lee la pestaña activa y extrae las figuras y precios sin disparar WAF."
             Write-Host ""
             Write-Host "UTILIDAD:" -ForegroundColor Yellow
-            Write-Host "   Metodo definitivo infalible cuando los bots automaticos son bloqueados."
+            Write-Host "   Salvavidas infalible cuando los bots automaticos son bloqueados por Cloudflare"
+            Write-Host "   o Datadome. Te permite resolver captchas humanos y extraer lo que ves."
             Write-Host ""
             Write-Host "CRITICIDAD: ALTA (Herramienta antibloqueo definitiva)" -ForegroundColor Yellow
             Write-Host ""
             Write-Host "MODO DE USO:" -ForegroundColor Yellow
-            Write-Host "   Con Chrome abierto en 9222 mostrando figuras, pulsa 6 en este menu."
+            Write-Host "   Pulsa 6. Chrome se abrira solo si no estaba activo; navega a la tienda y extraera los items."
         }
         "7" {
             Write-Host "OPCION [7]: Incursion Directa Multi-Tienda (Smyths, Wallapop, Vinted, eBay...)" -ForegroundColor Green
             Write-Host "-------------------------------------------------------------------" -ForegroundColor DarkGray
             Write-Host "QUE HACE:" -ForegroundColor Yellow
-            Write-Host "   Permite elegir cualquier tienda soportada y lanzar una extraccion rapida"
-            Write-Host "   desde la consola usando tu IP residencial."
+            Write-Host "   Permite extraer de forma 100% autonoma (sin necesidad de Chrome ni puerto 9222)"
+            Write-Host "   cualquier tienda individual o TODAS secuencialmente (opcion [A])."
             Write-Host ""
             Write-Host "UTILIDAD:" -ForegroundColor Yellow
-            Write-Host "   Actualizar los precios o descubrir novedades en Smyths Toys, Wallapop,"
-            Write-Host "   Vinted, eBay o Amazon de forma individual en segundos."
+            Write-Host "   Actualizar en bloque todo el mercado o rastrear novedades en segundos."
+            Write-Host "   Genera una tabla resumen consolidada al finalizar todas las etapas."
             Write-Host ""
             Write-Host "CRITICIDAD: MEDIA-ALTA | REGLA: Vintage inhabilitado en scrapers" -ForegroundColor Yellow
             Write-Host ""
             Write-Host "MODO DE USO:" -ForegroundColor Yellow
-            Write-Host "   Pulsa 7, selecciona la tienda (1-6) y confirma la consulta."
+            Write-Host "   Pulsa 7 y elige [A] para recorrer todas las tiendas en cadena, o [1-6] para una especifica."
         }
         "8" {
             Write-Host "OPCION [8]: Desplegar y Actualizar en Oracle Cloud (1 Clic)" -ForegroundColor Green
@@ -971,9 +986,9 @@ do {
     Write-Host ""
     Write-Host "  [ BÚSQUEDAS Y SCRAPING RESIDENCIAL ]" -ForegroundColor DarkCyan
     Write-Host "  [4]  Iniciar Nexus Local Bridge (Worker Residencial Wallapop)" -ForegroundColor White
-    Write-Host "  [5]  Abrir Google Chrome en Depuracion (Puerto 9222)" -ForegroundColor White
-    Write-Host "  [6]  Incursion Asistida Universal (CDP Multi-tienda)" -ForegroundColor White
-    Write-Host "  [7]  Incursion Directa Multi-Tienda (Smyths, Wallapop, Vinted, eBay...)" -ForegroundColor Yellow
+    Write-Host "  [5]  Abrir Google Chrome en Depuracion (Puerto 9222 - Manual)" -ForegroundColor DarkGray
+    Write-Host "  [6]  Incursion Asistida Universal CDP (Auto-inicia Chrome si no esta activo)" -ForegroundColor White
+    Write-Host "  [7]  Incursion Directa Multi-Tienda (Individual o Secuencial Completa)" -ForegroundColor Yellow
     Write-Host ""
     Write-Host "  [ NUBE Y PRODUCCION (ORACLE CLOUD & SUPABASE) ]" -ForegroundColor DarkCyan
     Write-Host "  [8]  Desplegar y Actualizar en Oracle Cloud (1 Clic)" -ForegroundColor Cyan

@@ -630,10 +630,14 @@ class ProductLoreModel(Base):
 
     product: Mapped["ProductModel"] = relationship("ProductModel", back_populates="lore_entry")
 
+# Alias para compatibilidad regresiva con subsistemas legacy de scraping
+ProductOffer = OfferModel
+
 __all__ = [
     "Base", 
     "ProductModel", 
     "OfferModel", 
+    "ProductOffer",
     "CollectionItemModel", 
     "PendingMatchModel", 
     "PriceAlertModel", 
@@ -658,6 +662,7 @@ __all__ = [
     "ProductLoreModel",
     "DOMAIN_VERSION"
 ]
+
 
 
 
