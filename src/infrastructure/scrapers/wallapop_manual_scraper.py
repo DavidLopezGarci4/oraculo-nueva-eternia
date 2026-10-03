@@ -32,13 +32,16 @@ from typing import List, Optional
 from curl_cffi.requests import AsyncSession
 
 from src.infrastructure.scrapers.base import BaseScraper, ScrapedOffer
+from src.infrastructure.scrapers.wallapop_section_api import search_wallapop_section
 from src.infrastructure.scrapers.wallapop_signed_api import search_wallapop_v3_signed
 
 
 class WallapopManualScraper(BaseScraper):
     """
-    Scraper manual de Wallapop basado en API v3 firmada + proxy residencial/local.
+    Scraper de Wallapop basado en el endpoint orgánico /api/v3/search/section con
+    TLS impersonation Chrome 124 (validado en PokeCardTrack).
     Soporta modo básico (tríada core) y modo completo escalonado (5 familias con paginación profunda).
+    Incluye fallback defensivo a API v3 firmada si se requiere.
     """
 
     CORE_QUERIES = [
@@ -86,20 +89,38 @@ class WallapopManualScraper(BaseScraper):
 
     async def _search_single(
         self, session: AsyncSession, query: str, proxy: str | None, start: int = 0, next_page: str | None = None
-    ) -> SignedSearchResult:
-        result = await search_wallapop_v3_signed(
+    ):
+        # 1. Prioridad: Endpoint orgánico /api/v3/search/section (0 tokens, TLS chrome124)
+        section_result = await search_wallapop_section(
             session,
             query,
             proxy=proxy,
             max_items=40,
-            start=start,
             next_page=next_page,
             log_callback=self._log,
             shop_name_override=self.shop_name,
         )
-        if result.blocked:
-            self.blocked = True
-        return result
+        if not section_result.blocked and (section_result.offers or section_result.next_page):
+            return section_result
+
+        # 2. Si se detecta bloqueo WAF en section, intentar fallback defensivo a API v3 firmada
+        if section_result.blocked:
+            self._log("🛡️ Section API bloqueada. Probando fallback defensivo a API v3 firmada...", level="warning")
+            signed_result = await search_wallapop_v3_signed(
+                session,
+                query,
+                proxy=proxy,
+                max_items=40,
+                start=start,
+                next_page=next_page,
+                log_callback=self._log,
+                shop_name_override=self.shop_name,
+            )
+            if signed_result.blocked:
+                self.blocked = True
+            return signed_result
+
+        return section_result
 
     async def _search_with_pagination(
         self, session: AsyncSession, query: str, proxy: str | None, max_pages: int = 3

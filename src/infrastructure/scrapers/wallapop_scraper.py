@@ -117,28 +117,8 @@ class WallapopScraper(BaseScraper):
             full_url = f"https://es.wallapop.com/item/{slug}"
             
             # Image URL
-            image_url = None
-            images = obj.get("images", [])
-            if images and isinstance(images, list):
-                first_img = images[0]
-                if isinstance(first_img, dict):
-                    if "urls" in first_img and isinstance(first_img["urls"], dict):
-                        urls = first_img["urls"]
-                        image_url = urls.get("big") or urls.get("medium") or urls.get("small")
-                    else:
-                        image_url = first_img.get("original") or first_img.get("medium")
-                else:
-                    image_url = first_img
-            elif obj.get("image"):
-                img_obj = obj.get("image")
-                if isinstance(img_obj, dict):
-                    if "urls" in img_obj and isinstance(img_obj["urls"], dict):
-                        urls = img_obj["urls"]
-                        image_url = urls.get("big") or urls.get("medium") or urls.get("small")
-                    else:
-                        image_url = img_obj.get("original") or img_obj.get("medium")
-                else:
-                    image_url = img_obj
+            from src.infrastructure.scrapers.wallapop_section_api import extract_image_url
+            image_url = extract_image_url(obj, prefer_medium=False)
                     
             offer = ScrapedOffer(
                 product_name=title,
@@ -168,6 +148,26 @@ class WallapopScraper(BaseScraper):
         else:
             self._log("📡 Apify: Escaneo recurrente detectado. Solicitando 60 ofertas para ciclo alterno.")
             apify_max_items = 60
+
+        # --- FASE 0: API WEB ORGÁNICA (Section API, 0€, sin tokens de Apify ni firmas) ---
+        self._log(f"⚡ Wallapop Section API: Intentando extracción orgánica directa para '{query}'...")
+        try:
+            from src.infrastructure.scrapers.wallapop_section_api import search_wallapop_section
+            async with AsyncSession() as session:
+                section_res = await search_wallapop_section(
+                    session,
+                    query,
+                    max_items=max_items,
+                    log_callback=self._log,
+                    shop_name_override=self.shop_name,
+                )
+                if section_res.offers:
+                    self._log(f"🎉 Wallapop Section API: ¡Éxito! {len(section_res.offers)} reliquias extraídas a coste 0€.")
+                    return section_res.offers
+                elif section_res.blocked:
+                    self._log("🛡️ Wallapop Section API bloqueada por WAF. Continuando con cascade secundario...", level="warning")
+        except Exception as e:
+            self._log(f"⚠️ Error en Wallapop Section API: {e}", level="warning")
 
         # --- FASE 1: APIFY (Créditos Gratuitos ~20,000 reqs/mes) ---
         from src.core.config import settings
