@@ -403,6 +403,43 @@ def harvest_lore(
     return char
 
 
+@router.post("/harvest-product/{product_id}", response_model=CharacterLoreOutput)
+def harvest_product_lore(
+    product_id: int,
+    db: Session = Depends(get_lore_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    """Fuerza la recolección determinista de lore para una figura específica desde Wiki Fandom."""
+    char = LoreHarvesterService.harvest_for_product(db=db, product_id=product_id)
+    if not char:
+        raise HTTPException(status_code=404, detail="Figura o personaje no encontrado")
+    return char
+
+
+@router.post("/harvest-missing", response_model=dict)
+def harvest_missing_lore(
+    db: Session = Depends(get_lore_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    """Pre-carga todos los slugs existentes en una sola consulta y cosecha solo los ausentes (sin N+1)."""
+    existing_slugs = {row[0] for row in db.query(CharacterLoreModel.slug).all()}
+    origins_products = db.query(ProductModel).filter(
+        or_(ProductModel.is_vintage == False, ProductModel.is_vintage.is_(None))
+    ).all()
+
+    harvested_count = 0
+    for product in origins_products:
+        slug = LoreHarvesterService.resolve_character_slug(product.name)
+        product.character_slug = slug
+        if slug not in existing_slugs:
+            char = LoreHarvesterService.get_or_create_character_lore(db=db, character_name=product.name)
+            existing_slugs.add(char.slug)
+            harvested_count += 1
+
+    db.commit()
+    return {"status": "ok", "harvested": harvested_count, "total_checked": len(origins_products)}
+
+
 @router.post("/seed", response_model=dict)
 def seed_origins_lore(
     force: bool = Query(False, description="Sobrescribir incluso los personalizados"),

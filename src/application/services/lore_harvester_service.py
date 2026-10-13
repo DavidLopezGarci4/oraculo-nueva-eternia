@@ -336,12 +336,12 @@ class LoreHarvesterService:
         """
         seeded_count = 0
         linked_products = 0
+        existing_slugs = {row[0] for row in db.query(CharacterLoreModel.slug).all()}
 
         # 1. Sembrar personajes canónicos de MOTU_LORE_ENCYCLOPEDIA
         for key, data in MOTU_LORE_ENCYCLOPEDIA.items():
             slug = key.replace(' ', '_').replace('-', '_')
-            existing = db.query(CharacterLoreModel).filter(CharacterLoreModel.slug == slug).first()
-            if not existing:
+            if slug not in existing_slugs:
                 stats = data.get("stats", {})
                 new_char = CharacterLoreModel(
                     slug=slug,
@@ -360,6 +360,7 @@ class LoreHarvesterService:
                     source_url="Canon MOTU Local"
                 )
                 db.add(new_char)
+                existing_slugs.add(slug)
                 seeded_count += 1
 
         db.commit()

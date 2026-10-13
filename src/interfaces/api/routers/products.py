@@ -6,6 +6,7 @@ import threading
 from fastapi import APIRouter, Depends, HTTPException
 from loguru import logger
 from sqlalchemy import and_, desc, func, select, event
+from sqlalchemy.orm import selectinload
 
 from src.application.services.deal_scorer import DealScorer
 from src.application.services.logistics_service import LogisticsService
@@ -14,6 +15,7 @@ from src.domain.models import (
     LogisticRuleModel,
     OfferModel,
     PendingMatchModel,
+    ProductLoreModel,
     ProductModel,
     UserModel,
 )
@@ -116,27 +118,7 @@ def get_products(
     search: Optional[str] = None
 ):
     with SessionCloud() as db:
-        subq = (
-            select(OfferModel.product_id, func.min(OfferModel.price).label("min_price"))
-            .where(OfferModel.source_type == "Peer-to-Peer")
-            .where(OfferModel.is_available == True)
-            .group_by(OfferModel.product_id)
-            .subquery()
-        )
-
-        query = (
-            select(ProductModel, OfferModel)
-            .outerjoin(subq, ProductModel.id == subq.c.product_id)
-            .outerjoin(
-                OfferModel,
-                and_(
-                    OfferModel.product_id == ProductModel.id,
-                    OfferModel.price == subq.c.min_price,
-                    OfferModel.source_type == "Peer-to-Peer",
-                    OfferModel.is_available == True,
-                ),
-            )
-        )
+        query = select(ProductModel).options(selectinload(ProductModel.offers))
         if is_vintage:
             query = query.where(ProductModel.is_vintage == True)
         else:
@@ -159,24 +141,26 @@ def get_products(
             )
             query = query.where(ProductModel.id.in_(shop_exists_subq))
 
+        query = query.order_by(ProductModel.id.asc())
         if offset:
             query = query.offset(offset)
         if limit:
             query = query.limit(limit)
 
-        results = db.execute(query).all()
+        products = db.execute(query).scalars().all()
         counts = get_purgatory_counts(db)
 
-        seen: set = set()
         final_products = []
-        for product, best_offer in results:
-            if product.id in seen:
-                continue
-            seen.add(product.id)
+        for product in products:
             po = ProductOutput.model_validate(product)
             po.avg_market_price = product.avg_market_price or 0.0
             po.purgatory_match_count = counts.get(product.id, 0)
-            if best_offer:
+            p2p_offers = [
+                o for o in (product.offers or [])
+                if o.source_type == "Peer-to-Peer" and o.is_available
+            ]
+            if p2p_offers:
+                best_offer = min(p2p_offers, key=lambda o: o.price)
                 po.best_p2p_price = best_offer.price
                 po.best_p2p_source = best_offer.shop_name
             final_products.append(po)
@@ -390,6 +374,15 @@ async def merge_products(request: ProductMergeRequest):
                 source_vintage.product_id = target.id
             else:
                 db.delete(source_vintage)
+
+        # 5b. Transfer/deduplicate product lore entry
+        source_lore = db.query(ProductLoreModel).filter(ProductLoreModel.product_id == source.id).first()
+        if source_lore:
+            exists = db.query(ProductLoreModel).filter(ProductLoreModel.product_id == target.id).first()
+            if not exists:
+                source_lore.product_id = target.id
+            else:
+                db.delete(source_lore)
 
         # 6. Delete source product
         source_name = source.name
@@ -628,6 +621,9 @@ async def delete_product(product_id: int):
         
         # 6. Borrar colecciones/lista de deseos vinculadas a este product_id
         db.query(CollectionItemModel).filter(CollectionItemModel.product_id == product.id).delete()
+
+        # 6b. Borrar lore por ítem vinculado a este product_id
+        db.query(ProductLoreModel).filter(ProductLoreModel.product_id == product.id).delete()
         
         # 7. Eliminar el producto genérico por completo de la base de datos
         db.delete(product)

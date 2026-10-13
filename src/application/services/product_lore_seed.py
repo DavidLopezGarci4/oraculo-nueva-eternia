@@ -598,12 +598,13 @@ class ProductLoreSeedService:
         total = 0
         updated = 0
         created = 0
+        existing_by_slug = {c.slug: c for c in db.query(CharacterLoreModel).all()}
 
         for entry in CANONICAL_CARD_PROFILES:
             prof = entry["profile"]
             raw_slug = prof["canonical_name"].lower().replace(" ", "_").replace("-", "_")
             slug = re.sub(r"[^a-z0-9_]", "", raw_slug)
-            existing = db.query(CharacterLoreModel).filter(CharacterLoreModel.slug == slug).first()
+            existing = existing_by_slug.get(slug)
             stats = prof.get("stats", {})
 
             if existing:
@@ -645,6 +646,7 @@ class ProductLoreSeedService:
                     source_url="Canon MOTU Oficial"
                 )
                 db.add(new_char)
+                existing_by_slug[slug] = new_char
                 created += 1
             total += 1
 
@@ -667,9 +669,10 @@ class ProductLoreSeedService:
         created = 0
         updated = 0
         skipped = 0
+        existing_by_pid = {l.product_id: l for l in db.query(ProductLoreModel).all()}
 
         for p in origins_products:
-            existing = db.query(ProductLoreModel).filter(ProductLoreModel.product_id == p.id).first()
+            existing = existing_by_pid.get(p.id)
 
             if existing:
                 if existing.is_customized and not force:
@@ -685,6 +688,7 @@ class ProductLoreSeedService:
                 data = cls.generate_default_lore_for_product(p, db)
                 new_lore = ProductLoreModel(**data)
                 db.add(new_lore)
+                existing_by_pid[p.id] = new_lore
                 created += 1
 
         db.commit()

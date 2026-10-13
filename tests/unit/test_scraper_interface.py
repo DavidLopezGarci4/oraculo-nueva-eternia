@@ -110,3 +110,65 @@ def test_sync_availability_preserves_vintage_offers():
         assert vintage_offer.is_available is True
         assert origins_offer.is_available is False
 
+
+def test_sync_availability_handles_timezone_aware_last_seen():
+    from datetime import datetime, timedelta, timezone
+    from unittest.mock import patch, MagicMock
+    from src.infrastructure.scrapers.pipeline import ScrapingPipeline
+
+    ebay_offer = MagicMock()
+    ebay_offer.is_vintage = False
+    ebay_offer.is_available = True
+    ebay_offer.shop_name = "Ebay.es"
+    ebay_offer.url = "https://ebay.es/itm/123"
+    ebay_offer.product = MagicMock(is_vintage=False, name="He-Man Origins")
+    ebay_offer.last_seen = datetime.now(timezone.utc) - timedelta(hours=12)
+    ebay_offer.price = 22.0
+
+    pipeline = ScrapingPipeline([])
+    with patch("src.infrastructure.scrapers.pipeline.SessionCloud") as mock_sess_cls:
+        mock_db = MagicMock()
+        mock_sess_cls.return_value = mock_db
+        mock_db.query.return_value.filter.return_value.all.return_value = [ebay_offer]
+
+        pipeline.sync_availability(found_urls=[], shop_names=["Ebay.es"])
+        assert ebay_offer.is_available is True
+
+
+def test_get_products_pagination_no_truncation_with_multiple_p2p_offers():
+    from unittest.mock import patch, MagicMock
+    from src.interfaces.api.routers.products import get_products
+    from src.domain.models import ProductModel, OfferModel
+
+    p1 = ProductModel(
+        id=1, name="He-Man", category="Action Figures", is_vintage=False,
+        retail_price=0.0, avg_retail_price=0.0, p25_retail_price=0.0,
+        avg_p2p_price=0.0, p25_p2p_price=0.0, avg_market_price=20.0, p25_price=0.0,
+    )
+    p1.offers = [
+        OfferModel(id=101, product_id=1, price=15.0, shop_name="Wallapop", source_type="Peer-to-Peer", is_available=True),
+        OfferModel(id=102, product_id=1, price=15.0, shop_name="Vinted", source_type="Peer-to-Peer", is_available=True),
+    ]
+    p2 = ProductModel(
+        id=2, name="Skeletor", category="Action Figures", is_vintage=False,
+        retail_price=0.0, avg_retail_price=0.0, p25_retail_price=0.0,
+        avg_p2p_price=0.0, p25_p2p_price=0.0, avg_market_price=22.0, p25_price=0.0,
+    )
+    p2.offers = [
+        OfferModel(id=103, product_id=2, price=18.0, shop_name="Ebay.es", source_type="Peer-to-Peer", is_available=True),
+    ]
+
+    with patch("src.interfaces.api.routers.products.SessionCloud") as mock_sess_cls, \
+         patch("src.interfaces.api.routers.products.get_purgatory_counts", return_value={}):
+        mock_db = MagicMock()
+        mock_sess_cls.return_value.__enter__.return_value = mock_db
+        mock_db.execute.return_value.scalars.return_value.all.return_value = [p1, p2]
+
+        res = get_products(is_vintage=False, limit=2, offset=0)
+        assert len(res) == 2
+        assert res[0].id == 1
+        assert res[0].best_p2p_price == 15.0
+        assert res[1].id == 2
+        assert res[1].best_p2p_price == 18.0
+
+

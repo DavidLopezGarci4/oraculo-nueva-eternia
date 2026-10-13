@@ -202,8 +202,9 @@ class ScrapingPipeline:
                     continue
 
                 # Regla eBay: 48h de gracia para evitar falsos negativos por micro-bloqueos
-                if offer.shop_name == "Ebay.es":
-                    if datetime.now(timezone.utc).replace(tzinfo=None) - offer.last_seen < timedelta(hours=48):
+                if offer.shop_name == "Ebay.es" and offer.last_seen:
+                    last_seen_naive = offer.last_seen.replace(tzinfo=None) if offer.last_seen.tzinfo else offer.last_seen
+                    if datetime.now(timezone.utc).replace(tzinfo=None) - last_seen_naive < timedelta(hours=48):
                         continue
                 
                 # Regla General (Vinted/Otros): Si desaparece de la búsqueda, ya no está disponible
