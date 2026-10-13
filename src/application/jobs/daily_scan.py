@@ -95,9 +95,9 @@ async def run_daily_scan(progress_callback=None):
     try:
         # PHASE 12: Ensure database schema is up to date before scanning
         try:
-            from src.infrastructure.universal_migrator import migrate
+            # from src.infrastructure.universal_migrator import migrate
             logger.info("🔧 Synchronizing database schema (Universal Migrator)...")
-            migrate()
+            pass  # Deprecated: schema managed by Alembic migrations
         except Exception as e:
             logger.warning(f"⚠️ Migration pre-check failed: {e}")
 

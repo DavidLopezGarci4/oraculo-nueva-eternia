@@ -106,8 +106,12 @@ def _sync_engine(engine, label: str):
             conn.execute(text("ALTER TABLE offers ADD COLUMN max_price FLOAT DEFAULT 0.0"))
             conn.commit()
 
-            conn.execute(text("ALTER TABLE offers ADD COLUMN origin_category VARCHAR(20) DEFAULT 'retail'"))
-            conn.commit()
+        if "origin_category" not in columns_offers:
+            try:
+                conn.execute(text("ALTER TABLE offers ADD COLUMN origin_category VARCHAR(20) DEFAULT 'retail'"))
+                conn.commit()
+            except Exception as e:
+                logger.warning(f"Could not add origin_category to offers: {e}")
 
         if "first_seen_at" not in columns_offers:
             logger.info("Adding 'first_seen_at' to offers table...")
@@ -164,8 +168,12 @@ def _sync_engine(engine, label: str):
             except Exception as e:
                 logger.warning(f"Could not add ean to pending_matches: {e}")
 
-            conn.execute(text("ALTER TABLE pending_matches ADD COLUMN origin_category VARCHAR(20) DEFAULT 'retail'"))
-            conn.commit()
+        if "origin_category" not in columns_pending:
+            try:
+                conn.execute(text("ALTER TABLE pending_matches ADD COLUMN origin_category VARCHAR(20) DEFAULT 'retail'"))
+                conn.commit()
+            except Exception as e:
+                logger.warning(f"Could not add origin_category to pending_matches: {e}")
 
         if "first_seen_at" not in columns_pending:
             logger.info("Adding 'first_seen_at' to pending_matches table...")

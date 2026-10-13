@@ -660,6 +660,8 @@ __all__ = [
     "ProductMonthlyStatsModel",
     "CharacterLoreModel",
     "ProductLoreModel",
+    "OfferHistoryModel",
+    "HunterAlertLogModel",
     "DOMAIN_VERSION"
 ]
 

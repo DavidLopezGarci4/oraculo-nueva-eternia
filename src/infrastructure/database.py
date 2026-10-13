@@ -32,14 +32,9 @@ if "sqlite" in (settings.DATABASE_URL or ""):
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def init_db():
-    """Initializes the database tables and runs migrations."""
+    """Initializes the database tables (schema migrations are managed exclusively via Alembic)."""
     from src.domain.models import Base
     Base.metadata.create_all(bind=engine)
-    try:
-        from src.infrastructure.universal_migrator import migrate
-        migrate()
-    except Exception as e:
-        print(f"Migration error: {e}")
 
 def get_db():
     """Dependency for DB session."""

@@ -20,6 +20,17 @@ ALTER TABLE public.product_aliases ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.price_alerts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.price_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.logistic_rules ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.authorized_devices ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.staged_imports ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vintage_products ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vintage_miscellaneous ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.hunter_alert_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.wallapop_ip_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.wallapop_jobs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.system_config ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.product_monthly_stats ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.character_lore ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.product_lore ENABLE ROW LEVEL SECURITY;
 
 -- 2. Crear Políticas de Denegación por Defecto (Opcional pero recomendado)
 -- Por defecto, al activar RLS, Supabase deniega todo. 
@@ -30,4 +41,4 @@ ALTER TABLE public.logistic_rules ENABLE ROW LEVEL SECURITY;
 -- Una vez ejecutado, los errores en "Security Advisor" deberían desaparecer.
 -- Las tablas solo serán accesibles mediante el Service Role Key o conexión Postgres directa.
 
-RAISE NOTICE 'RLS habilitado con éxito en 15 tablas.';
+RAISE NOTICE 'RLS habilitado con éxito en las 26 tablas del esquema.';

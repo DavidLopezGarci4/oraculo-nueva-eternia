@@ -53,5 +53,6 @@ class CollectionItemSchema(CollectionItemBase):
     is_grail: Optional[bool] = False
     grail_score: Optional[float] = 0.0
     current_value: Optional[float] = 0.0 # Snapshot of market value
+    acquired_at: Optional[datetime] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None

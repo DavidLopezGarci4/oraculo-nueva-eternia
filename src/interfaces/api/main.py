@@ -83,10 +83,14 @@ async def lifespan(app: FastAPI):
 
         # Auto-sembrado idempotente de Lore Canónico (Fase 88/90)
         try:
-            from src.infrastructure.database import SessionLocal
             from src.application.services.lore_harvester_service import LoreHarvesterService
-            with SessionLocal() as db_session:
-                LoreHarvesterService.seed_initial_catalog(db_session)
+            try:
+                with SessionCloud() as db_session:
+                    LoreHarvesterService.seed_initial_catalog(db_session)
+            except Exception:
+                from src.infrastructure.database import SessionLocal
+                with SessionLocal() as db_session:
+                    LoreHarvesterService.seed_initial_catalog(db_session)
         except Exception as e_lore:
             logger.warning(f"Aviso en auto-sembrado de Lore: {e_lore}")
     except Exception as e:
