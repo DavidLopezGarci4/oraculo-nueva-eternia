@@ -12,6 +12,9 @@ from src.infrastructure.database_cloud import SessionCloud, init_cloud_db
 from src.infrastructure.services.telegram_service import telegram_service
 from src.application.services.deal_scorer import DealScorer
 from src.application.services.logistics_service import LogisticsService
+from src.core.vintage_utils import check_is_vintage
+
+
 def clean_purgatory_globally(db: Session):
     """
     Elimina de forma proactiva y global del Purgatorio cualquier oferta 
@@ -179,10 +182,13 @@ class ScrapingPipeline:
         
         db: Session = SessionCloud()
         try:
-            # Buscamos ofertas que estaban marcadas como disponibles pero no se han encontrado ahora
+            # Buscamos ofertas que estaban marcadas como disponibles pero no se han encontrado ahora.
+            # Excluimos ofertas vintage (OfferModel.is_vintage) porque las búsquedas vintage
+            # están temporalmente desactivadas (Regla 2 AGENTS.md).
             query = db.query(OfferModel).filter(
                 OfferModel.shop_name.in_(shop_names),
                 OfferModel.is_available == True,
+                OfferModel.is_vintage.is_not(True),
                 ~OfferModel.url.in_(found_urls)
             )
             
@@ -192,6 +198,9 @@ class ScrapingPipeline:
                 return
 
             for offer in missing_offers:
+                if offer.is_vintage or (offer.product and getattr(offer.product, "is_vintage", False)):
+                    continue
+
                 # Regla eBay: 48h de gracia para evitar falsos negativos por micro-bloqueos
                 if offer.shop_name == "Ebay.es":
                     if datetime.now(timezone.utc).replace(tzinfo=None) - offer.last_seen < timedelta(hours=48):

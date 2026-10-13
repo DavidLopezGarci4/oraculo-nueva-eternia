@@ -28,33 +28,7 @@ router = APIRouter(prefix="/api/scrapers", tags=["scrapers"])
 # 🛡️ Flag global de cancelación cooperativa
 scraper_cancel_event = threading.Event()
 
-CANONICAL_SPIDER_NAMES = {
-    "fantasia": "Fantasia Personajes",
-    "fantasia personajes": "Fantasia Personajes",
-    "frikiverso": "Frikiverso",
-    "frikimaz": "Frikimaz",
-    "electropolis": "Electropolis",
-    "pixelatoy": "Pixelatoy",
-    "amazon": "Amazon.es",
-    "amazon.es": "Amazon.es",
-    "detoyboys": "DeToyboys",
-    "ebay": "Ebay.es",
-    "ebay.es": "Ebay.es",
-    "vinted": "Vinted",
-    "wallapop": "Wallapop",
-    "wallapopmanual": "Wallapop",
-    "wallamanual": "Wallapop",
-    "toymieu": "ToymiEU",
-    "time4actiontoysde": "Time4ActionToysDE",
-    "bigbadtoystore": "BigBadToyStore",
-    "smythstoys": "SmythsToys",
-    "dvdstorespain": "DVDStoreSpain",
-    "triguetech": "Triguetech",
-    "lamansiondelterror": "LaMansionDelTerror",
-    "actiontoys": "ActionToys",
-    "bixoto": "Bixoto",
-    "all": "all",
-}
+from src.interfaces.api.deps import CANONICAL_SPIDER_NAMES, REGISTERED_SPIDERS
 
 
 def run_scraper_task(
@@ -357,37 +331,42 @@ async def export_execution_logs_csv():
 @router.post("/run", response_model=RunScraperOutput, dependencies=[Depends(verify_api_key)])
 async def run_scrapers(request: ScraperRunRequest, background_tasks: BackgroundTasks):
     """Inicia la recolección de reliquias en segundo plano (Admin Only)"""
+    canonical_spider_name = CANONICAL_SPIDER_NAMES.get(
+        request.spider_name.lower().strip(), request.spider_name
+    )
     # 1. Marcar inicio en la base de datos y crear Log
     with SessionCloud() as db:
         status = (
             db.query(ScraperStatusModel)
-            .filter(ScraperStatusModel.spider_name == request.spider_name)
+            .filter(func.lower(ScraperStatusModel.spider_name) == canonical_spider_name.lower())
             .first()
         )
         if not status:
-            status = ScraperStatusModel(spider_name=request.spider_name)
+            status = ScraperStatusModel(spider_name=canonical_spider_name)
             db.add(status)
+        else:
+            status.spider_name = canonical_spider_name
         status.status = "running"
         status.start_time = datetime.now(timezone.utc).replace(tzinfo=None)
 
         execution_log = ScraperExecutionLogModel(
-            spider_name=request.spider_name,
+            spider_name=canonical_spider_name,
             status="running",
             start_time=status.start_time,
             trigger_type=request.trigger_type,
-            logs=f"[{datetime.now(ZoneInfo('Europe/Madrid')).strftime('%H:%M:%S')}] 🚀 Desplegando incursión manual: {request.spider_name}\n",
+            logs=f"[{datetime.now(ZoneInfo('Europe/Madrid')).strftime('%H:%M:%S')}] 🚀 Desplegando incursión manual: {canonical_spider_name}\n",
         )
         db.add(execution_log)
         db.commit()
         log_id = execution_log.id
 
     background_tasks.add_task(
-        run_scraper_task, request.spider_name, request.trigger_type, request.query, log_id
+        run_scraper_task, canonical_spider_name, request.trigger_type, request.query, log_id
     )
     return {
         "status": "success",
         "log_id": log_id,
-        "message": f"Incursión '{request.spider_name}' para '{request.query or 'auto'}' desplegada en los páramos de Eternia",
+        "message": f"Incursión '{canonical_spider_name}' para '{request.query or 'auto'}' desplegada en los páramos de Eternia",
     }
 
 

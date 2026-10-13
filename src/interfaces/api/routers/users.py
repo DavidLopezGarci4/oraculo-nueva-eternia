@@ -110,9 +110,10 @@ async def import_wallapop_products(request: WallapopImportRequest):
     # administrativo). La SPA (import manual por texto en Purgatory) sigue
     # funcionando igual, cae al flujo normal de verify_device.
     imported = 0
+    skipped_irrelevant = 0
     from src.core.url_utils import normalize_url
     from src.core.vintage_utils import validate_motu_relevance
-    from src.infrastructure.scrapers.pipeline import clean_purgatory_globally
+    from src.infrastructure.scrapers.pipeline import clean_purgatory_globally, check_is_vintage
     
     # Normalize all incoming URLs first
     for p in request.products:
@@ -125,7 +126,7 @@ async def import_wallapop_products(request: WallapopImportRequest):
         
         urls = [p.url for p in request.products if p.url]
         if not urls:
-            return {"status": "success", "imported": 0, "total_received": 0}
+            return {"status": "success", "imported": 0, "skipped_irrelevant": 0, "total_received": 0}
 
         active_urls = set(
             x[0] for x in db.query(OfferModel.url).filter(OfferModel.url.in_(urls)).all()
@@ -151,6 +152,12 @@ async def import_wallapop_products(request: WallapopImportRequest):
                 url_str in misc_urls or 
                 url_str in purgatory_urls):
                 continue
+
+            # Regla 2 AGENTS.md: Filtrar artículos vintage de los 80 en importación
+            if check_is_vintage(product.title):
+                logger.info(f"🚫 [Wallapop Import] Ignorando artículo vintage: '{product.title}'")
+                skipped_irrelevant += 1
+                continue
                 
             # Apply MOTU Relevance check
             is_relevant, reason = validate_motu_relevance(product.title)
@@ -175,6 +182,7 @@ async def import_wallapop_products(request: WallapopImportRequest):
                 )
                 db.add(history)
                 blocked_urls.add(url_str)
+                skipped_irrelevant += 1
                 continue
                 
             pending = PendingMatchModel(
@@ -194,8 +202,8 @@ async def import_wallapop_products(request: WallapopImportRequest):
         clean_purgatory_globally(db)
         db.commit()
 
-    logger.info(f"[Wallapop Extension] Importados {imported} productos al Purgatorio")
-    return {"status": "success", "imported": imported, "total_received": len(request.products)}
+    logger.info(f"[Wallapop Extension] Importados {imported} productos al Purgatorio (omitidos={skipped_irrelevant})")
+    return {"status": "success", "imported": imported, "skipped_irrelevant": skipped_irrelevant, "total_received": len(request.products)}
 
 
 @router.get("/api/radar/p2p-opportunities", response_model=List[P2POpportunityOutput])

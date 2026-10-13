@@ -59,9 +59,9 @@ class WallapopManualScraper(BaseScraper):
         "2. Vendedores Casuales / Chollos": [
             "he-man origins",
             "skeletor origins",
-            "figura he-man mattel",
-            "muñecos masters del universo",
-            "muñeco heman",
+            "figura he-man mattel origins",
+            "muñecos masters del universo origins",
+            "muñeco he-man origins",
         ],
         "3. Sub-líneas y Exclusivas": [
             "cartoon collection motu",
@@ -78,8 +78,8 @@ class WallapopManualScraper(BaseScraper):
         ],
         "5. Lotes y Liquidaciones": [
             "lote origins",
-            "lote motu",
-            "lote masters del universo",
+            "lote motu origins",
+            "lote masters del universo origins",
         ],
     }
 

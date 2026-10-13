@@ -209,16 +209,46 @@ def scope_user_id(current_user: UserModel, requested_user_id: int) -> int:
     return current_user.id
 
 
-# ─── Startup ──────────────────────────────────────────────────────────────────
+# ─── Startup & Unified Spider Registry ────────────────────────────────────────
+
+REGISTERED_SPIDERS = [
+    "Fantasia Personajes", "Frikiverso", "Frikimaz", "Electropolis",
+    "Pixelatoy", "Amazon.es", "DeToyboys", "Ebay.es",
+    "Vinted", "Wallapop", "ToymiEU", "Time4ActionToysDE",
+    "BigBadToyStore", "DVDStoreSpain", "Triguetech",
+    "LaMansionDelTerror", "SmythsToys", "Bixoto",
+]
+
+CANONICAL_SPIDER_NAMES = {
+    "fantasia": "Fantasia Personajes",
+    "fantasia personajes": "Fantasia Personajes",
+    "frikiverso": "Frikiverso",
+    "frikimaz": "Frikimaz",
+    "electropolis": "Electropolis",
+    "pixelatoy": "Pixelatoy",
+    "amazon": "Amazon.es",
+    "amazon.es": "Amazon.es",
+    "detoyboys": "DeToyboys",
+    "ebay": "Ebay.es",
+    "ebay.es": "Ebay.es",
+    "vinted": "Vinted",
+    "wallapop": "Wallapop",
+    "wallapopmanual": "Wallapop",
+    "wallamanual": "Wallapop",
+    "toymieu": "ToymiEU",
+    "time4actiontoysde": "Time4ActionToysDE",
+    "bigbadtoystore": "BigBadToyStore",
+    "smythstoys": "SmythsToys",
+    "dvdstorespain": "DVDStoreSpain",
+    "triguetech": "Triguetech",
+    "lamansiondelterror": "LaMansionDelTerror",
+    "bixoto": "Bixoto",
+    "all": "all",
+}
+
 
 def ensure_scrapers_registered():
-    spiders_to_check = [
-        "Fantasia Personajes", "Frikiverso", "Frikimaz", "Electropolis",
-        "Pixelatoy", "Amazon.es", "DeToyboys", "Ebay.es",
-        "Vinted", "Wallapop", "ToymiEU", "Time4ActionToysDE",
-        "BigBadToyStore", "DVDStoreSpain", "Triguetech",
-        "LaMansionDelTerror", "SmythsToys", "Bixoto",
-    ]
+    spiders_to_check = REGISTERED_SPIDERS
 
     now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
 
