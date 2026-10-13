@@ -54,6 +54,11 @@ Implementación de lógica de negocio siguiendo **Clean Architecture**.
   - `routers/vault.py` — `/api/vault/*`, `/api/excel/sync`, `/api/vault/download-images/*`.
   - Mount `/api/static/images` — montura de StaticFiles para servir imágenes locales desde data/image_cache.
   - `routers/logistics.py` — `/api/logistics/calculate-cart`.
+  - `routers/analytics.py` — `/api/analytics/market-index`, `/api/analytics/liquidity-pulse`, `/api/analytics/scarcity-alerts`, `/api/analytics/optimize-cart`.
+  - `routers/cards.py` — `/api/cards/{product_id}` (generación y datos de Trading Cards TCG).
+  - `routers/lore.py` — `/api/lore/*` (Living Lore Engine y Grimorio).
+  - `routers/showcase.py` — `/api/showcase/{username}` (Santuario público sin datos financieros).
+  - `routers/wallapop_jobs.py` — `/api/wallapop/jobs/*` (puente asíncrono de búsqueda local).
 - **core/**: Utilidades transversales (Logger, Config, Audit, SecurityShield).
   - `config.py` — incluye `JWT_SECRET` y `JWT_EXPIRE_MINUTES` (Phase 59).
 
@@ -247,5 +252,6 @@ Ejecutar la suite real: `.venv\Scripts\python -m pytest tests/` (**63 tests, 0 f
   - Endpoints REST en `/api/lore` (`list_lore`, `get_character_lore`, `update_character_lore`, `harvest_lore`, `seed_lore`).
   - Nueva pestaña "Grimorio de Lore" en `Config.tsx` con el componente `LoreTab.tsx`.
   - Hook en `daily_scan.py` para auto-vincular nuevos ítems sin detener el escaneo.
+- **Phase 101**: Blindaje integral de seguridad, gobernanza No-Vintage centralizada (`filter_non_vintage_queries`), privacidad de precios manuales por defecto (`blur(5px)`), paridad SQLite/Supabase + RLS en 23 tablas, paginación exacta sin truncado y analítica avanzada (`/api/analytics/liquidity-pulse`, `/api/analytics/scarcity-alerts`, EMI por wave/subcategoría y bundling de envíos en Matrix Cart).
 
-*Última actualización: 2026-08-20 - Fase 88: Living Lore Engine MOTU & Grimorio de Lore.*
+*Última actualización: 2026-10-13 - Fase 101: Blindaje Integral, Gobernanza No-Vintage y Analítica P2P/Retail.*
