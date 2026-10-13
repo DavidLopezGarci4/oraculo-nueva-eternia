@@ -859,7 +859,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isIncognito = false }) => {
                                                         </div>
 
                                                         <div className="flex items-center gap-3 shrink-0">
-                                                            <div className="text-right">
+                                                            <div className="text-right blur-incognito">
                                                                 {dealsMode === 'base' ? (
                                                                     <>
                                                                         <div className="text-xs font-black text-brand-primary">{deal.price} € <span className="text-[8px] opacity-70">CATÁLOGO</span></div>
@@ -911,13 +911,13 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isIncognito = false }) => {
                                                                 <span className="text-white/20">•</span>
                                                                 {dealsMode === 'base' ? (
                                                                     <>
-                                                                        <span className="text-xs font-black text-brand-primary">{deal.price} € <span className="text-[8px] opacity-70 font-bold">CATÁLOGO</span></span>
-                                                                        <span className="text-[10px] font-bold text-white/40">({deal.landing_price} € landed)</span>
+                                                                        <span className="text-xs font-black text-brand-primary blur-incognito">{deal.price} € <span className="text-[8px] opacity-70 font-bold">CATÁLOGO</span></span>
+                                                                        <span className="text-[10px] font-bold text-white/40 blur-incognito">({deal.landing_price} € landed)</span>
                                                                     </>
                                                                 ) : (
                                                                     <>
-                                                                        <span className="text-xs font-black text-brand-primary">{deal.landing_price} € <span className="text-[8px] opacity-70 font-bold">LANDED</span></span>
-                                                                        <span className="text-[10px] font-bold text-white/40">({deal.price} € base)</span>
+                                                                        <span className="text-xs font-black text-brand-primary blur-incognito">{deal.landing_price} € <span className="text-[8px] opacity-70 font-bold">LANDED</span></span>
+                                                                        <span className="text-[10px] font-bold text-white/40 blur-incognito">({deal.price} € base)</span>
                                                                     </>
                                                                 )}
                                                             </div>

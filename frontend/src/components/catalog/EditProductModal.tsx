@@ -78,8 +78,8 @@ const EditProductModal: React.FC<EditProductModalProps> = ({
                                     type="number"
                                     value={editingProduct.retail_price || 0}
                                     onChange={(e) => setEditingProduct({ ...editingProduct, retail_price: parseFloat(e.target.value) })}
-                                    className={`w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-white focus:outline-none focus:border-brand-primary/50 transition-all ${isIncognito ? 'blur-incognito' : ''}`}
-                                    title={isIncognito ? "Precio manual: •••" : undefined}
+                                    className={`w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-white focus:outline-none focus:border-brand-primary/50 transition-all blur-manual-price ${isIncognito ? 'blur-incognito' : ''}`}
+                                    title={(!isIncognito && localStorage.getItem('allowManualPriceReveal') === 'true') ? `Precio manual: ${editingProduct.retail_price || 0}€` : "Precio manual: •••"}
                                 />
                             </div>
 

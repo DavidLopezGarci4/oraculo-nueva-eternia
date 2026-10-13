@@ -39,12 +39,12 @@ const MarketStatCard: React.FC<{ title: string, value: number, type: 'retail' | 
         <div className="glass p-4 rounded-2xl border border-white/5 hover:bg-white/5 transition-all">
             <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">{title}</p>
             <div className="flex items-baseline gap-2">
-                <span className="text-xl font-black text-white">{stats?.avg || 0} €</span>
+                <span className="text-xl font-black text-white blur-incognito">{stats?.avg || 0} €</span>
                 <span className="text-[10px] font-bold text-white/30">Avg</span>
             </div>
             <div className="flex items-center gap-2 mt-1">
-                <span className="text-[8px] font-bold text-green-500/60 uppercase">Min: {stats?.min || 0} €</span>
-                <span className="text-[8px] font-bold text-red-500/60 uppercase">Max: {stats?.max || 0} €</span>
+                <span className="text-[8px] font-bold text-green-500/60 uppercase blur-incognito">Min: {stats?.min || 0} €</span>
+                <span className="text-[8px] font-bold text-red-500/60 uppercase blur-incognito">Max: {stats?.max || 0} €</span>
             </div>
         </div>
     );
@@ -52,6 +52,7 @@ const MarketStatCard: React.FC<{ title: string, value: number, type: 'retail' | 
 
 interface AuctionsProps {
     user?: Hero | null;
+    isIncognito?: boolean;
 }
 
 const Auctions: React.FC<AuctionsProps> = ({ user }) => {
@@ -356,7 +357,7 @@ const Auctions: React.FC<AuctionsProps> = ({ user }) => {
                                         <div className="flex items-center gap-1 overflow-hidden w-full mb-0.5">
                                             <span className="text-[6px] sm:text-[7px] font-black text-white/30 uppercase tracking-widest leading-none shrink-0">Mejor Precio Subasta</span>
                                         </div>
-                                        <div className="text-base sm:text-lg font-black text-brand-primary leading-none tracking-tighter truncate">{product.best_p2p_price || 0} <span className="text-[8px] sm:text-xs text-white/40">€</span></div>
+                                        <div className="text-base sm:text-lg font-black text-brand-primary leading-none tracking-tighter truncate blur-incognito">{product.best_p2p_price || 0} <span className="text-[8px] sm:text-xs text-white/40">€</span></div>
                                     </div>
                                     
                                     {/* Action Buttons Row - Symmetrical Center Dock */}
@@ -403,11 +404,11 @@ const Auctions: React.FC<AuctionsProps> = ({ user }) => {
                                         <div className="grid grid-cols-2 gap-2 mt-2">
                                             <div className="bg-white/5 p-2 rounded-xl flex flex-col items-center">
                                                 <span className="text-[7px] font-black text-white/20 uppercase">Media Retail</span>
-                                                <span className="text-xs font-black text-brand-primary">{product.avg_retail_price || '---'} €</span>
+                                                <span className="text-xs font-black text-brand-primary blur-incognito">{product.avg_retail_price || '---'} €</span>
                                             </div>
                                             <div className="bg-white/5 p-2 rounded-xl flex flex-col items-center">
                                                 <span className="text-[7px] font-black text-white/20 uppercase">Media Subasta</span>
-                                                <span className="text-xs font-black text-purple-400">{product.avg_p2p_price || '---'} €</span>
+                                                <span className="text-xs font-black text-purple-400 blur-incognito">{product.avg_p2p_price || '---'} €</span>
                                             </div>
                                         </div>
                                     </motion.div>
@@ -507,7 +508,7 @@ const Auctions: React.FC<AuctionsProps> = ({ user }) => {
                                                         </div>
                                                     </div>
                                                     <div className="flex items-center gap-8">
-                                                        <div className="text-right space-y-0.5">
+                                                        <div className="text-right space-y-0.5 blur-incognito">
                                                             <div className="text-2xl font-black text-white">{offer.price} €</div>
                                                             {offer.landing_price && offer.landing_price !== offer.price && (
                                                                 <div className="text-[10px] font-black text-orange-500/80 flex flex-col items-end">

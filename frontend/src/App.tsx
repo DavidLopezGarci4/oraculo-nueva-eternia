@@ -380,8 +380,10 @@ function App() {
     return <LoginPage onLoginSuccess={handleLoginSuccess} />;
   }
 
+  const allowManualPriceReveal = !isIncognito && localStorage.getItem('allowManualPriceReveal') === 'true';
+
   return (
-    <div className={`flex h-screen w-screen overflow-hidden bg-transparent text-white font-inter ${isIncognito ? 'mode-incognito' : ''}`}>
+    <div className={`flex h-screen w-screen overflow-hidden bg-transparent text-white font-inter ${isIncognito ? 'mode-incognito' : ''} ${allowManualPriceReveal ? 'reveal-manual-prices' : ''}`}>
       {/* Global Background Layer with Glassmorphism Haloes */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
         <div className="absolute top-[-10%] right-[-5%] h-[60%] w-[60%] rounded-full bg-brand-primary/5 blur-[120px]" />
@@ -426,10 +428,10 @@ function App() {
                     <Route path={TAB_PATHS.dashboard} element={<Dashboard user={currentUser} isIncognito={isIncognito} />} />
                     <Route path={TAB_PATHS.catalog} element={<Catalog user={currentUser} searchQuery={searchQuery} isIncognito={isIncognito} />} />
                     <Route path={TAB_PATHS.eternia} element={<Catalog user={currentUser} isVintageOnly={true} searchQuery={searchQuery} isIncognito={isIncognito} />} />
-                    <Route path={TAB_PATHS.auctions} element={<Auctions user={currentUser} />} />
+                    <Route path={TAB_PATHS.auctions} element={<Auctions user={currentUser} isIncognito={isIncognito} />} />
                     <Route path={TAB_PATHS.collection} element={<Collection user={currentUser} searchQuery={searchQuery} isIncognito={isIncognito} />} />
                     <Route path={TAB_PATHS.fortaleza_vintage} element={<Collection user={currentUser} isVintageOnly={true} searchQuery={searchQuery} isIncognito={isIncognito} />} />
-                    <Route path={TAB_PATHS.vintage_miscellaneous} element={<VintageMiscellaneous user={currentUser} />} />
+                    <Route path={TAB_PATHS.vintage_miscellaneous} element={<VintageMiscellaneous user={currentUser} isIncognito={isIncognito} />} />
                     <Route
                       path={TAB_PATHS.purgatory}
                       element={isAdminUser ? <Purgatory /> : <Navigate to={TAB_PATHS.dashboard} replace />}

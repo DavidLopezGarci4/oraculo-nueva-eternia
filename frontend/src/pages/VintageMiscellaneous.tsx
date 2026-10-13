@@ -7,6 +7,7 @@ import { type Hero, isUserAdmin } from '../api/admin';
 
 interface VintageMiscellaneousProps {
     user?: Hero | null;
+    isIncognito?: boolean;
 }
 
 const VintageMiscellaneous: React.FC<VintageMiscellaneousProps> = ({ user }) => {
@@ -192,7 +193,7 @@ const VintageMiscellaneous: React.FC<VintageMiscellaneousProps> = ({ user }) => 
                                             <div className="flex items-center gap-1 sm:gap-1.5 overflow-hidden w-full mb-0.5 sm:mb-1">
                                                 <span className="text-[6px] sm:text-[8px] font-black text-white/30 uppercase tracking-widest leading-none shrink-0">Precio Oferta</span>
                                             </div>
-                                            <div className="text-[16px] sm:text-2xl font-black text-purple-400 leading-[0.8] sm:leading-none tracking-tighter truncate">{item.price || 0} <span className="text-[8px] sm:text-xs text-white/40">€</span></div>
+                                            <div className="text-[16px] sm:text-2xl font-black text-purple-400 leading-[0.8] sm:leading-none tracking-tighter truncate blur-incognito">{item.price || 0} <span className="text-[8px] sm:text-xs text-white/40">€</span></div>
                                         </div>
 
                                         {/* Action Buttons Row */}
@@ -272,7 +273,7 @@ const VintageMiscellaneous: React.FC<VintageMiscellaneousProps> = ({ user }) => 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-2">
                                     <div className="glass p-4 rounded-2xl border border-white/5 flex flex-col items-center justify-center">
                                         <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Precio</p>
-                                        <span className="text-xl sm:text-2xl font-black text-purple-400">{selectedItem.price} €</span>
+                                        <span className="text-xl sm:text-2xl font-black text-purple-400 blur-incognito">{selectedItem.price} €</span>
                                     </div>
                                     <div className="glass p-4 rounded-2xl border border-white/5 flex flex-col items-center justify-center">
                                         <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Procedencia</p>

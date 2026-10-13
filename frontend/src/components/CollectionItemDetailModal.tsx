@@ -166,8 +166,8 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
                                                 }
                                             }}
                                             placeholder="0"
-                                            className={`bg-transparent text-base sm:text-2xl font-black text-white border-none focus:ring-0 w-12 sm:w-20 p-0 ${isIncognito ? 'blur-incognito opacity-30 select-none pointer-events-none' : ''}`}
-                                            title={isIncognito ? "•••" : undefined}
+                                            className={`bg-transparent text-base sm:text-2xl font-black text-white border-none focus:ring-0 w-12 sm:w-20 p-0 blur-manual-price ${isIncognito ? 'blur-incognito opacity-30 select-none pointer-events-none' : ''}`}
+                                            title={(!isIncognito && localStorage.getItem('allowManualPriceReveal') === 'true') ? `Inversión: ${price || 0}€` : "•••"}
                                         />
                                         <span className="text-xs sm:text-lg font-bold text-white/70">€</span>
                                     </div>
@@ -352,8 +352,8 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
                                         image_url: product.image_url || undefined,
                                         condition: condition,
                                         grading: grading,
-                                        purchase_price: price === '' ? 0.0 : (parseFloat(price) || 0.0),
-                                        current_value: product.p25_price || product.retail_price || 19.99,
+                                        purchase_price: isIncognito ? 0.0 : (price === '' ? 0.0 : (parseFloat(price) || 0.0)),
+                                        current_value: isIncognito ? 0.0 : (product.p25_price || product.retail_price || 19.99),
                                         sub_category: product.sub_category,
                                         release_year: (product as any).release_year,
                                         sku: (product as any).sku || (product as any).ean
