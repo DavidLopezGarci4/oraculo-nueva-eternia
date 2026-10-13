@@ -129,43 +129,70 @@ class BudgetOptimizerService:
                 reverse=True
             )
 
-            # 5. Algoritmo Voraz con Agrupación Logística
+            # 5. Algoritmo Voraz con Agrupación Logística Multi-Tienda (Amortización de Envío y Umbral Envío Gratis)
+            def _compute_shop_bundle_landed(shop_name: str, shop_items: List[Dict[str, Any]]) -> float:
+                if not shop_items:
+                    return 0.0
+                count = len(shop_items)
+                avg_base = sum(float(i["base_price"]) for i in shop_items) / count
+                unit_landed = LogisticsService.optimized_get_landing_price(
+                    price=avg_base,
+                    shop_name=shop_name,
+                    user_location=user_location,
+                    rules_map=rules_map,
+                    item_count=count,
+                )
+                return round(unit_landed * count, 2)
+
             selected_items = []
+            selected_by_shop: Dict[str, List[Dict[str, Any]]] = {}
             seen_products = set()
             current_total = 0.0
 
             for c in candidates:
                 if c["product_id"] in seen_products:
                     continue
-                if current_total + c["landed_price"] <= budget_limit:
-                    selected_items.append(c)
-                    seen_products.add(c["product_id"])
-                    current_total += c["landed_price"]
+                shop = c["shop_name"]
+                existing_shop_items = selected_by_shop.get(shop, [])
+                old_shop_landed = _compute_shop_bundle_landed(shop, existing_shop_items)
+                new_shop_landed = _compute_shop_bundle_landed(shop, existing_shop_items + [c])
+                marginal_cost = round(new_shop_landed - old_shop_landed, 2)
 
-            # 6. Agrupar desglose por tienda
+                if round(current_total + marginal_cost, 2) <= budget_limit:
+                    selected_items.append(c)
+                    selected_by_shop.setdefault(shop, []).append(c)
+                    seen_products.add(c["product_id"])
+                    current_total = round(current_total + marginal_cost, 2)
+
+            # 6. Agrupar desglose por tienda y cuantificar envío ahorrado por agrupación
             stores_breakdown = {}
-            total_savings = 0.0
-            for item in selected_items:
-                shop = item["shop_name"]
-                if shop not in stores_breakdown:
-                    stores_breakdown[shop] = {
-                        "shop_name": shop,
-                        "items_count": 0,
-                        "total_base": 0.0,
-                        "total_landed": 0.0,
-                        "items": []
-                    }
-                stores_breakdown[shop]["items_count"] += 1
-                stores_breakdown[shop]["total_base"] += item["base_price"]
-                stores_breakdown[shop]["total_landed"] += item["landed_price"]
-                stores_breakdown[shop]["items"].append(item)
-                total_savings += item["savings_amount"]
+            total_item_savings = 0.0
+            total_shipping_saved = 0.0
+
+            for shop, items in selected_by_shop.items():
+                total_base = round(sum(float(i["base_price"]) for i in items), 2)
+                unbundled_landed = round(sum(float(i["landed_price"]) for i in items), 2)
+                bundled_landed = _compute_shop_bundle_landed(shop, items)
+                shipping_saved = round(max(0.0, unbundled_landed - bundled_landed), 2)
+                total_shipping_saved += shipping_saved
+                total_item_savings += sum(float(i["savings_amount"]) for i in items)
+
+                stores_breakdown[shop] = {
+                    "shop_name": shop,
+                    "items_count": len(items),
+                    "total_base": total_base,
+                    "total_landed": bundled_landed,
+                    "unbundled_landed": unbundled_landed,
+                    "shipping_saved": shipping_saved,
+                    "items": items,
+                }
 
             return {
                 "budget_limit": budget_limit,
                 "total_spent": round(current_total, 2),
                 "remaining_budget": round(budget_limit - current_total, 2),
-                "savings_total": round(total_savings, 2),
+                "savings_total": round(total_item_savings + total_shipping_saved, 2),
+                "shipping_saved": round(total_shipping_saved, 2),
                 "items_count": len(selected_items),
                 "selected_items": selected_items,
                 "stores_breakdown": stores_breakdown

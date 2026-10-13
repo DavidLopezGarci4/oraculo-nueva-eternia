@@ -32,6 +32,16 @@ async def optimize_cart_budget(request: BudgetOptimizeRequest):
         user_location=request.user_location
     )
 
+@router.get("/analytics/liquidity-pulse", dependencies=[Depends(verify_device)])
+async def get_liquidity_pulse():
+    """Devuelve el pulso de liquidez P2P (days_on_market, ofertas estancadas y descuento sugerido de regateo)."""
+    return MarketAnalyticsService.get_p2p_liquidity_pulse()
+
+@router.get("/analytics/retail-scarcity", dependencies=[Depends(verify_device)])
+async def get_retail_scarcity(user_location: str = Query(default="ES")):
+    """Detecta figuras con una única tienda Retail activa en stock (alerta de agotamiento inminente)."""
+    return MarketAnalyticsService.get_retail_scarcity_alerts(user_location=user_location)
+
 @router.get("/sync/delta-updates", dependencies=[Depends(verify_device)])
 async def get_sync_delta_updates(since: Optional[str] = Query(default=None)):
     """Suministra el catálogo optimizado para caché y búsqueda instantánea en IndexedDB."""

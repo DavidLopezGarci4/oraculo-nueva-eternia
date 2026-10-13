@@ -1,7 +1,4 @@
-import axios from 'axios';
-import { ShieldIdentity } from './shield-identity';
-
-const API_BASE = '/api';
+import { apiClient } from './client';
 
 export interface FinancialHealth {
     total_invested: number;
@@ -72,46 +69,36 @@ export interface MatchStat {
     count: number;
 }
 
-// --- 3OX SHIELD INTERCEPTOR ---
-// Configuración global de cabeceras para el Ojo de Sauron
-axios.interceptors.request.use((config) => {
-    config.headers['X-Device-ID'] = ShieldIdentity.getDeviceId();
-    config.headers['X-Device-Name'] = ShieldIdentity.getDeviceName();
-    return config;
-}, (error) => {
-    return Promise.reject(error);
-});
-
 export const getDashboardStats = async (userId: number): Promise<DashboardStats> => {
-    const response = await axios.get(`${API_BASE}/dashboard/stats`, {
+    const response = await apiClient.get('/dashboard/stats', {
         params: { user_id: userId }
     });
     return response.data;
 };
 
 export const getTopDeals = async (userId: number, mode: 'landed' | 'base' = 'landed'): Promise<TopDeal[]> => {
-    const response = await axios.get(`${API_BASE}/dashboard/top-deals`, {
+    const response = await apiClient.get('/dashboard/top-deals', {
         params: { user_id: userId, mode }
     });
     return response.data;
 };
 
 export const getDashboardHistory = async (userId: number): Promise<MatchHistoryEntry[]> => {
-    const response = await axios.get(`${API_BASE}/dashboard/history`, {
+    const response = await apiClient.get('/dashboard/history', {
         params: { user_id: userId }
     });
     return response.data;
 };
 
 export const getDashboardMatchStats = async (userId: number): Promise<MatchStat[]> => {
-    const response = await axios.get(`${API_BASE}/dashboard/match-stats`, {
+    const response = await apiClient.get('/dashboard/match-stats', {
         params: { user_id: userId }
     });
     return response.data;
 };
 
 export const revertDashboardAction = async (historyId: number): Promise<{ status: string; message: string }> => {
-    const response = await axios.post(`${API_BASE}/dashboard/revert`, { history_id: historyId });
+    const response = await apiClient.post('/dashboard/revert', { history_id: historyId });
     return response.data;
 };
 
@@ -149,7 +136,7 @@ export interface HallOfFameResponse {
 }
 
 export const getHallOfFame = async (userId: number): Promise<HallOfFameResponse> => {
-    const response = await axios.get(`${API_BASE}/dashboard/hall-of-fame`, {
+    const response = await apiClient.get('/dashboard/hall-of-fame', {
         params: { user_id: userId }
     });
     return response.data;
@@ -157,7 +144,7 @@ export const getHallOfFame = async (userId: number): Promise<HallOfFameResponse>
 
 export const getPeerToPeerOpportunities = async (): Promise<P2POpportunity[]> => {
     const userId = localStorage.getItem('active_user_id') || '2';
-    const response = await axios.get(`${API_BASE}/radar/p2p-opportunities`, {
+    const response = await apiClient.get('/radar/p2p-opportunities', {
         params: { user_id: userId }
     });
     return response.data;

@@ -1,7 +1,9 @@
 import pytest
+from datetime import datetime, timedelta, timezone
 from unittest.mock import patch, MagicMock
 from src.application.services.market_analytics_service import MarketAnalyticsService
-from src.domain.models import ProductModel
+from src.application.services.budget_optimizer_service import BudgetOptimizerService
+from src.domain.models import ProductModel, OfferModel, LogisticRuleModel
 
 def test_market_index_calculation():
     """Prueba que el índice bursátil MOTU computa medias por waves y tendencia."""
@@ -16,6 +18,7 @@ def test_market_index_calculation():
         q = MagicMock()
         q.filter.return_value.all.return_value = [p1, p2, p3]
         q.filter.return_value.group_by.return_value.order_by.return_value.all.return_value = []
+        q.filter.return_value.group_by.return_value.all.return_value = []
         mock_db.query.return_value = q
 
         res = MarketAnalyticsService.get_market_index(period="3M")
@@ -38,3 +41,50 @@ def test_delta_updates_catalog():
         assert res["total_count"] == 1
         assert res["products"][0]["name"] == "He-Man"
         assert "server_time" in res
+
+def test_p2p_liquidity_pulse_classifies_velocity_and_stagnant_bargains():
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    p = ProductModel(id=1, name="He-Man Origins", is_vintage=False)
+    fast = OfferModel(id=10, product_id=1, price=20.0, shop_name="Wallapop", source_type="Peer-to-Peer", is_available=True, is_vintage=False, first_seen_at=now - timedelta(days=2), last_seen=now, url="https://w/1")
+    fast.product = p
+    stag = OfferModel(id=11, product_id=1, price=40.0, shop_name="Vinted", source_type="Peer-to-Peer", is_available=True, is_vintage=False, first_seen_at=now - timedelta(days=60), last_seen=now, url="https://v/2")
+    stag.product = p
+    with patch("src.application.services.market_analytics_service.SessionCloud") as mock_sess_cls:
+        mock_db = MagicMock()
+        mock_sess_cls.return_value.__enter__.return_value = mock_db
+        mock_db.query.return_value.filter.return_value.all.return_value = [fast, stag]
+        res = MarketAnalyticsService.get_p2p_liquidity_pulse()
+        assert res["high_velocity_count"] == 1 and res["stagnant_count"] == 1
+        assert res["items"][0]["suggested_bargain_discount_pct"] == 15.0
+        assert res["items"][0]["suggested_offer_price"] == 34.0
+
+def test_retail_scarcity_alerts_detects_single_retail_store():
+    p1 = ProductModel(id=1, name="Trap Jaw", sub_category="Origins", is_vintage=False, avg_p2p_price=35.0)
+    p2 = ProductModel(id=2, name="Skeletor", sub_category="Origins", is_vintage=False, avg_p2p_price=22.0)
+    o1_r = OfferModel(id=1, product_id=1, price=20.0, shop_name="ActionToys", source_type="Retail", is_available=True, is_vintage=False, url="https://at/1")
+    o1_p = OfferModel(id=2, product_id=1, price=36.0, shop_name="Wallapop", source_type="Peer-to-Peer", is_available=True, is_vintage=False, url="https://w/1")
+    o2_a = OfferModel(id=3, product_id=2, price=19.0, shop_name="ActionToys", source_type="Retail", is_available=True, is_vintage=False, url="https://at/2")
+    o2_b = OfferModel(id=4, product_id=2, price=21.0, shop_name="Tradeinn", source_type="Retail", is_available=True, is_vintage=False, url="https://tr/2")
+    rule = LogisticRuleModel(shop_name="ActionToys", country_code="ES", base_shipping=4.95, free_shipping_threshold=60.0, vat_multiplier=1.0, custom_fees=0.0)
+    with patch("src.application.services.market_analytics_service.SessionCloud") as mock_sess_cls:
+        mock_db = MagicMock()
+        mock_sess_cls.return_value.__enter__.return_value = mock_db
+        mock_db.query.return_value.all.return_value = [rule]
+        mock_db.query.return_value.filter.return_value.all.side_effect = [[p1, p2], [o1_r, o1_p, o2_a, o2_b]]
+        res = MarketAnalyticsService.get_retail_scarcity_alerts(user_location="ES")
+        assert res["total_alerts"] == 1 and res["alerts"][0]["last_retail_shop"] == "ActionToys"
+        assert res["alerts"][0]["p2p_spread_eur"] == 11.05
+
+def test_budget_optimizer_bundles_same_store_shipping():
+    p1 = ProductModel(id=1, name="He-Man", is_vintage=False, p25_price=30.0, retail_price=25.0)
+    p2 = ProductModel(id=2, name="Teela", is_vintage=False, p25_price=30.0, retail_price=25.0)
+    o1 = OfferModel(id=10, product_id=1, price=20.0, shop_name="ActionToys", is_available=True, url="https://at/1")
+    o2 = OfferModel(id=11, product_id=2, price=20.0, shop_name="ActionToys", is_available=True, url="https://at/2")
+    rule = LogisticRuleModel(shop_name="ActionToys", country_code="ES", base_shipping=5.0, free_shipping_threshold=60.0, vat_multiplier=1.0, custom_fees=0.0)
+    with patch("src.application.services.budget_optimizer_service.SessionCloud") as mock_sess_cls:
+        mock_db = MagicMock()
+        mock_sess_cls.return_value.__enter__.return_value = mock_db
+        mock_db.query.return_value.all.return_value = [rule]
+        mock_db.query.return_value.filter.return_value.all.side_effect = [[p1, p2], [o1, o2], []]
+        res = BudgetOptimizerService.optimize_cart(budget_limit=46.0, target_product_ids=[1, 2], user_location="ES")
+        assert res["items_count"] == 2 and res["total_spent"] == 45.0 and res["shipping_saved"] == 5.0
