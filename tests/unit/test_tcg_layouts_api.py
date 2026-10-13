@@ -1,7 +1,10 @@
 import pytest
 from unittest.mock import patch, MagicMock
 from fastapi import HTTPException
-from src.interfaces.api.routers.system import get_tcg_layouts, save_tcg_layouts
+from src.interfaces.api.routers.system import get_tcg_layouts, save_tcg_layouts, update_telegram_config
+from src.interfaces.api.routers.products import router as products_router
+from src.interfaces.api.routers.analytics import router as analytics_router
+from src.interfaces.api.deps import verify_device
 from src.domain.models import UserModel
 
 
@@ -56,3 +59,29 @@ async def test_save_tcg_layouts_admin_success():
         assert res["status"] == "success"
         assert "guardada exitosamente" in res["message"]
         assert mock_db.commit.called
+
+
+@pytest.mark.asyncio
+async def test_update_telegram_config_non_admin_forbidden():
+    """Verifica que POST /api/system/telegram-config rechace usuarios sin rol admin."""
+    mock_user = MagicMock(spec=UserModel)
+    mock_user.role = "user"
+    mock_user.username = "Invitado"
+    mock_user.email = "invitado@example.com"
+
+    with pytest.raises(HTTPException) as exc_info:
+        await update_telegram_config(payload={"only_missing": False}, current_user=mock_user)
+
+    assert exc_info.value.status_code == 403
+
+
+def test_refresh_image_and_analytics_routes_protected():
+    """Verifica que refresh-image tenga prefijo /api y verify_device esté en analytics."""
+    product_paths = {r.path: r for r in products_router.routes}
+    assert "/api/products/{identifier}/refresh-image" in product_paths
+    refresh_route = product_paths["/api/products/{identifier}/refresh-image"]
+    assert any(d.dependency == verify_device for d in refresh_route.dependencies)
+
+    for r in analytics_router.routes:
+        assert any(d.dependency == verify_device for d in r.dependencies), f"Missing verify_device on {r.path}"
+

@@ -173,6 +173,8 @@ async def get_telegram_config(current_user: UserModel = Depends(get_current_user
 
 @router.post("/api/system/telegram-config", response_model=StatusMessageOutput)
 async def update_telegram_config(payload: dict, current_user: UserModel = Depends(get_current_user)):
+    if not is_admin(current_user):
+        raise HTTPException(status_code=403, detail="Se requieren permisos de administrador")
     from src.application.services.telegram_filter_service import set_telegram_only_missing_enabled
     only_missing = bool(payload.get("only_missing", True))
     with SessionCloud() as db:

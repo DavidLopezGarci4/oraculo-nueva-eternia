@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 from src.application.services.market_analytics_service import MarketAnalyticsService
 from src.application.services.budget_optimizer_service import BudgetOptimizerService
-from src.interfaces.api.deps import verify_api_key
+from src.interfaces.api.deps import verify_api_key, verify_device
 
 router = APIRouter(prefix="/api", tags=["analytics"])
 
@@ -14,7 +14,7 @@ class BudgetOptimizeRequest(BaseModel):
     target_product_ids: Optional[List[int]] = None
     user_location: str = "ES"
 
-@router.get("/analytics/market-index")
+@router.get("/analytics/market-index", dependencies=[Depends(verify_device)])
 async def get_market_index(
     period: str = Query(default="3M", description="1M, 3M, 6M, 1A, ALL"),
     user_id: int = Query(default=2)
@@ -22,7 +22,7 @@ async def get_market_index(
     """Calcula y devuelve el Índice Bursátil MOTU (EMI) por Waves con serie histórica."""
     return MarketAnalyticsService.get_market_index(period=period, user_id=user_id)
 
-@router.post("/cart/budget-optimize")
+@router.post("/cart/budget-optimize", dependencies=[Depends(verify_device)])
 async def optimize_cart_budget(request: BudgetOptimizeRequest):
     """Encuentra la combinación matemática óptima de compras dentro de un presupuesto dado."""
     return BudgetOptimizerService.optimize_cart(
@@ -32,7 +32,7 @@ async def optimize_cart_budget(request: BudgetOptimizeRequest):
         user_location=request.user_location
     )
 
-@router.get("/sync/delta-updates")
+@router.get("/sync/delta-updates", dependencies=[Depends(verify_device)])
 async def get_sync_delta_updates(since: Optional[str] = Query(default=None)):
     """Suministra el catálogo optimizado para caché y búsqueda instantánea en IndexedDB."""
     return MarketAnalyticsService.get_delta_updates(since_timestamp=since)

@@ -663,7 +663,7 @@ async def get_vintage_miscellaneous():
         return output
 
 
-@router.post("/products/{identifier}/refresh-image")
+@router.post("/api/products/{identifier}/refresh-image", dependencies=[Depends(verify_device)])
 async def refresh_product_image(identifier: str):
     """
     Descarga la imagen actualizada de una figura desde ActionFigure411 (por ID de figura o producto)
