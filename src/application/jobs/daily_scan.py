@@ -44,7 +44,7 @@ from src.application.services.nexus_service import NexusService
 
 # Domain & Infra Models
 from src.infrastructure.database_cloud import SessionCloud as SessionLocal # Unified for Cloud
-from src.domain.models import ScraperStatusModel, ScraperExecutionLogModel, ProductModel, CollectionItemModel, LogisticRuleModel
+from src.domain.models import ScraperStatusModel, ScraperExecutionLogModel, ProductModel, CollectionItemModel, LogisticRuleModel, WallapopJobModel
 from src.core.audit_logger import AuditLogger
 from src.core.notifier import NotifierService
 from src.application.services.deal_scorer import DealScorer
@@ -144,10 +144,8 @@ async def run_daily_scan(progress_callback=None):
             DeToyboysNLScraper(),
         ]
 
-        # SmythsToys está protegido por WAF Imperva en GitHub Actions.
-        # Se incluye en escaneos locales o cuando se solicite explícitamente en --shops.
-        if not os.environ.get("GITHUB_ACTIONS") or (args.shops and any("smyths" in s.lower() for s in args.shops)):
-            all_scrapers.insert(10, SmythsToysScraper())
+        # SmythsToys integrado con Motor REA/CDP + Xvfb/WARP y fallback automático a Purgatorio
+        all_scrapers.insert(10, SmythsToysScraper())
         
         # Filter Scrapers
         scrapers = []
@@ -281,6 +279,25 @@ async def run_daily_scan(progress_callback=None):
                     if getattr(scraper, 'blocked', False):
                         logger.warning(f"🛡️ [{scraper.spider_name}] Scraper was marked as BLOCKED by target server.")
                         blocked_spiders.append(scraper.spider_name)
+                        if scraper.spider_name == "smythstoys" and os.environ.get("GITHUB_ACTIONS") == "true":
+                            try:
+                                existing_job = (
+                                    db.query(WallapopJobModel)
+                                    .filter(
+                                        WallapopJobModel.status == "pending",
+                                        WallapopJobModel.query.in_(["smythstoys", "auto"]),
+                                    )
+                                    .first()
+                                )
+                                if not existing_job:
+                                    db.add(WallapopJobModel(query="smythstoys", status="pending"))
+                                    db.commit()
+                                    update_task_log(
+                                        "🔄 [Auto-Fallback Purgatorio] Trabajo 'smythstoys' encolado en Supabase para resolución por Nexus Bridge."
+                                    )
+                            except Exception as eq_err:
+                                db.rollback()
+                                logger.warning(f"⚠️ No se pudo encolar job de respaldo para SmythsToys: {eq_err}")
                     elif not offers:
                         logger.info(f"⚪ [{scraper.spider_name}] Scrape completed with 0 items returned.")
                         log_entry.status = "success_empty"

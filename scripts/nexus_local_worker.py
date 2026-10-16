@@ -88,36 +88,38 @@ async def process_job(job: dict) -> None:
     from src.infrastructure.scrapers.smythstoys_scraper import SmythsToysScraper
 
     query = job.get("query") or "auto"
+    query_lower = query.strip().lower()
     job_id = job["id"]
     print(f"🔎 Procesando trabajo #{job_id}: '{query}'...")
-
-    wallapop_scraper = WallapopManualScraper()
-    wallapop_scraper.log_callback = lambda msg: print(f"   [Wallapop] {msg}")
-
-    smyths_scraper = SmythsToysScraper()
-    smyths_scraper.log_callback = lambda msg: print(f"   [Smyths] {msg}")
 
     all_offers = []
     blocked = False
 
-    # 1. Incursión en Wallapop
-    try:
-        print("🚀 Iniciando extracción en Wallapop...")
-        wallapop_offers = await wallapop_scraper.search(query)
-        all_offers.extend(wallapop_offers)
-        blocked = blocked or wallapop_scraper.blocked
-    except Exception as e:
-        print(f"❌ Error ejecutando la búsqueda de Wallapop para el trabajo #{job_id}: {e}")
+    # 1. Incursión en Wallapop (salvo si el job fue auto-encolado exclusivamente para Smyths Toys)
+    if query_lower != "smythstoys":
+        wallapop_scraper = WallapopManualScraper()
+        wallapop_scraper.log_callback = lambda msg: print(f"   [Wallapop] {msg}")
+        try:
+            print("🚀 Iniciando extracción en Wallapop...")
+            walla_q = "auto" if query_lower == "wallapop" else query
+            wallapop_offers = await wallapop_scraper.search(walla_q)
+            all_offers.extend(wallapop_offers)
+            blocked = blocked or wallapop_scraper.blocked
+        except Exception as e:
+            print(f"❌ Error ejecutando la búsqueda de Wallapop para el trabajo #{job_id}: {e}")
 
-    # 2. Incursión en Smyths Toys
-    try:
-        print("🚀 Iniciando extracción en Smyths Toys...")
-        smyths_query = "auto" if query.lower() in ["completo", "full", "deep", "exhaustivo"] else query
-        smyths_offers = await smyths_scraper.search(smyths_query)
-        all_offers.extend(smyths_offers)
-        blocked = blocked or smyths_scraper.blocked
-    except Exception as e:
-        print(f"❌ Error ejecutando la búsqueda de Smyths Toys para el trabajo #{job_id}: {e}")
+    # 2. Incursión en Smyths Toys (salvo si el job fue solicitado exclusivamente para Wallapop)
+    if query_lower != "wallapop":
+        smyths_scraper = SmythsToysScraper()
+        smyths_scraper.log_callback = lambda msg: print(f"   [Smyths] {msg}")
+        try:
+            print("🚀 Iniciando extracción en Smyths Toys...")
+            smyths_query = "auto" if query_lower in ["smythstoys", "completo", "full", "deep", "exhaustivo"] else query
+            smyths_offers = await smyths_scraper.search(smyths_query)
+            all_offers.extend(smyths_offers)
+            blocked = blocked or smyths_scraper.blocked
+        except Exception as e:
+            print(f"❌ Error ejecutando la búsqueda de Smyths Toys para el trabajo #{job_id}: {e}")
 
     offers_payload = [
         {

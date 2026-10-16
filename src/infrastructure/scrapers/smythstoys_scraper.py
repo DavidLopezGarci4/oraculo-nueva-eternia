@@ -1,11 +1,13 @@
 from typing import List, Optional, Dict, Any
-import json
 import asyncio
+import json
 import logging
 import random
 import re
 import os
 import shutil
+import socket
+import subprocess
 import tempfile
 import urllib.parse
 import urllib.request
@@ -17,66 +19,81 @@ from src.infrastructure.scrapers.pipeline import check_is_vintage
 
 logger = logging.getLogger(__name__)
 
+
 class SmythsToysScraper(BaseScraper):
     """
     Scraper para Smyths Toys (Alemania - DE).
-    Implementa dos opciones de evasión de WAF (Imperva/Incapsula):
-    
-    - OPCIÓN 1 (Activa por defecto): Playwright Persistent Context (Chrome Channel) con 
-      inyección profunda de antidetect, aterrizaje previo en la home para cookies y referer simulación.
-    - OPCIÓN 2 (Estructurada como fallback): API gestionada premium (ScraperAPI con render y premium).
+    Implementa el Motor REA/CDP (Coste 0 / 0 Tokens):
+    - Acuña la cookie `reese84` de Imperva lanzando Chrome nativo off-screen (o bajo Xvfb en CI)
+      y leyendo `Storage.getCookies` desde el WebSocket CDP de nivel navegador (`/json/version`)
+      SIN inyectar `Runtime.enable` (indetectable por Imperva).
+    - Reutiliza las cookies en `curl_cffi(impersonate="chrome124")` contra `&page=2` y extrae el
+      payload SSR completo de Nuxt 3 (`<script id="__NUXT_DATA__">`, 75 productos acumulados).
     """
-    
+
     USER_AGENTS = [
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
     ]
+
+    DEFAULT_MASTERS_SEARCH_URL = (
+        "https://www.smythstoys.com/de/de-de/search"
+        "?text=MASTERS&brands=%5B%22Mattel%22%2C%22WWE%22%5D&page=2"
+    )
 
     def __init__(self):
         super().__init__(
             shop_name="SmythsToys",
-            base_url="https://www.smythstoys.com"
+            base_url="https://www.smythstoys.com",
         )
-        self.category_url = "https://www.smythstoys.com/de/de-de/search?text=MASTERS&brands=%5B%22Mattel%22%2C%22WWE%22%5D&page=2"
-        self.search_url = self.category_url
+        self.category_url = self.DEFAULT_MASTERS_SEARCH_URL
+        self.search_url = self.DEFAULT_MASTERS_SEARCH_URL
+        self.keywords_de = "masters of the universe figuren und sets"
+        self.use_managed_api = False
 
     def _resolve_target_url(self, query: str) -> str:
         if not query or query.lower() in ["auto", "completo", "full", "deep", "exhaustivo", "masters", "motu", "origins"]:
             return self.search_url
         encoded_query = urllib.parse.quote_plus(query)
         return f"https://www.smythstoys.com/de/de-de/search?text={encoded_query}&page=2"
-        self.keywords_de = "masters of the universe figuren und sets"
-        
-        # --- CONFIGURACIÓN DE OPCIONES DE BYPASS ---
-        self.use_managed_api = False  # Si es True, fuerza el uso de ScraperAPI
+
+    def _get_proxy_url(self) -> Optional[str]:
+        return (
+            os.environ.get("SMYTHS_PROXY")
+            or os.environ.get("WARP_PROXY")
+            or os.environ.get("ALL_PROXY")
+            or None
+        )
 
     async def search(self, query: str = "auto") -> List[ScrapedOffer]:
         """
-        Incursión para extraer reliquias MOTU de Smyths Toys Alemania.
-        Cascada Zero-Cost:
-        1. Nivel 1 (Gratis): Infiltración rápida curl_cffi con TLS Chrome 124 a categoría / buscador.
-        2. Nivel 2 (Gratis): Playwright Headless con Antidetect e inicialización de cookies.
-        3. Nivel 3 (Reserva): ScraperAPI Premium solo si los métodos gratuitos fallan.
+        Cascada Zero-Cost (0 tokens de Apify):
+        1. Nivel 1 (Gratis): Infiltración rápida curl_cffi con TLS Chrome 124 y parser __NUXT_DATA__.
+        2. Nivel 2 (Gratis): Motor REA/CDP (Chrome nativo sin Runtime.enable + Storage.getCookies + curl_cffi).
+        3. Nivel 3 (Reserva): ScraperAPI si está configurado en el entorno.
         """
         self._log(f"🔎 Iniciando búsqueda en Smyths Toys para: {query}")
         self.blocked = False
-        
-        # Nivel 1: Fast Infiltration directa con curl_cffi (Gratis)
+
+        # Nivel 1: Fast Infiltration directa con curl_cffi
         self._log("⚡ SmythsToys [Nivel 1 Gratis]: Probando infiltración directa con curl-cffi...")
         offers = await self._fast_infiltration(query)
         if offers and not self.blocked:
             self._log(f"🎉 SmythsToys [Nivel 1 Gratis]: ¡Éxito! Encontradas {len(offers)} ofertas.")
             return offers
 
-        # Nivel 2: Playwright Headless con antidetect profundo (Gratis)
-        self._log("🛡️ SmythsToys [Nivel 2 Gratis]: Infiltración rápida bloqueada/vacía. Escalamiento a Playwright Antidetect...", level="warning")
+        # Nivel 2: Motor REA/CDP (Cookie Minter sin Runtime.enable + __NUXT_DATA__)
+        self._log(
+            "🛡️ SmythsToys [Nivel 2 REA/CDP]: Acuñando sesión Imperva (reese84) vía CDP de navegador...",
+            level="warning",
+        )
         self.blocked = False
-        offers = await self._search_option_1(query)
+        offers = await self._search_rea_cdp(query)
         if offers and not self.blocked:
             return offers
 
-        # Nivel 3: ScraperAPI Premium (Solo si hay clave configurada)
+        # Nivel 3: ScraperAPI Premium (solo si hay clave configurada)
         if os.environ.get("SCRAPERAPI_KEY"):
             self._log("📡 SmythsToys [Nivel 3 Reserva]: Activando ScraperAPI de rescate...", level="warning")
             self.blocked = False
@@ -84,193 +101,210 @@ class SmythsToysScraper(BaseScraper):
 
         return offers
 
-    async def _fast_infiltration(self, query: str) -> List[ScrapedOffer]:
-        """Infiltración ultrarrápida gratuita vía curl_cffi."""
-        target_url = self.category_url
-        if query and query.lower() != "auto":
-            encoded_query = urllib.parse.quote_plus(query)
-            target_url = f"https://www.smythstoys.com/de/de-de/search/?text={encoded_query}"
+    async def _fast_infiltration(self, query: str, cookies: Optional[Dict[str, str]] = None) -> List[ScrapedOffer]:
+        """Infiltración ultrarrápida vía curl_cffi y extracción de __NUXT_DATA__."""
+        target_url = self._resolve_target_url(query)
+        proxy_url = self._get_proxy_url()
+        proxies = {"http": proxy_url, "https": proxy_url} if proxy_url else None
 
         offers: List[ScrapedOffer] = []
         try:
             headers = {
-                "User-Agent": random.choice(self.USER_AGENTS),
+                "User-Agent": self.USER_AGENTS[0],
                 "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
                 "Accept-Language": "de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7",
-                "Referer": "https://www.smythstoys.com/de/de-de",
-                "Upgrade-Insecure-Requests": "1"
+                "Referer": "https://www.smythstoys.com/de/de-de/",
+                "Upgrade-Insecure-Requests": "1",
             }
-            async with AsyncSession(impersonate="chrome124") as session:
-                resp = await session.get(target_url, headers=headers, timeout=20)
+            async with AsyncSession(impersonate="chrome124", proxies=proxies) as session:
+                resp = await session.get(target_url, headers=headers, cookies=cookies, timeout=25)
                 if resp.status_code == 200:
-                    body_text = resp.text.lower()
-                    if "pardon our interruption" in body_text or "incapsula" in body_text or "incident id" in body_text:
+                    body_lower = resp.text.lower()
+                    if (
+                        len(resp.text) < 25000
+                        and ("pardon our interruption" in body_lower or "incapsula" in body_lower or "reese84" in body_lower)
+                    ):
                         self._log("🛡️ SmythsToys: Desafío Imperva detectado en curl_cffi.", level="debug")
                         self.blocked = True
                         return []
-                    soup = BeautifulSoup(resp.text, "html.parser")
-                    offers = self._parse_html(soup, set())
+                    offers = self._extract_offers_from_html(resp.text, set())
                 else:
                     self._log(f"⚠️ SmythsToys: HTTP {resp.status_code} en curl_cffi", level="debug")
+                    if resp.status_code in (403, 429, 503):
+                        self.blocked = True
         except Exception as e:
             self._log(f"⚠️ SmythsToys: Error en fast infiltration: {e}", level="debug")
-            
+
         return offers
 
-    async def _search_option_1(self, query: str) -> List[ScrapedOffer]:
-        """
-        OPCIÓN 1: Playwright con perfil persistente, Chrome local, inyección profunda antidetect y resolución WAF.
-        """
-        from playwright.async_api import async_playwright
-        
-        # Determinar si se ejecuta de forma oculta o visible.
-        # En entornos locales y Nexus, usamos modo visible con canal Chrome para máxima evasión de WAF.
-        is_headless = False
-        if os.environ.get("DAILY_SCAN_RUN") == "true" or os.environ.get("GITHUB_ACTIONS") == "true":
-            is_headless = True
-            self._log("🛡️ Ejecutando OPCIÓN 1: Playwright con perfil persistente en modo headless")
-        else:
-            self._log("👁️ Modo visible (headful) activo para incursión de alta confianza (anti-Imperva).")
-            
-        products: List[ScrapedOffer] = []
-        seen_urls = set()
-        
-        # 1. Intento de conexión CDP asistida (si el usuario tiene su Chrome de depuración abierto en puerto 9222)
-        if not is_headless:
-            try:
-                urllib.request.urlopen("http://localhost:9222/json/version", timeout=0.5)
-                self._log("🔌 Puerto de depuracion 9222 abierto detectado. Conectando via CDP...")
-                
-                async with async_playwright() as p:
-                    browser = await p.chromium.connect_over_cdp("http://localhost:9222")
-                    target_page = None
-                    for context in browser.contexts:
-                        for page in context.pages:
-                            if "smythstoys.com" in page.url:
-                                target_page = page
-                                break
-                        if target_page:
-                            break
-                            
-                    if not target_page:
-                        # Abrir pestaña en el navegador del usuario directamente vía CDP
-                        self._log("🧭 Abriendo pestaña en sesión activa de Chrome para Smyths Toys...")
-                        context = browser.contexts[0] if browser.contexts else await browser.new_context()
-                        target_page = await context.new_page()
-                        await target_page.goto(self.search_url, wait_until="domcontentloaded", timeout=45000)
-                        await asyncio.sleep(3)
+    @staticmethod
+    def _find_chrome_executable() -> Optional[str]:
+        env_bin = os.environ.get("CHROME_BIN") or os.environ.get("GOOGLE_CHROME_BIN")
+        if env_bin and os.path.exists(env_bin):
+            return env_bin
 
-                    self._log(f"🎯 Pestaña activa de Smyths Toys obtenida: {target_page.url}")
-                    html = await target_page.content()
-                    soup = BeautifulSoup(html, "html.parser")
-                    products = self._parse_html(soup, seen_urls)
-                    if products:
-                        self._log(f"✅ Extracción completada exitosamente vía CDP. Encontrados {len(products)} artículos.")
-                        return products
-            except Exception as e_cdp:
-                self._log(f"ℹ️ CDP no utilizado ({e_cdp}). Continuando con canal autónomo...")
-                
-        # Perfil persistente en el proyecto para conservar cookies de sesión de Imperva
-        user_data_dir = os.path.abspath(os.path.join(os.getcwd(), "data", "smyths_chrome_profile"))
-        os.makedirs(user_data_dir, exist_ok=True)
-        
-        target_url = self.category_url
-        if query and query.lower() not in ["auto", "completo", "full", "deep", "exhaustivo"]:
-            encoded_query = urllib.parse.quote_plus(query)
-            target_url = f"https://www.smythstoys.com/de/de-de/search/?text={encoded_query}"
-        
-        async with async_playwright() as p:
-            browser_context = None
-            try:
-                launch_args = [
-                    "--disable-blink-features=AutomationControlled",
-                    "--disable-infobars",
-                    "--no-sandbox",
-                    "--window-size=1366,768"
-                ]
-                
+        candidates = [
+            r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+            r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+            os.path.expandvars(r"%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe"),
+            "/usr/bin/google-chrome-stable",
+            "/usr/bin/google-chrome",
+            "/usr/bin/chromium-browser",
+            "/usr/bin/chromium",
+        ]
+        for path in candidates:
+            if path and os.path.exists(path):
+                return path
+
+        for cmd in ("google-chrome-stable", "google-chrome", "chromium-browser", "chromium", "chrome"):
+            found = shutil.which(cmd)
+            if found:
+                return found
+        return None
+
+    async def _fetch_browser_cookies_via_ws(self, ws_url: str) -> Dict[str, str]:
+        import websockets
+
+        async with websockets.connect(ws_url, max_size=10_000_000) as ws:
+            await ws.send(json.dumps({"id": 1, "method": "Storage.getCookies"}))
+            raw = await asyncio.wait_for(ws.recv(), timeout=5.0)
+            msg = json.loads(raw)
+            cookies_list = msg.get("result", {}).get("cookies", [])
+            return {
+                c["name"]: c["value"]
+                for c in cookies_list
+                if "smythstoys" in c.get("domain", "") and c.get("name") and c.get("value")
+            }
+
+    async def _mint_imperva_cookies_cdp(self, target_url: str) -> Dict[str, str]:
+        """
+        Acuña cookies válidas de Imperva (`reese84`) sin usar Playwright ni `Runtime.enable`.
+        1. Si el puerto 9222 está activo con cookies de Smyths, las reutiliza al instante.
+        2. Si no, lanza un subproceso efímero de Chrome en modo no-headless off-screen
+           (o sobre Xvfb en GitHub Actions) y consulta `Storage.getCookies` en `/json/version`.
+        """
+        # 1. Intentar reutilizar sesión CDP activa en 9222 si existe
+        try:
+            with urllib.request.urlopen("http://127.0.0.1:9222/json/version", timeout=0.6) as resp:
+                v_info = json.loads(resp.read().decode())
+            ws_9222 = v_info.get("webSocketDebuggerUrl")
+            if ws_9222:
+                cookies_9222 = await self._fetch_browser_cookies_via_ws(ws_9222)
+                if "reese84" in cookies_9222:
+                    self._log("🔌 Cookie Imperva `reese84` recuperada de sesión Chrome activa (puerto 9222).")
+                    return cookies_9222
+        except Exception:
+            pass
+
+        chrome_bin = self._find_chrome_executable()
+        if not chrome_bin:
+            self._log("⚠️ No se encontró ejecutable de Google Chrome/Chromium para el Motor REA/CDP.", level="warning")
+            return {}
+
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.bind(("127.0.0.1", 0))
+            debug_port = s.getsockname()[1]
+
+        tmp_profile = tempfile.mkdtemp(prefix="smyths_rea_cdp_")
+        proxy_url = self._get_proxy_url()
+
+        cmd = [
+            chrome_bin,
+            f"--remote-debugging-port={debug_port}",
+            f"--user-data-dir={tmp_profile}",
+            "--no-first-run",
+            "--no-default-browser-check",
+            "--disable-blink-features=AutomationControlled",
+            "--disable-infobars",
+            "--no-sandbox",
+            "--disable-dev-shm-usage",
+            "--disable-gpu",
+            "--window-position=-32000,-32000",
+            "--window-size=1366,768",
+            "--lang=de-DE",
+        ]
+        if proxy_url:
+            cmd.append(f"--proxy-server={proxy_url}")
+        cmd.append(target_url)
+
+        proc = None
+        minted_cookies: Dict[str, str] = {}
+        try:
+            self._log(f"🌐 Lanzando Chrome nativo off-screen (puerto {debug_port}) para acuñar token reese84...")
+            proc = subprocess.Popen(
+                cmd,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+
+            ws_url = None
+            for _ in range(15):
+                await asyncio.sleep(0.5)
                 try:
-                    self._log("🌐 Lanzando Google Chrome (Canal Persistente con Antidetect)...")
-                    browser_context = await p.chromium.launch_persistent_context(
-                        user_data_dir=user_data_dir,
-                        headless=is_headless,
-                        channel="chrome",
-                        ignore_default_args=["--enable-automation"],
-                        args=launch_args,
-                        viewport={"width": 1366, "height": 768},
-                        locale="de-DE",
-                        timezone_id="Europe/Berlin"
-                    )
-                except Exception as e:
-                    self._log(f"⚠️ Fallback a Chromium por defecto ({e})...")
-                    browser_context = await p.chromium.launch_persistent_context(
-                        user_data_dir=user_data_dir,
-                        headless=is_headless,
-                        ignore_default_args=["--enable-automation"],
-                        args=launch_args,
-                        viewport={"width": 1366, "height": 768},
-                        locale="de-DE",
-                        timezone_id="Europe/Berlin"
-                    )
-                
-                page = browser_context.pages[0] if browser_context.pages else await browser_context.new_page()
-                
-                # Inyección de stealth para ocultar automatización
-                await page.add_init_script("""
-                    Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-                    window.chrome = { runtime: {} };
-                """)
-                
-                self._log(f"🧭 Navegando a catálogo de Smyths Toys...")
+                    with urllib.request.urlopen(f"http://127.0.0.1:{debug_port}/json/version", timeout=1.0) as resp:
+                        v_info = json.loads(resp.read().decode())
+                    ws_url = v_info.get("webSocketDebuggerUrl")
+                    if ws_url:
+                        break
+                except Exception:
+                    continue
+
+            if not ws_url:
+                self._log("⚠️ No se pudo conectar al endpoint /json/version de Chrome.", level="warning")
+                return {}
+
+            for attempt in range(8):
+                await asyncio.sleep(2.0)
                 try:
-                    await page.goto(target_url, timeout=45000)
-                except Exception as nav_e:
-                    self._log(f"ℹ️ Conexión inicial: {nav_e}", level="debug")
-                
-                # Esperar resolución de reto / recarga automática de Imperva
-                for i in range(20):
-                    await asyncio.sleep(1.5)
+                    minted_cookies = await self._fetch_browser_cookies_via_ws(ws_url)
+                    if "reese84" in minted_cookies and len(minted_cookies["reese84"]) > 100:
+                        self._log(
+                            f"✅ Cookie `reese84` acuñada con éxito en intento {attempt + 1} "
+                            f"({len(minted_cookies)} cookies de sesión)."
+                        )
+                        break
+                except Exception:
+                    continue
+        except Exception as e:
+            self._log(f"⚠️ Error en Motor REA/CDP: {e}", level="warning")
+        finally:
+            if proc:
+                try:
+                    proc.terminate()
+                    proc.wait(timeout=4)
+                except Exception:
                     try:
-                        title = await page.title()
-                        if title and "Pardon Our Interruption" not in title and len(title) > 0:
-                            self._log(f"✅ Acceso concedido a Smyths Toys: '{title[:55]}...'")
-                            break
-                    except Exception:
-                        # Recarga de contexto por redirección de WAF en curso
-                        pass
-                
-                # Emulación de scroll humano para cargar elementos
-                self._log("🖱️ Simulando lectura de usuario y scroll orgánico...")
-                for _ in range(3):
-                    await page.mouse.wheel(0, random.randint(400, 750))
-                    await asyncio.sleep(random.uniform(0.8, 1.6))
-                    
-                await asyncio.sleep(2)
-                html = await page.content()
-                soup = BeautifulSoup(html, "html.parser")
-                body_text = soup.body.get_text() if soup.body else ""
-                
-                products = self._parse_html(soup, seen_urls)
-                
-                if len(products) == 0 and ("pardon our interruption" in body_text.lower() or "incident id" in body_text.lower()):
-                    self._log("⚠️ Bloqueo de Imperva persistente en este intento.", level="warning")
-                    self.blocked = True
-                    return []
-                    
-                if products:
-                    self._log(f"🎉 SmythsToys [Playwright]: ¡Éxito! Extraídas {len(products)} reliquias.")
-                
-            except Exception as e:
-                self._log(f"❌ Error en Playwright (Opción 1): {e}", level="error")
-                self.errors += 1
-            finally:
-                if browser_context:
-                    try:
-                        await browser_context.close()
+                        proc.kill()
                     except Exception:
                         pass
-                
-        return products
+            shutil.rmtree(tmp_profile, ignore_errors=True)
+
+        return minted_cookies
+
+    async def _search_rea_cdp(self, query: str) -> List[ScrapedOffer]:
+        """
+        Ejecuta el Motor REA/CDP: acuña cookies de Imperva sin Playwright `Runtime.enable`
+        y descarga el catálogo completo desde `<script id="__NUXT_DATA__">` vía `curl_cffi`.
+        """
+        target_url = self._resolve_target_url(query)
+        cookies = await self._mint_imperva_cookies_cdp(target_url)
+        if not cookies or "reese84" not in cookies:
+            self._log("⚠️ No se pudo acuñar la cookie `reese84` de Imperva.", level="warning")
+            self.blocked = True
+            return []
+
+        self.blocked = False
+        offers = await self._fast_infiltration(query, cookies=cookies)
+        if offers:
+            self._log(f"🎉 SmythsToys [Motor REA/CDP]: ¡Éxito! Extraídas {len(offers)} reliquias de __NUXT_DATA__.")
+            return offers
+
+        self.blocked = True
+        return []
+
+    async def _search_option_1(self, query: str) -> List[ScrapedOffer]:
+        """Alias retrocompatible hacia el Motor REA/CDP."""
+        return await self._search_rea_cdp(query)
 
     async def _search_option_2(self, query: str) -> List[ScrapedOffer]:
         """
@@ -558,7 +592,7 @@ class SmythsToysScraper(BaseScraper):
                 
             if not name or len(name) < 5:
                 continue
-                
+
             if check_is_vintage(name):
                 continue
 

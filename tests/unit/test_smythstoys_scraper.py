@@ -86,3 +86,37 @@ def test_smythstoys_parse_nuxt_data_devalue_and_vintage_guard():
     assert offers[1].is_available is False
 
 
+@pytest.mark.asyncio
+async def test_smythstoys_search_rea_cdp_replay(monkeypatch):
+    scraper = SmythsToysScraper()
+
+    call_count = {"fast": 0}
+
+    async def fake_fast_infiltration(query: str, cookies=None):
+        call_count["fast"] += 1
+        if not cookies:
+            scraper.blocked = True
+            return []
+        assert "reese84" in cookies
+        from src.infrastructure.scrapers.base import ScrapedOffer
+        return [
+            ScrapedOffer(
+                product_name="Origins Skeletor",
+                price=17.99,
+                currency="EUR",
+                url="https://www.smythstoys.com/de/de-de/skeletor/p/111",
+                shop_name="SmythsToys",
+            )
+        ]
+
+    async def fake_mint_cookies(target_url: str):
+        return {"reese84": "x" * 150}
+
+    monkeypatch.setattr(scraper, "_fast_infiltration", fake_fast_infiltration)
+    monkeypatch.setattr(scraper, "_mint_imperva_cookies_cdp", fake_mint_cookies)
+
+    offers = await scraper.search("auto")
+    assert len(offers) == 1
+    assert offers[0].product_name == "Origins Skeletor"
+    assert scraper.blocked is False
+    assert call_count["fast"] == 2

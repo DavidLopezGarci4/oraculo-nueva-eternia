@@ -67,6 +67,12 @@ jobs:
             git pull --rebase origin main
             git push
           fi
+      - name: Setup Cloudflare WARP (Zero-Cost Consumer Egress IP)
+        uses: cloudflare/warp-action@v1
+        continue-on-error: true
+        with:
+          version: latest
+
       - name: Run Scrapers (Market Incursion)
         env:
           SUPABASE_DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
@@ -78,7 +84,11 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           PYTHONPATH: .
         run: |
-          python src/application/jobs/daily_scan.py --shops "${{ github.event.inputs.shops }}" --random-delay 0 --no-nexus
+          if command -v xvfb-run >/dev/null 2>&1; then
+            xvfb-run -a --server-args="-screen 0 1366x768x24" python src/application/jobs/daily_scan.py --shops "${{ github.event.inputs.shops }}" --random-delay 0 --no-nexus
+          else
+            python src/application/jobs/daily_scan.py --shops "${{ github.event.inputs.shops }}" --random-delay 0 --no-nexus
+          fi
 
       - name: SSL Certificate Guardian (Auto-Renew if <= 14 days)
         if: always()
