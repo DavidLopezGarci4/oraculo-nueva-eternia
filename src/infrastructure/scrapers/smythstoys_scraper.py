@@ -1,4 +1,5 @@
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
+import json
 import asyncio
 import logging
 import random
@@ -12,6 +13,7 @@ from curl_cffi.requests import AsyncSession
 from bs4 import BeautifulSoup
 
 from src.infrastructure.scrapers.base import BaseScraper, ScrapedOffer
+from src.infrastructure.scrapers.pipeline import check_is_vintage
 
 logger = logging.getLogger(__name__)
 
@@ -36,8 +38,14 @@ class SmythsToysScraper(BaseScraper):
             shop_name="SmythsToys",
             base_url="https://www.smythstoys.com"
         )
-        self.category_url = "https://www.smythstoys.com/de/de-de/spielzeug/action-spielzeug/actionfiguren/masters-of-the-universe-figuren-und-sets/c/SM1001010408?sort=creationDate_dt+desc"
+        self.category_url = "https://www.smythstoys.com/de/de-de/search?text=MASTERS&brands=%5B%22Mattel%22%2C%22WWE%22%5D&page=2"
         self.search_url = self.category_url
+
+    def _resolve_target_url(self, query: str) -> str:
+        if not query or query.lower() in ["auto", "completo", "full", "deep", "exhaustivo", "masters", "motu", "origins"]:
+            return self.search_url
+        encoded_query = urllib.parse.quote_plus(query)
+        return f"https://www.smythstoys.com/de/de-de/search?text={encoded_query}&page=2"
         self.keywords_de = "masters of the universe figuren und sets"
         
         # --- CONFIGURACIÓN DE OPCIONES DE BYPASS ---
@@ -314,13 +322,158 @@ class SmythsToysScraper(BaseScraper):
                     self.blocked = True
                     return []
                     
-                products = self._parse_html(soup, seen_urls)
+                products = self._extract_offers_from_html(resp.text, seen_urls)
                 
         except Exception as e:
             self._log(f"❌ Error al consultar ScraperAPI (Opción 2): {e}", level="error")
             self.errors += 1
             
         return products
+
+    @staticmethod
+    def _clean_product_title(raw_name: str) -> str:
+        name = raw_name.replace("\n", " ").strip()
+        name = re.sub(r"\d+[.,]\d{2}\s*(?:€|EUR|\$)", "", name)
+        name = re.sub(r"(?i)\d+%\s*off\b", "", name)
+        name = re.sub(r"(?i)\d+%\b", "", name)
+        name = re.sub(r"(?i)\bvorheriger\s+verkaufspreis\b", "", name)
+        name = re.sub(r"(?i)exklusiv", "", name)
+        name = re.sub(r"(?i)masters\s+of\s+the\s+universe", "", name)
+        name = re.sub(r"\s+", " ", name).strip()
+        return name.strip("-,. ")
+
+    def _extract_offers_from_html(self, html: str, seen_urls: set) -> List[ScrapedOffer]:
+        """
+        Extrae ofertas priorizando el payload SSR estructurado de Nuxt 3 (`__NUXT_DATA__`)
+        y haciendo fallback al parseo de tarjetas DOM (`_parse_html`).
+        """
+        nuxt_offers = self._parse_nuxt_data(html, seen_urls)
+        if nuxt_offers:
+            return nuxt_offers
+        soup = BeautifulSoup(html, "html.parser")
+        return self._parse_html(soup, seen_urls)
+
+    def _parse_nuxt_data(self, html: str, seen_urls: set) -> List[ScrapedOffer]:
+        """
+        Deserializa el array plano `devalue` dentro de `<script id="__NUXT_DATA__">` de Nuxt 3 SSR.
+        Extrae todos los productos estructurados (código, nombre, URL, precio exacto, imagen HD y stock).
+        """
+        match = re.search(
+            r'<script[^>]*id="__NUXT_DATA__"[^>]*>(.*?)</script>',
+            html,
+            re.DOTALL | re.IGNORECASE,
+        )
+        if not match:
+            return []
+
+        try:
+            arr = json.loads(match.group(1))
+        except Exception as e:
+            self._log(f"⚠️ Error parseando JSON de __NUXT_DATA__: {e}", level="debug")
+            return []
+
+        if not isinstance(arr, list):
+            return []
+
+        def resolve(idx: Any, depth: int = 0) -> Any:
+            if depth > 9 or not isinstance(idx, int) or idx < 0 or idx >= len(arr):
+                return idx
+            val = arr[idx]
+            if isinstance(val, list):
+                if len(val) == 2 and isinstance(val[0], str) and val[0] in ("ShallowReactive", "Reactive", "Ref"):
+                    return resolve(val[1], depth + 1)
+                if len(val) == 2 and val[0] == "EmptyRef":
+                    return None
+                if len(val) >= 1 and val[0] == "Set":
+                    return [resolve(x, depth + 1) for x in val[1:]]
+                return [resolve(x, depth + 1) for x in val]
+            if isinstance(val, dict):
+                return {k: resolve(v, depth + 1) for k, v in val.items()}
+            return val
+
+        parsed_offers: List[ScrapedOffer] = []
+        for idx, item in enumerate(arr):
+            if not isinstance(item, dict):
+                continue
+            if not ("code" in item and "name" in item and "url" in item and "metadata" in item):
+                continue
+
+            obj = resolve(idx)
+            if not isinstance(obj, dict):
+                continue
+
+            raw_name = str(obj.get("name") or "").strip()
+            raw_url = str(obj.get("url") or "").strip()
+            if not raw_name or not raw_url:
+                continue
+
+            # Regla de negocio (.agents/AGENTS.md): filtrar artículos vintage de los 80
+            if check_is_vintage(raw_name):
+                continue
+
+            full_url = (
+                f"https://www.smythstoys.com{raw_url}"
+                if raw_url.startswith("/")
+                else raw_url
+            )
+            if full_url in seen_urls:
+                continue
+            seen_urls.add(full_url)
+
+            clean_name = self._clean_product_title(raw_name) or raw_name
+
+            # Extraer precio exacto desde metadata.priceDetails.value
+            price_val = 0.0
+            meta = obj.get("metadata")
+            if isinstance(meta, dict):
+                price_details = meta.get("priceDetails")
+                if isinstance(price_details, dict) and price_details.get("value") is not None:
+                    try:
+                        price_val = float(price_details["value"])
+                    except (ValueError, TypeError):
+                        price_val = 0.0
+            if price_val <= 0 and isinstance(obj.get("price"), dict):
+                try:
+                    price_val = float(obj["price"].get("value") or 0.0)
+                except (ValueError, TypeError):
+                    price_val = 0.0
+            if price_val <= 0:
+                continue
+
+            # Extraer imagen HD
+            img_url = None
+            prod_img = obj.get("productImage")
+            if isinstance(prod_img, dict):
+                img_url = prod_img.get("desktop") or prod_img.get("tablet") or prod_img.get("mobile")
+            if isinstance(img_url, str) and img_url.startswith("/"):
+                img_url = f"https://www.smythstoys.com{img_url}"
+
+            # Disponibilidad
+            is_avl = True
+            stock_info = obj.get("stock")
+            if isinstance(stock_info, dict):
+                status_str = str(stock_info.get("stockLevelStatus") or "").lower()
+                if status_str in ("outofstock", "nicht lieferbar", "ausverkauft"):
+                    is_avl = False
+            if obj.get("purchasable") is False or obj.get("inStock") is False:
+                is_avl = False
+
+            parsed_offers.append(
+                ScrapedOffer(
+                    product_name=clean_name,
+                    price=price_val,
+                    currency="EUR",
+                    url=full_url,
+                    shop_name="SmythsToys",
+                    image_url=img_url if isinstance(img_url, str) else None,
+                    is_available=is_avl,
+                )
+            )
+            self.items_scraped += 1
+
+        if parsed_offers:
+            self._log(f"✅ __NUXT_DATA__ SSR parseado: {len(parsed_offers)} productos extraídos.")
+        return parsed_offers
 
     def _parse_html(self, soup: BeautifulSoup, seen_urls: set) -> List[ScrapedOffer]:
         """
@@ -406,25 +559,12 @@ class SmythsToysScraper(BaseScraper):
             if not name or len(name) < 5:
                 continue
                 
-            # Limpieza y saneamiento del título del producto
-            name = name.replace("\n", " ").strip()
-            
-            # Remover precios residuales pegados al final del texto (ej: 21,99€, 17.99 EUR, 99.99€, etc.)
-            name = re.sub(r'\d+[.,]\d{2}\s*(?:€|EUR|\$)', '', name)
-            
-            # Remover textos promocionales alemanes colados (ej: 27% OFF, 27%, Vorheriger Verkaufspreis)
-            name = re.sub(r'(?i)\d+%\s*off\b', '', name)
-            name = re.sub(r'(?i)\d+%\b', '', name)
-            name = re.sub(r'(?i)\bvorheriger\s+verkaufspreis\b', '', name)
-            
-            # Remover palabras "Exklusiv" y "Masters of the Universe" para facilitar la asociación en la Fortaleza
-            # (Limpieza insensiva a mayúsculas/minúsculas y que actúe incluso si están unidas como "ExklusivMasters")
-            name = re.sub(r'(?i)exklusiv', '', name)
-            name = re.sub(r'(?i)masters\s+of\s+the\s+universe', '', name)
-            
-            # Limpiar espacios múltiples y caracteres sueltos residuales resultantes
-            name = re.sub(r'\s+', ' ', name).strip()
-            name = name.strip("-,. ")
+            if check_is_vintage(name):
+                continue
+
+            name = self._clean_product_title(name)
+            if not name:
+                continue
             
             # 2. Búsqueda de Precio
             price_val = 0.0
