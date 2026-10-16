@@ -4,8 +4,10 @@ import {
     CheckCircle2, RefreshCw, Download, Package, Sparkles, Settings, ShieldAlert,
     FileSpreadsheet, Trash2, Zap, Copy, Check, X, ShieldCheck, Bell, ExternalLink
 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { downloadImagesZip, getSSLStatus, renewSSLCertificate, getTelegramConfig, saveTelegramConfig, type SSLStatus, type Hero } from '../../api/admin';
+
+const AppArchitectureGraph = lazy(() => import('./AppArchitectureGraph'));
 
 interface ImageDownloadFailure {
     id: number;
@@ -80,6 +82,7 @@ export default function SystemTab({
     setResetStep,
 }: SystemTabProps) {
     const [showErrorLogModal, setShowErrorLogModal] = useState(false);
+    const [showTechStack, setShowTechStack] = useState(false);
     const [copiedLog, setCopiedLog] = useState(false);
     const [sslStatus, setSslStatus] = useState<SSLStatus | null>(null);
     const [loadingSSL, setLoadingSSL] = useState(false);
@@ -1016,6 +1019,35 @@ export default function SystemTab({
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* --- ARQUITECTURA TECNORED v2.0 & SALUD DEL SISTEMA --- */}
+            <div className="glass border border-cyan-500/25 p-6 rounded-3xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-cyan-500/[0.02]">
+                <div className="space-y-1.5">
+                    <div className="flex items-center gap-2.5 text-cyan-400 font-black uppercase tracking-widest text-xs">
+                        <Globe className="h-4 w-4" />
+                        <span>Grafo Topológico TecnoRed v2.0 & Salud en Vivo</span>
+                        <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/25 text-cyan-300">
+                            CANVAS 2D · 60 FPS
+                        </span>
+                    </div>
+                    <p className="text-[10px] text-white/65 font-bold uppercase leading-relaxed max-w-2xl">
+                        Explora las 9 tecnologías nucleares del Oráculo (React 19, FastAPI, Supabase, Motor REA/CDP, SmartMatcher), sus protocolos e interconexiones y las rutas de flujo paso a paso.
+                    </p>
+                </div>
+                <button
+                    onClick={() => setShowTechStack(true)}
+                    className="shrink-0 bg-cyan-500/15 hover:bg-cyan-500 text-cyan-300 hover:text-black border border-cyan-500/35 px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-cyan-500/0 hover:shadow-cyan-500/25"
+                >
+                    <Sparkles className="h-4 w-4" />
+                    Abrir Mapa TecnoRed
+                </button>
+            </div>
+
+            {showTechStack && (
+                <Suspense fallback={null}>
+                    <AppArchitectureGraph onClose={() => setShowTechStack(false)} />
+                </Suspense>
             )}
 
             {/* Error Log Modal */}
