@@ -1,0 +1,292 @@
+{
+  "appName": "Oráculo de Nueva Eternia",
+  "version": "Phase 101 (TecnoRed v2.0)",
+  "category": "Inteligencia de Mercado MOTU, Scrapers Resilientes & Gestión de Colecciones",
+  "description": "Arquitectura Full-Stack Híbrida (React 19 + FastAPI + Supabase PostgreSQL + SQLite Heritage + Motor REA/CDP) con vigilancia de 15 tiendas europeas, análisis de liquidez P2P y persistencia Purgatorio Primero.",
+  "nodes": [
+    {
+      "id": "ui_runtime",
+      "label": "React 19 + Vite 7",
+      "version": "^19.2.0",
+      "role": "Runtime UI Declarativo, Code-Splitting y Enrutado Perezoso",
+      "category": "local_web_apps",
+      "color": "#f59e0b",
+      "icon": "Atom",
+      "healthType": "runtime",
+      "computationalModel": "Renderizado concurrente basado en React Fiber con carga diferida (React.lazy + Suspense) y prefetch predictivo al posar el cursor.",
+      "whyChosen": "Desacopla las 10 vistas del Oráculo (Orbe, Fortaleza, Nueva Eternia, Purgatorio, Ajustes) manteniendo un arranque instantáneo.",
+      "useCases": [
+        "Montaje bajo demanda de vistas pesadas y modales de calibración",
+        "Modo Incógnito global (Ctrl+I / Doble Esc) y ocultación de precios manuales (.blur-manual-price)"
+      ]
+    },
+    {
+      "id": "design_engine",
+      "label": "Tailwind 4 + Canvas 2D",
+      "version": "^4.1.18",
+      "role": "Sistema Visual Glassmórfico, Animaciones y Topología 60 FPS",
+      "category": "graphics_multimedia",
+      "color": "#ec4899",
+      "icon": "Sparkles",
+      "healthType": "runtime",
+      "computationalModel": "Motor CSS atómico compilado en Rust junto con Framer Motion 12 y renderizado imperativo HTML5 Canvas 2D.",
+      "whyChosen": "Proporciona estética dual (Halo Azul Nueva Eternia / Halo Ámbar Eternia Vintage) y visualización topológica sin librerías pesadas.",
+      "useCases": [
+        "Efectos de rayo calibrables sobre la Espada del Poder y el Báculo de Havoc",
+        "Renderizado a 60 FPS del mapa topológico TecnoRed y cartas coleccionables"
+      ]
+    },
+    {
+      "id": "query_shield",
+      "label": "TanStack Query + Shield",
+      "version": "^5.90.16",
+      "role": "Caché Asíncrona, Deduplicación y Escudo de Dispositivo",
+      "category": "local_web_apps",
+      "color": "#f59e0b",
+      "icon": "ShieldCheck",
+      "healthType": "network",
+      "computationalModel": "Máquina de estados asíncrona Stale-While-Revalidate acoplada a interceptores Axios con inyección de X-Device-ID y JWT.",
+      "whyChosen": "Elimina peticiones redundantes al navegar entre catálogos y garantiza que solo dispositivos autorizados operen sobre la Fortaleza.",
+      "useCases": [
+        "Sincronización optimista de ítems de colección y precios manuales",
+        "Autorización criptográfica por huella de dispositivo (X-Device-ID) y rol Soberano"
+      ]
+    },
+    {
+      "id": "api_backend",
+      "label": "FastAPI + SQLAlchemy 2",
+      "version": "0.139.2",
+      "role": "Pasarela API Asíncrona, Orquestación de Dominio y Seguridad",
+      "category": "server_web_apps",
+      "color": "#8b5cf6",
+      "icon": "Server",
+      "healthType": "network",
+      "computationalModel": "Servidor ASGI asíncrono (Uvicorn) con inyección de dependencias, validación Pydantic v2 y ORM declarativo SQLAlchemy 2.0.",
+      "whyChosen": "Ofrece alto rendimiento de E/S concurrente para servir el catálogo, ejecutar scrapers en segundo plano y exponer analítica en tiempo real.",
+      "useCases": [
+        "Endpoints de productos con paginación selectinload sin truncamiento ni N+1",
+        "Guardián de certificados SSL Let's Encrypt y cola de trabajos Nexus Bridge"
+      ]
+    },
+    {
+      "id": "rea_scraper_mesh",
+      "label": "Motor REA/CDP + 15 Spiders",
+      "version": "v6.5 / Chrome124",
+      "role": "Malla de Extracción Resiliente Multi-Tienda y Evasión WAF",
+      "category": "desktop_apps",
+      "color": "#3b82f6",
+      "icon": "Cpu",
+      "healthType": "native_bridge",
+      "computationalModel": "Acuñación nativa de cookies WAF (reese84) vía WebSocket CDP de nivel navegador (Storage.getCookies sin Runtime.enable) + replay TLS JA3 en curl_cffi.",
+      "whyChosen": "Permite extraer catálogos protegidos por Imperva y CloudFront (Smyths Toys DE, Wallapop, Vinted, ActionToys) con 0 consumo de tokens de pago.",
+      "useCases": [
+        "Deserialización del grafo SSR __NUXT_DATA__ (devalue) de Smyths Toys en una sola petición",
+        "Ejecución desatendida en GitHub Actions bajo xvfb-run + Cloudflare WARP"
+      ]
+    },
+    {
+      "id": "smart_intelligence",
+      "label": "SmartMatcher + EMI Engine",
+      "version": "Phase 101",
+      "role": "Emparejamiento Difuso, Índice Bursátil y Optimizador de Carrito",
+      "category": "ai_machine_learning",
+      "color": "#f97316",
+      "icon": "Brain",
+      "healthType": "runtime",
+      "computationalModel": "Tokenización semántica con RapidFuzz, guardián anti-vintage estricto y motor heurístico de arbitraje y consolidación logística.",
+      "whyChosen": "Clasifica ofertas crudas, filtra ruido vintage de los 80 y calcula métricas accionables de liquidez y escasez.",
+      "useCases": [
+        "Pulso de Liquidez P2P (rotación rápida vs. stock estancado >45d con descuento sugerido)",
+        "Alerta de Último Bastión Retail y Matrix Cart con amortización de envío multi-tienda"
+      ]
+    },
+    {
+      "id": "supabase_cloud",
+      "label": "Supabase PostgreSQL + RLS",
+      "version": "PG 15 / Alembic",
+      "role": "Fuente de Verdad Cloud, Purgatorio e Histórico FinOps",
+      "category": "cloud_persistence",
+      "color": "#0ea5e9",
+      "icon": "Cloud",
+      "healthType": "network",
+      "computationalModel": "Base de datos relacional PostgreSQL en la nube gobernada por migraciones Alembic, políticas Row-Level Security (RLS) y compactación mensual FinOps.",
+      "whyChosen": "Centraliza el estado entre GitHub Actions, el servidor Oracle Cloud y los dispositivos móviles/escritorio del coleccionista.",
+      "useCases": [
+        "Almacenamiento de la tabla pending_matches (El Purgatorio) y ofertas activas",
+        "Persistencia histórica en price_history y agregados compactados en product_monthly_stats"
+      ]
+    },
+    {
+      "id": "local_heritage",
+      "label": "SQLite + Excel + Cache API",
+      "version": "Heritage Sync",
+      "role": "Bóveda Local, Respaldo Excel Maestro y Caché de Imágenes",
+      "category": "local_persistence",
+      "color": "#06b6d4",
+      "icon": "Database",
+      "healthType": "storage",
+      "computationalModel": "Persistencia híbrida en archivo SQLite (oraculo.db), libro Excel bidireccional (lista_MOTU.xlsx) y Cache Storage API del navegador.",
+      "whyChosen": "Garantiza soberanía total de los datos de la colección en disco local y carga instantánea de imágenes sin depender de CDNs externos.",
+      "useCases": [
+        "Sincronización inversa en CI/CD desde Supabase hacia data/MOTU/lista_MOTU.xlsx",
+        "Descarga masiva en segundo plano de imágenes del catálogo a la caché local del navegador"
+      ]
+    },
+    {
+      "id": "nexus_telegram",
+      "label": "Telegram Bot + Nexus Bridge",
+      "version": "Sentinel v2",
+      "role": "Alertas en Tiempo Real, Worker Residencial y Extensión DOM",
+      "category": "mobile_apps",
+      "color": "#10b981",
+      "icon": "Smartphone",
+      "healthType": "native_bridge",
+      "computationalModel": "Pasarela de notificaciones push HTML hacia Telegram combinada con cola asíncrona de trabajos (wallapop_jobs) y captura DOM en navegador.",
+      "whyChosen": "Permite recibir alertas de chollos al instante en el móvil y delegar incursiones bloqueadas en datacenter hacia IP residencial de forma transparente.",
+      "useCases": [
+        "Auto-relevo de Smyths Toys y Wallapop desde GitHub Actions hacia nexus_local_worker.py",
+        "Importación directa desde la extensión multitienda de Chrome (Wallapop y Vinted)"
+      ]
+    }
+  ],
+  "links": [
+    {
+      "source": "ui_runtime",
+      "target": "design_engine",
+      "relation": "renderiza_vistas",
+      "type": "jerarquia",
+      "protocol": "React 19 JSX + Canvas 2D Context",
+      "description": "Los componentes delegan la composición visual, animaciones de espada y grafos al motor gráfico."
+    },
+    {
+      "source": "ui_runtime",
+      "target": "query_shield",
+      "relation": "consulta_estado",
+      "type": "jerarquia",
+      "protocol": "TanStack Query Hooks",
+      "description": "Las páginas consumen datos cacheados y disparan mutaciones protegidas por huella de dispositivo."
+    },
+    {
+      "source": "query_shield",
+      "target": "api_backend",
+      "relation": "consume_rest",
+      "type": "jerarquia",
+      "protocol": "HTTPS JSON + X-Device-ID + Bearer JWT",
+      "description": "Cliente Axios centralizado que transmite identidad de dispositivo y token de sesión hacia FastAPI."
+    },
+    {
+      "source": "ui_runtime",
+      "target": "local_heritage",
+      "relation": "cachea_imagenes",
+      "type": "transversal",
+      "protocol": "Browser Cache Storage API + LocalStorage",
+      "description": "Almacena miniaturas de figuras e instantáneas de configuración en el navegador para lectura en 0 ms."
+    },
+    {
+      "source": "api_backend",
+      "target": "supabase_cloud",
+      "relation": "persiste_orm",
+      "type": "jerarquia",
+      "protocol": "SQLAlchemy 2.0 + psycopg2 Pool (TLS)",
+      "description": "Ejecuta consultas paginadas, transacciones de Purgatorio y agregaciones históricas sobre PostgreSQL."
+    },
+    {
+      "source": "api_backend",
+      "target": "smart_intelligence",
+      "relation": "calcula_analitica",
+      "type": "jerarquia",
+      "protocol": "In-Process Python Domain Services",
+      "description": "Invoca MarketAnalyticsService y BudgetOptimizerService para calcular EMI, liquidez P2P y carrito óptimo."
+    },
+    {
+      "source": "rea_scraper_mesh",
+      "target": "smart_intelligence",
+      "relation": "filtra_y_empareja",
+      "type": "jerarquia",
+      "protocol": "ScrapedOffer Pipeline + check_is_vintage",
+      "description": "Entrega las ofertas extraídas de las 15 tiendas al pipeline para filtrado anti-vintage y cálculo de DealScore."
+    },
+    {
+      "source": "smart_intelligence",
+      "target": "supabase_cloud",
+      "relation": "ingesta_purgatorio",
+      "type": "jerarquia",
+      "protocol": "ScrapingPipeline.update_database()",
+      "description": "Envía el 100% de las ofertas nuevas a pending_matches (Purgatorio) y actualiza precios de ofertas ya vinculadas."
+    },
+    {
+      "source": "rea_scraper_mesh",
+      "target": "nexus_telegram",
+      "relation": "encola_fallback",
+      "type": "transversal",
+      "protocol": "Supabase wallapop_jobs Queue",
+      "description": "Si un WAF bloquea la IP de GitHub Actions, auto-encola el trabajo para que el worker residencial lo resuelva."
+    },
+    {
+      "source": "nexus_telegram",
+      "target": "api_backend",
+      "relation": "entrega_reliquias",
+      "type": "transversal",
+      "protocol": "POST /api/wallapop/jobs/{id}/results",
+      "description": "El worker local y la extensión Chrome inyectan las ofertas capturadas directamente hacia el Purgatorio."
+    },
+    {
+      "source": "api_backend",
+      "target": "nexus_telegram",
+      "relation": "notifica_alertas",
+      "type": "transversal",
+      "protocol": "Telegram Bot API (HTML Push)",
+      "description": "Dispara avisos de chollos, resúmenes de incursión y alertas preventivas de certificados SSL."
+    },
+    {
+      "source": "supabase_cloud",
+      "target": "local_heritage",
+      "relation": "sincroniza_excel",
+      "type": "transversal",
+      "protocol": "sync_excel_from_db.py + openpyxl",
+      "description": "Reconstruye y versiona automáticamente el archivo maestro lista_MOTU.xlsx y exportaciones SQLite."
+    }
+  ],
+  "flows": [
+    {
+      "id": "rea_cdp_purgatory_flow",
+      "title": "⚡ Incursión Multi-Tienda, Motor REA/CDP y Purgatorio",
+      "category": "desktop_apps",
+      "summary": "Ruta completa desde el disparo en GitHub Actions (Xvfb + Cloudflare WARP) y acuñación de cookies Imperva hasta la ingesta en el Purgatorio.",
+      "explanation": "Garantiza la captura automatizada de las 15 tiendas (incluyendo los 75 productos SSR de Smyths Toys DE) a coste 0, con relevo automático a la cola Nexus si una IP cloud es bloqueada.",
+      "steps": [
+        { "nodeId": "rea_scraper_mesh", "role": "1. Acuña cookie reese84 vía CDP de navegador (/json/version) y extrae __NUXT_DATA__ con curl_cffi" },
+        { "nodeId": "smart_intelligence", "role": "2. Aplica guardián anti-vintage (check_is_vintage), limpia títulos y evalúa coincidencias" },
+        { "nodeId": "supabase_cloud", "role": "3. Inserta las nuevas ofertas en pending_matches (Purgatorio) y actualiza históricos de precio" },
+        { "nodeId": "nexus_telegram", "role": "4. Envía reporte de incursión a Telegram o procesa el auto-relevo desde nexus_local_worker" }
+      ]
+    },
+    {
+      "id": "emi_liquidity_cart_flow",
+      "title": "📊 Inteligencia de Mercado (EMI, Liquidez P2P y Matrix Cart)",
+      "category": "ai_machine_learning",
+      "summary": "Cálculo en tiempo real del índice bursátil de Eternia, velocidad de rotación en Wallapop/Vinted/eBay y optimización logística de carrito.",
+      "explanation": "Combina el histórico reciente con las estadísticas mensuales compactadas (FinOps) para detectar figuras en 'Último Bastión Retail' y ofertas P2P estancadas (>45 días) listas para regatear.",
+      "steps": [
+        { "nodeId": "supabase_cloud", "role": "1. Provee series de price_history, product_monthly_stats y reglas logísticas por tienda" },
+        { "nodeId": "smart_intelligence", "role": "2. Calcula EMI, clasifica liquidez P2P y amortiza portes multi-tienda en Matrix Cart" },
+        { "nodeId": "api_backend", "role": "3. Expone resultados en /api/analytics/liquidity-pulse, /retail-scarcity y /cart/budget-optimize" },
+        { "nodeId": "query_shield", "role": "4. Valida X-Device-ID y mantiene la caché reactiva en el cliente" },
+        { "nodeId": "ui_runtime", "role": "5. Renderiza indicadores financieros aplicando difuminado en modo incógnito y precios manuales" }
+      ]
+    },
+    {
+      "id": "heritage_excel_sync_flow",
+      "title": "🛡️ Sincronización Bidireccional Cloud ↔ Excel Maestro & Caché",
+      "category": "local_persistence",
+      "summary": "Flujo de preservación patrimonial que mantiene sincronizada la base de datos en la nube con el Excel Maestro local y la caché de imágenes.",
+      "explanation": "Asegura que cada cambio en la Fortaleza quede respaldado tanto en PostgreSQL como en el archivo físico lista_MOTU.xlsx y disponible offline en el navegador.",
+      "steps": [
+        { "nodeId": "ui_runtime", "role": "1. El coleccionista registra una adquisición o lanza la sincronización desde Ajustes" },
+        { "nodeId": "api_backend", "role": "2. Persiste la mutación y ejecuta el motor de exportación/sincronización documental" },
+        { "nodeId": "supabase_cloud", "role": "3. Consolida el estado maestro de collection_items y auditoría" },
+        { "nodeId": "local_heritage", "role": "4. Actualiza data/MOTU/lista_MOTU.xlsx, instantáneas SQLite y Cache Storage de imágenes" }
+      ]
+    }
+  ]
+}
