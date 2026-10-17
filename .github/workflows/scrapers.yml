@@ -67,11 +67,28 @@ jobs:
             git pull --rebase origin main
             git push
           fi
-      - name: Setup Cloudflare WARP (Zero-Cost Consumer Egress IP)
-        uses: cloudflare/warp-action@v1
+      - name: Setup Cloudflare WARP Proxy (Zero-Cost Consumer Egress IP)
         continue-on-error: true
-        with:
-          version: latest
+        run: |
+          set +e
+          curl -fsSL https://pkg.cloudflareclient.com/pubkey.gpg | sudo gpg --yes --dearmor --output /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/cloudflare-warp-archive-keyring.gpg] https://pkg.cloudflareclient.com/ $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/cloudflare-client.list
+          sudo apt-get update && sudo apt-get install -y cloudflare-warp xvfb
+          sudo systemctl start warp-svc || true
+          sleep 2
+          warp-cli --accept-tos registration new || warp-cli --accept-tos register || true
+          warp-cli --accept-tos mode proxy || warp-cli --accept-tos set-mode proxy || true
+          warp-cli --accept-tos proxy port 40000 || warp-cli --accept-tos set-proxy-port 40000 || true
+          warp-cli --accept-tos connect || true
+          for i in 1 2 3 4 5; do
+            if curl -fsS --max-time 4 --proxy socks5h://127.0.0.1:40000 https://www.cloudflare.com/cdn-cgi/trace | grep -qE "warp=(on|plus)"; then
+              echo "✅ Cloudflare WARP proxy activo en socks5://127.0.0.1:40000"
+              echo "WARP_PROXY=socks5://127.0.0.1:40000" >> "$GITHUB_ENV"
+              break
+            fi
+            sleep 2
+          done
+          exit 0
 
       - name: Run Scrapers (Market Incursion)
         env:
