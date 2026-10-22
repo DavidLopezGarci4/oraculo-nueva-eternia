@@ -44,6 +44,7 @@ class SmartMatcher:
             db_ean, 
             scraped_ean,
             penalize_extra=False,  # el contenido incluye la URL; no penalizar tokens extra
+            soft_qualifiers=False,  # autoselección: mantener el veto estricto de calificadores
         )
         
         # --- LÓGICA DE DECISIÓN UNIFICADA (The Law of the Oracle) ---

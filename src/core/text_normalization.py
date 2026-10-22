@@ -26,6 +26,8 @@ COMPOUND_NAMES = [
     (re.compile(r"\bkobra[\s\-_.]*khan\b"), "kobrakhan"),
     (re.compile(r"\btrap[\s\-_.]*jaw\b"), "trapjaw"),
     (re.compile(r"\bscare[\s\-_.]*glow\b"), "scareglow"),
+    # "The Original" es una variante del catálogo: no debe desaparecer por las stopwords "the"/"original"
+    (re.compile(r"\bthe[\s\-_.]*original\b"), "theoriginal"),
 ]
 
 # Sinónimos (multilingües) -> forma canónica del catálogo (inglés)

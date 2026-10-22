@@ -2,7 +2,7 @@ import re
 from typing import Set, Tuple, Optional
 from loguru import logger
 from rapidfuzz import fuzz
-from src.core.weight_engine import weights_manager
+from src.core.weight_engine import weights_manager, IDENTITY_WEIGHT
 from src.core.text_normalization import tokenize, split_catalog_name, STOP_WORDS, GENERIC_SERIES_TOKENS
 
 # Los tokens entre paréntesis del catálogo ("Skeletor (Vintage Sculpt)") son calificadores:
@@ -15,6 +15,10 @@ VARIANT_PENALTY_FLOOR = 0.5
 FUZZY_THRESHOLD = 85
 # Tokens de serie/marca genéricos que nunca cuentan como "variante" (compartidos)
 NEVER_VARIANT_TOKENS = GENERIC_SERIES_TOKENS
+
+
+def _fuzzy_in(token: str, pool: Set[str]) -> bool:
+    return any(fuzz.ratio(token, other) >= FUZZY_THRESHOLD for other in pool)
 
 
 class PythonBrainEngine:
@@ -38,10 +42,14 @@ class PythonBrainEngine:
         ean2: Optional[str] = None,
         penalize_extra: bool = True,
         db_context: Optional[str] = None,
+        soft_qualifiers: bool = True,
     ) -> Tuple[bool, float, str]:
         """
+        name1: nombre del catálogo. name2: título del anuncio.
         db_context: texto de contexto del candidato (p.ej. su sub_category). Sus tokens no
-        cuentan como "variante" si aparecen en el anuncio (p.ej. "Turtles of Grayskull").
+            cuentan como "variante" si aparecen en el anuncio (p.ej. "Turtles of Grayskull").
+        soft_qualifiers: si es False, los tokens entre paréntesis se tratan como núcleo
+            (comportamiento estricto clásico, usado por SmartMatcher para autoselección).
         """
         # R01: Prioridad absoluta EAN-13
         if ean1 and ean2:
@@ -50,22 +58,31 @@ class PythonBrainEngine:
             if clean_ean1 == clean_ean2 and len(clean_ean1) >= 8:
                 return True, 1.0, "EAN Match"
 
-        core, qualifiers = split_catalog_name(name1)  # DB Tokens
-        if not core:
-            core, qualifiers = qualifiers, set()
+        if soft_qualifiers:
+            core, qualifiers = split_catalog_name(name1)  # DB Tokens
+            if not core:
+                core, qualifiers = qualifiers, set()
+        else:
+            core, qualifiers = self.normalize(name1), set()
         tokens1 = core | qualifiers
         tokens2 = self.normalize(name2) # Scraped Tokens
         
         if not tokens1 or not tokens2: return False, 0.0, "Empty tokens"
 
         # --- DINAMIC WEIGHTING (IDF) ---
-        # Obtenemos pesos de WeightEngine (1.0 = Común, 10.0 = Raro)
-        all_unique = tokens1 | tokens2
-        weights = {t: weights_manager.get_weight(t) for t in all_unique}
+        # Instantánea única de pesos por llamada (coherente aunque otro hilo refresque el catálogo)
+        snapshot_weights, name_tokens = weights_manager.snapshot()
+
+        def w_of(t: str) -> float:
+            # Desconocido = ruido (1.0) para tokens del anuncio
+            return snapshot_weights.get(t, 1.0)
 
         def db_weight(t: str) -> float:
-            w = weights.get(t, 10.0)
+            w = snapshot_weights.get(t, 10.0)
             return w * QUALIFIER_WEIGHT_FACTOR if t in qualifiers else w
+
+        def is_identity(t: str) -> bool:
+            return t in snapshot_weights and snapshot_weights[t] > IDENTITY_WEIGHT
 
         # --- RAPIDFUZZ CROSS-TOKEN MATCHING ---
         total_w_common = 0.0
@@ -91,7 +108,7 @@ class PythonBrainEngine:
         # Ley 1: Conflicto de Identidad (Rareza Alta)
         # Si un token NÚCLEO de la DB es una "Identidad" (peso > 5 según WeightEngine), DEBE coincidir.
         # Los calificadores entre paréntesis no vetan (solo restan cobertura).
-        db_identities = {t for t in core if weights_manager.is_identity(t)}
+        db_identities = {t for t in core if is_identity(t)}
         
         if db_identities:
             missing_identities = db_identities - matched_tokens_db
@@ -100,8 +117,8 @@ class PythonBrainEngine:
 
         # Ley 2: Conflicto de Series (Tokens Comunes)
         # Si tokens muy comunes (peso < 3.0, como 'origins', 'masters') NO coinciden, penalizar o fallar.
-        db_series = {t for t in tokens1 if weights_manager.get_weight(t) < 3.0}
-        scr_series = {t for t in tokens2 if weights_manager.get_weight(t) < 3.0}
+        db_series = {t for t in tokens1 if w_of(t) < 3.0}
+        scr_series = {t for t in tokens2 if w_of(t) < 3.0}
         
         if db_series and scr_series:
             # Si ambos declaran serie, debe haber solapamiento
@@ -110,21 +127,24 @@ class PythonBrainEngine:
                 return False, 0.0, f"Series Dissonance: DB={db_series} vs Scraped={scr_series}"
 
         # Ley 3: Penalización de Variante
-        # Si el anuncio contiene tokens relevantes del catálogo que este candidato NO tiene
-        # (p.ej. "battle armor" frente al He-Man básico), la puntuación baja (con suelo).
+        # Si el anuncio contiene tokens conocidos del catálogo que este candidato NO tiene
+        # (p.ej. "battle armor" frente al He-Man básico, o "thundercats" frente al He-Man Origins),
+        # la puntuación baja (con suelo). No cuentan: números/años, series genéricas ni el
+        # contexto (subcategoría) del propio candidato, comparado con tolerancia a erratas.
         variant_note = ""
         if penalize_extra and weighted_score > 0:
             context_tokens = self.normalize(db_context) if db_context else set()
             extra_tokens = {
                 t2 for t2 in tokens2
-                if weights_manager.is_known(t2)
-                and t2 not in context_tokens
+                if t2 in snapshot_weights
+                and not t2.isdigit()
                 and t2 not in NEVER_VARIANT_TOKENS
-                and weights.get(t2, 1.0) >= VARIANT_TOKEN_MIN_WEIGHT
-                and not any(fuzz.ratio(t2, t1) >= FUZZY_THRESHOLD for t1 in tokens1)
+                and w_of(t2) >= VARIANT_TOKEN_MIN_WEIGHT
+                and not _fuzzy_in(t2, tokens1)
+                and not _fuzzy_in(t2, context_tokens)
             }
             if extra_tokens:
-                w_extra = sum(weights.get(t, 1.0) for t in extra_tokens)
+                w_extra = sum(w_of(t) for t in extra_tokens)
                 factor = max(VARIANT_PENALTY_FLOOR, w_db_total / (w_db_total + w_extra))
                 weighted_score *= factor
                 variant_note = f" · Variant penalty {sorted(extra_tokens)}"

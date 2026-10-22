@@ -60,6 +60,7 @@ CATALOG = [
     _p(1252, "He-Man", "Masters of the Universe Vintage", vintage=True),
     _p(1255, "Skeletor", "Masters of the Universe Vintage", vintage=True),
     _p(1274, "Battle Armor He-Man", "Masters of the Universe Vintage", vintage=True),
+    _p(1279, "He-Man (The Original)", "Masters of the Universe Vintage", vintage=True),
 ]
 
 
@@ -136,6 +137,34 @@ class TestPurgatoryScoring(unittest.TestCase):
     def test_the_collector_is_not_a_wildcard_for_cartoon_collection(self):
         top = self._top("Masters of the Universe Origins Cartoon Collection Zodac")
         self.assertEqual(top[0]["product_id"], 969)
+
+    # --- Correcciones del verificador independiente ---
+    def test_the_original_is_not_collapsed_into_base_name(self):
+        self.assertEqual(tokenize("He-Man (The Original)") - {"heman"}, {"theoriginal"})
+        _, score_orig, _ = engine.calculate_match("He-Man (The Original)", "He-Man The Original Mattel")
+        _, score_base, _ = engine.calculate_match("He-Man", "He-Man The Original Mattel")
+        self.assertGreater(score_orig, score_base)
+
+    def test_years_and_numbers_do_not_count_as_variants(self):
+        _, with_year, reason = engine.calculate_match("Skeletor", "Skeletor 1982 Mattel 3")
+        self.assertEqual(with_year, 1.0, reason)
+
+    def test_context_tokens_are_compared_fuzzily(self):
+        # "Exclusive" (singular) en el anuncio no penaliza a un candidato de "Origins Exclusives"
+        _, s1, r1 = engine.calculate_match("Stratos", "Stratos Exclusive", db_context="Origins Exclusives")
+        _, s2, _ = engine.calculate_match("Stratos", "Stratos Exclusives", db_context="Origins Exclusives")
+        self.assertEqual(s1, s2, r1)
+
+    def test_ean_keys_ignore_formatting_and_leading_zeros(self):
+        from src.interfaces.api.routers.purgatory import _ean_key
+        self.assertEqual(_ean_key("0887961-123456"), _ean_key("887961123456"))
+        self.assertEqual(_ean_key(None), "")
+
+    def test_smartmatcher_strict_mode_keeps_qualifier_veto(self):
+        _, score, reason = engine.calculate_match(
+            "Skeletor (Vintage Sculpt)", "Skeletor figura", soft_qualifiers=False, penalize_extra=False
+        )
+        self.assertEqual(score, 0.0, reason)
 
     # --- Desempate ---
     def test_deterministic_tie_break_prefers_modern_main_origins_line(self):

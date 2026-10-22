@@ -69,38 +69,20 @@ def get_purgatory_counts(db) -> dict[int, int]:
             return _purgatory_counts_cache
 
     from src.domain.models import PendingMatchModel, ProductModel
-    from src.core.brain_engine import engine
-    import re
+    # Mismo motor y mismas predicciones que GET /api/purgatory (sin memoria ni acompañantes)
+    from src.interfaces.api.routers.purgatory import build_suggestion_context, compute_suggestions
 
     pending = db.query(PendingMatchModel).all()
     products = db.query(ProductModel).all()
-
-    _STOP_WORDS = {"masters", "of", "the", "universe", "origins", "motu"}
-
-    # Build token index
-    token_index = {}
-    ean_index = {}
-    for p in products:
-        for token in set(re.findall(r"\w+", (p.name or "").lower())) - _STOP_WORDS:
-            token_index.setdefault(token, []).append(p)
-        if p.ean:
-            ean_index.setdefault(p.ean, []).append(p)
+    ctx = build_suggestion_context(products)
 
     counts = {}
     for item in pending:
-        scraped_name_safe = (item.scraped_name or "").lower()
-        search_tokens = set(re.findall(r"\w+", scraped_name_safe)) - _STOP_WORDS
-
-        candidates = set()
-        for token in search_tokens:
-            candidates.update(token_index.get(token, []))
-        if item.ean:
-            candidates.update(ean_index.get(item.ean, []))
-
-        for p in candidates:
-            _, score, _ = engine.calculate_match(p.name, item.scraped_name, p.ean, item.ean)
-            if score > 0.30:
-                counts[p.id] = counts.get(p.id, 0) + 1
+        for sug in compute_suggestions(item, ctx, use_memory=False):
+            if sug.get("is_companion"):
+                continue
+            pid = sug["product_id"]
+            counts[pid] = counts.get(pid, 0) + 1
 
     with _purgatory_counts_lock:
         _purgatory_counts_cache = counts

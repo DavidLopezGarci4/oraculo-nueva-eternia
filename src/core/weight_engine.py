@@ -10,6 +10,9 @@ from src.core.config import settings
 from src.domain.models import ProductModel
 from src.core.text_normalization import tokenize
 
+# Peso a partir del cual un token es una "Identidad" (palabra rara que debe coincidir)
+IDENTITY_WEIGHT = 5.0
+
 class WeightEngine:
     """
     Motor Dinámico de Pesos basado en IDF (Inverse Document Frequency).
@@ -23,6 +26,8 @@ class WeightEngine:
         self.weights: Dict[str, float] = {}
         self.token_df: Counter = Counter()
         self.total_docs: int = 0
+        # Tokens que aparecen en algún NOMBRE de producto (no solo en subcategorías)
+        self.name_tokens: frozenset = frozenset()
         self._signature: Optional[tuple] = None
         self._lock = threading.Lock()
         
@@ -46,9 +51,11 @@ class WeightEngine:
             return
 
         new_df = Counter()
+        new_name_tokens = set()
         for p in products:
-            combined = f"{p.name} {p.sub_category or ''}"
-            tokens = self.normalize(combined)
+            name_tokens = self.normalize(p.name or "")
+            new_name_tokens |= name_tokens
+            tokens = name_tokens | self.normalize(p.sub_category or "")
             for t in tokens:
                 new_df[t] += 1
         
@@ -69,6 +76,7 @@ class WeightEngine:
             self.weights = new_weights
             self.token_df = new_df
             self.total_docs = new_total_docs
+            self.name_tokens = frozenset(new_name_tokens)
             self._signature = self._catalog_signature(products)
 
     def refresh(self):
@@ -112,6 +120,11 @@ class WeightEngine:
             # Si no conocemos el token, probablemente sea una palabra de la web que no está en la DB
             return self.weights.get(token, 1.0)
 
+    def snapshot(self) -> tuple:
+        """(pesos, tokens_de_nombres) actuales. Los dicts se sustituyen atómicamente al refrescar."""
+        with self._lock:
+            return self.weights, self.name_tokens
+
     def is_known(self, token: str) -> bool:
         with self._lock:
             return token in self.weights
@@ -122,7 +135,7 @@ class WeightEngine:
         with self._lock:
             if token not in self.weights:
                 return False
-            return self.weights[token] > 5.0
+            return self.weights[token] > IDENTITY_WEIGHT
 
 # Singleton global instance
 weights_manager = WeightEngine()

@@ -69,9 +69,15 @@ def _build_product_index(products: list) -> tuple[dict, dict]:
     for p in products:
         for token in tokenize(p.name or "") - _INDEX_STOP_WORDS:
             token_index.setdefault(token, []).append(p)
-        if p.ean:
-            ean_index.setdefault(p.ean, []).append(p)
+        ean_key = _ean_key(p.ean)
+        if ean_key:
+            ean_index.setdefault(ean_key, []).append(p)
     return token_index, ean_index
+
+
+def _ean_key(ean) -> str:
+    """Clave de EAN normalizada (solo dígitos, sin ceros a la izquierda)."""
+    return re.sub(r"\D", "", str(ean or "")).lstrip("0")
 
 
 def _suggestion_sort_key(sug: dict) -> tuple:
@@ -140,7 +146,7 @@ def compute_suggestions(item, ctx: dict, use_memory: bool = True) -> list:
         for p in ctx["token_index"].get(token, []):
             candidates[p.id] = p
     if item.ean:
-        for p in ctx["ean_index"].get(item.ean, []):
+        for p in ctx["ean_index"].get(_ean_key(item.ean), []):
             candidates[p.id] = p
 
     suggestions = []
