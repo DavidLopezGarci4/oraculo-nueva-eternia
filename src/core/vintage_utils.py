@@ -1,5 +1,8 @@
 import re
 
+# Frases de figuras Origins ambientadas en la estética vintage (NO son vintage)
+ORIGINS_VINTAGE_STYLE_PHRASES = ("vintage sculpt",)
+
 def check_is_vintage(text: str) -> bool:
     """
     Checks if the given text indicates a vintage item.
@@ -9,7 +12,10 @@ def check_is_vintage(text: str) -> bool:
     if not text:
         return False
     
-    text_lower = text.lower()
+    text_lower = re.sub(r"[-_]+", " ", text.lower())
+    # Figuras Origins ambientadas en la línea vintage (p.ej. "Vintage Sculpt") NO son vintage
+    for phrase in ORIGINS_VINTAGE_STYLE_PHRASES:
+        text_lower = text_lower.replace(phrase, " ")
     if "vintage" in text_lower:
         return True
         
