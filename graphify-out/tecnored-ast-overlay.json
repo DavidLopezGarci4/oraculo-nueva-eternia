@@ -1,0 +1,483 @@
+{
+  "project": "oraculo-nueva-eternia",
+  "stats": {
+    "nodes": 3139,
+    "edges": 9012,
+    "communities": 160,
+    "extracted_edges": 8158,
+    "inferred_edges": 854,
+    "ambiguous_edges": 0,
+    "extracted_pct": 90.5
+  },
+  "has_stack_config": false,
+  "god_nodes": [
+    {
+      "id": "src_domain_models_productmodel",
+      "label": "ProductModel",
+      "degree": 205,
+      "source_file": "src/domain/models.py",
+      "source_location": "L12",
+      "community": 8,
+      "tecnoredCategory": "storage"
+    },
+    {
+      "id": "src_domain_models",
+      "label": "models.py",
+      "degree": 159,
+      "source_file": "src/domain/models.py",
+      "source_location": "L1",
+      "community": 0,
+      "tecnoredCategory": "storage"
+    },
+    {
+      "id": "src_infrastructure_scrapers_base_scrapedoffer",
+      "label": "ScrapedOffer",
+      "degree": 144,
+      "source_file": "src/infrastructure/scrapers/base.py",
+      "source_location": "L32",
+      "community": 3,
+      "tecnoredCategory": "network"
+    },
+    {
+      "id": "src_domain_models_offermodel",
+      "label": "OfferModel",
+      "degree": 136,
+      "source_file": "src/domain/models.py",
+      "source_location": "L87",
+      "community": 1,
+      "tecnoredCategory": "storage"
+    },
+    {
+      "id": "os",
+      "label": "os",
+      "degree": 131,
+      "source_file": "",
+      "source_location": "",
+      "community": 0,
+      "tecnoredCategory": "core_runtime"
+    },
+    {
+      "id": "src_domain_models_usermodel",
+      "label": "UserModel",
+      "degree": 129,
+      "source_file": "src/domain/models.py",
+      "source_location": "L307",
+      "community": 21,
+      "tecnoredCategory": "storage"
+    },
+    {
+      "id": "asyncio",
+      "label": "asyncio",
+      "degree": 121,
+      "source_file": "",
+      "source_location": "",
+      "community": 2,
+      "tecnoredCategory": "core_runtime"
+    },
+    {
+      "id": "logging",
+      "label": "logging",
+      "degree": 107,
+      "source_file": "",
+      "source_location": "",
+      "community": 2,
+      "tecnoredCategory": "core_runtime"
+    },
+    {
+      "id": "src_infrastructure_database_cloud",
+      "label": "database_cloud.py",
+      "degree": 101,
+      "source_file": "src/infrastructure/database_cloud.py",
+      "source_location": "L1",
+      "community": 15,
+      "tecnoredCategory": "core_runtime"
+    },
+    {
+      "id": "json",
+      "label": "json",
+      "degree": 100,
+      "source_file": "",
+      "source_location": "",
+      "community": 1,
+      "tecnoredCategory": "core_runtime"
+    },
+    {
+      "id": "src_interfaces_api_schemas",
+      "label": "api/schemas.py",
+      "degree": 100,
+      "source_file": "src/interfaces/api/schemas.py",
+      "source_location": "L1",
+      "community": 7,
+      "tecnoredCategory": "storage"
+    },
+    {
+      "id": "src_domain_models_pendingmatchmodel",
+      "label": "PendingMatchModel",
+      "degree": 97,
+      "source_file": "src/domain/models.py",
+      "source_location": "L167",
+      "community": 1,
+      "tecnoredCategory": "storage"
+    }
+  ],
+  "communities": [
+    {
+      "community_id": "0",
+      "name": "Scripts: models.py, os",
+      "node_count": 126,
+      "top_symbols": [
+        "models.py",
+        "os",
+        "CollectionItemModel",
+        "datetime",
+        "sqlalchemy",
+        "pathlib"
+      ]
+    },
+    {
+      "community_id": "1",
+      "name": "Routers: OfferModel, json",
+      "node_count": 126,
+      "top_symbols": [
+        "OfferModel",
+        "json",
+        "PendingMatchModel",
+        "purgatory.py",
+        "OfferHistoryModel",
+        "ProductAliasModel"
+      ]
+    },
+    {
+      "community_id": "2",
+      "name": "Scrapers: asyncio, logging",
+      "node_count": 109,
+      "top_symbols": [
+        "asyncio",
+        "logging",
+        "typing",
+        "daily_scan.py",
+        "BaseScraper",
+        "scrapers/base.py"
+      ]
+    },
+    {
+      "community_id": "3",
+      "name": "Scrapers: ScrapedOffer, ._log()",
+      "node_count": 90,
+      "top_symbols": [
+        "ScrapedOffer",
+        "._log()",
+        "EbayScraper",
+        "._normalize_price()",
+        "._safe_navigate()",
+        "DVDStoreSpainScraper"
+      ]
+    },
+    {
+      "community_id": "4",
+      "name": "Routers: lore.py, LoreHarvesterService",
+      "node_count": 82,
+      "top_symbols": [
+        "lore.py",
+        "LoreHarvesterService",
+        "CharacterLoreModel",
+        "ProductLoreSeedService",
+        "lore_harvester_service.py",
+        "ProductLoreModel"
+      ]
+    },
+    {
+      "community_id": "5",
+      "name": "Scrapers: scrapers.py, run_scraper_task()",
+      "node_count": 79,
+      "top_symbols": [
+        "scrapers.py",
+        "run_scraper_task()",
+        ".__init__()",
+        "ElectropolisScraper",
+        "FrikimazScraper",
+        "FrikiversoScraper"
+      ]
+    },
+    {
+      "community_id": "6",
+      "name": "Catalog: Catalog.tsx, Auctions.tsx",
+      "node_count": 79,
+      "top_symbols": [
+        "Catalog.tsx",
+        "Auctions.tsx",
+        "Collection.tsx",
+        "MOTUImage()",
+        "PowerSwordLoader()",
+        "CollectionItemDetailModal.tsx"
+      ]
+    },
+    {
+      "community_id": "7",
+      "name": "Api: api/schemas.py, BaseModel",
+      "node_count": 77,
+      "top_symbols": [
+        "api/schemas.py",
+        "BaseModel",
+        "WallapopImportRequest",
+        "CardAiEnhanceInput",
+        "CartRequest",
+        "CollectionItemUpdateRequest"
+      ]
+    },
+    {
+      "community_id": "8",
+      "name": "Routers: ProductModel, products.py",
+      "node_count": 70,
+      "top_symbols": [
+        "ProductModel",
+        "products.py",
+        "PriceHistoryModel",
+        "market_analytics_service.py",
+        "MaintenanceService",
+        "ProductMonthlyStatsModel"
+      ]
+    },
+    {
+      "community_id": "9",
+      "name": "Api: Config.tsx, admin.ts",
+      "node_count": 69,
+      "top_symbols": [
+        "Config.tsx",
+        "admin.ts",
+        "Config()",
+        "SystemTab.tsx",
+        "InventoryTab.tsx",
+        "UsersTab.tsx"
+      ]
+    },
+    {
+      "community_id": "10",
+      "name": "Frontend: App.tsx, App()",
+      "node_count": 67,
+      "top_symbols": [
+        "App.tsx",
+        "App()",
+        "Hero",
+        "client.ts",
+        "axios",
+        "isUserAdmin()"
+      ]
+    },
+    {
+      "community_id": "11",
+      "name": "Api: react, lucide-react",
+      "node_count": 66,
+      "top_symbols": [
+        "react",
+        "lucide-react",
+        "purgatory.ts",
+        "Purgatory.tsx",
+        "framer-motion",
+        "@tanstack/react-query"
+      ]
+    }
+  ],
+  "cross_module_bridges": [
+    {
+      "source": "models.py",
+      "target": "ProductModel",
+      "source_file": "src/domain/models.py",
+      "target_file": "src/domain/models.py",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "tecnoredType": "jerarquia",
+      "score": 364
+    },
+    {
+      "source": "models.py",
+      "target": "OfferModel",
+      "source_file": "src/domain/models.py",
+      "target_file": "src/domain/models.py",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "tecnoredType": "jerarquia",
+      "score": 295
+    },
+    {
+      "source": "models.py",
+      "target": "UserModel",
+      "source_file": "src/domain/models.py",
+      "target_file": "src/domain/models.py",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "tecnoredType": "jerarquia",
+      "score": 288
+    },
+    {
+      "source": "daily_scan.py",
+      "target": "ProductModel",
+      "source_file": "src/application/jobs/daily_scan.py",
+      "target_file": "src/domain/models.py",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "tecnoredType": "jerarquia",
+      "score": 280
+    },
+    {
+      "source": "purgatory.py",
+      "target": "ProductModel",
+      "source_file": "src/interfaces/api/routers/purgatory.py",
+      "target_file": "src/domain/models.py",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "tecnoredType": "jerarquia",
+      "score": 277
+    },
+    {
+      "source": "pipeline.py",
+      "target": "ProductModel",
+      "source_file": "src/infrastructure/scrapers/pipeline.py",
+      "target_file": "src/domain/models.py",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "tecnoredType": "jerarquia",
+      "score": 261
+    },
+    {
+      "source": "models.py",
+      "target": "PendingMatchModel",
+      "source_file": "src/domain/models.py",
+      "target_file": "src/domain/models.py",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "tecnoredType": "jerarquia",
+      "score": 256
+    },
+    {
+      "source": "admin.py",
+      "target": "ProductModel",
+      "source_file": "src/interfaces/api/routers/admin.py",
+      "target_file": "src/domain/models.py",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "tecnoredType": "jerarquia",
+      "score": 254
+    },
+    {
+      "source": "main.py",
+      "target": "ProductModel",
+      "source_file": "src/interfaces/api/main.py",
+      "target_file": "src/domain/models.py",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "tecnoredType": "jerarquia",
+      "score": 251
+    },
+    {
+      "source": "models.py",
+      "target": "typing",
+      "source_file": "src/domain/models.py",
+      "target_file": "",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "tecnoredType": "jerarquia",
+      "score": 251
+    },
+    {
+      "source": "TelegramListener",
+      "target": "ProductModel",
+      "source_file": "src/infrastructure/services/telegram_listener.py",
+      "target_file": "src/domain/models.py",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "tecnoredType": "transversal",
+      "score": 248
+    },
+    {
+      "source": "run_daily_scan()",
+      "target": "ProductModel",
+      "source_file": "src/application/jobs/daily_scan.py",
+      "target_file": "src/domain/models.py",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "tecnoredType": "transversal",
+      "score": 247
+    },
+    {
+      "source": "dashboard.py",
+      "target": "ProductModel",
+      "source_file": "src/interfaces/api/routers/dashboard.py",
+      "target_file": "src/domain/models.py",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "tecnoredType": "jerarquia",
+      "score": 246
+    },
+    {
+      "source": "ProductRepository",
+      "target": "ProductModel",
+      "source_file": "src/infrastructure/repositories/product.py",
+      "target_file": "src/domain/models.py",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "tecnoredType": "transversal",
+      "score": 246
+    },
+    {
+      "source": "lore.py",
+      "target": "ProductModel",
+      "source_file": "src/interfaces/api/routers/lore.py",
+      "target_file": "src/domain/models.py",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "tecnoredType": "jerarquia",
+      "score": 245
+    },
+    {
+      "source": "users.py",
+      "target": "ProductModel",
+      "source_file": "src/interfaces/api/routers/users.py",
+      "target_file": "src/domain/models.py",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "tecnoredType": "jerarquia",
+      "score": 244
+    },
+    {
+      "source": "routers/collection.py",
+      "target": "ProductModel",
+      "source_file": "src/interfaces/api/routers/collection.py",
+      "target_file": "src/domain/models.py",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "tecnoredType": "jerarquia",
+      "score": 238
+    },
+    {
+      "source": "system.py",
+      "target": "ProductModel",
+      "source_file": "src/interfaces/api/routers/system.py",
+      "target_file": "src/domain/models.py",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "tecnoredType": "jerarquia",
+      "score": 238
+    },
+    {
+      "source": "nexus_service.py",
+      "target": "ProductModel",
+      "source_file": "src/application/services/nexus_service.py",
+      "target_file": "src/domain/models.py",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "tecnoredType": "jerarquia",
+      "score": 236
+    },
+    {
+      "source": "ProductModel",
+      "target": "Base",
+      "source_file": "src/domain/models.py",
+      "target_file": "src/domain/base.py",
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "tecnoredType": "jerarquia",
+      "score": 236
+    }
+  ]
+}
