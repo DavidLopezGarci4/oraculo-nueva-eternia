@@ -1,4 +1,5 @@
 from collections import defaultdict
+from datetime import datetime
 from typing import List, Optional
 import time
 import threading
@@ -6,7 +7,7 @@ import threading
 from fastapi import APIRouter, Depends, HTTPException
 from loguru import logger
 from sqlalchemy import and_, desc, func, select, event
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import joinedload
 
 from src.application.services.deal_scorer import DealScorer
 from src.application.services.logistics_service import LogisticsService
@@ -41,12 +42,19 @@ _purgatory_counts_cache = None
 _purgatory_counts_timestamp = 0.0
 _purgatory_counts_lock = threading.Lock()
 
+
 def clear_purgatory_counts_cache():
     global _purgatory_counts_cache, _purgatory_counts_timestamp
     with _purgatory_counts_lock:
         _purgatory_counts_cache = None
         _purgatory_counts_timestamp = 0.0
+    try:
+        from src.application.services.market_analytics_service import MarketAnalyticsService
+        MarketAnalyticsService.invalidate_market_index_cache()
+    except Exception:
+        pass
     logger.info("Purgatory match counts cache CLEARED reactively.")
+
 
 # Invalidar caché reactivamente cuando cambie la base de datos
 @event.listens_for(PendingMatchModel, 'after_insert')
@@ -62,45 +70,43 @@ def on_db_change(mapper, connection, target):
 
 def get_purgatory_counts(db) -> dict[int, int]:
     global _purgatory_counts_cache, _purgatory_counts_timestamp
-    
+
     with _purgatory_counts_lock:
         now = time.time()
         if _purgatory_counts_cache is not None and (now - _purgatory_counts_timestamp) < 600:
             return _purgatory_counts_cache
 
-    from src.domain.models import PendingMatchModel, ProductModel
-    # Mismo motor y mismas predicciones que GET /api/purgatory (sin memoria ni acompañantes)
-    from src.interfaces.api.routers.purgatory import build_suggestion_context, compute_suggestions
+        from src.domain.models import PendingMatchModel, ProductModel
+        # Mismo motor y mismas predicciones que GET /api/purgatory (sin memoria ni acompañantes)
+        from src.interfaces.api.routers.purgatory import build_suggestion_context, compute_suggestions
 
-    pending = db.query(PendingMatchModel).all()
-    products = db.query(ProductModel).all()
-    ctx = build_suggestion_context(products)
+        pending = db.query(PendingMatchModel).all()
+        products = db.query(ProductModel).all()
+        ctx = build_suggestion_context(products)
 
-    counts = {}
-    for item in pending:
-        for sug in compute_suggestions(item, ctx, use_memory=False):
-            if sug.get("is_companion"):
-                continue
-            pid = sug["product_id"]
-            counts[pid] = counts.get(pid, 0) + 1
+        counts = {}
+        for item in pending:
+            for sug in compute_suggestions(item, ctx, use_memory=False):
+                if sug.get("is_companion"):
+                    continue
+                pid = sug["product_id"]
+                counts[pid] = counts.get(pid, 0) + 1
 
-    with _purgatory_counts_lock:
         _purgatory_counts_cache = counts
         _purgatory_counts_timestamp = time.time()
-
-    return counts
+        return counts
 
 
 @router.get("/api/products", response_model=List[ProductOutput])
 def get_products(
-    is_vintage: bool = False, 
+    is_vintage: bool = False,
     shop: Optional[str] = None,
     limit: Optional[int] = None,
     offset: Optional[int] = None,
     search: Optional[str] = None
 ):
     with SessionCloud() as db:
-        query = select(ProductModel).options(selectinload(ProductModel.offers))
+        query = select(ProductModel)
         if is_vintage:
             query = query.where(ProductModel.is_vintage == True)
         else:
@@ -132,26 +138,39 @@ def get_products(
         products = db.execute(query).scalars().all()
         counts = get_purgatory_counts(db)
 
+        best_p2p_by_pid: dict[int, tuple[float, str]] = {}
+        if products:
+            product_ids = [p.id for p in products]
+            p2p_rows = (
+                db.query(OfferModel.product_id, OfferModel.price, OfferModel.shop_name)
+                .filter(
+                    OfferModel.product_id.in_(product_ids),
+                    OfferModel.source_type == "Peer-to-Peer",
+                    OfferModel.is_available == True,
+                )
+                .order_by(OfferModel.product_id.asc(), OfferModel.price.asc())
+                .all()
+            )
+            for pid, price, shop_name in p2p_rows:
+                if pid not in best_p2p_by_pid:
+                    best_p2p_by_pid[pid] = (price, shop_name)
+
         final_products = []
         for product in products:
             po = ProductOutput.model_validate(product)
             po.avg_market_price = product.avg_market_price or 0.0
             po.purgatory_match_count = counts.get(product.id, 0)
-            p2p_offers = [
-                o for o in (product.offers or [])
-                if o.source_type == "Peer-to-Peer" and o.is_available
-            ]
-            if p2p_offers:
-                best_offer = min(p2p_offers, key=lambda o: o.price)
-                po.best_p2p_price = best_offer.price
-                po.best_p2p_source = best_offer.shop_name
+            best_p2p = best_p2p_by_pid.get(product.id)
+            if best_p2p is not None:
+                po.best_p2p_price = best_p2p[0]
+                po.best_p2p_source = best_p2p[1]
             final_products.append(po)
 
         return final_products
 
 
 @router.get("/api/products/search", response_model=List[ProductSearchResultOutput])
-async def search_products(q: str = ""):
+def search_products(q: str = ""):
     if len(q) < 2:
         return []
 
@@ -175,7 +194,7 @@ async def search_products(q: str = ""):
 
 
 @router.get("/api/auctions/products", response_model=List[ProductOutput])
-async def get_auction_products(is_vintage: bool = False):
+def get_auction_products(is_vintage: bool = False):
     with SessionCloud() as db:
         subq = (
             select(OfferModel.product_id, func.min(OfferModel.price).label("min_price"))
@@ -205,6 +224,25 @@ async def get_auction_products(is_vintage: bool = False):
 
         results = db.execute(query).all()
 
+        # Preload offers in a single batch for products missing avg_retail_price or avg_p2p_price
+        missing_avg_pids = [
+            product.id
+            for product, _ in results
+            if (product.avg_retail_price or 0) == 0 or (product.avg_p2p_price or 0) == 0
+        ]
+        offers_by_pid: dict[int, list[OfferModel]] = defaultdict(list)
+        if missing_avg_pids:
+            batch_offers = (
+                db.query(OfferModel)
+                .filter(
+                    OfferModel.product_id.in_(missing_avg_pids),
+                    OfferModel.is_available == True,
+                )
+                .all()
+            )
+            for o in batch_offers:
+                offers_by_pid[o.product_id].append(o)
+
         seen: set = set()
         output = []
         for product, best_offer in results:
@@ -216,9 +254,7 @@ async def get_auction_products(is_vintage: bool = False):
             p_out.best_p2p_source = best_offer.shop_name
 
             if p_out.avg_retail_price == 0 or p_out.avg_p2p_price == 0:
-                offers = db.query(OfferModel).filter(
-                    OfferModel.product_id == product.id, OfferModel.is_available == True
-                ).all()
+                offers = offers_by_pid.get(product.id, [])
                 retail_prices = [o.price for o in offers if o.source_type == "Retail"]
                 p2p_prices = [o.price for o in offers if o.source_type == "Peer-to-Peer"]
 
@@ -233,7 +269,7 @@ async def get_auction_products(is_vintage: bool = False):
 
 
 @router.get("/api/intelligence/market/{product_id}", dependencies=[Depends(verify_api_key)])
-async def get_market_intelligence(product_id: int):
+def get_market_intelligence(product_id: int):
     from src.application.services.market_intelligence import MarketIntelligenceService
 
     with SessionCloud() as db:
@@ -255,7 +291,7 @@ async def get_wallapop_preview(url: str):
 
 
 @router.put("/api/products/{product_id}", response_model=StatusMessageOutput, dependencies=[Depends(verify_api_key)])
-async def edit_product(product_id: int, request: ProductEditRequest):
+def edit_product(product_id: int, request: ProductEditRequest):
     from src.domain.models import VintageProductModel
     with SessionCloud() as db:
         product = db.query(ProductModel).filter(ProductModel.id == product_id).first()
@@ -297,7 +333,7 @@ async def edit_product(product_id: int, request: ProductEditRequest):
 
 
 @router.post("/api/products/merge", response_model=StatusMessageOutput, dependencies=[Depends(verify_api_key)])
-async def merge_products(request: ProductMergeRequest):
+def merge_products(request: ProductMergeRequest):
     from src.domain.models import ProductAliasModel, VintageProductModel, PriceAlertModel
 
     with SessionCloud() as db:
@@ -374,7 +410,7 @@ async def merge_products(request: ProductMergeRequest):
 
 
 @router.get("/api/products/with-offers", response_model=List[int], dependencies=[Depends(verify_device)])
-async def get_products_with_offers():
+def get_products_with_offers():
     with SessionCloud() as db:
         product_ids = (
             db.query(OfferModel.product_id)
@@ -386,7 +422,7 @@ async def get_products_with_offers():
 
 
 @router.get("/api/products/{product_id}/offers", response_model=List[ProductOfferOutput], dependencies=[Depends(verify_device)])
-async def get_product_offers(product_id: int):
+def get_product_offers(product_id: int):
     with SessionCloud() as db:
         all_offers = (
             db.query(OfferModel)
@@ -400,8 +436,7 @@ async def get_product_offers(product_id: int):
         if user:
             user_location = user.location
 
-        rules = db.query(LogisticRuleModel).all()
-        rules_map = {f"{r.shop_name}_{r.country_code}": r for r in rules}
+        rules_map = LogisticsService.get_cached_rules_map()
 
         best_by_shop = {}
         for o in all_offers:
@@ -440,7 +475,7 @@ async def get_product_offers(product_id: int):
 
 
 @router.get("/api/market/analytics/{product_id}", response_model=MarketAnalyticsOutput)
-async def get_market_analytics(product_id: int):
+def get_market_analytics(product_id: int):
     with SessionCloud() as db:
         offers = db.query(OfferModel).filter(
             OfferModel.product_id == product_id, OfferModel.is_available == True
@@ -467,7 +502,7 @@ async def get_market_analytics(product_id: int):
 
 
 @router.get("/api/products/{product_id}/price-history", response_model=List[ProductPriceHistoryOutput])
-async def get_product_price_history(product_id: int):
+def get_product_price_history(product_id: int):
     from src.domain.models import PriceHistoryModel, ProductMonthlyStatsModel
 
     with SessionCloud() as db:
@@ -475,14 +510,18 @@ async def get_product_price_history(product_id: int):
 
         shop_groups = defaultdict(list)
         granular_months_by_source = defaultdict(set)
-        for offer in offers:
-            history = (
+        if offers:
+            offer_by_id = {o.id: o for o in offers}
+            history_rows = (
                 db.query(PriceHistoryModel)
-                .filter(PriceHistoryModel.offer_id == offer.id)
+                .filter(PriceHistoryModel.offer_id.in_(list(offer_by_id.keys())))
                 .order_by(PriceHistoryModel.recorded_at.asc())
                 .all()
             )
-            for h in history:
+            for h in history_rows:
+                offer = offer_by_id.get(h.offer_id)
+                if not offer:
+                    continue
                 date_key = h.recorded_at.date().isoformat()
                 granular_months_by_source[offer.source_type or "Retail"].add((h.recorded_at.year, h.recorded_at.month))
                 shop_groups[offer.shop_name].append({
@@ -533,7 +572,7 @@ async def get_product_price_history(product_id: int):
 
 
 @router.get("/api/products/shops", response_model=List[str])
-async def get_unique_shops():
+def get_unique_shops():
     with SessionCloud() as db:
         query = select(OfferModel.shop_name).distinct()
         results = db.execute(query).scalars().all()
@@ -542,7 +581,7 @@ async def get_unique_shops():
 
 
 @router.get("/api/vintage/products", response_model=List[VintageProductListingOutput])
-async def get_vintage_products():
+def get_vintage_products():
     with SessionCloud() as db:
         # Fetch all offers marked as is_vintage to list them individually
         query = (
@@ -583,7 +622,7 @@ async def get_vintage_products():
 
 
 @router.delete("/api/products/{product_id}", response_model=StatusMessageOutput, dependencies=[Depends(verify_api_key)])
-async def delete_product(product_id: int):
+def delete_product(product_id: int):
     from src.domain.models import OfferModel, PendingMatchModel, ProductAliasModel, ProductModel, VintageProductModel, PriceAlertModel
     
     with SessionCloud() as db:
@@ -643,7 +682,7 @@ async def delete_product(product_id: int):
 
 
 @router.get("/api/vintage/miscellaneous", response_model=List[VintageMiscellaneousItemOutput])
-async def get_vintage_miscellaneous():
+def get_vintage_miscellaneous():
     with SessionCloud() as db:
         from src.domain.models import VintageMiscellaneousModel
         results = db.query(VintageMiscellaneousModel).order_by(desc(VintageMiscellaneousModel.added_at)).all()
@@ -667,7 +706,7 @@ async def get_vintage_miscellaneous():
 
 
 @router.post("/api/products/{identifier}/refresh-image", dependencies=[Depends(verify_device)])
-async def refresh_product_image(identifier: str):
+def refresh_product_image(identifier: str):
     """
     Descarga la imagen actualizada de una figura desde ActionFigure411 (por ID de figura o producto)
     y la sincroniza en Supabase Storage y Base de Datos.
@@ -678,6 +717,3 @@ async def refresh_product_image(identifier: str):
         if not res.get("success"):
             raise HTTPException(status_code=400, detail=res.get("error", "Error actualizando imagen"))
         return res
-
-
-

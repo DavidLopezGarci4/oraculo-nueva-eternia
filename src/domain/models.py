@@ -1,4 +1,4 @@
-from sqlalchemy import Integer, String, Float, DateTime, ForeignKey, Boolean, Text
+from sqlalchemy import Integer, String, Float, DateTime, ForeignKey, Boolean, Text, Index
 from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column
 from datetime import datetime, timezone
 from typing import List, Optional
@@ -86,6 +86,9 @@ class ProductModel(Base):
 
 class OfferModel(Base):
     __tablename__ = "offers"
+    __table_args__ = (
+        Index("ix_offers_prod_avail_source", "product_id", "is_available", "source_type"),
+    )
     
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), index=True)
@@ -139,6 +142,9 @@ class OfferModel(Base):
 
 class CollectionItemModel(Base):
     __tablename__ = "collection_items"
+    __table_args__ = (
+        Index("ix_collection_owner_acq", "owner_id", "acquired"),
+    )
     
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), unique=False, index=True) # Allow multiple users to own same product
@@ -363,6 +369,9 @@ class BlackcludedItemModel(Base):
 class PriceHistoryModel(Base):
     """Tracks price changes over time for analytics."""
     __tablename__ = "price_history"
+    __table_args__ = (
+        Index("ix_price_history_offer_rec", "offer_id", "recorded_at"),
+    )
     
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     offer_id: Mapped[int] = mapped_column(ForeignKey("offers.id"), index=True)
@@ -538,6 +547,9 @@ class ProductMonthlyStatsModel(Base):
     Almacena datos históricos agrupados, eliminando la necesidad de URLs y ofertas individuales inactivas.
     """
     __tablename__ = "product_monthly_stats"
+    __table_args__ = (
+        Index("ix_monthly_stats_lookup", "product_id", "year", "month", "source_type"),
+    )
     
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     product_id: Mapped[int] = mapped_column(ForeignKey("products.id", ondelete="CASCADE"), index=True)
@@ -664,7 +676,3 @@ __all__ = [
     "HunterAlertLogModel",
     "DOMAIN_VERSION"
 ]
-
-
-
-

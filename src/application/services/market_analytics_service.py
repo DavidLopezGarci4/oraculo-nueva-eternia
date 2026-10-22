@@ -1,7 +1,10 @@
+import copy
 from datetime import datetime, timezone, timedelta
+import time
 from typing import Dict, Any, List, Optional
 from loguru import logger
 from sqlalchemy import func
+from sqlalchemy.orm import joinedload
 
 from src.infrastructure.database_cloud import SessionCloud
 from src.domain.models import (
@@ -14,12 +17,70 @@ from src.domain.models import (
 )
 from src.application.services.logistics_service import LogisticsService
 
+_MARKET_INDEX_CACHE_TTL = 300.0  # 5 minutes
+# period_key -> (expires_at, base_payload_dict, product_fmv_map)
+_market_index_cache: dict[str, tuple[float, Dict[str, Any], Dict[int, float]]] = {}
+
+
 class MarketAnalyticsService:
     """
     Servicio de Analítica de Mercado y Sincronización Delta.
     Calcula el Índice Bursátil MOTU (Eternia Market Index - EMI) por Waves
     y suministra actualizaciones delta para la caché local en IndexedDB.
     """
+
+    @classmethod
+    def invalidate_market_index_cache(cls) -> None:
+        _market_index_cache.clear()
+
+    @staticmethod
+    def _compute_portfolio_metrics(db, user_id: int, product_fmv_map: Dict[int, float]) -> Optional[Dict[str, Any]]:
+        collection_items = db.query(CollectionItemModel).filter(
+            CollectionItemModel.owner_id == user_id,
+            CollectionItemModel.acquired == True
+        ).all()
+
+        if not collection_items:
+            return None
+
+        total_invested = 0.0
+        total_current_val = 0.0
+        bargains_count = 0
+        overpaid_count = 0
+        total_savings_eur = 0.0
+
+        for item in collection_items:
+            raw_paid = getattr(item, "purchase_price", None)
+            paid = float(raw_paid) if (raw_paid and raw_paid > 0) else 0.0
+            item_pid = getattr(item, "product_id", getattr(item, "id", 0))
+            val = product_fmv_map.get(item_pid, 24.99)
+
+            total_invested += paid
+            total_current_val += val
+
+            if paid > 0:
+                diff = val - paid
+                if diff >= val * 0.20:
+                    bargains_count += 1
+                    total_savings_eur += diff
+                elif paid >= val * 1.15:
+                    overpaid_count += 1
+
+        net_profit_eur = round(total_current_val - total_invested, 2)
+        roi_pct = round((net_profit_eur / max(1.0, total_invested)) * 100, 1) if total_invested > 0 else 0.0
+        alpha_pct = round((total_savings_eur / max(1.0, total_current_val)) * 100, 1)
+
+        return {
+            "total_items_in_collection": len(collection_items),
+            "total_invested_eur": round(total_invested, 2),
+            "total_market_value_eur": round(total_current_val, 2),
+            "net_unrealized_profit_eur": net_profit_eur,
+            "roi_percentage": roi_pct,
+            "bargains_detected_count": bargains_count,
+            "overpaid_count": overpaid_count,
+            "total_bargain_savings_eur": round(total_savings_eur, 2),
+            "alpha_percentage": alpha_pct,
+        }
 
     @classmethod
     def get_market_index(cls, period: str = "3M", user_id: int = 2, db_session=None) -> Dict[str, Any]:
@@ -48,8 +109,19 @@ class MarketAnalyticsService:
         decay_constant = math.log(2) / half_life_days
         available_periods = ["1M", "3M", "6M", "1A", "ALL"]
 
+        use_cache = db_session is None
+        mono_now = time.monotonic()
+
         ctx = nullcontext(db_session) if db_session is not None else SessionCloud()
         with ctx as db:
+            if use_cache:
+                cached_entry = _market_index_cache.get(period_key)
+                if cached_entry is not None and cached_entry[0] > mono_now:
+                    base_payload = copy.deepcopy(cached_entry[1])
+                    fmv_map = cached_entry[2]
+                    base_payload["portfolio_metrics"] = cls._compute_portfolio_metrics(db, user_id, fmv_map)
+                    return base_payload
+
             # 1. Obtener todos los productos modernos de Origins y Crossovers
             products = db.query(ProductModel).filter(
                 ProductModel.is_vintage == False
@@ -75,8 +147,17 @@ class MarketAnalyticsService:
 
             product_ids = {p.id for p in products}
 
-            # 2. Pre-cargar ofertas, estadísticas mensuales compactadas (>6M) e historial granular (<=6M)
-            offers = db.query(OfferModel).filter(OfferModel.price > 0).all()
+            # 2. Pre-cargar ofertas modernas (filtrando en SQL por ProductModel.is_vintage == False para preservar OfferModel.is_vintage IS NULL)
+            try:
+                offers = (
+                    db.query(OfferModel)
+                    .join(ProductModel, OfferModel.product_id == ProductModel.id)
+                    .filter(ProductModel.is_vintage == False, OfferModel.price > 0)
+                    .all()
+                )
+            except Exception:
+                offers = db.query(OfferModel).filter(OfferModel.price > 0).all()
+
             prod_offers: Dict[int, List[OfferModel]] = {}
             earliest_real_dt = None
 
@@ -90,15 +171,28 @@ class MarketAnalyticsService:
                             if earliest_real_dt is None or dt_utc < earliest_real_dt:
                                 earliest_real_dt = dt_utc
 
-            monthly_rows = (
-                db.query(ProductMonthlyStatsModel)
-                .filter(
-                    ProductMonthlyStatsModel.avg_price > 4.0,
-                    ProductMonthlyStatsModel.avg_price < 400.0,
+            try:
+                monthly_rows = (
+                    db.query(ProductMonthlyStatsModel)
+                    .join(ProductModel, ProductMonthlyStatsModel.product_id == ProductModel.id)
+                    .filter(
+                        ProductModel.is_vintage == False,
+                        ProductMonthlyStatsModel.avg_price > 4.0,
+                        ProductMonthlyStatsModel.avg_price < 400.0,
+                    )
+                    .order_by(ProductMonthlyStatsModel.year.asc(), ProductMonthlyStatsModel.month.asc())
+                    .all()
                 )
-                .order_by(ProductMonthlyStatsModel.year.asc(), ProductMonthlyStatsModel.month.asc())
-                .all()
-            )
+            except Exception:
+                monthly_rows = (
+                    db.query(ProductMonthlyStatsModel)
+                    .filter(
+                        ProductMonthlyStatsModel.avg_price > 4.0,
+                        ProductMonthlyStatsModel.avg_price < 400.0,
+                    )
+                    .order_by(ProductMonthlyStatsModel.year.asc(), ProductMonthlyStatsModel.month.asc())
+                    .all()
+                )
 
             # Mapa mensual por producto: pid -> {(year, month): (price_est, offers_count)}
             prod_monthly_map: Dict[int, Dict[tuple, tuple]] = {}
@@ -125,21 +219,39 @@ class MarketAnalyticsService:
                     p_map[ym_key] = (rep_price, cnt)
                 latest_monthly_fallback[pid] = p_map[ym_key][0]
 
-            # Cargar historial granular por producto
-            raw_history = (
-                db.query(
-                    OfferModel.product_id,
-                    PriceHistoryModel.price,
-                    PriceHistoryModel.recorded_at,
+            # Cargar historial granular por producto (filtrado en SQL por ProductModel.is_vintage == False)
+            try:
+                raw_history = (
+                    db.query(
+                        OfferModel.product_id,
+                        PriceHistoryModel.price,
+                        PriceHistoryModel.recorded_at,
+                    )
+                    .join(OfferModel, PriceHistoryModel.offer_id == OfferModel.id)
+                    .join(ProductModel, OfferModel.product_id == ProductModel.id)
+                    .filter(
+                        ProductModel.is_vintage == False,
+                        PriceHistoryModel.price > 4.0,
+                        PriceHistoryModel.price < 400.0,
+                    )
+                    .order_by(PriceHistoryModel.recorded_at.asc())
+                    .all()
                 )
-                .join(OfferModel, PriceHistoryModel.offer_id == OfferModel.id)
-                .filter(
-                    PriceHistoryModel.price > 4.0,
-                    PriceHistoryModel.price < 400.0,
+            except Exception:
+                raw_history = (
+                    db.query(
+                        OfferModel.product_id,
+                        PriceHistoryModel.price,
+                        PriceHistoryModel.recorded_at,
+                    )
+                    .join(OfferModel, PriceHistoryModel.offer_id == OfferModel.id)
+                    .filter(
+                        PriceHistoryModel.price > 4.0,
+                        PriceHistoryModel.price < 400.0,
+                    )
+                    .order_by(PriceHistoryModel.recorded_at.asc())
+                    .all()
                 )
-                .order_by(PriceHistoryModel.recorded_at.asc())
-                .all()
-            )
 
             prod_daily_map: Dict[int, Dict[str, List[float]]] = {}
             for pid, price_val, rec_at in raw_history:
@@ -231,54 +343,7 @@ class MarketAnalyticsService:
             current_index = round(total_market_sum / max(1, total_count), 2)
             base_msrp = round(total_msrp_sum / max(1, total_count), 2)
 
-            # 4. Métricas Financieras de la Colección del Usuario
-            collection_items = db.query(CollectionItemModel).filter(
-                CollectionItemModel.owner_id == user_id,
-                CollectionItemModel.acquired == True
-            ).all()
-
-            portfolio_metrics = None
-            if collection_items:
-                total_invested = 0.0
-                total_current_val = 0.0
-                bargains_count = 0
-                overpaid_count = 0
-                total_savings_eur = 0.0
-
-                for item in collection_items:
-                    raw_paid = getattr(item, "purchase_price", None)
-                    paid = float(raw_paid) if (raw_paid and raw_paid > 0) else 0.0
-                    item_pid = getattr(item, "product_id", getattr(item, "id", 0))
-                    val = product_fmv_map.get(item_pid, 24.99)
-
-                    total_invested += paid
-                    total_current_val += val
-
-                    if paid > 0:
-                        diff = val - paid
-                        if diff >= val * 0.20:
-                            bargains_count += 1
-                            total_savings_eur += diff
-                        elif paid >= val * 1.15:
-                            overpaid_count += 1
-
-                net_profit_eur = round(total_current_val - total_invested, 2)
-                roi_pct = round((net_profit_eur / max(1.0, total_invested)) * 100, 1) if total_invested > 0 else 0.0
-                alpha_pct = round((total_savings_eur / max(1.0, total_current_val)) * 100, 1)
-
-                portfolio_metrics = {
-                    "total_items_in_collection": len(collection_items),
-                    "total_invested_eur": round(total_invested, 2),
-                    "total_market_value_eur": round(total_current_val, 2),
-                    "net_unrealized_profit_eur": net_profit_eur,
-                    "roi_percentage": roi_pct,
-                    "bargains_detected_count": bargains_count,
-                    "overpaid_count": overpaid_count,
-                    "total_bargain_savings_eur": round(total_savings_eur, 2),
-                    "alpha_percentage": alpha_pct
-                }
-
-            # 5. Construir Anclas Reales por Producto (Mensual Compactado >6M + Diario Granular <=6M)
+            # 4. Construir Anclas Reales por Producto (Mensual Compactado >6M + Diario Granular <=6M)
             import statistics as py_stats
 
             prod_anchors: Dict[int, List[tuple]] = {}
@@ -410,7 +475,7 @@ class MarketAnalyticsService:
 
             sorted_waves = sorted(list(waves_breakdown.values()), key=lambda w: w["revaluation_pct"], reverse=True)
 
-            return {
+            base_payload = {
                 "current_index_value": current_index,
                 "base_msrp_value": base_msrp,
                 "trend_pct": trend_pct,
@@ -424,8 +489,18 @@ class MarketAnalyticsService:
                 "period": period_key,
                 "historical_series": historical_series,
                 "waves_breakdown": sorted_waves,
-                "portfolio_metrics": portfolio_metrics
+                "portfolio_metrics": None,
             }
+
+            if use_cache:
+                _market_index_cache[period_key] = (
+                    mono_now + _MARKET_INDEX_CACHE_TTL,
+                    copy.deepcopy(base_payload),
+                    dict(product_fmv_map),
+                )
+
+            base_payload["portfolio_metrics"] = cls._compute_portfolio_metrics(db, user_id, product_fmv_map)
+            return base_payload
 
     get_eternia_market_index = get_market_index
 
@@ -440,11 +515,16 @@ class MarketAnalyticsService:
         p2p_shops = {"Wallapop", "Vinted", "Ebay.es"}
 
         with SessionCloud() as db:
-            offers = db.query(OfferModel).filter(
-                OfferModel.is_available == True,
-                OfferModel.is_vintage.is_not(True),
-                OfferModel.price > 0,
-            ).all()
+            offers = (
+                db.query(OfferModel)
+                .options(joinedload(OfferModel.product))
+                .filter(
+                    OfferModel.is_available == True,
+                    OfferModel.is_vintage.is_not(True),
+                    OfferModel.price > 0,
+                )
+                .all()
+            )
 
             items = []
             high_velocity = 0
@@ -512,9 +592,8 @@ class MarketAnalyticsService:
         para anticipar agotamiento de catálogo y escalada especulativa en P2P.
         """
         p2p_shops = {"Wallapop", "Vinted", "Ebay.es"}
+        rules_map = LogisticsService.get_cached_rules_map()
         with SessionCloud() as db:
-            rules = db.query(LogisticRuleModel).all()
-            rules_map = {f"{r.shop_name}_{r.country_code}": r for r in rules}
             products = db.query(ProductModel).filter(ProductModel.is_vintage.is_not(True)).all()
             offers = db.query(OfferModel).filter(
                 OfferModel.is_available == True,
@@ -590,8 +669,7 @@ class MarketAnalyticsService:
             if since_timestamp:
                 try:
                     dt = datetime.fromisoformat(since_timestamp.replace("Z", "+00:00")).replace(tzinfo=None)
-                    # En ProductModel, filtramos los que tengan ofertas actualizadas recientemente
-                    # o devolvemos el catálogo completo si la fecha es muy antigua
+                    query = query.filter(ProductModel.updated_at >= dt)
                 except Exception:
                     pass
 
