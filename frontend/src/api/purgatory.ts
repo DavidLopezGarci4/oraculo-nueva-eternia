@@ -12,6 +12,11 @@ export interface PendingItemSuggestion {
     sub_category?: string;
     match_score: number;
     reason: string;
+    is_vintage?: boolean | null;
+    /** Acompañante sugerido junto al básico (p.ej. "Skeletor (Vintage Sculpt)"). Nunca se preselecciona. */
+    is_companion?: boolean;
+    /** Reforzado por vinculaciones manuales anteriores del usuario. */
+    is_learned?: boolean;
 }
 
 export interface PendingItem {

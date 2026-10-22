@@ -228,6 +228,16 @@ const PurgatoryListView: React.FC<PurgatoryListViewProps> = ({
                                                                 {sug.reason?.toUpperCase() || 'MATCH'}
                                                             </span>
                                                             <span className="text-[9px] font-bold text-white/60 uppercase tracking-widest">{sug.sub_category}</span>
+                                                            {sug.is_companion && (
+                                                                <span className="px-1.5 py-0.5 rounded bg-amber-500/15 border border-amber-500/40 text-[9px] font-black text-amber-300 uppercase tracking-tighter" title="Figura Origins ambientada en la línea vintage, sugerida junto al básico">
+                                                                    Vintage Sculpt
+                                                                </span>
+                                                            )}
+                                                            {sug.is_learned && (
+                                                                <span className="px-1.5 py-0.5 rounded bg-violet-500/15 border border-violet-500/40 text-[9px] font-black text-violet-300 uppercase tracking-tighter" title={sug.reason}>
+                                                                    Aprendido
+                                                                </span>
+                                                            )}
                                                         </div>
                                                         <h5 className="text-base font-black text-white leading-tight">{sug.name}</h5>
                                                         <p className="text-[10px] text-white/65 font-mono mt-0.5 uppercase tracking-tighter">Vincular con: <span className="text-brand-primary">{item.scraped_name}</span></p>

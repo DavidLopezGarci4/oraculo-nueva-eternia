@@ -270,7 +270,10 @@ const SwipeCard: React.FC<SwipeCardProps> = ({
                             <div className="flex flex-col gap-1.5 max-h-[135px] overflow-y-auto custom-scrollbar pr-1">
                                 {(() => {
                                     const filtered = item.suggestions ? item.suggestions.filter((s: any) => !s.is_vintage) : [];
-                                    const visible = showAllSuggestions ? filtered : filtered.slice(0, 4);
+                                    // Los acompañantes (Vintage Sculpt) siempre visibles aunque queden después de los 4 primeros
+                                    const visible = showAllSuggestions
+                                        ? filtered
+                                        : filtered.filter((s: any, idx: number) => idx < 4 || s.is_companion);
                                     return visible.map((sug: any) => {
                                         const isSelected = associatedProductId === sug.product_id;
                                         return (
@@ -285,6 +288,16 @@ const SwipeCard: React.FC<SwipeCardProps> = ({
                                                         <span className="text-brand-primary bg-brand-primary/10 px-1.5 py-0.5 rounded border border-brand-primary/25">
                                                             {sug.sub_category}
                                                         </span>
+                                                        {sug.is_companion && (
+                                                            <span className="text-amber-300 bg-amber-500/15 px-1.5 py-0.5 rounded border border-amber-500/40" title="Figura Origins ambientada en la línea vintage, sugerida junto al básico">
+                                                                Vintage Sculpt
+                                                            </span>
+                                                        )}
+                                                        {sug.is_learned && (
+                                                            <span className="text-violet-300 bg-violet-500/15 px-1.5 py-0.5 rounded border border-violet-500/40" title={sug.reason}>
+                                                                Aprendido
+                                                            </span>
+                                                        )}
                                                         {sug.release_year && (
                                                             <span className="bg-white/5 px-1.5 py-0.5 rounded border border-white/5">
                                                                 {sug.release_year}
@@ -306,7 +319,7 @@ const SwipeCard: React.FC<SwipeCardProps> = ({
                                         );
                                     });
                                 })()}
-                                {item.suggestions && item.suggestions.filter((s: any) => !s.is_vintage).length > 4 && (
+                                {item.suggestions && item.suggestions.filter((s: any) => !s.is_vintage).filter((s: any, idx: number) => idx >= 4 && !s.is_companion).length > 0 && (
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
@@ -314,7 +327,7 @@ const SwipeCard: React.FC<SwipeCardProps> = ({
                                         }}
                                         className="w-full text-center py-1.5 rounded-lg border border-dashed border-white/10 hover:border-white/20 text-[8px] font-black uppercase tracking-widest text-brand-primary hover:text-brand-primary/80 transition-colors cursor-pointer mt-1 bg-white/[0.01]"
                                     >
-                                        {showAllSuggestions ? 'Contraer' : `Ver más (+${item.suggestions.filter((s: any) => !s.is_vintage).length - 4})`}
+                                        {showAllSuggestions ? 'Contraer' : `Ver más (+${item.suggestions.filter((s: any) => !s.is_vintage).filter((s: any, idx: number) => idx >= 4 && !s.is_companion).length})`}
                                     </button>
                                 )}
                                 {(!item.suggestions || item.suggestions.filter((s: any) => !s.is_vintage).length === 0) && (

@@ -575,7 +575,7 @@ const Purgatory: React.FC = React.memo(() => {
         items.sort((a, b) => {
             const getBestScore = (item: any) => {
                 if (!item.suggestions || item.suggestions.length === 0) return 0;
-                const scores = item.suggestions.filter((s: any) => !s.is_vintage).map((s: any) => s.match_score || 0);
+                const scores = item.suggestions.filter((s: any) => !s.is_vintage && !s.is_companion).map((s: any) => s.match_score || 0);
                 return scores.length > 0 ? Math.max(...scores) : 0;
             };
 
@@ -617,7 +617,8 @@ const Purgatory: React.FC = React.memo(() => {
     useEffect(() => {
         if (deckItems.length > 0) {
             const currentItem = deckItems[0];
-            const firstSug = currentItem.suggestions?.filter((s: any) => !s.is_vintage)?.[0];
+            // Nunca preseleccionar un acompañante (Vintage Sculpt): la decisión es del usuario
+            const firstSug = currentItem.suggestions?.filter((s: any) => !s.is_vintage && !s.is_companion)?.[0];
             setAssociatedProductId(firstSug ? firstSug.product_id : null);
         } else {
             setAssociatedProductId(null);
@@ -630,7 +631,7 @@ const Purgatory: React.FC = React.memo(() => {
     const handleApproveCard = (item: any) => {
         let prodId = associatedProductId;
         if (!prodId) {
-            const sug = item.suggestions?.filter((s: any) => !s.is_vintage)?.[0];
+            const sug = item.suggestions?.filter((s: any) => !s.is_vintage && !s.is_companion)?.[0];
             if (sug) prodId = sug.product_id;
         }
 
