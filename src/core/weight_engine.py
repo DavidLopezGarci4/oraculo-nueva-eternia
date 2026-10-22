@@ -1,15 +1,14 @@
 
-import re
 import math
-import unicodedata
 import threading
-from typing import Dict, Set, Optional
+from typing import Dict, Set, Optional, Iterable
 from collections import Counter
 from loguru import logger
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from src.core.config import settings
 from src.domain.models import ProductModel
+from src.core.text_normalization import tokenize
 
 class WeightEngine:
     """
@@ -24,62 +23,84 @@ class WeightEngine:
         self.weights: Dict[str, float] = {}
         self.token_df: Counter = Counter()
         self.total_docs: int = 0
+        self._signature: Optional[tuple] = None
         self._lock = threading.Lock()
         
         # Cargar inicial
         self.refresh()
 
     def normalize(self, text: str) -> Set[str]:
-        if not text: return set()
-        text = unicodedata.normalize('NFKD', text).encode('ascii', 'ignore').decode('utf-8')
-        text = text.lower()
-        text = re.sub(r'[^a-z0-9]', ' ', text)
-        tokens = set(text.split())
-        # Filtro básico: longitud > 1 para evitar ruido (ej: 'a', 'la')
-        return {t for t in tokens if len(t) > 1 or t.isdigit()}
+        # Normalización compartida con brain_engine y el índice del Purgatorio
+        return tokenize(text)
+
+    @staticmethod
+    def _catalog_signature(products: list) -> tuple:
+        names_hash = hash(tuple(sorted(f"{p.id}:{p.name}:{p.sub_category or ''}" for p in products)))
+        return (len(products), max((p.id or 0) for p in products), names_hash)
+
+    def _compute(self, products: Iterable) -> None:
+        products = list(products)
+        new_total_docs = len(products)
+        if new_total_docs == 0:
+            logger.warning("WeightEngine: Database is empty. Using default weights.")
+            return
+
+        new_df = Counter()
+        for p in products:
+            combined = f"{p.name} {p.sub_category or ''}"
+            tokens = self.normalize(combined)
+            for t in tokens:
+                new_df[t] += 1
+        
+        # Calcular Pesos Dinámicos
+        new_weights = {}
+        max_idf = math.log10(new_total_docs) if new_total_docs > 1 else 1
+        
+        for t, count in new_df.items():
+            # IDF = log10(Total / df)
+            idf = math.log10(new_total_docs / count)
+            # Escala [1.0, 10.0]
+            # Si aparece en todos (df=N), idf=0 -> peso=1.0
+            # Si aparece en 1 (df=1), idf=max -> peso=10.0
+            scale = 9 * (idf / max_idf) if max_idf > 0 else 0
+            new_weights[t] = round(1.0 + scale, 2)
+
+        with self._lock:
+            self.weights = new_weights
+            self.token_df = new_df
+            self.total_docs = new_total_docs
+            self._signature = self._catalog_signature(products)
 
     def refresh(self):
-        """Recalcula los pesos analizando todos los productos de la DB."""
+        """Recalcula los pesos analizando todos los productos de la DB configurada (arranque)."""
         try:
             engine = create_engine(self.db_url)
             Session = sessionmaker(bind=engine)
             with Session() as session:
                 products = session.query(ProductModel).all()
-                new_total_docs = len(products)
-                
-                if new_total_docs == 0:
-                    logger.warning("WeightEngine: Database is empty. Using default weights.")
-                    return
-
-                new_df = Counter()
-                for p in products:
-                    combined = f"{p.name} {p.sub_category or ''}"
-                    tokens = self.normalize(combined)
-                    for t in tokens:
-                        new_df[t] += 1
-                
-                # Calcular Pesos Dinámicos
-                new_weights = {}
-                max_idf = math.log10(new_total_docs) if new_total_docs > 0 else 1
-                
-                for t, count in new_df.items():
-                    # IDF = log10(Total / df)
-                    idf = math.log10(new_total_docs / count)
-                    # Escala [1.0, 10.0]
-                    # Si aparece en todos (df=N), idf=0 -> peso=1.0
-                    # Si aparece en 1 (df=1), idf=max -> peso=10.0
-                    scale = 9 * (idf / max_idf) if max_idf > 0 else 0
-                    new_weights[t] = round(1.0 + scale, 2)
-
-                with self._lock:
-                    self.weights = new_weights
-                    self.token_df = new_df
-                    self.total_docs = new_total_docs
-                
-                logger.success(f"WeightEngine: Refreshed weights for {len(self.weights)} tokens from {new_total_docs} products.")
-                
+                self._compute(products)
+                if self.total_docs:
+                    logger.success(f"WeightEngine: Refreshed weights for {len(self.weights)} tokens from {self.total_docs} products.")
         except Exception as e:
             logger.error(f"WeightEngine: Error refreshing weights: {e}")
+
+    def refresh_from_products(self, products: list) -> bool:
+        """
+        Recalcula los pesos con el catálogo real que usa la petición (p.ej. Supabase).
+        Solo recalcula si el catálogo ha cambiado (firma por nº, id máximo y nombres).
+        Devuelve True si ha recalculado.
+        """
+        if not products:
+            return False
+        try:
+            signature = self._catalog_signature(products)
+            if signature == self._signature:
+                return False
+            self._compute(products)
+            return True
+        except Exception as e:
+            logger.error(f"WeightEngine: Error refreshing weights from products: {e}")
+            return False
 
     def get_weight(self, token: str) -> float:
         """
@@ -90,6 +111,10 @@ class WeightEngine:
         with self._lock:
             # Si no conocemos el token, probablemente sea una palabra de la web que no está en la DB
             return self.weights.get(token, 1.0)
+
+    def is_known(self, token: str) -> bool:
+        with self._lock:
+            return token in self.weights
 
     def is_identity(self, token: str) -> bool:
         """Determina si un token es una Identidad Crítica (peso > 5.0)."""

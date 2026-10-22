@@ -45,7 +45,10 @@ from typing import List
 router = APIRouter(tags=["purgatory"])
 
 
-_STOP_WORDS = {"masters", "of", "the", "universe", "origins", "motu"}
+# Tokens demasiado comunes para usarlos como llave del índice de candidatos
+_INDEX_STOP_WORDS = {"masters", "origins", "turtles"}
+MAX_MODERN_SUGGESTIONS = 5
+MIN_SUGGESTION_SCORE = 0.30
 
 
 def _build_product_index(products: list) -> tuple[dict, dict]:
@@ -56,20 +59,84 @@ def _build_product_index(products: list) -> tuple[dict, dict]:
 
     Reduces the matching loop from O(pending × all_products) to
     O(pending × avg_candidates), typically a 10-50x speedup.
+    Uses the shared normalization (he-man == heman, synonyms, stopwords).
     """
+    from src.core.text_normalization import tokenize
+
     token_index: dict = {}
     ean_index: dict = {}
     for p in products:
-        for token in set(re.findall(r"\w+", (p.name or "").lower())) - _STOP_WORDS:
+        for token in tokenize(p.name or "") - _INDEX_STOP_WORDS:
             token_index.setdefault(token, []).append(p)
         if p.ean:
             ean_index.setdefault(p.ean, []).append(p)
     return token_index, ean_index
 
 
+def _suggestion_sort_key(sug: dict) -> tuple:
+    """Desempate determinista: puntuación, modernas primero, línea Origins principal, nombre corto, id."""
+    return (
+        -sug["match_score"],
+        bool(sug.get("is_vintage")),
+        (sug.get("sub_category") or "").strip().lower() != "origins",
+        len(sug.get("name") or ""),
+        sug.get("product_id") or 0,
+    )
+
+
+def _serialize_suggestion(p, score: float, reason: str) -> dict:
+    return {
+        "product_id": p.id,
+        "name": p.name,
+        "figure_id": p.figure_id,
+        "sub_category": p.sub_category,
+        "is_vintage": p.is_vintage,
+        "release_year": p.release_year,
+        "variant_name": p.variant_name,
+        "match_score": round(score * 100, 1),
+        "reason": reason,
+    }
+
+
+def build_suggestion_context(products: list) -> dict:
+    """Prepara índices y pesos IDF con el catálogo real de la petición (una vez por request)."""
+    from src.core.weight_engine import weights_manager
+
+    weights_manager.refresh_from_products(products)
+    token_index, ean_index = _build_product_index(products)
+    return {"products": products, "token_index": token_index, "ean_index": ean_index}
+
+
+def compute_suggestions(item, ctx: dict) -> list:
+    """Calcula las predicciones de un anuncio del Purgatorio (ordenadas, deterministas)."""
+    from src.core.brain_engine import engine
+    from src.core.text_normalization import tokenize
+
+    search_tokens = tokenize(item.scraped_name or "") - _INDEX_STOP_WORDS
+
+    # Gather candidates via index — avoids iterating over every product
+    candidates: dict = {}
+    for token in search_tokens:
+        for p in ctx["token_index"].get(token, []):
+            candidates[p.id] = p
+    if item.ean:
+        for p in ctx["ean_index"].get(item.ean, []):
+            candidates[p.id] = p
+
+    suggestions = []
+    for p in candidates.values():
+        _, score, reason = engine.calculate_match(
+            p.name, item.scraped_name, p.ean, item.ean, db_context=p.sub_category
+        )
+        if score > MIN_SUGGESTION_SCORE:
+            suggestions.append(_serialize_suggestion(p, score, reason))
+
+    suggestions.sort(key=_suggestion_sort_key)
+    return suggestions[:MAX_MODERN_SUGGESTIONS]
+
+
 @router.get("/api/purgatory", response_model=List[PurgatoryItemOutput], dependencies=[Depends(verify_api_key)])
 def get_purgatory(page: int = 1, limit: int = 500):
-    from src.core.brain_engine import engine
     from src.infrastructure.scrapers.pipeline import clean_purgatory_globally
 
     with SessionCloud() as db:
@@ -89,40 +156,14 @@ def get_purgatory(page: int = 1, limit: int = 500):
             .all()
         )
 
-        # Single DB round-trip; index built once for the whole page
+        # Single DB round-trip; index + IDF built once for the whole page
         products = db.query(ProductModel).all()
-        token_index, ean_index = _build_product_index(products)
+        ctx = build_suggestion_context(products)
 
         results = []
         for item in pending:
             try:
-                scraped_name_safe = (item.scraped_name or "").lower()
-                search_tokens = set(re.findall(r"\w+", scraped_name_safe)) - _STOP_WORDS
-
-                # Gather candidates via index — avoids iterating over every product
-                candidates: set = set()
-                for token in search_tokens:
-                    candidates.update(token_index.get(token, []))
-                if item.ean:
-                    candidates.update(ean_index.get(item.ean, []))
-
-                suggestions = []
-                for p in candidates:
-                    _, score, reason = engine.calculate_match(p.name, item.scraped_name, p.ean, item.ean)
-                    if score > 0.30:
-                        suggestions.append({
-                            "product_id": p.id,
-                            "name": p.name,
-                            "figure_id": p.figure_id,
-                            "sub_category": p.sub_category,
-                            "is_vintage": p.is_vintage,
-                            "release_year": p.release_year,
-                            "variant_name": p.variant_name,
-                            "match_score": round(score * 100, 1),
-                            "reason": reason,
-                        })
-
-                suggestions.sort(key=lambda x: x["match_score"], reverse=True)
+                suggestions = compute_suggestions(item, ctx)
 
                 results.append({
                     "id": item.id,
@@ -139,7 +180,7 @@ def get_purgatory(page: int = 1, limit: int = 500):
                     "is_blocked": item.is_blocked,
                     "opportunity_score": item.opportunity_score,
                     "anomaly_flags": json.loads(item.anomaly_flags) if item.anomaly_flags else [],
-                    "suggestions": suggestions[:5],
+                    "suggestions": suggestions,
                 })
             except Exception as e:
                 logger.error(f"Error procesando item {getattr(item, 'id', 'unknown')} en Purgatorio: {e}")
