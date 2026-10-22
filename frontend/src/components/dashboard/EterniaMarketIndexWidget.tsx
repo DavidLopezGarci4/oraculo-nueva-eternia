@@ -14,6 +14,7 @@ interface WaveBreakdown {
     avg_msrp: number;
     avg_market: number;
     revaluation_pct: number;
+    period_change_pct?: number;
 }
 
 interface PortfolioMetrics {
@@ -32,6 +33,11 @@ interface MarketIndexData {
     current_index_value: number;
     base_msrp_value: number;
     trend_pct: number;
+    period_change_eur?: number;
+    period_high?: number;
+    period_low?: number;
+    data_span_days?: number;
+    available_periods?: string[];
     trend_direction: 'bullish' | 'bearish' | 'stable';
     status_label: string;
     period: string;
@@ -51,6 +57,8 @@ export const EterniaMarketIndexWidget: React.FC<EterniaMarketIndexWidgetProps> =
     const [loading, setLoading] = useState(true);
     const [hoverPoint, setHoverPoint] = useState<HistoricalPoint | null>(null);
     const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+    const [svgSize, setSvgSize] = useState<{ width: number; height: number }>({ width: 960, height: 184 });
+    const chartBoxRef = useRef<HTMLDivElement | null>(null);
     const svgRef = useRef<SVGSVGElement | null>(null);
 
     const fetchIndex = async (p: string) => {
@@ -62,6 +70,8 @@ export const EterniaMarketIndexWidget: React.FC<EterniaMarketIndexWidgetProps> =
                 headers: token ? { Authorization: `Bearer ${token}` } : {}
             });
             setData(res.data);
+            setHoverIndex(null);
+            setHoverPoint(null);
         } catch (e) {
             console.error('Error fetching market index:', e);
         } finally {
@@ -72,6 +82,33 @@ export const EterniaMarketIndexWidget: React.FC<EterniaMarketIndexWidgetProps> =
     useEffect(() => {
         fetchIndex(period);
     }, [period]);
+
+    // Sincronizar el viewBox del SVG con el tamaño real en píxeles de su contenedor para aprovechar el 100% de la caja
+    useEffect(() => {
+        const el = svgRef.current || chartBoxRef.current;
+        if (!el) return;
+
+        const updateDimensions = () => {
+            const target = svgRef.current || chartBoxRef.current;
+            if (!target) return;
+            const rect = target.getBoundingClientRect();
+            if (rect.width > 0 && rect.height > 0) {
+                setSvgSize({
+                    width: Math.max(280, Math.round(rect.width)),
+                    height: Math.max(140, Math.round(rect.height)),
+                });
+            }
+        };
+
+        updateDimensions();
+        const observer = new ResizeObserver(() => updateDimensions());
+        observer.observe(el);
+        window.addEventListener('resize', updateDimensions);
+        return () => {
+            observer.disconnect();
+            window.removeEventListener('resize', updateDimensions);
+        };
+    }, [data, loading]);
 
     if (loading && !data) {
         return (
@@ -99,20 +136,23 @@ export const EterniaMarketIndexWidget: React.FC<EterniaMarketIndexWidgetProps> =
     const trendColor = isBullish ? 'text-emerald-400' : isBearish ? 'text-rose-400' : 'text-cyan-400';
     const badgeBg = isBullish ? 'bg-emerald-500/15 border-emerald-500/30' : isBearish ? 'bg-rose-500/15 border-rose-500/30' : 'bg-cyan-500/15 border-cyan-500/30';
 
-    // Dimensiones de la gráfica SVG responsiva
+    // Dimensiones dinámicas de la gráfica SVG (100% del ancho y alto útil de su caja)
     const series = data.historical_series || [];
     const values = series.map((s) => s.index_value);
-    const minVal = values.length > 0 ? Math.min(...values) * 0.92 : data.base_msrp_value * 0.8;
-    const maxVal = values.length > 0 ? Math.max(...values) * 1.08 : data.base_msrp_value * 1.3;
-    const range = Math.max(1, maxVal - minVal);
+    const rawMin = values.length > 0 ? Math.min(...values) : data.base_msrp_value * 0.9;
+    const rawMax = values.length > 0 ? Math.max(...values) : data.base_msrp_value * 1.1;
+    const spread = Math.max(0.6, rawMax - rawMin);
+    const minVal = Math.max(0, rawMin - spread * 0.12);
+    const maxVal = rawMax + spread * 0.12;
+    const range = Math.max(0.1, maxVal - minVal);
 
-    const svgWidth = 700;
-    const svgHeight = 150;
-    const padX = 25;
-    const padTop = 15;
-    const padBottom = 30;
-    const chartW = svgWidth - padX * 2;
-    const chartH = svgHeight - padTop - padBottom;
+    const svgWidth = svgSize.width;
+    const svgHeight = svgSize.height;
+    const padX = 10;
+    const padTop = 12;
+    const padBottom = 22;
+    const chartW = Math.max(10, svgWidth - padX * 2);
+    const chartH = Math.max(10, svgHeight - padTop - padBottom);
 
     const points = series.map((s, idx) => {
         const x = padX + (idx / Math.max(1, series.length - 1)) * chartW;
@@ -120,15 +160,17 @@ export const EterniaMarketIndexWidget: React.FC<EterniaMarketIndexWidgetProps> =
         return { x, y, data: s };
     });
 
-    const pathD = points.length > 0 ? `M ${points.map((p) => `${p.x},${p.y}`).join(' L ')}` : '';
-    const areaD = points.length > 0 ? `${pathD} L ${padX + chartW},${padTop + chartH} L ${padX},${padTop + chartH} Z` : '';
+    const pathD = points.length > 0 ? `M ${points.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' L ')}` : '';
+    const areaD = points.length > 0
+        ? `${pathD} L ${(padX + chartW).toFixed(1)},${(padTop + chartH).toFixed(1)} L ${padX.toFixed(1)},${(padTop + chartH).toFixed(1)} Z`
+        : '';
 
-    // Manejo de interacción de cursor / toque
+    // Manejo de interacción de cursor / toque alineado 1:1 con el ancho real del SVG
     const handleMouseMove = (e: React.MouseEvent<SVGSVGElement> | React.TouchEvent<SVGSVGElement>) => {
         if (!svgRef.current || points.length === 0) return;
         const rect = svgRef.current.getBoundingClientRect();
         const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-        const relX = ((clientX - rect.left) / rect.width) * svgWidth;
+        const relX = ((clientX - rect.left) / Math.max(1, rect.width)) * svgWidth;
 
         let closestIdx = 0;
         let minDiff = Infinity;
@@ -149,22 +191,47 @@ export const EterniaMarketIndexWidget: React.FC<EterniaMarketIndexWidgetProps> =
         setHoverPoint(null);
     };
 
-    // Fechas clave para el eje X
+    // Etiquetas del eje X adaptadas al ancho y al periodo activo
+    const formatAxisDate = (isoDate: string) => {
+        const parts = isoDate.split('-');
+        if (parts.length !== 3) return isoDate;
+        if (period === '1A' || period === 'ALL') {
+            return `${parts[2]}/${parts[1]}/${parts[0].slice(2)}`;
+        }
+        return `${parts[2]}/${parts[1]}`;
+    };
+
     const dateLabels: Array<{ label: string; x: number }> = [];
-    if (points.length >= 3) {
-        const step = Math.floor((points.length - 1) / 3);
-        const indices = [0, step, step * 2, points.length - 1];
-        indices.forEach((idx) => {
-            const pt = points[idx];
-            if (pt) {
-                const parts = pt.data.date.split('-');
-                const formatted = parts.length === 3 ? `${parts[2]}/${parts[1]}` : pt.data.date;
-                dateLabels.push({ label: formatted, x: pt.x });
+    if (points.length >= 2) {
+        const tickCount = svgWidth >= 640 ? Math.min(6, points.length) : Math.min(4, points.length);
+        const usedIndices = new Set<number>();
+        for (let t = 0; t < tickCount; t++) {
+            const idx = Math.round((t / Math.max(1, tickCount - 1)) * (points.length - 1));
+            if (!usedIndices.has(idx) && points[idx]) {
+                usedIndices.add(idx);
+                dateLabels.push({
+                    label: formatAxisDate(points[idx].data.date),
+                    x: points[idx].x,
+                });
             }
-        });
+        }
     }
 
+    const periodOptions = data.available_periods && data.available_periods.length > 0
+        ? data.available_periods
+        : ['1M', '3M', '6M', '1A', 'ALL'];
+
+    const periodLabelsMap: Record<string, string> = {
+        '1M': 'últimos 30 días (resolución diaria)',
+        '3M': 'últimos 90 días (resolución 3d)',
+        '6M': 'últimos 6 meses (ventana granular)',
+        '1A': 'últimos 12 meses (híbrido mensual + diario)',
+        'ALL': 'histórico completo consolidado',
+    };
+
     const port = data.portfolio_metrics;
+    const periodHigh = data.period_high ?? rawMax;
+    const periodLow = data.period_low ?? rawMin;
 
     return (
         <div className="bg-gradient-to-br from-slate-900/90 via-slate-950 to-black border border-slate-800/80 rounded-2xl md:rounded-3xl p-4 sm:p-6 mb-6 shadow-2xl backdrop-blur-md">
@@ -181,18 +248,18 @@ export const EterniaMarketIndexWidget: React.FC<EterniaMarketIndexWidgetProps> =
                             </h3>
                             <span className={`text-xs px-2.5 py-0.5 rounded-full border font-mono font-bold flex items-center gap-1 ${badgeBg} ${trendColor}`}>
                                 {isBullish ? <TrendingUp className="h-3.5 w-3.5" /> : isBearish ? <TrendingDown className="h-3.5 w-3.5" /> : null}
-                                {data.trend_pct >= 0 ? '+' : ''}{data.trend_pct}%
+                                {data.trend_pct >= 0 ? '+' : ''}{data.trend_pct}% ({period})
                             </span>
                         </div>
                         <p className="text-xs text-slate-400 font-medium">
-                            Cotización del mercado secundario ponderada por recencia (EMA) y volumen
+                            Cotización ponderada por recencia (EMA) y volumen · {periodLabelsMap[period] || period}
                         </p>
                     </div>
                 </div>
 
                 {/* Selector de Período Temporal */}
                 <div className="flex items-center gap-1 bg-slate-950/90 p-1.5 rounded-xl border border-slate-800/90 self-start sm:self-auto shadow-inner">
-                    {['1M', '3M', '6M', '1A', 'ALL'].map((p) => (
+                    {periodOptions.map((p) => (
                         <button
                             key={p}
                             onClick={() => setPeriod(p)}
@@ -210,15 +277,18 @@ export const EterniaMarketIndexWidget: React.FC<EterniaMarketIndexWidgetProps> =
 
             {/* KPIs Financieros Clave (Fila Superior) */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-                {/* KPI 1: Cotización Actual EMI */}
+                {/* KPI 1: Cotización Actual EMI + Rango del Periodo */}
                 <div className="bg-slate-950/70 border border-slate-800/80 rounded-xl p-3.5 flex items-center justify-between">
                     <div>
                         <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-0.5">
-                            Cotización Media Actual
+                            Cotización Media Actual ({period})
                         </span>
                         <div className="flex items-baseline gap-2">
                             <span className="text-xl font-black text-white blur-incognito">{data.current_index_value.toFixed(2)} €</span>
                             <span className="text-[11px] font-bold text-slate-500 line-through blur-incognito">PVP {data.base_msrp_value.toFixed(2)}€</span>
+                        </div>
+                        <div className="text-[10px] text-slate-500 font-mono mt-0.5 blur-incognito">
+                            Mín {periodLow.toFixed(2)}€ · Máx {periodHigh.toFixed(2)}€
                         </div>
                     </div>
                     <div className={`px-2 py-1 rounded-lg text-xs font-mono font-bold blur-incognito ${trendColor} ${badgeBg}`}>
@@ -271,12 +341,15 @@ export const EterniaMarketIndexWidget: React.FC<EterniaMarketIndexWidgetProps> =
                 )}
             </div>
 
-            {/* Gráfico Vectorial Responsivo de Alta Precisión */}
-            <div className="relative w-full bg-slate-950/90 rounded-2xl border border-slate-800/90 overflow-hidden mb-5 p-3 select-none">
+            {/* Gráfico Vectorial Full-Box de Alta Precisión */}
+            <div
+                ref={chartBoxRef}
+                className="relative w-full bg-slate-950/90 rounded-2xl border border-slate-800/90 overflow-hidden mb-5 px-2 py-2 sm:px-3 sm:py-2.5 select-none"
+            >
                 <svg
                     ref={svgRef}
                     viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-                    className="w-full h-36 sm:h-44 overflow-visible cursor-crosshair"
+                    className="w-full h-40 sm:h-48 block overflow-visible cursor-crosshair"
                     onMouseMove={handleMouseMove}
                     onTouchMove={handleMouseMove}
                     onMouseLeave={handleMouseLeave}
@@ -285,10 +358,10 @@ export const EterniaMarketIndexWidget: React.FC<EterniaMarketIndexWidgetProps> =
                     <defs>
                         <linearGradient id="emiAreaGradient" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.45" />
-                            <stop offset="60%" stopColor="#06b6d4" stopOpacity="0.12" />
+                            <stop offset="65%" stopColor="#06b6d4" stopOpacity="0.14" />
                             <stop offset="100%" stopColor="#06b6d4" stopOpacity="0.0" />
                         </linearGradient>
-                        <filter id="glowEffect" x="-20%" y="-20%" width="140%" height="140%">
+                        <filter id="glowEffect" x="-10%" y="-20%" width="120%" height="140%">
                             <feGaussianBlur stdDeviation="2.5" result="blur" />
                             <feMerge>
                                 <feMergeNode in="blur" />
@@ -297,12 +370,12 @@ export const EterniaMarketIndexWidget: React.FC<EterniaMarketIndexWidgetProps> =
                         </filter>
                     </defs>
 
-                    {/* Líneas Guía Horizontales Sutiles */}
+                    {/* Líneas Guía Horizontales + Referencias de Escala */}
                     <line x1={padX} y1={padTop} x2={padX + chartW} y2={padTop} stroke="rgba(255,255,255,0.06)" strokeDasharray="3 3" />
                     <line x1={padX} y1={padTop + chartH * 0.5} x2={padX + chartW} y2={padTop + chartH * 0.5} stroke="rgba(255,255,255,0.06)" strokeDasharray="3 3" />
                     <line x1={padX} y1={padTop + chartH} x2={padX + chartW} y2={padTop + chartH} stroke="rgba(255,255,255,0.12)" />
 
-                    {/* Área con Gradiente Cyan */}
+                    {/* Área con Gradiente Cyan de extremo a extremo */}
                     {areaD && <path d={areaD} fill="url(#emiAreaGradient)" />}
 
                     {/* Línea de Cotización Principal */}
@@ -342,12 +415,12 @@ export const EterniaMarketIndexWidget: React.FC<EterniaMarketIndexWidgetProps> =
                         </>
                     )}
 
-                    {/* Eje X: Etiquetas de Fechas Legibles */}
+                    {/* Eje X: Etiquetas de Fechas Distribuidas en Todo el Ancho */}
                     {dateLabels.map((dl, idx) => (
                         <text
                             key={idx}
                             x={dl.x}
-                            y={svgHeight - 8}
+                            y={svgHeight - 5}
                             textAnchor={idx === 0 ? 'start' : idx === dateLabels.length - 1 ? 'end' : 'middle'}
                             className="text-[10px] font-bold fill-slate-500"
                         >
@@ -382,16 +455,17 @@ export const EterniaMarketIndexWidget: React.FC<EterniaMarketIndexWidgetProps> =
                         <Award className="h-3.5 w-3.5 text-cyan-400" />
                         Desglose de Cotización por Subcategorías & Waves
                     </span>
-                    <span className="text-[9px] text-slate-500">MSRP vs Fair Market Value</span>
+                    <span className="text-[9px] text-slate-500">MSRP vs Fair Market Value ({period})</span>
                 </div>
 
                 <div className="flex items-center gap-2.5 overflow-x-auto pb-2 custom-scrollbar">
                     {data.waves_breakdown.map((w) => {
                         const isPos = w.revaluation_pct >= 0;
+                        const hasPeriodDelta = w.period_change_pct !== undefined && Math.abs(w.period_change_pct) > 0.05;
                         return (
                             <div
                                 key={w.category}
-                                className="flex-shrink-0 bg-slate-950/80 border border-slate-800/80 hover:border-cyan-500/30 rounded-xl p-3 min-w-[150px] sm:min-w-[170px] transition-all"
+                                className="flex-shrink-0 bg-slate-950/80 border border-slate-800/80 hover:border-cyan-500/30 rounded-xl p-3 min-w-[155px] sm:min-w-[175px] transition-all"
                             >
                                 <div className="text-[11px] font-black text-slate-200 truncate mb-1" title={w.category}>
                                     {w.category}
@@ -400,7 +474,7 @@ export const EterniaMarketIndexWidget: React.FC<EterniaMarketIndexWidgetProps> =
                                     <span className="font-black text-white text-sm blur-incognito">{w.avg_market.toFixed(2)} €</span>
                                     <span className="text-[10px] font-bold text-slate-500 blur-incognito">PVP {w.avg_msrp.toFixed(2)}€</span>
                                 </div>
-                                <div className="flex items-center justify-between">
+                                <div className="flex items-center justify-between gap-1">
                                     <span className={`text-[10px] font-black font-mono blur-incognito ${isPos ? 'text-emerald-400' : 'text-rose-400'}`}>
                                         {isPos ? '+' : ''}{w.revaluation_pct}% vs salida
                                     </span>
@@ -408,6 +482,14 @@ export const EterniaMarketIndexWidget: React.FC<EterniaMarketIndexWidgetProps> =
                                         {w.figures_count} figs
                                     </span>
                                 </div>
+                                {hasPeriodDelta && (
+                                    <div className="mt-1 pt-1 border-t border-slate-800/60 flex items-center justify-between text-[9px] font-mono">
+                                        <span className="text-slate-500">Var. {period}:</span>
+                                        <span className={`font-bold blur-incognito ${(w.period_change_pct || 0) >= 0 ? 'text-cyan-400' : 'text-rose-400'}`}>
+                                            {(w.period_change_pct || 0) >= 0 ? '+' : ''}{w.period_change_pct}%
+                                        </span>
+                                    </div>
+                                )}
                             </div>
                         );
                     })}
