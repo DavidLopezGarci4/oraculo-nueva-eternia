@@ -9,7 +9,8 @@ logger = logging.getLogger("CurrencyService")
 class CurrencyService:
     """
     Servicio de Cambio de Divisas (Phase 56).
-    Obtiene el cambio USD/EUR de XE.com con caché persistente de 24h.
+    Obtiene el cambio USD/EUR de XE.com con caché persistente de 24h
+    y backoff negativo de 15 minutos ante fallos de red.
     """
     _cache = {
         "rate": 0.92, # Fallback prudente
@@ -62,8 +63,10 @@ class CurrencyService:
                     return rate
 
             logger.warning("Currency: Could not parse rate from XE.com. Using fallback.")
+            cls._cache["expiry"] = datetime.now() + timedelta(minutes=15)
         except Exception as e:
             logger.error(f"Currency: Error fetching rate: {e}")
+            cls._cache["expiry"] = datetime.now() + timedelta(minutes=15)
 
         return cls._cache["rate"]
 

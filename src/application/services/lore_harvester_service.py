@@ -332,7 +332,7 @@ class LoreHarvesterService:
     @classmethod
     def seed_initial_catalog(cls, db: Session) -> Dict[str, int]:
         """
-        Siembra la enciclopedia canónica en BD y vincula el 100% de los 507 productos existentes.
+        Siembra la enciclopedia canónica en BD y vincula productos sin character_slug.
         """
         seeded_count = 0
         linked_products = 0
@@ -363,16 +363,22 @@ class LoreHarvesterService:
                 existing_slugs.add(slug)
                 seeded_count += 1
 
-        db.commit()
+        if seeded_count > 0:
+            db.commit()
 
-        # 2. Asignar character_slug a todos los productos del catálogo
-        products = db.query(ProductModel).all()
+        # 2. Asignar character_slug sólo a los productos que aún no lo tengan vinculado
+        products = (
+            db.query(ProductModel)
+            .filter(or_(ProductModel.character_slug.is_(None), ProductModel.character_slug == ""))
+            .all()
+        )
         for p in products:
             slug = cls.resolve_character_slug(p.name)
             p.character_slug = slug
             linked_products += 1
 
-        db.commit()
+        if linked_products > 0:
+            db.commit()
         logger.info(f"✅ [LORE ENGINE SEED] {seeded_count} personajes sembrados, {linked_products} productos vinculados.")
         return {"seeded_characters": seeded_count, "linked_products": linked_products}
 
@@ -482,4 +488,3 @@ class LoreHarvesterService:
             db.commit()
             db.refresh(new_lore)
             return new_lore
-

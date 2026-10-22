@@ -21,12 +21,19 @@ class ProductRepository(BaseRepository[ProductModel]):
         from src.core.url_utils import normalize_url
         return self.db.query(OfferModel).filter(OfferModel.url == normalize_url(url)).first()
     
-    def add_offer(self, product: ProductModel, offer_data: dict, commit: bool = True) -> tuple[OfferModel, Optional[float]]:
+    def add_offer(
+        self,
+        product: ProductModel,
+        offer_data: dict,
+        commit: bool = True,
+        existing_offer: Optional[OfferModel] = None,
+    ) -> tuple[OfferModel, Optional[float]]:
         from src.domain.models import PriceHistoryModel
         from src.core.url_utils import normalize_url
         
         target_url = normalize_url(offer_data["url"])
-        existing_offer = next((o for o in product.offers if normalize_url(o.url) == target_url), None)
+        if existing_offer is None:
+            existing_offer = next((o for o in product.offers if normalize_url(o.url) == target_url), None)
         current_price = float(offer_data["price"])
         alert_discount = None
         
@@ -44,11 +51,18 @@ class ProductRepository(BaseRepository[ProductModel]):
                 # --- PHASE 40: MARKET ANALYTICS (SNAPSHOTS) ---
                 # Even if price didn't change, we record a snapshot if the last one was from > 24h ago
                 # This allow us to calculate "time on market" and time-weighted averages.
-                last_snapshot = self.db.query(PriceHistoryModel).filter(
-                    PriceHistoryModel.offer_id == existing_offer.id
-                ).order_by(PriceHistoryModel.recorded_at.desc()).first()
+                if "_last_history_at" in offer_data:
+                    last_recorded_at = offer_data["_last_history_at"]
+                else:
+                    row = (
+                        self.db.query(PriceHistoryModel.recorded_at)
+                        .filter(PriceHistoryModel.offer_id == existing_offer.id)
+                        .order_by(PriceHistoryModel.recorded_at.desc())
+                        .first()
+                    )
+                    last_recorded_at = row[0] if row else None
                 
-                if not last_snapshot or (datetime.now(timezone.utc).replace(tzinfo=None) - last_snapshot.recorded_at).total_seconds() > 86400:
+                if not last_recorded_at or (datetime.now(timezone.utc).replace(tzinfo=None) - last_recorded_at).total_seconds() > 86400:
                     ph = PriceHistoryModel(offer_id=existing_offer.id, price=current_price, is_snapshot=True)
                     self.db.add(ph)
 
@@ -107,8 +121,6 @@ class ProductRepository(BaseRepository[ProductModel]):
             if commit:
                 self.db.commit()
                 self.db.refresh(existing_offer)
-            else:
-                self.db.flush()
             return existing_offer, alert_discount
         else:
             # Create new Offer
@@ -147,8 +159,6 @@ class ProductRepository(BaseRepository[ProductModel]):
             if commit:
                 self.db.commit()
                 self.db.refresh(new_offer)
-            else:
-                self.db.flush()
             return new_offer, None
 
     def get_active_deals(self, min_discount: float = 0.20, max_original_price: float = None):

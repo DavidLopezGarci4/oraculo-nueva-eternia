@@ -10,7 +10,9 @@ if db_url and db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
 
 engine = create_engine(
-    db_url, 
+    db_url,
+    pool_pre_ping=True,
+    pool_recycle=1800,
     connect_args={"check_same_thread": False, "timeout": 30} if "sqlite" in db_url else {}
 )
 

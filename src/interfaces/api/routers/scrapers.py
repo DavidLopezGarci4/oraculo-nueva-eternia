@@ -1,6 +1,7 @@
 import asyncio
 import os
 import threading
+import time
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
@@ -21,7 +22,7 @@ from src.interfaces.api.schemas import (
     WallapopIpLogOutput,
     WallapopManualHtmlImportOutput,
 )
-from typing import List
+from typing import List, Optional
 
 router = APIRouter(prefix="/api/scrapers", tags=["scrapers"])
 
@@ -81,24 +82,48 @@ def run_scraper_task(
             db.commit()
             log_id = execution_log.id
 
-    def update_live_log(msg: str):
-        if not log_id:
+    log_lock = threading.Lock()
+    log_buffer: list[str] = []
+    last_flush = [time.monotonic()]
+
+    def _flush_log_buffer_locked():
+        if not log_id or not log_buffer:
             return
+        chunk_text = "\n".join(log_buffer)
+        log_buffer.clear()
+        last_flush[0] = time.monotonic()
         try:
             with SessionCloud() as db_l:
-                entry = db_l.query(ScraperExecutionLogModel).get(log_id)
+                entry = (
+                    db_l.query(ScraperExecutionLogModel)
+                    .filter(ScraperExecutionLogModel.id == log_id)
+                    .first()
+                )
                 if entry:
-                    ts = datetime.now(ZoneInfo("Europe/Madrid")).strftime("%H:%M:%S")
-                    line = f"[{ts}] {msg}"
                     if entry.logs:
-                        entry.logs += "\n" + line
+                        entry.logs += "\n" + chunk_text
                     else:
-                        entry.logs = line
+                        entry.logs = chunk_text
                     db_l.commit()
         except Exception:
             pass
 
-    update_live_log(f"⚔️ Iniciando secuencia de extracción para {spider_name}...")
+    def flush_live_logs():
+        with log_lock:
+            _flush_log_buffer_locked()
+
+    def update_live_log(msg: str, force: bool = False):
+        if not log_id:
+            return
+        ts = datetime.now(ZoneInfo("Europe/Madrid")).strftime("%H:%M:%S")
+        line = f"[{ts}] {msg}"
+        with log_lock:
+            log_buffer.append(line)
+            now_mono = time.monotonic()
+            if force or len(log_buffer) >= 15 or (now_mono - last_flush[0]) >= 2.0:
+                _flush_log_buffer_locked()
+
+    update_live_log(f"⚔️ Iniciando secuencia de extracción para {spider_name}...", force=True)
 
     items_found = 0
     new_items = 0
@@ -120,7 +145,6 @@ def run_scraper_task(
         from src.infrastructure.scrapers.toymi_scraper import ToymiEUScraper
         from src.infrastructure.scrapers.bixoto_scraper import BixotoScraper
         from src.infrastructure.scrapers.smythstoys_scraper import SmythsToysScraper
-        # from src.infrastructure.scrapers.tradeinn_scraper import TradeinnScraper
         from src.infrastructure.scrapers.vinted_scraper import VintedScraper
         from src.infrastructure.scrapers.wallapop_manual_scraper import WallapopManualScraper
         from src.infrastructure.scrapers.triguetech_scraper import TriguetechScraper
@@ -136,14 +160,13 @@ def run_scraper_task(
             "DeToyboys": DeToyboysNLScraper(),
             "Ebay.es": EbayScraper(),
             "Vinted": VintedScraper(),
-            "Wallapop": wallapop_instance, # API v3 firmada (0 tokens, 100% gratuita)
-            "WallapopManual": wallapop_instance, # Alias compatible
+            "Wallapop": wallapop_instance,
+            "WallapopManual": wallapop_instance,
             "ToymiEU": ToymiEUScraper(),
             "Bixoto": BixotoScraper(),
             "Time4ActionToysDE": Time4ActionToysDEScraper(),
             "BigBadToyStore": BigBadToyStoreScraper(),
             "SmythsToys": SmythsToysScraper(),
-            # "Tradeinn": TradeinnScraper(),
             "DVDStoreSpain": DVDStoreSpainScraper(),
             "Triguetech": TriguetechScraper(),
             "LaMansionDelTerror": LaMansionDelTerrorScraper(),
@@ -178,47 +201,51 @@ def run_scraper_task(
             pipeline.log_callback = update_live_log
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
-            # PHASE 47: Use provided query or fallback to specific store defaults
-            search_term = query
-            if not search_term:
-                search_term = "auto"
+            search_term = query or "auto"
 
             update_live_log(
-                f"📡 Buscando reliquias para '{search_term}' en {canonical_spider_name}..."
+                f"📡 Buscando reliquias para '{search_term}' en {canonical_spider_name}...",
+                force=True,
             )
 
             try:
-                results = loop.run_until_complete(
-                    asyncio.wait_for(
-                        pipeline.run_product_search(search_term), timeout=1800
+                try:
+                    results = loop.run_until_complete(
+                        asyncio.wait_for(
+                            pipeline.run_product_search(search_term), timeout=1800
+                        )
                     )
+                except asyncio.TimeoutError:
+                    update_live_log(
+                        "⌛ [TIMEOUT] La incursión ha excedido los 30 minutos. Abortando.",
+                        force=True,
+                    )
+                    results = []
+
+                if scraper_cancel_event.is_set():
+                    update_live_log(
+                        f"🛑 Incursión cancelada manualmente. {len(results)} ofertas parciales recolectadas.",
+                        force=True,
+                    )
+
+                update_live_log(f"💾 Persistiendo {len(results)} ofertas...", force=True)
+                new_items = pipeline.update_database(
+                    results, shop_names=[s.shop_name for s in spiders_to_run]
                 )
-            except asyncio.TimeoutError:
+                new_items = new_items if new_items is not None else 0
+                items_found = len(results)
+                logger.info(
+                    f"💾 Persistidas {items_found} ofertas tras incursión de {canonical_spider_name}."
+                )
                 update_live_log(
-                    "⌛ [TIMEOUT] La incursión ha excedido los 30 minutos. Abortando."
+                    f"✅ Incursión completada con éxito. {items_found} reliquias encontradas.",
+                    force=True,
                 )
-                results = []
+            finally:
+                flush_live_logs()
+                loop.close()
 
-            loop.close()
-
-            if scraper_cancel_event.is_set():
-                update_live_log(
-                    f"🛑 Incursión cancelada manualmente. {len(results)} ofertas parciales recolectadas."
-                )
-
-            update_live_log(f"💾 Persistiendo {len(results)} ofertas...")
-            new_items = pipeline.update_database(
-                results, shop_names=[s.shop_name for s in spiders_to_run]
-            )
-            new_items = new_items if new_items is not None else 0
-            items_found = len(results)
-            logger.info(
-                f"💾 Persistidas {items_found} ofertas tras incursión de {canonical_spider_name}."
-            )
-            update_live_log(
-                f"✅ Incursión completada con éxito. {items_found} reliquias encontradas."
-            )
-
+        flush_live_logs()
         with SessionCloud() as db:
             status = (
                 db.query(ScraperStatusModel)
@@ -245,7 +272,8 @@ def run_scraper_task(
 
     except Exception as e:
         logger.error(f"Scraper Error ({canonical_spider_name}): {e}")
-        update_live_log(f"❌ FALLO CRÍTICO: {str(e)}")
+        update_live_log(f"❌ FALLO CRÍTICO: {str(e)}", force=True)
+        flush_live_logs()
         with SessionCloud() as db:
             status = (
                 db.query(ScraperStatusModel)
@@ -270,7 +298,7 @@ def run_scraper_task(
 
 
 @router.get("/status", response_model=List[ScraperStatusOutput], dependencies=[Depends(verify_api_key)])
-async def get_scrapers_status():
+def get_scrapers_status():
     """Retorna el estado actual de los recolectores (Admin Only)"""
     with SessionCloud() as db:
         statuses = (
@@ -290,14 +318,13 @@ async def get_scrapers_status():
             canonical = CANONICAL_SPIDER_NAMES.get(s.spider_name.lower().strip(), s.spider_name)
             key = canonical.lower()
             if key not in unique_statuses or s.spider_name == canonical:
-                # Asegurar nombre canónico en la respuesta
                 s.spider_name = canonical
                 unique_statuses[key] = s
         return list(unique_statuses.values())
 
 
 @router.get("/logs", response_model=List[ScraperExecutionLogOutput], dependencies=[Depends(verify_api_key)])
-async def get_scrapers_logs():
+def get_scrapers_logs():
     """Retorna el historial de ejecuciones (Admin Only)"""
     with SessionCloud() as db:
         return (
@@ -316,7 +343,7 @@ async def get_github_quota_status():
 
 
 @router.get("/execution-logs/export", dependencies=[Depends(verify_api_key)])
-async def export_execution_logs_csv():
+def export_execution_logs_csv():
     """Genera y descarga un archivo CSV con el historial de ejecuciones y minutos facturables."""
     from src.application.services.github_quota_service import GitHubQuotaService
     csv_data = GitHubQuotaService.generate_logs_csv()
@@ -329,12 +356,11 @@ async def export_execution_logs_csv():
 
 
 @router.post("/run", response_model=RunScraperOutput, dependencies=[Depends(verify_api_key)])
-async def run_scrapers(request: ScraperRunRequest, background_tasks: BackgroundTasks):
+def run_scrapers(request: ScraperRunRequest, background_tasks: BackgroundTasks):
     """Inicia la recolección de reliquias en segundo plano (Admin Only)"""
     canonical_spider_name = CANONICAL_SPIDER_NAMES.get(
         request.spider_name.lower().strip(), request.spider_name
     )
-    # 1. Marcar inicio en la base de datos y crear Log
     with SessionCloud() as db:
         status = (
             db.query(ScraperStatusModel)
@@ -371,18 +397,16 @@ async def run_scrapers(request: ScraperRunRequest, background_tasks: BackgroundT
 
 
 @router.post("/stop", response_model=StopScrapersOutput, dependencies=[Depends(verify_api_key)])
-async def stop_scrapers():
+def stop_scrapers():
     """
     Protocolo de Emergencia: Mata procesos de scrapers activos y resetea estados en BD.
     (Admin Only - URGENTE)
     """
     killed_count = 0
     try:
-        # 0. Software Stop: Señal cooperativa de cancelación
         scraper_cancel_event.set()
         logger.warning("🚨 CANCEL FLAG SET: Señal de parada enviada al pipeline.")
 
-        # 1. Hardware Stop: Matar procesos hijos (Playwright/Browsers)
         current_process = psutil.Process(os.getpid())
         children = current_process.children(recursive=True)
 
@@ -400,7 +424,6 @@ async def stop_scrapers():
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 continue
 
-        # 2. Database Reset: Limpiar estados de 'running'
         with SessionCloud() as db:
             db.query(ScraperStatusModel).filter(
                 ScraperStatusModel.status == "running"
@@ -435,7 +458,7 @@ async def stop_scrapers():
 
 
 @router.get("/wallapop/ip-logs", response_model=List[WallapopIpLogOutput], dependencies=[Depends(verify_api_key)])
-async def get_wallapop_ip_logs():
+def get_wallapop_ip_logs():
     """Retorna el historial de logs de IP de Wallapop (Admin Only)"""
     with SessionCloud() as db:
         return (
@@ -447,7 +470,7 @@ async def get_wallapop_ip_logs():
 
 
 @router.get("/wallapop/ip-logs/download", dependencies=[Depends(verify_api_key)])
-async def download_wallapop_ip_logs():
+def download_wallapop_ip_logs():
     """Descarga los logs de IP de Wallapop en formato TXT (Admin Only)"""
     with SessionCloud() as db:
         logs = (
@@ -484,12 +507,9 @@ async def download_wallapop_ip_logs():
         )
 
 
-from typing import Optional
-
 @router.post("/wallapop/import-manual-html", response_model=WallapopManualHtmlImportOutput, dependencies=[Depends(verify_api_key)])
 async def import_wallapop_manual_html(file: Optional[UploadFile] = File(None)):
     """Parsea el archivo local o subido data/wallapop_search.html e inserta los artículos nuevos en el Purgatorio."""
-    import os
     import re
     from bs4 import BeautifulSoup
     from src.domain.models import (
@@ -499,17 +519,14 @@ async def import_wallapop_manual_html(file: Optional[UploadFile] = File(None)):
         VintageMiscellaneousModel
     )
 
-    # 1. Definir rutas
     project_root = os.getcwd()
     file_path = os.path.join(project_root, "data", "wallapop_search.html")
     content = ""
 
-    # 2. Obtener contenido del HTML (subido o local)
     if file is not None:
         try:
             content_bytes = await file.read()
             content = content_bytes.decode("utf-8", errors="ignore")
-            # Guardamos copia local en data/ para retrocompatibilidad
             os.makedirs(os.path.dirname(file_path), exist_ok=True)
             with open(file_path, "w", encoding="utf-8") as f:
                 f.write(content)
@@ -519,7 +536,6 @@ async def import_wallapop_manual_html(file: Optional[UploadFile] = File(None)):
                 detail=f"Error al procesar el archivo HTML subido: {str(e)}"
             )
     else:
-        # Fallback al archivo local
         if not os.path.exists(file_path):
             raise HTTPException(
                 status_code=404,
@@ -534,7 +550,6 @@ async def import_wallapop_manual_html(file: Optional[UploadFile] = File(None)):
                 detail=f"Error al leer el archivo HTML local: {str(e)}"
             )
 
-    # 3. Parsear con BeautifulSoup
     soup = BeautifulSoup(content, 'html.parser')
     cards = soup.select("a[href*='/item/']")
     
@@ -554,17 +569,14 @@ async def import_wallapop_manual_html(file: Optional[UploadFile] = File(None)):
             title = title_node.get_text(strip=True)
             title_lower = title.lower()
             
-            # Ignorar palabras basura
             if any(kw in title_lower for kw in junk_keywords):
                 continue
 
-            # Limpiar precio
             price_text = price_node.get_text(strip=True)
             price_val = float(re.sub(r'[^\d.,]', '', price_text).replace(',', '.'))
             if price_val <= 0:
                 continue
 
-            # Obtener URL
             href = card.get("href", "")
             clean_href = href.split("?")[0]
             full_url = clean_href if clean_href.startswith("http") else f"https://es.wallapop.com{clean_href}"
@@ -594,13 +606,11 @@ async def import_wallapop_manual_html(file: Optional[UploadFile] = File(None)):
             "message": "No se encontraron ofertas válidas de Wallapop en el HTML."
         }
 
-    # 4. Obtener URLs existentes para filtrado masivo
     incoming_urls = [o["url"] for o in offers_to_process]
     saved_count = 0
     skipped_count = 0
 
     with SessionCloud() as db:
-        # A. Obtener conjuntos de URLs ya catalogadas/descartadas/purgatorio
         blocked_urls = set(
             x[0] for x in db.query(BlackcludedItemModel.url).filter(BlackcludedItemModel.url.in_(incoming_urls)).all()
         )
@@ -614,10 +624,8 @@ async def import_wallapop_manual_html(file: Optional[UploadFile] = File(None)):
             x[0] for x in db.query(VintageMiscellaneousModel.url).filter(VintageMiscellaneousModel.url.in_(incoming_urls)).all()
         )
 
-        # Conjunto consolidado de exclusión
         exclusion_set = blocked_urls.union(existing_pending_urls).union(existing_offers_urls).union(existing_misc_urls)
 
-        # B. Insertar solo los nuevos no excluidos
         for offer in offers_to_process:
             if offer["url"] in exclusion_set:
                 skipped_count += 1
