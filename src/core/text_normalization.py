@@ -79,6 +79,9 @@ STOP_WORDS = {
 
 _PAREN_RE = re.compile(r"\(([^)]*)\)")
 
+# Tokens de serie/marca genéricos: nunca indican una variante concreta de una figura
+GENERIC_SERIES_TOKENS = frozenset({"masters", "origins"})
+
 
 def _ascii_lower(text: str) -> str:
     text = unicodedata.normalize("NFKD", text or "").encode("ascii", "ignore").decode("utf-8")

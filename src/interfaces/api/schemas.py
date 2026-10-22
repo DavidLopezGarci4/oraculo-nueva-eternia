@@ -719,6 +719,10 @@ class PurgatorySuggestionOutput(BaseModel):
     variant_name: str | None
     match_score: float
     reason: str
+    # Sugerencia añadida como acompañante (p.ej. "Skeletor (Vintage Sculpt)" tras el Skeletor básico)
+    is_companion: bool = False
+    # Sugerencia reforzada por vinculaciones manuales anteriores del usuario
+    is_learned: bool = False
 
 
 class PurgatoryItemOutput(BaseModel):

@@ -48,6 +48,7 @@ router = APIRouter(tags=["purgatory"])
 # Tokens demasiado comunes para usarlos como llave del índice de candidatos
 _INDEX_STOP_WORDS = {"masters", "origins", "turtles"}
 MAX_MODERN_SUGGESTIONS = 5
+MAX_VINTAGE_SUGGESTIONS = 5
 MIN_SUGGESTION_SCORE = 0.30
 
 
@@ -103,14 +104,27 @@ def build_suggestion_context(products: list) -> dict:
     from src.core.weight_engine import weights_manager
 
     weights_manager.refresh_from_products(products)
+    from src.core.purgatory_companions import build_companion_lookup
+
     token_index, ean_index = _build_product_index(products)
-    return {"products": products, "token_index": token_index, "ean_index": ean_index}
+    return {
+        "products": products,
+        "token_index": token_index,
+        "ean_index": ean_index,
+        "companion_lookup": build_companion_lookup(products),
+    }
 
 
 def compute_suggestions(item, ctx: dict) -> list:
-    """Calcula las predicciones de un anuncio del Purgatorio (ordenadas, deterministas)."""
+    """
+    Calcula las predicciones de un anuncio del Purgatorio (ordenadas, deterministas).
+    Devuelve hasta 5 modernas (+ acompañantes Vintage Sculpt) seguidas de hasta 5 vintage,
+    para que las vintage nunca quiten hueco a las modernas.
+    """
     from src.core.brain_engine import engine
     from src.core.text_normalization import tokenize
+    from src.core.weight_engine import weights_manager
+    from src.core.purgatory_companions import inject_vintage_sculpt_companions
 
     search_tokens = tokenize(item.scraped_name or "") - _INDEX_STOP_WORDS
 
@@ -132,7 +146,17 @@ def compute_suggestions(item, ctx: dict) -> list:
             suggestions.append(_serialize_suggestion(p, score, reason))
 
     suggestions.sort(key=_suggestion_sort_key)
-    return suggestions[:MAX_MODERN_SUGGESTIONS]
+    modern = [s for s in suggestions if not s.get("is_vintage")][:MAX_MODERN_SUGGESTIONS]
+    vintage = [s for s in suggestions if s.get("is_vintage")][:MAX_VINTAGE_SUGGESTIONS]
+
+    modern = inject_vintage_sculpt_companions(
+        modern,
+        ctx.get("companion_lookup", {}),
+        item.scraped_name or "",
+        weights_manager.is_identity,
+        _serialize_suggestion,
+    )
+    return modern + vintage
 
 
 @router.get("/api/purgatory", response_model=List[PurgatoryItemOutput], dependencies=[Depends(verify_api_key)])

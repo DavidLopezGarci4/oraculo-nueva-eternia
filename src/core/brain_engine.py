@@ -3,7 +3,7 @@ from typing import Set, Tuple, Optional
 from loguru import logger
 from rapidfuzz import fuzz
 from src.core.weight_engine import weights_manager
-from src.core.text_normalization import tokenize, split_catalog_name, STOP_WORDS
+from src.core.text_normalization import tokenize, split_catalog_name, STOP_WORDS, GENERIC_SERIES_TOKENS
 
 # Los tokens entre paréntesis del catálogo ("Skeletor (Vintage Sculpt)") son calificadores:
 # si faltan en el anuncio NO vetan el match, solo restan cobertura con este factor de peso.
@@ -13,8 +13,8 @@ VARIANT_TOKEN_MIN_WEIGHT = 4.0
 # La penalización por variante nunca baja la puntuación por debajo de este factor
 VARIANT_PENALTY_FLOOR = 0.5
 FUZZY_THRESHOLD = 85
-# Tokens de serie/marca genéricos que nunca cuentan como "variante"
-NEVER_VARIANT_TOKENS = {"masters", "origins"}
+# Tokens de serie/marca genéricos que nunca cuentan como "variante" (compartidos)
+NEVER_VARIANT_TOKENS = GENERIC_SERIES_TOKENS
 
 
 class PythonBrainEngine:
