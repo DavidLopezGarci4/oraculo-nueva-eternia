@@ -14,7 +14,7 @@ from src.core.link_memory import (
 )
 from src.core.weight_engine import weights_manager
 from src.interfaces.api.routers.purgatory import build_suggestion_context, compute_suggestions
-from tests.unit.test_purgatory_scoring import CATALOG
+from tests.unit.test_api_purgatory_scoring import CATALOG
 
 
 def _row(product_id, title, ts=datetime(2026, 9, 14, 10, 0)):
@@ -33,7 +33,7 @@ class TestLinkMemory(unittest.TestCase):
     def test_parse_ignores_corrupt_and_empty_rows(self):
         rows = [
             ("{not json", datetime(2026, 1, 1)),
-            (json.dumps({"product_id": 908}), datetime(2026, 1, 1)),  # sin título
+            (json.dumps({"product_id": 908}), datetime(2026, 1, 1)),  # sin tÃ­tulo
             (json.dumps({"product_id": "x", "original_item": {"scraped_name": "Skeletor"}}), None),
             _row(908, "Skeletor Origins Wallapop"),
             _row(908, "Skeletor Origins Wallapop", datetime(2026, 9, 20)),
@@ -45,7 +45,7 @@ class TestLinkMemory(unittest.TestCase):
 
     def test_similar_title_hits_and_different_title_does_not(self):
         entries = parse_history_rows([_row(1249, "Skeletor Origins vendedor madrid")])
-        # 4 de 5 tokens en común -> Jaccard 0.8 (umbral)
+        # 4 de 5 tokens en comÃºn -> Jaccard 0.8 (umbral)
         hits = find_learned_hits("Skeletor Origins vendedor madrid barcelona", entries)
         self.assertEqual([h.product_id for h in hits], [1249])
         self.assertEqual(find_learned_hits("He-Man Origins vendedor madrid", entries), [])
@@ -78,7 +78,7 @@ class TestLinkMemory(unittest.TestCase):
 
     def test_learned_sculpt_is_flagged_but_never_preselected_over_exact_base(self):
         # Vinculaste antes este anuncio al Vintage Sculpt: aparece marcado como aprendido,
-        # pero no supera a una coincidencia exacta (máx. 99) -> nunca vincula ni preselecciona solo
+        # pero no supera a una coincidencia exacta (mÃ¡x. 99) -> nunca vincula ni preselecciona solo
         learned = parse_history_rows([_row(1249, "Skeletor figura Mattel caja")])
         ctx = build_suggestion_context(CATALOG, learned_links=learned)
         sugs = compute_suggestions(_item("Skeletor figura Mattel caja"), ctx)

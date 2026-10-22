@@ -1,12 +1,12 @@
 """
-Tests del acompañante Vintage Sculpt (figuras Origins, NO vintage) en las predicciones del Purgatorio.
+Tests del acompaÃ±ante Vintage Sculpt (figuras Origins, NO vintage) en las predicciones del Purgatorio.
 """
 import unittest
 from types import SimpleNamespace
 
 from src.core.weight_engine import weights_manager
 from src.interfaces.api.routers.purgatory import build_suggestion_context, compute_suggestions
-from tests.unit.test_purgatory_scoring import CATALOG
+from tests.unit.test_api_purgatory_scoring import CATALOG
 
 HE_MAN_ORIGINS, SKELETOR_ORIGINS = 906, 908
 HE_MAN_SCULPT, SKELETOR_SCULPT = 922, 1249
