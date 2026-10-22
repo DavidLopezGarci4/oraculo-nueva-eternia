@@ -181,6 +181,8 @@ function App() {
   useEffect(() => {
     if (!isLoggedIn && !isSovereign) return;
     if (!useLocalImages || !bgDownloadEnabled) return;
+    const imageSource = localStorage.getItem('image_source') || 'supabase';
+    if (imageSource === 'supabase') return;
 
     let active = true;
     const cacheImagesInBackground = async () => {
@@ -189,11 +191,15 @@ function App() {
       if (!active) return;
 
       try {
-        const response = await axios.get('/api/products');
-        const products = response.data;
-        const productsWithImages = products.filter((p: any) => p.image_url);
+        const products = await queryClient.fetchQuery({
+          queryKey: ['products', false],
+          queryFn: async () => (await axios.get('/api/products?is_vintage=false')).data,
+          staleTime: 5 * 60 * 1000,
+        });
+        const productsWithImages = (products || []).filter((p: any) => p.image_url);
         
         const cache = await caches.open('motu-image-cache');
+        const srcParam = imageSource === 'custom_path' ? 'custom' : 'cache';
 
         // Throttle downloads to prevent CPU/network spikes: 1 image every 1500ms
         for (const p of productsWithImages) {
@@ -203,8 +209,8 @@ function App() {
           try {
             const hasMatch = await cache.match(cacheKey);
             if (!hasMatch) {
-              // Fetch from local static server first (since it is populated and fast)
-              let imgResponse = await fetch(cacheKey);
+              // Fetch from local static server with explicit source param to avoid DB queries when source=cache
+              let imgResponse = await fetch(`${cacheKey}?source=${srcParam}`);
               if (!imgResponse.ok) {
                 // Fallback to Supabase remote image URL if local is missing
                 imgResponse = await fetch(p.image_url);
@@ -230,7 +236,7 @@ function App() {
     return () => {
       active = false;
     };
-  }, [isLoggedIn, isSovereign, useLocalImages, bgDownloadEnabled]);
+  }, [isLoggedIn, isSovereign, useLocalImages, bgDownloadEnabled, queryClient]);
 
   // Show Cache Welcome Dialog for first time users
   useEffect(() => {

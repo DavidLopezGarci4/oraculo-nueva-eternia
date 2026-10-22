@@ -59,6 +59,8 @@ async def update_user_image_paths(
         user.pc_image_path = request.pc_path
         user.mobile_image_path = request.mobile_path
         db.commit()
+        from src.interfaces.api.main import invalidate_user_image_paths_cache
+        invalidate_user_image_paths_cache(user_id)
         return {
             "status": "success",
             "pc_image_path": user.pc_image_path,

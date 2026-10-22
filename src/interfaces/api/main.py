@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from loguru import logger
 
@@ -69,7 +70,7 @@ async def _supervised_telegram_listener():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
-        from src.infrastructure.database_cloud import init_cloud_db
+        from src.infrastructure.database_cloud import init_cloud_db, SessionCloud
         init_cloud_db()
         ensure_scrapers_registered()
 
@@ -110,8 +111,76 @@ async def lifespan(app: FastAPI):
 
 from fastapi.staticfiles import StaticFiles
 import os
+import time
+import anyio
+from src.infrastructure.database_cloud import SessionCloud
 
 app = FastAPI(title="Oráculo API Broker", version="1.0.0", lifespan=lifespan)
+
+STATIC_IMAGE_CACHE_HEADERS = {
+    "Cache-Control": "public, max-age=604800, stale-while-revalidate=86400"
+}
+_USER_IMAGE_PATHS_TTL = 300.0
+_user_image_paths_cache: dict[int, tuple[float, list[str]]] = {}
+
+
+def invalidate_user_image_paths_cache(user_id: int | None = None) -> None:
+    if user_id is None:
+        _user_image_paths_cache.clear()
+    else:
+        _user_image_paths_cache.pop(user_id, None)
+
+
+def _get_cached_user_image_paths(user_id: int) -> list[str]:
+    now = time.monotonic()
+    cached = _user_image_paths_cache.get(user_id)
+    if cached and cached[0] > now:
+        return cached[1]
+
+    from src.domain.models import UserModel
+
+    paths: list[str] = []
+    with SessionCloud() as db:
+        user = db.query(UserModel).filter(UserModel.id == user_id).first()
+        if user:
+            paths = [p for p in (user.pc_image_path, user.mobile_image_path) if p]
+    _user_image_paths_cache[user_id] = (now + _USER_IMAGE_PATHS_TTL, paths)
+    return paths
+
+
+def _load_product_candidate_image_urls(product_id: int) -> list[str]:
+    from src.domain.models import ProductModel, OfferModel
+
+    candidate_urls: list[str] = []
+    with SessionCloud() as db:
+        product = db.query(ProductModel).filter(ProductModel.id == product_id).first()
+        if product and product.image_url:
+            candidate_urls.append(product.image_url)
+
+        offers = (
+            db.query(OfferModel.image_url)
+            .filter(OfferModel.product_id == product_id, OfferModel.image_url.is_not(None))
+            .all()
+        )
+        for (img_url,) in offers:
+            if img_url and img_url not in candidate_urls:
+                candidate_urls.append(img_url)
+    return candidate_urls
+
+
+def _encode_webp_to_disk(raw_bytes: bytes, dest_path: str) -> None:
+    import io
+    from PIL import Image
+
+    with Image.open(io.BytesIO(raw_bytes)) as img:
+        if img.mode in ("RGBA", "LA"):
+            background = Image.new("RGB", img.size, (255, 255, 255))
+            background.paste(img, mask=img.split()[-1])
+            img = background
+        elif img.mode != "RGB":
+            img = img.convert("RGB")
+        img.save(dest_path, "WEBP", quality=85)
+
 
 async def _fetch_and_cache_product_image(product_id: int) -> "str | None":
     """
@@ -127,31 +196,16 @@ async def _fetch_and_cache_product_image(product_id: int) -> "str | None":
     guarda en IMAGE_CACHE_DIR, para que la siguiente petición ya la sirva
     desde caché local sin volver a descargarla.
     """
-    from src.infrastructure.database_cloud import SessionCloud
-    from src.domain.models import ProductModel, OfferModel
-
-    candidate_urls = []
-    with SessionCloud() as db:
-        product = db.query(ProductModel).filter(ProductModel.id == product_id).first()
-        if product and product.image_url:
-            candidate_urls.append(product.image_url)
-        
-        offers = db.query(OfferModel).filter(OfferModel.product_id == product_id, OfferModel.image_url.is_not(None)).all()
-        for o in offers:
-            if o.image_url and o.image_url not in candidate_urls:
-                candidate_urls.append(o.image_url)
-
-    if not candidate_urls:
-        return None
-
     dest_path = os.path.join(settings.IMAGE_CACHE_DIR, f"{product_id}.webp")
     os.makedirs(settings.IMAGE_CACHE_DIR, exist_ok=True)
     if os.path.exists(dest_path) and os.path.getsize(dest_path) > 0:
         return dest_path
 
-    import io
+    candidate_urls = await anyio.to_thread.run_sync(_load_product_candidate_image_urls, product_id)
+    if not candidate_urls:
+        return None
+
     import httpx
-    from PIL import Image
 
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
@@ -166,15 +220,7 @@ async def _fetch_and_cache_product_image(product_id: int) -> "str | None":
                 resp = await client.get(image_url)
                 status_code = getattr(resp, "status_code", 200)
                 if status_code == 200 and len(resp.content) > 50:
-                    with Image.open(io.BytesIO(resp.content)) as img:
-                        if img.mode in ("RGBA", "LA"):
-                            background = Image.new("RGB", img.size, (255, 255, 255))
-                            background.paste(img, mask=img.split()[-1])
-                            img = background
-                        elif img.mode != "RGB":
-                            img = img.convert("RGB")
-                        img.save(dest_path, "WEBP", quality=85)
-
+                    await anyio.to_thread.run_sync(_encode_webp_to_disk, resp.content, dest_path)
                     logger.info(f"📸 Imagen del producto {product_id} descargada y cacheada en WebP desde {image_url}.")
                     return dest_path
             except Exception as e:
@@ -187,40 +233,36 @@ async def _fetch_and_cache_product_image(product_id: int) -> "str | None":
 async def get_static_image_override(product_id: int, source: str = None, user_id: int = 2):
     from fastapi.responses import FileResponse
     from fastapi import HTTPException
-    from src.infrastructure.database_cloud import SessionCloud
-    from src.domain.models import UserModel
 
     extensions = [".webp", ".jpg", ".jpeg", ".png"]
 
     # 1. Try custom path if not explicitly cache-only
     if source != "cache":
-        with SessionCloud() as db:
-            user = db.query(UserModel).filter(UserModel.id == user_id).first()
-            if user:
-                for custom_dir in [user.pc_image_path, user.mobile_image_path]:
-                    if custom_dir:
-                        for ext in extensions:
-                            file_path = os.path.join(custom_dir, f"{product_id}{ext}")
-                            if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
-                                return FileResponse(file_path)
+        custom_dirs = await anyio.to_thread.run_sync(_get_cached_user_image_paths, user_id)
+        for custom_dir in custom_dirs:
+            for ext in extensions:
+                file_path = os.path.join(custom_dir, f"{product_id}{ext}")
+                if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
+                    return FileResponse(file_path, headers=STATIC_IMAGE_CACHE_HEADERS)
 
     # 2. Try server cache if not explicitly custom-only
     if source != "custom":
         for ext in extensions:
             server_cache_file = os.path.join(settings.IMAGE_CACHE_DIR, f"{product_id}{ext}")
             if os.path.exists(server_cache_file) and os.path.getsize(server_cache_file) > 0:
-                return FileResponse(server_cache_file)
+                return FileResponse(server_cache_file, headers=STATIC_IMAGE_CACHE_HEADERS)
 
         # 3. Cache miss: descarga + convierte + cachea automáticamente.
         cached_path = await _fetch_and_cache_product_image(product_id)
         if cached_path:
-            return FileResponse(cached_path)
+            return FileResponse(cached_path, headers=STATIC_IMAGE_CACHE_HEADERS)
 
     raise HTTPException(status_code=404, detail="Imagen no encontrada")
 
 
 from src.core.config import get_cors_origins
 
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=get_cors_origins(),
@@ -274,7 +316,6 @@ app.include_router(showcase_router.router)
 app.include_router(analytics_router.router)
 app.include_router(cards_router.router)
 app.include_router(lore_router.router)
-
 
 
 if __name__ == "__main__":

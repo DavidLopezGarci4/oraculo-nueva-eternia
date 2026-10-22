@@ -10,13 +10,14 @@ const globalBlobUrlMap = new Map<string, string>();
 let motuCachePromise: Promise<Cache> | null = null;
 
 function setBlobCache(key: string, url: string) {
-  if (globalBlobUrlMap.has(key)) {
-    const prev = globalBlobUrlMap.get(key);
-    if (prev && prev !== url) {
-      try { URL.revokeObjectURL(prev); } catch { /* ignore */ }
+  const existing = globalBlobUrlMap.get(key);
+  if (existing) {
+    if (existing !== url) {
+      try { URL.revokeObjectURL(url); } catch { /* ignore */ }
     }
-    globalBlobUrlMap.delete(key);
-  } else if (globalBlobUrlMap.size >= MAX_BLOB_CACHE_SIZE) {
+    return existing;
+  }
+  if (globalBlobUrlMap.size >= MAX_BLOB_CACHE_SIZE) {
     const oldestKey = globalBlobUrlMap.keys().next().value;
     if (oldestKey) {
       const oldestUrl = globalBlobUrlMap.get(oldestKey);
@@ -27,6 +28,7 @@ function setBlobCache(key: string, url: string) {
     }
   }
   globalBlobUrlMap.set(key, url);
+  return url;
 }
 
 export function clearMOTURAMCache() {
@@ -52,7 +54,7 @@ export function MOTUImage({ productId, fallbackSrc = '', src, className = '', ..
   const defaultSrc = src || fallbackSrc;
   const cacheKey = productId ? `/api/static/images/${productId}.webp` : null;
 
-  // 1. Synchronous initial state check from in-memory RAM cache for 0ms instant loading
+  // 1. Synchronous initial state check from in-memory RAM cache or direct static endpoint
   const [currentSrc, setCurrentSrc] = useState<string>(() => {
     if (productId && cacheKey && imageSource !== 'supabase') {
       const inMemoryUrl = globalBlobUrlMap.get(cacheKey);
@@ -80,12 +82,14 @@ export function MOTUImage({ productId, fallbackSrc = '', src, className = '', ..
       }
 
       if (imageSource !== 'supabase') {
-        // If already cached in RAM, use it immediately
         const cachedInMemory = globalBlobUrlMap.get(cacheKey);
         if (cachedInMemory) {
           if (active) setCurrentSrc(cachedInMemory);
           return;
         }
+
+        const srcParam = imageSource === 'custom_path' ? 'custom' : 'cache';
+        const fetchUrl = `${cacheKey}?source=${srcParam}`;
 
         try {
           const cachePromise = getMotuCache();
@@ -94,40 +98,23 @@ export function MOTUImage({ productId, fallbackSrc = '', src, className = '', ..
             const cachedResponse = await cache.match(cacheKey);
 
             if (cachedResponse) {
+              const existingBlobUrl = globalBlobUrlMap.get(cacheKey);
+              if (existingBlobUrl) {
+                if (active) setCurrentSrc(existingBlobUrl);
+                return;
+              }
               const blob = await cachedResponse.blob();
-              const objectUrl = URL.createObjectURL(blob);
-              setBlobCache(cacheKey, objectUrl);
+              const objectUrl = setBlobCache(cacheKey, URL.createObjectURL(blob));
               if (active) setCurrentSrc(objectUrl);
               return;
             }
           }
-
-          const srcParam = imageSource === 'custom_path' ? 'custom' : 'cache';
-          const fetchUrl = `${cacheKey}?source=${srcParam}`;
-          if (active) setCurrentSrc(fetchUrl);
-
-          // Asynchronously fetch and cache it from local backend
-          fetch(fetchUrl)
-            .then(async (response) => {
-              if (response.ok) {
-                const cache = await getMotuCache();
-                if (cache) {
-                  await cache.put(cacheKey, response.clone());
-                  const blob = await response.blob();
-                  const objectUrl = URL.createObjectURL(blob);
-                  setBlobCache(cacheKey, objectUrl);
-                  if (active) setCurrentSrc(objectUrl);
-                }
-              }
-            })
-            .catch((err) => {
-              console.warn(`Auto-caching failed for product ${productId}:`, err);
-            });
         } catch (e) {
           console.error("Cache API resolution failed:", e);
-          const srcParam = imageSource === 'custom_path' ? 'custom' : 'cache';
-          if (active) setCurrentSrc(`${cacheKey}?source=${srcParam}`);
         }
+
+        // Rely on native browser HTTP cache (Cache-Control: max-age=604800) with a single <img> request
+        if (active) setCurrentSrc(fetchUrl);
       } else {
         if (active) setCurrentSrc(defaultSrc);
       }
@@ -146,11 +133,10 @@ export function MOTUImage({ productId, fallbackSrc = '', src, className = '', ..
       return;
     }
 
-    if (currentSrc !== cacheKey) {
-      // Retry via static backend route
-      setCurrentSrc(cacheKey);
+    const cacheFallbackUrl = `${cacheKey}?source=cache`;
+    if (currentSrc !== cacheFallbackUrl && currentSrc !== cacheKey) {
+      setCurrentSrc(cacheFallbackUrl);
     } else if (currentSrc !== defaultSrc) {
-      // Fallback to default remote URL
       setCurrentSrc(defaultSrc);
     } else if (props.onError) {
       props.onError(e);
