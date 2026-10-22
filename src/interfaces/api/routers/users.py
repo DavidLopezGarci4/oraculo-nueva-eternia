@@ -8,7 +8,13 @@ from loguru import logger
 from src.application.services.logistics_service import LogisticsService
 from src.domain.models import OfferModel, PendingMatchModel, ProductModel, UserModel, BlackcludedItemModel, VintageMiscellaneousModel, OfferHistoryModel
 from src.infrastructure.database_cloud import SessionCloud
-from src.interfaces.api.deps import get_current_user, scope_user_id, verify_device, verify_wallapop_import
+from src.interfaces.api.deps import (
+    get_current_user,
+    invalidate_user_auth_cache,
+    scope_user_id,
+    verify_device,
+    verify_wallapop_import,
+)
 from src.interfaces.api.schemas import (
     WallapopImportRequest,
     UserImagePathsUpdateRequest,
@@ -23,7 +29,7 @@ router = APIRouter(tags=["users"])
 
 
 @router.get("/api/users/{user_id}", response_model=UserSettingsOutput, dependencies=[Depends(verify_device)])
-async def get_user_settings(user_id: int, current_user: UserModel = Depends(get_current_user)):
+def get_user_settings(user_id: int, current_user: UserModel = Depends(get_current_user)):
     user_id = scope_user_id(current_user, user_id)
     with SessionCloud() as db:
         user = db.query(UserModel).filter(UserModel.id == user_id).first()
@@ -42,7 +48,7 @@ async def get_user_settings(user_id: int, current_user: UserModel = Depends(get_
 
 
 @router.post("/api/users/{user_id}/image-paths", response_model=UserImagePathsOutput)
-async def update_user_image_paths(
+def update_user_image_paths(
     user_id: int,
     request: UserImagePathsUpdateRequest,
     current_user: UserModel = Depends(get_current_user),
@@ -61,6 +67,7 @@ async def update_user_image_paths(
         db.commit()
         from src.interfaces.api.main import invalidate_user_image_paths_cache
         invalidate_user_image_paths_cache(user_id)
+        invalidate_user_auth_cache(user_id)
         return {
             "status": "success",
             "pc_image_path": user.pc_image_path,
@@ -69,7 +76,7 @@ async def update_user_image_paths(
 
 
 @router.post("/api/users/{user_id}/location", response_model=UserLocationOutput)
-async def update_user_location(
+def update_user_location(
     user_id: int,
     location: str,
     current_user: UserModel = Depends(get_current_user),
@@ -81,11 +88,12 @@ async def update_user_location(
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
         user.location = location.upper()
         db.commit()
+        invalidate_user_auth_cache(user_id)
         return {"status": "success", "location": user.location}
 
 
 @router.post("/api/users/{user_id}/public-showcase", response_model=UserPublicShowcaseOutput)
-async def update_user_showcase(
+def update_user_showcase(
     user_id: int,
     is_public: bool,
     current_user: UserModel = Depends(get_current_user),
@@ -101,11 +109,12 @@ async def update_user_showcase(
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
         user.is_public_showcase = is_public
         db.commit()
+        invalidate_user_auth_cache(user_id)
         return {"status": "success", "is_public_showcase": user.is_public_showcase}
 
 
 @router.post("/api/wallapop/import", dependencies=[Depends(verify_wallapop_import)])
-async def import_wallapop_products(request: WallapopImportRequest):
+def import_wallapop_products(request: WallapopImportRequest):
     # Fase AAA-3d: la extensión de Chrome (chrome-extension/content.js) manda
     # su propia clave de bajo privilegio (X-Extension-Key, distinta de
     # ORACULO_API_KEY — si se filtra desde el navegador no da acceso
@@ -209,7 +218,7 @@ async def import_wallapop_products(request: WallapopImportRequest):
 
 
 @router.get("/api/radar/p2p-opportunities", response_model=List[P2POpportunityOutput])
-async def get_p2p_opportunities(user_id: int = 2, current_user: UserModel = Depends(get_current_user)):
+def get_p2p_opportunities(user_id: int = 2, current_user: UserModel = Depends(get_current_user)):
     user_id = scope_user_id(current_user, user_id)
     with SessionCloud() as db:
         user_location = "ES"

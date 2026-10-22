@@ -171,6 +171,8 @@ class TelegramListener:
                     return
                 device.is_authorized = True
                 db.commit()
+                from src.core.security import SecurityShield
+                SecurityShield.invalidate_device_cache(device.device_id)
                 dev_name = device.device_name or device.device_id
             await self.answer_callback_query(cq_id, f"✅ Dispositivo '{dev_name}' autorizado.")
             await telegram_service.send_message(
@@ -188,8 +190,11 @@ class TelegramListener:
                     await self.answer_callback_query(cq_id, "❌ Dispositivo no encontrado.")
                     return
                 dev_name = device.device_name or device.device_id
+                dev_id_str = device.device_id
                 db.delete(device)
                 db.commit()
+                from src.core.security import SecurityShield
+                SecurityShield.invalidate_device_cache(dev_id_str)
             await self.answer_callback_query(cq_id, f"🚫 Dispositivo '{dev_name}' bloqueado.")
             await telegram_service.send_message(
                 f"🛑 <b>[Escudo de Eternia]</b> Dispositivo <b>{dev_name}</b> ha sido <b>BLOQUEADO Y ELIMINADO</b>.",

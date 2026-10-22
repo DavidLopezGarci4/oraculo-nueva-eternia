@@ -15,7 +15,7 @@ class BudgetOptimizeRequest(BaseModel):
     user_location: str = "ES"
 
 @router.get("/analytics/market-index", dependencies=[Depends(verify_device)])
-async def get_market_index(
+def get_market_index(
     period: str = Query(default="3M", description="1M, 3M, 6M, 1A, ALL"),
     user_id: int = Query(default=2)
 ):
@@ -23,7 +23,7 @@ async def get_market_index(
     return MarketAnalyticsService.get_market_index(period=period, user_id=user_id)
 
 @router.post("/cart/budget-optimize", dependencies=[Depends(verify_device)])
-async def optimize_cart_budget(request: BudgetOptimizeRequest):
+def optimize_cart_budget(request: BudgetOptimizeRequest):
     """Encuentra la combinación matemática óptima de compras dentro de un presupuesto dado."""
     return BudgetOptimizerService.optimize_cart(
         budget_limit=request.budget_limit,
@@ -33,16 +33,16 @@ async def optimize_cart_budget(request: BudgetOptimizeRequest):
     )
 
 @router.get("/analytics/liquidity-pulse", dependencies=[Depends(verify_device)])
-async def get_liquidity_pulse():
+def get_liquidity_pulse():
     """Devuelve el pulso de liquidez P2P (days_on_market, ofertas estancadas y descuento sugerido de regateo)."""
     return MarketAnalyticsService.get_p2p_liquidity_pulse()
 
 @router.get("/analytics/retail-scarcity", dependencies=[Depends(verify_device)])
-async def get_retail_scarcity(user_location: str = Query(default="ES")):
+def get_retail_scarcity(user_location: str = Query(default="ES")):
     """Detecta figuras con una única tienda Retail activa en stock (alerta de agotamiento inminente)."""
     return MarketAnalyticsService.get_retail_scarcity_alerts(user_location=user_location)
 
 @router.get("/sync/delta-updates", dependencies=[Depends(verify_device)])
-async def get_sync_delta_updates(since: Optional[str] = Query(default=None)):
+def get_sync_delta_updates(since: Optional[str] = Query(default=None)):
     """Suministra el catálogo optimizado para caché y búsqueda instantánea en IndexedDB."""
     return MarketAnalyticsService.get_delta_updates(since_timestamp=since)

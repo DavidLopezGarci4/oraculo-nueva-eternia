@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import time
 from typing import Dict, Optional, List
 from src.domain.models import LogisticRuleModel
 from src.infrastructure.database_cloud import SessionCloud
@@ -40,12 +41,51 @@ DEFAULT_FALLBACK_RULE = LogisticRuleModel(
     strategy_key=None,
 )
 
+_RULES_CACHE_TTL = 600.0  # 10 minutes
+_rules_cache: dict[str, object] = {
+    "rules_map": None,
+    "expires_at": 0.0,
+}
+
 
 class LogisticsService:
     """
     Oráculo Logístico (Phase 15/18/42): Servicio centralizado para el cálculo de costes de importación,
     tarifas comerciales, seguros P2P y precio final puesto en casa (Landed Price).
     """
+
+    @staticmethod
+    def invalidate_rules_cache() -> None:
+        _rules_cache["rules_map"] = None
+        _rules_cache["expires_at"] = 0.0
+
+    @staticmethod
+    def get_cached_rules_map() -> Dict[str, LogisticRuleModel]:
+        now = time.monotonic()
+        cached_map = _rules_cache.get("rules_map")
+        expires_at = float(_rules_cache.get("expires_at") or 0.0)
+        if isinstance(cached_map, dict) and cached_map and now < expires_at:
+            return cached_map
+
+        with SessionCloud() as db:
+            rules = db.query(LogisticRuleModel).all()
+            rules_map: Dict[str, LogisticRuleModel] = {}
+            for r in rules:
+                _ = (
+                    r.shop_name,
+                    r.country_code,
+                    r.base_shipping,
+                    r.free_shipping_threshold,
+                    r.vat_multiplier,
+                    r.custom_fees,
+                    r.strategy_key,
+                )
+                db.expunge(r)
+                rules_map[f"{r.shop_name}_{r.country_code}"] = r
+
+        _rules_cache["rules_map"] = rules_map
+        _rules_cache["expires_at"] = now + _RULES_CACHE_TTL
+        return rules_map
 
     @staticmethod
     def normalize_shop_name(shop_name: str) -> str:
@@ -86,12 +126,10 @@ class LogisticsService:
     def get_landing_price(price: float, shop_name: str, user_location: str = "ES", item_count: int = 1) -> float:
         """
         Calcula el 'Precio de Aterrizaje' sumando IVA/Tasas y Gastos de Envío.
-        Versión Estándar (Consulta DB individual).
+        Utiliza caché en memoria de reglas logísticas para evitar abrir sesiones DB por llamada.
         """
-        with SessionCloud() as db:
-            rules = db.query(LogisticRuleModel).all()
-            rules_map = {f"{r.shop_name}_{r.country_code}": r for r in rules}
-            return LogisticsService.optimized_get_landing_price(price, shop_name, user_location, rules_map, item_count)
+        rules_map = LogisticsService.get_cached_rules_map()
+        return LogisticsService.optimized_get_landing_price(price, shop_name, user_location, rules_map, item_count)
 
     @staticmethod
     def optimized_get_landing_price(
@@ -184,11 +222,12 @@ class LogisticsService:
     def get_rules_by_shop(shop_name: str) -> Dict[str, LogisticRuleModel]:
         """Retorna todas las reglas geográficas para una tienda específica."""
         canonical = LogisticsService.normalize_shop_name(shop_name)
-        with SessionCloud() as db:
-            rules = db.query(LogisticRuleModel).filter(
-                (LogisticRuleModel.shop_name == canonical) | (LogisticRuleModel.shop_name == shop_name)
-            ).all()
-            return {r.country_code: r for r in rules}
+        rules_map = LogisticsService.get_cached_rules_map()
+        return {
+            r.country_code: r
+            for r in rules_map.values()
+            if r.shop_name == canonical or r.shop_name == shop_name
+        }
 
     @staticmethod
     def calculate_cart(items: List[dict], user_location: str = "ES") -> dict:
@@ -199,122 +238,120 @@ class LogisticsService:
         """
         from src.application.services.currency_service import CurrencyService
         
-        with SessionCloud() as db:
-            rules = db.query(LogisticRuleModel).all()
-            rules_map = {f"{r.shop_name}_{r.country_code}": r for r in rules}
+        rules_map = LogisticsService.get_cached_rules_map()
+        
+        # 1. Agrupar por Tienda Canónica
+        shops_data = {}
+        for item in items:
+            raw_shop = item.get("shop_name", "Desconocido")
+            canonical_shop = LogisticsService.normalize_shop_name(raw_shop)
             
-            # 1. Agrupar por Tienda Canónica
-            shops_data = {}
-            for item in items:
-                raw_shop = item.get("shop_name", "Desconocido")
-                canonical_shop = LogisticsService.normalize_shop_name(raw_shop)
-                
-                if canonical_shop not in shops_data:
-                    shops_data[canonical_shop] = {
-                        "display_name": canonical_shop,
-                        "items": [],
-                        "total_qty": 0,
-                        "base_total_eur": 0.0,
-                        "rule": LogisticsService._resolve_rule(canonical_shop, user_location, rules_map)
-                    }
-                
-                rule = shops_data[canonical_shop]["rule"]
-                price = float(item.get("price", 0.0))
-                price_eur = price
-
-                # Conversión USD para BBTS
-                if rule and (rule.shop_name == "BigBadToyStore" or rule.strategy_key == "bbts_flat_rate"):
-                    rate = CurrencyService.get_usd_to_eur_rate()
-                    price_eur = price * rate
-                
-                qty = int(item.get("quantity", 1))
-                shops_data[canonical_shop]["items"].append({
-                    "name": item.get("product_name", "Desconocido"),
-                    "unit_price": price,
-                    "unit_price_eur": round(price_eur, 2),
-                    "quantity": qty,
-                    "subtotal_eur": round(price_eur * qty, 2)
-                })
-                shops_data[canonical_shop]["total_qty"] += qty
-                shops_data[canonical_shop]["base_total_eur"] += (price_eur * qty)
-
-            # 2. Aplicar Reglas por Tienda
-            breakdown = []
-            grand_total_eur = 0.0
+            if canonical_shop not in shops_data:
+                shops_data[canonical_shop] = {
+                    "display_name": canonical_shop,
+                    "items": [],
+                    "total_qty": 0,
+                    "base_total_eur": 0.0,
+                    "rule": LogisticsService._resolve_rule(canonical_shop, user_location, rules_map)
+                }
             
-            for shop_name, data in shops_data.items():
-                rule = data["rule"]
-                item_count = data["total_qty"]
-                base_total = data["base_total_eur"]
+            rule = shops_data[canonical_shop]["rule"]
+            price = float(item.get("price", 0.0))
+            price_eur = price
 
-                if not rule:
-                    # Tienda sin regla en DB -> PENDING_RULES
-                    shop_total = base_total
-                    breakdown.append({
-                        "shop": shop_name,
-                        "status": "PENDING_RULES",
-                        "items": data["items"],
-                        "shipping_eur": 0.0,
-                        "tax_eur": 0.0,
-                        "total_eur": round(shop_total, 2)
-                    })
-                    grand_total_eur += shop_total
-                    continue
+            # Conversión USD para BBTS
+            if rule and (rule.shop_name == "BigBadToyStore" or rule.strategy_key == "bbts_flat_rate"):
+                rate = CurrencyService.get_usd_to_eur_rate()
+                price_eur = price * rate
+            
+            qty = int(item.get("quantity", 1))
+            shops_data[canonical_shop]["items"].append({
+                "name": item.get("product_name", "Desconocido"),
+                "unit_price": price,
+                "unit_price_eur": round(price_eur, 2),
+                "quantity": qty,
+                "subtotal_eur": round(price_eur * qty, 2)
+            })
+            shops_data[canonical_shop]["total_qty"] += qty
+            shops_data[canonical_shop]["base_total_eur"] += (price_eur * qty)
 
-                strategy = rule.strategy_key
+        # 2. Aplicar Reglas por Tienda
+        breakdown = []
+        grand_total_eur = 0.0
+        
+        for shop_name, data in shops_data.items():
+            rule = data["rule"]
+            item_count = data["total_qty"]
+            base_total = data["base_total_eur"]
 
-                # Caso A: BigBadToyStore (USD $8/item + 21% IVA)
-                if rule.shop_name == "BigBadToyStore" or strategy == "bbts_flat_rate":
-                    rate = CurrencyService.get_usd_to_eur_rate()
-                    shipping_usd = 8.00 * item_count
-                    shipping_eur = shipping_usd * rate
-                    total_taxable = base_total + shipping_eur
-                    tax_amount = total_taxable * 0.21 # 21% IVA
-                    total_final = total_taxable + tax_amount + rule.custom_fees
-
-                # Caso B: P2P Marketplaces (Ebay.es, Wallapop, Vinted): Envío 5€ + 2% Seguro
-                elif strategy == "p2p_insurance" or rule.shop_name in ("Ebay.es", "Wallapop", "Vinted"):
-                    shipping_eur = 5.00
-                    tax_amount = base_total * 0.02 # Seguro de protección 2%
-                    total_final = base_total + shipping_eur + tax_amount + rule.custom_fees
-
-                # Caso C: Triguetech (7.00€ tarifa plana fija por pedido)
-                elif strategy == "triguetech_flat_rate" or rule.shop_name == "Triguetech":
-                    shipping_eur = 7.00
-                    tax_amount = 0.0
-                    total_final = base_total + shipping_eur + rule.custom_fees
-
-                # Caso C2: ToymiEU (15.00€ tarifa plana fija por pedido)
-                elif strategy == "toymieu_flat_rate" or rule.shop_name == "ToymiEU":
-                    shipping_eur = 15.00
-                    tax_amount = 0.0
-                    total_final = base_total + shipping_eur + rule.custom_fees
-
-                # Caso D: Tiendas estándar (Frikimaz > 69€ gratis, etc.)
-                else:
-                    shipping_eur = rule.base_shipping
-                    if rule.free_shipping_threshold > 0 and base_total >= rule.free_shipping_threshold:
-                        shipping_eur = 0.0
-                    
-                    total_taxable = base_total + shipping_eur
-                    total_final = (total_taxable * rule.vat_multiplier) + rule.custom_fees
-                    tax_amount = total_taxable * (rule.vat_multiplier - 1)
-
+            if not rule:
+                # Tienda sin regla en DB -> PENDING_RULES
+                shop_total = base_total
                 breakdown.append({
                     "shop": shop_name,
-                    "status": "CALCULATED",
+                    "status": "PENDING_RULES",
                     "items": data["items"],
-                    "total_items_qty": item_count,
-                    "shipping_eur": round(shipping_eur, 2),
-                    "tax_eur": round(tax_amount, 2),
-                    "fees_eur": round(rule.custom_fees, 2),
-                    "total_eur": round(total_final, 2)
+                    "shipping_eur": 0.0,
+                    "tax_eur": 0.0,
+                    "total_eur": round(shop_total, 2)
                 })
-                grand_total_eur += total_final
+                grand_total_eur += shop_total
+                continue
 
-            return {
-                "breakdown": breakdown,
-                "grand_total_eur": round(grand_total_eur, 2),
-                "user_location": user_location,
-                "timestamp": datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
-            }
+            strategy = rule.strategy_key
+
+            # Caso A: BigBadToyStore (USD $8/item + 21% IVA)
+            if rule.shop_name == "BigBadToyStore" or strategy == "bbts_flat_rate":
+                rate = CurrencyService.get_usd_to_eur_rate()
+                shipping_usd = 8.00 * item_count
+                shipping_eur = shipping_usd * rate
+                total_taxable = base_total + shipping_eur
+                tax_amount = total_taxable * 0.21 # 21% IVA
+                total_final = total_taxable + tax_amount + rule.custom_fees
+
+            # Caso B: P2P Marketplaces (Ebay.es, Wallapop, Vinted): Envío 5€ + 2% Seguro
+            elif strategy == "p2p_insurance" or rule.shop_name in ("Ebay.es", "Wallapop", "Vinted"):
+                shipping_eur = 5.00
+                tax_amount = base_total * 0.02 # Seguro de protección 2%
+                total_final = base_total + shipping_eur + tax_amount + rule.custom_fees
+
+            # Caso C: Triguetech (7.00€ tarifa plana fija por pedido)
+            elif strategy == "triguetech_flat_rate" or rule.shop_name == "Triguetech":
+                shipping_eur = 7.00
+                tax_amount = 0.0
+                total_final = base_total + shipping_eur + rule.custom_fees
+
+            # Caso C2: ToymiEU (15.00€ tarifa plana fija por pedido)
+            elif strategy == "toymieu_flat_rate" or rule.shop_name == "ToymiEU":
+                shipping_eur = 15.00
+                tax_amount = 0.0
+                total_final = base_total + shipping_eur + rule.custom_fees
+
+            # Caso D: Tiendas estándar (Frikimaz > 69€ gratis, etc.)
+            else:
+                shipping_eur = rule.base_shipping
+                if rule.free_shipping_threshold > 0 and base_total >= rule.free_shipping_threshold:
+                    shipping_eur = 0.0
+                
+                total_taxable = base_total + shipping_eur
+                total_final = (total_taxable * rule.vat_multiplier) + rule.custom_fees
+                tax_amount = total_taxable * (rule.vat_multiplier - 1)
+
+            breakdown.append({
+                "shop": shop_name,
+                "status": "CALCULATED",
+                "items": data["items"],
+                "total_items_qty": item_count,
+                "shipping_eur": round(shipping_eur, 2),
+                "tax_eur": round(tax_amount, 2),
+                "fees_eur": round(rule.custom_fees, 2),
+                "total_eur": round(total_final, 2)
+            })
+            grand_total_eur += total_final
+
+        return {
+            "breakdown": breakdown,
+            "grand_total_eur": round(grand_total_eur, 2),
+            "user_location": user_location,
+            "timestamp": datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
+        }

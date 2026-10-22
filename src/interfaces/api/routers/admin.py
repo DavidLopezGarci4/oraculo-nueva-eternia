@@ -1,10 +1,9 @@
-import asyncio
-import json
 from typing import List
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from loguru import logger
 from sqlalchemy import desc, func, or_
+from sqlalchemy.orm import joinedload
 
 from src.core.security import SecurityShield
 from src.domain.models import (
@@ -16,7 +15,7 @@ from src.domain.models import (
     ProductModel,
 )
 from src.infrastructure.database_cloud import SessionCloud
-from src.interfaces.api.deps import verify_api_key
+from src.interfaces.api.deps import invalidate_user_auth_cache, verify_api_key
 from src.interfaces.api.schemas import (
     AnomalyValidationRequest,
     CreateUserRequest,
@@ -34,7 +33,7 @@ router = APIRouter(prefix="/api/admin", tags=["admin"])
 
 
 @router.post("/users/create", response_model=StatusMessageOutput, dependencies=[Depends(verify_api_key)])
-async def create_user(request: CreateUserRequest):
+def create_user(request: CreateUserRequest):
     with SessionCloud() as db:
         exists = db.query(UserModel).filter(
             or_(UserModel.email == request.email, UserModel.username == request.username)
@@ -51,13 +50,14 @@ async def create_user(request: CreateUserRequest):
         db.add(new_user)
         db.commit()
         db.refresh(new_user)
+        invalidate_user_auth_cache(new_user.id)
 
         logger.info(f"👤 Nuevo Guardián creado: {new_user.username} ({new_user.role})")
         return {"status": "success", "message": f"Héroe {new_user.username} registrado."}
 
 
 @router.get("/users", response_model=List[HeroOutput], dependencies=[Depends(verify_api_key)])
-async def get_all_heroes():
+def get_all_heroes():
     with SessionCloud() as db:
         counts = db.query(
             CollectionItemModel.owner_id,
@@ -84,7 +84,7 @@ async def get_all_heroes():
 
 
 @router.patch("/users/{user_id}/role", response_model=StatusMessageOutput, dependencies=[Depends(verify_api_key)])
-async def update_hero_role(user_id: int, request: UserRoleUpdateRequest):
+def update_hero_role(user_id: int, request: UserRoleUpdateRequest):
     with SessionCloud() as db:
         user = db.query(UserModel).filter(UserModel.id == user_id).first()
         if not user:
@@ -92,11 +92,12 @@ async def update_hero_role(user_id: int, request: UserRoleUpdateRequest):
 
         user.role = request.role
         db.commit()
+        invalidate_user_auth_cache(user_id)
         return {"status": "success", "message": f"Rango de {user.username} actualizado a {request.role}"}
 
 
 @router.post("/users/{user_id}/reset-password", response_model=StatusMessageOutput, dependencies=[Depends(verify_api_key)])
-async def reset_hero_password(user_id: int):
+def reset_hero_password(user_id: int):
     with SessionCloud() as db:
         user = db.query(UserModel).filter(UserModel.id == user_id).first()
         if not user:
@@ -107,7 +108,7 @@ async def reset_hero_password(user_id: int):
 
 
 @router.delete("/users/{user_id}", response_model=StatusMessageOutput, dependencies=[Depends(verify_api_key)])
-async def delete_hero(user_id: int):
+def delete_hero(user_id: int):
     with SessionCloud() as db:
         user = db.query(UserModel).filter(UserModel.id == user_id).first()
         if not user:
@@ -121,15 +122,14 @@ async def delete_hero(user_id: int):
         username = user.username
         db.delete(user)
         db.commit()
+        invalidate_user_auth_cache(user_id)
 
         logger.warning(f"🗑️ Héroe Eliminado: '{username}' (ID: {user_id}) ha sido borrado por el Arquitecto.")
         return {"status": "success", "message": f"Justicia del Arquitecto: El héroe '{username}' ha sido purgado de los registros."}
 
 
 @router.get("/duplicates", response_model=List[DuplicateGroupOutput], dependencies=[Depends(verify_api_key)])
-async def get_duplicates():
-    from src.domain.models import ProductModel
-
+def get_duplicates():
     with SessionCloud() as db:
         products = db.query(ProductModel).all()
         duplicates = []
@@ -157,7 +157,7 @@ async def get_duplicates():
 
 
 @router.post("/nexus/sync", response_model=StatusMessageOutput, dependencies=[Depends(verify_api_key)])
-async def sync_nexus(background_tasks: BackgroundTasks):
+def sync_nexus(background_tasks: BackgroundTasks):
     try:
         from src.application.services.nexus_service import NexusService
 
@@ -171,7 +171,7 @@ async def sync_nexus(background_tasks: BackgroundTasks):
 
 
 @router.post("/nexus/sync/vintage", response_model=StatusMessageOutput, dependencies=[Depends(verify_api_key)])
-async def sync_nexus_vintage(background_tasks: BackgroundTasks):
+def sync_nexus_vintage(background_tasks: BackgroundTasks):
     try:
         from src.application.services.nexus_vintage_service import NexusVintageService
 
@@ -184,9 +184,8 @@ async def sync_nexus_vintage(background_tasks: BackgroundTasks):
         raise HTTPException(status_code=500, detail=f"No se pudo iniciar Nexus Vintage: {str(e)}")
 
 
-
 @router.post("/validate-anomaly", response_model=StatusMessageOutput, dependencies=[Depends(verify_api_key)])
-async def validate_anomaly(request: AnomalyValidationRequest):
+def validate_anomaly(request: AnomalyValidationRequest):
     with SessionCloud() as db:
         item = db.query(PendingMatchModel).filter(PendingMatchModel.id == request.id).first()
         if not item:
@@ -207,14 +206,21 @@ async def validate_anomaly(request: AnomalyValidationRequest):
 
 
 @router.post("/reset-smartmatches", response_model=StatusMessageOutput, dependencies=[Depends(verify_api_key)])
-async def reset_smartmatches():
+def reset_smartmatches():
     with SessionCloud() as db:
-        all_offers = db.query(OfferModel).filter(OfferModel.product_id.isnot(None)).all()
+        all_offers = (
+            db.query(OfferModel)
+            .options(joinedload(OfferModel.product))
+            .filter(OfferModel.product_id.isnot(None))
+            .all()
+        )
+        existing_pending_urls = {
+            row[0] for row in db.query(PendingMatchModel.url).all()
+        }
 
         reverted_count = 0
         for offer in all_offers:
-            exists = db.query(PendingMatchModel).filter(PendingMatchModel.url == offer.url).first()
-            if not exists:
+            if offer.url not in existing_pending_urls:
                 product_name = offer.product.name if offer.product else "Unknown"
 
                 pending = PendingMatchModel(
@@ -226,6 +232,7 @@ async def reset_smartmatches():
                     image_url=None,
                 )
                 db.add(pending)
+                existing_pending_urls.add(offer.url)
 
             db.delete(offer)
             reverted_count += 1
@@ -238,27 +245,27 @@ async def reset_smartmatches():
 
 
 @router.get("/devices", response_model=List[AuthorizedDeviceOutput], dependencies=[Depends(verify_api_key)])
-async def get_all_devices():
+def get_all_devices():
     with SessionCloud() as db:
         devices = db.query(AuthorizedDeviceModel).order_by(desc(AuthorizedDeviceModel.created_at)).all()
         return devices
 
 
 @router.post("/devices/{device_id}/authorize", response_model=StatusMessageOutput, dependencies=[Depends(verify_api_key)])
-async def authorize_device(device_id: str):
+def authorize_device(device_id: str):
     with SessionCloud() as db:
         success = SecurityShield.authorize_device(device_id, db)
         if not success:
             raise HTTPException(status_code=404, detail="Dispositivo no encontrado")
 
         alert_msg = f"✅ *ORÁCULO INFORMA*\n\nEl dispositivo `{device_id}` ha sido **AUTORIZADO** con éxito."
-        asyncio.create_task(SecurityShield.send_telegram_alert(alert_msg))
+        SecurityShield._dispatch_telegram_alert_from_sync(alert_msg)
 
         return {"status": "success", "message": f"Dispositivo {device_id} autorizado."}
 
 
 @router.delete("/devices/{device_id}", response_model=StatusMessageOutput, dependencies=[Depends(verify_api_key)])
-async def revoke_device(device_id: str):
+def revoke_device(device_id: str):
     with SessionCloud() as db:
         device = db.query(AuthorizedDeviceModel).filter(
             AuthorizedDeviceModel.device_id == device_id
@@ -268,11 +275,12 @@ async def revoke_device(device_id: str):
 
         db.delete(device)
         db.commit()
+        SecurityShield.invalidate_device_cache(device_id)
         return {"status": "success", "message": f"Acceso revocado para {device_id}."}
 
 
 @router.get("/temporary-products", response_model=List[TemporaryProductOutput], dependencies=[Depends(verify_api_key)])
-async def get_temporary_products():
+def get_temporary_products():
     with SessionCloud() as db:
         query = db.query(ProductModel).filter(
             or_(
@@ -280,11 +288,26 @@ async def get_temporary_products():
                 ProductModel.figure_id.like("ORIG-%")
             )
         ).all()
-        
+
+        if not query:
+            return []
+
+        product_ids = [p.id for p in query]
+        offer_counts = dict(
+            db.query(OfferModel.product_id, func.count(OfferModel.id))
+            .filter(OfferModel.product_id.in_(product_ids))
+            .group_by(OfferModel.product_id)
+            .all()
+        )
+        collection_counts = dict(
+            db.query(CollectionItemModel.product_id, func.count(CollectionItemModel.id))
+            .filter(CollectionItemModel.product_id.in_(product_ids))
+            .group_by(CollectionItemModel.product_id)
+            .all()
+        )
+
         results = []
         for p in query:
-            offer_count = db.query(func.count(OfferModel.id)).filter(OfferModel.product_id == p.id).scalar()
-            collection_count = db.query(func.count(CollectionItemModel.id)).filter(CollectionItemModel.product_id == p.id).scalar()
             results.append({
                 "id": p.id,
                 "name": p.name,
@@ -292,21 +315,21 @@ async def get_temporary_products():
                 "sub_category": p.sub_category,
                 "image_url": p.image_url,
                 "is_vintage": p.is_vintage,
-                "offer_count": offer_count,
-                "collection_count": collection_count
+                "offer_count": offer_counts.get(p.id, 0),
+                "collection_count": collection_counts.get(p.id, 0),
             })
         return results
 
 
 @router.get("/ssl/status", response_model=SSLStatusOutput, dependencies=[Depends(verify_api_key)])
-async def get_ssl_status():
+def get_ssl_status():
     """Obtiene la telemetría, vigencia y fechas de renovación del certificado SSL."""
     from src.application.services.ssl_service import SSLService
     return SSLService.get_certificate_status()
 
 
 @router.post("/ssl/renew", response_model=StatusMessageOutput, dependencies=[Depends(verify_api_key)])
-async def renew_ssl(background_tasks: BackgroundTasks, request: SSLRenewRequest = SSLRenewRequest()):
+def renew_ssl(background_tasks: BackgroundTasks, request: SSLRenewRequest = SSLRenewRequest()):
     """Dispara la renovación manual/forzada de certificados SSL en segundo plano."""
     from src.application.services.ssl_service import SSLService
     background_tasks.add_task(SSLService.renew_ssl_certificate, force=request.force)
@@ -314,5 +337,3 @@ async def renew_ssl(background_tasks: BackgroundTasks, request: SSLRenewRequest 
         "status": "success",
         "message": f"Iniciando proceso de renovación de certificados SSL ({'Forzado' if request.force else 'Estándar'}) en segundo plano. Recibirás una alerta en Telegram con el resultado."
     }
-
-
