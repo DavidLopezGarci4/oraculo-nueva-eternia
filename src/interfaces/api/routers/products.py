@@ -486,12 +486,13 @@ async def get_market_analytics(product_id: int):
 
 @router.get("/api/products/{product_id}/price-history", response_model=List[ProductPriceHistoryOutput])
 async def get_product_price_history(product_id: int):
-    from src.domain.models import PriceHistoryModel
+    from src.domain.models import PriceHistoryModel, ProductMonthlyStatsModel
 
     with SessionCloud() as db:
         offers = db.query(OfferModel).filter(OfferModel.product_id == product_id).all()
 
         shop_groups = defaultdict(list)
+        granular_months_by_source = defaultdict(set)
         for offer in offers:
             history = (
                 db.query(PriceHistoryModel)
@@ -501,11 +502,35 @@ async def get_product_price_history(product_id: int):
             )
             for h in history:
                 date_key = h.recorded_at.date().isoformat()
+                granular_months_by_source[offer.source_type or "Retail"].add((h.recorded_at.year, h.recorded_at.month))
                 shop_groups[offer.shop_name].append({
                     "date": date_key,
                     "price": h.price,
                     "timestamp": h.recorded_at,
                 })
+
+        # Incorporar estadísticas mensuales compactadas (> 6 meses) para no perder histórico antiguo
+        monthly_stats = (
+            db.query(ProductMonthlyStatsModel)
+            .filter(ProductMonthlyStatsModel.product_id == product_id)
+            .order_by(ProductMonthlyStatsModel.year.asc(), ProductMonthlyStatsModel.month.asc())
+            .all()
+        )
+        for ms in monthly_stats:
+            if not ms.year or not ms.month:
+                continue
+            src = ms.source_type or "Retail"
+            ym = (int(ms.year), int(ms.month))
+            if ym not in granular_months_by_source[src]:
+                rep_price = float(ms.median_price or ms.avg_price or 0.0)
+                if rep_price > 0:
+                    dt_point = datetime(ym[0], ym[1], 1)
+                    shop_label = f"Histórico Mensual ({src})"
+                    shop_groups[shop_label].append({
+                        "date": dt_point.date().isoformat(),
+                        "price": round(rep_price, 2),
+                        "timestamp": dt_point,
+                    })
 
         results = []
         for shop_name, history_points in shop_groups.items():

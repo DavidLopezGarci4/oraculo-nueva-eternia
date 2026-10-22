@@ -22,25 +22,34 @@ class MarketAnalyticsService:
     """
 
     @classmethod
-    def get_market_index(cls, period: str = "3M", user_id: int = 2) -> Dict[str, Any]:
+    def get_market_index(cls, period: str = "3M", user_id: int = 2, db_session=None) -> Dict[str, Any]:
         """
         Calcula el Índice Bursátil MOTU (EMI) bajo estándar financiero cuantitativo:
-        - Ponderación exponencial continua por recencia (Half-Life = 30 días).
+        - Horizonte dinámico (1M, 3M, 6M, 1A, ALL) con ventana y half-life EMA adaptados al periodo.
         - Filtrado estadístico de valores atípicos (IQR Interquartile Range).
-        - Fair Market Value (FMV) por figura vs MSRP de salida.
-        - Métricas de rendimiento de la colección del usuario (Plusvalía, ROI, Alpha).
-        - Serie temporal continua con fechas reales y volumen rastreado.
+        - Fair Market Value (FMV) por figura priorizando ofertas activas y reutilizando ProductMonthlyStatsModel.
+        - Serie temporal de cesta (Carry-Forward / Interpolación Lineal por Anclas Reales) sin ondas sintéticas.
         """
         import math
+        from contextlib import nullcontext
+
         now = datetime.now(timezone.utc)
-        days_map = {"1M": 30, "3M": 90, "6M": 180, "1A": 365, "ALL": 730}
-        days = days_map.get(period.upper(), 90)
-        start_date = now - timedelta(days=days)
-
-        half_life_days = 30.0
+        period_key = (period or "3M").upper()
+        period_cfg = {
+            "1M": {"days": 30, "num_points": 30, "half_life": 10.0},
+            "3M": {"days": 90, "num_points": 30, "half_life": 21.0},
+            "6M": {"days": 180, "num_points": 30, "half_life": 45.0},
+            "1A": {"days": 365, "num_points": 32, "half_life": 90.0},
+            "ALL": {"days": 730, "num_points": 35, "half_life": 120.0},
+        }
+        cfg = period_cfg.get(period_key, period_cfg["3M"])
+        days = cfg["days"]
+        half_life_days = cfg["half_life"]
         decay_constant = math.log(2) / half_life_days
+        available_periods = ["1M", "3M", "6M", "1A", "ALL"]
 
-        with SessionCloud() as db:
+        ctx = nullcontext(db_session) if db_session is not None else SessionCloud()
+        with ctx as db:
             # 1. Obtener todos los productos modernos de Origins y Crossovers
             products = db.query(ProductModel).filter(
                 ProductModel.is_vintage == False
@@ -51,23 +60,98 @@ class MarketAnalyticsService:
                     "current_index_value": 28.50,
                     "base_msrp_value": 22.00,
                     "trend_pct": 0.0,
+                    "period_change_eur": 0.0,
+                    "period_high": 28.50,
+                    "period_low": 28.50,
+                    "data_span_days": 0,
+                    "available_periods": available_periods,
                     "trend_direction": "stable",
                     "status_label": "Mercado Estable",
-                    "period": period,
+                    "period": period_key,
                     "historical_series": [],
                     "waves_breakdown": [],
                     "portfolio_metrics": None
                 }
 
-            # 2. Pre-cargar todas las ofertas de mercado secundario y retail
+            product_ids = {p.id for p in products}
+
+            # 2. Pre-cargar ofertas, estadísticas mensuales compactadas (>6M) e historial granular (<=6M)
             offers = db.query(OfferModel).filter(OfferModel.price > 0).all()
             prod_offers: Dict[int, List[OfferModel]] = {}
+            earliest_real_dt = None
+
             for o in offers:
                 pid = getattr(o, "product_id", None)
-                if pid is not None:
+                if pid in product_ids:
                     prod_offers.setdefault(pid, []).append(o)
+                    for dt_cand in (o.first_seen_at, o.last_seen):
+                        if dt_cand is not None:
+                            dt_utc = dt_cand if dt_cand.tzinfo else dt_cand.replace(tzinfo=timezone.utc)
+                            if earliest_real_dt is None or dt_utc < earliest_real_dt:
+                                earliest_real_dt = dt_utc
 
-            # 3. Calcular Fair Market Value (FMV) para cada producto con decaimiento exponencial y filtro IQR
+            monthly_rows = (
+                db.query(ProductMonthlyStatsModel)
+                .filter(
+                    ProductMonthlyStatsModel.avg_price > 4.0,
+                    ProductMonthlyStatsModel.avg_price < 400.0,
+                )
+                .order_by(ProductMonthlyStatsModel.year.asc(), ProductMonthlyStatsModel.month.asc())
+                .all()
+            )
+
+            # Mapa mensual por producto: pid -> {(year, month): (price_est, offers_count)}
+            prod_monthly_map: Dict[int, Dict[tuple, tuple]] = {}
+            latest_monthly_fallback: Dict[int, float] = {}
+            for mr in monthly_rows:
+                pid = mr.product_id
+                if pid not in product_ids or not mr.year or not mr.month:
+                    continue
+                ym_key = (int(mr.year), int(mr.month))
+                rep_price = float(mr.median_price or mr.avg_price or 0.0)
+                if rep_price <= 0:
+                    continue
+                cnt = max(1, int(mr.offers_count or 1))
+                m_dt = datetime(ym_key[0], ym_key[1], 1, tzinfo=timezone.utc)
+                if earliest_real_dt is None or m_dt < earliest_real_dt:
+                    earliest_real_dt = m_dt
+
+                p_map = prod_monthly_map.setdefault(pid, {})
+                if ym_key in p_map:
+                    prev_p, prev_c = p_map[ym_key]
+                    total_c = prev_c + cnt
+                    p_map[ym_key] = ((prev_p * prev_c + rep_price * cnt) / total_c, total_c)
+                else:
+                    p_map[ym_key] = (rep_price, cnt)
+                latest_monthly_fallback[pid] = p_map[ym_key][0]
+
+            # Cargar historial granular por producto
+            raw_history = (
+                db.query(
+                    OfferModel.product_id,
+                    PriceHistoryModel.price,
+                    PriceHistoryModel.recorded_at,
+                )
+                .join(OfferModel, PriceHistoryModel.offer_id == OfferModel.id)
+                .filter(
+                    PriceHistoryModel.price > 4.0,
+                    PriceHistoryModel.price < 400.0,
+                )
+                .order_by(PriceHistoryModel.recorded_at.asc())
+                .all()
+            )
+
+            prod_daily_map: Dict[int, Dict[str, List[float]]] = {}
+            for pid, price_val, rec_at in raw_history:
+                if pid not in product_ids or not rec_at:
+                    continue
+                rec_utc = rec_at if rec_at.tzinfo else rec_at.replace(tzinfo=timezone.utc)
+                if earliest_real_dt is None or rec_utc < earliest_real_dt:
+                    earliest_real_dt = rec_utc
+                d_key = rec_utc.strftime("%Y-%m-%d")
+                prod_daily_map.setdefault(pid, {}).setdefault(d_key, []).append(float(price_val))
+
+            # 3. Calcular Fair Market Value (FMV) adaptado al half_life del periodo
             product_fmv_map: Dict[int, float] = {}
             waves_breakdown: Dict[str, Dict[str, Any]] = {}
 
@@ -79,7 +163,8 @@ class MarketAnalyticsService:
                         "figures_count": 0,
                         "avg_msrp": 0.0,
                         "avg_market": 0.0,
-                        "revaluation_pct": 0.0
+                        "revaluation_pct": 0.0,
+                        "period_change_pct": 0.0,
                     }
 
                 msrp = float(p.retail_price) if (p.retail_price and p.retail_price > 0) else 19.99
@@ -93,11 +178,11 @@ class MarketAnalyticsService:
                         if o_date.tzinfo is None:
                             o_date = o_date.replace(tzinfo=timezone.utc)
                         diff_days = max(0.0, (now - o_date).total_seconds() / 86400.0)
-                        w = math.exp(-decay_constant * diff_days)
+                        avail_boost = 1.25 if getattr(o, "is_available", True) else 0.75
+                        w = math.exp(-decay_constant * diff_days) * avail_boost
                         prices.append(float(o.price))
                         weights.append(w)
 
-                    # Filtrado estadístico IQR si hay 4 o más ofertas
                     if len(prices) >= 4:
                         sorted_indices = sorted(range(len(prices)), key=lambda k: prices[k])
                         sorted_p = [prices[i] for i in sorted_indices]
@@ -117,6 +202,8 @@ class MarketAnalyticsService:
 
                     total_w = sum(weights)
                     fmv = sum(p_val * w_val for p_val, w_val in zip(prices, weights)) / max(0.0001, total_w)
+                elif p.id in latest_monthly_fallback:
+                    fmv = latest_monthly_fallback[p.id]
                 else:
                     fmv = float(p.p25_price) if (p.p25_price and p.p25_price > 0) else (float(p.avg_market_price) if (p.avg_market_price and p.avg_market_price > 0) else msrp)
 
@@ -125,7 +212,6 @@ class MarketAnalyticsService:
                 waves_breakdown[wave_key]["avg_msrp"] += msrp
                 waves_breakdown[wave_key]["avg_market"] += fmv
 
-            # Consolidar medias por subcategoría / Waves
             total_market_sum = 0.0
             total_msrp_sum = 0.0
             total_count = len(products)
@@ -164,16 +250,16 @@ class MarketAnalyticsService:
                     paid = float(raw_paid) if (raw_paid and raw_paid > 0) else 0.0
                     item_pid = getattr(item, "product_id", getattr(item, "id", 0))
                     val = product_fmv_map.get(item_pid, 24.99)
-                    
+
                     total_invested += paid
                     total_current_val += val
 
                     if paid > 0:
                         diff = val - paid
-                        if diff >= val * 0.20: # Gangas conseguidas (al menos 20% bajo mercado)
+                        if diff >= val * 0.20:
                             bargains_count += 1
                             total_savings_eur += diff
-                        elif paid >= val * 1.15: # Sobrepuja
+                        elif paid >= val * 1.15:
                             overpaid_count += 1
 
                 net_profit_eur = round(total_current_val - total_invested, 2)
@@ -192,85 +278,124 @@ class MarketAnalyticsService:
                     "alpha_percentage": alpha_pct
                 }
 
-            # 5. Generar Serie Histórica Temporal Continua
-            # Agrupar PriceHistoryModel por día
-            history_rows = db.query(
-                func.date(PriceHistoryModel.recorded_at).label("record_date"),
-                func.avg(PriceHistoryModel.price).label("avg_price"),
-                func.count(PriceHistoryModel.id).label("sample_count")
-            ).filter(
-                PriceHistoryModel.recorded_at >= start_date.replace(tzinfo=None),
-                PriceHistoryModel.price > 4.0,
-                PriceHistoryModel.price < 400.0
-            ).group_by(
-                func.date(PriceHistoryModel.recorded_at)
-            ).order_by(
-                func.date(PriceHistoryModel.recorded_at).asc()
-            ).all()
+            # 5. Construir Anclas Reales por Producto (Mensual Compactado >6M + Diario Granular <=6M)
+            import statistics as py_stats
 
-            # Compacted monthly history (ProductMonthlyStatsModel) for long horizons
-            monthly_rows = db.query(
-                ProductMonthlyStatsModel.year,
-                ProductMonthlyStatsModel.month,
-                func.avg(ProductMonthlyStatsModel.avg_price).label("avg_price"),
-                func.sum(ProductMonthlyStatsModel.offers_count).label("sample_count"),
-            ).filter(
-                ProductMonthlyStatsModel.avg_price > 4.0,
-                ProductMonthlyStatsModel.avg_price < 400.0,
-            ).group_by(
-                ProductMonthlyStatsModel.year,
-                ProductMonthlyStatsModel.month,
-            ).all()
+            prod_anchors: Dict[int, List[tuple]] = {}
+            for p in products:
+                pid = p.id
+                anchors_dict: Dict[str, tuple] = {}
+
+                # A) Anclas granulares diarias de PriceHistoryModel
+                daily_entries = prod_daily_map.get(pid, {})
+                granular_months = set()
+                for d_str, p_list in daily_entries.items():
+                    dt_obj = datetime.strptime(d_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+                    granular_months.add((dt_obj.year, dt_obj.month))
+                    med_p = float(py_stats.median(p_list))
+                    anchors_dict[d_str] = (dt_obj, med_p, len(p_list))
+
+                # B) Anclas mensuales compactadas de ProductMonthlyStatsModel para meses sin detalle granular
+                for (yr, mo), (m_price, m_cnt) in prod_monthly_map.get(pid, {}).items():
+                    if (yr, mo) not in granular_months:
+                        m_dt = datetime(yr, mo, 15, tzinfo=timezone.utc)
+                        d_str = m_dt.strftime("%Y-%m-%d")
+                        anchors_dict[d_str] = (m_dt, float(m_price), int(m_cnt))
+
+                sorted_anc = sorted(anchors_dict.values(), key=lambda x: x[0])
+                # Asegurar ancla final en `now` con el FMV actual
+                fmv_now = product_fmv_map[pid]
+                if not sorted_anc:
+                    sorted_anc.append((now, fmv_now, 1))
+                elif (now - sorted_anc[-1][0]).total_seconds() > 3600:
+                    sorted_anc.append((now, fmv_now, 1))
+                else:
+                    sorted_anc[-1] = (now, fmv_now, sorted_anc[-1][2])
+
+                prod_anchors[pid] = sorted_anc
+
+            def eval_product_at(pid: int, target_dt: datetime) -> float:
+                anc = prod_anchors.get(pid, [])
+                if not anc:
+                    return product_fmv_map.get(pid, base_msrp)
+                if target_dt <= anc[0][0]:
+                    return anc[0][1]
+                if target_dt >= anc[-1][0]:
+                    return anc[-1][1]
+                for idx in range(len(anc) - 1):
+                    t0, v0, _ = anc[idx]
+                    t1, v1, _ = anc[idx + 1]
+                    if t0 <= target_dt <= t1:
+                        span = (t1 - t0).total_seconds()
+                        if span <= 0:
+                            return v1
+                        ratio = (target_dt - t0).total_seconds() / span
+                        return v0 + ratio * (v1 - v0)
+                return anc[-1][1]
+
+            # Determinar el inicio efectivo de la ventana temporal sin inventar datos previos al origen real
+            requested_start = now - timedelta(days=days)
+            if earliest_real_dt is not None:
+                if period_key == "ALL":
+                    effective_start = min(earliest_real_dt, now - timedelta(days=7))
+                else:
+                    effective_start = max(requested_start, min(earliest_real_dt, now - timedelta(days=7)))
+            else:
+                effective_start = requested_start
+
+            span_seconds = max(86400.0, (now - effective_start).total_seconds())
+            effective_days = max(1, int(round(span_seconds / 86400.0)))
+            num_points = min(max(7, effective_days), cfg["num_points"])
+            step_seconds = span_seconds / max(1, num_points)
 
             historical_series = []
-            hist_by_date = {str(r.record_date): (float(r.avg_price), int(r.sample_count)) for r in history_rows}
-            monthly_by_ym = {
-                f"{int(r.year):04d}-{int(r.month):02d}": (float(r.avg_price), int(r.sample_count or 1))
-                for r in monthly_rows
-                if r.year and r.month and r.avg_price
-            }
+            for i in range(num_points + 1):
+                pt_dt = effective_start + timedelta(seconds=i * step_seconds)
+                if i == num_points:
+                    pt_dt = now
+                d_str = pt_dt.strftime("%Y-%m-%d")
+                ym_key = (pt_dt.year, pt_dt.month)
 
-            num_points = min(days, 35) # entre 20 y 35 puntos para una curva suave y clara
-            step_days = max(1, days // num_points)
+                basket_vals = [eval_product_at(p.id, pt_dt) for p in products]
+                idx_val = round(sum(basket_vals) / max(1, len(basket_vals)), 2)
 
-            for i in range(num_points, -1, -1):
-                d_point = now - timedelta(days=i * step_days)
-                d_str = d_point.strftime("%Y-%m-%d")
-                ym_str = d_point.strftime("%Y-%m")
+                # Volumen observado en torno al bucket
+                vol = 0
+                for p in products:
+                    if d_str in prod_daily_map.get(p.id, {}):
+                        vol += len(prod_daily_map[p.id][d_str])
+                    elif ym_key in prod_monthly_map.get(p.id, {}):
+                        vol += prod_monthly_map[p.id][ym_key][1]
+                if vol == 0:
+                    vol = len(prod_offers)
 
-                if d_str in hist_by_date:
-                    val, count = hist_by_date[d_str]
-                    historical_series.append({
-                        "date": d_str,
-                        "index_value": round(val, 2),
-                        "volume": count
-                    })
-                elif ym_str in monthly_by_ym:
-                    val, count = monthly_by_ym[ym_str]
-                    historical_series.append({
-                        "date": d_str,
-                        "index_value": round(val, 2),
-                        "volume": count
-                    })
-                else:
-                    # Interpolación estocástica suave sobre la tendencia FMV
-                    progress = (num_points - i) / max(1, num_points)
-                    trend_drift = math.sin(progress * math.pi * 2.5) * 0.65 + math.cos(progress * math.pi * 1.5) * 0.45
-                    base_prog = base_msrp + (current_index - base_msrp) * (0.4 + 0.6 * progress)
-                    interpolated_val = max(18.0, base_prog + trend_drift)
-                    historical_series.append({
-                        "date": d_str,
-                        "index_value": round(interpolated_val, 2),
-                        "volume": int(total_count * (0.6 + 0.4 * progress))
-                    })
+                historical_series.append({
+                    "date": d_str,
+                    "index_value": idx_val,
+                    "volume": vol
+                })
 
-            # Asegurar que el último punto es exactamente el valor de mercado actual
             if historical_series:
                 historical_series[-1]["index_value"] = current_index
                 historical_series[-1]["date"] = now.strftime("%Y-%m-%d")
 
-            # Calcular la tendencia real del periodo
-            start_index = historical_series[0]["index_value"] if historical_series else current_index
+            # Calcular variación por subcategoría dentro del periodo seleccionado
+            for p in products:
+                wave_key = (p.sub_category or "Origins").strip()
+                waves_breakdown[wave_key].setdefault("_start_sum", 0.0)
+                waves_breakdown[wave_key]["_start_sum"] += eval_product_at(p.id, effective_start)
+
+            for k, v in waves_breakdown.items():
+                cnt = max(1, v["figures_count"])
+                start_wave_avg = v.pop("_start_sum", v["avg_market"] * cnt) / cnt
+                if start_wave_avg > 0:
+                    v["period_change_pct"] = round(((v["avg_market"] - start_wave_avg) / start_wave_avg) * 100, 1)
+
+            series_vals = [pt["index_value"] for pt in historical_series] if historical_series else [current_index]
+            start_index = series_vals[0]
+            period_high = round(max(series_vals), 2)
+            period_low = round(min(series_vals), 2)
+            period_change_eur = round(current_index - start_index, 2)
             trend_pct = round(((current_index - start_index) / max(1.0, start_index)) * 100, 1)
 
             if trend_pct >= 4.0:
@@ -283,16 +408,20 @@ class MarketAnalyticsService:
                 direction = "stable"
                 status_label = "Mercado Consolidado y Saludable"
 
-            # Ordenar subcategorías por revalorización descendente
             sorted_waves = sorted(list(waves_breakdown.values()), key=lambda w: w["revaluation_pct"], reverse=True)
 
             return {
                 "current_index_value": current_index,
                 "base_msrp_value": base_msrp,
                 "trend_pct": trend_pct,
+                "period_change_eur": period_change_eur,
+                "period_high": period_high,
+                "period_low": period_low,
+                "data_span_days": effective_days,
+                "available_periods": available_periods,
                 "trend_direction": direction,
                 "status_label": status_label,
-                "period": period,
+                "period": period_key,
                 "historical_series": historical_series,
                 "waves_breakdown": sorted_waves,
                 "portfolio_metrics": portfolio_metrics
