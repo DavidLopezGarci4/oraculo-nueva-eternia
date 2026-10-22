@@ -99,8 +99,11 @@ def _serialize_suggestion(p, score: float, reason: str) -> dict:
     }
 
 
-def build_suggestion_context(products: list) -> dict:
-    """Prepara índices y pesos IDF con el catálogo real de la petición (una vez por request)."""
+def build_suggestion_context(products: list, learned_links: list | None = None) -> dict:
+    """
+    Prepara índices y pesos IDF con el catálogo real de la petición (una vez por request).
+    learned_links: memoria de vinculaciones manuales (src.core.link_memory), opcional.
+    """
     from src.core.weight_engine import weights_manager
 
     weights_manager.refresh_from_products(products)
@@ -112,10 +115,12 @@ def build_suggestion_context(products: list) -> dict:
         "token_index": token_index,
         "ean_index": ean_index,
         "companion_lookup": build_companion_lookup(products),
+        "products_by_id": {p.id: p for p in products},
+        "learned_links": learned_links or [],
     }
 
 
-def compute_suggestions(item, ctx: dict) -> list:
+def compute_suggestions(item, ctx: dict, use_memory: bool = True) -> list:
     """
     Calcula las predicciones de un anuncio del Purgatorio (ordenadas, deterministas).
     Devuelve hasta 5 modernas (+ acompañantes Vintage Sculpt) seguidas de hasta 5 vintage,
@@ -125,6 +130,7 @@ def compute_suggestions(item, ctx: dict) -> list:
     from src.core.text_normalization import tokenize
     from src.core.weight_engine import weights_manager
     from src.core.purgatory_companions import inject_vintage_sculpt_companions
+    from src.core.link_memory import find_learned_hits, apply_learned_hits
 
     search_tokens = tokenize(item.scraped_name or "") - _INDEX_STOP_WORDS
 
@@ -145,6 +151,11 @@ def compute_suggestions(item, ctx: dict) -> list:
         if score > MIN_SUGGESTION_SCORE:
             suggestions.append(_serialize_suggestion(p, score, reason))
 
+    # Refuerzo por vinculaciones manuales anteriores (nunca vincula solo, máx. 99)
+    if use_memory and ctx.get("learned_links"):
+        hits = find_learned_hits(item.scraped_name or "", ctx["learned_links"])
+        suggestions = apply_learned_hits(suggestions, hits, ctx["products_by_id"], _serialize_suggestion)
+
     suggestions.sort(key=_suggestion_sort_key)
     modern = [s for s in suggestions if not s.get("is_vintage")][:MAX_MODERN_SUGGESTIONS]
     vintage = [s for s in suggestions if s.get("is_vintage")][:MAX_VINTAGE_SUGGESTIONS]
@@ -157,6 +168,15 @@ def compute_suggestions(item, ctx: dict) -> list:
         _serialize_suggestion,
     )
     return modern + vintage
+
+
+def _invalidate_link_memory() -> None:
+    """Fuerza recargar la memoria de vinculaciones tras una vinculación manual."""
+    try:
+        from src.core.link_memory import link_memory
+        link_memory.invalidate()
+    except Exception:
+        pass
 
 
 @router.get("/api/purgatory", response_model=List[PurgatoryItemOutput], dependencies=[Depends(verify_api_key)])
@@ -182,7 +202,8 @@ def get_purgatory(page: int = 1, limit: int = 500):
 
         # Single DB round-trip; index + IDF built once for the whole page
         products = db.query(ProductModel).all()
-        ctx = build_suggestion_context(products)
+        from src.core.link_memory import link_memory
+        ctx = build_suggestion_context(products, learned_links=link_memory.get_entries(db))
 
         results = []
         for item in pending:
@@ -290,6 +311,7 @@ def run_match_task(pending_id: int, product_id: int):
 
             db.delete(item)
             db.commit()
+            _invalidate_link_memory()
     except Exception as e:
         logger.error(f"Error inesperado en background match_purgatory para item {pending_id}: {e}")
     finally:
@@ -415,6 +437,7 @@ def run_match_bulk_task(matches: list[dict]):
                 
         try:
             db.commit()
+            _invalidate_link_memory()
             logger.info("Committed successful bulk matches.")
         except Exception as e:
             db.rollback()
