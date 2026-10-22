@@ -19,12 +19,12 @@ class MaintenanceService:
     @staticmethod
     def compact_database(db) -> Dict[str, Any]:
         """
-        Orquesta el mantenimiento FinOps de la base de datos:
-        1. Consolida el historial detallado de price_history en product_monthly_stats con métricas avanzadas.
-        2. Elimina ofertas de productos sin presencia actual en el mercado ("productos muertos").
-        3. Purga el historial detallado antiguo (> 60 días) de productos activos ("productos vivos").
-        4. Trunca logs extensos de scrapers antiguos (> 15 días).
-        5. Purga exclusiones de la lista negra antiguas (> 90 días).
+        Orquesta el mantenimiento FinOps de la base de datos (Ventana Hot = 6 meses / 180 días):
+        1. Consolida el historial detallado de price_history en product_monthly_stats con métricas avanzadas (IQR, mediana, P25/P75).
+        2. Preserva intactas las ofertas con link activo (is_available=True) y su historial para mantener accesibilidad y trazabilidad.
+        3. Conserva durante 6 meses (180 días) el historial granular de ofertas inactivas para alimentar las curvas de 1M, 3M y 6M.
+        4. Purga el historial detallado (> 180 días) de ofertas inactivas y elimina las ofertas inactivas obsoletas (> 180 días).
+        5. Trunca logs extensos de scrapers antiguos (> 15 días) y exclusiones antiguas (> 90 días).
         
         Retorna estadísticas detalladas del proceso.
         """
@@ -44,9 +44,10 @@ class MaintenanceService:
             products = db.query(ProductModel).all()
             stats["products_processed"] = len(products)
             
-            # Fecha de corte para purga de historial (60 días)
+            # Fecha de corte para compactación de historial: 6 meses (180 días)
             now = datetime.now(timezone.utc)
-            history_cutoff = now - timedelta(days=60)
+            history_cutoff = now - timedelta(days=180)
+            history_cutoff_naive = history_cutoff.replace(tzinfo=None)
             
             for product in products:
                 # Obtener todos los precios históricos de este producto
@@ -73,7 +74,7 @@ class MaintenanceService:
                     key = (recorded_at.year, recorded_at.month, source_type or "Retail")
                     if key not in grouped_prices:
                         grouped_prices[key] = []
-                    grouped_prices[key].append(price_val)
+                    grouped_prices[key].append(float(price_val))
                 
                 # Calcular y guardar estadísticas mensuales consolidadas
                 for (year, month, source_type), price_list in grouped_prices.items():
@@ -123,6 +124,12 @@ class MaintenanceService:
                             source_type=source_type
                         )
                         db.add(stat_record)
+                    else:
+                        # Evitar que una re-ejecución sobre un mes ya compactado (con menos muestras vivas)
+                        # degrade o sobrescriba la estadística consolidada previa
+                        existing_count = stat_record.offers_count or 0
+                        if count < existing_count:
+                            continue
                         
                     stat_record.avg_price = avg_p
                     stat_record.median_price = median_p
@@ -139,52 +146,49 @@ class MaintenanceService:
                 # Commiteamos los acumulados mensuales por producto para liberar memoria
                 db.commit()
                 
-                # 2. Gestionar la purga de ofertas detalladas e historial
-                # Comprobar si el producto tiene ofertas activas en el mercado actual
-                active_offers = (
-                    db.query(OfferModel)
-                    .filter(
+                # 2. Gestionar la purga de ofertas inactivas e historial (> 6 meses)
+                # Las ofertas con link activo (is_available == True) NUNCA se compactan ni se borran.
+                inactive_offer_ids = [
+                    r[0] for r in db.query(OfferModel.id).filter(
                         OfferModel.product_id == product.id,
-                        OfferModel.is_available == True
-                    )
-                    .count()
-                )
+                        OfferModel.is_available == False
+                    ).all()
+                ]
                 
-                if active_offers == 0:
-                    # PRODUCTO MUERTO: Ya no hay ofertas activas.
-                    # Primero borramos todos los registros de historial de precios asociados
+                if inactive_offer_ids:
+                    # Purgar historial detallado > 180 días perteneciente únicamente a ofertas inactivas
                     deleted_history_count = (
                         db.query(PriceHistoryModel)
                         .filter(
-                            PriceHistoryModel.offer_id.in_(
-                                db.query(OfferModel.id).filter(OfferModel.product_id == product.id)
-                            )
+                            PriceHistoryModel.offer_id.in_(inactive_offer_ids),
+                            PriceHistoryModel.recorded_at < history_cutoff_naive
                         )
                         .delete(synchronize_session=False)
                     )
                     stats["price_history_purged"] += deleted_history_count
-
-                    # Ahora borramos las ofertas inactivas de forma segura
-                    deleted_offers_count = (
+                    db.flush()
+                    
+                    # Eliminar ofertas inactivas cuya última actividad supere los 180 días
+                    # y que ya no tengan registros recientes en price_history
+                    inactive_offers = (
                         db.query(OfferModel)
-                        .filter(OfferModel.product_id == product.id)
-                        .delete(synchronize_session=False)
+                        .filter(OfferModel.id.in_(inactive_offer_ids))
+                        .all()
                     )
-                    stats["offers_purged"] += deleted_offers_count
-                else:
-                    # PRODUCTO VIVO: Tiene ofertas activas.
-                    # Mantenemos las ofertas actuales y purgamos el historial price_history detallado antiguo (> 60 días).
-                    deleted_history_count = (
-                        db.query(PriceHistoryModel)
-                        .filter(
-                            PriceHistoryModel.recorded_at < history_cutoff,
-                            PriceHistoryModel.offer_id.in_(
-                                db.query(OfferModel.id).filter(OfferModel.product_id == product.id)
+                    for off in inactive_offers:
+                        ref_date = off.last_seen or off.first_seen_at
+                        if ref_date is not None and ref_date.tzinfo is None:
+                            ref_date = ref_date.replace(tzinfo=timezone.utc)
+                        is_old_offer = (ref_date is None) or (ref_date < history_cutoff)
+                        if is_old_offer:
+                            remaining_hist = (
+                                db.query(PriceHistoryModel.id)
+                                .filter(PriceHistoryModel.offer_id == off.id)
+                                .count()
                             )
-                        )
-                        .delete(synchronize_session=False)
-                    )
-                    stats["price_history_purged"] += deleted_history_count
+                            if remaining_hist == 0:
+                                db.delete(off)
+                                stats["offers_purged"] += 1
             
             db.commit()
             

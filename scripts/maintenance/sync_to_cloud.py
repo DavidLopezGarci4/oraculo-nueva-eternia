@@ -1,4 +1,3 @@
-
 import sqlite3
 from sqlalchemy import create_engine, text, inspect
 from src.core.config import settings
@@ -31,6 +30,8 @@ def sync():
     tables = [
         "products",
         "offers",
+        "price_history",
+        "product_monthly_stats",
         "pending_matches",
         "collection",
         "price_alerts",
@@ -55,10 +56,6 @@ def sync():
                     print(f"     ℹ️ Tabla {table} vacía en local.")
                     continue
 
-                # Preparar inserción en Cloud
-                # 1. Limpiar tabla en cloud para evitar duplicados en migración limpia
-                # cloud_conn.execute(text(f"DELETE FROM {table}")) # Descomentar si se quiere resetear cloud
-                
                 columns = rows[0].keys()
                 placeholders = ", ".join([f":{col}" for col in columns])
                 insert_stmt = text(f"INSERT INTO {table} ({', '.join(columns)}) VALUES ({placeholders}) ON CONFLICT DO NOTHING")
