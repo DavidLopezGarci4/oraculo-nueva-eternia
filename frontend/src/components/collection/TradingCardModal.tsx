@@ -1286,7 +1286,10 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                 imgZoom,
                 imgPan
             };
-            localStorage.setItem(savedKey, JSON.stringify(dataToSave));
+            const timer = window.setTimeout(() => {
+                localStorage.setItem(savedKey, JSON.stringify(dataToSave));
+            }, 250);
+            return () => window.clearTimeout(timer);
         }
     }, [
         isOpen,

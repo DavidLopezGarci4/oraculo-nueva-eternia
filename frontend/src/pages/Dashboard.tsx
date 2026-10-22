@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
     Zap,
     Euro,
@@ -20,7 +20,6 @@ import { getDashboardStats, getTopDeals, getDashboardHistory, revertDashboardAct
 import { unlinkOffer, relinkOffer, type Hero, isUserAdmin } from '../api/admin';
 import PowerSwordLoader from '../components/ui/PowerSwordLoader';
 import axios from 'axios';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { parseUtcDate } from '../utils/dateUtils';
@@ -30,21 +29,18 @@ import { MOTUImage } from '../components/ui/MOTUImage';
 import OpportunityHeatMatrix, { type HeatFilterType, getDealDiscount } from '../components/dashboard/OpportunityHeatMatrix';
 import EterniaMarketIndexWidget from '../components/dashboard/EterniaMarketIndexWidget';
 import CollectionItemDetailModal from '../components/CollectionItemDetailModal';
-
-// Recharts & Collection API Imports for Arsenal Analytics & Completitud
-import {
-    ResponsiveContainer,
-    PieChart,
-    Pie,
-    Cell,
-    Tooltip as RechartsTooltip
-} from 'recharts';
-import { getCollection, type Product } from '../api/collection';
+import type { Product } from '../api/collection';
 
 interface DashboardProps {
     user: Hero | null;
     isIncognito?: boolean;
 }
+
+const COLORS = {
+    MOC: '#10b981',   // Emerald
+    New: '#0ea5e9',   // Cyan
+    Loose: '#a8a29e'  // Slate Gray
+};
 
 const Dashboard: React.FC<DashboardProps> = ({ user, isIncognito = false }) => {
     const { addToCart } = useCart();
@@ -56,6 +52,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isIncognito = false }) => {
     const [searchResults, setSearchResults] = React.useState<any[]>([]);
     const [showOpportunitiesModal, setShowOpportunitiesModal] = React.useState(false);
     const [selectedHallOfFameItem, setSelectedHallOfFameItem] = React.useState<Product | null>(null);
+    const [hoveredCond, setHoveredCond] = React.useState<{ name: string; value: number; estimatedValue: number } | null>(null);
 
     const handleOpenHallOfFameItem = (item: any) => {
         const prod: Product = {
@@ -151,113 +148,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isIncognito = false }) => {
         return topDeals;
     }, [topDeals, heatFilter]);
 
-    const activeUserId = user?.id || 2;
-
-    // Queries to support Pareto features (Completitud + Arsenal Analytics)
-    const { data: modernProducts } = useQuery<Product[]>({
-        queryKey: ['products', false],
-        queryFn: async () => {
-            const response = await axios.get('/api/products?is_vintage=false');
-            return response.data;
-        }
-    });
-
-    const { data: vintageProducts } = useQuery<Product[]>({
-        queryKey: ['products', true],
-        queryFn: async () => {
-            const response = await axios.get('/api/products?is_vintage=true');
-            return response.data;
-        }
-    });
-
-    const { data: modernCollection } = useQuery<Product[]>({
-        queryKey: ['collection', activeUserId, false],
-        queryFn: () => getCollection(activeUserId, false)
-    });
-
-    const { data: vintageCollection } = useQuery<Product[]>({
-        queryKey: ['collection', activeUserId, true],
-        queryFn: () => getCollection(activeUserId, true)
-    });
-
-    // Memos for calculations
-    const groups = useMemo(() => {
-        if (!modernProducts && !vintageProducts) return [];
-        const prodList = [...(modernProducts || []), ...(vintageProducts || [])];
-        const collList = [...(modernCollection || []), ...(vintageCollection || [])];
-        const ownedIds = new Set(collList.filter(c => !c.is_wish).map(c => c.id));
-
-        const map: Record<string, { total: number; owned: number; missing: Product[]; isVintage: boolean }> = {};
-        prodList.forEach(p => {
-            const sub = p.sub_category || 'Otros';
-            if (!map[sub]) {
-                map[sub] = { total: 0, owned: 0, missing: [], isVintage: !!p.is_vintage };
-            }
-            map[sub].total++;
-            if (ownedIds.has(p.id)) {
-                map[sub].owned++;
-            } else {
-                map[sub].missing.push(p);
-            }
-            if (p.is_vintage) {
-                map[sub].isVintage = true;
-            }
-        });
-
-        return Object.entries(map)
-            .map(([name, data]) => ({
-                name,
-                total: data.total,
-                owned: data.owned,
-                percentage: data.total > 0 ? (data.owned / data.total) * 100 : 0,
-                missing: data.missing,
-                isVintage: data.isVintage
-            }))
-            .filter(g => g.total > 0)
-            .sort((a, b) => b.percentage - a.percentage);
-    }, [modernProducts, vintageProducts, modernCollection, vintageCollection]);
-
-    const conditionData = useMemo(() => {
-        const collList = [...(modernCollection || []), ...(vintageCollection || [])].filter(c => !c.is_wish);
-        const counts: Record<string, { count: number; value: number }> = {
-            MOC: { count: 0, value: 0 },
-            Loose: { count: 0, value: 0 },
-            New: { count: 0, value: 0 }
-        };
-
-        collList.forEach(item => {
-            let cond = (item.condition || 'MOC').trim();
-            if (cond.toUpperCase() === 'NEW') cond = 'New';
-            else if (cond.toUpperCase() === 'LOOSE') cond = 'Loose';
-            else cond = 'MOC';
-
-            const basePrice = item.market_value || item.avg_market_price || 0;
-            let condMult = 1.0;
-            if (cond === 'New') condMult = 0.75;
-            else if (cond === 'Loose') condMult = 0.5;
-
-            const grad = item.grading !== undefined ? item.grading : 10.0;
-            const gradFactor = Math.max(0.10, 1.0 - ((10.0 - grad) * 0.04));
-            const adjustedPrice = basePrice * condMult * gradFactor;
-
-            counts[cond].count++;
-            counts[cond].value += adjustedPrice;
-        });
-
-        return Object.entries(counts)
-            .map(([name, data]) => ({
-                name,
-                value: data.count,
-                estimatedValue: data.value
-            }))
-            .filter(d => d.value > 0);
-    }, [modernCollection, vintageCollection]);
-
-    const COLORS = {
-        MOC: '#10b981',   // Emerald
-        New: '#0ea5e9',   // Cyan
-        Loose: '#a8a29e'  // Slate Gray
-    };
+    // Pareto features (Completitud + Arsenal Analytics) pre-computed in GET /api/dashboard/stats
+    const groups = stats?.waves_completion || [];
+    const conditionData = stats?.condition_breakdown || [];
+    const totalConditionCount = conditionData.reduce((acc, curr) => acc + curr.value, 0);
 
     // Search Logic
     React.useEffect(() => {
@@ -279,6 +173,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isIncognito = false }) => {
     if (isLoadingStats) {
         return <PowerSwordLoader variant="fullScreen" text="Sintonizando el Orbe de Grayskull..." />;
     }
+
+    // Pure SVG Donut geometry (radius = 60, circumference = 2 * PI * 60)
+    const donutRadius = 60;
+    const donutCircumference = 2 * Math.PI * donutRadius;
+    let cumulativeFraction = 0;
 
     return (
         <div className="space-y-2 md:space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-1000">
@@ -348,7 +247,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isIncognito = false }) => {
                 <div className="grid grid-cols-3 gap-1.5 md:gap-6 mt-4">
                     {/* Vínculos Activos Vintage */}
                     <div className="group relative overflow-hidden rounded-xl md:rounded-2xl border border-amber-500/15 bg-amber-950/10 backdrop-blur-md p-2 md:p-5 shadow-[0_0_15px_-5px_rgba(245,158,11,0.1)]">
-                        <div className={`absolute -right-10 -top-10 h-24 w-24 rounded-full bg-amber-500/5 blur-2xl pointer-events-none`}></div>
+                        <div className="absolute -right-10 -top-10 h-24 w-24 rounded-full bg-amber-500/5 blur-2xl pointer-events-none"></div>
                         <div className="relative flex flex-col items-center md:items-start gap-1 md:gap-3">
                             <div className="flex h-7 w-7 md:h-10 md:w-10 items-center justify-center rounded-lg md:rounded-xl bg-amber-500/10 border border-amber-500/20 shrink-0">
                                 <Zap className="h-3.5 w-3.5 md:h-5 md:w-5 text-amber-500 fill-amber-500" />
@@ -362,7 +261,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isIncognito = false }) => {
                     {/* Fortaleza Vintage */}
                     {stats.owned_count_vintage > 0 && (
                         <div className="group relative overflow-hidden rounded-xl md:rounded-2xl border border-amber-500/15 bg-amber-950/10 backdrop-blur-md p-2 md:p-5 shadow-[0_0_15px_-5px_rgba(245,158,11,0.1)]">
-                            <div className={`absolute -right-10 -top-10 h-24 w-24 rounded-full bg-amber-500/5 blur-2xl pointer-events-none`}></div>
+                            <div className="absolute -right-10 -top-10 h-24 w-24 rounded-full bg-amber-500/5 blur-2xl pointer-events-none"></div>
                             <div className="relative flex flex-col items-center md:items-start gap-1 md:gap-3">
                                 <div className="flex h-7 w-7 md:h-10 md:w-10 items-center justify-center rounded-lg md:rounded-xl bg-amber-500/10 border border-amber-500/20 shrink-0">
                                     <ShoppingBag className="h-3.5 w-3.5 md:h-5 md:w-5 text-amber-500" />
@@ -377,7 +276,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isIncognito = false }) => {
                     {/* Valor Venta Vintage */}
                     {stats.owned_count_vintage > 0 && (
                         <div className="group relative overflow-hidden rounded-xl md:rounded-2xl border border-amber-500/15 bg-amber-950/10 backdrop-blur-md p-2 md:p-5 shadow-[0_0_15px_-5px_rgba(245,158,11,0.1)]">
-                            <div className={`absolute -right-10 -top-10 h-24 w-24 rounded-full bg-amber-500/5 blur-2xl pointer-events-none`}></div>
+                            <div className="absolute -right-10 -top-10 h-24 w-24 rounded-full bg-amber-500/5 blur-2xl pointer-events-none"></div>
                             <div className="relative flex flex-col items-center md:items-start gap-1 md:gap-3">
                                 <div className="flex h-7 w-7 md:h-10 md:w-10 items-center justify-center rounded-lg md:rounded-xl bg-amber-500/10 border border-amber-500/20 shrink-0">
                                     <Euro className="h-3.5 w-3.5 md:h-5 md:w-5 text-amber-500" />
@@ -558,9 +457,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isIncognito = false }) => {
                 <EterniaMarketIndexWidget isIncognito={isIncognito} />
             </div>
 
-            {/* Pareto features: Completitud and Donut Chart */}
+            {/* Pareto features: Completitud and Pure SVG Donut Chart */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-                {/* Arsenal Analytics: Donut Chart */}
+                {/* Arsenal Analytics: Pure SVG Donut Chart */}
                 <div className="relative overflow-hidden rounded-2xl md:rounded-[2.5rem] border border-white/5 bg-black/60 backdrop-blur-md p-5 md:p-6 shadow-2xl flex flex-col justify-between">
                     <div className="absolute top-0 right-0 h-24 w-24 rounded-full bg-brand-primary/5 blur-2xl pointer-events-none"></div>
                     <div>
@@ -577,56 +476,57 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isIncognito = false }) => {
                             </div>
                         ) : (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
-                                {/* Pie Chart */}
+                                {/* Lightweight Pure SVG Donut Chart */}
                                 <div className="h-44 w-full relative flex items-center justify-center">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <PieChart>
-                                            <Pie
-                                                data={conditionData}
-                                                cx="50%"
-                                                cy="50%"
-                                                innerRadius={50}
-                                                outerRadius={75}
-                                                paddingAngle={4}
-                                                dataKey="value"
-                                            >
-                                                {conditionData.map((entry) => (
-                                                    <Cell 
-                                                        key={`cell-${entry.name}`} 
-                                                        fill={COLORS[entry.name as keyof typeof COLORS] || '#fff'} 
-                                                    />
-                                                ))}
-                                            </Pie>
-                                            <RechartsTooltip
-                                                content={({ active, payload }) => {
-                                                    if (active && payload && payload.length) {
-                                                        const data = payload[0].payload;
-                                                        return (
-                                                            <div className="glass p-2.5 rounded-xl border border-white/10 text-[10px] bg-black/95">
-                                                                <p className="font-black text-white uppercase tracking-wider mb-1">{data.name}</p>
-                                                                <p className="text-white/60">Cantidad: <span className="font-black text-brand-primary blur-incognito">{data.value}</span></p>
-                                                                <p className="text-white/60">Valor Est.: <span className="font-black text-emerald-400 blur-incognito">{data.estimatedValue.toFixed(2)}€</span></p>
-                                                            </div>
-                                                        );
-                                                    }
-                                                    return null;
-                                                }}
-                                            />
-                                        </PieChart>
-                                    </ResponsiveContainer>
+                                    <svg viewBox="0 0 160 160" className="w-40 h-40 -rotate-90 overflow-visible">
+                                        {conditionData.map((entry) => {
+                                            const fraction = totalConditionCount > 0 ? entry.value / totalConditionCount : 0;
+                                            const gap = conditionData.length > 1 ? 3 : 0;
+                                            const dashLength = Math.max(0, fraction * donutCircumference - gap);
+                                            const dashOffset = -cumulativeFraction * donutCircumference;
+                                            cumulativeFraction += fraction;
+                                            const color = COLORS[entry.name as keyof typeof COLORS] || '#fff';
+
+                                            return (
+                                                <circle
+                                                    key={`slice-${entry.name}`}
+                                                    cx="80"
+                                                    cy="80"
+                                                    r={donutRadius}
+                                                    fill="transparent"
+                                                    stroke={color}
+                                                    strokeWidth={hoveredCond?.name === entry.name ? 22 : 18}
+                                                    strokeDasharray={`${dashLength} ${donutCircumference}`}
+                                                    strokeDashoffset={dashOffset}
+                                                    className="transition-all duration-200 cursor-pointer"
+                                                    onMouseEnter={() => setHoveredCond(entry)}
+                                                    onMouseLeave={() => setHoveredCond(null)}
+                                                />
+                                            );
+                                        })}
+                                    </svg>
                                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                                        <span className="text-[9px] font-black uppercase text-white/35 tracking-wider leading-none">Total</span>
-                                        <span className="text-xl font-black text-white blur-incognito">
-                                            {conditionData.reduce((acc, curr) => acc + curr.value, 0)}
-                                        </span>
+                                        {hoveredCond ? (
+                                            <>
+                                                <span className="text-[9px] font-black uppercase text-brand-primary tracking-wider leading-none">{hoveredCond.name}</span>
+                                                <span className="text-lg font-black text-white blur-incognito">{hoveredCond.value} uds.</span>
+                                                <span className="text-[9px] font-bold text-emerald-400 blur-incognito">{hoveredCond.estimatedValue.toFixed(0)}€</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <span className="text-[9px] font-black uppercase text-white/35 tracking-wider leading-none">Total</span>
+                                                <span className="text-xl font-black text-white blur-incognito">
+                                                    {totalConditionCount}
+                                                </span>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
 
                                 {/* Custom Legend */}
                                 <div className="space-y-2">
                                     {conditionData.map((entry) => {
-                                        const totalCount = conditionData.reduce((acc, curr) => acc + curr.value, 0);
-                                        const pct = totalCount > 0 ? (entry.value / totalCount) * 100 : 0;
+                                        const pct = totalConditionCount > 0 ? (entry.value / totalConditionCount) * 100 : 0;
                                         const color = COLORS[entry.name as keyof typeof COLORS] || '#fff';
                                         
                                         return (
@@ -689,10 +589,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isIncognito = false }) => {
                                         </div>
 
                                         {/* Missing Figures List (Inline Pareto suggestion) */}
-                                        {group.missing.length > 0 && (
+                                        {group.missing_count > 0 && group.missing_names.length > 0 && (
                                             <div className="text-[8px] text-white/40 leading-normal font-bold uppercase tracking-wider truncate">
-                                                Falta: {group.missing.slice(0, 3).map(m => m.name).join(', ')}
-                                                {group.missing.length > 3 && ` y ${group.missing.length - 3} más...`}
+                                                Falta: {group.missing_names.slice(0, 3).join(', ')}
+                                                {group.missing_count > 3 && ` y ${group.missing_count - 3} más...`}
                                             </div>
                                         )}
                                     </div>

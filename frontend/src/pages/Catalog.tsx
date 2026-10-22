@@ -146,7 +146,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
         isLoading: isLoadingProducts,
         isError: isErrorProducts
     } = useQuery<Product[]>({
-        queryKey: ['products-full', isVintageOnly],
+        queryKey: ['products', isVintageOnly],
         queryFn: async () => {
             const url = `/api/products?is_vintage=${isVintageOnly ? 'true' : 'false'}`;
             const response = await axios.get(url);

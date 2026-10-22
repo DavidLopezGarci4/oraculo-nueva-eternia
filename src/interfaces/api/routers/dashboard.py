@@ -36,72 +36,169 @@ router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 def get_dashboard_stats(user_id: int = 1):
     try:
         with SessionCloud() as db:
-            # Total products counts (Agrupado por is_vintage para ahorrar 1 query)
-            product_counts = db.query(
+            # Query 1: User location
+            user_location = "ES"
+            user_row = db.query(UserModel.location).filter(UserModel.id == user_id).first()
+            if user_row and user_row[0]:
+                user_location = user_row[0]
+
+            # Query 2: Lightweight projection of all products for counts and wave completion
+            all_products = db.query(
+                ProductModel.id,
+                ProductModel.name,
+                ProductModel.sub_category,
                 ProductModel.is_vintage,
-                func.count(ProductModel.id)
-            ).group_by(
-                ProductModel.is_vintage
             ).all()
-            
+
             total_products = 0
             total_products_vintage = 0
-            for is_vintage, cnt in product_counts:
-                if is_vintage:
-                    total_products_vintage = cnt
+            for _pid, _pname, _sub, is_v in all_products:
+                if is_v:
+                    total_products_vintage += 1
                 else:
-                    total_products = cnt
+                    total_products += 1
 
-            # Collection counts (owned vs wishlist, modern vs vintage) agrupados para ahorrar 3 queries
-            coll_counts = db.query(
-                CollectionItemModel.acquired,
-                ProductModel.is_vintage,
-                func.count(CollectionItemModel.id)
-            ).join(ProductModel).filter(
-                CollectionItemModel.owner_id == user_id
-            ).group_by(
-                CollectionItemModel.acquired,
-                ProductModel.is_vintage
-            ).all()
+            # Query 3: All collection items for user (owned & wish, modern & vintage) with eager ProductModel
+            all_coll_items = (
+                db.query(CollectionItemModel)
+                .join(ProductModel)
+                .options(contains_eager(CollectionItemModel.product))
+                .filter(CollectionItemModel.owner_id == user_id)
+                .all()
+            )
 
             owned_count = 0
             owned_count_vintage = 0
             wish_count = 0
             wish_count_vintage = 0
+            acquired_items: list[CollectionItemModel] = []
+            owned_product_ids: set[int] = set()
 
-            for acquired, is_vintage, cnt in coll_counts:
-                if acquired:
-                    if is_vintage:
-                        owned_count_vintage = cnt
+            for ci in all_coll_items:
+                is_v = bool(ci.product.is_vintage) if ci.product else False
+                if ci.acquired:
+                    acquired_items.append(ci)
+                    if ci.product_id:
+                        owned_product_ids.add(ci.product_id)
+                    if is_v:
+                        owned_count_vintage += 1
                     else:
-                        owned_count = cnt
+                        owned_count += 1
                 else:
-                    if is_vintage:
-                        wish_count_vintage = cnt
+                    if is_v:
+                        wish_count_vintage += 1
                     else:
-                        wish_count = cnt
+                        wish_count += 1
 
+            # Query 4: Preload active offers once for all acquired items (modern + vintage)
             from src.application.services.valuation_service import ValuationService
 
             valuation_service = ValuationService(db)
-            user_location = "ES"
-            user = db.query(UserModel).filter(UserModel.id == user_id).first()
-            if user:
-                user_location = user.location
+            valuation_service.preload_offers_for_products(list(owned_product_ids))
 
-            financials = valuation_service.get_collection_valuation(user_id, user_location, is_vintage=False)
-            financials_vintage = valuation_service.get_collection_valuation(user_id, user_location, is_vintage=True)
+            total_invested = 0.0
+            market_value = 0.0
+            total_invested_v = 0.0
+            market_value_v = 0.0
 
-            total_invested = financials["total_invested"]
-            market_value = financials["total_value"]
-            profit_loss = financials["profit_loss"]
-            roi = financials["roi"]
+            condition_buckets = {
+                "MOC": {"count": 0, "value": 0.0},
+                "Loose": {"count": 0, "value": 0.0},
+                "New": {"count": 0, "value": 0.0},
+            }
 
-            total_invested_v = financials_vintage["total_invested"]
-            market_value_v = financials_vintage["total_value"]
-            profit_loss_v = financials_vintage["profit_loss"]
-            roi_v = financials_vintage["roi"]
+            for item in acquired_items:
+                if not item.product:
+                    continue
+                base_val, _ = valuation_service.get_product_valuation_pair(
+                    item.product, user_location
+                )
+                mult = valuation_service.get_condition_multiplier(
+                    item.condition, item.grading
+                )
+                adjusted_val = base_val * mult
+                invested = item.purchase_price or 0.0
 
+                if item.product.is_vintage:
+                    market_value_v += adjusted_val
+                    total_invested_v += invested
+                else:
+                    market_value += adjusted_val
+                    total_invested += invested
+
+                raw_cond = (item.condition or "MOC").strip().upper()
+                if raw_cond == "NEW":
+                    cond_key = "New"
+                elif raw_cond == "LOOSE":
+                    cond_key = "Loose"
+                else:
+                    cond_key = "MOC"
+
+                condition_buckets[cond_key]["count"] += 1
+                condition_buckets[cond_key]["value"] += adjusted_val
+
+            profit_loss = market_value - total_invested
+            roi = (profit_loss / total_invested * 100) if total_invested > 0 else 0.0
+
+            profit_loss_v = market_value_v - total_invested_v
+            roi_v = (profit_loss_v / total_invested_v * 100) if total_invested_v > 0 else 0.0
+
+            condition_breakdown = [
+                {
+                    "name": k,
+                    "value": int(v["count"]),
+                    "estimatedValue": round(float(v["value"]), 2),
+                }
+                for k, v in condition_buckets.items()
+                if v["count"] > 0
+            ]
+
+            waves_map: dict[str, dict] = {}
+            for pid, pname, sub_cat, is_v in all_products:
+                sub = sub_cat or "Otros"
+                entry = waves_map.get(sub)
+                if entry is None:
+                    entry = {
+                        "total": 0,
+                        "owned": 0,
+                        "missing_names": [],
+                        "missing_count": 0,
+                        "isVintage": bool(is_v),
+                    }
+                    waves_map[sub] = entry
+                entry["total"] += 1
+                if pid in owned_product_ids:
+                    entry["owned"] += 1
+                else:
+                    entry["missing_count"] += 1
+                    if len(entry["missing_names"]) < 3:
+                        entry["missing_names"].append(pname)
+                if is_v:
+                    entry["isVintage"] = True
+
+            waves_completion = sorted(
+                [
+                    {
+                        "name": name,
+                        "total": data["total"],
+                        "owned": data["owned"],
+                        "percentage": round(
+                            (data["owned"] / data["total"]) * 100, 1
+                        )
+                        if data["total"] > 0
+                        else 0.0,
+                        "missing_names": data["missing_names"],
+                        "missing_count": data["missing_count"],
+                        "isVintage": data["isVintage"],
+                    }
+                    for name, data in waves_map.items()
+                    if data["total"] > 0
+                ],
+                key=lambda w: w["percentage"],
+                reverse=True,
+            )
+
+            # Query 5: Shop distribution
             shop_dist = (
                 db.query(OfferModel.shop_name, func.count(OfferModel.id))
                 .filter(
@@ -138,6 +235,8 @@ def get_dashboard_stats(user_id: int = 1):
                 },
                 "match_count": match_count,
                 "shop_distribution": [{"shop": s, "count": c} for s, c in shop_dist],
+                "condition_breakdown": condition_breakdown,
+                "waves_completion": waves_completion,
             }
 
     except Exception as e:
@@ -524,4 +623,3 @@ def revert_action(request: dict):
         db.commit()
 
         return {"status": "success", "message": f"Justicia restaurada: '{scraped_name}' devuelto al Purgatorio"}
-

@@ -22,6 +22,16 @@ export interface DashboardStats {
     owned_count_vintage: number;
     wish_count_vintage?: number;
     financial_vintage: FinancialHealth;
+    condition_breakdown?: { name: string; value: number; estimatedValue: number }[];
+    waves_completion?: {
+        name: string;
+        total: number;
+        owned: number;
+        percentage: number;
+        missing_names: string[];
+        missing_count: number;
+        isVintage: boolean;
+    }[];
 }
 
 export interface TopDeal {

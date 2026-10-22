@@ -299,6 +299,22 @@ class ShopDistributionOutput(BaseModel):
     count: int
 
 
+class ConditionBreakdownItemOutput(BaseModel):
+    name: str
+    value: int
+    estimatedValue: float
+
+
+class WaveCompletionItemOutput(BaseModel):
+    name: str
+    total: int
+    owned: int
+    percentage: float
+    missing_names: List[str] = []
+    missing_count: int = 0
+    isVintage: bool = False
+
+
 class DashboardStatsOutput(BaseModel):
     total_products: int
     total_products_vintage: int
@@ -310,6 +326,8 @@ class DashboardStatsOutput(BaseModel):
     financial_vintage: FinancialHealthOutput
     match_count: int
     shop_distribution: List[ShopDistributionOutput]
+    condition_breakdown: List[ConditionBreakdownItemOutput] = []
+    waves_completion: List[WaveCompletionItemOutput] = []
 
 
 class HallOfFameItemOutput(BaseModel):

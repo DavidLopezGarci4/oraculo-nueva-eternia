@@ -127,7 +127,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
         isLoading,
         isError
     } = useQuery<Product[]>({
-        queryKey: ['collection-full', activeUserId, isVintageOnly],
+        queryKey: ['collection', activeUserId, isVintageOnly],
         queryFn: () => getCollection(activeUserId, isVintageOnly),
         staleTime: 1000 * 60 * 5,
     });
@@ -136,13 +136,13 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
     const toggleMutation = useMutation({
         mutationFn: ({ productId, wish }: { productId: number, wish: boolean }) => toggleCollection(productId, activeUserId, wish),
         onMutate: async ({ productId }) => {
-            await queryClient.cancelQueries({ queryKey: ['collection-full', activeUserId, isVintageOnly] });
-            const previousCollection = queryClient.getQueryData<Product[]>(['collection-full', activeUserId, isVintageOnly]);
+            await queryClient.cancelQueries({ queryKey: ['collection', activeUserId, isVintageOnly] });
+            const previousCollection = queryClient.getQueryData<Product[]>(['collection', activeUserId, isVintageOnly]);
 
             if (previousCollection) {
                 // Al desvincular/liberar de Mi Fortaleza, eliminar instantáneamente de la lista visible
                 queryClient.setQueryData<Product[]>(
-                    ['collection-full', activeUserId, isVintageOnly],
+                    ['collection', activeUserId, isVintageOnly],
                     previousCollection.filter(item => item.id !== productId)
                 );
             }
@@ -151,11 +151,11 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
         },
         onError: (_err, _variables, context) => {
             if (context?.previousCollection) {
-                queryClient.setQueryData(['collection-full', activeUserId, isVintageOnly], context.previousCollection);
+                queryClient.setQueryData(['collection', activeUserId, isVintageOnly], context.previousCollection);
             }
         },
         onSettled: () => {
-            queryClient.invalidateQueries({ queryKey: ['collection-full'] });
+            queryClient.invalidateQueries({ queryKey: ['collection'] });
             queryClient.invalidateQueries({ queryKey: ['collection'] });
             queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
             queryClient.invalidateQueries({ queryKey: ['products'] });

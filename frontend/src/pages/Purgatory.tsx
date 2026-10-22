@@ -158,7 +158,7 @@ const Purgatory: React.FC = React.memo(() => {
     }, [pendingItems]);
 
     const { data: products } = useQuery({
-        queryKey: ['products-purgatory'],
+        queryKey: ['products', false],
         queryFn: async () => {
             const response = await axios.get('/api/products');
             return response.data;
@@ -166,7 +166,7 @@ const Purgatory: React.FC = React.memo(() => {
     });
 
     const { data: vintageProducts } = useQuery({
-        queryKey: ['vintage-unique-products'],
+        queryKey: ['products', true],
         queryFn: async () => {
             const response = await axios.get('/api/products?is_vintage=true');
             return response.data;
@@ -457,9 +457,9 @@ const Purgatory: React.FC = React.memo(() => {
                 if (otherAction.type === 'match-vintage' || otherAction.type === 'match-misc') {
                     queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
                     queryClient.invalidateQueries({ queryKey: ['vintage-products'] });
-                    queryClient.invalidateQueries({ queryKey: ['vintage-unique-products'] });
                     queryClient.invalidateQueries({ queryKey: ['products'] });
-                    queryClient.invalidateQueries({ queryKey: ['products-purgatory'] });
+                    queryClient.invalidateQueries({ queryKey: ['products'] });
+                    // unified under ['products']
                     queryClient.invalidateQueries({ queryKey: ['vintage-miscellaneous'] });
                 }
             } catch (err: any) {

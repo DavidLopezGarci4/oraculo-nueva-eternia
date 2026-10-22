@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Activity, TrendingUp, TrendingDown, DollarSign, Award, Sparkles, Calendar } from 'lucide-react';
 import axios from 'axios';
 
@@ -53,34 +54,28 @@ interface EterniaMarketIndexWidgetProps {
 export const EterniaMarketIndexWidget: React.FC<EterniaMarketIndexWidgetProps> = ({ isIncognito = false }) => {
     void isIncognito;
     const [period, setPeriod] = useState<string>('3M');
-    const [data, setData] = useState<MarketIndexData | null>(null);
-    const [loading, setLoading] = useState(true);
+    const activeUserId = localStorage.getItem('active_user_id') || '2';
+    const { data = null, isLoading: loading } = useQuery<MarketIndexData>({
+        queryKey: ['market-index', period, activeUserId],
+        queryFn: async () => {
+            const token = localStorage.getItem('access_token');
+            const res = await axios.get(`/api/analytics/market-index?period=${period}&user_id=${activeUserId}`, {
+                headers: token ? { Authorization: `Bearer ${token}` } : {}
+            });
+            return res.data;
+        },
+        staleTime: 1000 * 60 * 5,
+        placeholderData: (prev) => prev,
+    });
     const [hoverPoint, setHoverPoint] = useState<HistoricalPoint | null>(null);
     const [hoverIndex, setHoverIndex] = useState<number | null>(null);
     const [svgSize, setSvgSize] = useState<{ width: number; height: number }>({ width: 960, height: 184 });
     const chartBoxRef = useRef<HTMLDivElement | null>(null);
     const svgRef = useRef<SVGSVGElement | null>(null);
 
-    const fetchIndex = async (p: string) => {
-        try {
-            setLoading(true);
-            const token = localStorage.getItem('access_token');
-            const activeUserId = localStorage.getItem('active_user_id') || '2';
-            const res = await axios.get(`/api/analytics/market-index?period=${p}&user_id=${activeUserId}`, {
-                headers: token ? { Authorization: `Bearer ${token}` } : {}
-            });
-            setData(res.data);
-            setHoverIndex(null);
-            setHoverPoint(null);
-        } catch (e) {
-            console.error('Error fetching market index:', e);
-        } finally {
-            setLoading(false);
-        }
-    };
-
     useEffect(() => {
-        fetchIndex(period);
+        setHoverIndex(null);
+        setHoverPoint(null);
     }, [period]);
 
     // Sincronizar el viewBox del SVG con el tamaño real en píxeles de su contenedor para aprovechar el 100% de la caja
