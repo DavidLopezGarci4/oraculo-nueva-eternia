@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 import time
 from typing import Dict, Optional, List
+from sqlalchemy import event
 from src.domain.models import LogisticRuleModel
 from src.infrastructure.database_cloud import SessionCloud
 import logging
@@ -362,3 +363,10 @@ class LogisticsService:
             "user_location": user_location,
             "timestamp": datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
         }
+
+
+@event.listens_for(LogisticRuleModel, "after_insert")
+@event.listens_for(LogisticRuleModel, "after_update")
+@event.listens_for(LogisticRuleModel, "after_delete")
+def _invalidate_logistics_cache_on_orm_change(mapper, connection, target) -> None:
+    LogisticsService.invalidate_rules_cache()

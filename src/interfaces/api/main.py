@@ -113,7 +113,17 @@ from fastapi.staticfiles import StaticFiles
 import os
 import time
 import anyio
-from src.infrastructure.database_cloud import SessionCloud
+from src.infrastructure.database_cloud import SessionCloud as _DefaultSessionCloud
+
+SessionCloud = _DefaultSessionCloud
+
+
+def _resolve_session_cloud():
+    if SessionCloud is not _DefaultSessionCloud:
+        return SessionCloud
+    from src.infrastructure.database_cloud import SessionCloud as _LiveSessionCloud
+    return _LiveSessionCloud
+
 
 app = FastAPI(title="Oráculo API Broker", version="1.0.0", lifespan=lifespan)
 
@@ -140,7 +150,8 @@ def _get_cached_user_image_paths(user_id: int) -> list[str]:
     from src.domain.models import UserModel
 
     paths: list[str] = []
-    with SessionCloud() as db:
+    session_factory = _resolve_session_cloud()
+    with session_factory() as db:
         user = db.query(UserModel).filter(UserModel.id == user_id).first()
         if user:
             paths = [p for p in (user.pc_image_path, user.mobile_image_path) if p]
@@ -152,7 +163,8 @@ def _load_product_candidate_image_urls(product_id: int) -> list[str]:
     from src.domain.models import ProductModel, OfferModel
 
     candidate_urls: list[str] = []
-    with SessionCloud() as db:
+    session_factory = _resolve_session_cloud()
+    with session_factory() as db:
         product = db.query(ProductModel).filter(ProductModel.id == product_id).first()
         if product and product.image_url:
             candidate_urls.append(product.image_url)
@@ -196,14 +208,14 @@ async def _fetch_and_cache_product_image(product_id: int) -> "str | None":
     guarda en IMAGE_CACHE_DIR, para que la siguiente petición ya la sirva
     desde caché local sin volver a descargarla.
     """
+    candidate_urls = await anyio.to_thread.run_sync(_load_product_candidate_image_urls, product_id)
+    if not candidate_urls:
+        return None
+
     dest_path = os.path.join(settings.IMAGE_CACHE_DIR, f"{product_id}.webp")
     os.makedirs(settings.IMAGE_CACHE_DIR, exist_ok=True)
     if os.path.exists(dest_path) and os.path.getsize(dest_path) > 0:
         return dest_path
-
-    candidate_urls = await anyio.to_thread.run_sync(_load_product_candidate_image_urls, product_id)
-    if not candidate_urls:
-        return None
 
     import httpx
 

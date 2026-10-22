@@ -121,60 +121,59 @@ def _tokenize_alert_product_name(name: str) -> list[str]:
 
 def preload_multiuser_alert_context(db: Session) -> list[dict]:
     """
-    Precarga en 3 queries planas todos los usuarios con Telegram activo,
+    Precarga antes del bucle de ofertas todos los usuarios con Telegram activo,
     sus listas de deseos y sus alertas de precio objetivo, evitando N+1 por oferta.
     """
     from src.domain.models import UserModel, CollectionItemModel, ProductModel, PriceAlertModel
 
     try:
         users_with_tg = (
-            db.query(UserModel.id, UserModel.telegram_chat_id)
-            .filter(UserModel.telegram_chat_id.is_not(None), UserModel.is_active == True)  # noqa: E712
+            db.query(UserModel)
+            .filter(UserModel.telegram_chat_id != None, UserModel.is_active == True)  # noqa: E711, E712
             .all()
         )
         if not users_with_tg:
             return []
 
-        user_ids = [u[0] for u in users_with_tg]
-
-        wish_rows = (
-            db.query(CollectionItemModel.owner_id, ProductModel.name)
-            .join(ProductModel, CollectionItemModel.product_id == ProductModel.id)
-            .filter(
-                CollectionItemModel.owner_id.in_(user_ids),
-                CollectionItemModel.acquired == False,  # noqa: E712
-            )
-            .all()
-        )
-        wish_by_user: dict[int, list[tuple[str, list[str]]]] = {uid: [] for uid in user_ids}
-        for owner_id, p_name in wish_rows:
-            words = _tokenize_alert_product_name(p_name)
-            if words:
-                wish_by_user.setdefault(owner_id, []).append((p_name, words))
-
-        alert_rows = (
-            db.query(PriceAlertModel.user_id, PriceAlertModel.target_price, ProductModel.name)
-            .join(ProductModel, PriceAlertModel.product_id == ProductModel.id)
-            .filter(
-                PriceAlertModel.user_id.in_(user_ids),
-                PriceAlertModel.is_active == True,  # noqa: E712
-            )
-            .all()
-        )
-        alerts_by_user: dict[int, list[tuple[str, float, list[str]]]] = {uid: [] for uid in user_ids}
-        for uid, target_price, p_name in alert_rows:
-            words = _tokenize_alert_product_name(p_name)
-            if words:
-                alerts_by_user.setdefault(uid, []).append((p_name, float(target_price or 0.0), words))
-
         context = []
-        for uid, chat_id in users_with_tg:
+        for u in users_with_tg:
+            wishlist_items = (
+                db.query(ProductModel)
+                .join(CollectionItemModel)
+                .filter(
+                    CollectionItemModel.owner_id == u.id,
+                    CollectionItemModel.acquired == False,  # noqa: E712
+                )
+                .all()
+            )
+            wish_entries: list[tuple[str, list[str]]] = []
+            for p in wishlist_items:
+                words = _tokenize_alert_product_name(p.name)
+                if words:
+                    wish_entries.append((p.name, words))
+
+            price_alerts = (
+                db.query(PriceAlertModel)
+                .join(ProductModel)
+                .filter(
+                    PriceAlertModel.user_id == u.id,
+                    PriceAlertModel.is_active == True,  # noqa: E712
+                )
+                .all()
+            )
+            alert_entries: list[tuple[str, float, list[str]]] = []
+            for pa in price_alerts:
+                p_name = pa.product.name if getattr(pa, "product", None) else ""
+                words = _tokenize_alert_product_name(p_name)
+                if words:
+                    alert_entries.append((p_name, float(pa.target_price or 0.0), words))
+
             context.append(
                 {
-                    "user_id": uid,
-                    "chat_id": chat_id,
-                    "wishlist": wish_by_user.get(uid, []),
-                    "price_alerts": alerts_by_user.get(uid, []),
+                    "user_id": u.id,
+                    "chat_id": u.telegram_chat_id,
+                    "wishlist": wish_entries,
+                    "price_alerts": alert_entries,
                 }
             )
         return context
