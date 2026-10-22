@@ -5,6 +5,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Query
 from loguru import logger
 from sqlalchemy import and_, desc, func
+from sqlalchemy.orm import contains_eager
 
 from src.application.services.logistics_service import LogisticsService
 from src.domain.models import (
@@ -145,11 +146,12 @@ def get_dashboard_stats(user_id: int = 1):
 
 
 @router.get("/hall-of-fame", response_model=HallOfFameOutput, dependencies=[Depends(verify_device)])
-async def get_dashboard_hall_of_fame(user_id: int = 1):
+def get_dashboard_hall_of_fame(user_id: int = 1):
     with SessionCloud() as db:
         items = (
             db.query(CollectionItemModel)
             .join(ProductModel)
+            .options(contains_eager(CollectionItemModel.product))
             .filter(CollectionItemModel.acquired == True, CollectionItemModel.owner_id == user_id)
             .all()
         )
@@ -243,7 +245,7 @@ async def get_dashboard_hall_of_fame(user_id: int = 1):
 
 
 @router.get("/top-deals", response_model=List[TopDealOutput], dependencies=[Depends(verify_device)])
-async def get_top_deals(user_id: int = 2, mode: str = Query("landed", description="'landed' or 'base'")):
+def get_top_deals(user_id: int = 2, mode: str = Query("landed", description="'landed' or 'base'")):
     with SessionCloud() as db:
         owned_ids = [
             p[0]
@@ -255,8 +257,8 @@ async def get_top_deals(user_id: int = 2, mode: str = Query("landed", descriptio
 
         freshness_threshold = datetime.now(timezone.utc) - timedelta(hours=72)
 
-        rules = db.query(LogisticRuleModel).all()
-        rules_map = {f"{r.shop_name}_{r.country_code}": r for r in rules}
+        # rules_map cached via LogisticsService.get_cached_rules_map(db)
+        rules_map = LogisticsService.get_cached_rules_map(db)
 
         user_location = "ES"
         user = db.query(UserModel).filter(UserModel.id == user_id).first()
@@ -267,6 +269,7 @@ async def get_top_deals(user_id: int = 2, mode: str = Query("landed", descriptio
         query = (
             db.query(OfferModel)
             .join(ProductModel)
+            .options(contains_eager(OfferModel.product))
             .filter(
                 OfferModel.is_available == True,
                 OfferModel.last_seen >= freshness_threshold,
@@ -341,7 +344,7 @@ async def get_top_deals(user_id: int = 2, mode: str = Query("landed", descriptio
 
 
 @router.get("/match-stats", response_model=List[MatchStatOutput], dependencies=[Depends(verify_device)])
-async def get_dashboard_match_stats():
+def get_dashboard_match_stats():
     with SessionCloud() as db:
         stats = (
             db.query(OfferModel.shop_name.label("shop"), func.count(OfferModel.id).label("count"))
@@ -354,7 +357,7 @@ async def get_dashboard_match_stats():
 
 
 @router.get("/history", response_model=List[MatchHistoryOutput], dependencies=[Depends(verify_device)])
-async def get_dashboard_history():
+def get_dashboard_history():
     with SessionCloud() as db:
         history = (
             db.query(OfferHistoryModel)
@@ -378,7 +381,7 @@ async def get_dashboard_history():
 
 
 @router.post("/revert", response_model=StatusMessageOutput, dependencies=[Depends(verify_api_key)])
-async def revert_action(request: dict):
+def revert_action(request: dict):
     # Fase AAA-2.1 / Fix Logística: esta acción borra/reconstruye entradas de OfferModel,
     # BlackcludedItemModel, VintageMiscellaneousModel e historial con soporte completo de tipos
     history_id = request.get("history_id")

@@ -181,18 +181,19 @@ def _invalidate_link_memory() -> None:
     try:
         from src.core.link_memory import link_memory
         link_memory.invalidate()
+        from src.application.services.market_analytics_service import MarketAnalyticsService
+        MarketAnalyticsService.invalidate_market_index_cache()
     except Exception:
         pass
 
 
 @router.get("/api/purgatory", response_model=List[PurgatoryItemOutput], dependencies=[Depends(verify_api_key)])
 def get_purgatory(page: int = 1, limit: int = 500):
-    from src.infrastructure.scrapers.pipeline import clean_purgatory_globally
+    # Read-only endpoint: global cleanup runs in ScrapingPipeline.update_database, not on GET
 
     with SessionCloud() as db:
         # Limpieza global proactiva del purgatorio
-        clean_purgatory_globally(db)
-        db.commit()
+        # (Removed clean_purgatory_globally on GET to prevent write locks & 4 full-table scans)
         
         offset = (page - 1) * limit
         query = db.query(PendingMatchModel)
@@ -325,7 +326,7 @@ def run_match_task(pending_id: int, product_id: int):
 
 
 @router.post("/api/purgatory/match", response_model=StatusMessageOutput, dependencies=[Depends(verify_api_key)])
-async def match_purgatory(request: PurgatoryMatchRequest, background_tasks: BackgroundTasks):
+def match_purgatory(request: PurgatoryMatchRequest, background_tasks: BackgroundTasks):
     if request.pending_id in PROCESSING_IDS:
         return {"status": "success", "message": "Vinculación ya se está procesando en segundo plano"}
 
@@ -451,7 +452,7 @@ def run_match_bulk_task(matches: list[dict]):
 
 
 @router.post("/api/purgatory/match/bulk", response_model=StatusMessageOutput, dependencies=[Depends(verify_api_key)])
-async def match_purgatory_bulk(request: PurgatoryBulkMatchRequest, background_tasks: BackgroundTasks):
+def match_purgatory_bulk(request: PurgatoryBulkMatchRequest, background_tasks: BackgroundTasks):
     to_process = []
     for m in request.matches:
         if m.pending_id not in PROCESSING_IDS:
@@ -526,7 +527,7 @@ def run_discard_task(pending_id: int, reason: str):
 
 
 @router.post("/api/purgatory/discard", response_model=StatusMessageOutput, dependencies=[Depends(verify_api_key)])
-async def discard_purgatory(request: PurgatoryDiscardRequest, background_tasks: BackgroundTasks):
+def discard_purgatory(request: PurgatoryDiscardRequest, background_tasks: BackgroundTasks):
     if request.pending_id in PROCESSING_IDS:
         return {"status": "success", "message": "El descarte ya se está procesando en segundo plano"}
 
@@ -544,10 +545,14 @@ def run_discard_bulk_task(pending_ids: list[int], reason: str):
     try:
         with SessionCloud() as db:
             items = db.query(PendingMatchModel).filter(PendingMatchModel.id.in_(pending_ids)).all()
+            from src.core.url_utils import normalize_url as _norm_url
+            norm_urls = [_norm_url(it.url) for it in items if it.url]
+            existing_bl_urls = {r[0] for r in db.query(BlackcludedItemModel.url).filter(BlackcludedItemModel.url.in_(norm_urls)).all()} if norm_urls else set()
             from src.core.url_utils import normalize_url
             for item in items:
                 normalized_url = normalize_url(item.url)
-                exists = db.query(BlackcludedItemModel).filter(BlackcludedItemModel.url == normalized_url).first()
+                exists = normalized_url in existing_bl_urls
+                existing_bl_urls.add(normalized_url)
                 if not exists:
                     blacklist = BlackcludedItemModel(
                         url=normalized_url,
@@ -590,7 +595,7 @@ def run_discard_bulk_task(pending_ids: list[int], reason: str):
 
 
 @router.post("/api/purgatory/discard/bulk", response_model=StatusMessageOutput, dependencies=[Depends(verify_api_key)])
-async def discard_purgatory_bulk(request: PurgatoryBulkDiscardRequest, background_tasks: BackgroundTasks):
+def discard_purgatory_bulk(request: PurgatoryBulkDiscardRequest, background_tasks: BackgroundTasks):
     to_process = [pid for pid in request.pending_ids if pid not in PROCESSING_IDS]
     if not to_process:
         return {"status": "success", "message": "Todos los descartes ya se están procesando"}
@@ -603,7 +608,7 @@ async def discard_purgatory_bulk(request: PurgatoryBulkDiscardRequest, backgroun
 
 
 @router.post("/api/offers/{offer_id}/unlink", response_model=StatusMessageOutput, dependencies=[Depends(verify_api_key)])
-async def unlink_offer(offer_id: int):
+def unlink_offer(offer_id: int):
     with SessionCloud() as db:
         offer = db.query(OfferModel).filter(OfferModel.id == offer_id).first()
         if not offer:
@@ -640,7 +645,7 @@ async def unlink_offer(offer_id: int):
 
 
 @router.post("/api/offers/{offer_id}/relink", response_model=StatusMessageOutput, dependencies=[Depends(verify_api_key)])
-async def relink_offer(offer_id: int, request: RelinkOfferRequest):
+def relink_offer(offer_id: int, request: RelinkOfferRequest):
     with SessionCloud() as db:
         offer = db.query(OfferModel).filter(OfferModel.id == offer_id).first()
         if not offer:
@@ -873,7 +878,7 @@ def run_match_vintage_task(pending_id: int, custom_name: Optional[str], product_
 
 
 @router.post("/api/purgatory/{pending_id}/vintage", response_model=StatusMessageOutput, dependencies=[Depends(verify_api_key)])
-async def match_purgatory_vintage(pending_id: int, background_tasks: BackgroundTasks, request: Optional[VintageMatchRequest] = None):
+def match_purgatory_vintage(pending_id: int, background_tasks: BackgroundTasks, request: Optional[VintageMatchRequest] = None):
     if pending_id in PROCESSING_IDS:
         return {"status": "success", "message": "La clasificación ya se está procesando en segundo plano"}
 
@@ -893,7 +898,7 @@ async def match_purgatory_vintage(pending_id: int, background_tasks: BackgroundT
 
 
 @router.post("/api/vintage/revert-offer/{offer_id}", response_model=StatusMessageOutput, dependencies=[Depends(verify_api_key)])
-async def revert_vintage_offer(offer_id: int):
+def revert_vintage_offer(offer_id: int):
     with SessionCloud() as db:
         offer = db.query(OfferModel).filter(OfferModel.id == offer_id).first()
         if not offer:
@@ -1024,7 +1029,7 @@ def run_match_miscellaneous_task(pending_id: int):
 
 
 @router.post("/api/purgatory/{pending_id}/miscellaneous", response_model=StatusMessageOutput, dependencies=[Depends(verify_api_key)])
-async def match_purgatory_miscellaneous(pending_id: int, background_tasks: BackgroundTasks):
+def match_purgatory_miscellaneous(pending_id: int, background_tasks: BackgroundTasks):
     if pending_id in PROCESSING_IDS:
         return {"status": "success", "message": "La clasificación miscelánea ya se está procesando en segundo plano"}
 
@@ -1039,7 +1044,7 @@ async def match_purgatory_miscellaneous(pending_id: int, background_tasks: Backg
 
 
 @router.post("/api/vintage/miscellaneous/revert/{item_id}", response_model=StatusMessageOutput, dependencies=[Depends(verify_api_key)])
-async def revert_miscellaneous_item(item_id: int):
+def revert_miscellaneous_item(item_id: int):
     with SessionCloud() as db:
         from src.domain.models import VintageMiscellaneousModel
         misc_item = db.query(VintageMiscellaneousModel).filter(VintageMiscellaneousModel.id == item_id).first()
@@ -1084,7 +1089,7 @@ async def revert_miscellaneous_item(item_id: int):
 
 
 @router.delete("/api/vintage/miscellaneous/{item_id}", response_model=StatusMessageOutput, dependencies=[Depends(verify_api_key)])
-async def delete_miscellaneous_item(item_id: int):
+def delete_miscellaneous_item(item_id: int):
     with SessionCloud() as db:
         from src.domain.models import VintageMiscellaneousModel
         misc_item = db.query(VintageMiscellaneousModel).filter(VintageMiscellaneousModel.id == item_id).first()

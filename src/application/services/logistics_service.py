@@ -60,16 +60,16 @@ class LogisticsService:
         _rules_cache["expires_at"] = 0.0
 
     @staticmethod
-    def get_cached_rules_map() -> Dict[str, LogisticRuleModel]:
+    def get_cached_rules_map(db=None) -> Dict[str, LogisticRuleModel]:
         now = time.monotonic()
         cached_map = _rules_cache.get("rules_map")
         expires_at = float(_rules_cache.get("expires_at") or 0.0)
         if isinstance(cached_map, dict) and cached_map and now < expires_at:
             return cached_map
 
-        with SessionCloud() as db:
-            rules = db.query(LogisticRuleModel).all()
-            rules_map: Dict[str, LogisticRuleModel] = {}
+        def _load(session) -> Dict[str, LogisticRuleModel]:
+            rules = session.query(LogisticRuleModel).all()
+            rmap: Dict[str, LogisticRuleModel] = {}
             for r in rules:
                 _ = (
                     r.shop_name,
@@ -80,8 +80,15 @@ class LogisticsService:
                     r.custom_fees,
                     r.strategy_key,
                 )
-                db.expunge(r)
-                rules_map[f"{r.shop_name}_{r.country_code}"] = r
+                session.expunge(r)
+                rmap[f"{r.shop_name}_{r.country_code}"] = r
+            return rmap
+
+        if db is not None:
+            rules_map = _load(db)
+        else:
+            with SessionCloud() as session:
+                rules_map = _load(session)
 
         _rules_cache["rules_map"] = rules_map
         _rules_cache["expires_at"] = now + _RULES_CACHE_TTL
