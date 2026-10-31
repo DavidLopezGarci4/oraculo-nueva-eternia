@@ -1,8 +1,9 @@
 # Manual del Usuario: 08. Configuración de Sistemas
 
-El panel de **Configuración** es la cabina de control técnico del Oráculo. Desde aquí, los administradores (Master) gestionan los engranajes de la aplicación, controlan la actividad de las arañas de extracción y supervisan las cuentas de acceso.
+El panel de **Configuración** reúne tanto las preferencias personales de cada coleccionista como la cabina de control técnico del Oráculo.
 
-*Esta sección está reservada exclusivamente para los usuarios con el rol de **Master (Administrador)**.*
+*   **Vista `Guardián` (Coleccionista):** Accede directamente a una vista despejada de **Ajustes Personales** (sin botonera administrativa), con control sobre su Santuario Público, país para cálculo de envíos (*Landed Price*), caché local de imágenes en el navegador, efectos visuales 3D y la píldora **`Acerca de & Novedades`** en la cabecera.
+*   **Vista `Master` (Administrador):** Desbloquea la **botonera superior de 6 pestañas** (*Ajustes, Scrapers, Inventario, Héroes, Grimorio Lore y Cromos TCG*), los controles globales del servidor (`Shield Layer 2`) y el visor interactivo **`TecnoRed v2.0`**.
 
 ---
 
@@ -48,16 +49,20 @@ El Oráculo lleva una bitácora forense de todas las acciones importantes realiz
 
 ---
 
-## 4. Ajustes Generales del Sistema (Todos los Usuarios)
+## 4. Ajustes Generales del Sistema (`Guardián` vs `Master`)
 
-La pestaña de **Ajustes de Sistema** está abierta tanto a Guardianes como a Administradores (Masters) y contiene configuraciones personalizadas del cliente y automatizaciones del perfil:
+La pestaña de **Ajustes** adapta automáticamente sus tarjetas según el rol activo para ofrecer al coleccionista (`Guardián`) un panel limpio de preferencias personales sin exponer parámetros internos del servidor ni generar errores de permisos:
 
-### 4.1 Santuario Público (Santuario Compartido)
+### 4.0 Ficha `Acerca de & Novedades` (`Guardián` y `Master`)
+*   **Píldora `vX.Y.Z · Novedades` en Cabecera**: Muestra siempre la versión SemVer instalada (con indicador luminoso cuando hay mejoras sin leer) y abre bajo demanda el modal de identidad, novedades explicadas en lenguaje humano, historial de versiones en acordeón y garantía de privacidad (*Modo Incógnito* y *Santuario Público*).
+*   **Enlace a Salud de la Arquitectura (`Solo Master`)**: Dentro del modal *Acerca de* (y al pie de *Ajustes* para administradores), el botón *"Inspeccionar Salud de la Arquitectura"* lanza el visor topológico **`TecnoRed v2.0`**, con sondas pasivas de latencia, rutas de flujo y casos de uso reales en el Oráculo (`useCases`).
+
+### 4.1 Santuario Público (`Guardián` y `Master`)
 *   **Toggle de Habilitación**: Permite encender o apagar la visibilidad pública de tu colección.
-*   **Enlace de Compartir**: Muestra el enlace exclusivo a tu Showcase y un botón rápido para copiarlo al portapapeles.
+*   **Enlace de Compartir**: Muestra el enlace exclusivo a tu Showcase y un botón rápido para copiarlo al portapapeles (ocultando siempre precios, inversión y ROI).
 
-### 4.2 Ubicación del Guardián y Reglas Logísticas (Landed Price)
-*   Permite seleccionar el país de residencia (ej. España, Francia). El sistema cruza esta ubicación y las directivas logísticas del oráculo para calcular de forma dinámica y precisa el costo real de envío consolidado (*Landed Price*) de cada oferta de subasta o tienda.
+### 4.2 Ubicación del Guardián y Reglas Logísticas (`Guardián` y `Master`)
+*   Permite seleccionar el país de residencia (España, Alemania, Italia, Francia o USA). El sistema cruza esta ubicación y las directivas logísticas del Oráculo para calcular de forma dinámica el costo real puesto en casa (*Landed Price*) de cada oferta de subasta o tienda.
 *   **Reglas Logísticas por Tienda y Marketplace:**
     *   **BigBadToyStore (BBTS):** Tarifa fija de $8.00 USD de envío a España con conversión de divisa a EUR y recargo del 21% de IVA/aduanas sobre el importe total.
     *   **Marketplaces P2P (Wallapop, Vinted, eBay):** Tarifa base de envío de 5.00€ + 2% adicional en concepto de seguro y protección al comprador.
@@ -66,19 +71,21 @@ La pestaña de **Ajustes de Sistema** está abierta tanto a Guardianes como a Ad
     *   **Triguetech:** Tarifa plana inamovible de 7.00€ por expedición.
     *   **Toymi / ToymiEU:** Coste estándar consolidado europeo.
 
-### 4.3 Caché Local de Imágenes (Acelerador de Carga en Cliente)
-El Oráculo cuenta con un sistema de almacenamiento en caché en el navegador (utilizando Cache API / IndexedDB) para erradicar por completo los tiempos de carga:
-*   **Preferencia en Local (`use_local_images`)**: Al activarse, el frontend lee y cachea de forma local en el navegador (`motu-image-cache`) las imágenes de las figuras al visualizarlas. Esto elimina la necesidad de configurar rutas de directorios físicos en el servidor o PC del usuario.
-*   **Descarga Reactiva en Lote**: Un botón que descarga secuencialmente todas las imágenes de productos (modernos y vintage combinados) directamente a la caché del navegador del cliente, con una barra de progreso exacta y soporte de cancelación interactiva.
-*   **Fallback Híbrido**: Cualquier componente de imagen (`MOTUImage`) resolverá la foto contra la caché local del navegador o de estáticos del servidor y, ante cualquier error 404, caerá inmediatamente al hotlink web original.
+### 4.3 Caché Local de Imágenes y Efectos Visuales 3D (`Guardián` y `Master`)
+El Oráculo cuenta con un sistema de almacenamiento en caché en el navegador (Cache API) y ajuste de efectos gráficos por dispositivo:
+*   **Preferencia en Local (`use_local_images`)**: Al activarse, el frontend lee y cachea de forma local en el navegador (`motu-image-cache`) las imágenes de las figuras al visualizarlas.
+*   **Descarga Reactiva en Lote**: Descarga secuencialmente las imágenes faltantes o actualiza toda la caché del navegador del cliente, con barra de progreso e informe de reintentos. *(La descarga empaquetada de archivo **ZIP de imágenes WebP** del servidor está reservada exclusivamente al rol **Master**).*
+*   **Efectos Hover 3D e Iluminación Neón**: Conmutador local (`Activados` / `Clásicos`) para optimizar fluidez y batería en dispositivos móviles.
+*   **Fallback Híbrido**: Cualquier componente de imagen (`MOTUImage`) resuelve contra la caché local o estáticos y cae automáticamente al CDN original si no está disponible.
 
-### 4.4 Vinculación con el Guardián de Telegram (Alertas Bidireccionales)
-Para recibir alertas personalizadas directamente en tu móvil:
+### 4.4 Vinculación con el Guardián de Telegram y Filtro Global
+Para recibir alertas personalizadas directamente en tu móvil (`Guardián` y `Master`):
 1.  Busca el bot del Oráculo en Telegram.
 2.  Escribe el comando `/register [tu_nombre_de_usuario]` (el nombre de usuario con el que inicias sesión en el Oráculo).
-3.  El bot asociará automáticamente tu cuenta y comenzarás a recibir de inmediato notificaciones enriquecidas en HTML cada vez que una nueva oferta en el Purgatorio coincida con una figura de tu **Lista de Deseos** o con una **Alerta de Precio** configurada.
+3.  El bot asociará automáticamente tu cuenta y comenzarás a recibir notificaciones enriquecidas en HTML cuando una oferta coincida con tu **Lista de Deseos** o con una **Alerta de Precio** configurada.
+*   **Filtro Inteligente Global (`Solo Master`):** En la pestaña *Ajustes*, el administrador dispone además del interruptor global del servidor (*Solo Figuras NO Poseídas*) y del visor de **Parámetros del Servidor (`.env`)**.
 
-### 4.5 Escudo de Dispositivos y Autorización Soberana
+### 4.5 Escudo de Dispositivos y Autorización Soberana (`Solo Master`)
 *   **Seguridad de Acceso:** Cada vez que un nuevo navegador, móvil o PC intenta acceder a la aplicación, el Escudo de Seguridad (`SecurityShield`) lo bloquea de forma preventiva y envía una notificación instantánea a Telegram exclusivamente al Soberano (Administrador).
 *   **Aprobación en 1 Clic:** El Soberano puede pulsar directamente `[ ✅ Permitir Acceso ]` o `[ 🚫 Bloquear ]` en el propio mensaje de Telegram.
 *   **Comandos de Gestión:**

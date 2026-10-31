@@ -7,6 +7,7 @@ def test_health_returns_ok(client):
     data = resp.json()
     assert data["status"] == "ok"
     assert data["service"] == "oraculo"
+    assert data["version"] == "1.2.2"
 
 
 def test_health_no_auth_required(client):

@@ -1,6 +1,6 @@
 # 📜 El Oráculo de Nueva Eternia: Documentación Maestra
 
-**Versión:** 2.4.0-SOVEREIGN (Telegram Sovereign Shield, SSL, Apify Multi-Token & Nexus Bridge)
+**Versión:** 1.2.2 (Reconciliada bajo SemVer 2.0.0 / ISO 19770-2 — Fases 1 a 102)
 **Última Revisión:** Octubre 2026
 
 Este documento es la **Fuente de Verdad Absoluta** del proyecto "El Oráculo de Nueva Eternia". Se ha redactado tras una auditoría profunda del código fuente (`src/`, `frontend/`, `docker-compose.yml`), asegurando que describe **exactamente cómo funciona la aplicación hoy en día**, sin suposiciones ni elementos obsoletos.

@@ -15,7 +15,7 @@ load_dotenv(dotenv_path=env_path, override=True)
 class Settings(BaseSettings):
     # App
     PROJECT_NAME: str = "El Oráculo de Nueva Eternia"
-    VERSION: str = "2.1.0-RECOVERY"
+    VERSION: str = "1.2.2"
     DEBUG: bool = False
     # Deployment environment: "development" | "production".
     # In "production", insecure default secrets abort startup (see guard below).

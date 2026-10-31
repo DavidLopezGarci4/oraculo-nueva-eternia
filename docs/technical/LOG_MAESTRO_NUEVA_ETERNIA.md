@@ -2,7 +2,7 @@
 
 ## ⚡ Estado Actual del Sistema: [PRODUCCIÓN SOBERANA — FASE 100 COMPLETADA]
 
-> **Última Versión Consolidada:** `v2.4.1-GENTLE-AI` (22/09/2026)  
+> **Última Versión Consolidada:** `v1.2.2` (31/10/2026 — Reconciliada bajo SemVer 2.0.0 / ISO 19770-2; Fases 1–102)  
 > **Suite de Pruebas:** 67 tests pasados (`100%`) en 13.36s | **Compilación Frontend:** Vite 7 (0 errores, 10.02s)  
 > **Base de Datos:** SQLite WAL (`busy_timeout=30000`) + Supabase PostgreSQL RLS | **Alembic:** `8f1e2d3c4b5a (head)`
 

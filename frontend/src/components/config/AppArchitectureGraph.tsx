@@ -146,6 +146,14 @@ export default function AppArchitectureGraph({ onClose }: Props) {
 
   useEffect(() => { runHealthProbes(); }, [runHealthProbes]);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   // 4. High-performance 60 FPS Canvas 2D loop
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -335,7 +343,12 @@ export default function AppArchitectureGraph({ onClose }: Props) {
   const SelectedIcon = ICON_MAP[selectedNode.icon] || Cpu;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-black/85 backdrop-blur-md animate-fade-in">
+    <div
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-black/85 backdrop-blur-md animate-fade-in"
+      role="dialog"
+      aria-modal="true"
+    >
       <div className="bg-[#0b0f19] border border-cyan-500/30 rounded-3xl w-full max-w-6xl max-h-[92vh] flex flex-col overflow-hidden shadow-2xl">
         {/* Header & Mode Switcher */}
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-white/10 bg-white/[0.02]">
@@ -463,6 +476,33 @@ export default function AppArchitectureGraph({ onClose }: Props) {
                 <div className="text-[9px] font-black uppercase tracking-wider text-amber-400 mb-1">Por qué se eligió en el Oráculo</div>
                 <p className="text-white/80 leading-relaxed">{selectedNode.whyChosen}</p>
               </div>
+              {selectedNode.useCases && selectedNode.useCases.length > 0 && (
+                <div
+                  className="p-3 rounded-2xl border space-y-2"
+                  style={{
+                    backgroundColor: `${selectedNode.color}0d`,
+                    borderColor: `${selectedNode.color}33`,
+                  }}
+                >
+                  <div
+                    className="text-[9px] font-black uppercase tracking-wider"
+                    style={{ color: selectedNode.color }}
+                  >
+                    Funciones Reales que Impulsa en el Oráculo
+                  </div>
+                  <ul className="space-y-1.5">
+                    {selectedNode.useCases.map((uc, idx) => (
+                      <li key={idx} className="flex items-start gap-2 text-white/85 leading-snug">
+                        <span
+                          className="h-1.5 w-1.5 rounded-full mt-1.5 shrink-0"
+                          style={{ backgroundColor: selectedNode.color }}
+                        />
+                        <span>{uc}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
 
             {/* Clickable Direct Connections (Topology Hop) */}

@@ -1,0 +1,65 @@
+{
+  "currentVersion": "1.2.2",
+  "buildNumber": 10202,
+  "lastUpdated": "2026-10-31",
+  "appName": "Oráculo de Nueva Eternia",
+  "appDescription": "Centro de inteligencia de mercado, vigilancia de ofertas y gestión patrimonial para coleccionistas de Masters of the Universe.",
+  "privacyPolicy": "Tus precios de compra, márgenes e inventario personal están protegidos bajo acceso privado, Modo Incógnito instantáneo y Santuario Público sin datos financieros.",
+  "versions": [
+    {
+      "version": "1.2.2",
+      "build": 10202,
+      "date": "2026-10-31",
+      "title": "Panel de Novedades, Ajustes más Ágiles y Vista Guardián Refinada",
+      "highlights": [
+        "✨ **Acerca de y Novedades en 1 toque:** Consulta en cualquier momento qué versión tienes activa y qué mejoras incluye desde la cabecera de Configuración.",
+        "🛡️ **Ajustes claros para Guardianes:** La pantalla de Configuración muestra únicamente las preferencias personales de tu colección, ubicación de envío y caché de imágenes.",
+        "⚡ **Apertura más ligera en móvil y PC:** Los paneles avanzados se cargan solo cuando se abren, acelerando la entrada a Ajustes y reduciendo el consumo de datos."
+      ]
+    },
+    {
+      "version": "1.2.1",
+      "build": 10201,
+      "date": "2026-10-31",
+      "title": "Fluidez a 60 FPS, Blindaje de Privacidad y Mapa de Salud",
+      "highlights": [
+        "🚀 **Navegación más rápida por tu colección:** Carga ágil de listados grandes, tarjetas con brillo fluido y menor uso de memoria al recorrer cientos de figuras.",
+        "🕵️ **Privacidad total en precios manuales:** El Modo Incógnito y las casillas de coste personal mantienen tus importes ocultos incluso al pasar el ratón por encima.",
+        "🧭 **Mapa visual del sistema (Administración):** Nuevo visor interactivo en tiempo real del estado de conexión y las rutas de datos del Oráculo."
+      ]
+    },
+    {
+      "version": "1.2.0",
+      "build": 10200,
+      "date": "2026-09-15",
+      "title": "Índice de Mercado, Liquidez Segunda Mano y Cromos Coleccionables",
+      "highlights": [
+        "📈 **Termómetro real del mercado:** Descubre qué figuras están agotándose en tiendas y qué anuncios llevan más de 45 días publicados para negociar mejor precio.",
+        "🛒 **Carrito inteligente multi-tienda:** Calcula automáticamente dónde combinar varias figuras para ahorrar en gastos de envío y aduanas.",
+        "🃏 **Grimorio de historias y Cromos TCG:** Explora la biografía y atributos de combate de cada personaje en cartas coleccionables interactivas."
+      ]
+    },
+    {
+      "version": "1.1.0",
+      "build": 10100,
+      "date": "2026-08-18",
+      "title": "Vigilancia Continua de Chollos en Telegram y Seguridad de Acceso",
+      "highlights": [
+        "🏹 **Avisos inmediatos en tu móvil:** Recibe alertas en Telegram cuando aparece una figura buscada por debajo de su precio habitual sin avisos repetidos.",
+        "🔐 **Autorización de dispositivos en 1 clic:** Protege el acceso a tu cuenta aprobando o bloqueando nuevos navegadores y móviles directamente desde Telegram.",
+        "🔄 **Sincronización con tu Excel Maestro:** Mantén respaldada tu colección tanto en la nube como en tu hoja de cálculo personal."
+      ]
+    },
+    {
+      "version": "1.0.0",
+      "build": 10000,
+      "date": "2026-06-30",
+      "title": "Lanzamiento de La Fortaleza, El Purgatorio y Radar Europeo",
+      "highlights": [
+        "🏰 **La Fortaleza de tu colección:** Registra figuras en caja o sueltas, controla tu inversión real y comparte tu Santuario Público ocultando todos los importes.",
+        "⚖️ **Precio real puesto en casa:** Compara ofertas de tiendas europeas, americanas y segunda mano sumando automáticamente envío, seguro e impuestos según tu país.",
+        "🔥 **El Purgatorio de validación:** Revisa y vincula ofertas nuevas con ayudas inteligentes antes de incorporarlas al catálogo principal."
+      ]
+    }
+  ]
+}

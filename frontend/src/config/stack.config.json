@@ -1,6 +1,6 @@
 {
   "appName": "Oráculo de Nueva Eternia",
-  "version": "Phase 101 (TecnoRed v2.0)",
+  "version": "v1.2.2 (TecnoRed v2.0)",
   "category": "Inteligencia de Mercado MOTU, Scrapers Resilientes & Gestión de Colecciones",
   "description": "Arquitectura Full-Stack Híbrida (React 19 + FastAPI + Supabase PostgreSQL + SQLite Heritage + Motor REA/CDP) con vigilancia de 15 tiendas europeas, análisis de liquidez P2P y persistencia Purgatorio Primero.",
   "nodes": [
@@ -71,7 +71,7 @@
     {
       "id": "rea_scraper_mesh",
       "label": "Motor REA/CDP + 15 Spiders",
-      "version": "v6.5 / Chrome124",
+      "version": "PW 1.64.1 / CDP",
       "role": "Malla de Extracción Resiliente Multi-Tienda y Evasión WAF",
       "category": "desktop_apps",
       "color": "#3b82f6",
@@ -81,7 +81,7 @@
       "whyChosen": "Permite extraer catálogos protegidos por Imperva y CloudFront (Smyths Toys DE, Wallapop, Vinted, ActionToys) con 0 consumo de tokens de pago.",
       "useCases": [
         "Deserialización del grafo SSR __NUXT_DATA__ (devalue) de Smyths Toys en una sola petición",
-        "Ejecución desatendida en GitHub Actions bajo xvfb-run + Cloudflare WARP"
+        "Ejecución desatendida en GitHub Actions (Ubuntu 26.04 LTS) bajo xvfb-run + Cloudflare WARP"
       ]
     },
     {

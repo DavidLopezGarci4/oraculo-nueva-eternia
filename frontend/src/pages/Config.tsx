@@ -1,24 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import axios from 'axios';
 import { Activity, Settings, Users, Package, BookOpen, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { resetSmartMatches, runScrapers, stopScrapers, getScraperLogs, type ScraperExecutionLog, getWallapopIpLogs, downloadWallapopIpLogs, type WallapopIpLog, runWallaManualHtml } from '../api/purgatory';
 import PowerSwordLoader from '../components/ui/PowerSwordLoader';
-import WallapopImporter from '../components/admin/WallapopImporter';
-import WallapopNexusBridge from '../components/admin/WallapopNexusBridge';
 import { getDashboardMatchStats } from '../api/dashboard';
-import AddUserModal from '../components/config/AddUserModal';
-import ResetConfirmModal from '../components/config/ResetConfirmModal';
-import IpLogsModal from '../components/config/IpLogsModal';
-import VintageCalibratorModal from '../components/config/VintageCalibratorModal';
-import ModernCalibratorModal from '../components/config/ModernCalibratorModal';
-import UsersTab from '../components/config/UsersTab';
 import SystemTab from '../components/config/SystemTab';
-import InventoryTab from '../components/config/InventoryTab';
-import ScrapersTab from '../components/config/ScrapersTab';
-import { LoreTab } from '../components/config/LoreTab';
-import TcgConfigTab from '../components/config/TcgConfigTab';
+
+const WallapopImporter = lazy(() => import('../components/admin/WallapopImporter'));
+const WallapopNexusBridge = lazy(() => import('../components/admin/WallapopNexusBridge'));
+const AddUserModal = lazy(() => import('../components/config/AddUserModal'));
+const ResetConfirmModal = lazy(() => import('../components/config/ResetConfirmModal'));
+const IpLogsModal = lazy(() => import('../components/config/IpLogsModal'));
+const VintageCalibratorModal = lazy(() => import('../components/config/VintageCalibratorModal'));
+const ModernCalibratorModal = lazy(() => import('../components/config/ModernCalibratorModal'));
+const UsersTab = lazy(() => import('../components/config/UsersTab'));
+const InventoryTab = lazy(() => import('../components/config/InventoryTab'));
+const ScrapersTab = lazy(() => import('../components/config/ScrapersTab'));
+const LoreTab = lazy(() => import('../components/config/LoreTab').then(m => ({ default: m.LoreTab })));
+const TcgConfigTab = lazy(() => import('../components/config/TcgConfigTab'));
+const AboutModal = lazy(() => import('../components/config/AboutModal'));
+const AppArchitectureGraph = lazy(() => import('../components/config/AppArchitectureGraph'));
 
 import { clearMOTURAMCache } from '../components/ui/MOTUImage';
 
@@ -154,6 +157,17 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
 
     const isAdmin = isUserAdmin(user);
     const [showShowcaseGuide, setShowShowcaseGuide] = useState(false);
+    const [showAboutModal, setShowAboutModal] = useState(false);
+    const [showTechStack, setShowTechStack] = useState(false);
+    const [hasUnreadVersion, setHasUnreadVersion] = useState(
+        () => localStorage.getItem('motu_last_seen_version') !== __APP_VERSION__
+    );
+
+    const handleOpenAbout = () => {
+        localStorage.setItem('motu_last_seen_version', __APP_VERSION__);
+        setHasUnreadVersion(false);
+        setShowAboutModal(true);
+    };
 
     const handleCardClick = (shop: string) => {
         localStorage.setItem('catalog_shop_filter', shop);
@@ -163,19 +177,21 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
     useEffect(() => {
         const loadConfigs = async () => {
             let loadedRemote = false;
-            try {
-                const configs = await getSystemSwordConfigs();
-                if (configs && Object.keys(configs).length > 0) {
-                    if (configs.vintage_sword_coords) {
-                        setCalibCoords(configs.vintage_sword_coords);
+            if (isAdmin) {
+                try {
+                    const configs = await getSystemSwordConfigs();
+                    if (configs && Object.keys(configs).length > 0) {
+                        if (configs.vintage_sword_coords) {
+                            setCalibCoords(configs.vintage_sword_coords);
+                        }
+                        if (configs.skeletor_sword_coords) {
+                            setModernCoords(configs.skeletor_sword_coords);
+                        }
+                        loadedRemote = true;
                     }
-                    if (configs.skeletor_sword_coords) {
-                        setModernCoords(configs.skeletor_sword_coords);
-                    }
-                    loadedRemote = true;
+                } catch (e) {
+                    console.error("Failed to load remote configs", e);
                 }
-            } catch (e) {
-                console.error("Failed to load remote configs", e);
             }
 
             if (!loadedRemote) {
@@ -190,7 +206,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
             }
         };
         loadConfigs();
-    }, []);
+    }, [isAdmin]);
 
     const handleSaveCalib = async () => {
         localStorage.setItem('vintage_sword_coords', JSON.stringify(calibCoords));
@@ -470,8 +486,9 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
     const activeUserId = parseInt(localStorage.getItem('active_user_id') || '2');
 
     useEffect(() => {
-        if (user && user.role !== 'admin' && activeTab === 'scrapers') {
+        if (user && !isUserAdmin(user) && activeTab !== 'system') {
             setActiveTab('system');
+            localStorage.setItem('motu_config_tab', 'system');
         }
     }, [user, activeTab]);
 
@@ -517,13 +534,13 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
 
     const fetchData = async () => {
         try {
-            // Fetch everything, but handle individual failures gracefully
+            // Fetch user settings for everyone; restrict admin telemetry & management calls to isAdmin
             const [s, u, al, h, ms, tempProducts, devs] = await Promise.all([
-                getScrapersStatus().catch((e: any) => { console.error("Scrapers error:", e); return []; }),
+                isAdmin ? getScrapersStatus().catch((e: any) => { console.error("Scrapers error:", e); return []; }) : Promise.resolve([]),
                 getUserSettings(activeUserId).catch((e: any) => { console.error("User settings error:", e); return null; }),
-                getScraperLogs().catch((e: any) => { console.error("Logs error:", e); return []; }),
-                getHeroes().catch((e: any) => { console.error("Heroes list error:", e); return []; }),
-                getDashboardMatchStats(activeUserId).catch((e: any) => { console.error("Match stats error:", e); return []; }),
+                isAdmin ? getScraperLogs().catch((e: any) => { console.error("Logs error:", e); return []; }) : Promise.resolve([]),
+                isAdmin ? getHeroes().catch((e: any) => { console.error("Heroes list error:", e); return []; }) : Promise.resolve([]),
+                isAdmin ? getDashboardMatchStats(activeUserId).catch((e: any) => { console.error("Match stats error:", e); return []; }) : Promise.resolve([]),
                 isAdmin ? getTemporaryProducts().catch((e: any) => { console.error("Temp products error:", e); return []; }) : Promise.resolve([]),
                 isAdmin ? getDevices().catch((e: any) => { console.error("Devices error:", e); return []; }) : Promise.resolve([])
             ]);
@@ -681,14 +698,15 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
         }
     });
 
-    // Adaptive polling: 5s when scrapers running, 60s when idle
+    // Adaptive polling: 5s when scrapers running, 60s when idle (Admin only)
     const hasRunning = statuses.some(s => s.status === 'running');
     useEffect(() => {
         fetchData();
+        if (!isAdmin) return;
         const pollMs = hasRunning ? 5000 : 60000;
         const interval = setInterval(fetchData, pollMs);
         return () => clearInterval(interval);
-    }, [hasRunning]);
+    }, [hasRunning, isAdmin]);
 
     const handleUpdateLocation = async (loc: string) => {
         setSavingSettings(true);
@@ -867,12 +885,29 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
             {/* Header & Tabs */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div className="flex flex-col gap-2">
-                    <h2 className="text-3xl font-bold tracking-tight text-white flex items-center gap-3">
-                        <Settings className="h-8 w-8 text-brand-primary" />
-                        Centro de Configuración y Mando
-                    </h2>
+                    <div className="flex flex-wrap items-center gap-3">
+                        <h2 className="text-3xl font-bold tracking-tight text-white flex items-center gap-3">
+                            <Settings className="h-8 w-8 text-brand-primary" />
+                            {isAdmin ? 'Centro de Configuración y Mando' : 'Ajustes de la Colección'}
+                        </h2>
+                        <button
+                            type="button"
+                            onClick={handleOpenAbout}
+                            title="Ver información de la versión y novedades recientes"
+                            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 hover:bg-brand-primary/15 border border-white/15 hover:border-brand-primary/40 text-xs font-mono font-bold text-white/85 hover:text-white transition-all cursor-pointer"
+                        >
+                            {hasUnreadVersion && (
+                                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                            )}
+                            <span className="text-brand-primary">v{__APP_VERSION__}</span>
+                            <span className="text-white/30">·</span>
+                            <span className="font-sans text-[11px] font-bold tracking-wide">Novedades</span>
+                        </button>
+                    </div>
                     <p className="text-white/50">
-                        Ajustes del sistema, scrapers de incursión, catálogo de reliquias, héroes y calibración del Oráculo.
+                        {isAdmin
+                            ? 'Ajustes del sistema, scrapers de incursión, catálogo de reliquias, héroes y calibración del Oráculo.'
+                            : 'Preferencias personales de tu colección, Santuario Público, ubicación logística y caché local.'}
                     </p>
                 </div>
 
@@ -925,59 +960,7 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
             </div>
 
             <AnimatePresence mode="wait">
-                {activeTab === 'scrapers' ? (
-                    <ScrapersTab
-                        statuses={statuses}
-                        runScrapersMutation={runScrapersMutation}
-                        stopScrapersMutation={stopScrapersMutation}
-                        runWallaManualHtmlMutation={runWallaManualHtmlMutation}
-                        syncingNexus={syncingNexus}
-                        handleSyncNexus={handleSyncNexus}
-                        handleOpenIpLogs={handleOpenIpLogs}
-                        wallaManualLoading={wallaManualLoading}
-                        logFilter={logFilter}
-                        setLogFilter={setLogFilter}
-                        advancedLogs={advancedLogs}
-                        selectedLog={selectedLog}
-                        setSelectedLog={setSelectedLog}
-                        setTargetLogId={setTargetLogId}
-                        handleCopyLogs={handleCopyLogs}
-                        copied={copied}
-                        consoleRef={consoleRef}
-                        syncingSensores={syncingSensores}
-                        setSyncingSensores={setSyncingSensores}
-                        fetchData={fetchData}
-                    />
-                ) : activeTab === 'inventory' ? (
-                    <InventoryTab
-                        matchStats={matchStats}
-                        isAdmin={isAdmin}
-                        handleCardClick={handleCardClick}
-                        temporaryProducts={temporaryProducts}
-                        setTemporaryProducts={setTemporaryProducts}
-                        loadingTemporary={loadingTemporary}
-                        setLoadingTemporary={setLoadingTemporary}
-                        freeMergeMode={freeMergeMode}
-                        setFreeMergeMode={setFreeMergeMode}
-                        mergeSource={mergeSource}
-                        setMergeSource={setMergeSource}
-                        mergeTarget={mergeTarget}
-                        setMergeTarget={setMergeTarget}
-                        mergeSearchQuery={mergeSearchQuery}
-                        setMergeSearchQuery={setMergeSearchQuery}
-                        mergeTargetSuggestions={mergeTargetSuggestions}
-                        setMergeTargetSuggestions={setMergeTargetSuggestions}
-                        searchingTarget={searchingTarget}
-                        isFusing={isFusing}
-                        freeMergeSourceQuery={freeMergeSourceQuery}
-                        setFreeMergeSourceQuery={setFreeMergeSourceQuery}
-                        freeMergeSourceSuggestions={freeMergeSourceSuggestions}
-                        setFreeMergeSourceSuggestions={setFreeMergeSourceSuggestions}
-                        showMergePanel={showMergePanel}
-                        setShowMergePanel={setShowMergePanel}
-                        handleConfirmMerge={handleConfirmMerge}
-                    />
-                ) : activeTab === 'system' ? (
+                {activeTab === 'system' || !isAdmin ? (
                     <SystemTab
                         user={user}
                         isAdmin={isAdmin}
@@ -1003,89 +986,194 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                         runningMaintenance={runningMaintenance}
                         handleRunMaintenance={handleRunMaintenance}
                         setResetStep={setResetStep}
+                        onOpenAbout={handleOpenAbout}
+                        onOpenTechStack={() => setShowTechStack(true)}
                     />
+                ) : activeTab === 'scrapers' ? (
+                    <Suspense fallback={<PowerSwordLoader text="Cargando mando de incursión..." />}>
+                        <ScrapersTab
+                            statuses={statuses}
+                            runScrapersMutation={runScrapersMutation}
+                            stopScrapersMutation={stopScrapersMutation}
+                            runWallaManualHtmlMutation={runWallaManualHtmlMutation}
+                            syncingNexus={syncingNexus}
+                            handleSyncNexus={handleSyncNexus}
+                            handleOpenIpLogs={handleOpenIpLogs}
+                            wallaManualLoading={wallaManualLoading}
+                            logFilter={logFilter}
+                            setLogFilter={setLogFilter}
+                            advancedLogs={advancedLogs}
+                            selectedLog={selectedLog}
+                            setSelectedLog={setSelectedLog}
+                            setTargetLogId={setTargetLogId}
+                            handleCopyLogs={handleCopyLogs}
+                            copied={copied}
+                            consoleRef={consoleRef}
+                            syncingSensores={syncingSensores}
+                            setSyncingSensores={setSyncingSensores}
+                            fetchData={fetchData}
+                        />
+                    </Suspense>
+                ) : activeTab === 'inventory' ? (
+                    <Suspense fallback={<PowerSwordLoader text="Cargando inventario maestro..." />}>
+                        <InventoryTab
+                            matchStats={matchStats}
+                            isAdmin={isAdmin}
+                            handleCardClick={handleCardClick}
+                            temporaryProducts={temporaryProducts}
+                            setTemporaryProducts={setTemporaryProducts}
+                            loadingTemporary={loadingTemporary}
+                            setLoadingTemporary={setLoadingTemporary}
+                            freeMergeMode={freeMergeMode}
+                            setFreeMergeMode={setFreeMergeMode}
+                            mergeSource={mergeSource}
+                            setMergeSource={setMergeSource}
+                            mergeTarget={mergeTarget}
+                            setMergeTarget={setMergeTarget}
+                            mergeSearchQuery={mergeSearchQuery}
+                            setMergeSearchQuery={setMergeSearchQuery}
+                            mergeTargetSuggestions={mergeTargetSuggestions}
+                            setMergeTargetSuggestions={setMergeTargetSuggestions}
+                            searchingTarget={searchingTarget}
+                            isFusing={isFusing}
+                            freeMergeSourceQuery={freeMergeSourceQuery}
+                            setFreeMergeSourceQuery={setFreeMergeSourceQuery}
+                            freeMergeSourceSuggestions={freeMergeSourceSuggestions}
+                            setFreeMergeSourceSuggestions={setFreeMergeSourceSuggestions}
+                            showMergePanel={showMergePanel}
+                            setShowMergePanel={setShowMergePanel}
+                            handleConfirmMerge={handleConfirmMerge}
+                        />
+                    </Suspense>
                 ) : activeTab === 'users' ? (
-                    <UsersTab
-                        heroes={heroes}
-                        onAddUserClick={() => setShowAddUserModal(true)}
-                        onIdentityChange={onIdentityChange}
-                        handleUpdateRole={handleUpdateRole}
-                        handleExportExcelAdmin={handleExportExcelAdmin}
-                        handleExportSqliteAdmin={handleExportSqliteAdmin}
-                        handlePasswordReset={handlePasswordReset}
-                        handleDeleteHero={handleDeleteHero}
-                        devices={devices}
-                        loadingDevices={loadingDevices}
-                        onAuthorizeDevice={handleAuthorizeDevice}
-                        onDeleteDevice={handleDeleteDevice}
-                        onRefreshDevices={loadDevices}
-                    />
+                    <Suspense fallback={<PowerSwordLoader text="Cargando registro de héroes..." />}>
+                        <UsersTab
+                            heroes={heroes}
+                            onAddUserClick={() => setShowAddUserModal(true)}
+                            onIdentityChange={onIdentityChange}
+                            handleUpdateRole={handleUpdateRole}
+                            handleExportExcelAdmin={handleExportExcelAdmin}
+                            handleExportSqliteAdmin={handleExportSqliteAdmin}
+                            handlePasswordReset={handlePasswordReset}
+                            handleDeleteHero={handleDeleteHero}
+                            devices={devices}
+                            loadingDevices={loadingDevices}
+                            onAuthorizeDevice={handleAuthorizeDevice}
+                            onDeleteDevice={handleDeleteDevice}
+                            onRefreshDevices={loadDevices}
+                        />
+                    </Suspense>
                 ) : activeTab === 'wallapop' ? (
-                    <motion.div
-                        key="wallapop"
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                    >
-                        <WallapopImporter />
-                        <WallapopNexusBridge />
-                    </motion.div>
+                    <Suspense fallback={<PowerSwordLoader text="Cargando puente Wallapop..." />}>
+                        <motion.div
+                            key="wallapop"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                        >
+                            <WallapopImporter />
+                            <WallapopNexusBridge />
+                        </motion.div>
+                    </Suspense>
                 ) : activeTab === 'lore' ? (
-                    <motion.div
-                        key="lore"
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                    >
-                        <LoreTab />
-                    </motion.div>
+                    <Suspense fallback={<PowerSwordLoader text="Abriendo el Grimorio..." />}>
+                        <motion.div
+                            key="lore"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                        >
+                            <LoreTab />
+                        </motion.div>
+                    </Suspense>
                 ) : activeTab === 'tcg' ? (
-                    <motion.div
-                        key="tcg"
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                    >
-                        <TcgConfigTab />
-                    </motion.div>
+                    <Suspense fallback={<PowerSwordLoader text="Cargando taller de cromos..." />}>
+                        <motion.div
+                            key="tcg"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                        >
+                            <TcgConfigTab />
+                        </motion.div>
+                    </Suspense>
                 ) : null}
             </AnimatePresence>
 
-            <AddUserModal isOpen={showAddUserModal} onClose={() => setShowAddUserModal(false)} />
+            {showAddUserModal && (
+                <Suspense fallback={null}>
+                    <AddUserModal isOpen={showAddUserModal} onClose={() => setShowAddUserModal(false)} />
+                </Suspense>
+            )}
 
-            <ResetConfirmModal
-                resetStep={resetStep}
-                isResetting={isResetting}
-                onCancel={() => setResetStep(0)}
-                onAdvance={() => setResetStep(2)}
-                onConfirm={handleResetSmartMatches}
-            />
+            {resetStep > 0 && (
+                <Suspense fallback={null}>
+                    <ResetConfirmModal
+                        resetStep={resetStep}
+                        isResetting={isResetting}
+                        onCancel={() => setResetStep(0)}
+                        onAdvance={() => setResetStep(2)}
+                        onConfirm={handleResetSmartMatches}
+                    />
+                </Suspense>
+            )}
 
-            <IpLogsModal
-                isOpen={showIpLogsModal}
-                onClose={() => setShowIpLogsModal(false)}
-                ipLogs={ipLogs}
-                loadingIpLogs={loadingIpLogs}
-                onDownload={handleDownloadIpLogs}
-            />
+            {showIpLogsModal && (
+                <Suspense fallback={null}>
+                    <IpLogsModal
+                        isOpen={showIpLogsModal}
+                        onClose={() => setShowIpLogsModal(false)}
+                        ipLogs={ipLogs}
+                        loadingIpLogs={loadingIpLogs}
+                        onDownload={handleDownloadIpLogs}
+                    />
+                </Suspense>
+            )}
 
-            <VintageCalibratorModal
-                isOpen={showCalibrator}
-                coords={calibCoords}
-                onChange={setCalibCoords}
-                onSave={handleSaveCalib}
-                onReset={handleResetCalib}
-                onClose={() => setShowCalibrator(false)}
-            />
+            {showCalibrator && (
+                <Suspense fallback={null}>
+                    <VintageCalibratorModal
+                        isOpen={showCalibrator}
+                        coords={calibCoords}
+                        onChange={setCalibCoords}
+                        onSave={handleSaveCalib}
+                        onReset={handleResetCalib}
+                        onClose={() => setShowCalibrator(false)}
+                    />
+                </Suspense>
+            )}
 
-            <ModernCalibratorModal
-                isOpen={showModernCalibrator}
-                coords={modernCoords}
-                onChange={setModernCoords}
-                onSave={handleSaveModernCalib}
-                onReset={handleResetModernCalib}
-                onClose={() => setShowModernCalibrator(false)}
-            />
+            {showModernCalibrator && (
+                <Suspense fallback={null}>
+                    <ModernCalibratorModal
+                        isOpen={showModernCalibrator}
+                        coords={modernCoords}
+                        onChange={setModernCoords}
+                        onSave={handleSaveModernCalib}
+                        onReset={handleResetModernCalib}
+                        onClose={() => setShowModernCalibrator(false)}
+                    />
+                </Suspense>
+            )}
+
+            {showAboutModal && (
+                <Suspense fallback={null}>
+                    <AboutModal
+                        isOpen={showAboutModal}
+                        isAdmin={isAdmin}
+                        onClose={() => setShowAboutModal(false)}
+                        onOpenArchitectureGraph={() => {
+                            if (isAdmin) setShowTechStack(true);
+                        }}
+                    />
+                </Suspense>
+            )}
+
+            {isAdmin && showTechStack && (
+                <Suspense fallback={null}>
+                    <AppArchitectureGraph onClose={() => setShowTechStack(false)} />
+                </Suspense>
+            )}
         </div >
     );
 };

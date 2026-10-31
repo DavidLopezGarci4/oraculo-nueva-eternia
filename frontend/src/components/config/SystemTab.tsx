@@ -52,6 +52,8 @@ interface SystemTabProps {
     runningMaintenance: boolean;
     handleRunMaintenance: () => void;
     setResetStep: (n: number) => void;
+    onOpenAbout?: () => void;
+    onOpenTechStack?: () => void;
 }
 
 /** Fase AAA-4a: extraido de Config.tsx (pestaña "system" / "Ajustes"). */
@@ -80,6 +82,8 @@ export default function SystemTab({
     runningMaintenance,
     handleRunMaintenance,
     setResetStep,
+    onOpenAbout,
+    onOpenTechStack,
 }: SystemTabProps) {
     const [showErrorLogModal, setShowErrorLogModal] = useState(false);
     const [showTechStack, setShowTechStack] = useState(false);
@@ -164,6 +168,7 @@ export default function SystemTab({
     const [updatingTelegramConfig, setUpdatingTelegramConfig] = useState(false);
 
     useEffect(() => {
+        if (!isAdmin) return;
         const loadTelegram = async () => {
             try {
                 setLoadingTelegramConfig(true);
@@ -176,7 +181,7 @@ export default function SystemTab({
             }
         };
         loadTelegram();
-    }, []);
+    }, [isAdmin]);
 
     const handleToggleTelegramOnlyMissing = async () => {
         try {
@@ -334,8 +339,9 @@ export default function SystemTab({
                     </h3>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {/* Telegram Push Smart Filter */}
+                <div className={`grid grid-cols-1 md:grid-cols-2 ${isAdmin ? 'lg:grid-cols-3' : 'lg:grid-cols-2'} gap-6`}>
+                    {/* Telegram Push Smart Filter (Admin Global Server Switch) */}
+                    {isAdmin && (
                     <div className="glass border border-cyan-500/30 p-6 rounded-3xl space-y-4 bg-cyan-500/[0.03] relative flex flex-col justify-between">
                         <div className="space-y-4">
                             <div className="flex items-center justify-between">
@@ -383,6 +389,7 @@ export default function SystemTab({
                             <span>Sincronizado con el bot /alertas de Telegram</span>
                         </div>
                     </div>
+                    )}
 
                     {/* Compartir Santuario (Public Showcase) */}
                     <div className="glass border border-brand-primary/30 p-6 rounded-3xl space-y-4 bg-brand-primary/5 flex flex-col justify-between">
@@ -520,11 +527,11 @@ export default function SystemTab({
                 <div className="flex items-center gap-2 px-1">
                     <span className="h-1.5 w-1.5 rounded-full bg-brand-primary"></span>
                     <h3 className="text-xs font-black uppercase tracking-[0.2em] text-white/60">
-                        Rendimiento, Caché & Servidor
+                        {isAdmin ? 'Rendimiento, Caché & Servidor' : 'Rendimiento & Caché Local'}
                     </h3>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className={`grid grid-cols-1 md:grid-cols-2 ${isAdmin ? 'lg:grid-cols-3' : 'lg:grid-cols-2'} gap-6`}>
                     {/* Local Image Cache */}
                     <div className="glass border border-brand-primary/30 p-6 rounded-3xl space-y-4 bg-brand-primary/5">
                         <div className="flex items-center gap-3 text-brand-primary font-bold uppercase tracking-widest text-xs mb-2">
@@ -634,13 +641,15 @@ export default function SystemTab({
                                             </button>
                                         )}
 
-                                        <button
-                                            onClick={() => downloadImagesZip()}
-                                            className="w-full bg-emerald-500/15 hover:bg-emerald-500 text-emerald-400 hover:text-white border border-emerald-500/30 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 cursor-pointer"
-                                        >
-                                            <Package className="h-3 w-3" />
-                                            Descargar ZIP de imágenes WebP
-                                        </button>
+                                        {isAdmin && (
+                                            <button
+                                                onClick={() => downloadImagesZip()}
+                                                className="w-full bg-emerald-500/15 hover:bg-emerald-500 text-emerald-400 hover:text-white border border-emerald-500/30 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 cursor-pointer"
+                                            >
+                                                <Package className="h-3 w-3" />
+                                                Descargar ZIP de imágenes WebP
+                                            </button>
+                                        )}
                                         <div className="text-[9px] font-bold text-white/40 uppercase text-center mt-1">
                                             Imágenes en la caché del navegador: <span className="text-brand-primary">{cachedImagesCount}</span>
                                             {cacheStorageSize && (
@@ -702,9 +711,25 @@ export default function SystemTab({
                                 </button>
                             </div>
                         </div>
+                        {onOpenAbout && (
+                            <div className="pt-3 border-t border-white/5">
+                                <button
+                                    type="button"
+                                    onClick={onOpenAbout}
+                                    className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 hover:bg-brand-primary/15 border border-white/10 hover:border-brand-primary/35 text-[9px] font-black uppercase tracking-widest text-white/75 hover:text-white transition-all flex items-center justify-between cursor-pointer"
+                                >
+                                    <span className="flex items-center gap-1.5">
+                                        <Sparkles className="h-3.5 w-3.5 text-amber-400" />
+                                        Acerca de &amp; Novedades
+                                    </span>
+                                    <span className="font-mono text-brand-primary">v{__APP_VERSION__}</span>
+                                </button>
+                            </div>
+                        )}
                     </div>
 
                     {/* Parámetros Activos del Servidor (.env) */}
+                    {isAdmin && (
                     <div className="glass border border-white/10 p-6 rounded-3xl space-y-4 bg-white/[0.02] relative flex flex-col justify-between">
                         <div className="space-y-4">
                             <div className="flex items-center justify-between">
@@ -751,6 +776,7 @@ export default function SystemTab({
                             </div>
                         </div>
                     </div>
+                    )}
                 </div>
             </div>
 
@@ -1021,33 +1047,37 @@ export default function SystemTab({
                 </div>
             )}
 
-            {/* --- ARQUITECTURA TECNORED v2.0 & SALUD DEL SISTEMA --- */}
-            <div className="glass border border-cyan-500/25 p-6 rounded-3xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-cyan-500/[0.02]">
-                <div className="space-y-1.5">
-                    <div className="flex items-center gap-2.5 text-cyan-400 font-black uppercase tracking-widest text-xs">
-                        <Globe className="h-4 w-4" />
-                        <span>Grafo Topológico TecnoRed v2.0 & Salud en Vivo</span>
-                        <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/25 text-cyan-300">
-                            CANVAS 2D · 60 FPS
-                        </span>
+            {/* --- ARQUITECTURA TECNORED v2.0 & SALUD DEL SISTEMA (ADMIN EXCLUSIVE) --- */}
+            {isAdmin && (
+                <>
+                    <div className="glass border border-cyan-500/25 p-6 rounded-3xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-cyan-500/[0.02]">
+                        <div className="space-y-1.5">
+                            <div className="flex items-center gap-2.5 text-cyan-400 font-black uppercase tracking-widest text-xs">
+                                <Globe className="h-4 w-4" />
+                                <span>Grafo Topológico TecnoRed v2.0 & Salud en Vivo</span>
+                                <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/25 text-cyan-300">
+                                    CANVAS 2D · 60 FPS
+                                </span>
+                            </div>
+                            <p className="text-[10px] text-white/65 font-bold uppercase leading-relaxed max-w-2xl">
+                                Explora las 9 tecnologías nucleares del Oráculo (React 19, FastAPI, Supabase, Motor REA/CDP, SmartMatcher), sus protocolos e interconexiones y las rutas de flujo paso a paso.
+                            </p>
+                        </div>
+                        <button
+                            onClick={() => (onOpenTechStack ? onOpenTechStack() : setShowTechStack(true))}
+                            className="shrink-0 bg-cyan-500/15 hover:bg-cyan-500 text-cyan-300 hover:text-black border border-cyan-500/35 px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-cyan-500/0 hover:shadow-cyan-500/25"
+                        >
+                            <Sparkles className="h-4 w-4" />
+                            Abrir Mapa TecnoRed
+                        </button>
                     </div>
-                    <p className="text-[10px] text-white/65 font-bold uppercase leading-relaxed max-w-2xl">
-                        Explora las 9 tecnologías nucleares del Oráculo (React 19, FastAPI, Supabase, Motor REA/CDP, SmartMatcher), sus protocolos e interconexiones y las rutas de flujo paso a paso.
-                    </p>
-                </div>
-                <button
-                    onClick={() => setShowTechStack(true)}
-                    className="shrink-0 bg-cyan-500/15 hover:bg-cyan-500 text-cyan-300 hover:text-black border border-cyan-500/35 px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-cyan-500/0 hover:shadow-cyan-500/25"
-                >
-                    <Sparkles className="h-4 w-4" />
-                    Abrir Mapa TecnoRed
-                </button>
-            </div>
 
-            {showTechStack && (
-                <Suspense fallback={null}>
-                    <AppArchitectureGraph onClose={() => setShowTechStack(false)} />
-                </Suspense>
+                    {showTechStack && (
+                        <Suspense fallback={null}>
+                            <AppArchitectureGraph onClose={() => setShowTechStack(false)} />
+                        </Suspense>
+                    )}
+                </>
             )}
 
             {/* Error Log Modal */}

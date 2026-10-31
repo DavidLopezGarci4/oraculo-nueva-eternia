@@ -125,7 +125,7 @@ def _resolve_session_cloud():
     return _LiveSessionCloud
 
 
-app = FastAPI(title="Oráculo API Broker", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="Oráculo API Broker", version=settings.VERSION, lifespan=lifespan)
 
 STATIC_IMAGE_CACHE_HEADERS = {
     "Cache-Control": "public, max-age=604800, stale-while-revalidate=86400"
