@@ -9,7 +9,7 @@ alembic==1.18.4
 requests==2.34.2
 beautifulsoup4==4.14.3
 lxml==6.1.1
-playwright==1.57.0
+playwright==1.64.1
 psycopg2-binary==2.9.11
 httpx==0.28.1
 loguru==0.7.3

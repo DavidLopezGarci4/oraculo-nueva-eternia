@@ -30,8 +30,9 @@ jobs:
           
       - name: Install dependencies
         run: |
+          python -m pip install --upgrade pip
           pip install -r requirements.txt
-          playwright install chromium
+          python -m playwright install --with-deps chromium
           
       - name: Nexo Maestro - Master Catalog & Cloud Image Sync
         env:
@@ -71,9 +72,15 @@ jobs:
         continue-on-error: true
         run: |
           set +e
+          sudo apt-get update && sudo apt-get install -y xvfb
           curl -fsSL https://pkg.cloudflareclient.com/pubkey.gpg | sudo gpg --yes --dearmor --output /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg
           echo "deb [signed-by=/usr/share/keyrings/cloudflare-warp-archive-keyring.gpg] https://pkg.cloudflareclient.com/ $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/cloudflare-client.list
-          sudo apt-get update && sudo apt-get install -y cloudflare-warp xvfb
+          if ! sudo apt-get update; then
+            echo "⚠️ Cloudflare APT repo sin Release para $(lsb_release -cs), aplicando fallback a noble..."
+            echo "deb [signed-by=/usr/share/keyrings/cloudflare-warp-archive-keyring.gpg] https://pkg.cloudflareclient.com/ noble main" | sudo tee /etc/apt/sources.list.d/cloudflare-client.list
+            sudo apt-get update
+          fi
+          sudo apt-get install -y cloudflare-warp
           sudo systemctl start warp-svc || true
           sleep 2
           warp-cli --accept-tos registration new || warp-cli --accept-tos register || true
