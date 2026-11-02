@@ -189,18 +189,18 @@ export const GrayskullRitualOverlay: React.FC<GrayskullRitualOverlayProps> = ({ 
                         {isClaim ? (
                             <>
                                 <Zap className="h-4 w-4 text-cyan-300 animate-pulse" />
-                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-white to-sky-400 font-black tracking-widest text-sm sm:text-base">
+                                <span className="text-cyan-100 drop-shadow-[0_0_12px_rgba(34,211,238,0.65)] font-cinzel font-black tracking-widest text-sm sm:text-base">
                                     ¡Por el Poder de Grayskull!
                                 </span>
                                 <Zap className="h-4 w-4 text-cyan-300 animate-pulse" />
                             </>
                         ) : (
                             <>
-                                <Flame className="h-4 w-4 text-orange-400 animate-bounce" />
-                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-red-400 to-amber-300 font-black text-sm sm:text-base">
+                                <Flame className="h-4 w-4 text-orange-400 animate-pulse" />
+                                <span className="text-amber-100 drop-shadow-[0_0_12px_rgba(249,115,22,0.65)] font-cinzel font-black text-sm sm:text-base">
                                     Liberando Reliquia en Cenizas
                                 </span>
-                                <Flame className="h-4 w-4 text-red-500 animate-bounce" />
+                                <Flame className="h-4 w-4 text-red-500 animate-pulse" />
                             </>
                         )}
                     </div>

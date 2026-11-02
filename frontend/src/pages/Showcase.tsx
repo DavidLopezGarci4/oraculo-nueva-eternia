@@ -138,7 +138,7 @@ const Showcase: React.FC<ShowcaseProps> = ({ username }) => {
     }
 
     return (
-        <div className="min-h-screen bg-[#08080c] text-white font-inter pb-20 p-4 md:p-8 relative overflow-hidden">
+        <div className="min-h-screen bg-[#08080c] text-white font-sans pb-20 p-4 md:p-8 relative overflow-hidden">
             {/* Ambient Lighting Background */}
             <div className="fixed inset-0 pointer-events-none overflow-hidden z-0" aria-hidden="true">
                 <div className="absolute top-[-10%] right-[-5%] h-[60%] w-[60%] rounded-full bg-brand-primary/5 blur-[120px]" />

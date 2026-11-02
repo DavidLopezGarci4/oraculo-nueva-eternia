@@ -194,7 +194,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isIncognito = false }) => {
                     <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-2 text-brand-primary">
                             <Zap className="h-3 w-3" />
-                            <h2 className="text-sm md:text-base font-black uppercase tracking-[0.2em] text-white">
+                            <h2 className="text-sm md:text-base font-black uppercase tracking-[0.2em] text-white font-cinzel">
                                 Orbe de <span className="text-brand-primary">Grayskull</span>
                             </h2>
                         </div>
@@ -214,7 +214,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isIncognito = false }) => {
                         </div>
                         <div className="text-center md:text-left">
                             <p className="text-[6px] xs:text-[8px] md:text-[10px] font-black uppercase tracking-widest text-white/60 mb-0.5 md:mb-1">Vínculos Activos</p>
-                            <h3 className="text-xs xs:text-sm md:text-3xl font-black text-white">{stats?.total_products || 0}</h3>
+                            <h3 className="text-xs xs:text-sm md:text-3xl font-black text-white tabular-nums">{stats?.total_products || 0}</h3>
                         </div>
                     </div>
                 </div>
@@ -225,7 +225,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isIncognito = false }) => {
                         </div>
                         <div className="text-center md:text-left">
                             <p className="text-[6px] xs:text-[8px] md:text-[10px] font-black uppercase tracking-widest text-white/60 mb-0.5 md:mb-1">Fortaleza</p>
-                            <h3 className="text-xs xs:text-sm md:text-3xl font-black text-white blur-incognito">{stats?.owned_count || 0}</h3>
+                            <h3 className="text-xs xs:text-sm md:text-3xl font-black text-white tabular-nums blur-incognito">{stats?.owned_count || 0}</h3>
                         </div>
                     </div>
                 </div>
@@ -236,7 +236,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isIncognito = false }) => {
                         </div>
                         <div className="text-center md:text-left">
                             <p className="text-[6px] xs:text-[8px] md:text-[10px] font-black uppercase tracking-widest text-white/60 mb-0.5 md:mb-1">Valor Venta</p>
-                            <h3 className="text-xs xs:text-sm md:text-3xl font-black text-white blur-incognito">{(stats?.financial?.market_value || 0).toLocaleString('es-ES')}€</h3>
+                            <h3 className="text-xs xs:text-sm md:text-3xl font-black text-white tabular-nums blur-incognito">{(stats?.financial?.market_value || 0).toLocaleString('es-ES')}€</h3>
                         </div>
                     </div>
                 </div>
@@ -254,7 +254,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isIncognito = false }) => {
                             </div>
                             <div className="text-center md:text-left">
                                 <p className="text-[6px] xs:text-[8px] md:text-[10px] font-black uppercase tracking-widest text-amber-500/60 mb-0.5 md:mb-1">Vínculos Vintage</p>
-                                <h3 className="text-xs xs:text-sm md:text-3xl font-black text-amber-500">{stats?.total_products_vintage || 0}</h3>
+                                <h3 className="text-xs xs:text-sm md:text-3xl font-black text-amber-500 tabular-nums">{stats?.total_products_vintage || 0}</h3>
                             </div>
                         </div>
                     </div>
@@ -268,7 +268,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isIncognito = false }) => {
                                 </div>
                                 <div className="text-center md:text-left">
                                     <p className="text-[6px] xs:text-[8px] md:text-[10px] font-black uppercase tracking-widest text-amber-500/60 mb-0.5 md:mb-1">Fortaleza Vintage</p>
-                                    <h3 className="text-xs xs:text-sm md:text-3xl font-black text-amber-500 blur-incognito">{stats?.owned_count_vintage || 0}</h3>
+                                    <h3 className="text-xs xs:text-sm md:text-3xl font-black text-amber-500 tabular-nums blur-incognito">{stats?.owned_count_vintage || 0}</h3>
                                 </div>
                             </div>
                         </div>
@@ -283,7 +283,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, isIncognito = false }) => {
                                 </div>
                                 <div className="text-center md:text-left">
                                     <p className="text-[6px] xs:text-[8px] md:text-[10px] font-black uppercase tracking-widest text-amber-500/60 mb-0.5 md:mb-1">Valor Vintage</p>
-                                    <h3 className="text-xs xs:text-sm md:text-3xl font-black text-amber-500 blur-incognito">{(stats?.financial_vintage?.market_value || 0).toLocaleString('es-ES')}€</h3>
+                                    <h3 className="text-xs xs:text-sm md:text-3xl font-black text-amber-500 tabular-nums blur-incognito">{(stats?.financial_vintage?.market_value || 0).toLocaleString('es-ES')}€</h3>
                                 </div>
                             </div>
                         </div>

@@ -90,7 +90,7 @@ const Navbar = ({ onMenuClick, showSearch = true, searchValue = "", onSearchChan
                             <span className="text-xs md:text-sm font-black text-white leading-none tracking-tight">
                                 {user?.username || 'Cargando...'}
                             </span>
-                            <span className="text-[8px] md:text-[9px] font-bold text-white/30 uppercase tracking-widest mt-0.5">
+                            <span className="text-[8px] md:text-[9px] font-bold text-white/50 uppercase tracking-widest mt-0.5">
                                 {isAdmin ? 'Arquitecto' : 'Guardián'}
                             </span>
                         </div>
@@ -101,7 +101,7 @@ const Navbar = ({ onMenuClick, showSearch = true, searchValue = "", onSearchChan
                                 onClick={() => {
                                     if (onIdentityChange) onIdentityChange();
                                 }}
-                                className="ml-1 p-1 md:p-2 rounded-lg bg-brand-primary/10 text-brand-primary hover:bg-brand-primary hover:text-white transition-all border border-brand-primary/20"
+                                className="ml-1 flex h-8 w-8 md:h-9 md:w-9 items-center justify-center rounded-lg bg-brand-primary/10 text-brand-primary hover:bg-brand-primary hover:text-white transition-all border border-brand-primary/20"
                                 title="Alternar Identidad (Admin/David)"
                                 aria-label="Alternar Identidad (Admin/David)"
                             >
@@ -113,7 +113,7 @@ const Navbar = ({ onMenuClick, showSearch = true, searchValue = "", onSearchChan
                         {onToggleIncognito && (
                             <button
                                 onClick={onToggleIncognito}
-                                className={`ml-1.5 p-1 md:p-2 rounded-lg transition-all border ${isIncognito ? 'bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500 hover:text-white' : 'bg-white/5 text-white/60 border-white/10 hover:bg-white/10 hover:text-white'}`}
+                                className={`ml-1.5 flex h-8 w-8 md:h-9 md:w-9 items-center justify-center rounded-lg transition-all border ${isIncognito ? 'bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500 hover:text-white' : 'bg-white/5 text-white/65 border-white/10 hover:bg-white/10 hover:text-white'}`}
                                 title={isIncognito ? "Desactivar Modo Incógnito (Esc dual / Ctrl+I)" : "Activar Modo Incógnito (Esc dual / Ctrl+I)"}
                                 aria-label={isIncognito ? "Desactivar Modo Incógnito" : "Activar Modo Incógnito"}
                                 aria-pressed={isIncognito}
@@ -125,7 +125,7 @@ const Navbar = ({ onMenuClick, showSearch = true, searchValue = "", onSearchChan
                         {/* Botón de Música */}
                         <button
                             onClick={toggleMusic}
-                            className={`ml-1.5 p-1 md:p-2 rounded-lg transition-all border ${isPlaying ? 'bg-brand-primary/15 text-brand-primary border-brand-primary/30 hover:bg-brand-primary hover:text-white' : 'bg-white/5 text-white/60 border-white/10 hover:bg-white/10 hover:text-white'}`}
+                            className={`ml-1.5 flex h-8 w-8 md:h-9 md:w-9 items-center justify-center rounded-lg transition-all border ${isPlaying ? 'bg-brand-primary/15 text-brand-primary border-brand-primary/30 hover:bg-brand-primary hover:text-white' : 'bg-white/5 text-white/65 border-white/10 hover:bg-white/10 hover:text-white'}`}
                             title={isPlaying ? "Silenciar Música" : "Reproducir Música"}
                             aria-label={isPlaying ? "Silenciar Música" : "Reproducir Música"}
                             aria-pressed={isPlaying}
@@ -147,7 +147,7 @@ const Navbar = ({ onMenuClick, showSearch = true, searchValue = "", onSearchChan
                             placeholder="Buscar figuras (nombre, EAN, ID)..."
                             value={searchValue}
                             onChange={(e) => onSearchChange?.(e.target.value)}
-                            className="w-full rounded-2xl bg-white/5 py-2.5 pl-9 pr-4 text-sm font-bold text-white border border-white/10 focus:border-brand-primary outline-none transition-all placeholder:text-white/20"
+                            className="w-full rounded-2xl bg-white/5 py-2.5 pl-9 pr-4 text-sm font-bold text-white border border-white/10 focus:border-brand-primary outline-none transition-all placeholder:text-white/40"
                         />
                     </div>
                 </div>

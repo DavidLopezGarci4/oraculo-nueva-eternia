@@ -1923,7 +1923,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                 onClick={() => setCardVersion('showcase')}
                                 className={`flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all font-cinzel cursor-pointer ${
                                     cardVersion === 'showcase'
-                                        ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-md shadow-purple-500/30 font-black'
+                                        ? 'bg-gradient-to-r from-emerald-500 to-teal-700 text-white shadow-md shadow-emerald-500/30 font-black'
                                         : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
                                 }`}
                             >

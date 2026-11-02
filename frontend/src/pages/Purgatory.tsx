@@ -771,7 +771,7 @@ const Purgatory: React.FC = React.memo(() => {
                     <div className="flex flex-col items-center justify-center py-6 min-h-[600px] relative w-full">
                         {deckItems.length === 0 ? (
                             <div className="flex flex-col items-center justify-center gap-4 text-center py-12 rounded-3xl border border-dashed border-white/10 bg-white/[0.01] w-full max-w-xl">
-                                <CheckCircle2 className="h-12 w-12 text-green-500/40 animate-bounce" />
+                                <CheckCircle2 className="h-12 w-12 text-green-500/40" />
                                 <div className="space-y-1">
                                     <p className="text-lg font-black text-white/60 uppercase tracking-widest">Fin del Mazo</p>
                                     <p className="text-xs text-white/65">Has procesado todas las cartas filtradas en esta ronda.</p>

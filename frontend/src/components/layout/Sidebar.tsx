@@ -67,7 +67,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen
                             />
                         </div>
                         <div className="flex flex-col">
-                            <h1 className="text-sm font-black tracking-tighter text-white leading-none">ORÁCULO</h1>
+                            <h1 className="text-sm font-black tracking-wider text-white leading-none font-cinzel">ORÁCULO</h1>
                             {['eternia', 'fortaleza_vintage'].includes(activeTab) ? (
                                 <span className="text-[8px] font-black text-amber-500 uppercase tracking-[0.2em] mt-1 drop-shadow-[0_0_8px_rgba(245,158,11,0.4)]">ETERNIA VINTAGE</span>
                             ) : (

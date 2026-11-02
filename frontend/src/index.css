@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 @theme {
+    --font-sans: 'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
     --color-brand-primary: #0ea5e9;
     --color-brand-secondary: #8b5cf6;
     --color-glass-bg: rgba(255, 255, 255, 0.03);
@@ -9,13 +10,23 @@
 }
 
 :root {
-    font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+    font-family: var(--font-sans);
     line-height: 1.5;
     font-weight: 400;
 
     color-scheme: dark;
     color: rgba(255, 255, 255, 0.87);
     background-color: #050608;
+}
+
+::selection {
+    background-color: rgba(14, 165, 233, 0.32);
+    color: #ffffff;
+}
+
+:focus-visible {
+    outline: 2px solid rgba(14, 165, 233, 0.65);
+    outline-offset: 2px;
 }
 
 body {
@@ -56,7 +67,7 @@ body {
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(135deg, white/5, transparent 40%);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), transparent 40%);
     pointer-events: none;
 }
 
@@ -187,4 +198,44 @@ button.bg-amber-500:hover::after {
 .tcg-holo-seal {
     background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 25%, #a855f7 50%, #ec4899 75%, #f59e0b 100%);
     box-shadow: inset 0 0 6px rgba(255, 255, 255, 0.8), 0 0 10px rgba(245, 158, 11, 0.3);
+}
+
+/* ── Custom Scrollbar & Utility Animations ── */
+.custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.14);
+    border-radius: 9999px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(14, 165, 233, 0.45);
+}
+
+@keyframes spin-slow {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.animate-spin-slow {
+    animation: spin-slow 8s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .animate-spin-slow {
+        animation: none;
+    }
 }

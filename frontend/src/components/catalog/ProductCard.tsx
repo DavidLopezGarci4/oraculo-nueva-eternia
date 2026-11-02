@@ -229,7 +229,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                             </div>
                             <div className={`rounded-lg sm:rounded-xl px-2 py-1 sm:px-3 sm:py-1.5 text-[8px] sm:text-[10px] font-black backdrop-blur-md border shadow-2xl transition-all transform uppercase tracking-widest flex items-center gap-1.5 ${isMaster ? 'border-purple-500/30 bg-purple-500/20 text-purple-300' : (isVintageOnly ? 'border-amber-500/30 bg-amber-500/20 text-white' : 'border-brand-primary/30 bg-brand-primary/20 text-white')}`}>
                                 <Gem className={`h-2 w-2 sm:h-3 sm:w-3 ${isMaster ? 'text-purple-400' : (isVintageOnly ? 'text-amber-500' : 'text-brand-primary')}`} />
-                                <span className="blur-incognito">{displayPrice}€</span>
+                                <span className="tabular-nums blur-incognito">{displayPrice}€</span>
                                 {product.best_p2p_source && (
                                     <span className="opacity-40 text-[6px] sm:text-[7px] border-l border-white/20 pl-1.5 ml-0.5">{product.best_p2p_source}</span>
                                 )}
@@ -264,7 +264,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                             <div className="mt-1 space-y-1">
                                 <div className="flex items-center justify-between text-[6px] sm:text-[8px] font-black uppercase tracking-tighter">
                                     <span className={`${progress > 80 ? (isVintageOnly ? 'text-amber-500' : 'text-brand-primary') : 'text-white/60'}`}>Set Completion</span>
-                                    <span className="text-white/65">{Math.round(progress)}%</span>
+                                    <span className="text-white/65 tabular-nums">{Math.round(progress)}%</span>
                                 </div>
                                 <div className="h-0.5 w-full bg-white/5 rounded-full overflow-hidden">
                                     <div
@@ -283,7 +283,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                         {/* Action Button: Detail View */}
                         <button
                             onClick={() => setSelectedProduct(product)}
-                            className={`flex h-7 w-7 items-center justify-center rounded-xl bg-white/5 text-white/65 border border-white/10 transition-all active:scale-95 duration-300 shadow-md ${isVintageOnly ? 'hover:bg-amber-500/20 hover:text-amber-500 hover:border-amber-500/45 hover:scale-110' : 'hover:bg-brand-primary/20 hover:text-brand-primary hover:border-brand-primary/45 hover:scale-110'}`}
+                            className={`flex h-8 w-8 items-center justify-center rounded-xl bg-white/5 text-white/65 border border-white/10 transition-all active:scale-95 duration-300 shadow-md ${isVintageOnly ? 'hover:bg-amber-500/20 hover:text-amber-500 hover:border-amber-500/45 hover:scale-110' : 'hover:bg-brand-primary/20 hover:text-brand-primary hover:border-brand-primary/45 hover:scale-110'}`}
                             title="Ver Mercado Live"
                         >
                             <Info className="h-3.5 w-3.5" />
@@ -293,13 +293,13 @@ const ProductCard: React.FC<ProductCardProps> = ({
                         <button
                             onClick={() => toggleMutation.mutate({ productId: product.id, wish: true })}
                             disabled={toggleMutation.isPending || owned}
-                            className={`flex h-7 w-7 items-center justify-center rounded-xl transition-all border shadow-md hover:scale-110 active:scale-95 duration-300 ${wished
+                            className={`flex h-8 w-8 items-center justify-center rounded-xl transition-all border shadow-md hover:scale-110 active:scale-95 duration-300 ${wished
                                 ? (isVintageOnly
                                     ? 'bg-amber-500/20 text-amber-500 border-amber-500/30 hover:bg-red-500/20 hover:text-red-400'
                                     : 'bg-brand-primary/20 text-brand-primary border-brand-primary/30 hover:bg-red-500/20 hover:text-red-400')
                                 : (isVintageOnly
-                                    ? 'bg-white/5 text-white/20 border-white/10 hover:bg-amber-500/10 hover:text-amber-500'
-                                    : 'bg-white/5 text-white/20 border-white/10 hover:bg-brand-primary/10 hover:text-brand-primary')
+                                    ? 'bg-white/5 text-white/60 border-white/10 hover:bg-amber-500/10 hover:text-amber-500'
+                                    : 'bg-white/5 text-white/60 border-white/10 hover:bg-brand-primary/10 hover:text-brand-primary')
                                 } ${owned ? 'opacity-20 cursor-not-allowed' : ''} ${toggleMutation.isPending ? 'opacity-50 cursor-wait' : ''}`}
                             title={wished ? 'Quitar de Deseos' : 'Añadir a Deseos'}
                         >
@@ -311,7 +311,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                             href={product.asin ? `https://www.amazon.es/s?k=${product.asin}` : buildSearchQuery(product, isVintageOnly)}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className={`flex h-7 w-7 items-center justify-center rounded-xl bg-white/5 text-white/20 border border-white/10 transition-all hover:scale-110 active:scale-95 duration-300 shadow-md ${isVintageOnly ? 'hover:bg-amber-500/20 hover:text-amber-400' : 'hover:bg-brand-secondary/20 hover:text-brand-secondary'}`}
+                            className={`flex h-8 w-8 items-center justify-center rounded-xl bg-white/5 text-white/60 border border-white/10 transition-all hover:scale-110 active:scale-95 duration-300 shadow-md ${isVintageOnly ? 'hover:bg-amber-500/20 hover:text-amber-400' : 'hover:bg-brand-secondary/20 hover:text-brand-secondary'}`}
                             title={product.asin ? "Buscar en Amazon.es por ASIN" : "Buscar en Google"}
                         >
                             <Search className="h-3.5 w-3.5" />
@@ -321,7 +321,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                         {isAdmin && (
                             <button
                                 onClick={() => setEditingProduct(product)}
-                                className={`flex h-7 w-7 items-center justify-center rounded-xl bg-white/5 text-white/65 border border-white/10 transition-all hover:scale-110 active:scale-95 duration-300 shadow-md ${isVintageOnly ? 'hover:bg-amber-500/20 hover:text-amber-500' : 'hover:bg-brand-primary/20 hover:text-brand-primary'}`}
+                                className={`flex h-8 w-8 items-center justify-center rounded-xl bg-white/5 text-white/65 border border-white/10 transition-all hover:scale-110 active:scale-95 duration-300 shadow-md ${isVintageOnly ? 'hover:bg-amber-500/20 hover:text-amber-500' : 'hover:bg-brand-primary/20 hover:text-brand-primary'}`}
                                 title="Editar Metadatos (Arquitecto)"
                             >
                                 <Settings className="h-3.5 w-3.5" />

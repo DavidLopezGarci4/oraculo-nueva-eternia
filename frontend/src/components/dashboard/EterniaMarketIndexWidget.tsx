@@ -229,7 +229,7 @@ export const EterniaMarketIndexWidget: React.FC<EterniaMarketIndexWidgetProps> =
     const periodLow = data.period_low ?? rawMin;
 
     return (
-        <div className="bg-gradient-to-br from-slate-900/90 via-slate-950 to-black border border-slate-800/80 rounded-2xl md:rounded-3xl p-4 sm:p-6 mb-6 shadow-2xl backdrop-blur-md">
+        <div className="bg-gradient-to-br from-slate-900/90 via-slate-950 to-black border border-slate-800/80 rounded-2xl md:rounded-3xl p-4 sm:p-6 mb-6 shadow-2xl backdrop-blur-md tabular-nums">
             {/* Header del Widget */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
                 <div className="flex items-center gap-3">
@@ -238,7 +238,7 @@ export const EterniaMarketIndexWidget: React.FC<EterniaMarketIndexWidgetProps> =
                     </div>
                     <div>
                         <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="text-base sm:text-lg font-black text-white tracking-wide uppercase">
+                            <h3 className="text-base sm:text-lg font-black text-white tracking-wide uppercase font-cinzel">
                                 Índice Bursátil MOTU (EMI)
                             </h3>
                             <span className={`text-xs px-2.5 py-0.5 rounded-full border font-mono font-bold flex items-center gap-1 ${badgeBg} ${trendColor}`}>

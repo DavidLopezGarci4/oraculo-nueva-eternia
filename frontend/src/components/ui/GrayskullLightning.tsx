@@ -53,7 +53,7 @@ export const GrayskullLightning: React.FC<GrayskullLightningProps> = ({
                                 transition={{ duration: 0.5 }}
                                 className="p-3 rounded-full bg-black/80 border border-emerald-400/80 shadow-2xl backdrop-blur-md"
                             >
-                                <Zap className="h-8 w-8 text-yellow-300 animate-bounce fill-yellow-400 drop-shadow-[0_0_12px_rgba(250,204,21,1)]" />
+                                <Zap className="h-8 w-8 text-yellow-300 animate-pulse fill-yellow-400 drop-shadow-[0_0_12px_rgba(250,204,21,1)]" />
                             </motion.div>
                         </div>
                     </motion.div>

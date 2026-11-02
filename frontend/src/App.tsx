@@ -389,7 +389,7 @@ function App() {
   const allowManualPriceReveal = !isIncognito && localStorage.getItem('allowManualPriceReveal') === 'true';
 
   return (
-    <div className={`flex h-screen w-screen overflow-hidden bg-transparent text-white font-inter ${isIncognito ? 'mode-incognito' : ''} ${allowManualPriceReveal ? 'reveal-manual-prices' : ''}`}>
+    <div className={`flex h-screen w-screen overflow-hidden bg-transparent text-white font-sans ${isIncognito ? 'mode-incognito' : ''} ${allowManualPriceReveal ? 'reveal-manual-prices' : ''}`}>
       {/* Global Background Layer with Glassmorphism Haloes */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
         <div className="absolute top-[-10%] right-[-5%] h-[60%] w-[60%] rounded-full bg-brand-primary/5 blur-[120px]" />
