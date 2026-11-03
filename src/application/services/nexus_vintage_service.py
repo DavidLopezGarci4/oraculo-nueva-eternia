@@ -71,13 +71,8 @@ class NexusVintageService:
         """
         Orchestrates the full vintage catalog sync with detailed telemetry.
         """
-        # Ensure DB schema is ready
-        try:
-            from src.infrastructure.universal_migrator import migrate
-            logger.info("📡 Paso 0 (Infraestructura): Sincronizando esquema de base de datos...")
-            migrate()
-        except Exception as me:
-            logger.error(f"❌ Error Crítico de Infraestructura: {me}")
+        # Schema & RLS are governed exclusively via Alembic migrations
+        # (universal_migrator runtime invocation removed to avoid shadow DDL & RLS drift)
         
         # Initialize Telemetry entry
         with SessionCloud() as db:

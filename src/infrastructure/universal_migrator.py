@@ -82,13 +82,6 @@ def _sync_engine(engine, label: str):
                     logger.warning(f"Could not add {col_name}: {e}")
                     conn.rollback()
 
-        # Phase 14: Origin Category support for filtering
-        if "origin_category" not in columns_products:
-             try:
-                 conn.execute(text("ALTER TABLE products ADD COLUMN origin_category VARCHAR(20) DEFAULT 'retail'"))
-                 conn.commit()
-             except: pass
-
         # --- Table: offers ---
         columns_offers = [c['name'] for c in inspector.get_columns("offers")]
         if "currency" not in columns_offers:
@@ -105,13 +98,6 @@ def _sync_engine(engine, label: str):
             logger.info("Adding 'max_price' to offers table...")
             conn.execute(text("ALTER TABLE offers ADD COLUMN max_price FLOAT DEFAULT 0.0"))
             conn.commit()
-
-        if "origin_category" not in columns_offers:
-            try:
-                conn.execute(text("ALTER TABLE offers ADD COLUMN origin_category VARCHAR(20) DEFAULT 'retail'"))
-                conn.commit()
-            except Exception as e:
-                logger.warning(f"Could not add origin_category to offers: {e}")
 
         if "first_seen_at" not in columns_offers:
             logger.info("Adding 'first_seen_at' to offers table...")
@@ -167,13 +153,6 @@ def _sync_engine(engine, label: str):
                 conn.commit()
             except Exception as e:
                 logger.warning(f"Could not add ean to pending_matches: {e}")
-
-        if "origin_category" not in columns_pending:
-            try:
-                conn.execute(text("ALTER TABLE pending_matches ADD COLUMN origin_category VARCHAR(20) DEFAULT 'retail'"))
-                conn.commit()
-            except Exception as e:
-                logger.warning(f"Could not add origin_category to pending_matches: {e}")
 
         if "first_seen_at" not in columns_pending:
             logger.info("Adding 'first_seen_at' to pending_matches table...")
@@ -334,6 +313,41 @@ def _sync_engine(engine, label: str):
                     except Exception as e:
                         logger.warning(f"Could not add {col_name} to character_lore: {e}")
                         conn.rollback()
+
+        # C. Salvaguarda Zero-Trust para ejecuciones manuales CLI contra PostgreSQL/Supabase
+        if engine.dialect.name == "postgresql":
+            try:
+                conn.execute(text("REVOKE ALL ON ALL TABLES IN SCHEMA public FROM anon, authenticated;"))
+                conn.execute(
+                    text(
+                        """
+                        DO $$
+                        DECLARE
+                            r RECORD;
+                        BEGIN
+                            FOR r IN
+                                SELECT c.relname AS tablename
+                                FROM pg_class c
+                                JOIN pg_namespace n ON n.oid = c.relnamespace
+                                WHERE n.nspname = 'public'
+                                  AND c.relkind IN ('r', 'p')
+                                  AND c.relrowsecurity = false
+                                  AND pg_get_userbyid(c.relowner) = current_user
+                                  AND NOT EXISTS (
+                                      SELECT 1 FROM pg_depend d
+                                      WHERE d.objid = c.oid AND d.deptype = 'e'
+                                  )
+                            LOOP
+                                EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY;', r.tablename);
+                            END LOOP;
+                        END $$;
+                        """
+                    )
+                )
+                conn.commit()
+            except Exception as e:
+                logger.warning(f"[{label}] RLS CLI safeguard warning: {e}")
+                conn.rollback()
 
 if __name__ == "__main__":
     migrate()

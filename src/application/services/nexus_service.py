@@ -68,15 +68,8 @@ class NexusService:
         """
         Orchestrates the full catalog sync with detailed telemetry.
         """
-        # 0. Infrastructure Guard: Ensure DB Schema is ready BEFORE any queries
-        try:
-            from src.infrastructure.universal_migrator import migrate
-            # Use a new event loop or run in executor if needed, but migrate() is sync
-            logger.info("📡 Paso 0 (Infraestructura): Sincronizando esquema de base de datos...")
-            migrate()
-        except Exception as me:
-            logger.error(f"❌ Error Crítico de Infraestructura: {me}")
-            # Even if it fails, we try to proceed to see if tables exist
+        # 0. Infrastructure Guard: Schema & RLS are governed exclusively via Alembic migrations
+        # (universal_migrator runtime invocation removed to avoid shadow DDL & RLS drift)
         
         # Initialize Telemetry entry (Now safe because migrate() ran)
         with SessionCloud() as db:

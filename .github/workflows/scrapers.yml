@@ -34,6 +34,40 @@ jobs:
           pip install -r requirements.txt
           python -m playwright install --with-deps chromium
           
+      - name: Verify Supabase RLS & Zero Public Exposure
+        env:
+          SUPABASE_DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
+        run: |
+          python - <<'PY'
+          import os, sys
+          from sqlalchemy import create_engine, text
+          url = (os.environ.get("SUPABASE_DATABASE_URL") or "").strip().strip("'\"")
+          if url.startswith("postgres://"):
+              url = url.replace("postgres://", "postgresql://", 1)
+          if not url or "postgresql" not in url:
+              print("No PostgreSQL SUPABASE_DATABASE_URL configured; skipping live RLS check.")
+              sys.exit(0)
+          engine = create_engine(url)
+          with engine.connect() as conn:
+              exposed = [
+                  r[0] for r in conn.execute(text("""
+                      SELECT c.relname
+                      FROM pg_class c
+                      JOIN pg_namespace n ON n.oid = c.relnamespace
+                      WHERE n.nspname = 'public'
+                        AND c.relkind IN ('r', 'p')
+                        AND c.relrowsecurity = false
+                        AND NOT EXISTS (
+                            SELECT 1 FROM pg_depend d WHERE d.objid = c.oid AND d.deptype = 'e'
+                        )
+                  """))
+              ]
+          if exposed:
+              print(f"CRITICAL SECURITY DRIFT: Tables in public without RLS: {exposed}", file=sys.stderr)
+              sys.exit(1)
+          print("✅ Zero-Trust RLS verified: 0 exposed tables in public.")
+          PY
+
       - name: Nexo Maestro - Master Catalog & Cloud Image Sync
         env:
           SUPABASE_DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
