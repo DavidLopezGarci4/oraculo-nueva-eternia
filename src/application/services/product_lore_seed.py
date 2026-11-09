@@ -10,7 +10,15 @@ from typing import Dict, Any, Optional, List
 from loguru import logger
 from sqlalchemy.orm import Session
 from src.domain.models import ProductModel, ProductLoreModel, CharacterLoreModel
-from src.domain.motu_canon_database import resolve_motu_profile, CANONICAL_CARD_PROFILES
+from src.domain.motu_canon_database import (
+    resolve_motu_profile,
+    CANONICAL_CARD_PROFILES,
+    MOTU_LORE_ENCYCLOPEDIA,
+    FACTION_TO_THEME,
+    SYSTEM_CANON_SOURCES,
+    canonicalize_slug,
+)
+from src.application.services.lore_dual_sync import LoreDualSync
 
 # Biografías canónicas de reverso de blíster (Cardback Bios) y frases oficiales de Mattel en español
 CARDBACK_BIOS_ORIGINS: Dict[str, Dict[str, str]] = {
@@ -589,70 +597,130 @@ class ProductLoreSeedService:
             "is_customized": False
         }
 
+    _CHARACTER_FIELDS = (
+        "canonical_name", "subtitle", "faction", "theme_key", "type_line", "special_move",
+        "quote", "flavor_quote_author", "lore", "fuerza", "magia", "defensa", "agilidad", "mana_cost",
+    )
+
+    @staticmethod
+    def _profile_to_values(prof: Dict[str, Any], default_name: str) -> Dict[str, Any]:
+        """Normaliza un perfil (CANONICAL_CARD_PROFILES o MOTU_LORE_ENCYCLOPEDIA) a columnas de character_lore."""
+        stats = prof.get("stats", {})
+        faction = prof.get("faction", "Guerreros Heroicos")
+        theme = prof.get("theme_key") or prof.get("frame_theme") or FACTION_TO_THEME.get(faction, "castle_grayskull")
+        return {
+            "canonical_name": prof.get("canonical_name", default_name),
+            "subtitle": prof.get("subtitle"),
+            "faction": faction,
+            "theme_key": theme,
+            "type_line": prof.get("type_line", "Criatura Legendaria — Guerrero Heroico"),
+            "special_move": prof.get("special_move", "Furia del Relámpago de Grayskull"),
+            "quote": prof.get("quote"),
+            "flavor_quote_author": prof.get("flavor_quote_author"),
+            "lore": prof.get("lore", "Noble defensor de la corte real de Eternia."),
+            "fuerza": stats.get("fuerza", 85),
+            "magia": stats.get("magia", 75),
+            "defensa": stats.get("defensa", 85),
+            "agilidad": stats.get("agilidad", 85),
+            "mana_cost": prof.get("mana_cost", "{2}{W}{W}"),
+        }
+
+    @staticmethod
+    def _is_curated(existing: CharacterLoreModel) -> bool:
+        """Registro verificado por una persona (no canon del sistema): inmutable salvo force=True."""
+        return bool(existing.is_verified and existing.source_url not in SYSTEM_CANON_SOURCES)
+
     @classmethod
-    def seed_canonical_characters(cls, db: Session, force: bool = False) -> Dict[str, int]:
+    def _upsert_character(
+        cls,
+        db: Session,
+        existing_by_slug: Dict[str, CharacterLoreModel],
+        slug: str,
+        values: Dict[str, Any],
+        force: bool,
+    ) -> str:
+        """Devuelve 'created' | 'updated' | 'unchanged' | 'skipped'."""
+        existing = existing_by_slug.get(slug)
+        if existing is None:
+            new_char = CharacterLoreModel(slug=slug, is_verified=True, source_url="Canon MOTU Oficial", **values)
+            db.add(new_char)
+            existing_by_slug[slug] = new_char
+            return "created"
+        if not force and cls._is_curated(existing):
+            return "skipped"
+        changed = False
+        for key, value in values.items():
+            if getattr(existing, key) != value:
+                setattr(existing, key, value)
+                changed = True
+        if not existing.is_verified or existing.source_url not in SYSTEM_CANON_SOURCES:
+            existing.is_verified = True
+            existing.source_url = "Canon MOTU Oficial"
+            changed = True
+        return "updated" if changed else "unchanged"
+
+    @classmethod
+    def _purge_legacy_slug(cls, db: Session, existing_by_slug: Dict[str, CharacterLoreModel], legacy: str, slug: str) -> bool:
+        """Elimina slugs corruptos heredados (p. ej. 'prncipe_adam') sembrados por el sistema y re-apunta productos."""
+        stale = existing_by_slug.get(legacy)
+        if stale is None or legacy == slug or stale.source_url not in SYSTEM_CANON_SOURCES:
+            return False
+        db.query(ProductModel).filter(ProductModel.character_slug == legacy).update({"character_slug": slug})
+        db.delete(stale)
+        del existing_by_slug[legacy]
+        return True
+
+    @classmethod
+    def seed_canonical_characters(cls, db: Session, force: bool = False) -> Dict[str, Any]:
         """
-        Siembra y actualiza CharacterLoreModel con los textos canónicos en español
-        de los cromos de Masters of the Universe para todos los personajes arquetípicos.
+        Siembra unificada de `character_lore` (único sembrador arquetípico).
+
+        Fuentes: CANONICAL_CARD_PROFILES (perfiles de cromo) y MOTU_LORE_ENCYCLOPEDIA (resto de personajes).
+        Procedencia (sin columnas nuevas): `source_url in SYSTEM_CANON_SOURCES` = canon del sistema,
+        actualizable con force=False; cualquier otra fila verificada se considera curada y solo se
+        sobrescribe con force=True. Es idempotente: solo escribe si hay cambios reales.
         """
-        total = 0
-        updated = 0
-        created = 0
+        counters = {"created": 0, "updated": 0, "unchanged": 0, "skipped": 0}
+        touched: set = set()
+        processed: set = set()
+        purged = 0
         existing_by_slug = {c.slug: c for c in db.query(CharacterLoreModel).all()}
 
         for entry in CANONICAL_CARD_PROFILES:
             prof = entry["profile"]
-            raw_slug = prof["canonical_name"].lower().replace(" ", "_").replace("-", "_")
-            slug = re.sub(r"[^a-z0-9_]", "", raw_slug)
-            existing = existing_by_slug.get(slug)
-            stats = prof.get("stats", {})
+            slug = canonicalize_slug(prof["canonical_name"])
+            legacy = re.sub(r"[^a-z0-9_]", "", prof["canonical_name"].lower().replace(" ", "_").replace("-", "_"))
+            if cls._purge_legacy_slug(db, existing_by_slug, legacy, slug):
+                purged += 1
+            result = cls._upsert_character(db, existing_by_slug, slug, cls._profile_to_values(prof, prof["canonical_name"]), force)
+            counters[result] += 1
+            processed.add(slug)
+            if result in ("created", "updated"):
+                touched.add(slug)
 
-            if existing:
-                if force or not existing.is_verified:
-                    existing.canonical_name = prof["canonical_name"]
-                    existing.subtitle = prof.get("subtitle")
-                    existing.faction = prof["faction"]
-                    existing.theme_key = prof.get("theme_key", "castle_grayskull")
-                    existing.type_line = prof["type_line"]
-                    existing.special_move = prof["special_move"]
-                    existing.quote = prof.get("quote")
-                    existing.flavor_quote_author = prof.get("flavor_quote_author")
-                    existing.lore = prof["lore"]
-                    existing.fuerza = stats.get("fuerza", 85)
-                    existing.magia = stats.get("magia", 75)
-                    existing.defensa = stats.get("defensa", 85)
-                    existing.agilidad = stats.get("agilidad", 85)
-                    existing.mana_cost = prof.get("mana_cost", "{2}{W}{W}")
-                    existing.is_verified = True
-                    updated += 1
-            else:
-                new_char = CharacterLoreModel(
-                    slug=slug,
-                    canonical_name=prof["canonical_name"],
-                    subtitle=prof.get("subtitle"),
-                    faction=prof["faction"],
-                    theme_key=prof.get("theme_key", "castle_grayskull"),
-                    type_line=prof["type_line"],
-                    special_move=prof["special_move"],
-                    quote=prof.get("quote"),
-                    flavor_quote_author=prof.get("flavor_quote_author"),
-                    lore=prof["lore"],
-                    fuerza=stats.get("fuerza", 85),
-                    magia=stats.get("magia", 75),
-                    defensa=stats.get("defensa", 85),
-                    agilidad=stats.get("agilidad", 85),
-                    mana_cost=prof.get("mana_cost", "{2}{W}{W}"),
-                    is_verified=True,
-                    source_url="Canon MOTU Oficial"
-                )
-                db.add(new_char)
-                existing_by_slug[slug] = new_char
-                created += 1
-            total += 1
+        for key, data in MOTU_LORE_ENCYCLOPEDIA.items():
+            slug = canonicalize_slug(key)
+            if slug in processed:
+                continue
+            result = cls._upsert_character(db, existing_by_slug, slug, cls._profile_to_values(data, key.title()), force)
+            counters[result] += 1
+            if result in ("created", "updated"):
+                touched.add(slug)
 
         db.commit()
-        logger.info(f"Grimorio Lore Personajes :: Sembrado de {total} arquetipos ({created} creados, {updated} actualizados).")
-        return {"total_characters": total, "created": created, "updated": updated}
+        total = sum(counters.values())
+        logger.info(
+            f"Grimorio Lore Personajes :: {total} arquetipos procesados "
+            f"({counters['created']} creados, {counters['updated']} actualizados, {counters['skipped']} curados preservados, {purged} slugs legacy purgados)."
+        )
+        return {
+            "total_characters": total,
+            "created": counters["created"],
+            "updated": counters["updated"],
+            "skipped": counters["skipped"],
+            "purged": purged,
+            "touched_slugs": sorted(touched),
+        }
 
     @classmethod
     def seed_origins_products(cls, db: Session, force: bool = False) -> Dict[str, int]:
@@ -694,3 +762,34 @@ class ProductLoreSeedService:
         db.commit()
         logger.info(f"Grimorio Lore Origins :: Sembrado completado ({created} creados, {updated} actualizados, {skipped} preservados).")
         return {"total_origins": total, "created": created, "updated": updated, "skipped": skipped}
+
+    @classmethod
+    def seed_missing_origins_products(cls, db: Session) -> Dict[str, int]:
+        """
+        Sembrado INCREMENTAL: crea solo las filas de `product_lore` que faltan para figuras Origins
+        (is_vintage == False). No toca filas existentes. Coste O(altas nuevas) en segundas pasadas.
+        """
+        existing_ids = {row[0] for row in db.query(ProductLoreModel.product_id).all()}
+        missing = db.query(ProductModel).filter(
+            (ProductModel.is_vintage == False) | (ProductModel.is_vintage.is_(None))  # noqa: E712
+        ).all()
+        created_ids: List[int] = []
+        for product in missing:
+            if product.id in existing_ids:
+                continue
+            db.add(ProductLoreModel(**cls.generate_default_lore_for_product(product, db)))
+            created_ids.append(product.id)
+        if created_ids:
+            db.commit()
+        return {"created": len(created_ids), "created_ids": created_ids}
+
+    @classmethod
+    def seed_all_dual(cls, db: Session, force: bool = False) -> Dict[str, Any]:
+        """
+        Sembrado completo (character_lore + product_lore) en `db` (SessionCloud) y replica
+        unidireccional hacia SQLite local. Con force=False respeta lo curado por un administrador.
+        """
+        chars = cls.seed_canonical_characters(db=db, force=force)
+        prods = cls.seed_origins_products(db=db, force=force)
+        LoreDualSync.replicate_all(db)
+        return {"characters": chars, "products": prods}

@@ -435,7 +435,7 @@ print("+" + "-"*65 + "+")
 print("|  METRICA DE DATOS       |  SQLITE LOCAL   |  SUPABASE CLOUD  |")
 print("+" + "-"*65 + "+")
 
-loc_prods, loc_origins, loc_offers, loc_lore = 0, 0, 0, 0
+loc_prods, loc_origins, loc_offers, loc_lore, loc_plore = 0, 0, 0, 0, 0
 db_path = "oraculo.db"
 if os.path.exists(db_path):
     conn = sqlite3.connect(db_path)
@@ -452,9 +452,13 @@ if os.path.exists(db_path):
         cur.execute("SELECT COUNT(*) FROM character_lore")
         loc_lore = cur.fetchone()[0]
     except Exception: pass
+    try:
+        cur.execute("SELECT COUNT(*) FROM product_lore")
+        loc_plore = cur.fetchone()[0]
+    except Exception: pass
     conn.close()
 
-cld_prods, cld_origins, cld_offers, cld_lore = 0, 0, 0, 0
+cld_prods, cld_origins, cld_offers, cld_lore, cld_plore = 0, 0, 0, 0, 0
 cld_status = "Desconectado"
 if settings.SUPABASE_DATABASE_URL and "sqlite" not in settings.SUPABASE_DATABASE_URL:
     try:
@@ -470,6 +474,10 @@ if settings.SUPABASE_DATABASE_URL and "sqlite" not in settings.SUPABASE_DATABASE
                 res = conn.execute(text("SELECT COUNT(*) FROM character_lore"))
                 cld_lore = res.scalar() or 0
             except Exception: pass
+            try:
+                res = conn.execute(text("SELECT COUNT(*) FROM product_lore"))
+                cld_plore = res.scalar() or 0
+            except Exception: pass
             cld_status = "Conectado (OK)"
     except Exception as e:
         cld_status = f"Error ({str(e)[:15]})"
@@ -480,10 +488,11 @@ print(f"|  Productos Totales      |  {loc_prods:<14} |  {cld_prods:<15} |")
 print(f"|  Figuras Origins        |  {loc_origins:<14} |  {cld_origins:<15} |")
 print(f"|  Ofertas (Purgatorio)   |  {loc_offers:<14} |  {cld_offers:<15} |")
 print(f"|  Perfiles Grimorio Lore |  {loc_lore:<14} |  {cld_lore:<15} |")
+print(f"|  Fichas Origins (Lore)  |  {loc_plore:<14} |  {cld_plore:<15} |")
 print("+" + "-"*65 + "+")
 print(f"Estado Supabase: {cld_status}")
-if loc_prods == cld_prods and loc_origins == cld_origins and loc_lore == cld_lore and loc_prods > 0:
-    print("Estado de Paridad: EXCELENTE (Paridad Dual 100% Identica)")
+if loc_prods == cld_prods and loc_origins == cld_origins and loc_lore == cld_lore and loc_plore == cld_plore and loc_prods > 0:
+    print("Estado de Paridad: CONTEOS IDENTICOS (no compara el contenido de cada ficha)")
 else:
     print("Estado de Paridad: DISCREPANCIAS DETECTADAS (Usa [13] o [14] para sincronizar)")
 '@
@@ -520,7 +529,7 @@ function Invoke-SeedCanonicalLore {
     Write-Host "Regla Estricta: Aplica unicamente a la coleccion Origins (excluye Vintage)." -ForegroundColor DarkCyan
     Write-Host ""
     
-    $forceChoice = Read-Host "¿Deseas forzar la sobreescritura de textos no verificados? [s/N]"
+    $forceChoice = Read-Host "¿Deseas forzar la sobreescritura de registros YA verificados y personalizados (force=True)? [s/N]"
     $isForce = if ($forceChoice.ToUpper() -eq "S") { "True" } else { "False" }
 
     $PythonExe = Get-PythonExe
@@ -535,23 +544,20 @@ from src.infrastructure.database import SessionLocal
 from src.infrastructure.database_cloud import SessionCloud, engine_cloud
 from src.application.services.product_lore_seed import ProductLoreSeedService
 
-print("1. Sembrando en Base de Datos Local SQLite...")
-with SessionLocal() as db_loc:
-    c_loc = ProductLoreSeedService.seed_canonical_characters(db_loc, force=force)
-    p_loc = ProductLoreSeedService.seed_origins_products(db_loc, force=force)
-    print(f"   -> SQLite: {c_loc['total_characters']} personajes y {p_loc['total_origins']} figuras Origins listas.")
-
 if engine_cloud and "sqlite" not in str(engine_cloud.url):
-    print("\n2. Sembrando en Base de Datos Supabase Cloud (PostgreSQL)...")
+    print("1. Sembrando en Supabase Cloud (fuente primaria) y replicando a SQLite local...")
     try:
         with SessionCloud() as db_cld:
-            c_cld = ProductLoreSeedService.seed_canonical_characters(db_cld, force=force)
-            p_cld = ProductLoreSeedService.seed_origins_products(db_cld, force=force)
-            print(f"   -> Supabase: {c_cld['total_characters']} personajes y {p_cld['total_origins']} figuras Origins listas.")
+            res = ProductLoreSeedService.seed_all_dual(db_cld, force=force)
+            print(f"   -> Supabase: {res['characters']['total_characters']} personajes y {res['products']['total_origins']} figuras Origins listas.")
+            print("   -> SQLite local: replica unidireccional Cloud -> Local aplicada.")
     except Exception as e:
         print(f"   -> Error sincronizando en Supabase: {e}")
 else:
-    print("\n2. Supabase Cloud no configurado o es SQLite. Omitiendo.")
+    print("1. Supabase Cloud no configurado o es SQLite. Sembrando solo en SQLite local...")
+    with SessionLocal() as db_loc:
+        res = ProductLoreSeedService.seed_all_dual(db_loc, force=force)
+        print(f"   -> SQLite: {res['characters']['total_characters']} personajes y {res['products']['total_origins']} figuras Origins listas.")
 
 print("\nSincronizacion del Grimorio Lore completada con exito.")
 '@
@@ -836,7 +842,7 @@ function Show-OptionFaqDetail {
             Write-Host "CRITICIDAD: ALTA (Resuelve el Grimorio vacio en ambas BDs)" -ForegroundColor Red
             Write-Host ""
             Write-Host "MODO DE USO:" -ForegroundColor Yellow
-            Write-Host "   Pulsa 14 y elige si deseas forzar la actualizacion de textos no verificados."
+            Write-Host "   Pulsa 14 y elige si deseas forzar (force=True): sobreescribe tambien los registros verificados y personalizados."
         }
         "15" {
             Write-Host "OPCION [15]: Refrescar Imagen de Figura desde ActionFigure411 (Dual)" -ForegroundColor Green

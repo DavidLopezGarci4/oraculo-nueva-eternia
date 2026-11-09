@@ -21,6 +21,7 @@ from src.domain.models import (
     UserModel,
 )
 from src.infrastructure.database_cloud import SessionCloud
+from src.application.services.lore_dual_sync import LoreDualSync
 from src.interfaces.api.deps import verify_api_key, verify_device
 from src.interfaces.api.schemas import (
     ProductEditRequest,
@@ -298,6 +299,7 @@ def edit_product(product_id: int, request: ProductEditRequest):
         if not product:
             raise HTTPException(status_code=404, detail="Producto no encontrado")
 
+        lore_purged_product_id = None
         if request.name is not None:
             product.name = request.name
         if request.ean is not None:
@@ -324,11 +326,16 @@ def edit_product(product_id: int, request: ProductEditRequest):
                 if not exists:
                     vintage_entry = VintageProductModel(product_id=product.id, notes="Promoted via metadata update")
                     db.add(vintage_entry)
+                # Grimorio: product_lore es exclusivo de Origins; se purga al pasar a Vintage
+                db.query(ProductLoreModel).filter(ProductLoreModel.product_id == product.id).delete()
+                lore_purged_product_id = product.id
             else:
                 # Remove from VintageProductModel if it exists
                 db.query(VintageProductModel).filter(VintageProductModel.product_id == product.id).delete()
 
         db.commit()
+        if lore_purged_product_id is not None:
+            LoreDualSync.delete_product_lore(db, lore_purged_product_id)
         return {"status": "success", "message": f"Reliquia '{product.name}' actualizada con éxito"}
 
 
@@ -393,19 +400,28 @@ def merge_products(request: ProductMergeRequest):
             else:
                 db.delete(source_vintage)
 
-        # 5b. Transfer/deduplicate product lore entry
+        # 5b. Transfer/deduplicate product lore entry (product_lore es exclusivo de Origins)
         source_lore = db.query(ProductLoreModel).filter(ProductLoreModel.product_id == source.id).first()
         if source_lore:
             exists = db.query(ProductLoreModel).filter(ProductLoreModel.product_id == target.id).first()
-            if not exists:
-                source_lore.product_id = target.id
-            else:
+            if target.is_vintage or exists:
                 db.delete(source_lore)
+            else:
+                source_lore.product_id = target.id
+        if target.is_vintage:
+            db.query(ProductLoreModel).filter(ProductLoreModel.product_id == target.id).delete()
 
         # 6. Delete source product
         source_name = source.name
+        source_pid, target_pid = source.id, target.id
         db.delete(source)
         db.commit()
+        # Replica unidireccional del Grimorio hacia SQLite local
+        LoreDualSync.delete_product_lore(db, source_pid)
+        if target.is_vintage:
+            LoreDualSync.delete_product_lore(db, target_pid)
+        else:
+            LoreDualSync.replicate_product_lore(db, [target_pid])
         return {"status": "success", "message": f"Fusión divina: '{source_name}' ha sido absorbido por '{target.name}'"}
 
 
@@ -670,11 +686,13 @@ def delete_product(product_id: int):
 
         # 6b. Borrar lore por ítem vinculado a este product_id
         db.query(ProductLoreModel).filter(ProductLoreModel.product_id == product.id).delete()
+        deleted_product_id = product.id
         
         # 7. Eliminar el producto genérico por completo de la base de datos
         db.delete(product)
         
         db.commit()
+        LoreDualSync.delete_product_lore(db, deleted_product_id)
         return {
             "status": "success", 
             "message": f"Producto '{product_name}' eliminado de Eternia con éxito. {len(offers)} ofertas devueltas al Purgatorio."

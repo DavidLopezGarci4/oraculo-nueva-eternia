@@ -141,7 +141,7 @@ def test_rls_ast_validator_rejects_unprotected_migration():
 def test_alembic_upgrade_head_succeeds_over_precreated_schema(tmp_path, monkeypatch):
     """
     Simula una BD preexistente creada con Base.metadata.create_all() sin estampar
-    y verifica que `alembic upgrade head` es 100% idempotente y alcanza `9b4c7d8e1f2a`.
+    y verifica que `alembic upgrade head` es 100% idempotente y alcanza la revision `head` vigente.
     """
     from alembic import command
     from alembic.config import Config
@@ -169,7 +169,9 @@ def test_alembic_upgrade_head_succeeds_over_precreated_schema(tmp_path, monkeypa
         ver = conn.execute(text("SELECT version_num FROM alembic_version")).scalar()
     verify_engine.dispose()
 
-    assert ver == "9b4c7d8e1f2a"
+    from alembic.script import ScriptDirectory
+
+    assert ver == ScriptDirectory.from_config(alembic_cfg).get_current_head()
 
 
 def test_no_shadow_migrators_or_startup_rls_locks():
@@ -205,8 +207,11 @@ def test_no_shadow_migrators_or_startup_rls_locks():
         and node.args
         and "ALTER TABLE" in ast.unparse(node.args[0]).upper()
     ]
-    assert len(executable_alters) <= 10, (
-        f"Prohibido añadir nuevo DDL ALTER TABLE en database_cloud.py (encontrados {len(executable_alters)} > 10). Usa Alembic."
+    assert len(executable_alters) <= 5, (
+        f"Prohibido añadir nuevo DDL ALTER TABLE en database_cloud.py (encontrados {len(executable_alters)} > 5). Usa Alembic."
+    )
+    assert "ALTER TABLE character_lore" not in db_cloud_src and '"character_lore"' not in db_cloud_src, (
+        "El esquema de character_lore se gestiona exclusivamente con Alembic (a7c3e91f04b2)."
     )
 
     # 3. universal_migrator.py no debe resucitar origin_category y debe proteger Postgres si se ejecuta por CLI

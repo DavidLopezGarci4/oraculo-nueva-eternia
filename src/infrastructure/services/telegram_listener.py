@@ -281,14 +281,15 @@ class TelegramListener:
             await self.cmd_centinela(chat_id, args)
         elif command in ["/update_image", "/actualizar_imagen", "/af411_image"]:
             await self.cmd_update_image(chat_id, args)
-        elif command in ["/harvest_lore", "/lore"]:
-            await self.cmd_harvest_lore(chat_id, args)
         elif command in ["/alertas", "/notificaciones"]:
             await self.cmd_alertas(chat_id)
             
         # --- Comandos de Administrador Only ---
         elif is_admin:
-            if command == "/status":
+            if command in ["/harvest_lore", "/lore"]:
+                # Escribe en el canon global (character_lore) y raspa la wiki: solo administradores.
+                await self.cmd_harvest_lore(chat_id, args)
+            elif command == "/status":
                 await self.cmd_status(chat_id)
             elif command in ["/ssl", "/ssl_status"]:
                 await self.cmd_ssl_status(chat_id)
@@ -921,36 +922,59 @@ class TelegramListener:
                 await telegram_service.send_message(f"❌ No se pudo actualizar la imagen: {err}", chat_id=chat_id)
 
     async def cmd_harvest_lore(self, chat_id: int, args: list):
-        """Cosecha lore desde Wiki Fandom para una figura o personaje."""
+        """Cosecha lore desde Wiki Fandom para una figura o personaje (solo administradores)."""
         if not args:
             await telegram_service.send_message("❌ Uso: <code>/lore [nombre_personaje_o_id]</code> (ej. <code>/lore He-Man</code> o <code>/lore 1460</code>)", chat_id=chat_id)
             return
 
         query_str = " ".join(args).strip()
-        from src.application.services.lore_harvester_service import LoreHarvesterService
-        with SessionCloud() as db:
-            char = None
-            if query_str.isdigit():
-                char = LoreHarvesterService.harvest_for_product(db, int(query_str))
-            else:
-                char = LoreHarvesterService.get_or_create_character_lore(db, query_str)
+        if not query_str or len(query_str) > 120:
+            await telegram_service.send_message("❌ El nombre debe tener entre 1 y 120 caracteres.", chat_id=chat_id)
+            return
 
-            if char:
-                msg = (
-                    f"📜 <b>[Grimorio de Grayskull: Lore Cosechado]</b>\n\n"
-                    f"• <b>Nombre:</b> <b>{char.canonical_name}</b>\n"
-                    f"• <b>Subtítulo:</b> <i>{char.subtitle or 'Campeón de Eternia'}</i>\n"
-                    f"• <b>Facción:</b> {char.faction}\n"
-                    f"• <b>Tipo:</b> {char.type_line}\n"
-                    f"• <b>Cita:</b> <i>\"{char.quote or 'Por el poder de Grayskull!'}\"</i> — {char.flavor_quote_author or char.canonical_name}\n"
-                    f"• <b>Biografía:</b> {char.lore[:200]}..."
-                )
-                await telegram_service.send_message(msg, chat_id=chat_id)
-            else:
-                await telegram_service.send_message(f"❌ No se pudo cosechar lore para '<b>{query_str}</b>'.", chat_id=chat_id)
+        from src.application.services.lore_harvester_service import LoreHarvesterService, VerifiedLoreConflict
+
+        def _harvest_blocking():
+            # Raspado HTTP síncrono + SQL: se ejecuta en un hilo para no congelar el event loop de asyncio.
+            with SessionCloud() as db:
+                if query_str.isdigit():
+                    char = LoreHarvesterService.harvest_for_product(db, int(query_str))
+                else:
+                    char = LoreHarvesterService.get_or_create_character_lore(db, query_str)
+                if not char:
+                    return None
+                return {
+                    "canonical_name": char.canonical_name,
+                    "subtitle": char.subtitle,
+                    "faction": char.faction,
+                    "type_line": char.type_line,
+                    "quote": char.quote,
+                    "author": char.flavor_quote_author or char.canonical_name,
+                    "lore": char.lore,
+                }
+
+        try:
+            char = await asyncio.to_thread(_harvest_blocking)
+        except VerifiedLoreConflict as conflict:
+            await telegram_service.send_message(
+                f"⚠️ <b>{conflict.slug}</b> ya está verificado. Re-cosecharlo exige confirmación con <code>force</code> desde el panel Grimorio Lore.",
+                chat_id=chat_id,
+            )
+            return
+
+        if char:
+            msg = (
+                f"📜 <b>[Grimorio de Grayskull: Lore Cosechado]</b>\n\n"
+                f"• <b>Nombre:</b> <b>{char['canonical_name']}</b>\n"
+                f"• <b>Subtítulo:</b> <i>{char['subtitle'] or 'Campeón de Eternia'}</i>\n"
+                f"• <b>Facción:</b> {char['faction']}\n"
+                f"• <b>Tipo:</b> {char['type_line']}\n"
+                f"• <b>Cita:</b> <i>\"{char['quote'] or 'Por el poder de Grayskull!'}\"</i> — {char['author']}\n"
+                f"• <b>Biografía:</b> {char['lore'][:200]}..."
+            )
+            await telegram_service.send_message(msg, chat_id=chat_id)
+        else:
+            await telegram_service.send_message(f"❌ No se pudo cosechar lore para '<b>{query_str}</b>'.", chat_id=chat_id)
 
 # Instancia única del listener
 telegram_listener = TelegramListener()
-
-
-

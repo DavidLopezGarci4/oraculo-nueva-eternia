@@ -7,9 +7,18 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 
 from src.domain.models import CharacterLoreModel, ProductModel
-from src.domain.motu_canon_database import MOTU_LORE_ENCYCLOPEDIA
+from src.domain.motu_canon_database import MOTU_LORE_ENCYCLOPEDIA, CURATED_SOURCE
+from src.application.services.lore_dual_sync import LoreDualSync
 
 logger = logging.getLogger("oraculo.lore_harvester")
+
+
+class VerifiedLoreConflict(Exception):
+    """Se intentó re-cosechar desde la wiki un personaje ya verificado sin `force=True`."""
+
+    def __init__(self, slug: str):
+        super().__init__(f"El personaje '{slug}' ya está verificado; usa force=True para sobrescribirlo.")
+        self.slug = slug
 
 class LoreHarvesterService:
     """
@@ -84,20 +93,21 @@ class LoreHarvesterService:
         return cls.normalize_slug(product_name)
 
     @classmethod
-    def get_or_create_character_lore(cls, db: Session, character_name: str) -> CharacterLoreModel:
+    def get_or_create_character_lore(cls, db: Session, character_name: str, force: bool = False) -> CharacterLoreModel:
         """
         Busca el lore de un personaje en BD.
-        Si ya existe, lo devuelve inmediatamente (0 peticiones a internet).
+        Si ya existe y force=False, lo devuelve inmediatamente (0 peticiones a internet).
         Si no existe, consulta la enciclopedia canónica o la Wiki Grayskull API.
+        Con force=True re-cosecha desde la wiki (queda is_verified=False para revisión humana).
         """
         slug = cls.resolve_character_slug(character_name)
         existing = db.query(CharacterLoreModel).filter(CharacterLoreModel.slug == slug).first()
-        if existing:
+        if existing and not force:
             return existing
 
         # Comprobar si existe en la enciclopedia canónica local
         enc_key = slug.replace('_', ' ')
-        for k, data in MOTU_LORE_ENCYCLOPEDIA.items():
+        for k, data in ([] if existing else MOTU_LORE_ENCYCLOPEDIA.items()):
             if k == enc_key or k in enc_key or enc_key in k:
                 stats = data.get("stats", {})
                 new_lore = CharacterLoreModel(
@@ -107,7 +117,7 @@ class LoreHarvesterService:
                     theme_key=data.get("frame_theme", "castle_grayskull"),
                     type_line=data.get("type_line", "Criatura Legendaria — Guerrero Heroico"),
                     special_move=data.get("special_move", "Furia del Relámpago de Grayskull"),
-                    quote=data.get("lore", "")[:60] if data.get("lore") else None,
+                    quote=data.get("quote"),
                     lore=data.get("lore", "Noble defensor de la corte real de Eternia y custodio de los secretos de Grayskull."),
                     fuerza=stats.get("fuerza", 88),
                     magia=stats.get("magia", 78),
@@ -119,11 +129,26 @@ class LoreHarvesterService:
                 db.add(new_lore)
                 db.commit()
                 db.refresh(new_lore)
+                LoreDualSync.replicate_characters(db, [slug])
                 logger.info(f"✨ [LORE SEED] Creado lore canónico local para {slug}")
                 return new_lore
 
-        # Si no existe en la enciclopedia local, cosechar desde Wiki Grayskull API (Coste 0)
+        # Cosecha externa (Coste 0): se libera la conexión SQL antes de cualquier I/O de red
+        # para no retener sesiones del pooler transaccional durante peticiones HTTP lentas.
+        db.rollback()
         harvested = cls.harvest_from_wiki_grayskull(character_name)
+        existing = db.query(CharacterLoreModel).filter(CharacterLoreModel.slug == slug).first()
+        if existing:
+            for field in cls._HARVEST_FIELDS:
+                if harvested.get(field) is not None:
+                    setattr(existing, field, harvested[field])
+            existing.is_verified = False
+            existing.updated_at = datetime.now(timezone.utc)
+            db.commit()
+            db.refresh(existing)
+            LoreDualSync.replicate_characters(db, [slug])
+            return existing
+
         new_lore = CharacterLoreModel(
             slug=slug,
             canonical_name=harvested.get("canonical_name", character_name.title()),
@@ -143,6 +168,7 @@ class LoreHarvesterService:
         db.add(new_lore)
         db.commit()
         db.refresh(new_lore)
+        LoreDualSync.replicate_characters(db, [slug])
         logger.info(f"🌐 [LORE HARVEST] Cosechado nuevo personaje {slug} de Wiki Grayskull (Pendiente de Revisión)")
         return new_lore
 
@@ -184,7 +210,7 @@ class LoreHarvesterService:
                     search_data = s_res.json().get("query", {}).get("search", [])
                     if search_data:
                         best_t = search_data[0]["title"]
-                        source_url = f"https://he-man.fandom.com/wiki/{best_t.replace(' ', '_')}"
+                        source_url = f"https://he-man.fandom.com/wiki/{urllib.parse.quote(best_t.replace(' ', '_'), safe='')}"
                         res = cffi_requests.get(source_url, impersonate="chrome120", timeout=8)
 
             if res.status_code == 200:
@@ -329,44 +355,27 @@ class LoreHarvesterService:
             "source_url": source_url
         }
 
+    # Campos de character_lore que puede sobrescribir una cosecha de wiki.
+    _HARVEST_FIELDS = (
+        "canonical_name", "subtitle", "faction", "theme_key", "type_line",
+        "special_move", "quote", "flavor_quote_author", "lore",
+        "text_color", "card_version", "mana_cost", "fuerza", "magia", "defensa", "agilidad", "source_url",
+    )
+
     @classmethod
-    def seed_initial_catalog(cls, db: Session) -> Dict[str, int]:
+    def seed_initial_catalog(cls, db: Session) -> Dict[str, Any]:
         """
-        Siembra la enciclopedia canónica en BD y vincula productos sin character_slug.
+        Siembra el canon en BD (delegando en el sembrador unificado `ProductLoreSeedService`)
+        y vincula productos sin character_slug.
         """
-        seeded_count = 0
+        from src.application.services.product_lore_seed import ProductLoreSeedService
+
+        char_res = ProductLoreSeedService.seed_canonical_characters(db=db, force=False)
+        seeded_count = char_res["created"] + char_res["updated"]
         linked_products = 0
-        existing_slugs = {row[0] for row in db.query(CharacterLoreModel.slug).all()}
+        linked_ids: List[int] = []
 
-        # 1. Sembrar personajes canónicos de MOTU_LORE_ENCYCLOPEDIA
-        for key, data in MOTU_LORE_ENCYCLOPEDIA.items():
-            slug = key.replace(' ', '_').replace('-', '_')
-            if slug not in existing_slugs:
-                stats = data.get("stats", {})
-                new_char = CharacterLoreModel(
-                    slug=slug,
-                    canonical_name=data.get("canonical_name", key.title()),
-                    faction=data.get("faction", "Guerreros Heroicos"),
-                    theme_key=data.get("frame_theme", "castle_grayskull"),
-                    type_line=data.get("type_line", "Criatura Legendaria — Guerrero Heroico"),
-                    special_move=data.get("special_move", "Furia del Relámpago de Grayskull"),
-                    quote=data.get("lore", "")[:60] if data.get("lore") else None,
-                    lore=data.get("lore", "Noble defensor de la corte real de Eternia."),
-                    fuerza=stats.get("fuerza", 88),
-                    magia=stats.get("magia", 78),
-                    defensa=stats.get("defensa", 90),
-                    agilidad=stats.get("agilidad", 85),
-                    is_verified=True,
-                    source_url="Canon MOTU Local"
-                )
-                db.add(new_char)
-                existing_slugs.add(slug)
-                seeded_count += 1
-
-        if seeded_count > 0:
-            db.commit()
-
-        # 2. Asignar character_slug sólo a los productos que aún no lo tengan vinculado
+        # Asignar character_slug sólo a los productos que aún no tengan vinculado
         products = (
             db.query(ProductModel)
             .filter(or_(ProductModel.character_slug.is_(None), ProductModel.character_slug == ""))
@@ -375,12 +384,35 @@ class LoreHarvesterService:
         for p in products:
             slug = cls.resolve_character_slug(p.name)
             p.character_slug = slug
+            linked_ids.append(p.id)
             linked_products += 1
 
         if linked_products > 0:
             db.commit()
         logger.info(f"✅ [LORE ENGINE SEED] {seeded_count} personajes sembrados, {linked_products} productos vinculados.")
-        return {"seeded_characters": seeded_count, "linked_products": linked_products}
+        return {
+            "seeded_characters": seeded_count,
+            "linked_products": linked_products,
+            "linked_ids": linked_ids,
+            "touched_slugs": char_res["touched_slugs"],
+        }
+
+    @classmethod
+    def seed_incremental_dual(cls, db: Session) -> Dict[str, Any]:
+        """
+        Sembrado incremental idempotente para arranque y altas de catálogo (Nexus):
+        canon arquetípico + slugs de productos + filas faltantes de `product_lore`,
+        con replica unidireccional SessionCloud -> SQLite local solo si hubo cambios.
+        """
+        from src.application.services.product_lore_seed import ProductLoreSeedService
+
+        res = cls.seed_initial_catalog(db)
+        prods = ProductLoreSeedService.seed_missing_origins_products(db)
+        if res["seeded_characters"] or res["linked_products"] or prods["created"]:
+            LoreDualSync.replicate_characters(db, res["touched_slugs"])
+            LoreDualSync.replicate_product_lore(db, prods["created_ids"])
+            LoreDualSync.replicate_character_slugs(db, res["linked_ids"])
+        return {**res, "product_lore_created": prods["created"]}
 
     @classmethod
     def list_characters(
@@ -416,7 +448,7 @@ class LoreHarvesterService:
 
     @classmethod
     def update_character(cls, db: Session, slug: str, data: Dict[str, Any]) -> Optional[CharacterLoreModel]:
-        """Actualiza el lore y lo marca como verificado."""
+        """Actualiza el lore, lo marca como verificado y como curado por un administrador (Master)."""
         char = db.query(CharacterLoreModel).filter(CharacterLoreModel.slug == slug).first()
         if not char:
             return None
@@ -424,55 +456,65 @@ class LoreHarvesterService:
         for field in [
             "canonical_name", "subtitle", "faction", "theme_key", "type_line",
             "special_move", "quote", "flavor_quote_author", "lore",
-            "text_color", "card_version", "fuerza", "magia", "defensa", "agilidad"
+            "text_color", "card_version", "mana_cost", "fuerza", "magia", "defensa", "agilidad"
         ]:
             if field in data:
                 setattr(char, field, data[field])
 
-        char.is_verified = True # Validación humana confirmada
+        char.is_verified = True  # Validación humana confirmada
+        char.source_url = CURATED_SOURCE  # Procedencia: curación de administrador (inmutable salvo force)
         char.updated_at = datetime.now(timezone.utc)
         db.commit()
         db.refresh(char)
+        LoreDualSync.replicate_characters(db, [slug])
         return char
 
     @classmethod
-    def harvest_for_product(cls, db: Session, product_id: int) -> Optional[CharacterLoreModel]:
+    def harvest_for_product(cls, db: Session, product_id: int, force: bool = False) -> Optional[CharacterLoreModel]:
         """
         Cosecha o actualiza el lore para un producto específico desde Wiki Fandom.
+
+        - Si el personaje ya está verificado y `force=False`, lanza `VerifiedLoreConflict`
+          sin realizar ninguna petición de red.
+        - Todo texto extraído de la wiki queda `is_verified=False` (pendiente de revisión humana).
+        - La petición HTTP se ejecuta fuera de cualquier transacción SQL abierta.
         """
         product = db.query(ProductModel).filter(ProductModel.id == product_id).first()
         if not product:
             return None
 
-        slug = cls.resolve_character_slug(product.name)
-        product.character_slug = slug
+        product_name = product.name
+        slug = cls.resolve_character_slug(product_name)
+        existing = db.query(CharacterLoreModel).filter(CharacterLoreModel.slug == slug).first()
+        if existing and existing.is_verified and not force:
+            raise VerifiedLoreConflict(slug)
 
-        harvested = cls.harvest_from_wiki_grayskull(product.name)
+        product.character_slug = slug
+        db.commit()  # Persiste el enlace y libera la conexión antes de la red
+
+        harvested = cls.harvest_from_wiki_grayskull(product_name)
         existing = db.query(CharacterLoreModel).filter(CharacterLoreModel.slug == slug).first()
 
         if existing:
-            for field in [
-                "canonical_name", "subtitle", "faction", "theme_key", "type_line",
-                "special_move", "quote", "flavor_quote_author", "lore",
-                "text_color", "card_version", "mana_cost", "fuerza", "magia", "defensa", "agilidad", "source_url"
-            ]:
+            for field in cls._HARVEST_FIELDS:
                 if field in harvested and harvested[field] is not None:
                     setattr(existing, field, harvested[field])
+            existing.is_verified = False
             existing.updated_at = datetime.now(timezone.utc)
             db.commit()
             db.refresh(existing)
-            return existing
+            result = existing
         else:
-            new_lore = CharacterLoreModel(
+            result = CharacterLoreModel(
                 slug=slug,
-                canonical_name=harvested.get("canonical_name", product.name.title()),
+                canonical_name=harvested.get("canonical_name", product_name.title()),
                 subtitle=harvested.get("subtitle", "Campeón de Eternia"),
                 faction=harvested.get("faction", "Guerreros Heroicos"),
                 theme_key=harvested.get("theme_key", "castle_grayskull"),
                 type_line=harvested.get("type_line", "Criatura Legendaria — Guerrero Heroico"),
-                special_move=harvested.get("special_move", f"Poder de {product.name.title()}"),
+                special_move=harvested.get("special_move", f"Poder de {product_name.title()}"),
                 quote=harvested.get("quote"),
-                flavor_quote_author=harvested.get("flavor_quote_author", product.name.title()),
+                flavor_quote_author=harvested.get("flavor_quote_author", product_name.title()),
                 lore=harvested.get("lore", "Guerrero descubierto en los confines del multiverso de Eternia."),
                 text_color=harvested.get("text_color", "#FFFFFF"),
                 card_version=harvested.get("card_version", "showcase"),
@@ -481,10 +523,13 @@ class LoreHarvesterService:
                 magia=harvested.get("magia", 75),
                 defensa=harvested.get("defensa", 85),
                 agilidad=harvested.get("agilidad", 85),
-                is_verified=True,
+                is_verified=False,
                 source_url=harvested.get("source_url")
             )
-            db.add(new_lore)
+            db.add(result)
             db.commit()
-            db.refresh(new_lore)
-            return new_lore
+            db.refresh(result)
+
+        LoreDualSync.replicate_characters(db, [slug])
+        LoreDualSync.replicate_character_slugs(db, [product_id])
+        return result

@@ -1,18 +1,30 @@
-from typing import List, Optional, Dict, Any
+from typing import List, Literal, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
-from loguru import logger
 
 from src.infrastructure.database_cloud import SessionCloud
-from src.infrastructure.database import SessionLocal
 from src.domain.models import UserModel, ProductModel, ProductLoreModel, CharacterLoreModel
-from src.interfaces.api.deps import get_current_user
-from src.application.services.lore_harvester_service import LoreHarvesterService
+from src.domain.motu_canon_database import VALID_FACTIONS, FACTION_TO_THEME
+from src.interfaces.api.deps import verify_device, require_admin
+from src.application.services.lore_harvester_service import LoreHarvesterService, VerifiedLoreConflict
+from src.application.services.lore_dual_sync import LoreDualSync
 from src.application.services.product_lore_seed import ProductLoreSeedService
 
-router = APIRouter(prefix="/api/lore", tags=["Lore & Characters"])
+# Todas las rutas exigen un dispositivo autorizado (Escudo 3OX). Las mutaciones globales
+# exigen además JWT de administrador (`require_admin`) en cada endpoint.
+router = APIRouter(
+    prefix="/api/lore",
+    tags=["Lore & Characters"],
+    dependencies=[Depends(verify_device)],
+)
+
+# Campos opcionales que un PUT puede vaciar explícitamente enviando null.
+_NULLABLE_FIELDS = {
+    "subtitle", "quote", "flavor_quote_author", "source_url", "text_color", "card_version", "mana_cost",
+}
+
 
 def get_lore_db():
     """Dependency para inyectar la sesión de BD (Cloud Supabase por defecto, fallback local)."""
@@ -21,6 +33,11 @@ def get_lore_db():
         yield db
     finally:
         db.close()
+
+
+# Catálogo cerrado de facciones: un valor fuera de VALID_FACTIONS responde 422 (validación estándar de Pydantic).
+FactionName = Literal[VALID_FACTIONS]  # type: ignore[valid-type]
+
 
 # ─── SCHEMAS LORE PERSONAJES ARQUETÍPICOS ───
 
@@ -55,22 +72,22 @@ class CharacterLoreListResponse(BaseModel):
 
 
 class CharacterLoreUpdateRequest(BaseModel):
-    canonical_name: Optional[str] = None
-    subtitle: Optional[str] = None
-    faction: Optional[str] = None
-    theme_key: Optional[str] = None
-    type_line: Optional[str] = None
-    special_move: Optional[str] = None
-    quote: Optional[str] = None
-    flavor_quote_author: Optional[str] = None
-    lore: Optional[str] = None
-    text_color: Optional[str] = None
-    card_version: Optional[str] = None
-    mana_cost: Optional[str] = None
-    fuerza: Optional[int] = None
-    magia: Optional[int] = None
-    defensa: Optional[int] = None
-    agilidad: Optional[int] = None
+    canonical_name: Optional[str] = Field(default=None, max_length=200)
+    subtitle: Optional[str] = Field(default=None, max_length=200)
+    faction: Optional[FactionName] = None
+    theme_key: Optional[str] = Field(default=None, max_length=60)
+    type_line: Optional[str] = Field(default=None, max_length=200)
+    special_move: Optional[str] = Field(default=None, max_length=200)
+    quote: Optional[str] = Field(default=None, max_length=500)
+    flavor_quote_author: Optional[str] = Field(default=None, max_length=200)
+    lore: Optional[str] = Field(default=None, max_length=2000)
+    text_color: Optional[str] = Field(default=None, max_length=20)
+    card_version: Optional[str] = Field(default=None, max_length=40)
+    mana_cost: Optional[str] = Field(default=None, max_length=40)
+    fuerza: Optional[int] = Field(default=None, ge=1, le=100)
+    magia: Optional[int] = Field(default=None, ge=1, le=100)
+    defensa: Optional[int] = Field(default=None, ge=1, le=100)
+    agilidad: Optional[int] = Field(default=None, ge=1, le=100)
 
 
 # ─── SCHEMAS PRODUCT LORE (GRIMORIO POR ÍTEM ORIGINS) ───
@@ -100,23 +117,23 @@ class ProductLoreOutput(BaseModel):
 
 
 class ProductLoreUpdateRequest(BaseModel):
-    canonical_name: Optional[str] = None
-    subtitle: Optional[str] = None
-    faction: Optional[str] = None
-    theme_key: Optional[str] = None
-    type_line: Optional[str] = None
-    special_move: Optional[str] = None
-    quote: Optional[str] = None
-    flavor_quote_author: Optional[str] = None
-    lore: Optional[str] = None
-    source_url: Optional[str] = None
-    text_color: Optional[str] = None
-    card_version: Optional[str] = None
-    mana_cost: Optional[str] = None
-    fuerza: Optional[int] = None
-    magia: Optional[int] = None
-    defensa: Optional[int] = None
-    agilidad: Optional[int] = None
+    canonical_name: Optional[str] = Field(default=None, max_length=200)
+    subtitle: Optional[str] = Field(default=None, max_length=200)
+    faction: Optional[FactionName] = None
+    theme_key: Optional[str] = Field(default=None, max_length=60)
+    type_line: Optional[str] = Field(default=None, max_length=200)
+    special_move: Optional[str] = Field(default=None, max_length=200)
+    quote: Optional[str] = Field(default=None, max_length=500)
+    flavor_quote_author: Optional[str] = Field(default=None, max_length=200)
+    lore: Optional[str] = Field(default=None, max_length=2000)
+    source_url: Optional[str] = Field(default=None, max_length=500)
+    text_color: Optional[str] = Field(default=None, max_length=20)
+    card_version: Optional[str] = Field(default=None, max_length=40)
+    mana_cost: Optional[str] = Field(default=None, max_length=40)
+    fuerza: Optional[int] = Field(default=None, ge=1, le=100)
+    magia: Optional[int] = Field(default=None, ge=1, le=100)
+    defensa: Optional[int] = Field(default=None, ge=1, le=100)
+    agilidad: Optional[int] = Field(default=None, ge=1, le=100)
 
 
 class ProductLoreListItem(BaseModel):
@@ -127,10 +144,17 @@ class ProductLoreListItem(BaseModel):
     canonical_name: str
     subtitle: Optional[str] = None
     faction: str
+    theme_key: str = "castle_grayskull"
+    type_line: str = ""
     special_move: str
     quote: Optional[str] = None
     flavor_quote_author: Optional[str] = None
     lore: str
+    mana_cost: Optional[str] = "{2}{W}{W}"
+    fuerza: int = 85
+    magia: int = 75
+    defensa: int = 85
+    agilidad: int = 85
     is_customized: bool = False
 
 
@@ -140,7 +164,42 @@ class ProductLoreListResponse(BaseModel):
 
 
 class HarvestRequest(BaseModel):
-    character_name: str
+    character_name: str = Field(..., min_length=1, max_length=120)
+    force: bool = False
+
+
+def _apply_updates(entry, update_dict: dict) -> None:
+    """Aplica un PUT parcial: solo los campos opcionales pueden vaciarse con null."""
+    if update_dict.get("faction") and "theme_key" not in update_dict:
+        update_dict["theme_key"] = FACTION_TO_THEME.get(update_dict["faction"], entry.theme_key)
+    for key, value in update_dict.items():
+        if value is None and key not in _NULLABLE_FIELDS:
+            continue
+        setattr(entry, key, value)
+
+
+def _list_item_from_data(prod: ProductModel, data: dict, is_customized: bool) -> ProductLoreListItem:
+    return ProductLoreListItem(
+        product_id=prod.id,
+        product_name=prod.name,
+        sub_category=prod.sub_category,
+        image_url=prod.image_url,
+        canonical_name=data["canonical_name"],
+        subtitle=data.get("subtitle"),
+        faction=data["faction"],
+        theme_key=data.get("theme_key") or "castle_grayskull",
+        type_line=data.get("type_line") or "",
+        special_move=data["special_move"],
+        quote=data.get("quote"),
+        flavor_quote_author=data.get("flavor_quote_author"),
+        lore=data["lore"],
+        mana_cost=data.get("mana_cost"),
+        fuerza=data.get("fuerza", 85),
+        magia=data.get("magia", 75),
+        defensa=data.get("defensa", 85),
+        agilidad=data.get("agilidad", 85),
+        is_customized=is_customized,
+    )
 
 
 # ─── ENDPOINTS LORE POR ÍTEM (EXCLUSIVO ORIGINS) ───
@@ -150,7 +209,9 @@ def get_product_lore(product_id: int, db: Session = Depends(get_lore_db)):
     """
     Obtiene el lore y reverso de blíster de una figura específica de la línea Origins.
     Excluye estrictamente productos vintage (is_vintage == True).
-    Si aún no existe registro, genera automáticamente el perfil canónico para que nunca esté vacío.
+
+    Lectura pura (método seguro): nunca escribe en BD. Si aún no existe fila en `product_lore`
+    devuelve el perfil canónico determinista calculado en memoria.
     """
     product = db.query(ProductModel).filter(ProductModel.id == product_id).first()
     if not product:
@@ -162,25 +223,12 @@ def get_product_lore(product_id: int, db: Session = Depends(get_lore_db)):
             detail="El Grimorio Lore solo aplica a la línea Masters of the Universe Origins (excluye Vintage)."
         )
 
-    # Buscar en tabla product_lore
     lore_entry = db.query(ProductLoreModel).filter(ProductLoreModel.product_id == product_id).first()
     if lore_entry:
         return lore_entry
 
-    # Fallback automático: Generar y persistir el perfil determinista para este producto
-    try:
-        data = ProductLoreSeedService.generate_default_lore_for_product(product, db)
-        new_lore = ProductLoreModel(**data)
-        db.add(new_lore)
-        db.commit()
-        db.refresh(new_lore)
-        return new_lore
-    except Exception as e:
-        logger.error(f"Error generando lore fallback para producto {product_id}: {e}")
-        db.rollback()
-        # Fallback en memoria si ocurre un error transitorio de base de datos
-        data = ProductLoreSeedService.generate_default_lore_for_product(product, db)
-        return ProductLoreOutput(**data)
+    data = ProductLoreSeedService.generate_default_lore_for_product(product, db)
+    return ProductLoreOutput(**data)
 
 
 @router.put("/product/{product_id}", response_model=ProductLoreOutput)
@@ -188,11 +236,11 @@ def update_product_lore(
     product_id: int,
     payload: ProductLoreUpdateRequest,
     db: Session = Depends(get_lore_db),
-    current_user: UserModel = Depends(get_current_user)
+    admin_user: UserModel = Depends(require_admin)
 ):
     """
-    Actualiza y persiste el lore de una figura Origins directamente en base de datos.
-    Marca el registro como personalizado por el usuario (is_customized = True).
+    Actualiza y persiste el lore de una figura Origins (solo administrador).
+    Marca el registro como personalizado (is_customized = True) y lo replica a SQLite local.
     """
     product = db.query(ProductModel).filter(ProductModel.id == product_id).first()
     if not product:
@@ -205,57 +253,17 @@ def update_product_lore(
         )
 
     lore_entry = db.query(ProductLoreModel).filter(ProductLoreModel.product_id == product_id).first()
-
     update_dict = payload.model_dump(exclude_unset=True)
-    update_dict["is_customized"] = True
 
     if not lore_entry:
-        default_data = ProductLoreSeedService.generate_default_lore_for_product(product, db)
-        default_data.update(update_dict)
-        lore_entry = ProductLoreModel(**default_data)
+        lore_entry = ProductLoreModel(**ProductLoreSeedService.generate_default_lore_for_product(product, db))
         db.add(lore_entry)
-    else:
-        for k, v in update_dict.items():
-            if v is not None:
-                setattr(lore_entry, k, v)
+    _apply_updates(lore_entry, update_dict)
+    lore_entry.is_customized = True
 
     db.commit()
     db.refresh(lore_entry)
-
-    # Sincronización secundaria con SQLite local si la sesión principal es Postgres
-    try:
-        with SessionLocal() as local_db:
-            local_entry = local_db.query(ProductLoreModel).filter(ProductLoreModel.product_id == product_id).first()
-            if not local_entry:
-                local_entry = ProductLoreModel(
-                    product_id=lore_entry.product_id,
-                    canonical_name=lore_entry.canonical_name,
-                    subtitle=lore_entry.subtitle,
-                    faction=lore_entry.faction,
-                    theme_key=lore_entry.theme_key,
-                    type_line=lore_entry.type_line,
-                    special_move=lore_entry.special_move,
-                    quote=lore_entry.quote,
-                    flavor_quote_author=lore_entry.flavor_quote_author,
-                    lore=lore_entry.lore,
-                    source_url=lore_entry.source_url,
-                    text_color=lore_entry.text_color,
-                    card_version=lore_entry.card_version,
-                    mana_cost=lore_entry.mana_cost,
-                    fuerza=lore_entry.fuerza,
-                    magia=lore_entry.magia,
-                    defensa=lore_entry.defensa,
-                    agilidad=lore_entry.agilidad,
-                    is_customized=True
-                )
-                local_db.add(local_entry)
-            else:
-                for k in update_dict.keys():
-                    setattr(local_entry, k, getattr(lore_entry, k))
-            local_db.commit()
-    except Exception as e:
-        logger.warning(f"Sincronización local de lore omitida o no requerida: {e}")
-
+    LoreDualSync.replicate_product_lore(db, [product_id])
     return lore_entry
 
 
@@ -270,7 +278,7 @@ def list_product_lores(
 ):
     """
     Lista figuras de la colección Origins (is_vintage == False) con su lore asociado
-    para visualización y edición en el panel del Grimorio.
+    para visualización y edición en el panel del Grimorio. Solo lectura.
     """
     query = db.query(ProductModel, ProductLoreModel).outerjoin(
         ProductLoreModel, ProductModel.id == ProductLoreModel.product_id
@@ -302,34 +310,12 @@ def list_product_lores(
     for prod, lore in results:
         if not lore:
             data = ProductLoreSeedService.generate_default_lore_for_product(prod, db)
-            items.append(ProductLoreListItem(
-                product_id=prod.id,
-                product_name=prod.name,
-                sub_category=prod.sub_category,
-                image_url=prod.image_url,
-                canonical_name=data["canonical_name"],
-                subtitle=data["subtitle"],
-                faction=data["faction"],
-                special_move=data["special_move"],
-                quote=data["quote"],
-                flavor_quote_author=data["flavor_quote_author"],
-                lore=data["lore"],
-                is_customized=False
-            ))
+            items.append(_list_item_from_data(prod, data, is_customized=False))
         else:
-            items.append(ProductLoreListItem(
-                product_id=prod.id,
-                product_name=prod.name,
-                sub_category=prod.sub_category,
-                image_url=prod.image_url,
-                canonical_name=lore.canonical_name,
-                subtitle=lore.subtitle,
-                faction=lore.faction,
-                special_move=lore.special_move,
-                quote=lore.quote,
-                flavor_quote_author=lore.flavor_quote_author,
-                lore=lore.lore,
-                is_customized=lore.is_customized
+            items.append(_list_item_from_data(
+                prod,
+                {c.name: getattr(lore, c.name) for c in ProductLoreModel.__table__.columns},
+                is_customized=lore.is_customized,
             ))
 
     return ProductLoreListResponse(items=items, total=total)
@@ -381,12 +367,13 @@ def update_character_lore(
     slug: str,
     payload: CharacterLoreUpdateRequest,
     db: Session = Depends(get_lore_db),
-    current_user: UserModel = Depends(get_current_user)
+    admin_user: UserModel = Depends(require_admin)
 ):
-    """Actualiza el lore de un personaje arquetípico."""
-    updated = LoreHarvesterService.update_character(
-        db=db, slug=slug, data=payload.model_dump(exclude_unset=True)
-    )
+    """Actualiza el lore de un personaje arquetípico (solo administrador; queda curado por Master)."""
+    data = payload.model_dump(exclude_unset=True)
+    if data.get("faction") and "theme_key" not in data:
+        data["theme_key"] = FACTION_TO_THEME[data["faction"]]
+    updated = LoreHarvesterService.update_character(db=db, slug=slug, data=data)
     if not updated:
         raise HTTPException(status_code=404, detail="Personaje no encontrado")
     return updated
@@ -396,21 +383,39 @@ def update_character_lore(
 def harvest_lore(
     payload: HarvestRequest,
     db: Session = Depends(get_lore_db),
-    current_user: UserModel = Depends(get_current_user)
+    admin_user: UserModel = Depends(require_admin)
 ):
-    """Fuerza la recolección de lore para un personaje desde Wiki Grayskull."""
-    char = LoreHarvesterService.get_or_create_character_lore(db=db, character_name=payload.character_name)
-    return char
+    """
+    Recolecta lore de un personaje desde Wiki Grayskull.
+    Si el personaje ya está verificado y force=False responde 409 Conflict sin consultar la red.
+    """
+    slug = LoreHarvesterService.resolve_character_slug(payload.character_name)
+    existing = db.query(CharacterLoreModel).filter(CharacterLoreModel.slug == slug).first()
+    if existing and existing.is_verified and not payload.force:
+        raise HTTPException(
+            status_code=409,
+            detail=f"El personaje '{slug}' ya está verificado. Confirma con force=true para sobrescribirlo."
+        )
+    return LoreHarvesterService.get_or_create_character_lore(
+        db=db, character_name=payload.character_name, force=payload.force
+    )
 
 
 @router.post("/harvest-product/{product_id}", response_model=CharacterLoreOutput)
 def harvest_product_lore(
     product_id: int,
+    force: bool = Query(False, description="Sobrescribir un personaje ya verificado"),
     db: Session = Depends(get_lore_db),
-    current_user: UserModel = Depends(get_current_user)
+    admin_user: UserModel = Depends(require_admin)
 ):
-    """Fuerza la recolección determinista de lore para una figura específica desde Wiki Fandom."""
-    char = LoreHarvesterService.harvest_for_product(db=db, product_id=product_id)
+    """Recolección determinista de lore para una figura desde Wiki Fandom (409 si está verificado sin force)."""
+    try:
+        char = LoreHarvesterService.harvest_for_product(db=db, product_id=product_id, force=force)
+    except VerifiedLoreConflict as conflict:
+        raise HTTPException(
+            status_code=409,
+            detail=f"El personaje '{conflict.slug}' ya está verificado. Confirma con force=true para sobrescribirlo."
+        )
     if not char:
         raise HTTPException(status_code=404, detail="Figura o personaje no encontrado")
     return char
@@ -419,49 +424,47 @@ def harvest_product_lore(
 @router.post("/harvest-missing", response_model=dict)
 def harvest_missing_lore(
     db: Session = Depends(get_lore_db),
-    current_user: UserModel = Depends(get_current_user)
+    admin_user: UserModel = Depends(require_admin)
 ):
     """Pre-carga todos los slugs existentes en una sola consulta y cosecha solo los ausentes (sin N+1)."""
     existing_slugs = {row[0] for row in db.query(CharacterLoreModel.slug).all()}
-    origins_products = db.query(ProductModel).filter(
+    origins = db.query(ProductModel.id, ProductModel.name, ProductModel.character_slug).filter(
         or_(ProductModel.is_vintage == False, ProductModel.is_vintage.is_(None))
     ).all()
 
     harvested_count = 0
-    for product in origins_products:
-        slug = LoreHarvesterService.resolve_character_slug(product.name)
-        product.character_slug = slug
+    relink: dict = {}
+    for product_id, product_name, current_slug in origins:
+        slug = LoreHarvesterService.resolve_character_slug(product_name)
         if slug not in existing_slugs:
-            char = LoreHarvesterService.get_or_create_character_lore(db=db, character_name=product.name)
+            # La cosecha libera la sesión SQL antes de cada petición HTTP y replica a SQLite local.
+            char = LoreHarvesterService.get_or_create_character_lore(db=db, character_name=product_name)
             existing_slugs.add(char.slug)
             harvested_count += 1
+        if current_slug != slug:
+            relink[product_id] = slug
 
-    db.commit()
-    return {"status": "ok", "harvested": harvested_count, "total_checked": len(origins_products)}
+    for product_id, slug in relink.items():
+        db.query(ProductModel).filter(ProductModel.id == product_id).update({"character_slug": slug})
+    if relink:
+        db.commit()
+        LoreDualSync.replicate_character_slugs(db, list(relink))
+    return {"status": "ok", "harvested": harvested_count, "total_checked": len(origins)}
 
 
 @router.post("/seed", response_model=dict)
 def seed_origins_lore(
-    force: bool = Query(False, description="Sobrescribir incluso los personalizados"),
+    force: bool = Query(False, description="Sobrescribir incluso lo curado por un administrador"),
     db: Session = Depends(get_lore_db),
-    current_user: UserModel = Depends(get_current_user)
+    admin_user: UserModel = Depends(require_admin)
 ):
     """
-    Ejecuta el sembrado del Grimorio Lore para todas las figuras de MOTU Origins (is_vintage == False)
-    y para todos los personajes arquetípicos con los textos canónicos de los cromos.
-    Sincroniza en la base de datos principal y en la base local.
+    Ejecuta el sembrado unificado del Grimorio Lore (personajes arquetípicos + figuras Origins).
+    Con force=False respeta lo curado por Master; con force=True sobrescribe todo.
+    Replica de forma unidireccional SessionCloud -> SQLite local.
     """
-    chars_res = ProductLoreSeedService.seed_canonical_characters(db=db, force=force)
-    prods_res = ProductLoreSeedService.seed_origins_products(db=db, force=force)
-
-    # Sincronización en base local SQLite si la principal es Postgres
-    try:
-        with SessionLocal() as local_db:
-            ProductLoreSeedService.seed_canonical_characters(db=local_db, force=force)
-            ProductLoreSeedService.seed_origins_products(db=local_db, force=force)
-    except Exception as e:
-        logger.warning(f"Sincronización secundaria local en /api/lore/seed omitida: {e}")
-
+    res = ProductLoreSeedService.seed_all_dual(db=db, force=force)
+    chars_res, prods_res = res["characters"], res["products"]
     return {
         "status": "ok",
         "result": {
@@ -471,4 +474,3 @@ def seed_origins_lore(
             "characters_seeded": chars_res.get("total_characters", 0)
         }
     }
-

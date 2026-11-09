@@ -10,31 +10,31 @@ import {
     Quote,
     Sparkles
 } from 'lucide-react';
-import { fetchProductLore, updateProductLore, type ProductLore } from '../../api/lore';
+import {
+    fetchProductLore,
+    updateProductLore,
+    FACTION_TO_THEME,
+    MOTU_FACTIONS,
+    LORE_RECOMMENDED_LENGTH,
+    type ProductLore
+} from '../../api/lore';
 
 interface ProductLoreAccordionProps {
     productId: number;
     productName: string;
     isVintage?: boolean;
+    /** Solo un administrador (Master) puede editar el canon global del Grimorio. */
+    isAdmin?: boolean;
 }
 
-const FACTION_CHOICES = [
-    'Guerreros Heroicos',
-    'Guerreros del Mal',
-    'La Horda del Terror',
-    'Los Hombres Serpiente',
-    'La Gran Rebelión',
-    'Guardianes Cósmicos'
-];
+const FACTION_CHOICES = MOTU_FACTIONS;
 
 export const ProductLoreAccordion: React.FC<ProductLoreAccordionProps> = ({
     productId,
     productName,
-    isVintage = false
+    isVintage = false,
+    isAdmin = false
 }) => {
-    // REGLA ESTRICTA: El Grimorio solo aplica a figuras Origins (no vintage)
-    if (isVintage) return null;
-
     const [isExpanded, setIsExpanded] = useState(false);
     const [loreData, setLoreData] = useState<ProductLore | null>(null);
     const [loading, setLoading] = useState(false);
@@ -69,10 +69,15 @@ export const ProductLoreAccordion: React.FC<ProductLoreAccordionProps> = ({
     };
 
     useEffect(() => {
+        if (isVintage) return;
         if (isExpanded && !loreData && !loading) {
             loadLore();
         }
-    }, [isExpanded, productId]);
+    }, [isExpanded, productId, isVintage]);
+
+    // REGLA ESTRICTA: El Grimorio solo aplica a figuras Origins (no vintage).
+    // El retorno anticipado va DESPUÉS de todos los hooks (Rules of Hooks).
+    if (isVintage) return null;
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -84,7 +89,8 @@ export const ProductLoreAccordion: React.FC<ProductLoreAccordionProps> = ({
                 flavor_quote_author: editQuoteAuthor.trim() || undefined,
                 lore: editLore.trim(),
                 special_move: editSpecialMove.trim() || undefined,
-                faction: editFaction
+                faction: editFaction,
+                theme_key: FACTION_TO_THEME[editFaction]
             });
             setLoreData(updated);
             setIsEditing(false);
@@ -234,6 +240,13 @@ export const ProductLoreAccordion: React.FC<ProductLoreAccordionProps> = ({
                                     placeholder="Biografía concisa de la figura y sus accesorios..."
                                     className="w-full px-2.5 py-1.5 rounded-lg bg-black/60 border border-slate-700 text-stone-200 text-xs leading-relaxed focus:border-amber-400 focus:outline-none resize-none font-serif"
                                 />
+                                <p
+                                    className={`mt-1 text-right text-[9px] font-mono ${
+                                        editLore.length > LORE_RECOMMENDED_LENGTH ? 'text-amber-400' : 'text-white/40'
+                                    }`}
+                                >
+                                    {editLore.length} / {LORE_RECOMMENDED_LENGTH} caracteres recomendados para el cromo TCG
+                                </p>
                             </div>
 
                             <div className="flex items-center justify-end gap-2 pt-1 border-t border-white/10">
@@ -311,14 +324,16 @@ export const ProductLoreAccordion: React.FC<ProductLoreAccordionProps> = ({
                                     )}
                                 </div>
 
-                                <button
-                                    type="button"
-                                    onClick={() => setIsEditing(true)}
-                                    className="px-2.5 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 text-[9.5px] font-black uppercase tracking-wider flex items-center gap-1 transition"
-                                >
-                                    <Edit3 className="h-3 w-3" />
-                                    <span>Editar Lore</span>
-                                </button>
+                                {isAdmin && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsEditing(true)}
+                                        className="px-2.5 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 text-[9.5px] font-black uppercase tracking-wider flex items-center gap-1 transition"
+                                    >
+                                        <Edit3 className="h-3 w-3" />
+                                        <span>Editar Lore</span>
+                                    </button>
+                                )}
                             </div>
                         </div>
                     )}

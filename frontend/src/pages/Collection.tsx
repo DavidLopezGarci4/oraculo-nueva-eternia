@@ -723,6 +723,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                     product={selectedProduct}
                     userId={activeUserId}
                     isIncognito={isIncognito}
+                    isAdmin={isAdmin}
                     onClose={() => {
                         setIsDetailOpen(false);
                         setSelectedProduct(null);

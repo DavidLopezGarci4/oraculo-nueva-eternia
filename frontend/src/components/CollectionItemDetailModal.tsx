@@ -27,10 +27,12 @@ interface CollectionItemDetailModalProps {
     product: Product;
     userId: number;
     isIncognito?: boolean;
+    /** Solo un administrador (Master) edita el canon global del Grimorio. */
+    isAdmin?: boolean;
     onClose: () => void;
 }
 
-const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ product, userId, isIncognito = false, onClose }) => {
+const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ product, userId, isIncognito = false, isAdmin = false, onClose }) => {
     const containerRef = React.useRef<HTMLDivElement>(null);
     useModalA11y(true, onClose, containerRef);
     const queryClient = useQueryClient();
@@ -302,6 +304,7 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
                                     productId={product.id}
                                     productName={product.name}
                                     isVintage={!!product.is_vintage}
+                                    isAdmin={isAdmin}
                                 />
                             )}
                         </div>
@@ -346,8 +349,11 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
                                 <TradingCardModal
                                     isOpen={showTradingCard}
                                     onClose={() => setShowTradingCard(false)}
+                                    isAdmin={isAdmin}
                                     item={{
                                         id: product.id,
+                                        product_id: product.id,
+                                        is_vintage: Boolean(product.is_vintage),
                                         name: product.name,
                                         image_url: product.image_url || undefined,
                                         condition: condition,

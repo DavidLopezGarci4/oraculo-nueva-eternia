@@ -390,18 +390,38 @@ async def run_daily_scan(progress_callback=None):
         except Exception as e_bk:
             logger.warning(f"⚠️ Error durante el sellado del vault de backup: {e_bk}")
 
-        # PHASE 88: Auto-resolución de Lore para productos nuevos (Caché permanente, 0 coste de red)
+        # PHASE 88: Auto-resolución de Lore para productos Origins nuevos (Caché permanente, 0 coste de red).
+        # `SessionLocal` es aquí un alias de `SessionCloud` (fuente primaria); la réplica hacia
+        # oraculo.db es unidireccional (LoreDualSync). El raspado HTTP es síncrono, así que se
+        # ejecuta en un hilo auxiliar para no bloquear el event loop. Vintage queda excluido.
         try:
             from src.application.services.lore_harvester_service import LoreHarvesterService
-            with SessionLocal() as db_lore:
-                unlinked = db_lore.query(ProductModel).filter(ProductModel.character_slug == None).all()
-                if unlinked:
-                    logger.info(f"🔮 Auto-resolviendo lore para {len(unlinked)} productos sin vincular...")
-                    for p in unlinked:
-                        lore = LoreHarvesterService.get_or_create_character_lore(db_lore, p.name)
-                        p.character_slug = lore.slug
+            from src.application.services.lore_dual_sync import LoreDualSync
+            from sqlalchemy import or_
+
+            def _resolve_unlinked_lore() -> int:
+                with SessionLocal() as db_lore:
+                    pending = [
+                        (p.id, p.name)
+                        for p in db_lore.query(ProductModel).filter(
+                            ProductModel.character_slug == None,  # noqa: E711
+                            or_(ProductModel.is_vintage == False, ProductModel.is_vintage.is_(None)),  # noqa: E712
+                        ).all()
+                    ]
+                    if not pending:
+                        return 0
+                    logger.info(f"🔮 Auto-resolviendo lore para {len(pending)} productos sin vincular...")
+                    linked_ids = []
+                    for pid, pname in pending:
+                        lore = LoreHarvesterService.get_or_create_character_lore(db_lore, pname)
+                        db_lore.query(ProductModel).filter(ProductModel.id == pid).update({"character_slug": lore.slug})
+                        linked_ids.append(pid)
                     db_lore.commit()
+                    LoreDualSync.replicate_character_slugs(db_lore, linked_ids)
                     logger.info("✨ Auto-resolución de lore finalizada.")
+                    return len(linked_ids)
+
+            await asyncio.to_thread(_resolve_unlinked_lore)
         except Exception as e_lore:
             logger.warning(f"⚠️ Error en la auto-asignación de lore durante Daily Scan: {e_lore}")
 

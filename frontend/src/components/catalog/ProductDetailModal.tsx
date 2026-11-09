@@ -236,6 +236,7 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                                 productId={selectedProduct.id}
                                 productName={selectedProduct.name}
                                 isVintage={isVintageOnly || !!selectedProduct.is_vintage}
+                                isAdmin={isAdmin}
                             />
                         )}
 

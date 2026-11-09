@@ -32,6 +32,14 @@ import { fetchCharacterLoreList, updateCharacterLore, harvestProductLore, fetchP
 import { refreshProductImage } from '../../api/products';
 import { DEFAULT_FACTION_CARD_LAYOUTS, type FactionCardLayout } from '../config/TcgConfigTab';
 
+/** Normaliza un nombre de producto para buscar su personaje arquetipico (sin sufijos entre parentesis ni lineas). */
+const cleanLoreSearchName = (raw: string): string =>
+    raw
+        .replace(/[\(\[\{].*?[\)\]\}]/g, ' ')
+        .replace(/\b(origins|masterverse|vintage|cartoon|deluxe|wave \d+|classics|moc|loose)\b/gi, ' ')
+        .replace(/\s+/g, ' ')
+        .trim() || raw.trim();
+
 interface TradingCardModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -48,7 +56,11 @@ interface TradingCardModalProps {
         release_year?: number;
         sku?: string;
         shelf_wear?: string;
+        product_id?: number;
+        is_vintage?: boolean;
     } | null;
+    /** Solo un administrador (Master) puede persistir en el canon global (BD). */
+    isAdmin?: boolean;
 }
 
 // Configuración de los marcos fotorrealistas en alta definición por cada facción
@@ -1083,7 +1095,7 @@ const generateTradingCardDataUrl = async (
     }
 };
 
-export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onClose, item }) => {
+export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onClose, item, isAdmin = false }) => {
     const cardRef = useRef<HTMLDivElement>(null);
     const [exporting, setExporting] = useState(false);
     const [copied, setCopied] = useState(false);
@@ -1206,8 +1218,8 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
         }).catch(() => {});
 
         // Cargar ficha canónica de lore desde la BD (por Product ID si es Origins, o fallback)
-        const productId = item.id || (item as any).product_id;
-        const isVintageItem = (item as any).is_vintage;
+        const productId = item.product_id ?? item.id;
+        const isVintageItem = Boolean(item.is_vintage);
 
         if (productId && !isVintageItem) {
             fetchProductLore(productId).then(res => {
@@ -1225,7 +1237,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                 }
             }).catch(() => {
                 const rawName = item.product_name || item.name || '';
-                fetchCharacterLoreList({ search: rawName, limit: 5 }).then(res => {
+                fetchCharacterLoreList({ search: cleanLoreSearchName(rawName), limit: 5 }).then(res => {
                     if (res && res.items && res.items.length > 0) {
                         const best = res.items[0];
                         setDbLoreChar(best);
@@ -1239,7 +1251,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
             });
         } else {
             const rawName = item.product_name || item.name || '';
-            fetchCharacterLoreList({ search: rawName, limit: 5 }).then(res => {
+            fetchCharacterLoreList({ search: cleanLoreSearchName(rawName), limit: 5 }).then(res => {
                 if (res && res.items && res.items.length > 0) {
                     const best = res.items[0];
                     setDbLoreChar(best);
@@ -1442,10 +1454,21 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
     };
 
     const handleHarvestLoreFromWiki = async () => {
-        if (!item) return;
+        if (!item || !isAdmin) return;
         setIsHarvestingLore(true);
         try {
-            const harvested = await harvestProductLore(item.id);
+            const harvestProductId = item.product_id ?? item.id;
+            let harvested: CharacterLore | undefined;
+            try {
+                harvested = await harvestProductLore(harvestProductId);
+            } catch (err: any) {
+                const alreadyVerified = err?.response?.status === 409;
+                if (alreadyVerified && window.confirm('Este personaje ya está verificado. ¿Quieres sobrescribirlo con los datos de la wiki (quedará pendiente de revisión)?')) {
+                    harvested = await harvestProductLore(harvestProductId, true);
+                } else {
+                    throw err;
+                }
+            }
             if (harvested) {
                 setDbLoreChar(harvested);
                 setCustomCardName(harvested.canonical_name);
@@ -1468,10 +1491,10 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
     };
 
     const handleRefreshImageFromAF411 = async () => {
-        if (!item) return;
+        if (!item || !isAdmin) return;
         setIsRefreshingImage(true);
         try {
-            const res = await refreshProductImage(item.id);
+            const res = await refreshProductImage(item.product_id ?? item.id);
             if (res && res.new_image_url) {
                 setActiveImageOverride(res.new_image_url);
                 resetFraming();
@@ -1484,8 +1507,9 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
     };
 
     const handleSaveToLoreCanon = async () => {
-        const productId = item.id || (item as any).product_id;
-        const isVintage = (item as any).is_vintage;
+        if (!isAdmin) return;
+        const productId = item.product_id ?? item.id;
+        const isVintage = Boolean(item.is_vintage);
         setSavingDbLore(true);
         try {
             if (productId && !isVintage) {
@@ -1494,7 +1518,8 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                     subtitle: customSubtitle.trim() || displaySubtitle,
                     special_move: customSpecialMove.trim() || specialMoveText,
                     lore: customLore.trim() || loreText,
-                    quote: specialMoveText || customSpecialMove.trim() || undefined,
+                    // La cita del blíster es independiente del ataque especial: no se sobrescribe con special_move
+                    quote: dbLoreChar?.quote || undefined,
                     flavor_quote_author: customQuoteAuthor.trim() || displayQuoteAuthor,
                     type_line: customTypeLine.trim() || typeLineText,
                     text_color: customTextColor,
@@ -1529,6 +1554,8 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                         faction: factionName
                     });
                     setDbLoreChar(updated);
+                } else {
+                    throw new Error('No hay ficha de personaje asociada para guardar en el canon.');
                 }
             }
             setLoreSaveSuccess(true);
@@ -2303,10 +2330,10 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                                 <input
                                                     type="number"
                                                     min="1"
-                                                    max="99"
+                                                    max="100"
                                                     value={customStats ? (customStats as any)[stat.key] : (statsData as any)[stat.key]}
                                                     onChange={(e) => {
-                                                        const val = Math.min(99, Math.max(1, parseInt(e.target.value) || 0));
+                                                        const val = Math.min(100, Math.max(1, parseInt(e.target.value) || 0));
                                                         setCustomStats(prev => ({
                                                             ...(prev || statsData),
                                                             [stat.key]: val
@@ -2319,6 +2346,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                     </div>
 
                                     {/* 9. Botones de Acción Instantánea: Wiki Fandom & AF411 */}
+                                    {isAdmin && (
                                     <div className="sm:col-span-2 flex items-center gap-2 pt-1">
                                         <button
                                             type="button"
@@ -2340,10 +2368,11 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                                             <span>📸 Refrescar Imagen AF411</span>
                                         </button>
                                     </div>
+                                    )}
                                 </div>
 
                                 {/* Botón Guardar en Base de Datos */}
-                                {(dbLoreChar || effectiveDbLore || item) && (
+                                {isAdmin && (dbLoreChar || effectiveDbLore || item) && (
                                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-white/10">
                                         <span className="text-[9px] text-stone-400">
                                             Guarda los textos permanentemente en la base de datos para esta figura de Origins.

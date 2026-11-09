@@ -82,16 +82,18 @@ async def lifespan(app: FastAPI):
             from src.application.services.vinted_sentinel_service import vinted_sentinel
             vinted_sentinel.start()
 
-        # Auto-sembrado idempotente de Lore Canónico (Fase 88/90)
+        # Auto-sembrado incremental idempotente de Lore Canónico (Fase 88/90):
+        # SessionCloud es la fuente primaria; la replica a SQLite local es unidireccional y best-effort.
         try:
             from src.application.services.lore_harvester_service import LoreHarvesterService
             try:
                 with SessionCloud() as db_session:
-                    LoreHarvesterService.seed_initial_catalog(db_session)
-            except Exception:
+                    LoreHarvesterService.seed_incremental_dual(db_session)
+            except Exception as e_cloud:
+                logger.warning(f"Auto-sembrado de Lore en SessionCloud falló, usando SQLite local: {e_cloud}")
                 from src.infrastructure.database import SessionLocal
                 with SessionLocal() as db_session:
-                    LoreHarvesterService.seed_initial_catalog(db_session)
+                    LoreHarvesterService.seed_incremental_dual(db_session)
         except Exception as e_lore:
             logger.warning(f"Aviso en auto-sembrado de Lore: {e_lore}")
     except Exception as e:

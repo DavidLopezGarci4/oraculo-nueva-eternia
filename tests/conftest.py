@@ -65,6 +65,12 @@ _SESSION_TARGETS = [
     "src.infrastructure.scrapers.wallapop_manual_importer.SessionCloud",
     "src.application.services.vinted_hunter_service.SessionCloud",
     "scripts.seed_logistics.SessionCloud",
+    # Grimorio MOTU: evita que /api/lore, el lifespan y la replica dual toquen la BD real.
+    "src.interfaces.api.routers.lore.SessionCloud",
+    # El lifespan importa SessionCloud desde database_cloud en cada arranque: sin este parche
+    # el auto-sembrado del Grimorio escribiria en la BD real. (main.SessionCloud NO se parchea:
+    # `_resolve_session_cloud` lo usa para detectar parches propios de cada test.)
+    "src.infrastructure.database_cloud.SessionCloud",
 ]
 
 # ─── Shared constants ────────────────────────────────────────────────────────

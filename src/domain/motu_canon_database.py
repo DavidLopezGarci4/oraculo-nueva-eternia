@@ -2189,7 +2189,7 @@ CANONICAL_CARD_PROFILES: List[Dict[str, Any]] = [
             "canonical_name": "Guerrero Ninja de Eternia",
             "subtitle": "Héroe Ninja de Grayskull",
             "theme_key": "castle_grayskull",
-            "faction": "Guerreros Heroicos",
+            "faction": "Alianzas del Multiverso",
             "type_line": "Ninja Mutante — Turtles of Grayskull",
             "special_move": "Torbellino Mutante de Grayskull",
             "quote": "¡Cowabunga por el poder sagrado de Grayskull!",
@@ -2209,7 +2209,7 @@ CANONICAL_CARD_PROFILES: List[Dict[str, Any]] = [
             "canonical_name": "Ruler of the Sun",
             "subtitle": "Campeón de la Luz Solar",
             "theme_key": "castle_grayskull",
-            "faction": "Guerreros Heroicos",
+            "faction": "Gobernantes de Solaria",
             "type_line": "Campeón Solar — Rulers of the Sun",
             "special_move": "Fulgor Solar Purificador",
             "quote": "¡Que el resplandor de la justicia ilumine la oscuridad!",
@@ -2229,7 +2229,7 @@ CANONICAL_CARD_PROFILES: List[Dict[str, Any]] = [
             "canonical_name": "Titán del Ring Eterniano",
             "subtitle": "Leyenda del Cuadrilátero",
             "theme_key": "castle_grayskull",
-            "faction": "Guerreros Heroicos",
+            "faction": "Alianzas del Multiverso",
             "type_line": "Campeón del Cuadrilátero — WWE Universe",
             "special_move": "Lariat Titánico de Eternia",
             "quote": "¡En este ring nadie puede detener el poder de la leyenda!",
@@ -2249,7 +2249,7 @@ CANONICAL_CARD_PROFILES: List[Dict[str, Any]] = [
             "canonical_name": "Guerrero Felino del Augurio",
             "subtitle": "Señor de los Thundercats",
             "theme_key": "castle_grayskull",
-            "faction": "Guerreros Heroicos",
+            "faction": "Alianzas del Multiverso",
             "type_line": "Guerrero Felino — Crossover de Thundera",
             "special_move": "Furia del Ojo de Thundera",
             "quote": "¡Thunder, Thunder, Thundercats, Ho!",
@@ -2396,3 +2396,35 @@ def resolve_motu_profile(product_name: str, sub_category: Optional[str] = "MOTU 
         "rarity_class": detected_faction
     }
 
+
+
+# 3. CATÁLOGO CERRADO DE FACCIONES, PROCEDENCIA Y NORMALIZACIÓN DE SLUGS (Grimorio MOTU)
+import unicodedata
+
+# Facción (Español) -> theme_key gráfico existente (6 marcos calibrados; sin recursos nuevos).
+FACTION_TO_THEME: Dict[str, str] = {
+    "Guerreros Heroicos": "castle_grayskull",
+    "Guerreros del Mal": "snake_mountain",
+    "La Horda del Terror": "evil_horde",
+    "Los Hombres Serpiente": "snake_men",
+    "La Gran Rebelión": "great_rebellion",
+    "Guardianes Cósmicos": "cosmic_enforcers",
+    "Gobernantes de Solaria": "castle_grayskull",
+    "Alianzas del Multiverso": "castle_grayskull",
+}
+VALID_FACTIONS = tuple(FACTION_TO_THEME.keys())
+
+# Procedencia reutilizando `character_lore.source_url` (cero columnas nuevas):
+#  - SYSTEM_CANON_SOURCES: canon estático del sistema, actualizable con force=False.
+#  - CURATED_SOURCE: edición humana de un administrador (Master), inmutable salvo force=True.
+SYSTEM_CANON_SOURCES = ("Canon MOTU Oficial", "Canon MOTU Local")
+CURATED_SOURCE = "Curado por Master"
+
+
+def canonicalize_slug(text: str) -> str:
+    """Slug ASCII determinista (NFKD sin acentos): 'Príncipe Adam' -> 'principe_adam'."""
+    if not text:
+        return "desconocido"
+    ascii_text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
+    slug = re.sub(r"[^a-z0-9_]", "", ascii_text.lower().replace(" ", "_").replace("-", "_"))
+    return slug or "desconocido"

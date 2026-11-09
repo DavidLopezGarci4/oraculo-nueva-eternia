@@ -24,20 +24,29 @@ import {
     seedInitialLore,
     fetchProductLoreList,
     updateProductLore,
+    MOTU_FACTIONS,
+    FACTION_TO_THEME,
+    LORE_RECOMMENDED_LENGTH,
     type CharacterLore,
     type ProductLoreListItem
 } from '../../api/lore';
 import { MOTUImage } from '../ui/MOTUImage';
 import { getOptimizedImageUrl } from '../../utils/imageUtils';
 
+const FACTION_EMOJI: Record<string, string> = {
+    'Guerreros Heroicos': '🛡️',
+    'Guerreros del Mal': '💀',
+    'La Horda del Terror': '🦇',
+    'Los Hombres Serpiente': '🐍',
+    'La Gran Rebelión': '✨',
+    'Guardianes Cósmicos': '🌌',
+    'Gobernantes de Solaria': '☀️',
+    'Alianzas del Multiverso': '🌀'
+};
+
 const FACTION_OPTIONS = [
     { value: 'ALL', label: 'Todas las Facciones' },
-    { value: 'Guerreros Heroicos', label: '🛡️ Guerreros Heroicos' },
-    { value: 'Guerreros del Mal', label: '💀 Guerreros del Mal' },
-    { value: 'La Horda del Terror', label: '🦇 La Horda del Terror' },
-    { value: 'Los Hombres Serpiente', label: '🐍 Los Hombres Serpiente' },
-    { value: 'La Gran Rebelión', label: '✨ La Gran Rebelión' },
-    { value: 'Guardianes Cósmicos', label: '🌌 Guardianes Cósmicos' }
+    ...MOTU_FACTIONS.map((f) => ({ value: f, label: `${FACTION_EMOJI[f] ?? '⚔️'} ${f}` }))
 ];
 
 const THEME_OPTIONS = [
@@ -48,6 +57,43 @@ const THEME_OPTIONS = [
     { value: 'great_rebellion', label: 'Gran Rebelión (Mármol & Cristal)' },
     { value: 'cosmic_enforcers', label: 'Guardianes Cósmicos (Titanio Estelar)' }
 ];
+
+type StatKey = 'fuerza' | 'magia' | 'defensa' | 'agilidad';
+const STAT_FIELDS: { key: StatKey; label: string }[] = [
+    { key: 'fuerza', label: 'Fuerza' },
+    { key: 'magia', label: 'Magia' },
+    { key: 'defensa', label: 'Defensa' },
+    { key: 'agilidad', label: 'Agilidad' }
+];
+
+/** Atributos RPG editables (1..100), igual que la validación del backend. */
+const StatsInputs: React.FC<{
+    values: Partial<Record<StatKey, number>>;
+    onChange: (key: StatKey, value: number) => void;
+}> = ({ values, onChange }) => (
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        {STAT_FIELDS.map(({ key, label }) => (
+            <div key={key}>
+                <label className="block text-[9px] font-bold uppercase text-amber-300 mb-1">{label}:</label>
+                <input
+                    type="number"
+                    min={1}
+                    max={100}
+                    value={values[key] ?? 85}
+                    onChange={(e) => onChange(key, Math.min(100, Math.max(1, parseInt(e.target.value, 10) || 1)))}
+                    className="w-full px-2 py-1.5 rounded-lg bg-black border border-slate-700 text-white text-xs font-mono"
+                />
+            </div>
+        ))}
+    </div>
+);
+
+/** Aviso visual NO bloqueante: la biografía recomendada para encajar en el cromo TCG. */
+const LoreLengthHint: React.FC<{ length: number }> = ({ length }) => (
+    <p className={`mt-1 text-right text-[9px] font-mono ${length > LORE_RECOMMENDED_LENGTH ? 'text-amber-400' : 'text-slate-500'}`}>
+        {length} / {LORE_RECOMMENDED_LENGTH} caracteres recomendados para el cromo TCG
+    </p>
+);
 
 export const LoreTab: React.FC = () => {
     // Modo de vista: 'products' (Figuras Origins) o 'characters' (Personajes Canónicos)
@@ -145,7 +191,13 @@ export const LoreTab: React.FC = () => {
                 quote: prodEditForm.quote,
                 flavor_quote_author: prodEditForm.flavor_quote_author,
                 lore: prodEditForm.lore,
-                special_move: prodEditForm.special_move
+                special_move: prodEditForm.special_move,
+                theme_key: prodEditForm.faction ? FACTION_TO_THEME[prodEditForm.faction] : undefined,
+                mana_cost: prodEditForm.mana_cost,
+                fuerza: prodEditForm.fuerza,
+                magia: prodEditForm.magia,
+                defensa: prodEditForm.defensa,
+                agilidad: prodEditForm.agilidad
             });
             setProducts((prev) =>
                 prev.map((p) =>
@@ -159,6 +211,12 @@ export const LoreTab: React.FC = () => {
                               flavor_quote_author: updated.flavor_quote_author,
                               lore: updated.lore,
                               special_move: updated.special_move,
+                              theme_key: updated.theme_key,
+                              mana_cost: updated.mana_cost,
+                              fuerza: updated.fuerza,
+                              magia: updated.magia,
+                              defensa: updated.defensa,
+                              agilidad: updated.agilidad,
                               is_customized: true
                           }
                         : p
@@ -177,7 +235,18 @@ export const LoreTab: React.FC = () => {
     const handleHarvest = async (charName: string) => {
         setHarvesting(true);
         try {
-            const harvested = await harvestCharacterLore(charName);
+            let harvested: CharacterLore;
+            try {
+                harvested = await harvestCharacterLore(charName);
+            } catch (err: any) {
+                if (err?.response?.status === 409 && window.confirm(
+                    `"${charName}" ya está verificado. ¿Sobrescribirlo con los datos de la wiki? (quedará pendiente de revisión)`
+                )) {
+                    harvested = await harvestCharacterLore(charName, true);
+                } else {
+                    throw err;
+                }
+            }
             setEditingChar(harvested);
             showToast(`🌐 Datos recabados de Wiki Grayskull para "${harvested.canonical_name}"`);
         } catch (e) {
@@ -216,6 +285,10 @@ export const LoreTab: React.FC = () => {
                 return 'bg-pink-500/20 text-pink-300 border-pink-500/40';
             case 'Guardianes Cósmicos':
                 return 'bg-sky-500/20 text-sky-300 border-sky-500/40';
+            case 'Gobernantes de Solaria':
+                return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40';
+            case 'Alianzas del Multiverso':
+                return 'bg-violet-500/20 text-violet-300 border-violet-500/40';
             default:
                 return 'bg-slate-700/50 text-slate-300 border-slate-600';
         }
@@ -493,7 +566,64 @@ export const LoreTab: React.FC = () => {
                                                             rows={3}
                                                             className="w-full px-2.5 py-1.5 rounded-lg bg-black border border-slate-700 text-stone-200 text-xs font-serif resize-none"
                                                         />
+                                                        <LoreLengthHint length={(prodEditForm.lore || '').length} />
                                                     </div>
+
+                                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                                        <div>
+                                                            <label className="block text-[9px] font-bold uppercase text-amber-300 mb-1">
+                                                                Facción:
+                                                            </label>
+                                                            <select
+                                                                value={prodEditForm.faction || 'Guerreros Heroicos'}
+                                                                onChange={(e) =>
+                                                                    setProdEditForm({
+                                                                        ...prodEditForm,
+                                                                        faction: e.target.value,
+                                                                        theme_key: FACTION_TO_THEME[e.target.value]
+                                                                    })
+                                                                }
+                                                                className="w-full px-2.5 py-1.5 rounded-lg bg-black border border-slate-700 text-white text-xs"
+                                                            >
+                                                                {MOTU_FACTIONS.map((f) => (
+                                                                    <option key={f} value={f}>
+                                                                        {f}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-[9px] font-bold uppercase text-amber-300 mb-1">
+                                                                Autor de la Cita:
+                                                            </label>
+                                                            <input
+                                                                type="text"
+                                                                value={prodEditForm.flavor_quote_author || ''}
+                                                                onChange={(e) =>
+                                                                    setProdEditForm({ ...prodEditForm, flavor_quote_author: e.target.value })
+                                                                }
+                                                                className="w-full px-2.5 py-1.5 rounded-lg bg-black border border-slate-700 text-white text-xs"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-[9px] font-bold uppercase text-amber-300 mb-1">
+                                                                Coste de Maná (ej. {'{2}{W}{W}'}):
+                                                            </label>
+                                                            <input
+                                                                type="text"
+                                                                value={prodEditForm.mana_cost || ''}
+                                                                onChange={(e) =>
+                                                                    setProdEditForm({ ...prodEditForm, mana_cost: e.target.value })
+                                                                }
+                                                                className="w-full px-2.5 py-1.5 rounded-lg bg-black border border-slate-700 text-white text-xs font-mono"
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    <StatsInputs
+                                                        values={prodEditForm}
+                                                        onChange={(key, value) => setProdEditForm({ ...prodEditForm, [key]: value })}
+                                                    />
 
                                                     <div className="flex justify-end gap-2 pt-1 border-t border-white/5">
                                                         <button
@@ -550,7 +680,13 @@ export const LoreTab: React.FC = () => {
                                                                     quote: prod.quote,
                                                                     flavor_quote_author: prod.flavor_quote_author,
                                                                     lore: prod.lore,
-                                                                    special_move: prod.special_move
+                                                                    special_move: prod.special_move,
+                                                                    theme_key: prod.theme_key,
+                                                                    mana_cost: prod.mana_cost,
+                                                                    fuerza: prod.fuerza,
+                                                                    magia: prod.magia,
+                                                                    defensa: prod.defensa,
+                                                                    agilidad: prod.agilidad
                                                                 });
                                                             }}
                                                             className="px-2.5 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 text-[10px] font-black uppercase tracking-wider flex items-center gap-1 transition"
@@ -684,7 +820,13 @@ export const LoreTab: React.FC = () => {
                                     </label>
                                     <select
                                         value={editingChar.faction}
-                                        onChange={(e) => setEditingChar({ ...editingChar, faction: e.target.value })}
+                                        onChange={(e) =>
+                                            setEditingChar({
+                                                ...editingChar,
+                                                faction: e.target.value,
+                                                theme_key: FACTION_TO_THEME[e.target.value] ?? editingChar.theme_key
+                                            })
+                                        }
                                         className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white text-sm"
                                     >
                                         {FACTION_OPTIONS.filter((f) => f.value !== 'ALL').map((f) => (
@@ -734,7 +876,50 @@ export const LoreTab: React.FC = () => {
                                     rows={4}
                                     className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white text-sm resize-none"
                                 />
+                                <LoreLengthHint length={editingChar.lore.length} />
                             </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-300 uppercase mb-1">
+                                        Cita del Reverso (Quote):
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={editingChar.quote || ''}
+                                        onChange={(e) => setEditingChar({ ...editingChar, quote: e.target.value })}
+                                        className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white text-sm italic font-serif"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-300 uppercase mb-1">
+                                        Autor de la Cita:
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={editingChar.flavor_quote_author || ''}
+                                        onChange={(e) => setEditingChar({ ...editingChar, flavor_quote_author: e.target.value })}
+                                        className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white text-sm"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-300 uppercase mb-1">
+                                    Coste de Maná (ej. {'{2}{W}{W}'}):
+                                </label>
+                                <input
+                                    type="text"
+                                    value={editingChar.mana_cost || ''}
+                                    onChange={(e) => setEditingChar({ ...editingChar, mana_cost: e.target.value })}
+                                    className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-white text-sm font-mono"
+                                />
+                            </div>
+
+                            <StatsInputs
+                                values={editingChar}
+                                onChange={(key, value) => setEditingChar({ ...editingChar, [key]: value })}
+                            />
                         </div>
 
                         <div className="flex items-center justify-between pt-4 border-t border-slate-800">

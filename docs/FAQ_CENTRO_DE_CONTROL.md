@@ -137,9 +137,9 @@ Este documento detalla en profundidad el funcionamiento, utilidad, criticidad y 
   Compara en tiempo real los datos existentes en SQLite local (`oraculo.db`) contra Supabase Cloud (PostgreSQL):
   - Número de figuras y productos en catálogo.
   - Número de ofertas y oportunidades en el Purgatorio.
-  - Conteo de perfiles canónicos en el Grimorio Lore.
+  - Conteo de perfiles canónicos (`character_lore`) y de fichas de figuras Origins (`product_lore`) en el Grimorio Lore.
   - Estado de las conexiones y verificación de variables críticas (`SUPABASE_DATABASE_URL`, `TELEGRAM_BOT_TOKEN`).
-* **Utilidad:** Proporciona visibilidad instantánea de si ambos entornos están sincronizados o si existen datos desfasados antes de realizar migraciones o despliegues.
+* **Utilidad:** Proporciona visibilidad instantánea de si ambos entornos están sincronizados o si existen datos desfasados antes de realizar migraciones o despliegues. Compara únicamente **conteos de filas**: no detecta que una ficha tenga distinto contenido en cada base de datos.
 * **Criticidad:** **ALTA**. Detección temprana de discrepancias en la arquitectura dual.
 * **Modo de Uso:** Pulsa `12` y Enter. En 2 segundos verás la tabla comparativa en la terminal.
 
@@ -156,13 +156,13 @@ Este documento detalla en profundidad el funcionamiento, utilidad, criticidad y 
 
 ### [14] Sembrar / Sincronizar Grimorio Lore Canónico (Origins Dual)
 * **¿Qué hace exactamente?**
-  Invoca `ProductLoreSeedService.seed_canonical_characters` y `seed_origins_products` para poblar simultáneamente en **SQLite local y en Supabase Cloud**:
-  - Los 54 perfiles arquetípicos de personajes MOTU en español (`motu_canon_database.py`).
+  Invoca `ProductLoreSeedService.seed_all_dual` (sembrador unificado de `seed_canonical_characters` y `seed_origins_products`). Siembra primero en **Supabase Cloud** (fuente primaria) y replica de forma unidireccional a **SQLite local** (si Supabase no está configurado, siembra solo en SQLite):
+  - Los perfiles arquetípicos de personajes MOTU en español (`motu_canon_database.py`), con las 8 facciones del Grimorio.
   - Las 338+ figuras exclusivas de la línea Origins con sus frases del reverso de blíster (*cardback bios*), subtítulos canónicos y estadísticas equilibradas.
   - Aplica la regla estricta del proyecto: **exclusivo para Origins, omitiendo figuras Vintage**.
 * **Utilidad:** Rellena y unifica toda la información del Grimorio Lore y los cromos coleccionables en ambas bases de datos con coste cero (sin consumo de tokens de IA).
 * **Criticidad:** **ALTA**. Resuelve el problema del Grimorio Lore vacío y sincroniza el texto de las tarjetas coleccionables.
-* **Modo de Uso:** Pulsa `14` y Enter. Se te preguntará si deseas sobreescribir los textos que no hayan sido editados manualmente.
+* **Modo de Uso:** Pulsa `14` y Enter. Se te preguntará si quieres forzar (`force=True`). Sin `force`, se actualiza el canon automático del sistema pero se **respeta lo verificado y curado por un administrador** (y las fichas Origins personalizadas). Con `force=True` se **sobrescriben también los registros ya verificados y personalizados**: úsalo solo si quieres volver al canon original.
 
 ---
 

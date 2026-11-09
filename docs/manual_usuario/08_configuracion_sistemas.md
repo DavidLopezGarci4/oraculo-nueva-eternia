@@ -117,12 +117,14 @@ Para recibir alertas personalizadas directamente en tu móvil (`Guardián` y `Ma
 
 ## 5. Grimorio de Lore Canónico MOTU (Pestaña "Grimorio Lore")
 
-Esta sección permite auditar, editar y validar las historias, técnicas especiales y estadísticas canónicas de combate de todos los personajes del multiverso MOTU vinculados al catálogo:
+Esta sección permite auditar, editar y validar las historias, técnicas especiales y estadísticas canónicas de combate de todos los personajes del multiverso MOTU vinculados al catálogo. Solo el rol `Master` (administrador) puede modificar el canon global; el resto de usuarios únicamente lo consulta y personaliza sus cromos en su navegador (`localStorage`).
 
-*   **Buscador y Filtro por Facciones:** Localiza al instante cualquier héroe o villano por nombre o texto de lore, filtrando por facciones (*Guerreros Heroicos*, *Guerreros del Mal*, *La Horda del Terror*, *Los Hombres Serpiente*, *La Gran Rebelión*, *Guardianes Cósmicos*).
+*   **Dos vistas:** `Figuras Origins` (ficha 1:1 del reverso de blíster de cada figura de la línea Origins; las figuras Vintage quedan excluidas) y `Personajes Arquetípicos` (perfil base de cada personaje, usado también como respaldo de las figuras Vintage en el visor de cromos).
+*   **Buscador y Filtro por Facciones:** Localiza al instante cualquier héroe o villano por nombre o texto de lore, filtrando por las **8 facciones** del Grimorio: *Guerreros Heroicos*, *Guerreros del Mal*, *La Horda del Terror*, *Los Hombres Serpiente*, *La Gran Rebelión*, *Guardianes Cósmicos*, *Gobernantes de Solaria* y *Alianzas del Multiverso* (crossovers). Las dos últimas reutilizan el marco gráfico de *Castle Grayskull*.
 *   **Filtro de Pendientes de Revisión:** Permite aislar con 1 clic los personajes recién descubiertos por el Daily Scan que requieren revisión humana.
-*   **Editor Visual:** Modal interactivo para ajustar el nombre de la habilidad especial, estadísticas de combate (FUE, MAG, DEF, AGI) y el texto de historia con contador de caracteres integrado (máximo 180 caracteres para garantizar un encaje perfecto en el cromo TCG).
-*   **Regla de Inmutabilidad:** Una vez verificado o sembrado un personaje en base de datos (`is_verified = True`), jamás se sobreescribirá automáticamente por la web, garantizando 0 consumo de tokens y lecturas ultra-rápidas a 0ms.
+*   **Editor Visual:** Modal interactivo para ajustar facción, nombre de la habilidad especial, cita del reverso y su autor, coste de maná (texto simbólico, p. ej. `{2}{W}{W}`), estadísticas de combate (FUE, MAG, DEF, AGI; valores de 1 a 100) y el texto de historia con contador de caracteres integrado (180 caracteres recomendados para el encaje en el cromo TCG; es un aviso visual que no bloquea el guardado).
+*   **Regla de Inmutabilidad:** Los textos cosechados de la wiki quedan siempre como *pendientes de revisión*. Al guardar un personaje, queda marcado como **curado por Master** y ni el sembrado automático ni una re-cosecha lo sobrescriben. Para re-cosechar un personaje ya verificado la interfaz pide confirmación explícita (`force`), y el resultado vuelve a quedar pendiente de revisión.
+*   **Paridad de bases de datos:** Los cambios se guardan primero en Supabase (fuente primaria) y se replican a SQLite local. La opción `[12]` del Centro de Control compara los conteos de ambas.
 
 ---
 

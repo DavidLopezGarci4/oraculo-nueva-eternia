@@ -136,6 +136,22 @@ class NexusService:
                     db_mig.close()
 
             excel_path = await loop.run_in_executor(None, run_migration_task)
+
+            # 2.5 Grimorio MOTU: las figuras Origins nuevas nacen aqui (no en daily_scan, por Purgatory-First),
+            # asi que se materializan sus character_slug y filas de product_lore (sin tocar curaciones).
+            def run_lore_seed_task():
+                from src.application.services.lore_harvester_service import LoreHarvesterService
+                with SessionCloud() as db_lore:
+                    return LoreHarvesterService.seed_incremental_dual(db_lore)
+
+            try:
+                lore_res = await loop.run_in_executor(None, run_lore_seed_task)
+                logger.info(
+                    f"📡 Paso 2.5: Grimorio sincronizado ({lore_res['product_lore_created']} fichas Origins nuevas, "
+                    f"{lore_res['linked_products']} productos vinculados)."
+                )
+            except Exception as e_lore:
+                logger.warning(f"⚠️ Aviso en sembrado incremental del Grimorio: {e_lore}")
             
             # 3. Cloud Image Synchronization (Supabase Storage)
             logger.info("📡 Paso 3: Sincronizando imágenes con la Nube (Supabase)...")
