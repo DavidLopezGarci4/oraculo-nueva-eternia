@@ -3,7 +3,7 @@
 @theme {
     --font-sans: 'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
     --color-brand-primary: #0ea5e9;
-    --color-brand-secondary: #8b5cf6;
+    --color-brand-secondary: #f59e0b;
     --color-glass-bg: rgba(255, 255, 255, 0.03);
     --color-glass-border: rgba(255, 255, 255, 0.1);
     --color-glass-shine: rgba(255, 255, 255, 0.05);
@@ -117,10 +117,35 @@ body {
     opacity: 1;
 }
 
+.blur-manual-price:hover:not(:focus) {
+    filter: blur(5px);
+    opacity: 0.45;
+}
+
 .reveal-manual-prices .blur-manual-price {
     filter: none;
     opacity: 1;
     user-select: auto;
+}
+
+.reveal-manual-prices .blur-manual-price:hover:not(:focus) {
+    filter: none;
+    opacity: 1;
+}
+
+.tabular-nums {
+    font-variant-numeric: tabular-nums;
+}
+
+input.input-no-spinner::-webkit-outer-spin-button,
+input.input-no-spinner::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input.input-no-spinner[type='number'] {
+    -moz-appearance: textfield;
+    appearance: textfield;
 }
 
 /* ── Heroic Primary Buttons Glow & Hover Effects ── */
@@ -140,7 +165,7 @@ button.bg-amber-500:hover {
 }
 
 button.bg-brand-secondary:hover {
-    box-shadow: 0 0 25px rgba(139, 92, 246, 0.4), 0 0 50px rgba(139, 92, 246, 0.15) !important;
+    box-shadow: 0 0 25px rgba(245, 158, 11, 0.4), 0 0 50px rgba(245, 158, 11, 0.15) !important;
 }
 
 button.bg-amber-500:hover {
@@ -235,7 +260,14 @@ button.bg-amber-500:hover::after {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .animate-spin-slow {
-        animation: none;
+    .animate-spin-slow,
+    .animate-pulse {
+        animation: none !important;
+    }
+
+    button.bg-brand-primary:hover::after,
+    button.bg-brand-secondary:hover::after,
+    button.bg-amber-500:hover::after {
+        transition: none !important;
     }
 }

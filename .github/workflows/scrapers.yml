@@ -140,12 +140,14 @@ jobs:
           APIFY_TOKEN3: ${{ secrets.APIFY_TOKEN3 }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          INPUT_SHOPS: ${{ github.event.inputs.shops }}
           PYTHONPATH: .
         run: |
+          SAFE_SHOPS=$(printf '%s' "${INPUT_SHOPS:-}" | tr -cd 'a-zA-Z0-9 _.-')
           if command -v xvfb-run >/dev/null 2>&1; then
-            xvfb-run -a --server-args="-screen 0 1366x768x24" python src/application/jobs/daily_scan.py --shops "${{ github.event.inputs.shops }}" --random-delay 0 --no-nexus
+            xvfb-run -a --server-args="-screen 0 1366x768x24" python src/application/jobs/daily_scan.py --shops "$SAFE_SHOPS" --random-delay 0 --no-nexus
           else
-            python src/application/jobs/daily_scan.py --shops "${{ github.event.inputs.shops }}" --random-delay 0 --no-nexus
+            python src/application/jobs/daily_scan.py --shops "$SAFE_SHOPS" --random-delay 0 --no-nexus
           fi
 
       - name: SSL Certificate Guardian (Auto-Renew if <= 14 days)

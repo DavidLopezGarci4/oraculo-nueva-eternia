@@ -52,7 +52,6 @@ interface EterniaMarketIndexWidgetProps {
 }
 
 export const EterniaMarketIndexWidget: React.FC<EterniaMarketIndexWidgetProps> = ({ isIncognito = false }) => {
-    void isIncognito;
     const [period, setPeriod] = useState<string>('3M');
     const activeUserId = localStorage.getItem('active_user_id') || '2';
     const { data = null, isLoading: loading } = useQuery<MarketIndexData>({
@@ -229,7 +228,7 @@ export const EterniaMarketIndexWidget: React.FC<EterniaMarketIndexWidgetProps> =
     const periodLow = data.period_low ?? rawMin;
 
     return (
-        <div className="bg-gradient-to-br from-slate-900/90 via-slate-950 to-black border border-slate-800/80 rounded-2xl md:rounded-3xl p-4 sm:p-6 mb-6 shadow-2xl backdrop-blur-md tabular-nums">
+        <div className={`bg-gradient-to-br from-slate-900/90 via-slate-950 to-black border border-slate-800/80 rounded-2xl md:rounded-3xl p-4 sm:p-6 mb-6 shadow-2xl backdrop-blur-md tabular-nums ${isIncognito ? 'mode-incognito' : ''}`}>
             {/* Header del Widget */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
                 <div className="flex items-center gap-3">
@@ -299,16 +298,16 @@ export const EterniaMarketIndexWidget: React.FC<EterniaMarketIndexWidgetProps> =
                                 <DollarSign className="h-3 w-3" /> Tu Plusvalía Neta
                             </span>
                             <div className="flex items-baseline gap-2">
-                                <span className="text-xl font-black text-emerald-400 blur-incognito">
+                                <span className="text-xl font-black text-emerald-400 blur-incognito blur-manual-price">
                                     {port.net_unrealized_profit_eur >= 0 ? '+' : ''}{port.net_unrealized_profit_eur.toLocaleString('es-ES')} €
                                 </span>
-                                <span className="text-[11px] font-bold text-emerald-500/80 font-mono blur-incognito">
+                                <span className="text-[11px] font-bold text-emerald-500/80 font-mono blur-incognito blur-manual-price">
                                     (+{port.roi_percentage}%)
                                 </span>
                             </div>
                         </div>
                         <span className="text-[9px] font-bold text-slate-400 text-right">
-                            {port.total_items_in_collection} figuras
+                            <span className="blur-incognito">{port.total_items_in_collection}</span> figuras
                         </span>
                     </div>
                 )}
@@ -321,15 +320,15 @@ export const EterniaMarketIndexWidget: React.FC<EterniaMarketIndexWidgetProps> =
                                 <Sparkles className="h-3 w-3" /> Gangas / Ahorro
                             </span>
                             <div className="flex items-baseline gap-2">
-                                <span className="text-xl font-black text-amber-400 blur-incognito">
+                                <span className="text-xl font-black text-amber-400 blur-incognito blur-manual-price">
                                     {port.total_bargain_savings_eur.toLocaleString('es-ES')} €
                                 </span>
                                 <span className="text-[11px] font-bold text-amber-300 font-mono">
-                                    ({port.bargains_detected_count} gangas)
+                                    (<span className="blur-incognito blur-manual-price">{port.bargains_detected_count}</span> gangas)
                                 </span>
                             </div>
                         </div>
-                        <div className="px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/30 text-[10px] font-bold text-amber-300 font-mono">
+                        <div className="px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/30 text-[10px] font-bold text-amber-300 font-mono blur-incognito blur-manual-price">
                             Alpha +{port.alpha_percentage}%
                         </div>
                     </div>

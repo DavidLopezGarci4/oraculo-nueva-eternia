@@ -1,3 +1,4 @@
+import html
 import re
 from typing import Dict, Any, List, Optional
 import httpx
@@ -44,7 +45,8 @@ class OracleAssistantAI:
     @classmethod
     async def _query_gemini_flash(cls, text: str, user_id: int) -> Optional[str]:
         """Consulta a Gemini Flash mediante Function Calling estructurado."""
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={settings.GEMINI_API_KEY}"
+        url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent"
+        gemini_headers = {"x-goog-api-key": settings.GEMINI_API_KEY or ""}
         
         tools = [{
             "function_declarations": [
@@ -97,7 +99,7 @@ class OracleAssistantAI:
         }
 
         async with httpx.AsyncClient(timeout=8.0) as client:
-            resp = await client.post(url, json=payload)
+            resp = await client.post(url, json=payload, headers=gemini_headers)
             if resp.status_code != 200:
                 logger.warning(f"Gemini API error {resp.status_code}: {resp.text}")
                 return None
@@ -135,7 +137,7 @@ class OracleAssistantAI:
                     ]
                 }
                 
-                resp2 = await client.post(url, json=second_payload)
+                resp2 = await client.post(url, json=second_payload, headers=gemini_headers)
                 if resp2.status_code == 200:
                     cand2 = resp2.json().get("candidates", [])
                     if cand2:
@@ -151,7 +153,7 @@ class OracleAssistantAI:
         elif fn_name == "get_top_opportunities":
             return cls._tool_top_opportunities(args.get("limit", 5))
         elif fn_name == "search_figure_price":
-            return cls._tool_figure_price(args.get("figure_name", ""))
+            return cls._tool_figure_price(args.get("figure_name", ""), user_id=user_id)
         elif fn_name == "get_missing_wishlist":
             return cls._tool_missing_wishlist(user_id)
         return {"error": "Función no reconocida"}
@@ -182,7 +184,7 @@ class OracleAssistantAI:
                 return "🛡️ <i>No hay chollos extremos registrados en este momento. El Centinela sigue vigilando.</i>"
             
             lines = [
-                f"• <b>{d['name']}</b> a <b>{d['price']:.2f}€</b> (Landed: {d['landed_price']:.2f}€ | 💰 <b>-{d['savings_pct']:.0f}%</b>) en {d['shop']}\n  ↳ <a href=\"{d['url']}\">Ver Oferta</a>"
+                f"• <b>{html.escape(str(d['name'] or ''))}</b> a <b>{d['price']:.2f}€</b> (Landed: {d['landed_price']:.2f}€ | 💰 <b>-{d['savings_pct']:.0f}%</b>) en {html.escape(str(d['shop'] or ''))}\n  ↳ <a href=\"{html.escape(str(d['url'] or ''), quote=True)}\">Ver Oferta</a>"
                 for d in deals
             ]
             return "🏹 <b>[Mejores Oportunidades por Landed Price]</b>\n\n" + "\n\n".join(lines)
@@ -197,15 +199,15 @@ class OracleAssistantAI:
             search_term = search_term.replace(noise, "").strip()
 
         if len(search_term) >= 3:
-            data = cls._tool_figure_price(search_term)
+            data = cls._tool_figure_price(search_term, user_id=user_id)
             if data.get("found"):
                 fig = data["figure"]
                 in_coll = "✅ <i>En tu Fortaleza</i>" if fig["in_collection"] else "⏳ <i>Pendiente de conseguir</i>"
                 return (
-                    f"🔍 <b>[Ficha de Mercado: {fig['name']}]</b>\n\n"
+                    f"🔍 <b>[Ficha de Mercado: {html.escape(str(fig['name'] or ''))}]</b>\n\n"
                     f"• 🏷️ <b>Precio Salida (MSRP):</b> {fig['retail_price']:.2f} €\n"
                     f"• ⚖️ <b>Suelo Mercado (P25):</b> {fig['p25_price']:.2f} €\n"
-                    f"• 📦 <b>Línea / Subcategoría:</b> {fig['sub_category']}\n"
+                    f"• 📦 <b>Línea / Subcategoría:</b> {html.escape(str(fig['sub_category'] or ''))}\n"
                     f"• 🛡️ <b>Estado en tu Colección:</b> {in_coll}\n"
                     f"{'• 🔥 <b>Mejor Oferta Actual:</b> ' + str(fig['best_offer']) + ' €' if fig.get('best_offer') else ''}"
                 )
@@ -276,7 +278,7 @@ class OracleAssistantAI:
             return {"deals": deals[:limit]}
 
     @classmethod
-    def _tool_figure_price(cls, figure_name: str) -> Dict[str, Any]:
+    def _tool_figure_price(cls, figure_name: str, user_id: int | None = None) -> Dict[str, Any]:
         with SessionCloud() as db:
             term = f"%{figure_name.strip()}%"
             prod = db.query(ProductModel).filter(
@@ -287,11 +289,13 @@ class OracleAssistantAI:
             if not prod:
                 return {"found": False}
 
-            in_coll = db.query(CollectionItemModel).filter(
-                CollectionItemModel.product_id == prod.id,
-                CollectionItemModel.owner_id == 2,
-                CollectionItemModel.acquired == True
-            ).count() > 0
+            in_coll = False
+            if user_id is not None:
+                in_coll = db.query(CollectionItemModel).filter(
+                    CollectionItemModel.product_id == prod.id,
+                    CollectionItemModel.owner_id == user_id,
+                    CollectionItemModel.acquired == True
+                ).count() > 0
 
             best_offer = db.query(OfferModel.price).filter(
                 OfferModel.product_id == prod.id,

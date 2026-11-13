@@ -88,6 +88,12 @@ class ProductRepository(BaseRepository[ProductModel]):
                 existing_offer.source_type = offer_data["source_type"]
 
             # --- PHASE 39: AUCTION INTELLIGENCE ---
+            if "sale_type" in offer_data:
+                existing_offer.sale_type = offer_data["sale_type"]
+            if "expiry_at" in offer_data:
+                existing_offer.expiry_at = offer_data["expiry_at"]
+            if "bids_count" in offer_data:
+                existing_offer.bids_count = offer_data["bids_count"]
             if "time_left_raw" in offer_data:
                 existing_offer.time_left_raw = offer_data["time_left_raw"]
 
@@ -129,7 +135,7 @@ class ProductRepository(BaseRepository[ProductModel]):
                 shop_name=offer_data["shop_name"],
                 price=current_price,
                 currency=offer_data.get("currency", "EUR"),
-                url=offer_data["url"],
+                url=target_url,
                 is_available=offer_data.get("is_available", True),
                 min_price=current_price,
                 max_price=current_price,
@@ -141,6 +147,9 @@ class ProductRepository(BaseRepository[ProductModel]):
                 grading=offer_data.get("grading"),
                 image_url=offer_data.get("image_url"),
                 # Phase 39 Fields
+                sale_type=offer_data.get("sale_type", "Retail"),
+                expiry_at=offer_data.get("expiry_at"),
+                bids_count=offer_data.get("bids_count", 0),
                 time_left_raw=offer_data.get("time_left_raw"),
                 # Phase 41: Market Intelligence
                 first_seen_at=offer_data.get("first_seen_at", datetime.now(timezone.utc).replace(tzinfo=None)),

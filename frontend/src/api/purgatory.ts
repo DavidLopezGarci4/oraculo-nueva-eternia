@@ -186,11 +186,15 @@ export const downloadWallapopIpLogs = async (): Promise<void> => {
     });
     const url = window.URL.createObjectURL(new Blob([response.data], { type: 'text/plain' }));
     const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', 'wallapop_ip_logs.txt');
-    document.body.appendChild(link);
-    link.click();
-    link.parentNode?.removeChild(link);
+    try {
+        link.href = url;
+        link.setAttribute('download', 'wallapop_ip_logs.txt');
+        document.body.appendChild(link);
+        link.click();
+    } finally {
+        link.remove();
+        window.URL.revokeObjectURL(url);
+    }
 };
 
 export const runWallaManualHtml = async (file?: File) => {

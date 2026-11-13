@@ -1,10 +1,16 @@
-from fastapi import APIRouter, Depends, Query, Body
+from fastapi import APIRouter, Depends, Header, Query, Body
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel
 
 from src.application.services.market_analytics_service import MarketAnalyticsService
 from src.application.services.budget_optimizer_service import BudgetOptimizerService
-from src.interfaces.api.deps import verify_api_key, verify_device
+from src.domain.models import UserModel
+from src.interfaces.api.deps import (
+    get_optional_current_user,
+    resolve_optional_scoped_user_id,
+    verify_api_key,
+    verify_device,
+)
 
 router = APIRouter(prefix="/api", tags=["analytics"])
 
@@ -17,17 +23,25 @@ class BudgetOptimizeRequest(BaseModel):
 @router.get("/analytics/market-index", dependencies=[Depends(verify_device)])
 def get_market_index(
     period: str = Query(default="3M", description="1M, 3M, 6M, 1A, ALL"),
-    user_id: int = Query(default=2)
+    user_id: int = Query(default=2),
+    current_user: Optional[UserModel] = Depends(get_optional_current_user),
+    x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
 ):
     """Calcula y devuelve el Índice Bursátil MOTU (EMI) por Waves con serie histórica."""
-    return MarketAnalyticsService.get_market_index(period=period, user_id=user_id)
+    scoped_uid = resolve_optional_scoped_user_id(user_id, current_user, x_api_key)
+    return MarketAnalyticsService.get_market_index(period=period, user_id=scoped_uid)
 
 @router.post("/cart/budget-optimize", dependencies=[Depends(verify_device)])
-def optimize_cart_budget(request: BudgetOptimizeRequest):
+def optimize_cart_budget(
+    request: BudgetOptimizeRequest,
+    current_user: Optional[UserModel] = Depends(get_optional_current_user),
+    x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
+):
     """Encuentra la combinación matemática óptima de compras dentro de un presupuesto dado."""
+    scoped_uid = resolve_optional_scoped_user_id(request.user_id, current_user, x_api_key)
     return BudgetOptimizerService.optimize_cart(
         budget_limit=request.budget_limit,
-        user_id=request.user_id,
+        user_id=scoped_uid,
         target_product_ids=request.target_product_ids,
         user_location=request.user_location
     )

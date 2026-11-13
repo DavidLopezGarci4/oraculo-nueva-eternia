@@ -25,6 +25,7 @@ class Settings(BaseSettings):
 
     # CORS allowed origins (comma-separated in .env, e.g. "https://oraculo-eternia.duckdns.org").
     CORS_ORIGINS: str = "http://localhost:3001,http://127.0.0.1:3001"
+    ALLOWED_CHROME_EXTENSION_IDS: str = ""
 
     # Database
     DATABASE_URL: str = "sqlite:///./oraculo.db"
@@ -126,15 +127,31 @@ _INSECURE_DEFAULTS = {
     "ORACULO_API_KEY": "eternia-shield-2026",
     "EXTENSION_API_KEY": "eternia-extension-dev-key",
 }
-if settings.ENV.strip().lower() == "production":
-    _leaked = [k for k, v in _INSECURE_DEFAULTS.items() if getattr(settings, k) == v]
-    if _leaked:
-        logger.critical(
-            "FATAL: Insecure default value(s) in production for: "
-            f"{', '.join(_leaked)}. Set strong secrets in .env "
-            "(e.g. `python -c \"import secrets; print(secrets.token_urlsafe(48))\"`)."
+_SAFE_DEV_ENVS = frozenset({"development", "dev", "local", "test"})
+
+
+def validate_environment_secrets(cfg: Settings) -> None:
+    """Fail closed if non-development environments run with default placeholder secrets or DEBUG=True."""
+    env_name = (cfg.ENV or "").strip().lower()
+    if env_name in _SAFE_DEV_ENVS:
+        return
+    if cfg.DEBUG:
+        raise ValueError(
+            f"FATAL: DEBUG=True is forbidden in ENV={cfg.ENV!r}. Set DEBUG=False."
         )
-        sys.exit(1)
+    leaked = [k for k, v in _INSECURE_DEFAULTS.items() if getattr(cfg, k) == v]
+    if leaked:
+        raise ValueError(
+            "FATAL: Insecure default value(s) in "
+            f"ENV={cfg.ENV!r} for: {', '.join(leaked)}. Set strong secrets in .env."
+        )
+
+
+try:
+    validate_environment_secrets(settings)
+except ValueError as _sec_err:
+    logger.critical(str(_sec_err))
+    sys.exit(1)
 
 
 def get_cors_origins() -> list[str]:

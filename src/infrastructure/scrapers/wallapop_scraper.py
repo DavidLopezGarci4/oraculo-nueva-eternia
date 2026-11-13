@@ -10,6 +10,7 @@ from datetime import datetime
 from playwright.async_api import async_playwright, Page, BrowserContext
 from bs4 import BeautifulSoup
 from curl_cffi.requests import AsyncSession
+from src.core.vintage_utils import check_is_vintage
 from src.infrastructure.scrapers.base import BaseScraper, ScrapedOffer
 
 logger = logging.getLogger(__name__)
@@ -138,6 +139,9 @@ class WallapopScraper(BaseScraper):
         Intenta obtener las ofertas de Wallapop de forma directa y ultra-rápida.
         Utiliza una cascada inteligente de APIs con cuota gratuita (Apify -> ScraperAPI -> Directa/Proxies).
         """
+        if query != "auto" and check_is_vintage(query):
+            self._log(f"🚫 Wallapop API: Búsqueda vintage bloqueada por política AGENTS.md ({query}).", level="warning")
+            return []
         # Determinar si es el primer escaneo mediante un archivo de bloqueo persistente (lock file)
         lock_file_path = os.path.join("data", "wallapop_first_run.lock")
         is_first_run = not os.path.exists(lock_file_path)
@@ -436,6 +440,10 @@ class WallapopScraper(BaseScraper):
         return []
 
     async def search(self, query: str) -> List[ScrapedOffer]:
+        if query != "auto" and check_is_vintage(query):
+            self._log(f"🚫 Wallapop: Búsqueda vintage bloqueada por política AGENTS.md ({query}).", level="warning")
+            return []
+
         offers: List[ScrapedOffer] = []
         
         # CloudFront blocks GitHub Actions / OCI Datacenter IPs by default.
@@ -470,10 +478,12 @@ class WallapopScraper(BaseScraper):
                 self._log(f"⚠️ Error en API para '{search_query}': {e}", level="warning")
                 
         if api_offers:
-            # Deduplicar ofertas
+            # Deduplicar ofertas y purgar artículos vintage / años 80
             seen_urls = set()
             unique_offers = []
             for o in api_offers:
+                if check_is_vintage(o.product_name) or check_is_vintage(o.url):
+                    continue
                 if o.url not in seen_urls:
                     seen_urls.add(o.url)
                     unique_offers.append(o)
@@ -525,7 +535,6 @@ class WallapopScraper(BaseScraper):
                         user_data_dir,
                         headless=is_headless,
                         proxy=proxy_config,
-                        ignore_https_errors=True,
                         args=[
                             '--disable-blink-features=AutomationControlled',
                             '--no-sandbox',
@@ -770,10 +779,12 @@ class WallapopScraper(BaseScraper):
                     finally:
                         await context.close()
                     
-                    # Deduplicar ofertas y finalizar búsqueda exitosa
+                    # Deduplicar ofertas, filtrar vintage / años 80 y finalizar búsqueda exitosa
                     seen_urls = set()
                     unique_offers = []
                     for o in offers:
+                        if check_is_vintage(o.product_name) or check_is_vintage(o.url):
+                            continue
                         if o.url not in seen_urls:
                             seen_urls.add(o.url)
                             unique_offers.append(o)
@@ -786,9 +797,12 @@ class WallapopScraper(BaseScraper):
                 self._log(f"💥 Error general en Wallapop Playwright Fallback: {e}", level="error")
                 self.errors += 1
 
-        self.items_scraped = len(offers)
+        filtered_offers = [
+            o for o in offers if not check_is_vintage(o.product_name) and not check_is_vintage(o.url)
+        ]
+        self.items_scraped = len(filtered_offers)
         self._log(f"✅ Wallapop Fallback Complete: Halladas {self.items_scraped} reliquias en total.")
-        return offers
+        return filtered_offers
 
 if __name__ == "__main__":
     import sys

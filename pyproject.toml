@@ -23,7 +23,11 @@ include = ["src*", "vec3*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-python_files = ["test_api_*.py"]
+python_files = [
+    "test_api_*.py",
+    "test_backend_bugs_and_perf.py",
+    "test_redteam_security_hardening.py",
+]
 markers = [
     "network: requires live network access (not run by default; use -m network)",
 ]

@@ -1,6 +1,9 @@
 import asyncio
+import hmac
+import html
 import httpx
 import logging
+import os
 import re
 from typing import Optional
 from src.core.config import settings
@@ -39,13 +42,20 @@ class TelegramListener:
         chat_id_str = str(chat_id)
         if chat_id_str == str(self.admin_chat_id):
             return True, True, None
-            
-        with SessionCloud() as db:
-            user = db.query(UserModel).filter(UserModel.telegram_chat_id == chat_id_str).first()
-            if user:
-                is_admin_role = (user.role or "").strip().lower() == "admin" or (user.username or "").strip().lower() in ("david", "admin") or user.id in (1, 2)
-                return is_admin_role, True, user
-        return False, False, None
+
+        def _fetch_user_sync() -> tuple[bool, bool, Optional[UserModel]]:
+            from src.interfaces.api.deps import is_admin as is_admin_user
+
+            with SessionCloud() as db:
+                user = db.query(UserModel).filter(UserModel.telegram_chat_id == chat_id_str).first()
+                if user:
+                    _ = (user.id, user.username, user.email, user.role, user.telegram_chat_id, user.is_active)
+                    is_admin_role = is_admin_user(user)
+                    db.expunge(user)
+                    return is_admin_role, True, user
+            return False, False, None
+
+        return await asyncio.to_thread(_fetch_user_sync)
 
     async def start_polling(self):
         """Inicia el bucle asíncrono de escucha en segundo plano."""
@@ -148,11 +158,17 @@ class TelegramListener:
             from src.application.services.ssl_service import SSLService
             asyncio.create_task(SSLService.renew_ssl_certificate(force=True))
         elif data == "alerts:toggle":
-            from src.application.services.telegram_filter_service import is_telegram_only_missing_enabled, set_telegram_only_missing_enabled
-            with SessionCloud() as db:
-                current_val = is_telegram_only_missing_enabled(db)
-                new_val = not current_val
-                set_telegram_only_missing_enabled(db, new_val)
+            def _toggle_alerts_sync() -> bool:
+                from src.application.services.telegram_filter_service import (
+                    is_telegram_only_missing_enabled,
+                    set_telegram_only_missing_enabled,
+                )
+                with SessionCloud() as db:
+                    new_val_inner = not is_telegram_only_missing_enabled(db)
+                    set_telegram_only_missing_enabled(db, new_val_inner)
+                    return new_val_inner
+
+            new_val = await asyncio.to_thread(_toggle_alerts_sync)
             mode_text = "SOLO figuras que NO posees" if new_val else "TODAS las ofertas destacadas"
             await self.answer_callback_query(cq_id, f"✅ Modo cambiado: {mode_text}")
             await self.cmd_alertas(chat_id)
@@ -164,19 +180,26 @@ class TelegramListener:
                 await self.answer_callback_query(cq_id, "❌ Acción restringida exclusivamente al Gran Arquitecto.")
                 return
             dev_id = int(data.split(":")[2])
-            with SessionCloud() as db:
-                device = db.query(AuthorizedDeviceModel).filter(AuthorizedDeviceModel.id == dev_id).first()
-                if not device:
-                    await self.answer_callback_query(cq_id, "❌ Dispositivo no encontrado.")
-                    return
-                device.is_authorized = True
-                db.commit()
-                from src.core.security import SecurityShield
-                SecurityShield.invalidate_device_cache(device.device_id)
-                dev_name = device.device_name or device.device_id
+            def _allow_device_sync() -> tuple[Optional[str], Optional[str]]:
+                with SessionCloud() as db:
+                    device = db.query(AuthorizedDeviceModel).filter(AuthorizedDeviceModel.id == dev_id).first()
+                    if not device:
+                        return None, None
+                    device.is_authorized = True
+                    dev_id_str = str(device.device_id)
+                    dev_name_val = str(device.device_name or dev_id_str)
+                    db.commit()
+                    from src.core.security import SecurityShield
+                    SecurityShield.invalidate_device_cache(dev_id_str)
+                    return dev_id_str, dev_name_val
+
+            dev_id_str, dev_name = await asyncio.to_thread(_allow_device_sync)
+            if not dev_id_str:
+                await self.answer_callback_query(cq_id, "❌ Dispositivo no encontrado.")
+                return
             await self.answer_callback_query(cq_id, f"✅ Dispositivo '{dev_name}' autorizado.")
             await telegram_service.send_message(
-                f"🛡️ <b>[Escudo de Eternia]</b> Dispositivo <b>{dev_name}</b> (<code>{device.device_id}</code>) ha sido <b>AUTORIZADO</b> con éxito.",
+                f"🛡️ <b>[Escudo de Eternia]</b> Dispositivo <b>{html.escape(dev_name or '')}</b> (<code>{html.escape(dev_id_str)}</code>) ha sido <b>AUTORIZADO</b> con éxito.",
                 chat_id=chat_id
             )
         elif data.startswith("device:deny:"):
@@ -184,20 +207,28 @@ class TelegramListener:
                 await self.answer_callback_query(cq_id, "❌ Acción restringida exclusivamente al Gran Arquitecto.")
                 return
             dev_id = int(data.split(":")[2])
-            with SessionCloud() as db:
-                device = db.query(AuthorizedDeviceModel).filter(AuthorizedDeviceModel.id == dev_id).first()
-                if not device:
-                    await self.answer_callback_query(cq_id, "❌ Dispositivo no encontrado.")
-                    return
-                dev_name = device.device_name or device.device_id
-                dev_id_str = device.device_id
-                db.delete(device)
-                db.commit()
-                from src.core.security import SecurityShield
-                SecurityShield.invalidate_device_cache(dev_id_str)
-            await self.answer_callback_query(cq_id, f"🚫 Dispositivo '{dev_name}' bloqueado.")
+
+            def _deny_device_sync() -> Optional[str]:
+                with SessionCloud() as db:
+                    device = db.query(AuthorizedDeviceModel).filter(AuthorizedDeviceModel.id == dev_id).first()
+                    if not device:
+                        return None
+                    dev_id_str = str(device.device_id)
+                    dev_name_val = str(device.device_name or dev_id_str)
+                    db.delete(device)
+                    db.commit()
+                    from src.core.security import SecurityShield
+                    SecurityShield.invalidate_device_cache(dev_id_str)
+                    return dev_name_val
+
+            dev_name = await asyncio.to_thread(_deny_device_sync)
+            if dev_name is None:
+                await self.answer_callback_query(cq_id, "❌ Dispositivo no encontrado.")
+                return
+            safe_dev_name = html.escape(dev_name)
+            await self.answer_callback_query(cq_id, f"🚫 Dispositivo '{safe_dev_name}' bloqueado.")
             await telegram_service.send_message(
-                f"🛑 <b>[Escudo de Eternia]</b> Dispositivo <b>{dev_name}</b> ha sido <b>BLOQUEADO Y ELIMINADO</b>.",
+                f"🛑 <b>[Escudo de Eternia]</b> Dispositivo <b>{safe_dev_name}</b> ha sido <b>BLOQUEADO Y ELIMINADO</b>.",
                 chat_id=chat_id
             )
         else:
@@ -242,7 +273,10 @@ class TelegramListener:
                 return
             
             from src.application.services.telegram_oracle_ai import OracleAssistantAI
-            ai_reply = await OracleAssistantAI.process_user_query(text, user_id=2)
+            if not user:
+                await telegram_service.send_message("🔒 Usuario no vinculado correctamente.", chat_id=chat_id)
+                return
+            ai_reply = await OracleAssistantAI.process_user_query(text, user_id=user.id)
             await telegram_service.send_message(ai_reply, chat_id=chat_id)
             return
             
@@ -319,30 +353,46 @@ class TelegramListener:
 
     async def cmd_register(self, chat_id: int, args: list):
         if not args:
-            await telegram_service.send_message("❌ Uso: <code>/register [nombre_usuario]</code>", chat_id=chat_id)
+            await telegram_service.send_message("❌ Uso: <code>/register [nombre_usuario] [clave_vinculacion]</code>", chat_id=chat_id)
             return
-            
+
+        from src.core.security import SecurityShield
+
+        is_master_chat = bool(settings.TELEGRAM_CHAT_ID) and str(chat_id) == str(settings.TELEGRAM_CHAT_ID)
+        provided_token = args[1].strip() if len(args) > 1 else ""
+        if not is_master_chat and not (provided_token and SecurityShield.safe_compare_digest(provided_token, settings.ORACULO_API_KEY)):
+            await telegram_service.send_message("🔒 Se requiere clave de autorización del Arquitecto para vincular un chat externo.", chat_id=chat_id)
+            return
+
         username = args[0].strip()
-        with SessionCloud() as db:
-            db_user = db.query(UserModel).filter(UserModel.username == username).first()
-            if not db_user:
-                await telegram_service.send_message(f"❌ Usuario <b>{username}</b> no encontrado en el sistema.", chat_id=chat_id)
-                return
-                
-            chat_id_str = str(chat_id)
-            if db_user.telegram_chat_id and db_user.telegram_chat_id != chat_id_str:
-                await telegram_service.send_message("❌ Este usuario ya tiene otro chat ID asociado.", chat_id=chat_id)
-                return
-                
-            db_user.telegram_chat_id = chat_id_str
-            db.commit()
-            
-            msg = (
-                f"<b>✅ Registro Exitoso</b>\n\n"
-                f"Bienvenido, Guardián <b>{db_user.username}</b>. Tu chat ID ha sido vinculado.\n"
-                f"A partir de ahora recibirás alertas de tu lista de deseos y tus alertas de precios configuradas."
-            )
-            await telegram_service.send_message(msg, chat_id=chat_id)
+        chat_id_str = str(chat_id)
+
+        def _register_chat_sync() -> tuple[str, Optional[str]]:
+            with SessionCloud() as db:
+                db_user = db.query(UserModel).filter(UserModel.username == username).first()
+                if not db_user:
+                    return "not_found", None
+                if db_user.telegram_chat_id and db_user.telegram_chat_id != chat_id_str:
+                    return "conflict", None
+                linked_name = str(db_user.username)
+                db_user.telegram_chat_id = chat_id_str
+                db.commit()
+                return "ok", linked_name
+
+        status_code, linked_username = await asyncio.to_thread(_register_chat_sync)
+        if status_code == "not_found":
+            await telegram_service.send_message(f"❌ Usuario <b>{html.escape(username)}</b> no encontrado en el sistema.", chat_id=chat_id)
+            return
+        if status_code == "conflict":
+            await telegram_service.send_message("❌ Este usuario ya tiene otro chat ID asociado.", chat_id=chat_id)
+            return
+
+        msg = (
+            f"<b>✅ Registro Exitoso</b>\n\n"
+            f"Bienvenido, Guardián <b>{html.escape(linked_username or username)}</b>. Tu chat ID ha sido vinculado.\n"
+            f"A partir de ahora recibirás alertas de tu lista de deseos y tus alertas de precios configuradas."
+        )
+        await telegram_service.send_message(msg, chat_id=chat_id)
 
     async def cmd_help(self, chat_id: int, is_admin: bool):
         lines = ["<b>📖 Comandos del Oráculo de Eternia</b>\n"]
@@ -375,9 +425,12 @@ class TelegramListener:
         await telegram_service.send_message("\n".join(lines), chat_id=chat_id)
 
     async def cmd_alertas(self, chat_id: int):
-        from src.application.services.telegram_filter_service import is_telegram_only_missing_enabled
-        with SessionCloud() as db:
-            only_missing = is_telegram_only_missing_enabled(db)
+        def _read_alert_filter_sync() -> bool:
+            from src.application.services.telegram_filter_service import is_telegram_only_missing_enabled
+            with SessionCloud() as db:
+                return is_telegram_only_missing_enabled(db)
+
+        only_missing = await asyncio.to_thread(_read_alert_filter_sync)
 
         status_badge = "🟢 <b>ACTIVADO (Recomendado)</b>" if only_missing else "⚪ <b>DESACTIVADO</b>"
         explanation = (
@@ -402,11 +455,16 @@ class TelegramListener:
         await telegram_service.send_message(msg, chat_id=chat_id, reply_markup=keyboard)
 
     async def cmd_purgatorio(self, chat_id: int):
-        with SessionCloud() as db:
-            total = db.query(PendingMatchModel).count()
-            vintage = db.query(PendingMatchModel).filter(PendingMatchModel.is_vintage == True).count()
-            modern = db.query(PendingMatchModel).filter(PendingMatchModel.is_vintage == False).count()
-            high_opp = db.query(PendingMatchModel).filter(PendingMatchModel.opportunity_score >= 80).count()
+        def _read_purgatory_stats_sync() -> tuple[int, int, int, int]:
+            with SessionCloud() as db:
+                return (
+                    db.query(PendingMatchModel).count(),
+                    db.query(PendingMatchModel).filter(PendingMatchModel.is_vintage == True).count(),
+                    db.query(PendingMatchModel).filter(PendingMatchModel.is_vintage == False).count(),
+                    db.query(PendingMatchModel).filter(PendingMatchModel.opportunity_score >= 80).count(),
+                )
+
+        total, vintage, modern, high_opp = await asyncio.to_thread(_read_purgatory_stats_sync)
             
         msg = (
             f"<b>🗳️ Estado del Purgatorio del Oráculo</b>\n\n"
@@ -421,41 +479,63 @@ class TelegramListener:
         if not query:
             await telegram_service.send_message("❌ Uso: <code>/buscar [nombre_figura]</code>", chat_id=chat_id)
             return
-            
-        with SessionCloud() as db:
-            # Búsqueda insensible a mayúsculas
-            search_query = f"%{query}%"
-            offers = db.query(OfferModel).join(ProductModel).filter(
-                OfferModel.is_available == True,
-                ProductModel.name.like(search_query)
-            ).order_by(OfferModel.price).limit(5).all()
-            
-        if not offers:
-            await telegram_service.send_message(f"🔍 No se encontraron ofertas activas para <b>'{query}'</b>.", chat_id=chat_id)
+
+        from sqlalchemy.orm import joinedload
+
+        safe_query = html.escape(query)
+
+        def _search_offers_sync() -> list[str]:
+            result_lines: list[str] = []
+            with SessionCloud() as db:
+                search_query = f"%{query}%"
+                offers = (
+                    db.query(OfferModel)
+                    .options(joinedload(OfferModel.product))
+                    .join(ProductModel)
+                    .filter(
+                        OfferModel.is_available == True,
+                        ProductModel.name.like(search_query),
+                    )
+                    .order_by(OfferModel.price)
+                    .limit(5)
+                    .all()
+                )
+                if offers:
+                    result_lines.append(f"<b>🔍 Top 5 Ofertas más baratas para '{safe_query}':</b>\n")
+                    for o in offers:
+                        prod_name = html.escape(o.product.name) if o.product and o.product.name else "Desconocido"
+                        shop = html.escape(o.shop_name or "Tienda")
+                        url = html.escape(o.url or "", quote=True)
+                        result_lines.append(
+                            f"• <b>{prod_name}</b>\n"
+                            f"  💰 {o.price:.2f}€ | 🏪 {shop}\n"
+                            f"  🔗 <a href='{url}'>Ver Oferta en Web</a>\n"
+                        )
+            return result_lines
+
+        lines = await asyncio.to_thread(_search_offers_sync)
+
+        if not lines:
+            await telegram_service.send_message(f"🔍 No se encontraron ofertas activas para <b>'{safe_query}'</b>.", chat_id=chat_id)
             return
-            
-        lines = [f"<b>🔍 Top 5 Ofertas más baratas para '{query}':</b>\n"]
-        for o in offers:
-            lines.append(
-                f"• <b>{o.product.name}</b>\n"
-                f"  💰 {o.price:.2f}€ | 🏪 {o.shop_name}\n"
-                f"  🔗 <a href='{o.url}'>Ver Oferta en Web</a>\n"
-            )
+
         await telegram_service.send_message("\n".join(lines), chat_id=chat_id)
 
     async def cmd_status(self, chat_id: int):
-        with SessionCloud() as db:
-            # Scrapers status
-            statuses = db.query(ScraperStatusModel).all()
-            
-            # DB Stats
-            total_products = db.query(ProductModel).count()
-            total_offers = db.query(OfferModel).filter(OfferModel.is_available == True).count()
-            
+        def _fetch_status_sync() -> tuple[list[tuple[str, str]], int, int]:
+            with SessionCloud() as db:
+                statuses = db.query(ScraperStatusModel).all()
+                status_rows = [(str(s.spider_name or ""), str(s.status or "")) for s in statuses]
+                total_products_val = db.query(ProductModel).count()
+                total_offers_val = db.query(OfferModel).filter(OfferModel.is_available == True).count()
+                return status_rows, total_products_val, total_offers_val
+
+        status_rows, total_products, total_offers = await asyncio.to_thread(_fetch_status_sync)
+
         scraper_lines = []
-        for s in statuses:
-            icon = "🟢" if s.status == "completed" else "🔴" if "error" in s.status else "⏳" if s.status == "running" else "⚪"
-            scraper_lines.append(f"{icon} <b>{s.spider_name}:</b> {s.status.upper()}")
+        for spider_name, status_val in status_rows:
+            icon = "🟢" if status_val == "completed" else "🔴" if "error" in status_val else "⏳" if status_val == "running" else "⚪"
+            scraper_lines.append(f"{icon} <b>{html.escape(spider_name)}:</b> {html.escape(status_val.upper())}")
             
         msg = (
             f"<b>📊 Estado del Sistema</b>\n\n"
@@ -468,32 +548,37 @@ class TelegramListener:
     async def cmd_run(self, chat_id: int, scraper_name: str, query: Optional[str]):
         # Validar tienda
         valid_spiders = ["fantasia", "frikiverso", "frikimaz", "electropolis", "pixelatoy", "amazon", "detoyboys", "ebay", "vinted", "wallapop", "toymieu", "time4actiontoysde", "bigbadtoystore", "smythstoys", "dvdstorespain", "triguetech", "bixoto", "all"]
-        
+        safe_scraper = html.escape(scraper_name)
+
         if scraper_name.lower() not in valid_spiders:
-            await telegram_service.send_message(f"❌ Tienda <b>'{scraper_name}'</b> no válida.\nOpciones: {', '.join(valid_spiders)}", chat_id=chat_id)
+            await telegram_service.send_message(f"❌ Tienda <b>'{safe_scraper}'</b> no válida.\nOpciones: {', '.join(valid_spiders)}", chat_id=chat_id)
             return
-            
-        # Lanzar tarea
-        from fastapi import BackgroundTasks
-        bg_tasks = BackgroundTasks()
-        bg_tasks.add_task(run_scraper_task, scraper_name, "telegram", query)
-        
-        # Nota: La ejecución en FastAPI BackgroundTasks requiere la llamada a través del framework,
-        # pero aquí podemos ejecutarlo directamente en un thread/ejecutor de asyncio para no requerir fastapi endpoints:
+
+        if query:
+            from src.core.vintage_utils import check_is_vintage
+            if check_is_vintage(query):
+                await telegram_service.send_message(
+                    f"⛔ Búsqueda bloqueada por política del Oráculo: los términos vintage/años 80 están deshabilitados temporalmente (<b>{html.escape(query)}</b>).",
+                    chat_id=chat_id
+                )
+                return
+
+        # Ejecutar en thread/ejecutor de asyncio sin bloquear el event loop
         loop = asyncio.get_running_loop()
         loop.run_in_executor(None, run_scraper_task, scraper_name, "telegram", query)
-        
+
+        safe_query = html.escape(query) if query else "auto"
         await telegram_service.send_message(
             f"🚀 <b>Incursión Iniciada</b>\n\n"
-            f"Scraper <b>{scraper_name}</b> ejecutándose en segundo plano para <b>'{query or 'auto'}'</b>.\n"
-            f"Te avisaré si detectamos compras obligatorias o alertas de wishlist.", 
+            f"Scraper <b>{safe_scraper}</b> ejecutándose en segundo plano para <b>'{safe_query}'</b>.\n"
+            f"Te avisaré si detectamos compras obligatorias o alertas de wishlist.",
             chat_id=chat_id
         )
 
     async def cmd_stop(self, chat_id: int):
         try:
-            # Ejecutar parada
-            res = await stop_scrapers()
+            # Ejecutar parada en thread separado para no bloquear el event loop
+            res = await asyncio.to_thread(stop_scrapers)
             killed = res.get("killed_processes", 0)
             await telegram_service.send_message(
                 f"🛑 <b>Parada de Emergencia Completada</b>\n\n"
@@ -501,30 +586,30 @@ class TelegramListener:
                 chat_id=chat_id
             )
         except Exception as e:
-            await telegram_service.send_message(f"❌ Error al detener los scrapers: {e}", chat_id=chat_id)
+            await telegram_service.send_message(f"❌ Error al detener los scrapers: {html.escape(str(e))}", chat_id=chat_id)
 
     async def cmd_ssl_status(self, chat_id: int):
         from src.application.services.ssl_service import SSLService
-        status = SSLService.get_certificate_status()
-        
+        status = await asyncio.to_thread(SSLService.get_certificate_status)
+
         icon = "🟢" if status.get("status") == "ACTIVE" else "🟡" if status.get("status") == "EXPIRING_SOON" else "🔴"
         valid_from = status.get("valid_from")
         valid_until = status.get("valid_until")
         next_renewal = status.get("next_renewal_recommended")
-        
-        from_str = valid_from.strftime("%d/%m/%Y %H:%M UTC") if valid_from else "N/D"
-        until_str = valid_until.strftime("%d/%m/%Y %H:%M UTC") if valid_until else "N/D"
-        next_str = next_renewal.strftime("%d/%m/%Y") if next_renewal else "N/D"
-        
+
+        from_str = html.escape(valid_from.strftime("%d/%m/%Y %H:%M UTC")) if valid_from else "N/D"
+        until_str = html.escape(valid_until.strftime("%d/%m/%Y %H:%M UTC")) if valid_until else "N/D"
+        next_str = html.escape(next_renewal.strftime("%d/%m/%Y")) if next_renewal else "N/D"
+
         msg = (
             f"🔒 <b>[Oráculo SSL] Diagnóstico de Certificados</b>\n\n"
-            f"• Dominio: <code>{status.get('domain')}</code>\n"
-            f"• Estado: {icon} <b>{status.get('status')}</b> ({status.get('days_remaining')} días restantes)\n"
-            f"• Emisor: <b>{status.get('issuer')}</b>\n"
+            f"• Dominio: <code>{html.escape(str(status.get('domain') or ''))}</code>\n"
+            f"• Estado: {icon} <b>{html.escape(str(status.get('status') or ''))}</b> ({status.get('days_remaining')} días restantes)\n"
+            f"• Emisor: <b>{html.escape(str(status.get('issuer') or ''))}</b>\n"
             f"• Emisión: <code>{from_str}</code>\n"
             f"• Caducidad: <code>{until_str}</code>\n"
             f"• Próxima Renovación Recomendada: <b>{next_str}</b>\n\n"
-            f"ℹ️ <i>{status.get('details')}</i>"
+            f"ℹ️ <i>{html.escape(str(status.get('details') or ''))}</i>"
         )
         keyboard = {
             "inline_keyboard": [
@@ -549,8 +634,15 @@ class TelegramListener:
             await telegram_service.send_message("❌ Comando restringido exclusivamente al Gran Arquitecto.", chat_id=chat_id)
             return
 
-        with SessionCloud() as db:
-            devices = db.query(AuthorizedDeviceModel).order_by(AuthorizedDeviceModel.id.desc()).limit(15).all()
+        def _list_devices_sync() -> list[tuple[int, str, str, bool]]:
+            with SessionCloud() as db:
+                devices_db = db.query(AuthorizedDeviceModel).order_by(AuthorizedDeviceModel.id.desc()).limit(15).all()
+                return [
+                    (int(d.id), str(d.device_id or ""), str(d.device_name or "Sin Nombre"), bool(d.is_authorized))
+                    for d in devices_db
+                ]
+
+        devices = await asyncio.to_thread(_list_devices_sync)
 
         if not devices:
             await telegram_service.send_message("🛡️ <b>[Escudo de Eternia]</b> No hay dispositivos registrados en la base de datos.", chat_id=chat_id)
@@ -559,20 +651,21 @@ class TelegramListener:
         lines = ["🛡️ <b>[Escudo de Eternia] Dispositivos Registrados:</b>\n"]
         buttons = []
 
-        for d in devices:
-            status_icon = "🟢" if d.is_authorized else "🔴"
-            status_text = "AUTORIZADO" if d.is_authorized else "BLOQUEADO"
-            name = d.device_name or "Sin Nombre"
-            lines.append(f"{status_icon} <b>#{d.id} {name}</b> - {status_text}\n  🆔 <code>{d.device_id[:16]}...</code>")
+        for dev_pk, device_id_str, raw_name, is_auth in devices:
+            status_icon = "🟢" if is_auth else "🔴"
+            status_text = "AUTORIZADO" if is_auth else "BLOQUEADO"
+            safe_name = html.escape(raw_name)
+            safe_short_id = html.escape(device_id_str[:16])
+            lines.append(f"{status_icon} <b>#{dev_pk} {safe_name}</b> - {status_text}\n  🆔 <code>{safe_short_id}...</code>")
 
-            if not d.is_authorized:
+            if not is_auth:
                 buttons.append([
-                    {"text": f"✅ Aprobar #{d.id} ({name[:12]})", "callback_data": f"device:allow:{d.id}"},
-                    {"text": f"🗑️ Eliminar #{d.id}", "callback_data": f"device:deny:{d.id}"}
+                    {"text": f"✅ Aprobar #{dev_pk} ({raw_name[:12]})", "callback_data": f"device:allow:{dev_pk}"},
+                    {"text": f"🗑️ Eliminar #{dev_pk}", "callback_data": f"device:deny:{dev_pk}"}
                 ])
             else:
                 buttons.append([
-                    {"text": f"🚫 Revocar/Eliminar #{d.id} ({name[:12]})", "callback_data": f"device:deny:{d.id}"}
+                    {"text": f"🚫 Revocar/Eliminar #{dev_pk} ({raw_name[:12]})", "callback_data": f"device:deny:{dev_pk}"}
                 ])
 
         keyboard = {"inline_keyboard": buttons} if buttons else None
@@ -587,23 +680,35 @@ class TelegramListener:
             return
         
         target = args[0].strip()
-        with SessionCloud() as db:
-            device = None
-            if target.isdigit():
-                device = db.query(AuthorizedDeviceModel).filter(AuthorizedDeviceModel.id == int(target)).first()
-            if not device:
-                device = db.query(AuthorizedDeviceModel).filter(AuthorizedDeviceModel.device_id.like(f"%{target}%")).first()
-            
-            if not device:
-                await telegram_service.send_message(f"❌ No se encontró ningún dispositivo para '<b>{target}</b>'.", chat_id=chat_id)
-                return
-            
-            device.is_authorized = True
-            db.commit()
-            dev_name = device.device_name or device.device_id
-            
+
+        def _approve_device_sync() -> tuple[Optional[str], Optional[str]]:
+            with SessionCloud() as db:
+                device = None
+                if target.isdigit():
+                    device = db.query(AuthorizedDeviceModel).filter(AuthorizedDeviceModel.id == int(target)).first()
+                if not device:
+                    device = db.query(AuthorizedDeviceModel).filter(AuthorizedDeviceModel.device_id.like(f"%{target}%")).first()
+
+                if not device:
+                    return None, None
+
+                device.is_authorized = True
+                dev_id_val = str(device.device_id)
+                dev_name_val = str(device.device_name or dev_id_val)
+                db.commit()
+                from src.core.security import SecurityShield
+                SecurityShield.invalidate_device_cache(dev_id_val)
+                return dev_id_val, dev_name_val
+
+        dev_id_str, raw_dev_name = await asyncio.to_thread(_approve_device_sync)
+        if not dev_id_str:
+            await telegram_service.send_message(f"❌ No se encontró ningún dispositivo para '<b>{html.escape(target)}</b>'.", chat_id=chat_id)
+            return
+
+        dev_name = html.escape(raw_dev_name or dev_id_str)
+
         await telegram_service.send_message(
-            f"✅ <b>[Escudo de Eternia]</b> Dispositivo <b>{dev_name}</b> (<code>{device.device_id}</code>) ha sido <b>AUTORIZADO</b> permanentemente.",
+            f"✅ <b>[Escudo de Eternia]</b> Dispositivo <b>{dev_name}</b> (<code>{html.escape(dev_id_str)}</code>) ha sido <b>AUTORIZADO</b> permanentemente.",
             chat_id=chat_id
         )
 
@@ -616,21 +721,33 @@ class TelegramListener:
             return
         
         target = args[0].strip()
-        with SessionCloud() as db:
-            device = None
-            if target.isdigit():
-                device = db.query(AuthorizedDeviceModel).filter(AuthorizedDeviceModel.id == int(target)).first()
-            if not device:
-                device = db.query(AuthorizedDeviceModel).filter(AuthorizedDeviceModel.device_id.like(f"%{target}%")).first()
-            
-            if not device:
-                await telegram_service.send_message(f"❌ No se encontró ningún dispositivo para '<b>{target}</b>'.", chat_id=chat_id)
-                return
-            
-            dev_name = device.device_name or device.device_id
-            db.delete(device)
-            db.commit()
-            
+
+        def _deny_device_cmd_sync() -> Optional[str]:
+            with SessionCloud() as db:
+                device = None
+                if target.isdigit():
+                    device = db.query(AuthorizedDeviceModel).filter(AuthorizedDeviceModel.id == int(target)).first()
+                if not device:
+                    device = db.query(AuthorizedDeviceModel).filter(AuthorizedDeviceModel.device_id.like(f"%{target}%")).first()
+
+                if not device:
+                    return None
+
+                dev_id_str = str(device.device_id)
+                dev_name_val = str(device.device_name or dev_id_str)
+                db.delete(device)
+                db.commit()
+                from src.core.security import SecurityShield
+                SecurityShield.invalidate_device_cache(dev_id_str)
+                return dev_name_val
+
+        raw_dev_name = await asyncio.to_thread(_deny_device_cmd_sync)
+        if raw_dev_name is None:
+            await telegram_service.send_message(f"❌ No se encontró ningún dispositivo para '<b>{html.escape(target)}</b>'.", chat_id=chat_id)
+            return
+
+        dev_name = html.escape(raw_dev_name)
+
         await telegram_service.send_message(
             f"🛑 <b>[Escudo de Eternia]</b> Dispositivo <b>{dev_name}</b> ha sido <b>BLOQUEADO Y ELIMINADO</b>.",
             chat_id=chat_id
@@ -666,52 +783,70 @@ class TelegramListener:
             images = details.get("images", [])
             image_url = images[0] if images else None
 
+            from src.core.vintage_utils import check_is_vintage
+            if check_is_vintage(title):
+                await telegram_service.send_message(
+                    f"⛔ <b>Artículo vintage rechazado:</b> <b>{html.escape(title)}</b> (búsquedas vintage deshabilitadas temporalmente).",
+                    chat_id=chat_id
+                )
+                return
+
             # Relevancia MOTU
             is_relevant, reason = validate_motu_relevance(title)
             if not is_relevant:
                 await telegram_service.send_message(
                     f"⚠️ <b>Artículo descartado por filtro MOTU:</b>\n"
-                    f"• <b>Título:</b> {title}\n"
-                    f"• <i>Motivo: {reason}</i>",
+                    f"• <b>Título:</b> {html.escape(title)}\n"
+                    f"• <i>Motivo: {html.escape(str(reason))}</i>",
                     chat_id=chat_id
                 )
                 return
 
-            with SessionCloud() as db:
-                existing_p = db.query(PendingMatchModel).filter(PendingMatchModel.url == url).first()
-                existing_o = db.query(OfferModel).filter(OfferModel.url == url).first()
+            parsed_price = float(price) if price else 0.0
 
-                if existing_p or existing_o:
-                    await telegram_service.send_message(
-                        f"ℹ️ El artículo <b>{title}</b> ({price} €) ya existe en la base de datos del Oráculo.",
-                        chat_id=chat_id
+            def _import_wallapop_sync() -> bool:
+                with SessionCloud() as db:
+                    existing_p = db.query(PendingMatchModel).filter(PendingMatchModel.url == url).first()
+                    existing_o = db.query(OfferModel).filter(OfferModel.url == url).first()
+                    if existing_p or existing_o:
+                        return False
+                    new_pending = PendingMatchModel(
+                        scraped_name=title,
+                        price=parsed_price,
+                        url=url,
+                        shop_name="Wallapop",
+                        image_url=image_url,
+                        source_type="Peer-to-Peer",
+                        sale_type="Fixed_P2P"
                     )
-                    return
+                    db.add(new_pending)
+                    db.commit()
+                    return True
 
-                new_pending = PendingMatchModel(
-                    scraped_name=title,
-                    price=float(price) if price else 0.0,
-                    url=url,
-                    shop_name="Wallapop",
-                    image_url=image_url,
-                    source_type="Peer-to-Peer",
-                    sale_type="Fixed_P2P"
+            created = await asyncio.to_thread(_import_wallapop_sync)
+            safe_title = html.escape(title)
+            safe_price = html.escape(str(price))
+            safe_url = html.escape(url or "", quote=True)
+
+            if not created:
+                await telegram_service.send_message(
+                    f"ℹ️ El artículo <b>{safe_title}</b> ({safe_price} €) ya existe en la base de datos del Oráculo.",
+                    chat_id=chat_id
                 )
-                db.add(new_pending)
-                db.commit()
+                return
 
             msg = (
                 f"🎁 <b>[Wallapop: Importación Exitosa]</b>\n\n"
-                f"• <b>Artículo:</b> {title}\n"
-                f"• <b>Precio:</b> <b>{price} €</b>\n"
-                f"• <b>Enlace:</b> <a href=\"{url}\">Ver en Wallapop</a>\n\n"
+                f"• <b>Artículo:</b> {safe_title}\n"
+                f"• <b>Precio:</b> <b>{safe_price} €</b>\n"
+                f"• <b>Enlace:</b> <a href=\"{safe_url}\">Ver en Wallapop</a>\n\n"
                 f"✅ <i>Añadido al Purgatorio del Oráculo para revisión y matching.</i>"
             )
             await telegram_service.send_message(msg, chat_id=chat_id)
 
         except Exception as e:
             logger.error(f"Error al importar producto de Wallapop desde Telegram: {e}")
-            await telegram_service.send_message(f"❌ Error al procesar el enlace: {e}", chat_id=chat_id)
+            await telegram_service.send_message(f"❌ Error al procesar el enlace: {html.escape(str(e))}", chat_id=chat_id)
 
     async def cmd_tokens(self, chat_id: int):
         await telegram_service.send_message("🔍 <i>Verificando estado de tokens de scraping (0 créditos consumidos)...</i>", chat_id=chat_id)
@@ -771,8 +906,15 @@ class TelegramListener:
         await telegram_service.send_message("\n".join(lines), chat_id=chat_id)
 
     async def cmd_nexus(self, chat_id: int, query_term: str):
+        from src.core.vintage_utils import check_is_vintage
         from src.domain.models import WallapopJobModel
         q_clean = query_term.strip().lower()
+        if q_clean not in ["completo", "full", "deep", "exhaustivo", "auto", "basico", "basic", ""] and check_is_vintage(query_term):
+            await telegram_service.send_message(
+                f"⛔ Búsqueda bloqueada por política del Oráculo: los términos vintage/años 80 están deshabilitados temporalmente (<b>{html.escape(query_term)}</b>).",
+                chat_id=chat_id
+            )
+            return
         if q_clean in ["completo", "full", "deep", "exhaustivo"]:
             job_desc = "🌟 <b>Incursión Profunda Escalonada</b> (5 Familias MOTU Origins en Wallapop & Smyths Toys)"
             target_query = "completo"
@@ -782,16 +924,19 @@ class TelegramListener:
             target_query = "auto"
             cadence_note = "⚡ <i>Duración estimada: ~10 - 25 seg.</i>"
         else:
-            job_desc = f"🎯 <b>Búsqueda Personalizada:</b> '<code>{query_term}</code>' (Wallapop + Smyths Toys)"
+            job_desc = f"🎯 <b>Búsqueda Personalizada:</b> '<code>{html.escape(query_term)}</code>' (Wallapop + Smyths Toys)"
             target_query = query_term
             cadence_note = "⚡ <i>Duración estimada: ~5 - 15 seg.</i>"
 
-        with SessionCloud() as db:
-            job = WallapopJobModel(query=target_query, status="pending")
-            db.add(job)
-            db.commit()
-            db.refresh(job)
-            job_id = job.id
+        def _create_nexus_job_sync() -> int:
+            with SessionCloud() as db:
+                job = WallapopJobModel(query=target_query, status="pending")
+                db.add(job)
+                db.commit()
+                db.refresh(job)
+                return job.id
+
+        job_id = await asyncio.to_thread(_create_nexus_job_sync)
 
         msg = (
             f"⚡ <b>[Nexus Local Bridge]</b> Trabajo <b>#{job_id}</b> encolado.\n\n"
@@ -804,13 +949,21 @@ class TelegramListener:
 
     async def cmd_caza(self, chat_id: int, args: list):
         from src.application.services.vinted_hunter_service import VintedHunterService
+        from src.core.vintage_utils import check_is_vintage
         query_term = " ".join(args).strip() if args else "auto"
-        
+
+        if query_term.lower() not in ["auto", "origins", "motu", ""] and check_is_vintage(query_term):
+            await telegram_service.send_message(
+                f"⛔ Caza bloqueada por política del Oráculo: los términos vintage/años 80 están deshabilitados temporalmente (<b>{html.escape(query_term)}</b>).",
+                chat_id=chat_id
+            )
+            return
+
         if query_term.lower() in ["auto", "origins", "motu", ""]:
             desc = "Cuarteto Canónico MOTU (<i>motu origins, masters del universo, masters of the universe, he-man origins</i>)"
             actual_query = "auto"
         else:
-            desc = f"Búsqueda Personalizada: '<code>{query_term}</code>'"
+            desc = f"Búsqueda Personalizada: '<code>{html.escape(query_term)}</code>'"
             actual_query = query_term
             
         await telegram_service.send_message(
@@ -903,23 +1056,27 @@ class TelegramListener:
             return
 
         target_id = args[0].strip()
-        await telegram_service.send_message(f"🔄 Conectando con ActionFigure411 para actualizar la imagen de la figura <b>{target_id}</b>...", chat_id=chat_id)
-        
+        await telegram_service.send_message(f"🔄 Conectando con ActionFigure411 para actualizar la imagen de la figura <b>{html.escape(target_id)}</b>...", chat_id=chat_id)
+
         from src.application.services.catalog_refresh_service import CatalogRefreshService
-        with SessionCloud() as db:
-            result = CatalogRefreshService.refresh_figure_image(db, target_id)
-            if result.get("success"):
-                msg = (
-                    f"✅ <b>[Imagen Actualizada con Éxito]</b>\n\n"
-                    f"• <b>Figura:</b> {result.get('name')}\n"
-                    f"• <b>ID Figura:</b> <code>{result.get('figure_id')}</code>\n"
-                    f"• <b>ID Catálogo:</b> #{result.get('product_id')}\n"
-                    f"• <b>Nueva URL:</b> {result.get('new_image_url')}"
-                )
-                await telegram_service.send_message(msg, chat_id=chat_id)
-            else:
-                err = result.get("error", "Error desconocido")
-                await telegram_service.send_message(f"❌ No se pudo actualizar la imagen: {err}", chat_id=chat_id)
+
+        def _refresh_sync() -> dict:
+            with SessionCloud() as db:
+                return CatalogRefreshService.refresh_figure_image(db, target_id)
+
+        result = await asyncio.to_thread(_refresh_sync)
+        if result.get("success"):
+            msg = (
+                f"✅ <b>[Imagen Actualizada con Éxito]</b>\n\n"
+                f"• <b>Figura:</b> {html.escape(str(result.get('name') or ''))}\n"
+                f"• <b>ID Figura:</b> <code>{html.escape(str(result.get('figure_id') or ''))}</code>\n"
+                f"• <b>ID Catálogo:</b> #{result.get('product_id')}\n"
+                f"• <b>Nueva URL:</b> {html.escape(str(result.get('new_image_url') or ''))}"
+            )
+            await telegram_service.send_message(msg, chat_id=chat_id)
+        else:
+            err = html.escape(str(result.get("error", "Error desconocido")))
+            await telegram_service.send_message(f"❌ No se pudo actualizar la imagen: {err}", chat_id=chat_id)
 
     async def cmd_harvest_lore(self, chat_id: int, args: list):
         """Cosecha lore desde Wiki Fandom para una figura o personaje (solo administradores)."""

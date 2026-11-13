@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Dict, Any, Optional, Tuple
 import httpx
 from src.core.config import settings
+from src.core.safe_http import fetch_safe_bytes, validate_public_url
 from src.domain.motu_canon_database import resolve_motu_profile, ATTACK_MATRIX
 
 logger = logging.getLogger(__name__)
@@ -176,33 +177,41 @@ class GeminiCardService:
                     pass
 
             if image_url.startswith("http://") or image_url.startswith("https://"):
+                validate_public_url(image_url)
                 try:
-                    async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
-                        resp = await client.get(image_url)
-                        if resp.status_code == 200:
-                            content_type = resp.headers.get("content-type", "image/jpeg").split(";")[0]
-                            b64 = base64.b64encode(resp.content).decode("utf-8")
-                            return (content_type, b64)
+                    raw_bytes, status_code, resp_headers = await fetch_safe_bytes(
+                        image_url, max_bytes=8 * 1024 * 1024, timeout=15.0
+                    )
+                    if status_code == 200 and raw_bytes:
+                        content_type = resp_headers.get("content-type", "image/jpeg").split(";")[0]
+                        b64 = base64.b64encode(raw_bytes).decode("utf-8")
+                        return (content_type, b64)
+                    return None
+                except ValueError:
+                    raise
                 except Exception as e:
                     logger.warning(f"No se pudo descargar imagen desde {image_url}: {e}")
+                    return None
 
-            # Intentar leer desde caché de imagen local si es ruta relativa
-            try:
-                local_candidates = [
-                    Path(image_url),
-                    Path(settings.IMAGE_CACHE_DIR) / Path(image_url).name,
-                    Path("data/image_cache") / Path(image_url).name
-                ]
-                for path in local_candidates:
-                    if path.exists() and path.is_file():
-                        with open(path, "rb") as f:
-                            data_bytes = f.read()
-                            suffix = path.suffix.lower().replace(".", "")
-                            mime = f"image/{suffix}" if suffix in ["png", "jpeg", "jpg", "webp"] else "image/jpeg"
-                            b64 = base64.b64encode(data_bytes).decode("utf-8")
-                            return (mime, b64)
-            except Exception as e:
-                logger.warning(f"Error comprobando archivo local {image_url}: {e}")
+            if "://" in image_url or "/" in image_url or "\\" in image_url or ".." in image_url:
+                raise ValueError(f"Ruta o esquema de imagen no permitido: {image_url!r}")
+
+            # Solo permitir nombres de archivo directos presentes en la caché de imágenes oficial
+            allowed_roots = [
+                Path(settings.IMAGE_CACHE_DIR).resolve(),
+                Path("data/image_cache").resolve(),
+            ]
+            for root in allowed_roots:
+                candidate = (root / image_url).resolve()
+                if candidate.is_relative_to(root) and candidate.exists() and candidate.is_file():
+                    with open(candidate, "rb") as f:
+                        data_bytes = f.read(8 * 1024 * 1024)
+                    suffix = candidate.suffix.lower().replace(".", "")
+                    mime = f"image/{suffix}" if suffix in ["png", "jpeg", "jpg", "webp"] else "image/jpeg"
+                    b64 = base64.b64encode(data_bytes).decode("utf-8")
+                    return (mime, b64)
+
+            raise ValueError(f"Referencia de imagen local no permitida o inexistente: {image_url!r}")
 
         return None
 
@@ -282,10 +291,11 @@ class GeminiCardService:
         ]
 
         async with httpx.AsyncClient(timeout=60.0) as client:
+            gemini_headers = {"x-goog-api-key": settings.GEMINI_API_KEY or ""}
             for model in models_to_try:
                 try:
-                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={settings.GEMINI_API_KEY}"
-                    resp = await client.post(url, json=payload)
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+                    resp = await client.post(url, json=payload, headers=gemini_headers)
                     if resp.status_code == 200:
                         data = resp.json()
                         candidates = data.get("candidates", [])
@@ -321,7 +331,8 @@ class GeminiCardService:
         canonical_profile = resolve_motu_profile(product_name, sub_category)
 
         if settings.GEMINI_API_KEY:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={settings.GEMINI_API_KEY}"
+            url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+            gemini_headers = {"x-goog-api-key": settings.GEMINI_API_KEY}
             prompt = (
                 f"Genera una ficha canónica de combate y coleccionismo en JSON para la figura de Masters of the Universe '{product_name}' "
                 f"({sub_category}, estado {condition}, estilo visual '{style_name}').\n"
@@ -347,7 +358,7 @@ class GeminiCardService:
 
             try:
                 async with httpx.AsyncClient(timeout=15.0) as client:
-                    resp = await client.post(url, json=payload)
+                    resp = await client.post(url, json=payload, headers=gemini_headers)
                     if resp.status_code == 200:
                         res_json = resp.json()
                         candidates = res_json.get("candidates", [])

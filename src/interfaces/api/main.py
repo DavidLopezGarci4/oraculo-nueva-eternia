@@ -150,12 +150,13 @@ def _get_cached_user_image_paths(user_id: int) -> list[str]:
         return cached[1]
 
     from src.domain.models import UserModel
+    from src.interfaces.api.deps import is_admin
 
     paths: list[str] = []
     session_factory = _resolve_session_cloud()
     with session_factory() as db:
         user = db.query(UserModel).filter(UserModel.id == user_id).first()
-        if user:
+        if user and is_admin(user):
             paths = [p for p in (user.pc_image_path, user.mobile_image_path) if p]
     _user_image_paths_cache[user_id] = (now + _USER_IMAGE_PATHS_TTL, paths)
     return paths
@@ -185,7 +186,9 @@ def _load_product_candidate_image_urls(product_id: int) -> list[str]:
 def _encode_webp_to_disk(raw_bytes: bytes, dest_path: str) -> None:
     import io
     from PIL import Image
+    from src.core.safe_http import configure_pillow_limits
 
+    configure_pillow_limits()
     with Image.open(io.BytesIO(raw_bytes)) as img:
         if img.mode in ("RGBA", "LA"):
             background = Image.new("RGB", img.size, (255, 255, 255))
@@ -199,16 +202,7 @@ def _encode_webp_to_disk(raw_bytes: bytes, dest_path: str) -> None:
 async def _fetch_and_cache_product_image(product_id: int) -> "str | None":
     """
     Fase AAA-4.2 (B.7): rellena la caché local de imágenes bajo demanda.
-
-    Hasta ahora, la conversión a WebP solo pasaba por el importador antiguo
-    de Excel (storage_service.py, vía GitHub Actions) o por un script de
-    migración puntual (scripts/phase0_migration.py) que nadie vuelve a
-    ejecutar — las imágenes descubiertas por los ~17 scrapers de tiendas
-    nunca se descargaban ni convertían, solo se servía la URL remota tal
-    cual. Esta función descarga la imagen remota del producto, la convierte
-    a WebP (mismo patrón que storage_service.py/phase0_migration.py) y la
-    guarda en IMAGE_CACHE_DIR, para que la siguiente petición ya la sirva
-    desde caché local sin volver a descargarla.
+    Protegida contra SSRF mediante validate_public_url y límite de tamaño.
     """
     candidate_urls = await anyio.to_thread.run_sync(_load_product_candidate_image_urls, product_id)
     if not candidate_urls:
@@ -219,54 +213,82 @@ async def _fetch_and_cache_product_image(product_id: int) -> "str | None":
     if os.path.exists(dest_path) and os.path.getsize(dest_path) > 0:
         return dest_path
 
-    import httpx
+    from src.core.safe_http import fetch_safe_bytes
 
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
         "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
     }
 
-    async with httpx.AsyncClient(timeout=15.0, follow_redirects=True, headers=headers) as client:
-        for image_url in candidate_urls:
-            if not image_url or not image_url.startswith("http"):
-                continue
-            try:
-                resp = await client.get(image_url)
-                status_code = getattr(resp, "status_code", 200)
-                if status_code == 200 and len(resp.content) > 50:
-                    await anyio.to_thread.run_sync(_encode_webp_to_disk, resp.content, dest_path)
-                    logger.info(f"📸 Imagen del producto {product_id} descargada y cacheada en WebP desde {image_url}.")
-                    return dest_path
-            except Exception as e:
-                logger.warning(f"⚠️ Error intentando descargar desde {image_url} para producto {product_id}: {e}")
+    for image_url in candidate_urls:
+        if not image_url or not image_url.startswith("http"):
+            continue
+        try:
+            content, status_code, _ = await fetch_safe_bytes(
+                image_url,
+                max_bytes=10 * 1024 * 1024,
+                timeout=15.0,
+                headers=headers,
+            )
+            if status_code == 200 and len(content) > 50:
+                await anyio.to_thread.run_sync(_encode_webp_to_disk, content, dest_path)
+                logger.info(f"📸 Imagen del producto {product_id} descargada y cacheada en WebP desde {image_url}.")
+                return dest_path
+        except Exception as e:
+            logger.warning(f"⚠️ Error intentando descargar desde {image_url} para producto {product_id}: {e}")
 
     return None
+
+
+def _has_valid_image_magic(file_path) -> bool:
+    try:
+        with file_path.open("rb") as fh:
+            header = fh.read(12)
+    except OSError:
+        return False
+    return (
+        (len(header) >= 12 and header[:4] == b"RIFF" and header[8:12] == b"WEBP")
+        or header.startswith(b"\x89PNG\r\n\x1a\n")
+        or header.startswith(b"\xff\xd8\xff")
+    )
 
 
 @app.get("/api/static/images/{product_id}.webp")
 async def get_static_image_override(product_id: int, source: str = None, user_id: int = 2):
     from fastapi.responses import FileResponse
     from fastapi import HTTPException
+    from pathlib import Path
 
     extensions = [".webp", ".jpg", ".jpeg", ".png"]
+    cache_root = Path(settings.IMAGE_CACHE_DIR).resolve()
 
-    # 1. Try custom path if not explicitly cache-only
     if source != "cache":
         custom_dirs = await anyio.to_thread.run_sync(_get_cached_user_image_paths, user_id)
         for custom_dir in custom_dirs:
+            raw_base = Path(custom_dir)
+            if raw_base.is_symlink() or not raw_base.exists() or not raw_base.is_dir():
+                continue
+            base = raw_base.resolve()
             for ext in extensions:
-                file_path = os.path.join(custom_dir, f"{product_id}{ext}")
-                if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
-                    return FileResponse(file_path, headers=STATIC_IMAGE_CACHE_HEADERS)
+                candidate = base / f"{product_id}{ext}"
+                if candidate.is_symlink():
+                    continue
+                resolved = candidate.resolve()
+                if (
+                    resolved.is_relative_to(base)
+                    and resolved.exists()
+                    and resolved.is_file()
+                    and resolved.stat().st_size > 0
+                    and _has_valid_image_magic(resolved)
+                ):
+                    return FileResponse(str(resolved), headers=STATIC_IMAGE_CACHE_HEADERS)
 
-    # 2. Try server cache if not explicitly custom-only
     if source != "custom":
         for ext in extensions:
-            server_cache_file = os.path.join(settings.IMAGE_CACHE_DIR, f"{product_id}{ext}")
-            if os.path.exists(server_cache_file) and os.path.getsize(server_cache_file) > 0:
-                return FileResponse(server_cache_file, headers=STATIC_IMAGE_CACHE_HEADERS)
+            server_cache_file = (cache_root / f"{product_id}{ext}").resolve()
+            if server_cache_file.is_relative_to(cache_root) and server_cache_file.exists() and server_cache_file.is_file() and server_cache_file.stat().st_size > 0:
+                return FileResponse(str(server_cache_file), headers=STATIC_IMAGE_CACHE_HEADERS)
 
-        # 3. Cache miss: descarga + convierte + cachea automáticamente.
         cached_path = await _fetch_and_cache_product_image(product_id)
         if cached_path:
             return FileResponse(cached_path, headers=STATIC_IMAGE_CACHE_HEADERS)
@@ -274,17 +296,46 @@ async def get_static_image_override(product_id: int, source: str = None, user_id
     raise HTTPException(status_code=404, detail="Imagen no encontrada")
 
 
+import re as _re
 from src.core.config import get_cors_origins
+
+_ext_ids = [
+    _re.escape(ext_id.strip())
+    for ext_id in (settings.ALLOWED_CHROME_EXTENSION_IDS or "").split(",")
+    if ext_id.strip()
+]
+_is_dev_env = (settings.ENV or "").strip().lower() in ("development", "dev", "local", "test")
+_cors_extension_regex = (
+    rf"^chrome-extension://(?:{'|'.join(_ext_ids)})$"
+    if _ext_ids
+    else (r"^chrome-extension://[a-p]{32}$" if _is_dev_env else None)
+)
 
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=get_cors_origins(),
-    allow_origin_regex=r"^chrome-extension://.*$",
+    allow_origin_regex=_cors_extension_regex,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "X-API-Key", "X-Device-ID", "X-Device-Name"],
+    allow_headers=[
+        "Authorization",
+        "Content-Type",
+        "X-API-Key",
+        "X-Device-ID",
+        "X-Device-Name",
+        "X-Extension-Key",
+    ],
 )
+
+
+@app.middleware("http")
+async def add_security_headers_middleware(request: Request, call_next):
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    return response
 
 # ─── Global exception handlers ────────────────────────────────────────────────
 

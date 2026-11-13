@@ -71,7 +71,7 @@ const Auctions: React.FC<AuctionsProps> = ({ user }) => {
 
 
     // 1. Fetch de productos con subastas activas
-    const { data: products, isLoading: isLoadingProducts, isError: isErrorProducts } = useQuery<Product[]>({
+    const { data: products, isLoading: isLoadingProducts, isError: isErrorProducts, refetch: refetchProducts } = useQuery<Product[]>({
         queryKey: ['auction-products'],
         queryFn: async () => {
             const response = await axios.get('/api/auctions/products');
@@ -140,21 +140,25 @@ const Auctions: React.FC<AuctionsProps> = ({ user }) => {
         }
     });
 
-    const isOwned = (productId: number) => {
-        const item = collection?.find(p => p.id === productId);
-        return item && !item.is_wish;
-    };
+    const { ownedIds, wishedIds } = React.useMemo(() => {
+        const owned = new Set<number>();
+        const wished = new Set<number>();
+        collection?.forEach((p) => {
+            if (p.is_wish) wished.add(p.id);
+            else owned.add(p.id);
+        });
+        return { ownedIds: owned, wishedIds: wished };
+    }, [collection]);
 
-    const isWished = (productId: number) => {
-        const item = collection?.find(p => p.id === productId);
-        return item && item.is_wish;
-    };
+    const isOwned = (productId: number) => ownedIds.has(productId);
+
+    const isWished = (productId: number) => wishedIds.has(productId);
 
     const sortedProducts = React.useMemo(() => {
         if (!products) return [];
         let filtered = products;
         if (showOnlyWishlist) {
-            filtered = filtered.filter(p => isWished(p.id));
+            filtered = filtered.filter(p => wishedIds.has(p.id));
         }
         return [...filtered].sort((a, b) => {
             let comparison = 0;
@@ -167,7 +171,7 @@ const Auctions: React.FC<AuctionsProps> = ({ user }) => {
             }
             return sortOrder === 'asc' ? comparison : -comparison;
         });
-    }, [products, sortBy, sortOrder, showOnlyWishlist, collection]);
+    }, [products, sortBy, sortOrder, showOnlyWishlist, wishedIds]);
 
     if (isLoadingProducts || isLoadingCollection) {
         return <PowerSwordLoader variant="fullScreen" text="Explorando los puestos del Mercader de Eternos..." />;
@@ -175,9 +179,17 @@ const Auctions: React.FC<AuctionsProps> = ({ user }) => {
 
     if (isErrorProducts) {
         return (
-            <div className="flex h-64 flex-col items-center justify-center gap-4 text-red-400">
+            <div className="flex h-64 flex-col items-center justify-center gap-4 text-red-400 rounded-2xl border border-red-500/20 bg-red-950/10 p-6">
                 <AlertCircle className="h-10 w-10" />
-                <p className="text-sm font-medium">Error al conectar con el Mercader de Eternos</p>
+                <p className="text-sm font-bold">Error al conectar con el Mercader de Eternos</p>
+                <button
+                    type="button"
+                    onClick={() => refetchProducts()}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-primary/15 border border-brand-primary/35 text-brand-primary hover:bg-brand-primary hover:text-white text-xs font-black uppercase tracking-wider transition-all"
+                >
+                    <RefreshCw className="h-3.5 w-3.5" />
+                    Reintentar conexión
+                </button>
             </div>
         );
     }
@@ -188,7 +200,7 @@ const Auctions: React.FC<AuctionsProps> = ({ user }) => {
                 <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-brand-primary/10 blur-[100px] pointer-events-none"></div>
                 <div className="relative z-10 flex flex-col gap-1">
                     <div className="flex items-center gap-2 text-brand-primary">
-                        <span className="text-base md:text-xl">🏛️</span>
+                        <Gavel className="h-4 w-4 md:h-5 md:w-5 text-brand-primary" />
                         <h2 className="text-sm md:text-base font-black uppercase tracking-[0.2em] text-white">
                             Mercader de <span className="text-brand-primary">Eternos</span>
                         </h2>
@@ -224,6 +236,7 @@ const Auctions: React.FC<AuctionsProps> = ({ user }) => {
                             onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
                             className="h-[38px] w-[38px] sm:h-[42px] sm:w-[42px] flex items-center justify-center rounded-xl bg-white/[0.03] border border-white/5 text-brand-primary hover:bg-white/10 hover:text-brand-primary/80 transition-all shrink-0 shadow-md"
                             title={sortOrder === 'asc' ? 'Orden Ascendente' : 'Orden Descendente'}
+                            aria-label={sortOrder === 'asc' ? 'Cambiar a orden descendente' : 'Cambiar a orden ascendente'}
                         >
                             {sortOrder === 'asc' ? <ArrowUp className="h-4 w-4 sm:h-5 sm:w-5" /> : <ArrowDown className="h-4 w-4 sm:h-5 sm:w-5" />}
                         </button>
@@ -257,7 +270,20 @@ const Auctions: React.FC<AuctionsProps> = ({ user }) => {
                 </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-1.5 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {sortedProducts.length === 0 ? (
+                <div className="glass-card flex flex-col items-center justify-center py-16 text-center space-y-3 border border-white/10">
+                    <Gavel className="h-10 w-10 text-white/25" />
+                    <h3 className="text-sm font-black uppercase tracking-widest text-white/80">
+                        {showOnlyWishlist ? 'Sin subastas activas en tu Lista de Deseos' : 'Sin subastas activas en este momento'}
+                    </h3>
+                    <p className="text-xs text-white/45 max-w-md">
+                        {showOnlyWishlist
+                            ? 'Desactiva el filtro "Solo Deseos" o marca reliquias con la estrella para vigilar sus subastas.'
+                            : 'El Mercader de Eternos no detectó subastas abiertas en este ciclo.'}
+                    </p>
+                </div>
+            ) : (
+                <div className="grid grid-cols-2 gap-1.5 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {sortedProducts?.map((product) => {
                     const owned = isOwned(product.id);
                     const wished = isWished(product.id);
@@ -365,8 +391,9 @@ const Auctions: React.FC<AuctionsProps> = ({ user }) => {
                                         {/* Action: Toggle Price History */}
                                         <button
                                             onClick={() => setHistoryProductId(historyProductId === product.id ? null : product.id)}
-                                            className={`flex h-7 w-7 items-center justify-center rounded-xl transition-all border hover:scale-110 active:scale-95 duration-300 shadow-md ${historyProductId === product.id ? 'bg-purple-500/20 text-purple-400 border-purple-500/50' : 'bg-white/5 text-white/30 border-white/10 hover:bg-white/10 hover:text-white'}`}
+                                            className={`flex h-7 w-7 items-center justify-center rounded-xl transition-all border hover:scale-110 active:scale-95 duration-300 shadow-md ${historyProductId === product.id ? 'bg-amber-500/20 text-amber-400 border-amber-500/50' : 'bg-white/5 text-white/30 border-white/10 hover:bg-white/10 hover:text-white'}`}
                                             title="Ver Evolución de Precios"
+                                            aria-label={`Ver evolución de precios de ${product.name}`}
                                         >
                                             <History className="h-3.5 w-3.5" />
                                         </button>
@@ -376,6 +403,7 @@ const Auctions: React.FC<AuctionsProps> = ({ user }) => {
                                             onClick={() => setSelectedProduct(product)}
                                             className="flex h-7 w-7 items-center justify-center rounded-xl bg-white/5 text-white/40 border border-white/10 transition-all hover:bg-brand-primary/20 hover:text-brand-primary hover:border-brand-primary/45 hover:scale-110 active:scale-95 duration-300 shadow-md"
                                             title="Ver Mercado Live"
+                                            aria-label={`Ver mercado en vivo de ${product.name}`}
                                         >
                                             <Info className="h-3.5 w-3.5" />
                                         </button>
@@ -389,6 +417,7 @@ const Auctions: React.FC<AuctionsProps> = ({ user }) => {
                                                 : 'bg-white/5 text-white/20 border-white/10 hover:bg-brand-primary/10 hover:text-brand-primary'
                                                 } ${owned ? 'opacity-20 cursor-not-allowed' : ''} ${toggleMutation.isPending ? 'opacity-50 cursor-wait' : ''}`}
                                             title={wished ? 'Quitar de Deseos' : 'Añadir a Deseos'}
+                                            aria-label={wished ? `Quitar ${product.name} de Deseos` : `Añadir ${product.name} a Deseos`}
                                         >
                                             <Star className={`h-3.5 w-3.5 ${wished ? 'fill-current' : ''}`} />
                                         </button>
@@ -397,8 +426,8 @@ const Auctions: React.FC<AuctionsProps> = ({ user }) => {
 
                                 {historyProductId === product.id && (
                                     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="overflow-hidden space-y-3 mt-2">
-                                        <div className="flex items-center justify-between text-[8px] font-black uppercase tracking-widest text-purple-400 pt-2 px-1"><span className="flex items-center gap-1"><TrendingUp className="h-3 w-3" /> Evolución Subastas</span></div>
-                                        {isLoadingHistory ? <div className="h-20 flex items-center justify-center"><RefreshCw className="h-4 w-4 animate-spin text-purple-500/50" /></div> : priceHistory && priceHistory.length > 0 ? <PriceHistoryChart data={priceHistory} /> : <div className="p-4 text-[10px] font-bold text-center text-white/10 uppercase italic">Sin datos históricos</div>}
+                                        <div className="flex items-center justify-between text-[8px] font-black uppercase tracking-widest text-amber-400 pt-2 px-1"><span className="flex items-center gap-1"><TrendingUp className="h-3 w-3" /> Evolución Subastas</span></div>
+                                        {isLoadingHistory ? <div className="h-20 flex items-center justify-center"><RefreshCw className="h-4 w-4 animate-spin text-amber-500/50" /></div> : priceHistory && priceHistory.length > 0 ? <PriceHistoryChart data={priceHistory} /> : <div className="p-4 text-[10px] font-bold text-center text-white/10 uppercase italic">Sin datos históricos</div>}
 
                                         {/* Quick Averages Grid */}
                                         <div className="grid grid-cols-2 gap-2 mt-2">
@@ -408,7 +437,7 @@ const Auctions: React.FC<AuctionsProps> = ({ user }) => {
                                             </div>
                                             <div className="bg-white/5 p-2 rounded-xl flex flex-col items-center">
                                                 <span className="text-[7px] font-black text-white/20 uppercase">Media Subasta</span>
-                                                <span className="text-xs font-black text-purple-400 blur-incognito">{product.avg_p2p_price || '---'} €</span>
+                                                <span className="text-xs font-black text-amber-400 blur-incognito">{product.avg_p2p_price || '---'} €</span>
                                             </div>
                                         </div>
                                     </motion.div>
@@ -417,7 +446,8 @@ const Auctions: React.FC<AuctionsProps> = ({ user }) => {
                         </div>
                     );
                 })}
-            </div>
+                </div>
+            )}
 
             {selectedProduct && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl" onClick={() => setSelectedProduct(null)}>

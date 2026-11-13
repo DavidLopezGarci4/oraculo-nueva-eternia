@@ -16,7 +16,7 @@ class BudgetOptimizerService:
     def optimize_cart(
         cls,
         budget_limit: float,
-        user_id: int = 2,
+        user_id: Optional[int] = 2,
         target_product_ids: Optional[List[int]] = None,
         user_location: str = "ES"
     ) -> Dict[str, Any]:
@@ -32,16 +32,20 @@ class BudgetOptimizerService:
                     ProductModel.is_vintage == False
                 ).all()
             else:
-                owned_ids = {
-                    i.product_id for i in db.query(CollectionItemModel.product_id).filter(
-                        CollectionItemModel.owner_id == user_id,
-                        CollectionItemModel.acquired == True
-                    ).all()
-                }
-                products = db.query(ProductModel).filter(
-                    ProductModel.id.notin_(owned_ids),
-                    ProductModel.is_vintage == False
-                ).all()
+                owned_ids = (
+                    {
+                        i.product_id for i in db.query(CollectionItemModel.product_id).filter(
+                            CollectionItemModel.owner_id == user_id,
+                            CollectionItemModel.acquired == True
+                        ).all()
+                    }
+                    if user_id is not None
+                    else set()
+                )
+                query = db.query(ProductModel).filter(ProductModel.is_vintage == False)
+                if owned_ids:
+                    query = query.filter(ProductModel.id.notin_(owned_ids))
+                products = query.all()
 
             product_map = {p.id: p for p in products}
             if not product_map:

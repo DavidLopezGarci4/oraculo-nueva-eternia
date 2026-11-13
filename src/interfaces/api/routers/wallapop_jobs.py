@@ -17,11 +17,13 @@ Flujo:
      y marca el job como done/error.
 """
 from datetime import datetime, timezone
+import html
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import desc
 
+from src.core.vintage_utils import check_is_vintage
 from src.domain.models import WallapopJobModel
 from src.infrastructure.database_cloud import SessionCloud
 from src.interfaces.api.deps import verify_api_key
@@ -37,8 +39,13 @@ router = APIRouter(prefix="/api/wallapop/jobs", tags=["wallapop-nexus-bridge"])
 
 
 @router.post("", response_model=WallapopJobCreatedOutput, dependencies=[Depends(verify_api_key)])
-async def create_wallapop_job(request: WallapopJobCreateRequest):
+def create_wallapop_job(request: WallapopJobCreateRequest):
     """Encola un nuevo trabajo de búsqueda para el Nexus Local Bridge (Admin Only)."""
+    if request.query and check_is_vintage(request.query):
+        raise HTTPException(
+            status_code=400,
+            detail="Búsquedas vintage deshabilitadas temporalmente (AGENTS.md Regla 2).",
+        )
     with SessionCloud() as db:
         job = WallapopJobModel(query=request.query or "auto", status="pending")
         db.add(job)
@@ -52,7 +59,7 @@ async def create_wallapop_job(request: WallapopJobCreateRequest):
 
 
 @router.get("/pending", response_model=Optional[WallapopJobOutput], dependencies=[Depends(verify_api_key)])
-async def claim_pending_wallapop_job(worker_id: str | None = None):
+def claim_pending_wallapop_job(worker_id: str | None = None):
     """
     Reclama (y marca como 'running') el trabajo pendiente más antiguo, para que
     un worker local lo procese. Devuelve null si no hay trabajos pendientes.
@@ -80,7 +87,7 @@ async def claim_pending_wallapop_job(worker_id: str | None = None):
 
 
 @router.post("/{job_id}/results", response_model=WallapopJobResultsOutput, dependencies=[Depends(verify_api_key)])
-async def submit_wallapop_job_results(job_id: int, request: WallapopJobResultsRequest):
+def submit_wallapop_job_results(job_id: int, request: WallapopJobResultsRequest):
     """Recibe los resultados de un worker local y los enruta al Purgatorio (Admin Only)."""
     with SessionCloud() as db:
         job = db.query(WallapopJobModel).filter(WallapopJobModel.id == job_id).first()
@@ -119,7 +126,7 @@ async def submit_wallapop_job_results(job_id: int, request: WallapopJobResultsRe
             pipeline = ScrapingPipeline([])
             # Extraer las tiendas únicas presentes en las ofertas
             unique_shops = list(set(o["shop_name"] for o in offers_payload))
-            new_items = pipeline.update_database(offers_payload, shop_names=unique_shops) or 0
+            new_items = pipeline.update_database(offers_payload, shop_names=unique_shops, allow_deactivation=False) or 0
 
         job.status = "error" if (request.blocked and not offers_payload) else "done"
         if job.status == "error" and not job.error_message:
@@ -128,10 +135,13 @@ async def submit_wallapop_job_results(job_id: int, request: WallapopJobResultsRe
         job.completed_at = datetime.now(timezone.utc)
         db.commit()
 
-        # Notificar a Telegram con desglose de tiendas
+        # Notificar a Telegram con desglose de tiendas sin requerir loop activo
         try:
-            import asyncio
+            from src.infrastructure.scrapers.pipeline import _dispatch_async_coro
             from src.infrastructure.services.telegram_service import telegram_service
+            safe_query = html.escape(str(job.query or "auto"))
+            safe_error = html.escape(str(job.error_message or ""))
+
             if job.status == "done":
                 wallapop_count = sum(1 for o in offers_payload if o["shop_name"] == "Wallapop")
                 smyths_count = sum(1 for o in offers_payload if o["shop_name"] == "SmythsToys")
@@ -143,15 +153,15 @@ async def submit_wallapop_job_results(job_id: int, request: WallapopJobResultsRe
                     parts.append(f"Smyths Toys: {smyths_count}")
                 details_str = f" ({', '.join(parts)})" if parts else ""
 
-                asyncio.create_task(telegram_service.send_message(
+                _dispatch_async_coro(telegram_service.send_message(
                     f"⚡ <b>[Nexus Bridge: PC Local]</b> Trabajo #{job_id} completado con éxito.\n"
-                    f"• Búsqueda: <b>{job.query}</b>\n"
+                    f"• Búsqueda: <b>{safe_query}</b>\n"
                     f"• Reliquias extraídas: <b>{len(offers_payload)}</b>{details_str}\n"
                     f"• <b>{new_items}</b> nuevas en el Purgatorio."
                 ))
             elif job.status == "error":
-                asyncio.create_task(telegram_service.send_message(
-                    f"⚠️ <b>[Nexus Bridge: PC Local]</b> Error en trabajo #{job_id} ('{job.query}'): {job.error_message}"
+                _dispatch_async_coro(telegram_service.send_message(
+                    f"⚠️ <b>[Nexus Bridge: PC Local]</b> Error en trabajo #{job_id} ('{safe_query}'): {safe_error}"
                 ))
         except Exception:
             pass
@@ -160,7 +170,7 @@ async def submit_wallapop_job_results(job_id: int, request: WallapopJobResultsRe
 
 
 @router.get("", response_model=List[WallapopJobOutput], dependencies=[Depends(verify_api_key)])
-async def list_wallapop_jobs(limit: int = 30):
+def list_wallapop_jobs(limit: int = 30):
     """Lista los trabajos más recientes del Nexus Local Bridge, para la UI de Configuración."""
     with SessionCloud() as db:
         return (

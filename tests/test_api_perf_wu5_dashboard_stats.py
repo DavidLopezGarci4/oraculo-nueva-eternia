@@ -6,7 +6,7 @@ Real integration & cohesion tests for Performance Work Unit 5 (WU-5):
 """
 from sqlalchemy import event
 
-from tests.conftest import _TestSession
+from tests.conftest import API_KEY, _TestSession
 from src.domain.models import ProductModel, CollectionItemModel, OfferModel
 
 
@@ -101,7 +101,8 @@ def test_dashboard_stats_includes_condition_breakdown_and_waves_completion_in_bo
         db.commit()
 
     # Warm up auth/device/logistics caches once so we measure get_dashboard_stats itself
-    client.get("/api/dashboard/stats?user_id=1", headers=authorized_device_headers)
+    admin_perf_headers = {**authorized_device_headers, "X-API-Key": API_KEY}
+    client.get("/api/dashboard/stats?user_id=1", headers=admin_perf_headers)
 
     with _TestSession() as db:
         engine = db.get_bind()
@@ -113,7 +114,7 @@ def test_dashboard_stats_includes_condition_breakdown_and_waves_completion_in_bo
 
         event.listen(engine, "before_cursor_execute", _before_cursor_execute)
         try:
-            res = client.get("/api/dashboard/stats?user_id=1", headers=authorized_device_headers)
+            res = client.get("/api/dashboard/stats?user_id=1", headers=admin_perf_headers)
         finally:
             event.remove(engine, "before_cursor_execute", _before_cursor_execute)
 

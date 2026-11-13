@@ -1,4 +1,5 @@
 import os
+import re
 from datetime import datetime
 from typing import List, Optional
 
@@ -24,19 +25,23 @@ def trigger_excel_sync_background(user_id: int, product_id: int):
             if not user or not product:
                 return
             
-            is_admin = user.role == 'admin' or user.username == 'David'
+            is_admin = (user.role or "").strip().lower() == "admin"
             username = user.username
             is_vintage = product.is_vintage or False
             
         project_root = Path(__file__).resolve().parents[4]
+        motu_dir = (project_root / "data" / "MOTU").resolve()
         
         if is_admin:
             if is_vintage:
-                excel_path = project_root / "data" / "MOTU" / "lista_vintage.xlsx"
+                excel_path = motu_dir / "lista_vintage.xlsx"
             else:
-                excel_path = project_root / "data" / "MOTU" / "lista_MOTU.xlsx"
+                excel_path = motu_dir / "lista_MOTU.xlsx"
         else:
-            excel_path = project_root / "data" / "MOTU" / f"lista_MOTU_{username}.xlsx"
+            safe_username = re.sub(r"[^A-Za-z0-9_-]", "_", username or "user")[:48]
+            excel_path = (motu_dir / f"lista_MOTU_{safe_username}.xlsx").resolve()
+            if not excel_path.is_relative_to(motu_dir):
+                raise ValueError("Invalid Excel sync target path")
             
         if excel_path.exists():
             manager = ExcelManager(str(excel_path))

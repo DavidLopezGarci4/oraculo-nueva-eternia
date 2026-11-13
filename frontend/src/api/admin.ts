@@ -135,8 +135,22 @@ export interface Hero {
 export const isUserAdmin = (user?: Hero | null): boolean => {
     if (!user) return false;
     const role = (user.role || '').trim().toLowerCase();
-    const username = (user.username || '').trim().toLowerCase();
-    return role === 'admin' || username === 'david' || username === 'admin' || user.id === 1;
+    const isSovereignSession = typeof window !== 'undefined' && window.localStorage?.getItem('is_sovereign') === 'true';
+    return role === 'admin' || isSovereignSession;
+};
+
+const triggerBlobDownload = (blob: Blob, filename: string): void => {
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    try {
+        link.href = url;
+        link.setAttribute('download', filename);
+        document.body.appendChild(link);
+        link.click();
+    } finally {
+        link.remove();
+        window.URL.revokeObjectURL(url);
+    }
 };
 
 export const updateUserPublicShowcase = async (userId: number, isPublic: boolean): Promise<{ status: string; is_public_showcase: boolean }> => {
@@ -173,14 +187,7 @@ export const downloadVault = async (userId: number = 2): Promise<void> => {
         responseType: 'blob'
     });
 
-    // Crear enlace de descarga
-    const url = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `eternia_vault_${userId}_${new Date().getTime()}.db`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    triggerBlobDownload(new Blob([response.data]), `eternia_vault_${userId}_${new Date().getTime()}.db`);
 };
 
 export const syncExcel = async (userId: number = 2): Promise<{ status: string; message: string }> => {
@@ -194,40 +201,21 @@ export const downloadImagesZip = async (): Promise<void> => {
     const response = await adminAxios.get('/vault/download-images/zip', {
         responseType: 'blob'
     });
-    const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/zip' }));
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', 'motu_images.zip');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
+    triggerBlobDownload(new Blob([response.data], { type: 'application/zip' }), 'motu_images.zip');
 };
 
 export const exportCollectionExcel = async (userId: number = 2): Promise<void> => {
     const response = await adminAxios.get(`/guardian/export/excel?user_id=${userId}`, {
         responseType: 'blob'
     });
-    const url = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `Coleccion_Export_${new Date().getTime()}.xlsx`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    triggerBlobDownload(new Blob([response.data]), `Coleccion_Export_${new Date().getTime()}.xlsx`);
 };
 
 export const exportCollectionExcelVintage = async (userId: number = 2): Promise<void> => {
     const response = await adminAxios.get(`/guardian/export/excel/vintage?user_id=${userId}`, {
         responseType: 'blob'
     });
-    const url = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `Coleccion_Vintage_Export_${new Date().getTime()}.xlsx`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    triggerBlobDownload(new Blob([response.data]), `Coleccion_Vintage_Export_${new Date().getTime()}.xlsx`);
 };
 
 
@@ -235,13 +223,7 @@ export const exportCollectionSqlite = async (userId: number = 2): Promise<void> 
     const response = await adminAxios.get(`/guardian/export/sqlite?user_id=${userId}`, {
         responseType: 'blob'
     });
-    const url = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `Eternia_Vault_${new Date().getTime()}.db`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    triggerBlobDownload(new Blob([response.data]), `Eternia_Vault_${new Date().getTime()}.db`);
 };
 
 export const getPublicShowcase = async (username: string): Promise<any> => {
@@ -355,15 +337,8 @@ export const downloadExecutionLogsCsv = async (): Promise<void> => {
     const response = await adminAxios.get('/scrapers/execution-logs/export', {
         responseType: 'blob'
     });
-    const url = window.URL.createObjectURL(new Blob([response.data], { type: 'text/csv;charset=utf-8;' }));
-    const link = document.createElement('a');
-    link.href = url;
     const timestamp = new Date().toISOString().slice(0, 19).replace(/[-:]/g, '').replace('T', '_');
-    link.setAttribute('download', `oraculo_execution_logs_${timestamp}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
+    triggerBlobDownload(new Blob([response.data], { type: 'text/csv;charset=utf-8;' }), `oraculo_execution_logs_${timestamp}.csv`);
 };
 
 export const getSystemTcgLayouts = async (): Promise<Record<string, any>> => {

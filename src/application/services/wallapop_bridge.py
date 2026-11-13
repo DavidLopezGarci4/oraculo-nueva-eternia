@@ -1,6 +1,8 @@
 
+import re
 import random
 import logging
+from urllib.parse import urlparse
 from curl_cffi.requests import AsyncSession
 from typing import Optional, Dict, Any
 from datetime import datetime
@@ -33,13 +35,17 @@ class WallapopBridge:
         """
         Extracts item ID from URL and fetches full details from Wallapop API.
         """
-        # 1. Extract ID from Slug (e.g. .../item/figura-motu-123456789)
+        # 1. Extract and strictly validate ID from Slug (e.g. .../item/figura-motu-123456789)
         try:
-            item_slug = item_url.split("/item/")[-1].split("?")[0]
-            # If slug contains the ID at the end or is just the ID
-            # Wallapop slugs usually end with ID or are ID themselves
-            # Example: https://es.wallapop.com/item/battle-cat-motu-origins-987654321
-            item_id = item_slug.split("-")[-1] if "-" in item_slug else item_slug
+            parsed = urlparse(item_url)
+            if "/item/" not in parsed.path:
+                return None
+            rel_slug = parsed.path.split("/item/", 1)[1].strip("/")
+            if not rel_slug or "/" in rel_slug:
+                return None
+            item_id = rel_slug.split("-")[-1] if "-" in rel_slug else rel_slug
+            if not re.fullmatch(r"[A-Za-z0-9]+", item_id):
+                return None
         except Exception as e:
             logger.error(f"Failed to extract Wallapop ID: {e}")
             return None

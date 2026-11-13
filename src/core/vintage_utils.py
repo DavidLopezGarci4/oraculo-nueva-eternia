@@ -2,28 +2,33 @@ import re
 
 # Frases de figuras Origins ambientadas en la estética vintage (NO son vintage)
 ORIGINS_VINTAGE_STYLE_PHRASES = ("vintage sculpt",)
+_DECADE_80S_RE = re.compile(
+    r"\b(?:a[ñn]os\s*80s?|los\s*80s?|d[eé]cada\s+(?:de\s+)?los\s*80s?|80'?s)\b",
+    re.IGNORECASE,
+)
+
 
 def check_is_vintage(text: str) -> bool:
     """
     Checks if the given text indicates a vintage item.
-    Returns True if the text contains 'vintage' (case-insensitive)
-    or a 4-digit year in the range 1980-1989.
+    Returns True if the text contains 'vintage' (case-insensitive),
+    an 80s decade reference, or a 4-digit year in the range 1980-1989.
     """
     if not text:
         return False
-    
+
     text_lower = re.sub(r"[-_]+", " ", text.lower())
     # Figuras Origins ambientadas en la línea vintage (p.ej. "Vintage Sculpt") NO son vintage
     for phrase in ORIGINS_VINTAGE_STYLE_PHRASES:
         text_lower = text_lower.replace(phrase, " ")
-    if "vintage" in text_lower:
+    if "vintage" in text_lower or _DECADE_80S_RE.search(text_lower):
         return True
-        
+
     # Match any word boundaries containing a year between 1980 and 1989
     years = re.findall(r"\b(198[0-9])\b", text)
     if years:
         return True
-        
+
     return False
 
 

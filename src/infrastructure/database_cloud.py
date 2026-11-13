@@ -67,23 +67,26 @@ def _add_column_if_missing_sqlite(session, table: str, ddl: str) -> None:
 
 def init_cloud_db():
     from src.domain.models import Base
-    Base.metadata.create_all(bind=engine_cloud)
-
     from sqlalchemy import text
 
+    dialect = (engine_cloud.url.drivername or "").lower()
+    if "postgresql" in dialect:
+        # AGENTS.md Rule 2: Zero DDL on FastAPI boot against Supabase (:6543 lock prevention).
+        # Schema changes must run exclusively via `python -m alembic upgrade head`.
+        try:
+            with SessionCloud() as session:
+                session.execute(text("SELECT 1;"))
+        except Exception as e:
+            logger.error(f"Cloud DB :: fallo en health check PostgreSQL de arranque: {e}")
+        return
+
+    Base.metadata.create_all(bind=engine_cloud)
     try:
         with SessionCloud() as session:
-            dialect = engine_cloud.url.drivername or ""
-            if "postgresql" in dialect.lower():
-                session.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_public_showcase BOOLEAN DEFAULT FALSE;"))
-                session.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_chat_id VARCHAR;"))
-                session.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS pc_image_path VARCHAR;"))
-                session.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS mobile_image_path VARCHAR;"))
-            else:
-                _add_column_if_missing_sqlite(session, "users", "is_public_showcase BOOLEAN DEFAULT FALSE")
-                _add_column_if_missing_sqlite(session, "users", "telegram_chat_id VARCHAR")
-                _add_column_if_missing_sqlite(session, "users", "pc_image_path VARCHAR")
-                _add_column_if_missing_sqlite(session, "users", "mobile_image_path VARCHAR")
+            _add_column_if_missing_sqlite(session, "users", "is_public_showcase BOOLEAN DEFAULT FALSE")
+            _add_column_if_missing_sqlite(session, "users", "telegram_chat_id VARCHAR")
+            _add_column_if_missing_sqlite(session, "users", "pc_image_path VARCHAR")
+            _add_column_if_missing_sqlite(session, "users", "mobile_image_path VARCHAR")
             session.commit()
     except Exception as e:
         # Fase AAA-2.4: antes esto era `except: pass` (silenciaba TODO fallo de

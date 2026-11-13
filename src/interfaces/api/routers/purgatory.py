@@ -1,5 +1,6 @@
 import json
 import re
+import threading
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
@@ -10,6 +11,84 @@ from pydantic import BaseModel
 from typing import Optional
 
 PROCESSING_IDS = set()
+_PROCESSING_LOCK = threading.Lock()
+
+
+def _snapshot_processing() -> list[int]:
+    with _PROCESSING_LOCK:
+        return list(PROCESSING_IDS)
+
+
+def _is_processing(pending_id: int) -> bool:
+    with _PROCESSING_LOCK:
+        return pending_id in PROCESSING_IDS
+
+
+def _try_claim_processing(pending_id: int) -> bool:
+    with _PROCESSING_LOCK:
+        if pending_id in PROCESSING_IDS:
+            return False
+        PROCESSING_IDS.add(pending_id)
+        return True
+
+
+def _release_processing(*pending_ids: int) -> None:
+    with _PROCESSING_LOCK:
+        for pid in pending_ids:
+            PROCESSING_IDS.discard(pid)
+
+
+def _upsert_pending_match(
+    db,
+    *,
+    url: str,
+    scraped_name: str,
+    price: float,
+    currency: str,
+    shop_name: str,
+    source_type: str,
+    ean: Optional[str] = None,
+    image_url: Optional[str] = None,
+    condition: Optional[str] = None,
+    grading: Optional[float] = None,
+    is_vintage: Optional[bool] = None,
+) -> None:
+    existing = db.query(PendingMatchModel).filter(PendingMatchModel.url == url).first()
+    if existing is not None:
+        existing.scraped_name = scraped_name
+        existing.price = price
+        existing.currency = currency
+        existing.shop_name = shop_name
+        existing.source_type = source_type
+        if ean is not None:
+            existing.ean = ean
+        if image_url is not None:
+            existing.image_url = image_url
+        if condition is not None:
+            existing.condition = condition
+        if grading is not None:
+            existing.grading = grading
+        if is_vintage is not None:
+            existing.is_vintage = is_vintage
+        return
+
+    kwargs = dict(
+        scraped_name=scraped_name,
+        ean=ean,
+        price=price,
+        currency=currency,
+        url=url,
+        shop_name=shop_name,
+        image_url=image_url,
+        source_type=source_type,
+    )
+    if condition is not None:
+        kwargs["condition"] = condition
+    if grading is not None:
+        kwargs["grading"] = grading
+    if is_vintage is not None:
+        kwargs["is_vintage"] = is_vintage
+    db.add(PendingMatchModel(**kwargs))
 
 class VintageMatchRequest(BaseModel):
     custom_name: Optional[str] = None
@@ -177,12 +256,14 @@ def compute_suggestions(item, ctx: dict, use_memory: bool = True) -> list:
 
 
 def _invalidate_link_memory() -> None:
-    """Fuerza recargar la memoria de vinculaciones tras una vinculación manual."""
+    """Fuerza recargar la memoria de vinculaciones y cachés tras mutaciones del Purgatorio."""
     try:
         from src.core.link_memory import link_memory
         link_memory.invalidate()
         from src.application.services.market_analytics_service import MarketAnalyticsService
         MarketAnalyticsService.invalidate_market_index_cache()
+        from src.interfaces.api.routers.products import clear_purgatory_counts_cache
+        clear_purgatory_counts_cache()
     except Exception:
         pass
 
@@ -197,8 +278,9 @@ def get_purgatory(page: int = 1, limit: int = 500):
         
         offset = (page - 1) * limit
         query = db.query(PendingMatchModel)
-        if PROCESSING_IDS:
-            query = query.filter(~PendingMatchModel.id.in_(list(PROCESSING_IDS)))
+        processing_snapshot = _snapshot_processing()
+        if processing_snapshot:
+            query = query.filter(~PendingMatchModel.id.in_(processing_snapshot))
             
         pending = (
             query.order_by(desc(PendingMatchModel.found_at))
@@ -322,12 +404,12 @@ def run_match_task(pending_id: int, product_id: int):
     except Exception as e:
         logger.error(f"Error inesperado en background match_purgatory para item {pending_id}: {e}")
     finally:
-        PROCESSING_IDS.discard(pending_id)
+        _release_processing(pending_id)
 
 
 @router.post("/api/purgatory/match", response_model=StatusMessageOutput, dependencies=[Depends(verify_api_key)])
 def match_purgatory(request: PurgatoryMatchRequest, background_tasks: BackgroundTasks):
-    if request.pending_id in PROCESSING_IDS:
+    if _is_processing(request.pending_id):
         return {"status": "success", "message": "Vinculación ya se está procesando en segundo plano"}
 
     with SessionCloud() as db:
@@ -335,15 +417,13 @@ def match_purgatory(request: PurgatoryMatchRequest, background_tasks: Background
         product = db.query(ProductModel).filter(ProductModel.id == request.product_id).first()
 
         if not item:
-            existing_offer = db.query(OfferModel).filter(OfferModel.product_id == request.product_id).first()
-            if existing_offer:
-                return {"status": "success", "message": "Reliquia ya procesada previamente (Idempotencia)"}
             raise HTTPException(status_code=404, detail="Reliquia no encontrada en el Purgatorio")
 
         if not product:
             raise HTTPException(status_code=404, detail="Producto objetivo no encontrado")
 
-    PROCESSING_IDS.add(request.pending_id)
+    if not _try_claim_processing(request.pending_id):
+        return {"status": "success", "message": "Vinculación ya se está procesando en segundo plano"}
     background_tasks.add_task(run_match_task, request.pending_id, request.product_id)
     return {"status": "success", "message": "Vinculación programada en segundo plano"}
 
@@ -440,7 +520,7 @@ def run_match_bulk_task(matches: list[dict]):
             except Exception as e:
                 logger.error(f"Error procesando bulk match item {pending_id} -> producto {product_id}: {e}")
             finally:
-                PROCESSING_IDS.discard(pending_id)
+                _release_processing(pending_id)
                 
         try:
             db.commit()
@@ -453,11 +533,11 @@ def run_match_bulk_task(matches: list[dict]):
 
 @router.post("/api/purgatory/match/bulk", response_model=StatusMessageOutput, dependencies=[Depends(verify_api_key)])
 def match_purgatory_bulk(request: PurgatoryBulkMatchRequest, background_tasks: BackgroundTasks):
-    to_process = []
-    for m in request.matches:
-        if m.pending_id not in PROCESSING_IDS:
-            PROCESSING_IDS.add(m.pending_id)
-            to_process.append({"pending_id": m.pending_id, "product_id": m.product_id})
+    to_process = [
+        {"pending_id": m.pending_id, "product_id": m.product_id}
+        for m in request.matches
+        if _try_claim_processing(m.pending_id)
+    ]
             
     if not to_process:
         return {"status": "success", "message": "Todas las vinculaciones ya se están procesando"}
@@ -509,6 +589,7 @@ def run_discard_task(pending_id: int, reason: str):
 
             db.delete(item)
             db.commit()
+            _invalidate_link_memory()
     except IntegrityError as e:
         db.rollback()
         # Idempotent cleanup if it already exists in blacklist
@@ -523,12 +604,12 @@ def run_discard_task(pending_id: int, reason: str):
     except Exception as e:
         logger.error(f"Error inesperado en background discard_purgatory para item {pending_id}: {e}")
     finally:
-        PROCESSING_IDS.discard(pending_id)
+        _release_processing(pending_id)
 
 
 @router.post("/api/purgatory/discard", response_model=StatusMessageOutput, dependencies=[Depends(verify_api_key)])
 def discard_purgatory(request: PurgatoryDiscardRequest, background_tasks: BackgroundTasks):
-    if request.pending_id in PROCESSING_IDS:
+    if _is_processing(request.pending_id):
         return {"status": "success", "message": "El descarte ya se está procesando en segundo plano"}
 
     with SessionCloud() as db:
@@ -536,7 +617,8 @@ def discard_purgatory(request: PurgatoryDiscardRequest, background_tasks: Backgr
         if not item:
             return {"status": "success", "message": "Reliquia ya procesada o inexistente (Idempotencia)"}
 
-    PROCESSING_IDS.add(request.pending_id)
+    if not _try_claim_processing(request.pending_id):
+        return {"status": "success", "message": "El descarte ya se está procesando en segundo plano"}
     background_tasks.add_task(run_discard_task, request.pending_id, request.reason)
     return {"status": "success", "message": "Descarte programado en segundo plano"}
 
@@ -587,21 +669,18 @@ def run_discard_bulk_task(pending_ids: list[int], reason: str):
 
                 db.delete(item)
             db.commit()
+            _invalidate_link_memory()
     except Exception as e:
         logger.error(f"Error inesperado en background discard_purgatory_bulk: {e}")
     finally:
-        for pid in pending_ids:
-            PROCESSING_IDS.discard(pid)
+        _release_processing(*pending_ids)
 
 
 @router.post("/api/purgatory/discard/bulk", response_model=StatusMessageOutput, dependencies=[Depends(verify_api_key)])
 def discard_purgatory_bulk(request: PurgatoryBulkDiscardRequest, background_tasks: BackgroundTasks):
-    to_process = [pid for pid in request.pending_ids if pid not in PROCESSING_IDS]
+    to_process = [pid for pid in request.pending_ids if _try_claim_processing(pid)]
     if not to_process:
         return {"status": "success", "message": "Todos los descartes ya se están procesando"}
-
-    for pid in to_process:
-        PROCESSING_IDS.add(pid)
 
     background_tasks.add_task(run_discard_bulk_task, to_process, request.reason)
     return {"status": "success", "message": f"Descarte en lote de {len(to_process)} items programado en segundo plano"}
@@ -616,17 +695,15 @@ def unlink_offer(offer_id: int):
 
         product_name = offer.product.name if offer.product else "Reliquia Desconocida"
 
-        purgatory_item = PendingMatchModel(
+        _upsert_pending_match(
+            db,
+            url=offer.url,
             scraped_name=product_name,
-            ean=None,
             price=offer.price,
             currency=offer.currency,
-            url=offer.url,
             shop_name=offer.shop_name,
-            image_url=None,
             source_type=offer.source_type,
         )
-        db.add(purgatory_item)
 
         history = OfferHistoryModel(
             offer_url=offer.url,
@@ -641,6 +718,7 @@ def unlink_offer(offer_id: int):
         db.query(ProductAliasModel).filter(ProductAliasModel.source_url == offer.url).delete()
         db.delete(offer)
         db.commit()
+        _invalidate_link_memory()
         return {"status": "success", "message": f"Justicia del Arquitecto: '{product_name}' ha sido devuelto al Purgatorio"}
 
 
@@ -686,6 +764,7 @@ def relink_offer(offer_id: int, request: RelinkOfferRequest):
         db.add(history)
 
         db.commit()
+        _invalidate_link_memory()
         return {"status": "success", "message": f"Decreto del Arquitecto: Oferta reasignada a '{new_product.name}'"}
 
 
@@ -871,15 +950,16 @@ def run_match_vintage_task(pending_id: int, custom_name: Optional[str], product_
 
             db.delete(item)
             db.commit()
+            _invalidate_link_memory()
     except Exception as e:
         logger.error(f"Error en background match_purgatory_vintage para item {pending_id}: {e}")
     finally:
-        PROCESSING_IDS.discard(pending_id)
+        _release_processing(pending_id)
 
 
 @router.post("/api/purgatory/{pending_id}/vintage", response_model=StatusMessageOutput, dependencies=[Depends(verify_api_key)])
 def match_purgatory_vintage(pending_id: int, background_tasks: BackgroundTasks, request: Optional[VintageMatchRequest] = None):
-    if pending_id in PROCESSING_IDS:
+    if _is_processing(pending_id):
         return {"status": "success", "message": "La clasificación ya se está procesando en segundo plano"}
 
     with SessionCloud() as db:
@@ -892,7 +972,8 @@ def match_purgatory_vintage(pending_id: int, background_tasks: BackgroundTasks, 
     is_vintage = request.is_vintage if (request and request.is_vintage is not None) else True
     sub_category = request.sub_category if request else None
 
-    PROCESSING_IDS.add(pending_id)
+    if not _try_claim_processing(pending_id):
+        return {"status": "success", "message": "La clasificación ya se está procesando en segundo plano"}
     background_tasks.add_task(run_match_vintage_task, pending_id, custom_name, product_id, is_vintage, sub_category)
     return {"status": "success", "message": "Clasificación programada en segundo plano."}
 
@@ -907,20 +988,20 @@ def revert_vintage_offer(offer_id: int):
         product = offer.product
         try:
             # Recreate pending match
-            purgatory_item = PendingMatchModel(
+            _upsert_pending_match(
+                db,
+                url=offer.url,
                 scraped_name=product.name if product else "Reliquia Vintage Revertida",
                 ean=product.ean if product else None,
                 price=offer.price,
                 currency=offer.currency,
-                url=offer.url,
                 shop_name=offer.shop_name,
                 image_url=offer.image_url or (product.image_url if product else None),
                 source_type=offer.source_type,
                 condition=offer.condition or "Loose",
                 grading=offer.grading or 7.5,
-                is_vintage=True
+                is_vintage=True,
             )
-            db.add(purgatory_item)
 
             # Add History
             from src.domain.models import OfferHistoryModel
@@ -942,16 +1023,18 @@ def revert_vintage_offer(offer_id: int):
             
             # Check if there are any remaining vintage offers for this product. If not, clear its is_vintage flag.
             db.flush()
-            remaining_v_offers = db.query(OfferModel).filter(
-                OfferModel.product_id == product.id,
-                OfferModel.is_vintage == True
-            ).count()
-            if remaining_v_offers == 0:
-                product.is_vintage = False
-                from src.domain.models import VintageProductModel
-                db.query(VintageProductModel).filter(VintageProductModel.product_id == product.id).delete()
+            if product is not None:
+                remaining_v_offers = db.query(OfferModel).filter(
+                    OfferModel.product_id == product.id,
+                    OfferModel.is_vintage == True
+                ).count()
+                if remaining_v_offers == 0:
+                    product.is_vintage = False
+                    from src.domain.models import VintageProductModel
+                    db.query(VintageProductModel).filter(VintageProductModel.product_id == product.id).delete()
 
             db.commit()
+            _invalidate_link_memory()
             return {"status": "success", "message": "Oferta desclasificada de Vintage y devuelta al Purgatorio"}
 
         except Exception as e:
@@ -1011,6 +1094,7 @@ def run_match_miscellaneous_task(pending_id: int):
 
             db.delete(item)
             db.commit()
+            _invalidate_link_memory()
     except IntegrityError as e:
         db.rollback()
         # Deduplicate: if it already existed in miscellaneous, just delete the pending match to keep it clean
@@ -1025,12 +1109,12 @@ def run_match_miscellaneous_task(pending_id: int):
     except Exception as e:
         logger.error(f"Error en background match_purgatory_miscellaneous para item {pending_id}: {e}")
     finally:
-        PROCESSING_IDS.discard(pending_id)
+        _release_processing(pending_id)
 
 
 @router.post("/api/purgatory/{pending_id}/miscellaneous", response_model=StatusMessageOutput, dependencies=[Depends(verify_api_key)])
 def match_purgatory_miscellaneous(pending_id: int, background_tasks: BackgroundTasks):
-    if pending_id in PROCESSING_IDS:
+    if _is_processing(pending_id):
         return {"status": "success", "message": "La clasificación miscelánea ya se está procesando en segundo plano"}
 
     with SessionCloud() as db:
@@ -1038,7 +1122,8 @@ def match_purgatory_miscellaneous(pending_id: int, background_tasks: BackgroundT
         if not item:
             raise HTTPException(status_code=404, detail="Reliquia no encontrada en el Purgatorio")
 
-    PROCESSING_IDS.add(pending_id)
+    if not _try_claim_processing(pending_id):
+        return {"status": "success", "message": "La clasificación miscelánea ya se está procesando en segundo plano"}
     background_tasks.add_task(run_match_miscellaneous_task, pending_id)
     return {"status": "success", "message": "Clasificación miscelánea programada en segundo plano."}
 
@@ -1080,6 +1165,7 @@ def revert_miscellaneous_item(item_id: int):
 
             db.delete(misc_item)
             db.commit()
+            _invalidate_link_memory()
             return {"status": "success", "message": "Artículo devuelto al Purgatorio con éxito."}
 
         except Exception as e:
@@ -1110,6 +1196,7 @@ def delete_miscellaneous_item(item_id: int):
 
             db.delete(misc_item)
             db.commit()
+            _invalidate_link_memory()
             return {"status": "success", "message": "Artículo de Miscelánea eliminado con éxito."}
 
         except Exception as e:

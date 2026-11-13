@@ -1,4 +1,5 @@
 import asyncio
+import html
 import logging
 from datetime import datetime, timezone
 from typing import Optional, Dict, Any, List, Set
@@ -63,133 +64,137 @@ class VintedHunterService:
                 "status": "empty"
             }
 
-        # 2. Inyectar en base de datos / Purgatorio mediante ScrapingPipeline
-        pipeline = ScrapingPipeline([])
-        pipeline.update_database(offers, shop_names=["Vinted"])
-        
-        # 3. Detectar y evaluar gangas respecto al precio medio de mercado (P25)
-        new_bargains_to_alert = []
-        recurring_bargains_count = 0
-        matcher = SmartMatcher()
-        
-        with SessionCloud() as db:
-            # A) Precargar URLs descartadas o bloqueadas por el usuario
-            blackcluded_urls: Set[str] = {b.url for b in db.query(BlackcludedItemModel.url).all()}
-            rejected_matches = db.query(PendingMatchModel.url).filter(
-                (PendingMatchModel.validation_status == "REJECTED") | 
-                (PendingMatchModel.is_blocked == True)
-            ).all()
-            rejected_urls: Set[str] = {p[0] for p in rejected_matches}
-            discarded_urls: Set[str] = blackcluded_urls.union(rejected_urls)
+        # 2 & 3. Inyectar en BD / Purgatorio y detectar gangas sin bloquear el event loop
+        def _process_and_match_sync() -> tuple[List[Dict[str, Any]], int]:
+            pipeline = ScrapingPipeline([])
+            pipeline.update_database(offers, shop_names=["Vinted"], allow_deactivation=False)
 
-            # B) Precargar URLs ya notificadas hoy (día natural UTC actual)
-            today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-            today_alerted_urls: Set[str] = {
-                a[0] for a in db.query(HunterAlertLogModel.url).filter(
-                    HunterAlertLogModel.sent_at >= today_start
+            found_bargains: List[Dict[str, Any]] = []
+            recurring_count = 0
+            matcher = SmartMatcher()
+
+            with SessionCloud() as db:
+                # A) Precargar URLs descartadas o bloqueadas por el usuario
+                blackcluded_urls: Set[str] = {b.url for b in db.query(BlackcludedItemModel.url).all()}
+                rejected_matches = db.query(PendingMatchModel.url).filter(
+                    (PendingMatchModel.validation_status == "REJECTED") |
+                    (PendingMatchModel.is_blocked == True)
                 ).all()
-            }
+                rejected_urls: Set[str] = {p[0] for p in rejected_matches}
+                discarded_urls: Set[str] = blackcluded_urls.union(rejected_urls)
 
-            # C) Precargar reglas logísticas y catálogo activo
-            rules = db.query(LogisticRuleModel).all()
-            rules_map = {f"{r.shop_name}_{r.country_code}": r for r in rules}
-            products = db.query(ProductModel).filter(ProductModel.is_vintage == False).all()
-            
-            # Palabras clave de despiece, piezas sueltas, accesorios o roturas a descartar en el Centinela
-            DISCARD_PART_KEYWORDS = [
-                "despiece", "piezas", "para piezas", "incompleto", "incompleta",
-                "roto", "rota", "dañado", "dañada", "loose", "solo figura",
-                "cabeza", "brazo", "pierna", "arma", "armas", "accesorio", "accesorios",
-                "sin caja", "sin blister", "vintage 80", "años 80", "1981", "1982",
-                "1983", "1984", "1985", "1986", "1987", "mattel 198"
-            ]
+                # B) Precargar URLs ya notificadas hoy (día natural UTC actual)
+                today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+                today_alerted_urls: Set[str] = {
+                    a[0] for a in db.query(HunterAlertLogModel.url).filter(
+                        HunterAlertLogModel.sent_at >= today_start
+                    ).all()
+                }
 
-            for offer in offers:
-                if offer.price < 9.0:
-                    # Suelo protector: ofertas < 9€ son piezas sueltas, catálogos o armas
-                    continue
-                
-                title_lower = (offer.product_name or "").lower()
-                # Descartar ofertas con términos explícitos de despiece o piezas sueltas
-                if any(kw in title_lower for kw in DISCARD_PART_KEYWORDS):
-                    continue
+                # C) Precargar reglas logísticas y catálogo activo
+                rules = db.query(LogisticRuleModel).all()
+                rules_map = {f"{r.shop_name}_{r.country_code}": r for r in rules}
+                products = db.query(ProductModel).filter(ProductModel.is_vintage == False).all()
 
-                # Descartar si el usuario la ha bloqueado o rechazado previamente
-                if offer.url in discarded_urls:
-                    continue
-                    
-                # Calcular Landed Price optimizado (Base + 5€ envío + 2% seguro Vinted)
-                landed_price = LogisticsService.optimized_get_landing_price(
-                    price=offer.price,
-                    shop_name="Vinted",
-                    user_location="ES",
-                    rules_map=rules_map
-                )
-                
-                # Buscar matching contra el catálogo de figuras modernas (Origins)
-                best_match_product = None
-                best_score = 0.0
-                
-                for p in products:
-                    is_match, score, _ = matcher.match(
-                        product_name=p.name,
-                        scraped_title=offer.product_name,
-                        scraped_url=offer.url,
-                        db_ean=p.sku if hasattr(p, "sku") else p.ean,
-                        scraped_ean=offer.ean,
-                        sub_category=p.sub_category
+                # Palabras clave de despiece, piezas sueltas, accesorios o roturas a descartar en el Centinela
+                DISCARD_PART_KEYWORDS = [
+                    "despiece", "piezas", "para piezas", "incompleto", "incompleta",
+                    "roto", "rota", "dañado", "dañada", "loose", "solo figura",
+                    "cabeza", "brazo", "pierna", "arma", "armas", "accesorio", "accesorios",
+                    "sin caja", "sin blister", "vintage 80", "años 80", "1981", "1982",
+                    "1983", "1984", "1985", "1986", "1987", "mattel 198"
+                ]
+
+                for offer in offers:
+                    if offer.price < 9.0:
+                        # Suelo protector: ofertas < 9€ son piezas sueltas, catálogos o armas
+                        continue
+
+                    title_lower = (offer.product_name or "").lower()
+                    # Descartar ofertas con términos explícitos de despiece o piezas sueltas
+                    if any(kw in title_lower for kw in DISCARD_PART_KEYWORDS):
+                        continue
+
+                    # Descartar si el usuario la ha bloqueado o rechazado previamente
+                    if offer.url in discarded_urls:
+                        continue
+
+                    # Calcular Landed Price optimizado (Base + 5€ envío + 2% seguro Vinted)
+                    landed_price = LogisticsService.optimized_get_landing_price(
+                        price=offer.price,
+                        shop_name="Vinted",
+                        user_location="ES",
+                        rules_map=rules_map
                     )
-                    if is_match and score > best_score:
-                        best_score = score
-                        best_match_product = p
-                
-                if not best_match_product or best_score < 0.60:
-                    continue
 
-                # Exclusión explícita de vintage en el Centinela (el vintage se gestiona en el Daily Scan)
-                if getattr(best_match_product, "is_vintage", False):
-                    continue
-                
-                # Determinar el precio de referencia de mercado: prioridad al PVP original de salida (MSRP/Retail)
-                retail = best_match_product.retail_price or 0.0
-                p25 = best_match_product.p25_price or 0.0
-                benchmark = retail if retail > 0 else (p25 if p25 > 0 else 0.0)
-                
-                # Alertar si el coste total está dentro o por debajo del precio original de mercado (+10% margen)
-                if benchmark > 0 and landed_price <= (benchmark * 1.10):
-                    savings_pct = max(0.0, ((benchmark - landed_price) / benchmark) * 100)
-                    bargain_data = {
-                        "product_name": best_match_product.name,
-                        "item_title": offer.product_name,
-                        "price": offer.price,
-                        "landed_price": landed_price,
-                        "benchmark_price": benchmark,
-                        "savings_pct": savings_pct,
-                        "url": offer.url,
-                        "image_url": offer.image_url,
-                        "shop_name": "Vinted"
-                    }
+                    # Buscar matching contra el catálogo de figuras modernas (Origins)
+                    best_match_product = None
+                    best_score = 0.0
 
-                    # Comprobar si ya fue alertada hoy
-                    if offer.url in today_alerted_urls:
-                        recurring_bargains_count += 1
-                    else:
-                        from src.application.services.telegram_filter_service import should_send_product_push
-                        if should_send_product_push(db, best_match_product.id, chat_id=chat_id):
-                            new_bargains_to_alert.append(bargain_data)
+                    for p in products:
+                        is_match, score, _ = matcher.match(
+                            product_name=p.name,
+                            scraped_title=offer.product_name,
+                            scraped_url=offer.url,
+                            db_ean=p.sku if hasattr(p, "sku") else p.ean,
+                            scraped_ean=offer.ean,
+                            sub_category=p.sub_category
+                        )
+                        if is_match and score > best_score:
+                            best_score = score
+                            best_match_product = p
+
+                    if not best_match_product or best_score < 0.60:
+                        continue
+
+                    # Exclusión explícita de vintage en el Centinela (el vintage se gestiona en el Daily Scan)
+                    if getattr(best_match_product, "is_vintage", False):
+                        continue
+
+                    # Determinar el precio de referencia de mercado: prioridad al PVP original de salida (MSRP/Retail)
+                    retail = best_match_product.retail_price or 0.0
+                    p25 = best_match_product.p25_price or 0.0
+                    benchmark = retail if retail > 0 else (p25 if p25 > 0 else 0.0)
+
+                    # Alertar si el coste total está dentro o por debajo del precio original de mercado (+10% margen)
+                    if benchmark > 0 and landed_price <= (benchmark * 1.10):
+                        savings_pct = max(0.0, ((benchmark - landed_price) / benchmark) * 100)
+                        bargain_data = {
+                            "product_name": best_match_product.name,
+                            "item_title": offer.product_name,
+                            "price": offer.price,
+                            "landed_price": landed_price,
+                            "benchmark_price": benchmark,
+                            "savings_pct": savings_pct,
+                            "url": offer.url,
+                            "image_url": offer.image_url,
+                            "shop_name": "Vinted"
+                        }
+
+                        # Comprobar si ya fue alertada hoy
+                        if offer.url in today_alerted_urls:
+                            recurring_count += 1
                         else:
-                            recurring_bargains_count += 1
+                            from src.application.services.telegram_filter_service import should_send_product_push
+                            if should_send_product_push(db, best_match_product.id, chat_id=chat_id):
+                                found_bargains.append(bargain_data)
+                            else:
+                                recurring_count += 1
 
-                        # Registrar en la base de datos para deduplicación diaria
-                        db.add(HunterAlertLogModel(
-                            url=offer.url,
-                            product_name=best_match_product.name,
-                            price=offer.price,
-                            sent_at=datetime.now(timezone.utc)
-                        ))
-                        today_alerted_urls.add(offer.url)
+                            # Registrar en la base de datos para deduplicación diaria
+                            db.add(HunterAlertLogModel(
+                                url=offer.url,
+                                product_name=best_match_product.name,
+                                price=offer.price,
+                                sent_at=datetime.now(timezone.utc)
+                            ))
+                            today_alerted_urls.add(offer.url)
 
-            db.commit()
+                db.commit()
+
+            return found_bargains, recurring_count
+
+        new_bargains_to_alert, recurring_bargains_count = await asyncio.to_thread(_process_and_match_sync)
 
         logger.info(
             f"🏹 VintedHunter: {len(new_bargains_to_alert)} nuevas gangas para alertar "
@@ -219,7 +224,7 @@ class VintedHunterService:
         if notify_summary:
             if new_bargains_to_alert:
                 bargains_list = "\n".join([
-                    f"  ↳ <b>{b['product_name']}</b> a <b>{b['price']:.2f}€</b> (Landed: {b['landed_price']:.2f}€ vs Ref: {b['benchmark_price']:.2f}€ | 💰 <b>-{b['savings_pct']:.0f}%</b>) — <a href=\"{b['url']}\">Ver Oferta</a>"
+                    f"  ↳ <b>{html.escape(str(b['product_name']))}</b> a <b>{b['price']:.2f}€</b> (Landed: {b['landed_price']:.2f}€ vs Ref: {b['benchmark_price']:.2f}€ | 💰 <b>-{b['savings_pct']:.0f}%</b>) — <a href=\"{html.escape(str(b['url'] or ''), quote=True)}\">Ver Oferta</a>"
                     for b in new_bargains_to_alert[:5]
                 ])
                 opportunities_block = f"🔥 <b>¡Nuevas Oportunidades Detectadas! ({len(new_bargains_to_alert)})</b>\n{bargains_list}\n\n"
@@ -246,7 +251,7 @@ class VintedHunterService:
                 logger.error(f"Error enviando resumen de centinela a Telegram: {ex}")
 
         # 6. Guardar log forense de ejecución y minutos en la base de datos
-        try:
+        def _save_hunter_log_sync() -> None:
             with SessionCloud() as db_log:
                 db_log.add(ScraperExecutionLogModel(
                     spider_name="VintedHunter",
@@ -260,6 +265,9 @@ class VintedHunterService:
                     logs=f"Incursión '{query}': {total_scraped} analizadas, {len(new_bargains_to_alert)} gangas nuevas, {recurring_bargains_count} recurrentes."
                 ))
                 db_log.commit()
+
+        try:
+            await asyncio.to_thread(_save_hunter_log_sync)
         except Exception as log_ex:
             logger.error(f"Error guardando ScraperExecutionLogModel en VintedHunter: {log_ex}")
 

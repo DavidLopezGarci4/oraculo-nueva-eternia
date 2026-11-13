@@ -1,5 +1,6 @@
 import copy
 from datetime import datetime, timezone, timedelta
+import threading
 import time
 from typing import Dict, Any, List, Optional
 from loguru import logger
@@ -20,6 +21,7 @@ from src.application.services.logistics_service import LogisticsService
 _MARKET_INDEX_CACHE_TTL = 300.0  # 5 minutes
 # period_key -> (expires_at, base_payload_dict, product_fmv_map)
 _market_index_cache: dict[str, tuple[float, Dict[str, Any], Dict[int, float]]] = {}
+_market_index_cache_lock = threading.RLock()
 
 
 class MarketAnalyticsService:
@@ -31,10 +33,14 @@ class MarketAnalyticsService:
 
     @classmethod
     def invalidate_market_index_cache(cls) -> None:
-        _market_index_cache.clear()
+        with _market_index_cache_lock:
+            _market_index_cache.clear()
 
     @staticmethod
-    def _compute_portfolio_metrics(db, user_id: int, product_fmv_map: Dict[int, float]) -> Optional[Dict[str, Any]]:
+    def _compute_portfolio_metrics(db, user_id: Optional[int], product_fmv_map: Dict[int, float]) -> Optional[Dict[str, Any]]:
+        if user_id is None:
+            return None
+
         collection_items = db.query(CollectionItemModel).filter(
             CollectionItemModel.owner_id == user_id,
             CollectionItemModel.acquired == True
@@ -83,7 +89,7 @@ class MarketAnalyticsService:
         }
 
     @classmethod
-    def get_market_index(cls, period: str = "3M", user_id: int = 2, db_session=None) -> Dict[str, Any]:
+    def get_market_index(cls, period: str = "3M", user_id: Optional[int] = 2, db_session=None) -> Dict[str, Any]:
         """
         Calcula el Índice Bursátil MOTU (EMI) bajo estándar financiero cuantitativo:
         - Horizonte dinámico (1M, 3M, 6M, 1A, ALL) con ventana y half-life EMA adaptados al periodo.
@@ -115,7 +121,8 @@ class MarketAnalyticsService:
         ctx = nullcontext(db_session) if db_session is not None else SessionCloud()
         with ctx as db:
             if use_cache:
-                cached_entry = _market_index_cache.get(period_key)
+                with _market_index_cache_lock:
+                    cached_entry = _market_index_cache.get(period_key)
                 if cached_entry is not None and cached_entry[0] > mono_now:
                     base_payload = copy.deepcopy(cached_entry[1])
                     fmv_map = cached_entry[2]
@@ -493,11 +500,12 @@ class MarketAnalyticsService:
             }
 
             if use_cache:
-                _market_index_cache[period_key] = (
-                    mono_now + _MARKET_INDEX_CACHE_TTL,
-                    copy.deepcopy(base_payload),
-                    dict(product_fmv_map),
-                )
+                with _market_index_cache_lock:
+                    _market_index_cache[period_key] = (
+                        mono_now + _MARKET_INDEX_CACHE_TTL,
+                        copy.deepcopy(base_payload),
+                        dict(product_fmv_map),
+                    )
 
             base_payload["portfolio_metrics"] = cls._compute_portfolio_metrics(db, user_id, product_fmv_map)
             return base_payload

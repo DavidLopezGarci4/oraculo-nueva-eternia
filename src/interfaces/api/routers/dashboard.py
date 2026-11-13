@@ -1,8 +1,8 @@
 import json
 from datetime import datetime, timedelta, timezone
-from typing import List
+from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from loguru import logger
 from sqlalchemy import and_, desc, func
 from sqlalchemy.orm import contains_eager
@@ -19,7 +19,12 @@ from src.domain.models import (
     UserModel,
 )
 from src.infrastructure.database_cloud import SessionCloud
-from src.interfaces.api.deps import verify_api_key, verify_device
+from src.interfaces.api.deps import (
+    get_optional_current_user,
+    resolve_optional_scoped_user_id,
+    verify_api_key,
+    verify_device,
+)
 from src.interfaces.api.schemas import (
     DashboardStatsOutput,
     HallOfFameOutput,
@@ -33,14 +38,20 @@ router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 
 
 @router.get("/stats", response_model=DashboardStatsOutput, dependencies=[Depends(verify_device)])
-def get_dashboard_stats(user_id: int = 1):
+def get_dashboard_stats(
+    user_id: int = 1,
+    current_user: Optional[UserModel] = Depends(get_optional_current_user),
+    x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
+):
+    scoped_uid = resolve_optional_scoped_user_id(user_id, current_user, x_api_key)
     try:
         with SessionCloud() as db:
             # Query 1: User location
             user_location = "ES"
-            user_row = db.query(UserModel.location).filter(UserModel.id == user_id).first()
-            if user_row and user_row[0]:
-                user_location = user_row[0]
+            if scoped_uid is not None:
+                user_row = db.query(UserModel.location).filter(UserModel.id == scoped_uid).first()
+                if user_row and user_row[0]:
+                    user_location = user_row[0]
 
             # Query 2: Lightweight projection of all products for counts and wave completion
             all_products = db.query(
@@ -59,13 +70,15 @@ def get_dashboard_stats(user_id: int = 1):
                     total_products += 1
 
             # Query 3: All collection items for user (owned & wish, modern & vintage) with eager ProductModel
-            all_coll_items = (
-                db.query(CollectionItemModel)
-                .join(ProductModel)
-                .options(contains_eager(CollectionItemModel.product))
-                .filter(CollectionItemModel.owner_id == user_id)
-                .all()
-            )
+            all_coll_items: list[CollectionItemModel] = []
+            if scoped_uid is not None:
+                all_coll_items = (
+                    db.query(CollectionItemModel)
+                    .join(ProductModel)
+                    .options(contains_eager(CollectionItemModel.product))
+                    .filter(CollectionItemModel.owner_id == scoped_uid)
+                    .all()
+                )
 
             owned_count = 0
             owned_count_vintage = 0
@@ -245,13 +258,24 @@ def get_dashboard_stats(user_id: int = 1):
 
 
 @router.get("/hall-of-fame", response_model=HallOfFameOutput, dependencies=[Depends(verify_device)])
-def get_dashboard_hall_of_fame(user_id: int = 1):
+def get_dashboard_hall_of_fame(
+    user_id: int = 1,
+    current_user: Optional[UserModel] = Depends(get_optional_current_user),
+    x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
+):
+    scoped_uid = resolve_optional_scoped_user_id(user_id, current_user, x_api_key)
+    if scoped_uid is None:
+        return {
+            "origins": {"top_value": [], "top_roi": []},
+            "vintage": {"top_value": [], "top_roi": []}
+        }
+
     with SessionCloud() as db:
         items = (
             db.query(CollectionItemModel)
             .join(ProductModel)
             .options(contains_eager(CollectionItemModel.product))
-            .filter(CollectionItemModel.acquired == True, CollectionItemModel.owner_id == user_id)
+            .filter(CollectionItemModel.acquired == True, CollectionItemModel.owner_id == scoped_uid)
             .all()
         )
 
@@ -270,7 +294,7 @@ def get_dashboard_hall_of_fame(user_id: int = 1):
         valuation_service.preload_offers_for_products(product_ids)
 
         user_location = "ES"
-        user = db.query(UserModel).filter(UserModel.id == user_id).first()
+        user = db.query(UserModel).filter(UserModel.id == scoped_uid).first()
         if user:
             user_location = user.location
 
@@ -344,15 +368,25 @@ def get_dashboard_hall_of_fame(user_id: int = 1):
 
 
 @router.get("/top-deals", response_model=List[TopDealOutput], dependencies=[Depends(verify_device)])
-def get_top_deals(user_id: int = 2, mode: str = Query("landed", description="'landed' or 'base'")):
+def get_top_deals(
+    user_id: int = 2,
+    mode: str = Query("landed", description="'landed' or 'base'"),
+    current_user: Optional[UserModel] = Depends(get_optional_current_user),
+    x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
+):
+    scoped_uid = resolve_optional_scoped_user_id(user_id, current_user, x_api_key)
     with SessionCloud() as db:
-        owned_ids = [
-            p[0]
-            for p in db.query(CollectionItemModel.product_id).filter(
-                CollectionItemModel.owner_id == user_id,
-                CollectionItemModel.acquired == True,
-            ).all()
-        ]
+        owned_ids = (
+            [
+                p[0]
+                for p in db.query(CollectionItemModel.product_id).filter(
+                    CollectionItemModel.owner_id == scoped_uid,
+                    CollectionItemModel.acquired == True,
+                ).all()
+            ]
+            if scoped_uid is not None
+            else []
+        )
 
         freshness_threshold = datetime.now(timezone.utc) - timedelta(hours=72)
 
@@ -360,9 +394,10 @@ def get_top_deals(user_id: int = 2, mode: str = Query("landed", description="'la
         rules_map = LogisticsService.get_cached_rules_map(db)
 
         user_location = "ES"
-        user = db.query(UserModel).filter(UserModel.id == user_id).first()
-        if user:
-            user_location = user.location
+        if scoped_uid is not None:
+            user = db.query(UserModel).filter(UserModel.id == scoped_uid).first()
+            if user:
+                user_location = user.location
 
         # Consultar ofertas candidatas activas sin filtro SQL prematuro de MIN(price)
         query = (

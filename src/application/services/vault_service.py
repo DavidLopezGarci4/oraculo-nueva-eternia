@@ -4,7 +4,7 @@ import sqlite3
 import json
 from datetime import datetime
 from typing import List, Optional
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from src.infrastructure.database_cloud import SessionCloud
 from src.domain.models import ProductModel, CollectionItemModel, PriceHistoryModel, OfferModel, UserModel
 from src.core.logger import logger
@@ -46,11 +46,18 @@ class VaultService:
             cursor.execute("INSERT INTO metadata (key, value) VALUES (?, ?)", ("generated_at", datetime.now().isoformat()))
             
             # 3. Exportar Productos en Colección
-            col_items = db_session.query(CollectionItemModel).filter(CollectionItemModel.owner_id == user_id).all()
+            col_items = (
+                db_session.query(CollectionItemModel)
+                .options(joinedload(CollectionItemModel.product))
+                .filter(CollectionItemModel.owner_id == user_id)
+                .all()
+            )
             for item in col_items:
                 p = item.product
+                if not p:
+                    continue
                 cursor.execute(
-                    "INSERT INTO products (id, name, ean, category, master_value) VALUES (?, ?, ?, ?, ?)",
+                    "INSERT OR IGNORE INTO products (id, name, ean, category, master_value) VALUES (?, ?, ?, ?, ?)",
                     (p.id, p.name, p.ean, p.category, p.avg_market_price)
                 )
                 cursor.execute(

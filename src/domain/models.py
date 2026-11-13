@@ -88,6 +88,8 @@ class OfferModel(Base):
     __tablename__ = "offers"
     __table_args__ = (
         Index("ix_offers_prod_avail_source", "product_id", "is_available", "source_type"),
+        Index("ix_offers_avail_source_last_seen", "is_available", "source_type", "last_seen"),
+        Index("ix_offers_shop_avail_vintage", "shop_name", "is_available", "is_vintage"),
     )
     
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
@@ -176,6 +178,9 @@ class PendingMatchModel(Base):
     These sit in 'Purgatory' until the user assigns them.
     """
     __tablename__ = "pending_matches"
+    __table_args__ = (
+        Index("ix_pending_matches_status_found_at", "validation_status", "found_at"),
+    )
     
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     

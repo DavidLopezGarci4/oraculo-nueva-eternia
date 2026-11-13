@@ -84,12 +84,17 @@ def submit_results(job_id: int, offers: list, blocked: bool = False, error_messa
 
 
 async def process_job(job: dict) -> None:
+    from src.core.vintage_utils import check_is_vintage
     from src.infrastructure.scrapers.wallapop_manual_scraper import WallapopManualScraper
     from src.infrastructure.scrapers.smythstoys_scraper import SmythsToysScraper
 
     query = job.get("query") or "auto"
     query_lower = query.strip().lower()
     job_id = job["id"]
+    if query_lower != "auto" and check_is_vintage(query):
+        print(f"🚫 Trabajo #{job_id} rechazado por política AGENTS.md (búsqueda vintage bloqueada): '{query}'")
+        submit_results(job_id, [], blocked=False, error_message="Búsqueda vintage deshabilitada por política AGENTS.md")
+        return
     print(f"🔎 Procesando trabajo #{job_id}: '{query}'...")
 
     all_offers = []

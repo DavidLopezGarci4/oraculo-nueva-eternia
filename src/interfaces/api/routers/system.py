@@ -1,3 +1,4 @@
+import html
 import sys
 
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
@@ -11,7 +12,7 @@ router = APIRouter(tags=["system"])
 
 
 @router.get("/api/system/audit", dependencies=[Depends(verify_api_key)])
-async def system_audit():
+def system_audit():
     import sqlalchemy
 
     from src.core.config import settings
@@ -23,6 +24,9 @@ async def system_audit():
         UserModel,
     )
     from src.infrastructure.database_cloud import cloud_url, engine_cloud
+
+    from src.core.logger import redact_sensitive_text
+    from sqlalchemy.engine import make_url
 
     db_type = "Postgres/Supabase" if "postgresql" in cloud_url else "SQLite/Local"
 
@@ -61,6 +65,11 @@ async def system_audit():
             except Exception:
                 pass
 
+            try:
+                safe_db_url = make_url(settings.DATABASE_URL).render_as_string(hide_password=True)
+            except Exception:
+                safe_db_url = redact_sensitive_text(settings.DATABASE_URL)
+
             return {
                 "status": "ONLINE",
                 "database_engine": db_type,
@@ -87,7 +96,7 @@ async def system_audit():
                 "environment": {
                     "SUPABASE_DATABASE_URL_SET": settings.SUPABASE_DATABASE_URL is not None
                     and len(settings.SUPABASE_DATABASE_URL) > 10,
-                    "DATABASE_URL": settings.DATABASE_URL,
+                    "DATABASE_URL": safe_db_url,
                     "PYTHON_VERSION": sys.version,
                     "SMTP_CONFIG": {
                         "HOST": settings.SMTP_HOST,
@@ -100,11 +109,12 @@ async def system_audit():
                 },
             }
         except Exception as e:
-            logger.error(f"AUDIT FAILURE: {e}")
+            safe_err = redact_sensitive_text(str(e))
+            logger.error(f"AUDIT FAILURE: {safe_err}")
             return {
                 "status": "ERROR",
                 "database_engine": db_type,
-                "error_detail": str(e),
+                "error_detail": safe_err,
                 "hint": "Check if DB credentials are correct or if the DB server is reachable.",
             }
 
@@ -113,7 +123,7 @@ from src.interfaces.api.deps import get_current_user
 from src.domain.models import SystemConfigModel, UserModel
 
 @router.get("/api/system/sword-configs")
-async def get_sword_configs(current_user: UserModel = Depends(get_current_user)):
+def get_sword_configs(current_user: UserModel = Depends(get_current_user)):
     with SessionCloud() as db:
         cfg = db.query(SystemConfigModel).filter(SystemConfigModel.key == "sword_configs").first()
         if cfg:
@@ -124,7 +134,7 @@ async def get_sword_configs(current_user: UserModel = Depends(get_current_user))
         return {}
 
 @router.post("/api/system/sword-configs", response_model=StatusMessageOutput)
-async def save_sword_configs(configs: dict, current_user: UserModel = Depends(get_current_user)):
+def save_sword_configs(configs: dict, current_user: UserModel = Depends(get_current_user)):
     if not is_admin(current_user):
         raise HTTPException(status_code=403, detail="No autorizado para modificar la configuración de espadas.")
         
@@ -138,7 +148,7 @@ async def save_sword_configs(configs: dict, current_user: UserModel = Depends(ge
     return {"status": "success", "message": "Configuración de espadas guardada exitosamente."}
 
 @router.get("/api/system/tcg-layouts")
-async def get_tcg_layouts(current_user: UserModel = Depends(get_current_user)):
+def get_tcg_layouts(current_user: UserModel = Depends(get_current_user)):
     with SessionCloud() as db:
         cfg = db.query(SystemConfigModel).filter(SystemConfigModel.key == "tcg_layouts").first()
         if cfg:
@@ -149,7 +159,7 @@ async def get_tcg_layouts(current_user: UserModel = Depends(get_current_user)):
         return {}
 
 @router.post("/api/system/tcg-layouts", response_model=StatusMessageOutput)
-async def save_tcg_layouts(layouts: dict, current_user: UserModel = Depends(get_current_user)):
+def save_tcg_layouts(layouts: dict, current_user: UserModel = Depends(get_current_user)):
     if not is_admin(current_user):
         raise HTTPException(status_code=403, detail="No autorizado para modificar la configuración de cartas TCG.")
         
@@ -164,7 +174,7 @@ async def save_tcg_layouts(layouts: dict, current_user: UserModel = Depends(get_
 
 
 @router.get("/api/system/telegram-config")
-async def get_telegram_config(current_user: UserModel = Depends(get_current_user)):
+def get_telegram_config(current_user: UserModel = Depends(get_current_user)):
     from src.application.services.telegram_filter_service import is_telegram_only_missing_enabled
     with SessionCloud() as db:
         only_missing = is_telegram_only_missing_enabled(db)
@@ -172,7 +182,7 @@ async def get_telegram_config(current_user: UserModel = Depends(get_current_user
 
 
 @router.post("/api/system/telegram-config", response_model=StatusMessageOutput)
-async def update_telegram_config(payload: dict, current_user: UserModel = Depends(get_current_user)):
+def update_telegram_config(payload: dict, current_user: UserModel = Depends(get_current_user)):
     if not is_admin(current_user):
         raise HTTPException(status_code=403, detail="Se requieren permisos de administrador")
     from src.application.services.telegram_filter_service import set_telegram_only_missing_enabled
@@ -188,9 +198,10 @@ async def update_telegram_config(payload: dict, current_user: UserModel = Depend
     }
 
 
-async def run_maintenance_task():
+def run_maintenance_task():
     from src.application.services.maintenance_service import MaintenanceService
     from src.core.security import SecurityShield
+    from src.infrastructure.scrapers.pipeline import _dispatch_async_coro
     
     logger.info("🧹 [TASK] Iniciando purificación FinOps de base de datos en segundo plano...")
     try:
@@ -208,15 +219,18 @@ async def run_maintenance_task():
                 f"• Registros de lista negra purgados: <b>{stats.get('blacklist_purged', 0)}</b>\n\n"
                 "✨ <i>¡Base de datos de Supabase saneada con éxito!</i>"
             )
-            await SecurityShield.send_telegram_alert(msg)
+            _dispatch_async_coro(SecurityShield.send_telegram_alert(msg))
             logger.info("🧹 [TASK] Purificación en segundo plano completada y alerta de Telegram enviada.")
     except Exception as e:
-        err_msg = f"❌ <b>[FinOps] Fallo en la Purificación</b>\n\nError: <code>{str(e)}</code>"
-        await SecurityShield.send_telegram_alert(err_msg)
+        err_msg = f"❌ <b>[FinOps] Fallo en la Purificación</b>\n\nError: <code>{html.escape(str(e))}</code>"
+        try:
+            _dispatch_async_coro(SecurityShield.send_telegram_alert(err_msg))
+        except Exception:
+            pass
         logger.error(f"❌ Error en la tarea de mantenimiento en segundo plano: {e}")
 
 @router.post("/api/system/maintenance", response_model=StatusMessageOutput)
-async def run_maintenance(
+def run_maintenance(
     background_tasks: BackgroundTasks,
     current_user: UserModel = Depends(get_current_user)
 ):

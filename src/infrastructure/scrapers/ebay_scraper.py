@@ -7,6 +7,7 @@ import random
 from typing import List, Optional
 from datetime import datetime, timezone
 from playwright.async_api import Page, BrowserContext
+from src.core.vintage_utils import check_is_vintage
 from src.infrastructure.scrapers.base import BaseScraper, ScrapedOffer
 
 # Force UTF-8 for console output to handle emojis safely
@@ -43,18 +44,32 @@ class EbayScraper(BaseScraper):
                 self._log(f"⚠️ Error en warm-up de eBay: {e}", level="warning")
 
     async def search(self, query: str) -> List[ScrapedOffer]:
+        if query != "auto" and check_is_vintage(query):
+            self._log(f"🚫 Ebay.es: Búsqueda vintage bloqueada por política AGENTS.md ({query}).", level="warning")
+            return []
+
         if query == "auto":
-            # Estrategia de 2 Consultas de Alta Cobertura (Inglés + Español)
-            # Evita timeouts de 10 min y minimiza el riesgo de bloqueos por Cloudflare
+            # AGENTS.md Regla 2: consultas enfocadas estrictamente a Masters of the Universe Origins
             queries_config = [
-                "masters of the universe",
-                "masters del universo"
+                "masters of the universe origins",
+                "masters del universo origins"
             ]
         else:
             queries_config = [query]
 
         offers: List[ScrapedOffer] = []
         await self._init_session()
+        try:
+            return await self._search_with_active_session(queries_config, offers)
+        finally:
+            if self._session is not None:
+                try:
+                    await self._session.close()
+                except Exception:
+                    pass
+                self._session = None
+
+    async def _search_with_active_session(self, queries_config: List[str], offers: List[ScrapedOffer]) -> List[ScrapedOffer]:
         
         playwright_queries = []
         
@@ -172,9 +187,8 @@ class EbayScraper(BaseScraper):
                 
                 if "origins" in query_lower and "origins" not in title_lower:
                     continue
-                if "vintage" in query_lower:
-                    is_v = "vintage" in title_lower or any(yr in title_lower for yr in ["1980", "1981", "1982", "1983", "1984", "1985", "1986", "1987", "1988", "1989"])
-                    if not is_v: continue
+                if check_is_vintage(title):
+                    continue
 
                 # Imagen
                 img_el = item.select_one(".s-item__image-img, .s-card__image-img, img")
@@ -283,18 +297,16 @@ class EbayScraper(BaseScraper):
                     title = title_raw.lower()
                     full_text = item.get_text(separator=" ", strip=True).lower()
                     
-                    # Filtro Inteligente Contextual (Phase 43)
+                    # Filtro Inteligente Contextual (Phase 43) & Bloqueo Vintage (AGENTS.md)
                     query_lower = search_query.lower()
                     if "origins" in query_lower and "origins" not in title:
                         continue
-                    if "vintage" in query_lower:
-                        is_v = "vintage" in title or any(yr in title for yr in ["1980", "1981", "1982", "1983", "1984", "1985", "1986", "1987", "1988", "1989"])
-                        if not is_v: continue
+                    if check_is_vintage(title_raw):
+                        continue
                     
-                    # Filtro de seguridad para evitar "usados" en búsquedas no vintage
-                    if "vintage" not in query_lower:
-                        is_used = any(kw in full_text for kw in ["usado", "used", "segunda mano"])
-                        if is_used and "nuevo" not in full_text: continue
+                    # Filtro de seguridad para evitar "usados"
+                    is_used = any(kw in full_text for kw in ["usado", "used", "segunda mano"])
+                    if is_used and "nuevo" not in full_text: continue
 
                     price_el = item.select_one(".s-item__price, .s-card__price")
                     price = self._normalize_price(price_el.get_text()) if price_el else 0.0

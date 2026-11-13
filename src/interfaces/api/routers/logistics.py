@@ -11,7 +11,7 @@ router = APIRouter(tags=["logistics"])
 
 
 @router.post("/api/logistics/calculate-cart", response_model=CartCalculationOutput)
-async def api_calculate_cart(request: CartRequest, current_user: UserModel = Depends(get_current_user)):
+def api_calculate_cart(request: CartRequest, current_user: UserModel = Depends(get_current_user)):
     try:
         # Fase AAA-1: exige sesión válida. La ubicación se resuelve sobre el
         # usuario autenticado (o el user_id solicitado si es admin), nunca de

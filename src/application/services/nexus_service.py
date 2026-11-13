@@ -13,25 +13,37 @@ from src.core.config import settings
 logger = logging.getLogger("NexusService")
 
 class TelemetryHandler(logging.Handler):
-    """Logging handler that pipes logs to the ScraperExecutionLogModel in DB."""
-    def __init__(self, log_id: int):
+    """Bufferiza líneas de telemetría en memoria para escribir en lotes sin bloquear la BD."""
+    def __init__(self, log_id: int, flush_every: int = 15):
         super().__init__()
         self.log_id = log_id
+        self.flush_every = flush_every
+        self._buffer: list[str] = []
         self.setFormatter(logging.Formatter("%(message)s"))
 
     def emit(self, record):
         try:
             msg = self.format(record)
             ts = datetime.now(ZoneInfo("Europe/Madrid")).strftime("%H:%M:%S")
-            line = f"[{ts}] {msg}"
-            
+            self._buffer.append(f"[{ts}] {msg}")
+            if len(self._buffer) >= self.flush_every:
+                self.flush()
+        except Exception:
+            pass  # Avoid infinite loops or crashing the app due to logging errors
+
+    def flush(self):
+        if not self._buffer:
+            return
+        chunk = "\n" + "\n".join(self._buffer)
+        self._buffer.clear()
+        try:
             with SessionCloud() as db:
                 db.query(ScraperExecutionLogModel).filter(ScraperExecutionLogModel.id == self.log_id).update({
-                    "logs": ScraperExecutionLogModel.logs + "\n" + line
+                    "logs": ScraperExecutionLogModel.logs + chunk
                 })
                 db.commit()
         except Exception:
-            pass # Avoid infinite loops or crashing the app due to logging errors
+            pass
 
 class NexusService:
     @staticmethod
@@ -51,15 +63,52 @@ class NexusService:
             # FORCE BACKUP before nuclear wipe
             GuardianService.backup_stock(db)
 
-        # Order matters for foreign keys: Price History references Offers
-        db.query(PriceHistoryModel).delete()
-        db.query(OfferModel).delete()
-        
+        from src.domain.models import (
+            PriceAlertModel,
+            ProductLoreModel,
+            ProductMonthlyStatsModel,
+            VintageProductModel,
+        )
+
+        # Order matters for foreign keys: scope STRICTLY to modern (is_vintage == False) products
+        modern_ids = [
+            row[0] for row in db.query(ProductModel.id).filter(ProductModel.is_vintage == False).all()
+        ]
+        if not modern_ids:
+            logger.info("ℹ️ PURGE: No existing modern products found.")
+            return
+
+        offer_ids = [
+            row[0] for row in db.query(OfferModel.id).filter(OfferModel.product_id.in_(modern_ids)).all()
+        ]
+        if offer_ids:
+            db.query(PriceHistoryModel).filter(PriceHistoryModel.offer_id.in_(offer_ids)).delete(synchronize_session=False)
+
+        db.query(OfferModel).filter(OfferModel.product_id.in_(modern_ids)).delete(synchronize_session=False)
+        db.query(ProductAliasModel).filter(ProductAliasModel.product_id.in_(modern_ids)).delete(synchronize_session=False)
+
         if not safe_mode:
-            db.query(CollectionItemModel).delete()
-            
-        db.query(ProductAliasModel).delete()
-        db.query(ProductModel).delete()
+            purge_ids = modern_ids
+            db.query(CollectionItemModel).filter(CollectionItemModel.product_id.in_(purge_ids)).delete(synchronize_session=False)
+        else:
+            preserved_pids = {
+                row[0]
+                for row in db.query(CollectionItemModel.product_id)
+                .filter(CollectionItemModel.product_id.in_(modern_ids))
+                .distinct()
+                .all()
+            }
+            purge_ids = [pid for pid in modern_ids if pid not in preserved_pids]
+
+        if purge_ids:
+            for dep_model in (
+                PriceAlertModel,
+                ProductLoreModel,
+                ProductMonthlyStatsModel,
+            ):
+                db.query(dep_model).filter(dep_model.product_id.in_(purge_ids)).delete(synchronize_session=False)
+
+            db.query(ProductModel).filter(ProductModel.id.in_(purge_ids)).delete(synchronize_session=False)
         db.commit()
         logger.info(f"☢️ PURGE: Database is now clean (SafeMode={safe_mode}).")
 
@@ -72,47 +121,53 @@ class NexusService:
         # (universal_migrator runtime invocation removed to avoid shadow DDL & RLS drift)
         
         # Initialize Telemetry entry (Now safe because migrate() ran)
-        with SessionCloud() as db:
-            status = db.query(ScraperStatusModel).filter(ScraperStatusModel.spider_name == "Nexus").first()
-            if not status:
-                status = ScraperStatusModel(spider_name="Nexus", status="stopped")
-                db.add(status)
-            
-            status.status = "running"
-            status.start_time = datetime.now(timezone.utc).replace(tzinfo=None)
-            
-            exec_log = ScraperExecutionLogModel(
-                spider_name="Nexus",
-                status="running",
-                start_time=status.start_time,
-                trigger_type="manual",
-                logs=f"[{datetime.now(ZoneInfo('Europe/Madrid')).strftime('%H:%M:%S')}] 🚀 Iniciando Sincronización del Nexo Maestro...\n"
-            )
-            db.add(exec_log)
-            db.commit()
-            log_id = exec_log.id
+        def _init_telemetry_sync() -> int:
+            with SessionCloud() as db:
+                status = db.query(ScraperStatusModel).filter(ScraperStatusModel.spider_name == "Nexus").first()
+                if not status:
+                    status = ScraperStatusModel(spider_name="Nexus", status="stopped")
+                    db.add(status)
 
-        # Attach telemetry handler to capture all INFO logs from sub-modules
+                status.status = "running"
+                status.start_time = datetime.now(timezone.utc).replace(tzinfo=None)
+
+                exec_log = ScraperExecutionLogModel(
+                    spider_name="Nexus",
+                    status="running",
+                    start_time=status.start_time,
+                    trigger_type="manual",
+                    logs=f"[{datetime.now(ZoneInfo('Europe/Madrid')).strftime('%H:%M:%S')}] 🚀 Iniciando Sincronización del Nexo Maestro...\n"
+                )
+                db.add(exec_log)
+                db.commit()
+                return exec_log.id
+
+        log_id = await asyncio.to_thread(_init_telemetry_sync)
+
+        # Attach telemetry handler only to module logger (never root logger)
         telemetry_handler = TelemetryHandler(log_id)
         telemetry_handler.setLevel(logging.INFO)
-        root_logger = logging.getLogger()
-        root_logger.addHandler(telemetry_handler)
+        logger.addHandler(telemetry_handler)
         
         logger.info("📡 Inicio: Preparando motores de migración...")
         
         try:
-            loop = asyncio.get_event_loop()
-            
+            loop = asyncio.get_running_loop()
+
             if purge_before_sync:
                 logger.warning("📡 Paso 0.5: Purgando catálogo existente por petición del usuario...")
-                with SessionCloud() as db_purge:
-                    # Guardian Safety is now default here
-                    NexusService.purge_catalog(db_purge, safe_mode=True)
-            
+                def _purge_sync() -> None:
+                    with SessionCloud() as db_purge:
+                        # Guardian Safety is now default here
+                        NexusService.purge_catalog(db_purge, safe_mode=True)
+                await asyncio.to_thread(_purge_sync)
+
             # 🛡️ ALWAYS backup stock before any sync, just in case
             from src.application.services.guardian_service import GuardianService
-            with SessionCloud() as db_guard:
-                GuardianService.backup_stock(db_guard)
+            def _backup_sync() -> None:
+                with SessionCloud() as db_guard:
+                    GuardianService.backup_stock(db_guard)
+            await asyncio.to_thread(_backup_sync)
 
             # 1. Scrape Web to Excel
             logger.info("📡 Paso 1: Capturando datos de ActionFigure411 (Raspado Web)...")
@@ -171,35 +226,40 @@ class NexusService:
             logger.info("✅ Nexus: Catálogo e imágenes sincronizados con éxito.")
             
             # Finalize Status
-            with SessionCloud() as db:
-                db.query(ScraperStatusModel).filter(ScraperStatusModel.spider_name == "Nexus").update({
-                    "status": "completed",
-                    "end_time": datetime.now(timezone.utc).replace(tzinfo=None)
-                })
-                db.query(ScraperExecutionLogModel).filter(ScraperExecutionLogModel.id == log_id).update({
-                    "status": "success",
-                    "end_time": datetime.now(timezone.utc).replace(tzinfo=None)
-                })
-                db.commit()
-                
+            def _finalize_sync() -> None:
+                with SessionCloud() as db:
+                    db.query(ScraperStatusModel).filter(ScraperStatusModel.spider_name == "Nexus").update({
+                        "status": "completed",
+                        "end_time": datetime.now(timezone.utc).replace(tzinfo=None)
+                    })
+                    db.query(ScraperExecutionLogModel).filter(ScraperExecutionLogModel.id == log_id).update({
+                        "status": "success",
+                        "end_time": datetime.now(timezone.utc).replace(tzinfo=None)
+                    })
+                    db.commit()
+
+            await asyncio.to_thread(_finalize_sync)
             return True
-            
+
         except Exception as e:
             error_detail = f"{str(e)}"
             logger.error(f"❌ Error en Nexus: {error_detail}")
-            
-            with SessionCloud() as db:
-                db.query(ScraperStatusModel).filter(ScraperStatusModel.spider_name == "Nexus").update({
-                    "status": "error",
-                    "end_time": datetime.now(timezone.utc).replace(tzinfo=None)
-                })
-                db.query(ScraperExecutionLogModel).filter(ScraperExecutionLogModel.id == log_id).update({
-                    "status": "error",
-                    "error_message": error_detail,
-                    "end_time": datetime.now(timezone.utc).replace(tzinfo=None)
-                })
-                db.commit()
+
+            def _record_error_sync() -> None:
+                with SessionCloud() as db:
+                    db.query(ScraperStatusModel).filter(ScraperStatusModel.spider_name == "Nexus").update({
+                        "status": "error",
+                        "end_time": datetime.now(timezone.utc).replace(tzinfo=None)
+                    })
+                    db.query(ScraperExecutionLogModel).filter(ScraperExecutionLogModel.id == log_id).update({
+                        "status": "error",
+                        "error_message": error_detail,
+                        "end_time": datetime.now(timezone.utc).replace(tzinfo=None)
+                    })
+                    db.commit()
+
+            await asyncio.to_thread(_record_error_sync)
             return False
         finally:
-            # Always remove handler to avoid leaking memory/handlers
-            root_logger.removeHandler(telemetry_handler)
+            await asyncio.to_thread(telemetry_handler.flush)
+            logger.removeHandler(telemetry_handler)

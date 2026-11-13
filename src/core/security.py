@@ -1,6 +1,7 @@
 import asyncio
 import hashlib
 import hmac
+import html
 import os
 import threading
 import time
@@ -17,8 +18,20 @@ from src.domain.models import AuthorizedDeviceModel
 
 _DEVICE_CACHE_TTL = 300.0  # 5 minutes
 _DEVICE_LAST_ACCESS_THROTTLE = 900.0  # 15 minutes
+_MAX_DEVICE_CACHE = 1024
 # device_id -> (is_authorized, cache_expires_at, last_db_touch_at)
 _device_cache: dict[str, tuple[bool, float, float]] = {}
+
+
+def _cache_device_state(device_id: str, value: tuple[bool, float, float]) -> None:
+    if len(_device_cache) >= _MAX_DEVICE_CACHE and device_id not in _device_cache:
+        now = time.monotonic()
+        expired = [k for k, v in _device_cache.items() if now >= v[1]]
+        for k in expired:
+            _device_cache.pop(k, None)
+        while len(_device_cache) >= _MAX_DEVICE_CACHE:
+            _device_cache.pop(next(iter(_device_cache)))
+    _device_cache[device_id] = value
 
 
 class SecurityShield:
@@ -44,6 +57,16 @@ class SecurityShield:
         if now >= expires_at or (now - last_db_touch) >= _DEVICE_LAST_ACCESS_THROTTLE:
             return None
         return is_authorized
+
+    @staticmethod
+    def safe_compare_digest(provided: Optional[str], expected: Optional[str]) -> bool:
+        """Constant-time string comparison safe against non-ASCII characters."""
+        if not provided or not expected:
+            return False
+        return hmac.compare_digest(
+            str(provided).encode("utf-8"),
+            str(expected).encode("utf-8"),
+        )
 
     @staticmethod
     def hash_password(password: str) -> str:
@@ -120,6 +143,16 @@ class SecurityShield:
         device = db.query(AuthorizedDeviceModel).filter(AuthorizedDeviceModel.device_id == device_id).first()
 
         if not device:
+            from src.core.rate_limit import enforce_rate_limit_key
+            safe_ip_key = str(ip_address or "unknown")[:64]
+            enforce_rate_limit_key(
+                f"unknown-device:{safe_ip_key}",
+                max_requests=15,
+                window_seconds=600,
+                bucket="unknown-device",
+                client_ip=safe_ip_key,
+                respect_testing=True,
+            )
             logger.info(f"🆕 Nuevo dispositivo detectado: {device_id} ({device_name})")
             new_device = AuthorizedDeviceModel(
                 device_id=device_id,
@@ -130,14 +163,18 @@ class SecurityShield:
             db.commit()
             db.refresh(new_device)
 
-            _device_cache[device_id] = (False, now + _DEVICE_CACHE_TTL, now)
+            _cache_device_state(device_id, (False, now + _DEVICE_CACHE_TTL, now))
+
+            safe_device_name = html.escape(str(device_name or "Desconocido")[:80])
+            safe_device_id = html.escape(str(device_id)[:80])
+            safe_ip = html.escape(str(ip_address or "unknown")[:64])
 
             alert_msg = (
                 f"🛡️ <b>[EL ORÁCULO: ALERTA DE ACCESO]</b>\n\n"
                 f"Se ha detectado un nuevo dispositivo intentando conectar:\n"
-                f"📱 <b>Dispositivo:</b> {device_name}\n"
-                f"🆔 <b>ID:</b> <code>{device_id}</code>\n"
-                f"🌐 <b>IP:</b> <code>{ip_address}</code>\n\n"
+                f"📱 <b>Dispositivo:</b> {safe_device_name}\n"
+                f"🆔 <b>ID:</b> <code>{safe_device_id}</code>\n"
+                f"🌐 <b>IP:</b> <code>{safe_ip}</code>\n\n"
                 f"⚠️ <b>Acceso BLOQUEADO</b> hasta que lo autorices."
             )
             device_keyboard = {
@@ -157,7 +194,7 @@ class SecurityShield:
             last_touch = now
 
         is_auth = bool(device.is_authorized)
-        _device_cache[device_id] = (is_auth, now + _DEVICE_CACHE_TTL, last_touch)
+        _cache_device_state(device_id, (is_auth, now + _DEVICE_CACHE_TTL, last_touch))
 
         if not is_auth:
             logger.warning(f"🚫 Acceso denegado para dispositivo conocido pero no autorizado: {device_id}")
@@ -193,7 +230,7 @@ class SecurityShield:
             device.is_authorized = True
             db.commit()
             now = time.monotonic()
-            _device_cache[device_id] = (True, now + _DEVICE_CACHE_TTL, now)
+            _cache_device_state(device_id, (True, now + _DEVICE_CACHE_TTL, now))
             logger.info(f"✅ Dispositivo {device_id} autorizado por el Arquitecto.")
             return True
         return False

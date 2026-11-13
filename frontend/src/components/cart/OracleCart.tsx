@@ -43,12 +43,13 @@ const OracleCart: React.FC = () => {
                     className="mt-2 px-4 py-2.5 bg-gradient-to-r from-amber-500/20 to-brand-primary/20 border border-brand-primary/40 hover:border-brand-primary text-brand-primary rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-lg"
                 >
                     <Sparkles className="h-4 w-4" />
-                    🧙‍♂️ Optimizar Cesta con Presupuesto
+                    Optimizar Cesta con Presupuesto
                 </button>
                 <BudgetOptimizerModal
                     isOpen={showOptimizer}
                     onClose={() => setShowOptimizer(false)}
                     onAddItemsToCart={handleAddOptimizedItems}
+                    userLocation={invoice?.user_location || 'ES'}
                 />
             </div>
         );
@@ -79,6 +80,7 @@ const OracleCart: React.FC = () => {
                 isOpen={showOptimizer}
                 onClose={() => setShowOptimizer(false)}
                 onAddItemsToCart={handleAddOptimizedItems}
+                userLocation={invoice?.user_location || 'ES'}
             />
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -92,16 +94,34 @@ const OracleCart: React.FC = () => {
                                 </div>
                                 <div className="min-w-0">
                                     <p className="truncate text-sm font-bold text-white">{item.product_name}</p>
-                                    <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">{item.shop_name} - {item.price} €</p>
+                                    <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">{item.shop_name} - <span className="blur-incognito">{item.price} €</span></p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-6">
                                 <div className="flex items-center gap-3 bg-black/40 rounded-xl p-1 border border-white/5">
-                                    <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="p-1 rounded-lg hover:bg-white/10 text-white/40 hover:text-white transition-all"><Minus className="h-3 w-3" /></button>
+                                    <button
+                                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                                        aria-label={`Reducir cantidad de ${item.product_name}`}
+                                        className="p-1 rounded-lg hover:bg-white/10 text-white/40 hover:text-white transition-all"
+                                    >
+                                        <Minus className="h-3 w-3" />
+                                    </button>
                                     <span className="text-xs font-black text-white w-4 text-center">{item.quantity}</span>
-                                    <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="p-1 rounded-lg hover:bg-white/10 text-white/40 hover:text-white transition-all"><Plus className="h-3 w-3" /></button>
+                                    <button
+                                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                                        aria-label={`Aumentar cantidad de ${item.product_name}`}
+                                        className="p-1 rounded-lg hover:bg-white/10 text-white/40 hover:text-white transition-all"
+                                    >
+                                        <Plus className="h-3 w-3" />
+                                    </button>
                                 </div>
-                                <button onClick={() => removeFromCart(item.id)} className="p-2 rounded-xl text-red-500/30 hover:text-red-500 hover:bg-red-500/10 transition-all"><Trash2 className="h-4 w-4" /></button>
+                                <button
+                                    onClick={() => removeFromCart(item.id)}
+                                    aria-label={`Eliminar ${item.product_name} del carrito`}
+                                    className="p-2 rounded-xl text-red-500/30 hover:text-red-500 hover:bg-red-500/10 transition-all"
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                </button>
                             </div>
                         </div>
                     ))}
@@ -116,7 +136,7 @@ const OracleCart: React.FC = () => {
 
                         <div className="space-y-1">
                             <h5 className="text-[10px] font-black text-brand-primary uppercase tracking-widest">Resumen del Oráculo</h5>
-                            <p className="text-2xl font-black text-white">{invoice?.grand_total_eur || '---'} €</p>
+                            <p className="text-2xl font-black text-white blur-incognito">{invoice?.grand_total_eur || '---'} €</p>
                             <p className="text-[8px] text-white/20 font-bold uppercase tracking-widest italic">Simulación Total Landed (Puerta a Puerta)</p>
                         </div>
 
@@ -139,21 +159,21 @@ const OracleCart: React.FC = () => {
                                         <div className="space-y-1.5">
                                             <div className="flex justify-between text-[10px] items-center">
                                                 <div className="flex items-center gap-2 text-white/40 font-bold"><Package className="h-3 w-3 opacity-50" /> Base Artículos</div>
-                                                <span className="text-white/80 font-black">{shop.items.reduce((acc, i) => acc + i.subtotal_eur, 0).toFixed(2)} €</span>
+                                                <span className="text-white/80 font-black blur-incognito">{shop.items.reduce((acc, i) => acc + i.subtotal_eur, 0).toFixed(2)} €</span>
                                             </div>
                                             <div className="flex justify-between text-[10px] items-center">
                                                 <div className="flex items-center gap-2 text-white/40 font-bold"><Truck className="h-3 w-3 opacity-50" /> Envío Logístico</div>
-                                                <span className="text-white/80 font-black">{shop.shipping_eur.toFixed(2)} €</span>
+                                                <span className="text-white/80 font-black blur-incognito">{shop.shipping_eur.toFixed(2)} €</span>
                                             </div>
                                             <div className="flex justify-between text-[10px] items-center">
                                                 <div className="flex items-center gap-2 text-white/40 font-bold"><Info className="h-3 w-3 opacity-50" /> IVA / Tasas</div>
-                                                <span className="text-white/80 font-black">{(shop.tax_eur + (shop.fees_eur || 0)).toFixed(2)} €</span>
+                                                <span className="text-white/80 font-black blur-incognito">{(shop.tax_eur + (shop.fees_eur || 0)).toFixed(2)} €</span>
                                             </div>
                                         </div>
 
                                         <div className="flex justify-between items-center pt-1">
                                             <span className="text-[8px] font-black text-white/20 uppercase">Subtotal Landed</span>
-                                            <span className="text-xs font-black text-brand-primary">{shop.total_eur.toFixed(2)} €</span>
+                                            <span className="text-xs font-black text-brand-primary blur-incognito">{shop.total_eur.toFixed(2)} €</span>
                                         </div>
                                     </div>
                                 ))}

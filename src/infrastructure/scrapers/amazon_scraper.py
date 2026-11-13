@@ -9,6 +9,7 @@ from typing import List, Optional
 from datetime import datetime
 from bs4 import BeautifulSoup
 from playwright.async_api import Page, BrowserContext
+from src.core.vintage_utils import check_is_vintage
 from src.infrastructure.scrapers.base import BaseScraper, ScrapedOffer
 
 # Force UTF-8 for console output to handle emojis safely
@@ -36,6 +37,10 @@ class AmazonScraper(BaseScraper):
         2. Nivel 2 (Gratis): Escalamiento a Sirius A1 (Playwright Stealth con aceptación de cookies).
         3. Nivel 3 (Reserva): ScraperAPI Premium solo si los métodos gratuitos son bloqueados.
         """
+        if query != "auto" and check_is_vintage(query):
+            self._log(f"🚫 Amazon.es: Búsqueda vintage bloqueada por política AGENTS.md ({query}).", level="warning")
+            return []
+
         search_query = "masters of the universe origins" if query == "auto" else query
         url = f"{self.search_url}{search_query.replace(' ', '+')}"
         self.blocked = False
@@ -61,7 +66,7 @@ class AmazonScraper(BaseScraper):
         if not offers and self.blocked:
             self._log("⚠️ Amazon.es: Todos los niveles de extracción fueron bloqueados temporalmente.", level="warning")
             
-        return offers
+        return [o for o in offers if not check_is_vintage(o.product_name)]
 
     async def _fast_infiltration(self, url: str, search_query: str, use_scraperapi: bool = False) -> List[ScrapedOffer]:
         """Attempt extraction via curl-cffi."""

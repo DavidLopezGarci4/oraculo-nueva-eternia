@@ -1,7 +1,29 @@
 import sys
+import re
 import logging
 from loguru import logger
 from src.core.config import settings
+
+_SENSITIVE_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
+    (re.compile(r"([?&](?:api_key|key|token|access_token|reset_token)=)[^&\s\"'<>]+", re.IGNORECASE), r"\1[REDACTED]"),
+    (re.compile(r"(bot\d+:)[A-Za-z0-9_-]{12,}", re.IGNORECASE), r"\1[REDACTED]"),
+    (re.compile(r"(postgres(?:ql)?(?:\+[a-z0-9_]+)?://[^:\s/]+:)[^@\s/]+(@)", re.IGNORECASE), r"\1[REDACTED]\2"),
+    (re.compile(r"(Bearer\s+)[A-Za-z0-9._-]{12,}", re.IGNORECASE), r"\1[REDACTED]"),
+)
+
+
+def redact_sensitive_text(text: str) -> str:
+    """Scrub API keys, Telegram bot tokens, DB credentials, and bearer tokens from logs."""
+    if not text:
+        return text
+    cleaned = str(text)
+    for pattern, repl in _SENSITIVE_PATTERNS:
+        cleaned = pattern.sub(repl, cleaned)
+    return cleaned
+
+
+def _redact_loguru_record(record) -> None:
+    record["message"] = redact_sensitive_text(record.get("message", ""))
 
 # Register SUCCESS level (25) for standard logging
 SUCCESS_LEVEL_NUM = 25
@@ -33,8 +55,12 @@ def setup_logging():
     """Configures application logging with JSON formatting for observability."""
     # Intercept standard logging
     logging.basicConfig(handlers=[InterceptHandler()], level=0, force=True)
+    # Prevent httpx/httpcore from logging query-string API keys or bot URLs at INFO level
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
     
     logger.remove()  # Remove default handler
+    logger.configure(patcher=_redact_loguru_record)
     
     # Stdout handler (Human readable for Dev, JSON for Prod could be added via env)
     log_level = "DEBUG" if settings.DEBUG else "INFO"

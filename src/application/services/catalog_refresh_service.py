@@ -14,8 +14,12 @@ from sqlalchemy.orm import Session
 
 from src.domain.models import ProductModel
 from src.application.services.storage_service import StorageService
+from src.core.safe_http import MAX_REDIRECT_HOPS, validate_public_url
 
 logger = logging.getLogger('oraculo.catalog_refresh')
+
+_MAX_RESPONSE_BYTES = 10 * 1024 * 1024
+
 
 class CatalogRefreshService:
     CHECKLIST_URLS = [
@@ -26,11 +30,36 @@ class CatalogRefreshService:
     ]
 
     @classmethod
+    def _safe_cffi_get(cls, url: str, *, timeout: float = 15.0, max_bytes: int = _MAX_RESPONSE_BYTES):
+        """SSRF-safe GET via curl_cffi with explicit redirect hops and byte cap."""
+        current_url = validate_public_url(url)
+        for _ in range(MAX_REDIRECT_HOPS + 1):
+            res = cffi_requests.get(
+                current_url,
+                impersonate='chrome120',
+                timeout=timeout,
+                allow_redirects=False,
+            )
+            status_code = getattr(res, 'status_code', 200)
+            headers = getattr(res, 'headers', None) or {}
+            if status_code in (301, 302, 303, 307, 308) and hasattr(headers, 'get'):
+                location = headers.get('location') or headers.get('Location')
+                if not location:
+                    break
+                current_url = validate_public_url(urljoin(current_url, location))
+                continue
+            content = getattr(res, 'content', b'') or b''
+            if len(content) > max_bytes:
+                raise ValueError(f'Respuesta remota excede limite de {max_bytes} bytes.')
+            return res
+        raise ValueError('Demasiadas redirecciones HTTP en CatalogRefreshService.')
+
+    @classmethod
     def find_af411_detail_url(cls, figure_id: str) -> Optional[str]:
         clean_id = str(figure_id).strip()
         for chk_url in cls.CHECKLIST_URLS:
             try:
-                res = cffi_requests.get(chk_url, impersonate='chrome120', timeout=10)
+                res = cls._safe_cffi_get(chk_url, timeout=10)
                 if res.status_code == 200:
                     soup = BeautifulSoup(res.text, 'html.parser')
                     link = soup.find('a', href=lambda h: h and clean_id in h)
@@ -60,7 +89,7 @@ class CatalogRefreshService:
             return {'success': False, 'error': f'No se encontro URL en AF411 para {effective_fig_id}'}
 
         try:
-            d_res = cffi_requests.get(detail_url, impersonate='chrome120', timeout=10)
+            d_res = cls._safe_cffi_get(detail_url, timeout=10)
             if d_res.status_code != 200:
                 return {'success': False, 'error': f'Error en {detail_url} HTTP {d_res.status_code}'}
             
@@ -70,7 +99,7 @@ class CatalogRefreshService:
                 return {'success': False, 'error': 'No se encontro enlace fancybox'}
 
             remote_img_url = urljoin('https://www.actionfigure411.com/', a_fancy.get('href'))
-            img_res = cffi_requests.get(remote_img_url, impersonate='chrome120', timeout=15)
+            img_res = cls._safe_cffi_get(remote_img_url, timeout=15)
             if img_res.status_code != 200:
                 return {'success': False, 'error': f'Error descargando imagen HTTP {img_res.status_code}'}
 
@@ -83,9 +112,11 @@ class CatalogRefreshService:
 
             import io
             with Image.open(io.BytesIO(img_res.content)) as im:
-                if im.mode in ('RGBA', 'LA'):
-                    bg = Image.new('RGB', im.size, (255, 255, 255))
-                    bg.paste(im, mask=im.split()[3])
+                has_alpha = im.mode in ('RGBA', 'LA') or (im.mode == 'P' and 'transparency' in im.info)
+                if has_alpha:
+                    rgba = im.convert('RGBA')
+                    bg = Image.new('RGB', rgba.size, (255, 255, 255))
+                    bg.paste(rgba, mask=rgba.split()[3])
                     im = bg
                 elif im.mode != 'RGB':
                     im = im.convert('RGB')
@@ -99,9 +130,7 @@ class CatalogRefreshService:
             new_public_url = storage.upload_image(str(webp_path), folder=folder)
 
             if not new_public_url:
-                bucket_prefix = 'https://stxjzolhpcinrbkltehy.supabase.co/storage/v1/object/public/motu-catalog/'
-                subpath = f'vintage/{webp_filename}' if product.is_vintage else webp_filename
-                new_public_url = f'{bucket_prefix}{subpath}'
+                return {'success': False, 'error': 'No se pudo subir la imagen al almacenamiento en la nube'}
 
             old_image_url = product.image_url
             product.image_url = new_public_url

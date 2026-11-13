@@ -90,6 +90,9 @@ def test_alembic_rls_head_migration_and_future_table_invariants():
 
     for mig_file in migration_files:
         source = mig_file.read_text(encoding="utf-8-sig")
+        assert "DISABLE ROW LEVEL SECURITY" not in source.upper(), (
+            f"Prohibido ejecutar DISABLE ROW LEVEL SECURITY en cualquier migración ({mig_file.name})."
+        )
         tree = ast.parse(source, filename=str(mig_file))
 
         revision_id = None
@@ -207,8 +210,8 @@ def test_no_shadow_migrators_or_startup_rls_locks():
         and node.args
         and "ALTER TABLE" in ast.unparse(node.args[0]).upper()
     ]
-    assert len(executable_alters) <= 5, (
-        f"Prohibido añadir nuevo DDL ALTER TABLE en database_cloud.py (encontrados {len(executable_alters)} > 5). Usa Alembic."
+    assert len(executable_alters) <= 1, (
+        f"Prohibido añadir DDL ALTER TABLE en database_cloud.py (encontrados {len(executable_alters)} > 1). Usa Alembic."
     )
     assert "ALTER TABLE character_lore" not in db_cloud_src and '"character_lore"' not in db_cloud_src, (
         "El esquema de character_lore se gestiona exclusivamente con Alembic (a7c3e91f04b2)."

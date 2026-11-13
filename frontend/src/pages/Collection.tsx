@@ -162,12 +162,14 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
         }
     });
 
+    const deferredSearchQuery = React.useDeferredValue(searchQuery);
+
     const sortedFilteredItems = React.useMemo(() => {
         if (!collection) return [];
         
         const filtered = collection.filter(product => {
-            const query = searchQuery.toLowerCase();
-            const rawQuery = searchQuery.trim();
+            const query = deferredSearchQuery.toLowerCase();
+            const rawQuery = deferredSearchQuery.trim();
             const idOnlyQuery = rawQuery.replace(/^#/, '');
             const matchesId = idOnlyQuery.length > 0 && !isNaN(Number(idOnlyQuery)) && product.id.toString().includes(idOnlyQuery);
 
@@ -211,7 +213,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
 
             return sortOrder === 'asc' ? comparison : -comparison;
         });
-    }, [collection, searchQuery, conditionFilter, sortBy, sortOrder, selectedChips]);
+    }, [collection, deferredSearchQuery, conditionFilter, sortBy, sortOrder, selectedChips]);
 
     const ownedItems = sortedFilteredItems.filter(p => !p.is_wish);
     const wishItems = sortedFilteredItems.filter(p => p.is_wish);
@@ -584,7 +586,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                                             {roi !== 0 && (
                                                 <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-lg border font-black text-[8px] sm:text-[9px] whitespace-nowrap ${roi >= 0 ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
                                                     {roi >= 0 ? <TrendingUp className="h-2 w-2 sm:h-2.5 sm:w-2.5" /> : <TrendingDown className="h-2 w-2 sm:h-2.5 sm:w-2.5" />}
-                                                    <span className="blur-incognito">{roi >= 0 ? '+' : ''}{roi.toFixed(1)}%</span>
+                                                    <span className={`blur-incognito ${product.purchase_price && product.purchase_price > 0 ? 'blur-manual-price' : ''}`}>{roi >= 0 ? '+' : ''}{roi.toFixed(1)}%</span>
                                                 </div>
                                             )}
                                             {activeTab === 'owned' && (
@@ -596,7 +598,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                                                         {grading.toFixed(1)}
                                                     </span>
                                                     {product.purchase_price && product.purchase_price > 0 ? (
-                                                        <span className={`px-1 py-0.5 rounded-md text-[6px] sm:text-[7px] font-black uppercase tracking-wider flex items-center gap-0.5 border ${isVintageOnly ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'bg-brand-primary/10 text-brand-primary border-brand-primary/20'}`} title={(!isIncognito && localStorage.getItem('allowManualPriceReveal') === 'true') ? `Inversión manual: ${product.purchase_price}€` : "Inversión manual: •••"}>
+                                                        <span className={`px-1 py-0.5 rounded-md text-[6px] sm:text-[7px] font-black uppercase tracking-wider flex items-center gap-0.5 border ${isVintageOnly ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'bg-brand-primary/10 text-brand-primary border-brand-primary/20'}`} title="Inversión manual registrada">
                                                             <ShoppingCart className="h-2 w-2" />
                                                             <span className="blur-manual-price blur-incognito">{product.purchase_price.toFixed(0)}€</span>
                                                         </span>
@@ -788,7 +790,7 @@ const Collection: React.FC<CollectionProps> = ({ searchQuery = "", isVintageOnly
                                             value={editingProduct.retail_price || 0}
                                             onChange={(e) => setEditingProduct({ ...editingProduct, retail_price: parseFloat(e.target.value) })}
                                             className={`w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-white focus:outline-none transition-all blur-manual-price ${editingProduct.is_vintage ? 'focus:border-amber-500/50' : 'focus:border-brand-primary/50'} ${isIncognito ? 'blur-incognito' : ''}`}
-                                            title={(!isIncognito && localStorage.getItem('allowManualPriceReveal') === 'true') ? `Precio manual: ${editingProduct.retail_price || 0}€` : "Precio manual: •••"}
+                                            title="Precio de lanzamiento"
                                         />
                                     </div>
 

@@ -1,32 +1,35 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Package, ShoppingBag, X } from 'lucide-react';
 import axios from 'axios';
+import { useModalA11y } from '../../hooks/useModalA11y';
 
 interface BudgetOptimizerModalProps {
     isOpen: boolean;
     onClose: () => void;
     onAddItemsToCart: (items: any[]) => void;
+    userLocation?: string;
 }
 
 export const BudgetOptimizerModal: React.FC<BudgetOptimizerModalProps> = ({
     isOpen,
     onClose,
-    onAddItemsToCart
+    onAddItemsToCart,
+    userLocation = 'ES'
 }) => {
+    const modalRef = useRef<HTMLDivElement>(null);
+    useModalA11y(isOpen, onClose, modalRef);
     const [budget, setBudget] = useState<number>(80);
     const [loading, setLoading] = useState<boolean>(false);
     const [result, setResult] = useState<any | null>(null);
 
-    if (!isOpen) return null;
-
     const handleOptimize = async () => {
         try {
             setLoading(true);
-            const token = localStorage.getItem('token');
+            const token = localStorage.getItem('access_token');
             const res = await axios.post(
                 '/api/cart/budget-optimize',
-                { budget_limit: budget, user_location: 'ES' },
+                { budget_limit: budget, user_location: userLocation },
                 { headers: token ? { Authorization: `Bearer ${token}` } : {} }
             );
             setResult(res.data);
@@ -46,16 +49,23 @@ export const BudgetOptimizerModal: React.FC<BudgetOptimizerModalProps> = ({
 
     return (
         <AnimatePresence>
-            <div className="fixed inset-0 z-[200] flex items-center justify-center p-3 sm:p-6 bg-black/90 backdrop-blur-2xl overflow-y-auto">
-                <motion.div
+            {isOpen && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-3 sm:p-6 bg-black/90 backdrop-blur-2xl overflow-y-auto">
+                    <motion.div
+                    ref={modalRef}
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label="Optimizador de Presupuesto"
+                    tabIndex={-1}
                     initial={{ opacity: 0, scale: 0.93, y: 15 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.93, y: 15 }}
-                    className="relative w-full max-w-xl bg-gradient-to-b from-slate-900 via-slate-950 to-black border-2 border-brand-primary/50 rounded-3xl shadow-[0_0_60px_rgba(0,0,0,0.9)] p-5 sm:p-6 text-white my-auto flex flex-col max-h-[88vh] overflow-hidden"
+                    className="relative w-full max-w-xl bg-gradient-to-b from-slate-900 via-slate-950 to-black border-2 border-brand-primary/50 rounded-3xl shadow-[0_0_60px_rgba(0,0,0,0.9)] p-5 sm:p-6 text-white my-auto flex flex-col max-h-[88vh] overflow-hidden outline-none"
                 >
                     {/* Botón cerrar */}
                     <button
                         onClick={onClose}
+                        aria-label="Cerrar optimizador"
                         className="absolute top-4 right-4 p-2 rounded-full bg-slate-800/90 hover:bg-red-500 text-slate-300 hover:text-white transition z-20 shadow-md"
                         title="Cerrar Asistente"
                     >
@@ -81,7 +91,7 @@ export const BudgetOptimizerModal: React.FC<BudgetOptimizerModalProps> = ({
                     <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-3.5 mb-4">
                         <div className="flex items-center justify-between text-xs text-slate-300 mb-2">
                             <span>¿Cuál es tu presupuesto disponible?</span>
-                            <span className="font-bold text-brand-primary text-sm">{budget} €</span>
+                            <span className="font-bold text-brand-primary text-sm blur-incognito">{budget} €</span>
                         </div>
                         <input
                             type="range"
@@ -116,7 +126,8 @@ export const BudgetOptimizerModal: React.FC<BudgetOptimizerModalProps> = ({
                             disabled={loading}
                             className="w-full py-3 bg-gradient-to-r from-brand-primary to-amber-500 hover:from-brand-primary/90 hover:to-amber-500/90 text-black font-bold text-xs rounded-xl shadow-lg transition flex items-center justify-center gap-2"
                         >
-                            {loading ? 'Calculando combinación óptima...' : '🧙‍♂️ Calcular Cesta Óptima'}
+                            <Sparkles className="h-4 w-4" />
+                            {loading ? 'Calculando combinación óptima...' : 'Calcular Cesta Óptima'}
                         </button>
                     )}
 
@@ -127,7 +138,7 @@ export const BudgetOptimizerModal: React.FC<BudgetOptimizerModalProps> = ({
                             <div className="grid grid-cols-3 gap-2 bg-slate-900/90 border border-emerald-500/30 rounded-xl p-3 text-center">
                                 <div>
                                     <span className="text-[10px] text-slate-400 block">Total Invertido:</span>
-                                    <span className="font-bold text-white text-sm">{result.total_spent} €</span>
+                                    <span className="font-bold text-white text-sm blur-incognito">{result.total_spent} €</span>
                                 </div>
                                 <div>
                                     <span className="text-[10px] text-slate-400 block">Figuras Conseguidas:</span>
@@ -135,7 +146,7 @@ export const BudgetOptimizerModal: React.FC<BudgetOptimizerModalProps> = ({
                                 </div>
                                 <div>
                                     <span className="text-[10px] text-slate-400 block">Ahorro Total:</span>
-                                    <span className="font-bold text-emerald-400 text-sm">+{result.savings_total} €</span>
+                                    <span className="font-bold text-emerald-400 text-sm blur-incognito">+{result.savings_total} €</span>
                                 </div>
                             </div>
 
@@ -152,15 +163,15 @@ export const BudgetOptimizerModal: React.FC<BudgetOptimizerModalProps> = ({
                                             <div className="truncate">
                                                 <div className="font-bold text-white truncate text-xs">{item.product_name}</div>
                                                 <div className="text-[10px] text-slate-400">
-                                                    {item.shop_name} • Base: {item.base_price.toFixed(2)}€
+                                                    {item.shop_name} • <span className="blur-incognito">Base: {item.base_price.toFixed(2)}€</span>
                                                 </div>
                                             </div>
                                         </div>
                                         <div className="text-right shrink-0">
-                                            <div className="font-bold text-emerald-400 text-xs">
+                                            <div className="font-bold text-emerald-400 text-xs blur-incognito">
                                                 {item.landed_price.toFixed(2)} € <span className="text-[9px] text-slate-400">Landed</span>
                                             </div>
-                                            <div className="text-[9px] text-emerald-400 font-semibold">
+                                            <div className="text-[9px] text-emerald-400 font-semibold blur-incognito">
                                                 -{item.savings_pct}% ahorro
                                             </div>
                                         </div>
@@ -187,7 +198,8 @@ export const BudgetOptimizerModal: React.FC<BudgetOptimizerModalProps> = ({
                         </div>
                     )}
                 </motion.div>
-            </div>
+                </div>
+            )}
         </AnimatePresence>
     );
 };

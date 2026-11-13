@@ -15,6 +15,8 @@ on:
 jobs:
   hunt:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4.2.2
 
@@ -33,10 +35,14 @@ jobs:
           SUPABASE_DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          INPUT_QUERY: ${{ github.event.inputs.query }}
+          INPUT_CHAT_ID: ${{ github.event.inputs.chat_id }}
           PYTHONPATH: .
         run: |
-          CHAT_ARG=""
-          if [ -n "${{ github.event.inputs.chat_id }}" ]; then
-            CHAT_ARG="--chat-id ${{ github.event.inputs.chat_id }}"
+          SAFE_QUERY=$(printf '%s' "${INPUT_QUERY:-auto}" | tr -cd 'a-zA-Z0-9 ._-')
+          [ -z "$SAFE_QUERY" ] && SAFE_QUERY="auto"
+          if [ -n "$INPUT_CHAT_ID" ]; then
+            SAFE_CHAT=$(printf '%s' "$INPUT_CHAT_ID" | tr -cd '0-9-')
+            [ -n "$SAFE_CHAT" ] && python scripts/hunt_vinted.py --query "$SAFE_QUERY" --chat-id "$SAFE_CHAT" && exit 0
           fi
-          python scripts/hunt_vinted.py --query "${{ github.event.inputs.query || 'auto' }}" $CHAT_ARG
+          python scripts/hunt_vinted.py --query "$SAFE_QUERY"

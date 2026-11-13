@@ -1,3 +1,4 @@
+import html
 import httpx
 import logging
 import json
@@ -86,12 +87,15 @@ class TelegramService:
         if not self.enabled:
             return
 
+        safe_name = html.escape(str(product_name or ""))
+        safe_shop = html.escape(str(shop_name or ""))
+        safe_url = html.escape(str(url or ""), quote=True)
         message = (
             f"<b>👁️ EL OJO DE SAURON DETECTA UN HALLAZGO</b>\n\n"
-            f"📦 <b>Producto:</b> {product_name}\n"
+            f"📦 <b>Producto:</b> {safe_name}\n"
             f"💰 <b>Precio:</b> {price:.2f}€\n"
-            f"🏪 <b>Tienda:</b> {shop_name}\n\n"
-            f"🔗 <a href='{url}'>Ver Oferta en la Web</a>"
+            f"🏪 <b>Tienda:</b> {safe_shop}\n\n"
+            f"🔗 <a href='{safe_url}'>Ver Oferta en la Web</a>"
         )
         
         return await self.send_message(message)
@@ -101,15 +105,18 @@ class TelegramService:
         if not self.enabled:
             return
 
+        safe_name = html.escape(str(product_name or ""))
+        safe_shop = html.escape(str(shop_name or ""))
+        safe_url = html.escape(str(url or ""), quote=True)
         message = (
             f"<b>🚨 COMPRA OBLIGATORIA DETECTADA 🚨</b>\n\n"
             f"🌟 <b>Opportunity Score:</b> {score}/100\n"
-            f"📦 <b>Producto:</b> {product_name}\n"
+            f"📦 <b>Producto:</b> {safe_name}\n"
             f"🏷️ <b>Precio Tienda:</b> {price:.2f}€\n"
             f"🛬 <b>Landed Price:</b> {landed_price:.2f}€\n"
-            f"🏪 <b>Tienda:</b> {shop_name}\n\n"
+            f"🏪 <b>Tienda:</b> {safe_shop}\n\n"
             f"🔥 <i>Esta oferta ha superado el análisis de inversión del Oráculo.</i>\n\n"
-            f"🔗 <a href='{url}'>IR A LA WEB AHORA</a>"
+            f"🔗 <a href='{safe_url}'>IR A LA WEB AHORA</a>"
         )
         
         return await self.send_message(message)
@@ -119,12 +126,15 @@ class TelegramService:
         if not self.enabled:
             return
 
+        safe_name = html.escape(str(scraped_name or ""))
+        safe_shop = html.escape(str(shop_name or ""))
+        safe_url = html.escape(str(url or ""), quote=True)
         message = (
             f"<b>🏺 NUEVO CANDIDATO VINTAGE EN PURGATORIO</b>\n\n"
-            f"📦 <b>Producto:</b> {scraped_name}\n"
+            f"📦 <b>Producto:</b> {safe_name}\n"
             f"💰 <b>Precio:</b> {price:.2f}€\n"
-            f"🏪 <b>Tienda:</b> {shop_name}\n\n"
-            f"🔗 <a href='{url}'>Ver Ficha en Web</a>"
+            f"🏪 <b>Tienda:</b> {safe_shop}\n\n"
+            f"🔗 <a href='{safe_url}'>Ver Ficha en Web</a>"
         )
         
         return await self.send_message(message)
@@ -134,13 +144,16 @@ class TelegramService:
         if not self.enabled:
             return
 
+        safe_name = html.escape(str(product_name or ""))
+        safe_shop = html.escape(str(shop_name or ""))
+        safe_url = html.escape(str(url or ""), quote=True)
         message = (
             f"<b>⭐ ¡FIGURA DE TU LISTA DE DESEOS ENCONTRADA!</b>\n\n"
-            f"📦 <b>Producto deseado:</b> {product_name}\n"
+            f"📦 <b>Producto deseado:</b> {safe_name}\n"
             f"💰 <b>Precio:</b> {price:.2f}€\n"
-            f"🏪 <b>Tienda:</b> {shop_name}\n\n"
+            f"🏪 <b>Tienda:</b> {safe_shop}\n\n"
             f"🔥 <i>¡Esta figura está en tu radar de deseos!</i>\n\n"
-            f"🔗 <a href='{url}'>Ir a comprar ahora</a>"
+            f"🔗 <a href='{safe_url}'>Ir a comprar ahora</a>"
         )
         
         return await self.send_message(message, chat_id=chat_id)
@@ -150,13 +163,16 @@ class TelegramService:
         if not self.enabled:
             return
 
+        safe_name = html.escape(str(product_name or ""))
+        safe_shop = html.escape(str(shop_name or ""))
+        safe_url = html.escape(str(url or ""), quote=True)
         message = (
             f"<b>🎯 ALERTA DE PRECIO OBJETIVO ALCANZADO</b>\n\n"
-            f"📦 <b>Producto:</b> {product_name}\n"
+            f"📦 <b>Producto:</b> {safe_name}\n"
             f"📉 <b>Precio encontrado:</b> {price:.2f}€\n"
             f"💵 <b>Tu objetivo:</b> {target_price:.2f}€\n"
-            f"🏪 <b>Tienda:</b> {shop_name}\n\n"
-            f"🔗 <a href='{url}'>Ir a comprar ahora</a>"
+            f"🏪 <b>Tienda:</b> {safe_shop}\n\n"
+            f"🔗 <a href='{safe_url}'>Ir a comprar ahora</a>"
         )
         
         return await self.send_message(message, chat_id=chat_id)
@@ -166,16 +182,20 @@ class TelegramService:
         if not self.enabled:
             return
 
+        safe_name = html.escape(str(product_name or ""))
+        safe_title = html.escape(str(item_title or ""))
+        safe_shop = html.escape(str(shop_name or "").upper())
+        safe_url = html.escape(str(url or ""), quote=True)
         message = (
-            f"🔥 <b>¡GANGA DETECTADA EN {shop_name.upper()}!</b> 🔥\n\n"
-            f"📦 <b>Figura Identificada:</b> <b>{product_name}</b>\n"
-            f"🏷️ <b>Título del Anuncio:</b> <i>{item_title}</i>\n"
+            f"🔥 <b>¡GANGA DETECTADA EN {safe_shop}!</b> 🔥\n\n"
+            f"📦 <b>Figura Identificada:</b> <b>{safe_name}</b>\n"
+            f"🏷️ <b>Título del Anuncio:</b> <i>{safe_title}</i>\n"
             f"🏷️ <b>Precio Base:</b> {price:.2f}€\n"
             f"🛬 <b>Landed (con envío + seguro):</b> <b>{landed_price:.2f}€</b>\n"
             f"📊 <b>Precio Medio de Mercado (P25):</b> {benchmark_price:.2f}€\n"
             f"📉 <b>Ahorro Estimado:</b> <b>{savings_pct:.0f}%</b>\n\n"
             f"⚡ <i>Oferta inyectada al Purgatorio del Oráculo.</i>\n\n"
-            f"🛒 <a href='{url}'>VER Y COMPRAR EN {shop_name.upper()}</a>"
+            f"🛒 <a href='{safe_url}'>VER Y COMPRAR EN {safe_shop}</a>"
         )
         
         return await self.send_message(message, chat_id=chat_id)

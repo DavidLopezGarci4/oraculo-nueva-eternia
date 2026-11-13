@@ -1,3 +1,4 @@
+import asyncio
 import os
 import logging
 from pathlib import Path
@@ -36,10 +37,10 @@ class StorageService:
         if not self.client or self.storage_disabled: return False
         try:
             # Check if bucket exists
-            buckets = self.client.storage.list_buckets()
+            buckets = await asyncio.to_thread(self.client.storage.list_buckets)
             if not any(b.name == self.bucket_name for b in buckets):
                 logger.info(f" Creating bucket: {self.bucket_name}")
-                self.client.storage.create_bucket(self.bucket_name, options={"public": True})
+                await asyncio.to_thread(self.client.storage.create_bucket, self.bucket_name, options={"public": True})
             return True
         except Exception as e:
             err_msg = self._get_safe_error_message(e)
@@ -70,9 +71,11 @@ class StorageService:
                 from PIL import Image
                 temp_webp_path = str(path.with_suffix(".temp.webp"))
                 with Image.open(local_path) as img:
-                    if img.mode in ('RGBA', 'LA'):
-                        background = Image.new('RGB', img.size, (255, 255, 255))
-                        background.paste(img, mask=img.split()[3])
+                    has_alpha = img.mode in ('RGBA', 'LA') or (img.mode == 'P' and 'transparency' in img.info)
+                    if has_alpha:
+                        rgba = img.convert('RGBA')
+                        background = Image.new('RGB', rgba.size, (255, 255, 255))
+                        background.paste(rgba, mask=rgba.split()[3])
                         img = background
                     elif img.mode != 'RGB':
                         img = img.convert('RGB')

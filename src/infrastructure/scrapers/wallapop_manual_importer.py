@@ -18,6 +18,7 @@ from typing import List, Optional
 from datetime import datetime, timezone
 
 # Importaciones del proyecto
+from src.core.vintage_utils import check_is_vintage
 from src.infrastructure.scrapers.base import ScrapedOffer
 from src.infrastructure.scrapers.pipeline import ScrapingPipeline
 from src.infrastructure.database_cloud import SessionCloud
@@ -120,6 +121,9 @@ class WallapopManualImporter:
         
         with SessionCloud() as db:
             for offer in offers_data:
+                if check_is_vintage(offer.get('product_name', '')) or check_is_vintage(offer.get('url', '')):
+                    logger.info(f"Omitido item vintage por política AGENTS.md: {offer.get('product_name', '')[:60]}")
+                    continue
                 # Verificar si ya existe en Purgatorio
                 existing = db.query(PendingMatchModel).filter(
                     PendingMatchModel.url == offer['url']

@@ -229,8 +229,16 @@ def run_scraper_task(
                     )
 
                 update_live_log(f"💾 Persistiendo {len(results)} ofertas...", force=True)
+                failed_spiders = getattr(pipeline, "failed_spiders", set())
+                completed_shops = [
+                    s.shop_name
+                    for s in spiders_to_run
+                    if s.shop_name not in failed_spiders and not getattr(s, "blocked", False)
+                ]
                 new_items = pipeline.update_database(
-                    results, shop_names=[s.shop_name for s in spiders_to_run]
+                    results,
+                    shop_names=completed_shops,
+                    allow_deactivation=(search_term == "auto" and not scraper_cancel_event.is_set()),
                 )
                 new_items = new_items if new_items is not None else 0
                 items_found = len(results)
@@ -358,6 +366,14 @@ def export_execution_logs_csv():
 @router.post("/run", response_model=RunScraperOutput, dependencies=[Depends(verify_api_key)])
 def run_scrapers(request: ScraperRunRequest, background_tasks: BackgroundTasks):
     """Inicia la recolección de reliquias en segundo plano (Admin Only)"""
+    from src.core.vintage_utils import check_is_vintage
+
+    if request.query and check_is_vintage(request.query):
+        raise HTTPException(
+            status_code=400,
+            detail="Búsquedas vintage deshabilitadas temporalmente (AGENTS.md Regla 2).",
+        )
+
     canonical_spider_name = CANONICAL_SPIDER_NAMES.get(
         request.spider_name.lower().strip(), request.spider_name
     )
@@ -410,7 +426,7 @@ def stop_scrapers():
         current_process = psutil.Process(os.getpid())
         children = current_process.children(recursive=True)
 
-        target_keywords = ["playwright", "chromium", "chrome", "node", "python"]
+        target_keywords = ["playwright", "chromium", "chrome", "headless_shell"]
 
         for child in children:
             try:
@@ -507,26 +523,21 @@ def download_wallapop_ip_logs():
         )
 
 
-@router.post("/wallapop/import-manual-html", response_model=WallapopManualHtmlImportOutput, dependencies=[Depends(verify_api_key)])
-async def import_wallapop_manual_html(file: Optional[UploadFile] = File(None)):
-    """Parsea el archivo local o subido data/wallapop_search.html e inserta los artículos nuevos en el Purgatorio."""
+def _process_wallapop_manual_html_sync(file_path: str, uploaded_bytes: Optional[bytes]) -> dict:
+    """Ejecuta lectura/escritura HTML, parsing BeautifulSoup e inserción DB en hilo worker."""
     import re
     from bs4 import BeautifulSoup
     from src.domain.models import (
         PendingMatchModel,
         OfferModel,
         BlackcludedItemModel,
-        VintageMiscellaneousModel
+        VintageMiscellaneousModel,
     )
 
-    project_root = os.getcwd()
-    file_path = os.path.join(project_root, "data", "wallapop_search.html")
     content = ""
-
-    if file is not None:
+    if uploaded_bytes is not None:
         try:
-            content_bytes = await file.read()
-            content = content_bytes.decode("utf-8", errors="ignore")
+            content = uploaded_bytes.decode("utf-8", errors="ignore")
             os.makedirs(os.path.dirname(file_path), exist_ok=True)
             with open(file_path, "w", encoding="utf-8") as f:
                 f.write(content)
@@ -556,6 +567,7 @@ async def import_wallapop_manual_html(file: Optional[UploadFile] = File(None)):
     offers_to_process = []
     seen_urls = set()
     junk_keywords = ["camiseta", "t-shirt", "poster", "taza", "mug", "revista", "dvd", "llavero", "keyring", "reproduccion", "repro", "sticker", "pegatina"]
+    from src.core.vintage_utils import check_is_vintage
 
     for card in cards:
         try:
@@ -573,11 +585,20 @@ async def import_wallapop_manual_html(file: Optional[UploadFile] = File(None)):
                 continue
 
             price_text = price_node.get_text(strip=True)
-            price_val = float(re.sub(r'[^\d.,]', '', price_text).replace(',', '.'))
+            raw_num = re.sub(r'[^\d.,]', '', price_text)
+            if '.' in raw_num and ',' in raw_num and raw_num.rfind(',') > raw_num.rfind('.'):
+                raw_num = raw_num.replace('.', '').replace(',', '.')
+            elif raw_num.count('.') > 1:
+                raw_num = raw_num.replace('.', '')
+            else:
+                raw_num = raw_num.replace(',', '.')
+            price_val = float(raw_num)
             if price_val <= 0:
                 continue
 
             href = card.get("href", "")
+            if check_is_vintage(title) or check_is_vintage(href):
+                continue
             clean_href = href.split("?")[0]
             full_url = clean_href if clean_href.startswith("http") else f"https://es.wallapop.com{clean_href}"
 
@@ -653,3 +674,14 @@ async def import_wallapop_manual_html(file: Optional[UploadFile] = File(None)):
         "total_inserted": saved_count,
         "message": f"Se procesaron {total_found} ofertas. Insertadas: {saved_count}, Omitidas: {skipped_count} (duplicadas/asignadas/descartadas)."
     }
+
+
+@router.post("/wallapop/import-manual-html", response_model=WallapopManualHtmlImportOutput, dependencies=[Depends(verify_api_key)])
+async def import_wallapop_manual_html(file: Optional[UploadFile] = File(None)):
+    """Parsea el archivo local o subido data/wallapop_search.html e inserta los artículos nuevos en el Purgatorio."""
+    import anyio
+
+    project_root = os.getcwd()
+    file_path = os.path.join(project_root, "data", "wallapop_search.html")
+    uploaded_bytes = await file.read() if file is not None else None
+    return await anyio.to_thread.run_sync(_process_wallapop_manual_html_sync, file_path, uploaded_bytes)

@@ -42,7 +42,7 @@ export interface CardAiEnhanceResult {
 }
 
 export const enhanceCardWithAI = async (payload: CardAiEnhancePayload): Promise<CardAiEnhanceResult> => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('access_token');
     const response = await axios.post<CardAiEnhanceResult>(
         '/api/cards/ai-enhance',
         payload,

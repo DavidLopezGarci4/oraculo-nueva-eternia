@@ -11,6 +11,8 @@ from src.domain.models import (
     CollectionItemModel,
     OfferModel,
     PendingMatchModel,
+    PriceAlertModel,
+    StagedImportModel,
     UserModel,
     ProductModel,
 )
@@ -117,6 +119,8 @@ def delete_hero(user_id: int):
         if user.role == "admin":
             raise HTTPException(status_code=403, detail="No se puede eliminar a un Arquitecto del sistema.")
 
+        db.query(PriceAlertModel).filter(PriceAlertModel.user_id == user.id).delete()
+        db.query(StagedImportModel).filter(StagedImportModel.user_id == user.id).delete()
         db.query(CollectionItemModel).filter(CollectionItemModel.owner_id == user.id).delete()
 
         username = user.username

@@ -316,7 +316,12 @@ async def run_daily_scan(progress_callback=None):
                                         logger.warning(f"⚠️ Scraper {scraper.spider_name} does not implement _scrape_detail for deep harvest.")
 
                         pipeline.log_callback = update_task_log
-                        new_items_found = pipeline.update_database(offers, shop_names=[scraper.shop_name])
+                        allow_deact = (query == "auto") and not bool(getattr(scraper, "blocked", False))
+                        new_items_found = pipeline.update_database(
+                            offers,
+                            shop_names=[scraper.shop_name],
+                            allow_deactivation=allow_deact,
+                        )
                         update_task_log(f"💾 {new_items_found} nuevas reliquias añadidas al Purgatorio.")
                         total_stats["found"] += len(offers)
                         total_stats["new"] += new_items_found

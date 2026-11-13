@@ -28,7 +28,5 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """Downgrade schema."""
-    bind = op.get_bind()
-    if bind.dialect.name == "postgresql":
-        op.execute("ALTER TABLE staged_imports DISABLE ROW LEVEL SECURITY;")
-        op.execute("ALTER TABLE authorized_devices DISABLE ROW LEVEL SECURITY;")
+    # Zero-Trust RLS policy is irreversible on public tables.
+    pass

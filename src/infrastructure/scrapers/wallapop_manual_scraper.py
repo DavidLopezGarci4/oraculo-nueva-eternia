@@ -23,7 +23,6 @@ desde el panel de Configuración (endpoint /api/scrapers/run).
 """
 from __future__ import annotations
 
-import os
 import asyncio
 import os
 import random
@@ -31,6 +30,7 @@ from typing import List, Optional
 
 from curl_cffi.requests import AsyncSession
 
+from src.core.vintage_utils import check_is_vintage
 from src.infrastructure.scrapers.base import BaseScraper, ScrapedOffer
 from src.infrastructure.scrapers.wallapop_section_api import search_wallapop_section
 from src.infrastructure.scrapers.wallapop_signed_api import search_wallapop_v3_signed
@@ -139,6 +139,9 @@ class WallapopManualScraper(BaseScraper):
         return offers
 
     async def search(self, query: str = "auto") -> List[ScrapedOffer]:
+        if query != "auto" and check_is_vintage(query):
+            self._log(f"🚫 WallapopManual: Búsqueda vintage bloqueada por política AGENTS.md ({query}).", level="warning")
+            return []
         self._log("⚔️ Wallapop: Extracción directa vía API v3 oficial (ingeniería inversa local, 100% gratuita sin APIs de terceros).")
 
         proxy = os.environ.get("WALLAPOP_RESIDENTIAL_PROXY") or None
@@ -178,10 +181,12 @@ class WallapopManualScraper(BaseScraper):
                     if idx < len(queries) - 1:
                         await asyncio.sleep(random.uniform(1.2, 2.0))
 
-        # Deduplicar por URL
+        # Deduplicar por URL y filtrar vintage (AGENTS.md Regla 2)
         seen = set()
         unique: List[ScrapedOffer] = []
         for o in all_offers:
+            if check_is_vintage(o.product_name) or check_is_vintage(o.url):
+                continue
             if o.url not in seen:
                 seen.add(o.url)
                 unique.append(o)

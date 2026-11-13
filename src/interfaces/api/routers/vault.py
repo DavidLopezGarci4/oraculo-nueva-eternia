@@ -36,7 +36,7 @@ def _resolve_staged_file(filename: str) -> Path:
 
 
 @router.get("/api/vault/generate")
-async def api_generate_vault(user_id: int = 2):
+def api_generate_vault(user_id: int = 2):
     from src.application.services.vault_service import VaultService
 
     vault_service = VaultService()
@@ -53,7 +53,7 @@ async def api_generate_vault(user_id: int = 2):
 
 
 @router.post("/api/vault/stage", response_model=StatusMessageOutput)
-async def api_stage_vault(user_id: int = 2, filename: str = None):
+def api_stage_vault(user_id: int = 2, filename: str = None):
     from src.application.services.vault_service import VaultService
     from src.domain.models import StagedImportModel
 
@@ -78,29 +78,33 @@ async def api_stage_vault(user_id: int = 2, filename: str = None):
 
 
 @router.post("/api/excel/sync", response_model=StatusMessageOutput)
-async def api_sync_excel(user_id: int = 2):
+def api_sync_excel(user_id: int = 2):
     from src.application.services.excel_manager import ExcelManager
     from src.domain.models import UserModel
     from src.infrastructure.database_cloud import SessionCloud
+    import re
     import shutil
 
     with SessionCloud() as db:
         user = db.query(UserModel).filter(UserModel.id == user_id).first()
         if not user:
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
-        is_admin = user.role == 'admin' or user.username == 'David'
+        is_admin = user.role == 'admin'
         username = user.username
 
     project_root = Path(__file__).resolve().parents[4]
-    
+    motu_dir = (project_root / "data" / "MOTU").resolve()
+
     if is_admin:
-        excel_path = project_root / "data" / "MOTU" / "lista_MOTU.xlsx"
+        excel_path = motu_dir / "lista_MOTU.xlsx"
     else:
-        # User-specific excel file path
-        excel_path = project_root / "data" / "MOTU" / f"lista_MOTU_{username}.xlsx"
+        safe_username = re.sub(r"[^A-Za-z0-9_-]", "_", username or "") or f"user_{user_id}"
+        excel_path = (motu_dir / f"lista_MOTU_{safe_username}.xlsx").resolve()
+        if not excel_path.is_relative_to(motu_dir):
+            raise HTTPException(status_code=400, detail="Nombre de usuario inválido")
         # Copy template if it doesn't exist yet
         if not excel_path.exists():
-            template_path = project_root / "data" / "MOTU" / "lista_MOTU.xlsx"
+            template_path = motu_dir / "lista_MOTU.xlsx"
             if not template_path.exists():
                 raise HTTPException(status_code=500, detail="Plantilla de Excel lista_MOTU.xlsx no encontrada.")
             # Ensure directories exist
@@ -111,7 +115,7 @@ async def api_sync_excel(user_id: int = 2):
     success = manager.sync_acquisitions_from_db(user_id)
 
     if success:
-        return {"status": "success", "message": f"Excel Bridge de {username if not is_admin else 'David'} sincronizado con éxito."}
+        return {"status": "success", "message": f"Excel Bridge de {username} sincronizado con éxito."}
     raise HTTPException(
         status_code=500,
         detail="Fallo en la sincronización del Excel. Verifique la ruta y el formato.",
@@ -119,7 +123,7 @@ async def api_sync_excel(user_id: int = 2):
 
 
 @router.get("/api/vault/download-images/zip")
-async def download_images_zip():
+def download_images_zip():
     cache_dir = Path(settings.IMAGE_CACHE_DIR)
     if not cache_dir.exists():
         raise HTTPException(status_code=404, detail="El directorio de caché de imágenes no existe.")

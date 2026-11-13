@@ -19,21 +19,35 @@ interface Props {
 
 const PriceHistoryChart: React.FC<Props> = ({ data }) => {
     // Transform data for Recharts (Combine all shops into unified points by date)
-    const allDates = Array.from(new Set(data.flatMap(s => s.history.map(h => h.date)))).sort();
+    const chartData = React.useMemo(() => {
+        const allDates = Array.from(new Set(data.flatMap(s => s.history.map(h => h.date)))).sort();
 
-    const chartData = allDates.map(date => {
-        const point: any = {
-            name: format(new Date(date), 'dd MMM', { locale: es }),
-            fullDate: date
-        };
-        data.forEach(shop => {
-            const historyPoint = shop.history.find(h => h.date === date);
-            if (historyPoint) {
-                point[shop.shop_name] = historyPoint.price;
+        const shopPriceMaps = data.map(shop => {
+            const priceByDate = new Map<string, number>();
+            for (const h of shop.history) {
+                priceByDate.set(h.date, h.price);
             }
+            return { shop_name: shop.shop_name, priceByDate };
         });
-        return point;
-    });
+
+        return allDates.map(date => {
+            const parsedDate = new Date(date);
+            const labelName = Number.isNaN(parsedDate.getTime())
+                ? String(date)
+                : format(parsedDate, 'dd MMM', { locale: es });
+            const point: any = {
+                name: labelName,
+                fullDate: date
+            };
+            shopPriceMaps.forEach(({ shop_name, priceByDate }) => {
+                const price = priceByDate.get(date);
+                if (price !== undefined) {
+                    point[shop_name] = price;
+                }
+            });
+            return point;
+        });
+    }, [data]);
 
     // Mapeo fijo de colores para tiendas comunes para asegurar consistencia
     const getShopColor = (name: string, idx: number) => {
@@ -43,12 +57,12 @@ const PriceHistoryChart: React.FC<Props> = ({ data }) => {
         if (lowerName.includes('wallapop')) return '#13C1AC'; // Wallapop Green
         if (lowerName.includes('amazon')) return '#FF9900'; // Amazon Orange
 
-        const colors = ['#0ea5e9', '#ec4899', '#8b5cf6', '#10b981', '#f59e0b'];
+        const colors = ['#0ea5e9', '#f59e0b', '#10b981', '#38bdf8', '#fbbf24'];
         return colors[idx % colors.length];
     };
 
     return (
-        <div className="h-[280px] w-full mt-4 bg-white/5 rounded-[2rem] p-4 border border-white/10 backdrop-blur-xl">
+        <div className="h-[280px] w-full mt-4 bg-white/5 rounded-[2rem] p-4 border border-white/10 backdrop-blur-xl blur-incognito">
             <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 10 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />

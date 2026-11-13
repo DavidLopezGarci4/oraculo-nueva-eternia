@@ -125,7 +125,7 @@ const PurgatoryListView: React.FC<PurgatoryListViewProps> = ({
                             <div className="flex-1 md:hidden space-y-2">
                                 <h3 className="text-sm font-bold text-white leading-snug line-clamp-3">{item.scraped_name}</h3>
                                 <div className="flex items-baseline gap-2">
-                                    <span className="text-xl font-black text-brand-primary tracking-tight">{item.price} {item.currency}</span>
+                                    <span className="text-xl font-black text-brand-primary tracking-tight blur-incognito">{item.price} {item.currency}</span>
                                 </div>
                                 <span className="text-[10px] font-bold text-white/60">{new Date(item.found_at).toLocaleDateString()}</span>
                             </div>
@@ -149,7 +149,7 @@ const PurgatoryListView: React.FC<PurgatoryListViewProps> = ({
                             <div className="flex items-center gap-6 pt-1">
                                 <div className="flex flex-col">
                                     <span className="text-[10px] font-black text-white/60 uppercase tracking-wider">Precio Detectado</span>
-                                    <span className="text-2xl font-black text-white tracking-tight">{item.price} <span className="text-sm text-white/65">{item.currency}</span></span>
+                                    <span className="text-2xl font-black text-white tracking-tight blur-incognito">{item.price} <span className="text-sm text-white/65">{item.currency}</span></span>
                                 </div>
                                 {item.ean && (
                                     <div className="flex flex-col">
@@ -234,7 +234,7 @@ const PurgatoryListView: React.FC<PurgatoryListViewProps> = ({
                                                                 </span>
                                                             )}
                                                             {sug.is_learned && (
-                                                                <span className="px-1.5 py-0.5 rounded bg-violet-500/15 border border-violet-500/40 text-[9px] font-black text-violet-300 uppercase tracking-tighter" title={sug.reason}>
+                                                                <span className="px-1.5 py-0.5 rounded bg-sky-500/15 border border-sky-500/40 text-[9px] font-black text-sky-300 uppercase tracking-tighter" title={sug.reason}>
                                                                     Aprendido
                                                                 </span>
                                                             )}

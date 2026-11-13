@@ -4,9 +4,11 @@ Este archivo contiene las directrices de arquitectura y comportamiento para cual
 
 ---
 
-## 1. Metodología de Desarrollo (SDD)
-*   **Obligatorio:** Todo desarrollo complejo, refactorización o cambio arquitectónico debe seguir la skill `specification-driven-development`.
-*   No se debe programar "al vuelo" (*vibe coding*). Se debe consensuar primero un glosario/contexto y un plan técnico antes de modificar ficheros.
+## 1. Metodología de Desarrollo (ODD — Gentle AI v4)
+*   **Obligatorio:** Todo desarrollo, corrección de bugs, mejora de rendimiento o evolución arquitectónica sigue **Organic Driven Development (ODD)** mediante las skills globales `gentle-ai` y `work-unit-commits`.
+*   **Enrutamiento Elástico por Complejidad:**
+    *   *Tareas pequeñas/medianas:* Ciclo directo `RED -> GREEN -> REFACTOR` en código y tests deterministas, cerrando por unidades de trabajo atómicas (`<= 400` líneas por slice) sin burocracia documental.
+    *   *Tareas grandes o multifase:* Contrato ligero de alcance, criterios de aceptación y evidencia por unidad de trabajo en `odd/tasks/<slug>.md`, apoyado en `docs/CONTEXT.md` como glosario vivo del dominio.
 
 ---
 

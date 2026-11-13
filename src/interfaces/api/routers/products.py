@@ -4,7 +4,7 @@ from typing import List, Optional
 import time
 import threading
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from loguru import logger
 from sqlalchemy import and_, desc, func, select, event
 from sqlalchemy.orm import joinedload
@@ -64,9 +64,7 @@ def clear_purgatory_counts_cache():
 @event.listens_for(ProductModel, 'after_insert')
 @event.listens_for(ProductModel, 'after_delete')
 def on_db_change(mapper, connection, target):
-    # Throttle: solo invalidar si han transcurrido más de 60s para no degradar consultas durante scraping masivo
-    if time.time() - _purgatory_counts_timestamp > 60:
-        clear_purgatory_counts_cache()
+    clear_purgatory_counts_cache()
 
 
 def get_purgatory_counts(db) -> dict[int, int]:
@@ -77,33 +75,34 @@ def get_purgatory_counts(db) -> dict[int, int]:
         if _purgatory_counts_cache is not None and (now - _purgatory_counts_timestamp) < 600:
             return _purgatory_counts_cache
 
-        from src.domain.models import PendingMatchModel, ProductModel
-        # Mismo motor y mismas predicciones que GET /api/purgatory (sin memoria ni acompañantes)
-        from src.interfaces.api.routers.purgatory import build_suggestion_context, compute_suggestions
+    from src.domain.models import PendingMatchModel, ProductModel
+    # Mismo motor y mismas predicciones que GET /api/purgatory (sin memoria ni acompañantes)
+    from src.interfaces.api.routers.purgatory import build_suggestion_context, compute_suggestions
 
-        pending = db.query(PendingMatchModel).all()
-        products = db.query(ProductModel).all()
-        ctx = build_suggestion_context(products)
+    pending = db.query(PendingMatchModel).all()
+    products = db.query(ProductModel).all()
+    ctx = build_suggestion_context(products)
 
-        counts = {}
-        for item in pending:
-            for sug in compute_suggestions(item, ctx, use_memory=False):
-                if sug.get("is_companion"):
-                    continue
-                pid = sug["product_id"]
-                counts[pid] = counts.get(pid, 0) + 1
+    counts = {}
+    for item in pending:
+        for sug in compute_suggestions(item, ctx, use_memory=False):
+            if sug.get("is_companion"):
+                continue
+            pid = sug["product_id"]
+            counts[pid] = counts.get(pid, 0) + 1
 
+    with _purgatory_counts_lock:
         _purgatory_counts_cache = counts
         _purgatory_counts_timestamp = time.time()
-        return counts
+    return counts
 
 
 @router.get("/api/products", response_model=List[ProductOutput])
 def get_products(
     is_vintage: bool = False,
     shop: Optional[str] = None,
-    limit: Optional[int] = None,
-    offset: Optional[int] = None,
+    limit: Optional[int] = Query(default=None, ge=1, le=2000),
+    offset: int = Query(default=0, ge=0),
     search: Optional[str] = None
 ):
     with SessionCloud() as db:
@@ -639,7 +638,17 @@ def get_vintage_products():
 
 @router.delete("/api/products/{product_id}", response_model=StatusMessageOutput, dependencies=[Depends(verify_api_key)])
 def delete_product(product_id: int):
-    from src.domain.models import OfferModel, PendingMatchModel, ProductAliasModel, ProductModel, VintageProductModel, PriceAlertModel
+    from src.domain.models import (
+        OfferModel,
+        PendingMatchModel,
+        PriceAlertModel,
+        PriceHistoryModel,
+        ProductAliasModel,
+        ProductLoreModel,
+        ProductModel,
+        ProductMonthlyStatsModel,
+        VintageProductModel,
+    )
     
     with SessionCloud() as db:
         product = db.query(ProductModel).filter(ProductModel.id == product_id).first()
@@ -650,27 +659,48 @@ def delete_product(product_id: int):
         
         # 1. Obtener todas las ofertas vinculadas a este producto para devolverlas al Purgatorio
         offers = db.query(OfferModel).filter(OfferModel.product_id == product.id).all()
+        offer_urls = [o.url for o in offers if o.url]
+        existing_pending_urls = set()
+        if offer_urls:
+            existing_pending_urls = {
+                row[0]
+                for row in db.query(PendingMatchModel.url)
+                .filter(PendingMatchModel.url.in_(offer_urls))
+                .all()
+            }
+
         for offer in offers:
-            purgatory_item = PendingMatchModel(
-                scraped_name=offer.product.name if offer.product else product_name,
-                ean=product.ean,
-                price=offer.price,
-                currency=offer.currency,
-                url=offer.url,
-                shop_name=offer.shop_name,
-                image_url=offer.image_url,
-                source_type=offer.source_type,
-                is_vintage=offer.is_vintage,
-                condition=offer.condition or "Loose",
-                grading=offer.grading or 7.5
-            )
-            db.add(purgatory_item)
+            if offer.url and offer.url not in existing_pending_urls:
+                purgatory_item = PendingMatchModel(
+                    scraped_name=offer.product.name if offer.product else product_name,
+                    ean=product.ean,
+                    price=offer.price,
+                    currency=offer.currency,
+                    url=offer.url,
+                    shop_name=offer.shop_name,
+                    image_url=offer.image_url,
+                    source_type=offer.source_type,
+                    is_vintage=offer.is_vintage,
+                    condition=offer.condition or "Loose",
+                    grading=offer.grading or 7.5
+                )
+                db.add(purgatory_item)
+                existing_pending_urls.add(offer.url)
             
             # Borrar alias de este item
             db.query(ProductAliasModel).filter(ProductAliasModel.source_url == offer.url).delete()
-            
-        # 2. Borrar las ofertas del producto
-        db.query(OfferModel).filter(OfferModel.product_id == product.id).delete()
+
+        # 1.5 Borrar historial de precios que referencia las ofertas de este producto
+        offer_ids = [o.id for o in offers]
+        if offer_ids:
+            db.query(PriceHistoryModel).filter(PriceHistoryModel.offer_id.in_(offer_ids)).delete(synchronize_session=False)
+
+        # 2. Borrar las ofertas del producto y expirar relación en caché para evitar SAWarning al borrar product
+        db.query(OfferModel).filter(OfferModel.product_id == product.id).delete(synchronize_session=False)
+        db.expire(product, ["offers"])
+
+        # 3. Borrar estadísticas mensuales si existían
+        db.query(ProductMonthlyStatsModel).filter(ProductMonthlyStatsModel.product_id == product.id).delete()
         
         # 3. Borrar de VintageProductModel si existía
         db.query(VintageProductModel).filter(VintageProductModel.product_id == product.id).delete()
@@ -723,7 +753,7 @@ def get_vintage_miscellaneous():
         return output
 
 
-@router.post("/api/products/{identifier}/refresh-image", dependencies=[Depends(verify_device)])
+@router.post("/api/products/{identifier}/refresh-image", dependencies=[Depends(verify_api_key)])
 def refresh_product_image(identifier: str):
     """
     Descarga la imagen actualizada de una figura desde ActionFigure411 (por ID de figura o producto)

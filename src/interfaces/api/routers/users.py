@@ -11,6 +11,7 @@ from src.infrastructure.database_cloud import SessionCloud
 from src.interfaces.api.deps import (
     get_current_user,
     invalidate_user_auth_cache,
+    require_admin,
     scope_user_id,
     verify_device,
     verify_wallapop_import,
@@ -51,7 +52,7 @@ def get_user_settings(user_id: int, current_user: UserModel = Depends(get_curren
 def update_user_image_paths(
     user_id: int,
     request: UserImagePathsUpdateRequest,
-    current_user: UserModel = Depends(get_current_user),
+    current_user: UserModel = Depends(require_admin),
 ):
     # Fase AAA-2.1: antes cualquiera (sin auth) podía fijar la ruta de imágenes
     # personalizada de OTRO usuario, con impacto directo en qué ficheros sirve

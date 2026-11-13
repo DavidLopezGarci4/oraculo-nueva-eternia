@@ -4,8 +4,9 @@ import {
     CheckCircle2, RefreshCw, Download, Package, Sparkles, Settings, ShieldAlert,
     FileSpreadsheet, Trash2, Zap, Copy, Check, X, ShieldCheck, Bell, ExternalLink
 } from 'lucide-react';
-import { useState, useEffect, lazy, Suspense } from 'react';
+import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { downloadImagesZip, getSSLStatus, renewSSLCertificate, getTelegramConfig, saveTelegramConfig, type SSLStatus, type Hero } from '../../api/admin';
+import { useModalA11y } from '../../hooks/useModalA11y';
 
 const AppArchitectureGraph = lazy(() => import('./AppArchitectureGraph'));
 
@@ -100,10 +101,49 @@ export default function SystemTab({
         details: string;
         timestamp?: string;
     } | null>(null);
+    const sslPollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const uiTimersRef = useRef<number[]>([]);
+    const isMountedRef = useRef(true);
+    const errorLogModalRef = useRef<HTMLDivElement>(null);
+    const sslModalRef = useRef<HTMLDivElement>(null);
+
+    useModalA11y(
+        Boolean(showErrorLogModal && downloadStatus.failedItems && downloadStatus.failedItems.length > 0),
+        () => setShowErrorLogModal(false),
+        errorLogModalRef
+    );
+    useModalA11y(
+        Boolean(showSSLModal && sslModalData),
+        () => setShowSSLModal(false),
+        sslModalRef
+    );
+
+    useEffect(() => {
+        isMountedRef.current = true;
+        return () => {
+            isMountedRef.current = false;
+            if (sslPollIntervalRef.current) {
+                clearInterval(sslPollIntervalRef.current);
+                sslPollIntervalRef.current = null;
+            }
+            uiTimersRef.current.forEach((id) => window.clearTimeout(id));
+            uiTimersRef.current = [];
+        };
+    }, []);
 
     const [lastExcelSync, setLastExcelSync] = useState<string | null>(() => localStorage.getItem('motu_last_excel_sync'));
     const [lastFinopsMaintenance, setLastFinopsMaintenance] = useState<string | null>(() => localStorage.getItem('motu_last_finops_maintenance'));
     const [cacheStorageSize, setCacheStorageSize] = useState<string | null>(null);
+    const [allowManualPriceReveal, setAllowManualPriceReveal] = useState<boolean>(
+        () => localStorage.getItem('allowManualPriceReveal') === 'true'
+    );
+
+    const handleToggleManualPriceReveal = () => {
+        const next = !allowManualPriceReveal;
+        localStorage.setItem('allowManualPriceReveal', next ? 'true' : 'false');
+        setAllowManualPriceReveal(next);
+        window.dispatchEvent(new Event('oraculo:manual-price-reveal'));
+    };
 
     useEffect(() => {
         const calculateStorage = async () => {
@@ -212,12 +252,25 @@ export default function SystemTab({
 
         const startTime = Date.now();
         try {
+            if (sslPollIntervalRef.current) {
+                clearInterval(sslPollIntervalRef.current);
+                sslPollIntervalRef.current = null;
+            }
             const res = await renewSSLCertificate(true);
+            if (!isMountedRef.current) return;
             let attempts = 0;
-            const interval = setInterval(async () => {
+            sslPollIntervalRef.current = setInterval(async () => {
+                if (!isMountedRef.current) {
+                    if (sslPollIntervalRef.current) {
+                        clearInterval(sslPollIntervalRef.current);
+                        sslPollIntervalRef.current = null;
+                    }
+                    return;
+                }
                 attempts++;
                 try {
                     const fresh = await getSSLStatus();
+                    if (!isMountedRef.current) return;
                     setSslStatus(fresh);
                     
                     const lastResult = fresh.last_renewal_result;
@@ -226,7 +279,10 @@ export default function SystemTab({
                         : false;
 
                     if (isNewResult || (!fresh.is_renewing && attempts >= 10) || attempts >= 35) {
-                        clearInterval(interval);
+                        if (sslPollIntervalRef.current) {
+                            clearInterval(sslPollIntervalRef.current);
+                            sslPollIntervalRef.current = null;
+                        }
                         setRenewingSSL(false);
                         
                         if (lastResult && (isNewResult || attempts >= 10)) {
@@ -249,8 +305,13 @@ export default function SystemTab({
                     }
                 } catch (pollErr) {
                     if (attempts >= 35) {
-                        clearInterval(interval);
-                        setRenewingSSL(false);
+                        if (sslPollIntervalRef.current) {
+                            clearInterval(sslPollIntervalRef.current);
+                            sslPollIntervalRef.current = null;
+                        }
+                        if (isMountedRef.current) {
+                            setRenewingSSL(false);
+                        }
                     }
                 }
             }, 2500);
@@ -295,7 +356,10 @@ export default function SystemTab({
         const textToCopy = `=== INFORME SSL ORÁCULO DE ETERNIA ===\nFecha: ${sslModalData.timestamp || new Date().toISOString()}\nEstado: ${sslModalData.status.toUpperCase()}\nTítulo: ${sslModalData.title}\nMensaje: ${sslModalData.message}\n\nDETALLES / LOGS:\n${sslModalData.details}\n======================================`;
         navigator.clipboard.writeText(textToCopy);
         setCopiedSSLLog(true);
-        setTimeout(() => setCopiedSSLLog(false), 2500);
+        const timerId = window.setTimeout(() => {
+            if (isMountedRef.current) setCopiedSSLLog(false);
+        }, 2500);
+        uiTimersRef.current.push(timerId);
     };
 
     const handleCopyErrorLog = () => {
@@ -305,7 +369,10 @@ export default function SystemTab({
         ).join('\n');
         navigator.clipboard.writeText(logText);
         setCopiedLog(true);
-        setTimeout(() => setCopiedLog(false), 2500);
+        const timerId = window.setTimeout(() => {
+            if (isMountedRef.current) setCopiedLog(false);
+        }, 2500);
+        uiTimersRef.current.push(timerId);
     };
 
     return (
@@ -391,6 +458,39 @@ export default function SystemTab({
                     </div>
                     )}
 
+                    {/* Privacidad de Precios Manuales (AGENTS.md Regla 2) */}
+                    <div className="glass border border-brand-primary/30 p-6 rounded-3xl space-y-4 bg-brand-primary/5 flex flex-col justify-between">
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-3 text-brand-primary font-bold uppercase tracking-widest text-xs mb-2">
+                                <Lock className="h-4 w-4" />
+                                Privacidad de Precios Manuales
+                            </div>
+                            <p className="text-[10px] text-white/65 font-bold uppercase leading-tight">
+                                Por defecto los precios manuales de compra y su ROI permanecen difuminados (sin revelarse al pasar el cursor) y siempre quedan ocultos en Modo Incógnito.
+                            </p>
+
+                            <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl">
+                                <span id="manual-price-reveal-label" className="text-xs text-white/70">Mostrar Precios Manuales de Compra</span>
+                                <button
+                                    type="button"
+                                    onClick={handleToggleManualPriceReveal}
+                                    role="switch"
+                                    aria-checked={allowManualPriceReveal}
+                                    aria-labelledby="manual-price-reveal-label"
+                                    className={`relative h-5 w-10 rounded-full transition-all cursor-pointer ${allowManualPriceReveal ? 'bg-brand-primary' : 'bg-white/10'}`}
+                                >
+                                    <div className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${allowManualPriceReveal ? 'right-0.5' : 'left-0.5'}`} />
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="text-[9px] text-white/55 font-bold uppercase tracking-wider pt-2 border-t border-white/5">
+                            {allowManualPriceReveal
+                                ? 'Visible fuera de Modo Incógnito (enfoque o sesión activa)'
+                                : 'Protección estricta activa: cifras manuales difuminadas'}
+                        </div>
+                    </div>
+
                     {/* Compartir Santuario (Public Showcase) */}
                     <div className="glass border border-brand-primary/30 p-6 rounded-3xl space-y-4 bg-brand-primary/5 flex flex-col justify-between">
                         <div className="space-y-4">
@@ -462,7 +562,7 @@ export default function SystemTab({
                                     <div>
                                         <h4 className="font-black text-white uppercase tracking-wider mb-1">2. Privacidad de Datos</h4>
                                         <p className="text-[8px] leading-normal text-amber-500 font-bold">
-                                            Se ocultan automáticamente tu inversión, precios de adquisición, ROI y todas tus anotaciones personales de la base de datos.
+                                            Se ocultan automáticamente tu inversión personal, precios de adquisición y ROI privado (mostrando únicamente la cotización media pública de mercado).
                                         </p>
                                     </div>
                                     <div>
@@ -1083,7 +1183,14 @@ export default function SystemTab({
             {/* Error Log Modal */}
             {showErrorLogModal && downloadStatus.failedItems && downloadStatus.failedItems.length > 0 && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-                    <div className="bg-[#12141a] border border-white/10 rounded-3xl p-6 max-w-2xl w-full max-h-[85vh] flex flex-col space-y-4 shadow-2xl">
+                    <div
+                        ref={errorLogModalRef}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label="Informe de Errores de Descarga"
+                        tabIndex={-1}
+                        className="bg-[#12141a] border border-white/10 rounded-3xl p-6 max-w-2xl w-full max-h-[85vh] flex flex-col space-y-4 shadow-2xl outline-none"
+                    >
                         <div className="flex justify-between items-center pb-3 border-b border-white/10">
                             <div className="flex items-center gap-2 text-red-400 font-black uppercase text-sm">
                                 <AlertCircle className="h-5 w-5" />
@@ -1091,6 +1198,7 @@ export default function SystemTab({
                             </div>
                             <button
                                 onClick={() => setShowErrorLogModal(false)}
+                                aria-label="Cerrar informe de errores"
                                 className="p-1 rounded-xl bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-all"
                             >
                                 <X className="h-5 w-5" />
@@ -1144,7 +1252,13 @@ export default function SystemTab({
             {/* SSL Diagnosis & Renewal Log Modal */}
             {showSSLModal && sslModalData && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-                    <div className={`bg-[#12141a] border rounded-3xl p-6 max-w-2xl w-full max-h-[85vh] flex flex-col space-y-4 shadow-2xl ${
+                    <div
+                        ref={sslModalRef}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label="Diagnóstico de Certificados SSL"
+                        tabIndex={-1}
+                        className={`bg-[#12141a] border rounded-3xl p-6 max-w-2xl w-full max-h-[85vh] flex flex-col space-y-4 shadow-2xl outline-none ${
                         sslModalData.status === 'error'
                             ? 'border-red-500/40 shadow-red-500/10'
                             : sslModalData.status === 'success'

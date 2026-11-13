@@ -16,11 +16,10 @@ import {
 import { useCart } from '../context/CartContext';
 import { getCollection, toggleCollection } from '../api/collection';
 import type { Product } from '../api/collection';
-import { updateProduct, unlinkOffer, syncNexusVintage, getScrapersLogs } from '../api/admin';
+import { updateProduct, unlinkOffer, syncNexusVintage, getScrapersLogs, isUserAdmin, type Hero } from '../api/admin';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { getProductPriceHistory, getUniqueShops } from '../api/products';
-import type { Hero } from '../api/admin';
 import { indexedDbCache } from '../services/indexedDbCache';
 import PowerSwordLoader from '../components/ui/PowerSwordLoader';
 import CronosView from '../components/catalog/CronosView';
@@ -96,7 +95,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
 
     // Contexto de Autenticación (Fase 8.2)
     const activeUserId = parseInt(localStorage.getItem('active_user_id') || '2');
-    const isAdmin = user?.role?.toLowerCase() === 'admin' || user?.username?.toLowerCase() === 'david';
+    const isAdmin = isUserAdmin(user);
 
     const handleTriggerVintageSync = async () => {
         setShowVintageSyncModal(true);
@@ -149,13 +148,32 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
         queryKey: ['products', isVintageOnly],
         queryFn: async () => {
             const url = `/api/products?is_vintage=${isVintageOnly ? 'true' : 'false'}`;
-            const response = await axios.get(url);
-            if (response.data && Array.isArray(response.data)) {
-                indexedDbCache.setProducts(response.data).then(() => {
-                    indexedDbCache.getCount().then(setIdbCount);
-                });
+            try {
+                const response = await axios.get(url);
+                if (response.data && Array.isArray(response.data)) {
+                    const syncCache = () => {
+                        indexedDbCache.setProducts(response.data).then(() => {
+                            indexedDbCache.getCount().then(setIdbCount);
+                        });
+                    };
+                    const ric = (window as Window & { requestIdleCallback?: (cb: () => void) => number }).requestIdleCallback;
+                    if (typeof ric === 'function') {
+                        ric(syncCache);
+                    } else {
+                        window.setTimeout(syncCache, 120);
+                    }
+                }
+                return response.data;
+            } catch (err) {
+                const cached = await indexedDbCache.getAllProducts();
+                const filteredCached = cached.filter(
+                    (p) => Boolean((p as unknown as Product).is_vintage) === isVintageOnly
+                );
+                if (filteredCached.length > 0) {
+                    return filteredCached as unknown as Product[];
+                }
+                throw err;
             }
-            return response.data;
         },
         staleTime: 1000 * 60 * 5,
     });
@@ -319,11 +337,13 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
     }, [products, collectionMap]);
 
     // 8. Lógica de Ordenación y Filtrado Híbrida 100% Instantánea en Cliente (0ms)
+    const deferredSearchQuery = React.useDeferredValue(searchQuery);
+
     const sortedProducts = React.useMemo(() => {
         if (!products) return [];
 
         const filtered = [...products].filter(product => {
-            const query = searchQuery.toLowerCase();
+            const query = deferredSearchQuery.toLowerCase();
             const owned = isOwned(product.id);
             const wished = isWished(product.id);
 
@@ -345,7 +365,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
                 }
             }
 
-            const rawQuery = searchQuery.trim();
+            const rawQuery = deferredSearchQuery.trim();
             const idOnlyQuery = rawQuery.replace(/^#/, '');
             const matchesId = idOnlyQuery.length > 0 && !isNaN(Number(idOnlyQuery)) && product.id.toString().includes(idOnlyQuery);
 
@@ -381,7 +401,7 @@ const Catalog: React.FC<CatalogProps> = React.memo(({ searchQuery = "", isVintag
         });
 
         return filtered;
-    }, [products, searchQuery, selectedChips, selectedShopFilter, viewMode, sortBy, sortOrder, isOwned, isWished, subCatStats]);
+    }, [products, deferredSearchQuery, selectedChips, selectedShopFilter, viewMode, sortBy, sortOrder, isOwned, isWished, subCatStats]);
 
     const chartData = React.useMemo(() => {
         if (!historyCronosA && !historyCronosB) return [];

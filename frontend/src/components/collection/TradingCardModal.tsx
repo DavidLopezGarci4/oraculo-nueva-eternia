@@ -24,13 +24,13 @@ import {
     Globe,
     Palette
 } from 'lucide-react';
-import { toPng } from 'html-to-image';
 import { MOTUImage } from '../ui/MOTUImage';
 import { enhanceCardWithAI, type CardAiEnhanceResult } from '../../api/cards';
 import { getSystemTcgLayouts } from '../../api/admin';
 import { fetchCharacterLoreList, updateCharacterLore, harvestProductLore, fetchProductLore, updateProductLore, type CharacterLore } from '../../api/lore';
 import { refreshProductImage } from '../../api/products';
 import { DEFAULT_FACTION_CARD_LAYOUTS, type FactionCardLayout } from '../config/TcgConfigTab';
+import { useModalA11y } from '../../hooks/useModalA11y';
 
 /** Normaliza un nombre de producto para buscar su personaje arquetipico (sin sufijos entre parentesis ni lineas). */
 const cleanLoreSearchName = (raw: string): string =>
@@ -950,6 +950,7 @@ const generateTradingCardDataUrl = async (
     profileData?: any
 ): Promise<string> => {
     try {
+        const { toPng } = await import('html-to-image');
         return await toPng(node, {
             pixelRatio: 2.5,
             skipFonts: false,
@@ -1097,6 +1098,41 @@ const generateTradingCardDataUrl = async (
 
 export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onClose, item, isAdmin = false }) => {
     const cardRef = useRef<HTMLDivElement>(null);
+    const modalContainerRef = useRef<HTMLDivElement>(null);
+    const timersRef = useRef<number[]>([]);
+    const isMountedRef = useRef(true);
+    const dbBaselineRef = useRef<{
+        itemId: number;
+        cardVersion: 'showcase' | 'secret_lair' | 'classic';
+        customCardName: string;
+        customSubtitle: string;
+        customManaCost: string;
+        customSpecialMove: string;
+        customLore: string;
+        customQuoteAuthor: string;
+        customTypeLine: string;
+        customTextColor: string;
+    } | null>(null);
+
+    useModalA11y(Boolean(isOpen && item), onClose, modalContainerRef);
+
+    React.useEffect(() => {
+        isMountedRef.current = true;
+        return () => {
+            isMountedRef.current = false;
+            timersRef.current.forEach((id) => window.clearTimeout(id));
+            timersRef.current = [];
+        };
+    }, []);
+
+    const scheduleTimer = (fn: () => void, delayMs: number) => {
+        const id = window.setTimeout(() => {
+            timersRef.current = timersRef.current.filter((t) => t !== id);
+            if (isMountedRef.current) fn();
+        }, delayMs);
+        timersRef.current.push(id);
+    };
+
     const [exporting, setExporting] = useState(false);
     const [copied, setCopied] = useState(false);
     const [shared, setShared] = useState(false);
@@ -1167,11 +1203,16 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
     React.useEffect(() => {
         if (!isOpen || !item) return;
 
+        let cancelled = false;
+        dbBaselineRef.current = null;
+
         const savedKey = `tcg_custom_card_${item.id}`;
         const savedCustom = localStorage.getItem(savedKey);
+        let parsedCustom: Record<string, any> | null = null;
         if (savedCustom) {
             try {
                 const parsed = JSON.parse(savedCustom);
+                parsedCustom = parsed;
                 setCardVersion(parsed.cardVersion || 'secret_lair');
                 setCustomCardName(parsed.customCardName || '');
                 setCustomSubtitle(parsed.customSubtitle || '');
@@ -1212,6 +1253,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
             try { setCustomLayouts(JSON.parse(stored)); } catch {}
         }
         getSystemTcgLayouts().then(remote => {
+            if (cancelled) return;
             if (remote && Object.keys(remote).length > 0) {
                 setCustomLayouts(prev => ({ ...prev, ...remote }));
             }
@@ -1223,57 +1265,94 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
 
         if (productId && !isVintageItem) {
             fetchProductLore(productId).then(res => {
+                if (cancelled) return;
                 if (res) {
                     setDbLoreChar(res as any);
-                    if (res.canonical_name && !customCardName) setCustomCardName(res.canonical_name);
-                    if (res.subtitle && !customSubtitle) setCustomSubtitle(res.subtitle);
-                    if (res.flavor_quote_author && !customQuoteAuthor) setCustomQuoteAuthor(res.flavor_quote_author);
-                    if (res.text_color && customTextColor === '#FFFFFF') setCustomTextColor(res.text_color);
-                    if (res.mana_cost && !customManaCost) setCustomManaCost(res.mana_cost);
-                    if (res.card_version && !savedCustom) setCardVersion(res.card_version as any);
-                    if (res.special_move && !customSpecialMove) setCustomSpecialMove(res.special_move);
-                    if (res.type_line && !customTypeLine) setCustomTypeLine(res.type_line);
-                    if (res.lore && !customLore) setCustomLore(res.lore);
+                    if (!parsedCustom) {
+                        dbBaselineRef.current = {
+                            itemId: item.id,
+                            cardVersion: (res.card_version as any) || 'secret_lair',
+                            customCardName: res.canonical_name || '',
+                            customSubtitle: res.subtitle || '',
+                            customManaCost: res.mana_cost || '',
+                            customSpecialMove: res.special_move || '',
+                            customLore: res.lore || '',
+                            customQuoteAuthor: res.flavor_quote_author || '',
+                            customTypeLine: res.type_line || '',
+                            customTextColor: res.text_color || '#FFFFFF'
+                        };
+                    }
+                    if (res.canonical_name && !parsedCustom?.customCardName) setCustomCardName(res.canonical_name);
+                    if (res.subtitle && !parsedCustom?.customSubtitle) setCustomSubtitle(res.subtitle);
+                    if (res.flavor_quote_author && !parsedCustom?.customQuoteAuthor) setCustomQuoteAuthor(res.flavor_quote_author);
+                    if (res.text_color && (!parsedCustom?.customTextColor || parsedCustom.customTextColor === '#FFFFFF')) setCustomTextColor(res.text_color);
+                    if (res.mana_cost && !parsedCustom?.customManaCost) setCustomManaCost(res.mana_cost);
+                    if (res.card_version && !parsedCustom) setCardVersion(res.card_version as any);
+                    if (res.special_move && !parsedCustom?.customSpecialMove) setCustomSpecialMove(res.special_move);
+                    if (res.type_line && !parsedCustom?.customTypeLine) setCustomTypeLine(res.type_line);
+                    if (res.lore && !parsedCustom?.customLore) setCustomLore(res.lore);
                 }
             }).catch(() => {
+                if (cancelled) return;
                 const rawName = item.product_name || item.name || '';
                 fetchCharacterLoreList({ search: cleanLoreSearchName(rawName), limit: 5 }).then(res => {
+                    if (cancelled) return;
                     if (res && res.items && res.items.length > 0) {
                         const best = res.items[0];
                         setDbLoreChar(best);
-                        if (best.subtitle && !customSubtitle) setCustomSubtitle(best.subtitle);
-                        if (best.flavor_quote_author && !customQuoteAuthor) setCustomQuoteAuthor(best.flavor_quote_author);
-                        if (best.text_color && customTextColor === '#FFFFFF') setCustomTextColor(best.text_color);
-                        if (best.mana_cost && !customManaCost) setCustomManaCost(best.mana_cost);
-                        if (best.card_version && !savedCustom) setCardVersion(best.card_version as any);
+                        if (!parsedCustom) {
+                            dbBaselineRef.current = {
+                                itemId: item.id,
+                                cardVersion: (best.card_version as any) || 'secret_lair',
+                                customCardName: '',
+                                customSubtitle: best.subtitle || '',
+                                customManaCost: best.mana_cost || '',
+                                customSpecialMove: '',
+                                customLore: '',
+                                customQuoteAuthor: best.flavor_quote_author || '',
+                                customTypeLine: '',
+                                customTextColor: best.text_color || '#FFFFFF'
+                            };
+                        }
+                        if (best.subtitle && !parsedCustom?.customSubtitle) setCustomSubtitle(best.subtitle);
+                        if (best.flavor_quote_author && !parsedCustom?.customQuoteAuthor) setCustomQuoteAuthor(best.flavor_quote_author);
+                        if (best.text_color && (!parsedCustom?.customTextColor || parsedCustom.customTextColor === '#FFFFFF')) setCustomTextColor(best.text_color);
+                        if (best.mana_cost && !parsedCustom?.customManaCost) setCustomManaCost(best.mana_cost);
+                        if (best.card_version && !parsedCustom) setCardVersion(best.card_version as any);
                     }
                 }).catch(() => {});
             });
         } else {
             const rawName = item.product_name || item.name || '';
             fetchCharacterLoreList({ search: cleanLoreSearchName(rawName), limit: 5 }).then(res => {
+                if (cancelled) return;
                 if (res && res.items && res.items.length > 0) {
                     const best = res.items[0];
                     setDbLoreChar(best);
                 }
             }).catch(() => {});
         }
+
+        return () => {
+            cancelled = true;
+        };
     }, [isOpen, item?.id]);
 
     // Guardar automáticamente cualquier cambio en la carta para mantenerlo fijo
     React.useEffect(() => {
         if (!isOpen || !item) return;
 
+        const baseline = dbBaselineRef.current?.itemId === item.id ? dbBaselineRef.current : null;
         const hasCustomization = Boolean(
-            cardVersion !== 'secret_lair' ||
-            customCardName ||
-            customSubtitle ||
-            customManaCost ||
-            customSpecialMove ||
-            customLore ||
-            customQuoteAuthor ||
-            customTypeLine ||
-            customTextColor !== '#FFFFFF' ||
+            cardVersion !== (baseline?.cardVersion ?? 'secret_lair') ||
+            customCardName !== (baseline?.customCardName ?? '') ||
+            customSubtitle !== (baseline?.customSubtitle ?? '') ||
+            customManaCost !== (baseline?.customManaCost ?? '') ||
+            customSpecialMove !== (baseline?.customSpecialMove ?? '') ||
+            customLore !== (baseline?.customLore ?? '') ||
+            customQuoteAuthor !== (baseline?.customQuoteAuthor ?? '') ||
+            customTypeLine !== (baseline?.customTypeLine ?? '') ||
+            customTextColor !== (baseline?.customTextColor ?? '#FFFFFF') ||
             customStats ||
             userFactionOverride ||
             imgZoom !== 1 ||
@@ -1481,7 +1560,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                 if (harvested.mana_cost) setCustomManaCost(harvested.mana_cost);
                 if (harvested.theme_key) setUserFactionOverride(harvested.theme_key);
                 setLoreSaveSuccess(true);
-                setTimeout(() => setLoreSaveSuccess(false), 3000);
+                scheduleTimer(() => setLoreSaveSuccess(false), 3000);
             }
         } catch (e) {
             console.error('Error cosechando lore de Wiki Fandom:', e);
@@ -1559,7 +1638,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                 }
             }
             setLoreSaveSuccess(true);
-            setTimeout(() => setLoreSaveSuccess(false), 3000);
+            scheduleTimer(() => setLoreSaveSuccess(false), 3000);
         } catch (e) {
             console.error('Error al guardar lore en la base de datos:', e);
         } finally {
@@ -1784,7 +1863,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
             document.body.removeChild(link);
 
             setDownloaded(true);
-            setTimeout(() => setDownloaded(false), 3000);
+            scheduleTimer(() => setDownloaded(false), 3000);
         } catch (err) {
             console.error('Error descargando:', err);
         } finally {
@@ -1826,7 +1905,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                     new ClipboardItem({ 'image/png': blob })
                 ]);
                 setCopied(true);
-                setTimeout(() => setCopied(false), 3000);
+                scheduleTimer(() => setCopied(false), 3000);
             } else {
                 handleDownload();
             }
@@ -1882,7 +1961,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                     files: [file]
                 });
                 setShared(true);
-                setTimeout(() => setShared(false), 3000);
+                scheduleTimer(() => setShared(false), 3000);
             } else {
                 const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
                 const waLink = document.createElement('a');
@@ -1894,7 +1973,7 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
                 document.body.removeChild(waLink);
 
                 setShared(true);
-                setTimeout(() => setShared(false), 3000);
+                scheduleTimer(() => setShared(false), 3000);
             }
         } catch (err) {
             console.error('Error compartiendo:', err);
@@ -1907,14 +1986,20 @@ export const TradingCardModal: React.FC<TradingCardModalProps> = ({ isOpen, onCl
         <AnimatePresence>
             <div className="fixed inset-0 z-[260] flex items-center justify-center p-3 sm:p-4 bg-black/90 backdrop-blur-2xl overflow-y-auto">
                 <motion.div
+                    ref={modalContainerRef}
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label="Cromo Coleccionista Digital"
+                    tabIndex={-1}
                     initial={{ opacity: 0, scale: 0.92, y: 15 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.92, y: 15 }}
-                    className="relative w-full max-w-sm sm:max-w-md bg-gradient-to-b from-slate-900/95 via-slate-950 to-black border-2 border-amber-500/50 rounded-3xl shadow-[0_0_60px_rgba(0,0,0,0.9)] p-4 sm:p-5 text-white my-auto flex flex-col items-center"
+                    className="relative w-full max-w-sm sm:max-w-md bg-gradient-to-b from-slate-900/95 via-slate-950 to-black border-2 border-amber-500/50 rounded-3xl shadow-[0_0_60px_rgba(0,0,0,0.9)] p-4 sm:p-5 text-white my-auto flex flex-col items-center outline-none"
                 >
                     {/* Botón cerrar */}
                     <button
                         onClick={onClose}
+                        aria-label="Cerrar Cromo"
                         className="absolute top-3 right-3 p-2 rounded-full bg-slate-800/90 hover:bg-red-500 text-slate-300 hover:text-white transition z-30 shadow-lg cursor-pointer"
                         title="Cerrar Cromo"
                     >

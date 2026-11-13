@@ -1,4 +1,5 @@
 import asyncio
+import html
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import os
@@ -223,7 +224,7 @@ class SSLService:
             else:
                 # Entorno Windows / Desarrollo o sin script bash directo
                 logger.info("🔒 [SSL] Entorno de desarrollo / local detectado. Ejecutando verificación de estado.")
-                status_info = cls.get_certificate_status()
+                status_info = await asyncio.to_thread(cls.get_certificate_status)
                 success = status_info.get("is_valid", False) or status_info.get("status") == "UNKNOWN"
                 output_str = f"[SIMULATION/DIAGNOSTIC] Chequeo de certificado ejecutado. Estado actual: {status_info.get('status')} ({status_info.get('days_remaining')} días restantes)."
         finally:
@@ -259,7 +260,7 @@ class SSLService:
             err_msg = (
                 "🚨 <b>[Oráculo SSL] Fallo en la Renovación</b>\n\n"
                 f"• Dominio: <code>{cls.DEFAULT_DOMAIN}</code>\n"
-                f"• Error: <code>{output_str[:300]}</code>\n\n"
+                f"• Error: <code>{html.escape(output_str[:300])}</code>\n\n"
                 "⚠️ <i>Pulsa el botón inferior para reintentar cuando esté listo el servidor.</i>"
             )
             await SecurityShield.send_telegram_alert(err_msg, reply_markup=tg_keyboard)
@@ -273,7 +274,7 @@ class SSLService:
         cls._last_renewal_result = result
 
         # Persistir resultado e historial en base de datos para observabilidad soberana
-        try:
+        def _persist_ssl_telemetry_sync() -> None:
             from src.domain.models import SystemConfigModel
             from src.infrastructure.database_cloud import SessionCloud
             import json
@@ -291,18 +292,21 @@ class SSLService:
                 if not cfg_hist:
                     cfg_hist = SystemConfigModel(key="ssl_renewal_history", value="[]")
                     db.add(cfg_hist)
-                
+
                 try:
                     history = json.loads(cfg_hist.value)
                     if not isinstance(history, list):
                         history = []
                 except Exception:
                     history = []
-                
+
                 history.insert(0, result)
                 cfg_hist.value = json.dumps(history[:10])
-                
+
                 db.commit()
+
+        try:
+            await asyncio.to_thread(_persist_ssl_telemetry_sync)
         except Exception as e:
             logger.error(f"⚠️ No se pudo guardar la telemetría SSL en la base de datos: {e}")
 

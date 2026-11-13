@@ -1,6 +1,6 @@
 # Contexto de Dominio y Arquitectura — Oráculo de Nueva Eternia
 
-Este documento define el glosario operativo, las fronteras de persistencia y los invariantes de seguridad consensuados bajo la metodología **Specification-Driven Development (SDD)**.
+Este documento define el glosario operativo, las fronteras de persistencia y los invariantes de seguridad consensuados bajo la metodología **Organic Driven Development (ODD — Gentle AI v4)**.
 
 ---
 

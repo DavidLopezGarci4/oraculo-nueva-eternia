@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional, Dict, Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # --- Cart (Fase 1) ---
@@ -21,29 +21,29 @@ class CartRequest(BaseModel):
 # --- Auth ---
 
 class LoginRequest(BaseModel):
-    email: str
-    password: str
+    email: str = Field(..., max_length=120)
+    password: str = Field(..., max_length=256)
 
 
 class RegisterRequest(BaseModel):
-    username: str
-    email: str
-    password: str
+    username: str = Field(..., max_length=120)
+    email: str = Field(..., max_length=120)
+    password: str = Field(..., max_length=256)
 
 
 class ForgotPasswordRequest(BaseModel):
-    email: str
+    email: str = Field(..., max_length=120)
 
 
 class ResetPasswordRequest(BaseModel):
-    token: str
-    new_password: str
+    token: str = Field(..., max_length=256)
+    new_password: str = Field(..., max_length=256)
 
 
 class CreateUserRequest(BaseModel):
-    username: str
-    email: str
-    password: str
+    username: str = Field(..., max_length=120)
+    email: str = Field(..., max_length=120)
+    password: str = Field(..., max_length=256)
     role: str = "viewer"
 
 

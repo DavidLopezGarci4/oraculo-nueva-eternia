@@ -29,7 +29,7 @@ HTTP_ONLY_SCRAPER_CLASSES = {
 def _dispatch_async_coro(coro, pending_list: list | None = None):
     """
     Registra una corrutina de notificación para ejecutarla al final de la transacción,
-    o la despacha inmediatamente si ya hay un event loop activo.
+    o la despacha inmediatamente si ya hay un event loop activo (o vía asyncio.run en worker threads).
     """
     if pending_list is not None:
         pending_list.append(coro)
@@ -42,17 +42,18 @@ def _dispatch_async_coro(coro, pending_list: list | None = None):
         pass
 
     try:
-        loop = asyncio.get_event_loop()
-        if not loop.is_closed():
-            loop.run_until_complete(coro)
-            return
-    except Exception:
-        pass
+        asyncio.run(coro)
+        return
+    except Exception as e:
+        logger.warning(f"⚠️ Error despachando notificación asíncrona: {e}")
 
     try:
         coro.close()
     except Exception:
         pass
+
+
+_schedule_async_notification = _dispatch_async_coro
 
 
 def _flush_pending_notifications(pending_list: list):
@@ -70,17 +71,11 @@ def _flush_pending_notifications(pending_list: list):
     except RuntimeError:
         pass
 
+    async def _run_batch() -> None:
+        await asyncio.gather(*batch, return_exceptions=True)
+
     try:
-        loop = asyncio.get_event_loop()
-        if loop.is_closed():
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            try:
-                loop.run_until_complete(asyncio.gather(*batch, return_exceptions=True))
-            finally:
-                loop.close()
-        else:
-            loop.run_until_complete(asyncio.gather(*batch, return_exceptions=True))
+        asyncio.run(_run_batch())
     except Exception as e:
         logger.warning(f"⚠️ Error despachando notificaciones de Telegram: {e}")
         for coro in batch:
@@ -255,6 +250,7 @@ class ScrapingPipeline:
         self.log_callback = None
         self.browser_concurrency = max(1, int(browser_concurrency))
         self.http_concurrency = max(1, int(http_concurrency))
+        self.failed_spiders: set[str] = set()
 
     def _log(self, msg: str):
         if self.log_callback:
@@ -278,6 +274,7 @@ class ScrapingPipeline:
         If cancel_event is set, aborts remaining scrapers.
         """
         logger.info(f"Pipeline: Searching for '{product_name}' across {len(self.scrapers)} scrapers.")
+        self.failed_spiders = set()
 
         browser_sem = asyncio.Semaphore(self.browser_concurrency)
         http_sem = asyncio.Semaphore(self.http_concurrency)
@@ -287,10 +284,13 @@ class ScrapingPipeline:
             async with sem:
                 if self.cancel_event and self.cancel_event.is_set():
                     logger.warning(f"🛑 Pipeline ABORTADO: Señal de cancelación recibida antes de {scraper.shop_name}.")
+                    self.failed_spiders.add(scraper.shop_name)
                     return []
 
                 try:
                     res = await asyncio.wait_for(scraper.search(product_name), timeout=300)  # 5 min per scraper max
+                    if getattr(scraper, "blocked", False):
+                        self.failed_spiders.add(scraper.shop_name)
                     logger.info(f"Scraper {scraper.shop_name} found {len(res)} offers.")
                     source = "Peer-to-Peer" if getattr(scraper, 'is_auction_source', False) else "Retail"
                     for offer in res:
@@ -298,10 +298,13 @@ class ScrapingPipeline:
                             offer.source_type = source
                     return res
                 except asyncio.TimeoutError:
+                    self.failed_spiders.add(scraper.shop_name)
                     logger.warning(f"⏳ Scraper {scraper.shop_name} TIMEOUT (5 min). Saltando.")
                 except asyncio.CancelledError:
+                    self.failed_spiders.add(scraper.shop_name)
                     logger.warning(f"🛑 Scraper {scraper.shop_name} CANCELADO.")
                 except Exception as e:
+                    self.failed_spiders.add(scraper.shop_name)
                     logger.error(f"Scraper {scraper.shop_name} failed for '{product_name}': {e}")
                 return []
 
@@ -405,7 +408,7 @@ class ScrapingPipeline:
         finally:
             db.close()
 
-    def update_database(self, offers: List[dict], shop_names: List[str] = None):
+    def update_database(self, offers: List[dict], shop_names: List[str] = None, allow_deactivation: bool = True):
         """
         Persists found offers to the database using SmartMatcher.
         Includes Phase 18: Búnker & Circuit Breaker.
@@ -618,7 +621,7 @@ class ScrapingPipeline:
 
                     # --- PHASE 18: DEAL SCORER (UPDATE SCORE) ---
                     landed_price = LogisticsService.optimized_get_landing_price(offer.get('price'), offer.get('shop_name'), user_location, rules_map)
-                    is_wish = any(ci.owner_id == 2 and not ci.acquired for ci in existing_offer.product.collection_items)
+                    is_wish = any(not ci.acquired for ci in existing_offer.product.collection_items)
                     opp_score = DealScorer.calculate_score(existing_offer.product, landed_price, is_wish)
 
                     # Update without committing or flushing per offer
@@ -740,7 +743,7 @@ class ScrapingPipeline:
                         )
                         
                         landed_price = LogisticsService.optimized_get_landing_price(offer.get('price'), offer.get('shop_name'), user_location, rules_map)
-                        is_wish = any(ci.owner_id == 2 and not ci.acquired for ci in best_match_product.collection_items)
+                        is_wish = any(not ci.acquired for ci in best_match_product.collection_items)
                         opp_score = DealScorer.calculate_score(best_match_product, landed_price, is_wish)
 
                         pending_data = {
@@ -795,7 +798,7 @@ class ScrapingPipeline:
                         continue
                     
                     landed_price = LogisticsService.optimized_get_landing_price(offer.get('price'), offer.get('shop_name'), user_location, rules_map)
-                    is_wish = any(ci.owner_id == 2 and not ci.acquired for ci in best_match_product.collection_items)
+                    is_wish = any(not ci.acquired for ci in best_match_product.collection_items)
                     opp_score = DealScorer.calculate_score(best_match_product, landed_price, is_wish)
 
                     self._log(f"✅ [SmartMatch] Auto-vinculado: '{offer.get('product_name')}' ➔ '{best_match_product.name}' ({offer.get('price')}€)")
@@ -931,7 +934,7 @@ class ScrapingPipeline:
 
                 items_in_tx += 1
                 if items_in_tx >= 50:
-                    db.commit()
+                    db.flush()
                     items_in_tx = 0
             
             # Limpieza global proactiva del purgatorio al finalizar la actualización
@@ -943,6 +946,11 @@ class ScrapingPipeline:
                 MarketAnalyticsService.invalidate_market_index_cache()
             except Exception:
                 pass
+            try:
+                from src.interfaces.api.routers.products import clear_purgatory_counts_cache
+                clear_purgatory_counts_cache()
+            except Exception:
+                pass
             
             # --- RESUMEN DE MÉTRICAS COMPLETO (COMPATIBLE CON PARSER FRONTEND) ---
             stats_msg = f"📊 [Resumen] Nuevas en Purgatorio: {new_items_count} | Precios actualizados: {price_updates_count} | Sin cambios: {unchanged_count} | Descartadas: {discarded_count}"
@@ -951,7 +959,7 @@ class ScrapingPipeline:
             logger.success(f"⚡ Batch Complete: {stats_msg}")
 
             # --- PHASE 44: AVAILABILITY SYNC ---
-            if shop_names:
+            if shop_names and allow_deactivation:
                 incoming_urls = [str(o.get('url', '')) for o in offers if o.get('url')]
                 self.sync_availability(incoming_urls, shop_names)
 

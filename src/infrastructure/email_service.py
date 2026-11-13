@@ -1,3 +1,4 @@
+import html
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -12,7 +13,7 @@ class EmailService:
         Envía un correo de recuperación de contraseña.
         """
         if not settings.SMTP_USER or not settings.SMTP_PASS:
-            logger.warning(f"📧 SMTP NOT CONFIGURED. Reset Token for {to_email}: {token}")
+            logger.warning(f"📧 SMTP NOT CONFIGURED. Reset email skipped for {to_email} (token redacted).")
             return False
 
         # El enlace apuntará al frontend (dominio de OCI)
@@ -38,11 +39,12 @@ class EmailService:
         3OX Shield Persistence
         """
         
+        safe_username = html.escape(str(username or "Guardián"))
         # Versión HTML opcional (puedes mejorarla después)
         html_body = f"""
         <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
             <h2 style="color: #00bcd4;">Recuperación de Eternia</h2>
-            <p>Hola <strong>{username}</strong>,</p>
+            <p>Hola <strong>{safe_username}</strong>,</p>
             <p>Se ha solicitado un reseteo de contraseña para tu cuenta en el Oráculo.</p>
             <div style="text-align: center; margin: 30px 0;">
                 <a href="{reset_link}" style="background-color: #00bcd4; color: black; padding: 15px 25px; text-decoration: none; font-weight: bold; border-radius: 5px;">RESETEAR MI CONTRASEÑA</a>

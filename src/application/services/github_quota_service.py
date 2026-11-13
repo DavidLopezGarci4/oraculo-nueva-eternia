@@ -1,3 +1,4 @@
+import asyncio
 import math
 import io
 import csv
@@ -46,7 +47,7 @@ class GitHubQuotaService:
             source = "github_api_live"
         else:
             # Fallback a registros de la base de datos local
-            db_data = cls._fetch_db_logs_this_month(month_start)
+            db_data = await asyncio.to_thread(cls._fetch_db_logs_this_month, month_start)
             billed_minutes = db_data["total_billed_minutes"]
             total_runs = db_data["total_runs"]
             breakdown = db_data["breakdown"]

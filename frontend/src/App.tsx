@@ -12,6 +12,7 @@ import axios from 'axios';
 import CacheWelcomeModal from './components/ui/CacheWelcomeModal';
 import SSLWarningModal from './components/ui/SSLWarningModal';
 import { clearSession, setUnauthorizedHandler } from './api/client';
+import { hasOpenModal } from './hooks/useModalA11y';
 
 // Lazy-Loaded Page Components for Code Splitting
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -86,6 +87,7 @@ function App() {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(localStorage.getItem('is_logged_in') === 'true');
   const [activeUserId, setActiveUserId] = useState<number>(parseInt(localStorage.getItem('active_user_id') || '2'));
   const [isIncognito, setIsIncognito] = useState<boolean>(() => localStorage.getItem('motu_incognito') === 'true');
+  const [manualPriceRevealPref, setManualPriceRevealPref] = useState<boolean>(() => localStorage.getItem('allowManualPriceReveal') === 'true');
   const [useLocalImages, setUseLocalImages] = useState<boolean>(() => localStorage.getItem('use_local_images') === 'true');
   const [bgDownloadEnabled, setBgDownloadEnabled] = useState<boolean>(() => localStorage.getItem('motu_background_download_enabled') === 'true');
   const [showCacheWelcome, setShowCacheWelcome] = useState<boolean>(false);
@@ -111,6 +113,7 @@ function App() {
           return val;
         });
       } else if (e.key === 'Escape') {
+        if (hasOpenModal()) return;
         const now = Date.now();
         if (now - lastEscTime < 300) {
           e.preventDefault();
@@ -328,6 +331,19 @@ function App() {
     return () => clearTimeout(timer);
   }, [isAdminUser]);
 
+  useEffect(() => {
+    const syncManualPricePref = (e?: Event) => {
+      if (e instanceof StorageEvent && e.key !== null && e.key !== 'allowManualPriceReveal') return;
+      setManualPriceRevealPref(localStorage.getItem('allowManualPriceReveal') === 'true');
+    };
+    window.addEventListener('oraculo:manual-price-reveal', syncManualPricePref);
+    window.addEventListener('storage', syncManualPricePref);
+    return () => {
+      window.removeEventListener('oraculo:manual-price-reveal', syncManualPricePref);
+      window.removeEventListener('storage', syncManualPricePref);
+    };
+  }, []);
+
   const handleDismissSSLWarning = () => {
     sessionStorage.setItem('motu_ssl_warning_dismissed', 'true');
     setShowSSLWarningModal(false);
@@ -383,10 +399,16 @@ function App() {
   }
 
   if (!isLoggedIn) {
-    return <LoginPage onLoginSuccess={handleLoginSuccess} />;
+    return (
+      <ErrorBoundary>
+        <Suspense fallback={<PowerSwordLoader variant="fullScreen" text="Canalizando Poder..." />}>
+          <LoginPage onLoginSuccess={handleLoginSuccess} />
+        </Suspense>
+      </ErrorBoundary>
+    );
   }
 
-  const allowManualPriceReveal = !isIncognito && localStorage.getItem('allowManualPriceReveal') === 'true';
+  const allowManualPriceReveal = !isIncognito && manualPriceRevealPref;
 
   return (
     <div className={`flex h-screen w-screen overflow-hidden bg-transparent text-white font-sans ${isIncognito ? 'mode-incognito' : ''} ${allowManualPriceReveal ? 'reveal-manual-prices' : ''}`}>
@@ -428,7 +450,7 @@ function App() {
 
           <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-24 md:pb-6 scroll-smooth">
             <div className="max-w-7xl mx-auto w-full">
-              <ErrorBoundary>
+              <ErrorBoundary key={location.pathname}>
                 <Suspense fallback={<PowerSwordLoader variant="fullScreen" text="Canalizando Poder..." />}>
                   <Routes>
                     <Route path={TAB_PATHS.dashboard} element={<Dashboard user={currentUser} isIncognito={isIncognito} />} />

@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import threading
 import time
 from typing import Dict, Optional, List
 from sqlalchemy import event
@@ -47,6 +48,7 @@ _rules_cache: dict[str, object] = {
     "rules_map": None,
     "expires_at": 0.0,
 }
+_rules_cache_lock = threading.RLock()
 
 
 class LogisticsService:
@@ -57,16 +59,18 @@ class LogisticsService:
 
     @staticmethod
     def invalidate_rules_cache() -> None:
-        _rules_cache["rules_map"] = None
-        _rules_cache["expires_at"] = 0.0
+        with _rules_cache_lock:
+            _rules_cache["rules_map"] = None
+            _rules_cache["expires_at"] = 0.0
 
     @staticmethod
     def get_cached_rules_map(db=None) -> Dict[str, LogisticRuleModel]:
         now = time.monotonic()
-        cached_map = _rules_cache.get("rules_map")
-        expires_at = float(_rules_cache.get("expires_at") or 0.0)
-        if isinstance(cached_map, dict) and cached_map and now < expires_at:
-            return cached_map
+        with _rules_cache_lock:
+            cached_map = _rules_cache.get("rules_map")
+            expires_at = float(_rules_cache.get("expires_at") or 0.0)
+            if isinstance(cached_map, dict) and cached_map and now < expires_at:
+                return dict(cached_map)
 
         def _load(session) -> Dict[str, LogisticRuleModel]:
             rules = session.query(LogisticRuleModel).all()
@@ -91,9 +95,10 @@ class LogisticsService:
             with SessionCloud() as session:
                 rules_map = _load(session)
 
-        _rules_cache["rules_map"] = rules_map
-        _rules_cache["expires_at"] = now + _RULES_CACHE_TTL
-        return rules_map
+        with _rules_cache_lock:
+            _rules_cache["rules_map"] = rules_map
+            _rules_cache["expires_at"] = time.monotonic() + _RULES_CACHE_TTL
+        return dict(rules_map)
 
     @staticmethod
     def normalize_shop_name(shop_name: str) -> str:

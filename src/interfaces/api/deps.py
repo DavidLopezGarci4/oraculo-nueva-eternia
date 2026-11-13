@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+import hmac
 import time
 
 import jwt
@@ -7,6 +8,7 @@ from fastapi.security import OAuth2PasswordBearer
 from loguru import logger
 
 from src.core.config import settings
+from src.core.rate_limit import _extract_client_ip
 from src.core.security import SecurityShield
 from src.domain.models import AuthorizedDeviceModel, ScraperStatusModel, UserModel
 from src.infrastructure.database_cloud import SessionCloud
@@ -101,7 +103,7 @@ def _user_from_token(token: str | None) -> UserModel | None:
 
 def _is_service_key(x_api_key: str | None) -> bool:
     """True solo si la cabecera coincide con la API key servidor-a-servidor."""
-    return bool(x_api_key) and x_api_key == settings.ORACULO_API_KEY
+    return SecurityShield.safe_compare_digest(x_api_key, settings.ORACULO_API_KEY)
 
 
 # ─── Admin helpers & guard ───────────────────────────────────────────────────
@@ -111,13 +113,11 @@ def is_admin(user: UserModel | None) -> bool:
     if not user:
         return False
     role = (user.role or "").strip().lower()
-    username = (user.username or "").strip().lower()
     email = (user.email or "").strip().lower()
     sovereign_email = (settings.SOVEREIGN_EMAIL or "").strip().lower()
 
     return (
         role == "admin"
-        or username in ("david", "admin")
         or (bool(sovereign_email) and email == sovereign_email)
     )
 
@@ -167,7 +167,7 @@ def verify_device(
         return x_device_id
 
     with SessionCloud() as db:
-        ip_address = request.client.host if request.client else "Unknown IP"
+        ip_address = _extract_client_ip(request)
         is_authorized = SecurityShield.check_access_sync(
             x_device_id, x_device_name, ip_address, db
         )
@@ -193,7 +193,7 @@ def verify_wallapop_import(
     x_device_id: str = Header(None, alias="X-Device-ID"),
     x_device_name: str = Header("Desconocido", alias="X-Device-Name"),
 ):
-    if x_extension_key and x_extension_key == settings.EXTENSION_API_KEY:
+    if SecurityShield.safe_compare_digest(x_extension_key, settings.EXTENSION_API_KEY):
         return "extension"
     return verify_device(request=request, x_device_id=x_device_id, x_device_name=x_device_name)
 
@@ -252,6 +252,31 @@ def scope_user_id(current_user: UserModel, requested_user_id: int) -> int:
     if is_admin(current_user):
         return requested_user_id
     return current_user.id
+
+
+def get_optional_current_user(token: str | None = Depends(_oauth2_scheme)) -> UserModel | None:
+    """Devuelve el UserModel autenticado por JWT si existe y es válido, o None."""
+    return _user_from_token(token)
+
+
+def resolve_optional_scoped_user_id(
+    requested_user_id: int | None,
+    current_user: UserModel | None,
+    x_api_key: str | None = None,
+) -> int | None:
+    """
+    Resuelve el alcance efectivo de user_id para rutas híbridas (device + optional JWT):
+    - Admin JWT o Service Key válida: puede consultar el `requested_user_id` solicitado.
+    - Viewer JWT: forzado estrictamente a `current_user.id` (cierra IDOR).
+    - Sin JWT ni Service Key (solo device): `None` (no lee datos privados/precios manuales de ningún usuario).
+    """
+    if current_user is not None:
+        if is_admin(current_user):
+            return requested_user_id if requested_user_id is not None else current_user.id
+        return current_user.id
+    if _is_service_key(x_api_key):
+        return requested_user_id
+    return None
 
 
 # ─── Startup & Unified Spider Registry ────────────────────────────────────────
