@@ -716,3 +716,30 @@ def test_bp10_purgatory_duplicates_404_and_telegram_listener_async(tmp_path):
 
     direct_session_hits = _has_direct_session_call(tree, False)
     assert direct_session_hits == [], f"Blocking SessionCloud inside async defs: {direct_session_hits}"
+
+    # 8. AST governance: every module-level SessionCloud binding in app/api/infra must be patched by conftest
+    import tests.conftest as conftest_mod
+
+    targets_set = set(conftest_mod._SESSION_TARGETS)
+    scan_dirs = [
+        Path("src/interfaces/api"),
+        Path("src/application/services"),
+        Path("src/application/jobs"),
+        Path("src/infrastructure/services"),
+        Path("src/infrastructure/scrapers"),
+    ]
+    missing_targets: list[str] = []
+    for base_dir in scan_dirs:
+        for py_file in sorted(base_dir.rglob("*.py")):
+            mod_name = ".".join(py_file.with_suffix("").parts)
+            mod_tree = ast.parse(py_file.read_text(encoding="utf-8"))
+            for stmt in mod_tree.body:
+                if isinstance(stmt, ast.ImportFrom) and stmt.module == "src.infrastructure.database_cloud":
+                    for alias in stmt.names:
+                        if alias.name == "SessionCloud":
+                            bound = f"{mod_name}.{alias.asname or alias.name}"
+                            if bound == "src.interfaces.api.main._DefaultSessionCloud":
+                                continue
+                            if bound not in targets_set:
+                                missing_targets.append(bound)
+    assert missing_targets == [], f"Unpatched module-level SessionCloud bindings in conftest.py: {missing_targets}"

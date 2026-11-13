@@ -191,6 +191,13 @@ def test_rt04_financial_idor_closed_on_dashboard_and_analytics(client, authorize
     assert "PRIVATE_VICTIM_NOTE_XYZ" not in hof_atk.text
     assert "199.99" not in hof_atk.text
 
+    from src.application.services import budget_optimizer_service, market_analytics_service
+
+    expected_test_url = str(_TestSession.kw["bind"].url)
+    assert str(market_analytics_service.SessionCloud.kw["bind"].url) == expected_test_url
+    assert str(budget_optimizer_service.SessionCloud.kw["bind"].url) == expected_test_url
+    market_analytics_service.MarketAnalyticsService.invalidate_market_index_cache()
+
     emi_atk = client.get(f"/api/analytics/market-index?period=3M&user_id={victim_id}", headers=attacker_headers)
     assert emi_atk.status_code == 200
     assert emi_atk.json().get("portfolio_metrics") is None
