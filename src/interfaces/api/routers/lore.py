@@ -96,6 +96,7 @@ class ProductLoreOutput(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     product_id: int
+    figure_id: Optional[str] = None
     canonical_name: str
     subtitle: Optional[str] = None
     faction: str
@@ -138,6 +139,7 @@ class ProductLoreUpdateRequest(BaseModel):
 
 class ProductLoreListItem(BaseModel):
     product_id: int
+    figure_id: Optional[str] = None
     product_name: str
     sub_category: Optional[str] = None
     image_url: Optional[str] = None
@@ -161,6 +163,7 @@ class ProductLoreListItem(BaseModel):
 class ProductLoreListResponse(BaseModel):
     items: List[ProductLoreListItem]
     total: int
+    sub_categories: List[str] = []
 
 
 class HarvestRequest(BaseModel):
@@ -178,9 +181,16 @@ def _apply_updates(entry, update_dict: dict) -> None:
         setattr(entry, key, value)
 
 
+def _product_lore_to_output(product: ProductModel, lore_entry: ProductLoreModel) -> ProductLoreOutput:
+    data = {c.name: getattr(lore_entry, c.name) for c in ProductLoreModel.__table__.columns}
+    data["figure_id"] = product.figure_id
+    return ProductLoreOutput(**data)
+
+
 def _list_item_from_data(prod: ProductModel, data: dict, is_customized: bool) -> ProductLoreListItem:
     return ProductLoreListItem(
         product_id=prod.id,
+        figure_id=prod.figure_id,
         product_name=prod.name,
         sub_category=prod.sub_category,
         image_url=prod.image_url,
@@ -225,9 +235,10 @@ def get_product_lore(product_id: int, db: Session = Depends(get_lore_db)):
 
     lore_entry = db.query(ProductLoreModel).filter(ProductLoreModel.product_id == product_id).first()
     if lore_entry:
-        return lore_entry
+        return _product_lore_to_output(product, lore_entry)
 
     data = ProductLoreSeedService.generate_default_lore_for_product(product, db)
+    data["figure_id"] = product.figure_id
     return ProductLoreOutput(**data)
 
 
@@ -264,16 +275,17 @@ def update_product_lore(
     db.commit()
     db.refresh(lore_entry)
     LoreDualSync.replicate_product_lore(db, [product_id])
-    return lore_entry
+    return _product_lore_to_output(product, lore_entry)
 
 
 @router.get("/products", response_model=ProductLoreListResponse)
 def list_product_lores(
-    search: Optional[str] = Query(None, description="Búsqueda por nombre de figura o texto"),
+    search: Optional[str] = Query(None, description="Búsqueda por nombre, figure_id, #ID o texto"),
     faction: Optional[str] = Query(None, description="Filtro por facción"),
     sub_category: Optional[str] = Query(None, description="Filtro por subcategoría / wave"),
+    customized: Optional[str] = Query(None, description="Filtro editorial: ALL | CUSTOMIZED | DEFAULT"),
     skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=200),
+    limit: int = Query(50, ge=1, le=500),
     db: Session = Depends(get_lore_db)
 ):
     """
@@ -286,16 +298,22 @@ def list_product_lores(
         or_(ProductModel.is_vintage == False, ProductModel.is_vintage.is_(None))
     )
 
-    if search:
-        s = f"%{search.strip()}%"
-        query = query.filter(
-            or_(
-                ProductModel.name.ilike(s),
-                ProductLoreModel.canonical_name.ilike(s),
-                ProductLoreModel.lore.ilike(s),
-                ProductLoreModel.quote.ilike(s)
-            )
-        )
+    if search and search.strip():
+        q = search.strip()
+        s = f"%{q}%"
+        conditions = [
+            ProductModel.name.ilike(s),
+            ProductModel.figure_id.ilike(s),
+            ProductLoreModel.canonical_name.ilike(s),
+            ProductLoreModel.subtitle.ilike(s),
+            ProductLoreModel.lore.ilike(s),
+            ProductLoreModel.quote.ilike(s),
+        ]
+        if q.startswith("#") and q[1:].isdigit():
+            conditions.append(ProductModel.id == int(q[1:]))
+        elif q.isdigit():
+            conditions.append(ProductModel.id == int(q))
+        query = query.filter(or_(*conditions))
 
     if faction and faction != "ALL":
         query = query.filter(ProductLoreModel.faction == faction)
@@ -303,8 +321,27 @@ def list_product_lores(
     if sub_category and sub_category != "ALL":
         query = query.filter(ProductModel.sub_category == sub_category)
 
+    if customized:
+        cust_flag = customized.strip().upper()
+        if cust_flag == "CUSTOMIZED":
+            query = query.filter(ProductLoreModel.is_customized == True)  # noqa: E712
+        elif cust_flag == "DEFAULT":
+            query = query.filter(or_(ProductLoreModel.is_customized == False, ProductLoreModel.is_customized.is_(None)))  # noqa: E712
+
     total = query.count()
     results = query.order_by(ProductModel.name.asc()).offset(skip).limit(limit).all()
+
+    sub_cat_rows = (
+        db.query(ProductModel.sub_category)
+        .filter(
+            or_(ProductModel.is_vintage == False, ProductModel.is_vintage.is_(None)),
+            ProductModel.sub_category.isnot(None),
+        )
+        .distinct()
+        .order_by(ProductModel.sub_category.asc())
+        .all()
+    )
+    sub_categories = [r[0] for r in sub_cat_rows if r[0]]
 
     items = []
     for prod, lore in results:
@@ -318,7 +355,7 @@ def list_product_lores(
                 is_customized=lore.is_customized,
             ))
 
-    return ProductLoreListResponse(items=items, total=total)
+    return ProductLoreListResponse(items=items, total=total, sub_categories=sub_categories)
 
 
 # ─── ENDPOINTS LORE PERSONAJES ARQUETÍPICOS ───
@@ -329,7 +366,7 @@ def list_character_lore(
     faction: Optional[str] = Query(None, description="Filtro por facción"),
     pending_only: bool = Query(False, description="Solo pendientes de revisión"),
     skip: int = Query(0, ge=0),
-    limit: int = Query(150, ge=1, le=300),
+    limit: int = Query(150, ge=1, le=500),
     db: Session = Depends(get_lore_db)
 ):
     """Lista perfiles canónicos de personajes arquetípicos (He-Man, Skeletor...)."""
@@ -346,7 +383,7 @@ def list_lore_alias(
     faction: Optional[str] = Query(None, description="Filtro por facción"),
     pending_only: bool = Query(False, description="Solo pendientes de revisión"),
     skip: int = Query(0, ge=0),
-    limit: int = Query(150, ge=1, le=300),
+    limit: int = Query(150, ge=1, le=500),
     db: Session = Depends(get_lore_db)
 ):
     """Alias retrocompatible para /api/lore."""

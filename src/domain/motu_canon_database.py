@@ -6,8 +6,37 @@ Contiene:
 - Mapeo de Facciones traducidas al castellano con temas de marco (Grayskull, Snake Mountain, Horda, etc.).
 """
 
+import json
 import re
+from functools import lru_cache
+from pathlib import Path
 from typing import Dict, Any, Optional, List
+
+ORIGINS_FIGURE_CATALOG_PATH = Path(__file__).resolve().parent / "data" / "origins_grimorio_by_figure_id.json"
+
+
+@lru_cache(maxsize=1)
+def load_origins_figure_id_catalog() -> Dict[str, Dict[str, Any]]:
+    """Carga en memoria el catálogo de 338 figuras Origins enlazado por `figure_id` (O(1))."""
+    if not ORIGINS_FIGURE_CATALOG_PATH.exists():
+        return {}
+    raw = json.loads(ORIGINS_FIGURE_CATALOG_PATH.read_text(encoding="utf-8"))
+    return raw if isinstance(raw, dict) else {}
+
+
+def get_figure_id_lore(figure_id: Optional[str]) -> Optional[Dict[str, Any]]:
+    """Devuelve una copia del perfil canónico exacto por `figure_id`, o `None` si no existe."""
+    if not figure_id:
+        return None
+    entry = load_origins_figure_id_catalog().get(str(figure_id).strip())
+    return dict(entry) if entry else None
+
+
+def _has_word_match(clean_text: str, keyword: str) -> bool:
+    """Comprueba coincidencia por frontera alfanumérica para evitar falsos positivos ('eldor' vs 'keldor')."""
+    if not keyword:
+        return False
+    return re.search(rf"(?<![a-z0-9]){re.escape(keyword)}(?![a-z0-9])", clean_text) is not None
 
 # 1. MATRIZ DE ATAQUES ESPECIALES MOTU POR TIPO DE ARMA / ACCESORIO
 ATTACK_MATRIX: Dict[str, List[str]] = {
@@ -632,8 +661,20 @@ MOTU_LORE_ENCYCLOPEDIA: Dict[str, Dict[str, Any]] = {
         "special_move": "Azote Ofídico Venenoso",
         "weapon_type": "snake_venom"
     },
+    "tung lashor": {
+        "canonical_name": "Tung Lashor",
+        "faction": "Los Hombres Serpiente",
+        "type_line": "Emboscador Ofídico — Lengua Venenosa",
+        "frame_theme": "snake_men",
+        "emblem": "snake",
+        "mana_gems": ["snake", "venom"],
+        "lore": "Infiltrador reptil con una lengua retráctil impregnada de toxinas paralizantes. Puede desarmar a los guerreros más diestros a metros de distancia.",
+        "stats": {"fuerza": 86, "magia": 70, "defensa": 87, "agilidad": 94},
+        "special_move": "Azote Ofídico Venenoso",
+        "weapon_type": "snake_venom"
+    },
     "tung lashr": {
-        "canonical_name": "Tung Lashr",
+        "canonical_name": "Tung Lashor",
         "faction": "Los Hombres Serpiente",
         "type_line": "Emboscador Ofídico — Lengua Venenosa",
         "frame_theme": "snake_men",
@@ -694,8 +735,8 @@ MOTU_LORE_ENCYCLOPEDIA: Dict[str, Dict[str, Any]] = {
     },
     "battle cat man": {
         "canonical_name": "Battle Cat Man",
-        "faction": "Guerreros Heroicos",
-        "type_line": "Furia Felina — Guardián de Eternia",
+        "faction": "Alianzas del Multiverso",
+        "type_line": "Guerrero Felino — Thundercats / Multiverso",
         "frame_theme": "castle_grayskull",
         "emblem": "shield",
         "mana_gems": ["grayskull", "beast", "gold"],
@@ -806,7 +847,7 @@ MOTU_LORE_ENCYCLOPEDIA: Dict[str, Dict[str, Any]] = {
     },
     "mumm-ra": {
         "canonical_name": "Mumm-Ra el Inmortal",
-        "faction": "Alianzas del Multiverso",
+        "faction": "Guerreros del Mal",
         "type_line": "Sacerdote Maldito — Siervo de los Antiguos",
         "frame_theme": "snake_mountain",
         "emblem": "skull",
@@ -895,7 +936,7 @@ MOTU_LORE_ENCYCLOPEDIA: Dict[str, Dict[str, Any]] = {
         "frame_theme": "snake_men",
         "emblem": "snake",
         "mana_gems": ["snake", "snake", "venom"],
-        "lore": "General y maestro estratega de los Hombres Serpiente. Dotado de una monstruosa pinza trituradora y mente maquiavélica para orquestar emboscadas。",
+        "lore": "General y maestro estratega de los Hombres Serpiente. Dotado de una monstruosa pinza trituradora y mente maquiavélica para orquestar emboscadas.",
         "stats": {"fuerza": 93, "magia": 88, "defensa": 94, "agilidad": 90},
         "special_move": "Apresamiento Asfixiante de Tenaza",
         "weapon_type": "mechanical_trap"
@@ -1250,7 +1291,7 @@ MOTU_LORE_ENCYCLOPEDIA: Dict[str, Dict[str, Any]] = {
     },
     "shredder": {
         "canonical_name": "Shredder / Skele-Shredder",
-        "faction": "Alianzas del Multiverso",
+        "faction": "Guerreros del Mal",
         "type_line": "Señor del Clan del Pie — Tirano Mutado",
         "frame_theme": "snake_mountain",
         "emblem": "skull",
@@ -1259,6 +1300,414 @@ MOTU_LORE_ENCYCLOPEDIA: Dict[str, Dict[str, Any]] = {
         "stats": {"fuerza": 96, "magia": 92, "defensa": 95, "agilidad": 96},
         "special_move": "Corte de Acero Mutágeno del Pie",
         "weapon_type": "power_sword"
+    },
+    "castle grayskull": {
+        "canonical_name": "Castle Grayskull",
+        "faction": "Guerreros Heroicos",
+        "type_line": "Fortaleza Sagrada — Bastión del Poder",
+        "frame_theme": "castle_grayskull",
+        "emblem": "shield",
+        "mana_gems": ["grayskull", "grayskull", "light"],
+        "lore": "Antigua fortaleza mística que resguarda el Orbe del Poder y los secretos ancestrales de Eternia bajo la vigilancia de Sorceress.",
+        "stats": {"fuerza": 95, "magia": 100, "defensa": 100, "agilidad": 50},
+        "special_move": "Escudo Dimensional de las Murallas Sagradas",
+        "weapon_type": "magic_sorcery"
+    },
+    "keldor": {
+        "canonical_name": "Keldor",
+        "faction": "Guerreros del Mal",
+        "type_line": "Hechicero Gar — Precursor de Skeletor",
+        "frame_theme": "snake_mountain",
+        "emblem": "skull",
+        "mana_gems": ["havoc", "acid", "dark"],
+        "lore": "Príncipe desterrado de ascendencia Gar cuya ambición y dominio de las artes oscuras desencadenaron la traición que forjó a Skeletor.",
+        "stats": {"fuerza": 90, "magia": 95, "defensa": 88, "agilidad": 90},
+        "special_move": "Filo Alquímico de Desterrado",
+        "weapon_type": "havoc_staff"
+    },
+    "pig-head": {
+        "canonical_name": "Pig-Head",
+        "faction": "Guerreros del Mal",
+        "type_line": "Señor de la Guerra Malvado — Rival de Sun-Man",
+        "frame_theme": "snake_mountain",
+        "emblem": "skull",
+        "mana_gems": ["havoc", "dark", "steel"],
+        "lore": "Cruel tirano porcuno de armadura acorazada y maza con púas que lidera las legiones oscuras para extinguir la luz solar de Solaria.",
+        "stats": {"fuerza": 94, "magia": 82, "defensa": 93, "agilidad": 83},
+        "special_move": "Embestida Brutal del Colmillo Oscuro",
+        "weapon_type": "ram_mace"
+    },
+    "night stalker": {
+        "canonical_name": "Night Stalker",
+        "faction": "Guerreros del Mal",
+        "type_line": "Corcel Cibernético — Montura de Jitsu y Skeletor",
+        "frame_theme": "snake_mountain",
+        "emblem": "skull",
+        "mana_gems": ["havoc", "steel", "dark"],
+        "lore": "Siniestro caballo mecánico blindado de Snake Mountain equipado con blásteres de plasma y cascos de acero para arrollar a Stridor.",
+        "stats": {"fuerza": 95, "magia": 80, "defensa": 97, "agilidad": 91},
+        "special_move": "Carga Nocturna de Blindaje Infernal",
+        "weapon_type": "laser_blaster"
+    },
+    "despara": {
+        "canonical_name": "Despara",
+        "faction": "La Horda del Terror",
+        "type_line": "Capitana de Fuerza — Horda del Terror",
+        "frame_theme": "evil_horde",
+        "emblem": "bat",
+        "mana_gems": ["horde", "blade", "dark"],
+        "lore": "Implacable comandante acorazada al servicio de Hordak antes de descubrir su verdadero linaje como Adora, princesa gemela de Eternia.",
+        "stats": {"fuerza": 95, "magia": 86, "defensa": 93, "agilidad": 96},
+        "special_move": "Juicio Escarlata de la Capitana",
+        "weapon_type": "power_sword"
+    },
+    "ninjor": {
+        "canonical_name": "Ninjor",
+        "faction": "Guerreros del Mal",
+        "type_line": "Asesino Shinobi — Guerrero Diabólico",
+        "frame_theme": "snake_mountain",
+        "emblem": "skull",
+        "mana_gems": ["havoc", "shadow", "blade"],
+        "lore": "Maestro ninja convocado por Skeletor desde las dimensiones sombrías. Su katana, nunchakus y arco golpean antes de que nadie perciba su sombra.",
+        "stats": {"fuerza": 89, "magia": 84, "defensa": 86, "agilidad": 99},
+        "special_move": "Corte Fantasma de la Sombra Shinobi",
+        "weapon_type": "power_sword"
+    },
+    "modulok": {
+        "canonical_name": "Modulok",
+        "faction": "La Horda del Terror",
+        "type_line": "Científico Mutante — Imperio de la Horda",
+        "frame_theme": "evil_horde",
+        "emblem": "bat",
+        "mana_gems": ["horde", "plasma", "mutagen"],
+        "lore": "Genio desquiciado de mil combinaciones corporales. Reensambla sus múltiples extremidades y blásteres dobles en los laboratorios de la Horda.",
+        "stats": {"fuerza": 88, "magia": 85, "defensa": 90, "agilidad": 86},
+        "special_move": "Recombinación Biomecánica Letal",
+        "weapon_type": "horde_crossbow"
+    },
+    "blast-attack": {
+        "canonical_name": "Blast-Attack",
+        "faction": "Los Hombres Serpiente",
+        "type_line": "Soldado Explosivo — Hombres Serpiente",
+        "frame_theme": "snake_men",
+        "emblem": "snake",
+        "mana_gems": ["snake", "fire", "explosive"],
+        "lore": "Guerrero biónico dotado de un torso detonable de alto impacto que emplea King Hiss como arma viva de demolición contra fortalezas.",
+        "stats": {"fuerza": 92, "magia": 72, "defensa": 91, "agilidad": 84},
+        "special_move": "Detonación Sísmica del Núcleo",
+        "weapon_type": "laser_blaster"
+    },
+    "terroar": {
+        "canonical_name": "Terroar",
+        "faction": "Los Hombres Serpiente",
+        "type_line": "Señor de las Tenazas — Hombres Serpiente",
+        "frame_theme": "snake_men",
+        "emblem": "snake",
+        "mana_gems": ["snake", "venom", "steel"],
+        "lore": "Abominación acorazada de los Hombres Serpiente nacida en los laboratorios de Snake Mountain con mandíbula trampa y tenaza trituradora.",
+        "stats": {"fuerza": 95, "magia": 80, "defensa": 94, "agilidad": 85},
+        "special_move": "Tenaza Infernal del Pozo Ofídico",
+        "weapon_type": "mechanical_trap"
+    },
+    "necro-conda": {
+        "canonical_name": "Necro-Conda",
+        "faction": "Los Hombres Serpiente",
+        "type_line": "Espectro Reptil — Guardia del Inframundo",
+        "frame_theme": "snake_men",
+        "emblem": "snake",
+        "mana_gems": ["snake", "dark", "venom"],
+        "lore": "Guerrero ofídico fosforescente alzado de entre las tumbas malditas del Subternia reptiliano con armamento espectral brillante.",
+        "stats": {"fuerza": 89, "magia": 91, "defensa": 88, "agilidad": 92},
+        "special_move": "Mordida Espectral Luminiscente",
+        "weapon_type": "snake_venom"
+    },
+    "extendar": {
+        "canonical_name": "Extendar",
+        "faction": "Guerreros Heroicos",
+        "type_line": "Centinela Extensible — Guerrero Heroico",
+        "frame_theme": "castle_grayskull",
+        "emblem": "shield",
+        "mana_gems": ["grayskull", "steel", "defense"],
+        "lore": "Antiguo guerrero transformado por los experimentos de Hordak que huyó para proteger Eternia desplegando su torso y extremidades telescópicas.",
+        "stats": {"fuerza": 91, "magia": 76, "defensa": 96, "agilidad": 85},
+        "special_move": "Golpe Telescópico de la Torre Acero",
+        "weapon_type": "ram_mace"
+    },
+    "hurricane hordak": {
+        "canonical_name": "Hurricane Hordak",
+        "faction": "La Horda del Terror",
+        "type_line": "Tirano Torbellino — Imperio de la Horda",
+        "frame_theme": "evil_horde",
+        "emblem": "bat",
+        "mana_gems": ["horde", "wind", "plasma"],
+        "lore": "El líder supremo de la Horda equipado con brazos intercambiables giratorios capaces de desatar huracanes cibernéticos destructores.",
+        "stats": {"fuerza": 97, "magia": 96, "defensa": 95, "agilidad": 91},
+        "special_move": "Ciclón Giratorio de Etheria",
+        "weapon_type": "horde_crossbow"
+    },
+    "snake teela": {
+        "canonical_name": "Snake Teela",
+        "faction": "Los Hombres Serpiente",
+        "type_line": "Guerrera Mutada — Culto de la Serpiente",
+        "frame_theme": "snake_men",
+        "emblem": "snake",
+        "mana_gems": ["snake", "magic", "venom"],
+        "lore": "Versión maldita de la capitana real corrompida por el veneno ancestral de la Montaña Serpiente, blandiendo escudo y lanza ofídica.",
+        "stats": {"fuerza": 91, "magia": 90, "defensa": 90, "agilidad": 95},
+        "special_move": "Embestida Venenosa de la Doncella Cobra",
+        "weapon_type": "snake_venom"
+    },
+    "snake armor he-man": {
+        "canonical_name": "Snake Armor He-Man",
+        "faction": "Guerreros Heroicos",
+        "type_line": "Cazador Ofídico — Campeón de Grayskull",
+        "frame_theme": "castle_grayskull",
+        "emblem": "shield",
+        "mana_gems": ["grayskull", "steel", "power"],
+        "lore": "He-Man revestido con coraza retráctil anti-veneno forjada por Man-At-Arms para resistir los asaltos de King Hiss y Lady Slither.",
+        "stats": {"fuerza": 99, "magia": 90, "defensa": 98, "agilidad": 91},
+        "special_move": "Relámpago Blindado Antiserpiente",
+        "weapon_type": "power_sword"
+    },
+    "snake armor skeletor": {
+        "canonical_name": "Snake Armor Skeletor",
+        "faction": "Guerreros del Mal",
+        "type_line": "Señor del Caos Ofídico — Snake Mountain",
+        "frame_theme": "snake_mountain",
+        "emblem": "skull",
+        "mana_gems": ["havoc", "snake", "dark"],
+        "lore": "Skeletor ataviado con armadura escamada de combate y yelmo serpentino para usurpar el control de los Hombres Serpiente.",
+        "stats": {"fuerza": 94, "magia": 99, "defensa": 95, "agilidad": 88},
+        "special_move": "Veneno Arcano de Snake Mountain",
+        "weapon_type": "havoc_staff"
+    },
+    "krang": {
+        "canonical_name": "Krang",
+        "faction": "Guerreros del Mal",
+        "type_line": "Cerebro Conquistador — Dimensión X",
+        "frame_theme": "snake_mountain",
+        "emblem": "skull",
+        "mana_gems": ["havoc", "mutagen", "tech"],
+        "lore": "El genio alienígena de la Dimensión X desata su androide colosal equipado con arsenal del Tecnódromo contra Eternia.",
+        "stats": {"fuerza": 95, "magia": 92, "defensa": 96, "agilidad": 84},
+        "special_move": "Aplastamiento Biomecánico de Dimensión X",
+        "weapon_type": "laser_blaster"
+    },
+    "2-bopsteady": {
+        "canonical_name": "2-Bopsteady",
+        "faction": "Guerreros del Mal",
+        "type_line": "Fusión Mutante Bicéfala — Clan del Pie",
+        "frame_theme": "snake_mountain",
+        "emblem": "skull",
+        "mana_gems": ["havoc", "mutagen", "dark"],
+        "lore": "Fusión caótica de Bebop, Rocksteady y la magia oscura de Two-Bad, multiplicando su fuerza bruta mutante sin perder rivalidad interna.",
+        "stats": {"fuerza": 97, "magia": 75, "defensa": 96, "agilidad": 82},
+        "special_move": "Carga Bicéfala de Púas Mutantes",
+        "weapon_type": "ram_mace"
+    },
+    "sla'ker": {
+        "canonical_name": "Sla'Ker",
+        "faction": "Guerreros del Mal",
+        "type_line": "Clon Cibernético Mutado — Crossover Ofídico",
+        "frame_theme": "snake_mountain",
+        "emblem": "skull",
+        "mana_gems": ["havoc", "mutagen", "steel"],
+        "lore": "Quimera biomecánica nacida de la combinación de Faker y Slash con armamento afilado diseñada para cazar héroes del multiverso.",
+        "stats": {"fuerza": 95, "magia": 82, "defensa": 94, "agilidad": 93},
+        "special_move": "Frenesí de Cuchillas Sintéticas",
+        "weapon_type": "claws_beast"
+    },
+    "splinter": {
+        "canonical_name": "Splinter",
+        "faction": "Alianzas del Multiverso",
+        "type_line": "Gran Maestro Shinobi — Alianza Multiversal",
+        "frame_theme": "castle_grayskull",
+        "emblem": "shield",
+        "mana_gems": ["grayskull", "mutagen", "ancient"],
+        "lore": "Sabio maestro ninja del Clan Hamato instruido en la mística de Grayskull para guiar a las Tortugas en Eternia.",
+        "stats": {"fuerza": 88, "magia": 92, "defensa": 89, "agilidad": 97},
+        "special_move": "Golpe de Bastón del Clan Hamato",
+        "weapon_type": "magic_sorcery"
+    },
+    "casey jones": {
+        "canonical_name": "Casey Jones",
+        "faction": "Alianzas del Multiverso",
+        "type_line": "Vigilante Enmascarado — Alianza Multiversal",
+        "frame_theme": "castle_grayskull",
+        "emblem": "shield",
+        "mana_gems": ["grayskull", "steel", "mutagen"],
+        "lore": "Vigilante callejero forjado en las fraguas de Eternia con armamento improvisado de batalla para pulverizar hordas del mal.",
+        "stats": {"fuerza": 92, "magia": 70, "defensa": 90, "agilidad": 91},
+        "special_move": "Impacto Demoledor de Hierro Eterniano",
+        "weapon_type": "ram_mace"
+    },
+    "april o'neil": {
+        "canonical_name": "April O'Neil",
+        "faction": "Alianzas del Multiverso",
+        "type_line": "Cronista y Guerrera Arcana — Multiverso",
+        "frame_theme": "castle_grayskull",
+        "emblem": "shield",
+        "mana_gems": ["grayskull", "magic", "mutagen"],
+        "lore": "Valiente cronista aliada de los héroes que empuña energía mística de Grayskull y dotes de hechicera para desenmascarar conspiraciones.",
+        "stats": {"fuerza": 82, "magia": 92, "defensa": 85, "agilidad": 93},
+        "special_move": "Crónica de Luz Purificadora",
+        "weapon_type": "magic_sorcery"
+    },
+    "leonardo": {
+        "canonical_name": "Leonardo",
+        "faction": "Alianzas del Multiverso",
+        "type_line": "Estratega del Clan Hamato — Tortugas de Grayskull",
+        "frame_theme": "castle_grayskull",
+        "emblem": "shield",
+        "mana_gems": ["grayskull", "mutagen", "blade"],
+        "lore": "Disciplinado líder de las Tortugas armado con katanas forjadas con energía eterniana para contener el avance de Shredder y Skeletor.",
+        "stats": {"fuerza": 94, "magia": 86, "defensa": 93, "agilidad": 96},
+        "special_move": "Doble Katana de la Honorabilidad",
+        "weapon_type": "power_sword"
+    },
+    "donatello": {
+        "canonical_name": "Donatello",
+        "faction": "Alianzas del Multiverso",
+        "type_line": "Ingeniero Tecnomágico — Tortugas de Grayskull",
+        "frame_theme": "castle_grayskull",
+        "emblem": "shield",
+        "mana_gems": ["grayskull", "tech", "mutagen"],
+        "lore": "Genio tecnológico que combina dispositivos de la Tierra con tecnología de Man-At-Arms y un báculo bo electrificado.",
+        "stats": {"fuerza": 88, "magia": 91, "defensa": 90, "agilidad": 94},
+        "special_move": "Onda Bo Tecnomágica",
+        "weapon_type": "laser_blaster"
+    },
+    "michelangelo": {
+        "canonical_name": "Michelangelo",
+        "faction": "Alianzas del Multiverso",
+        "type_line": "Guerrero Acrobático — Tortugas de Grayskull",
+        "frame_theme": "castle_grayskull",
+        "emblem": "shield",
+        "mana_gems": ["grayskull", "mutagen", "speed"],
+        "lore": "Maestro acrobático armado con nunchakus imbuidos de poder estelar cuyo humor inagotable desarma al enemigo más feroz.",
+        "stats": {"fuerza": 90, "magia": 82, "defensa": 89, "agilidad": 98},
+        "special_move": "Torbellino Acrobático Cowabunga",
+        "weapon_type": "power_sword"
+    },
+    "megatron": {
+        "canonical_name": "Megatron",
+        "faction": "Guerreros del Mal",
+        "type_line": "Tirano Decepticon — Crossover Cybertron",
+        "frame_theme": "snake_mountain",
+        "emblem": "skull",
+        "mana_gems": ["havoc", "steel", "dark"],
+        "lore": "La tiranía de Cybertron fusionada con la magia oscura de Snake Mountain para desatar descargas de antimateria implacables.",
+        "stats": {"fuerza": 98, "magia": 93, "defensa": 98, "agilidad": 86},
+        "special_move": "Cañón de Fusión Oscura",
+        "weapon_type": "laser_blaster"
+    },
+    "starscream": {
+        "canonical_name": "Starscream",
+        "faction": "Guerreros del Mal",
+        "type_line": "Comandante Aéreo Decepticon — Crossover",
+        "frame_theme": "snake_mountain",
+        "emblem": "skull",
+        "mana_gems": ["havoc", "wind", "steel"],
+        "lore": "Traicionero comandante de los buscadores aéreos cuya velocidad supersónica y rayos nulificadores siembran el caos en Eternia.",
+        "stats": {"fuerza": 90, "magia": 88, "defensa": 89, "agilidad": 99},
+        "special_move": "Rayo Nulificador Supersónico",
+        "weapon_type": "laser_blaster"
+    },
+    "optimus prime": {
+        "canonical_name": "Optimus Prime",
+        "faction": "Alianzas del Multiverso",
+        "type_line": "Comandante Autobot — Alianza Multiversal",
+        "frame_theme": "castle_grayskull",
+        "emblem": "shield",
+        "mana_gems": ["grayskull", "steel", "light"],
+        "lore": "El líder noble de los Autobots uniendo el poder de la Matriz de Liderazgo con la defensa sagrada de Eternia.",
+        "stats": {"fuerza": 99, "magia": 91, "defensa": 99, "agilidad": 87},
+        "special_move": "Hacha de Energón de la Matriz",
+        "weapon_type": "battle_axe"
+    },
+    "bumblebee": {
+        "canonical_name": "Bumblebee",
+        "faction": "Alianzas del Multiverso",
+        "type_line": "Explorador Autobot — Alianza Multiversal",
+        "frame_theme": "castle_grayskull",
+        "emblem": "shield",
+        "mana_gems": ["grayskull", "speed", "steel"],
+        "lore": "Ágil explorador Autobot equipado con blindaje de Eternia para infiltrarse tras las líneas de los Decepticons y Skeletor.",
+        "stats": {"fuerza": 88, "magia": 82, "defensa": 91, "agilidad": 97},
+        "special_move": "Aguijón Energético Veloz",
+        "weapon_type": "laser_blaster"
+    },
+    "demogorgon": {
+        "canonical_name": "Demogorgon",
+        "faction": "Guerreros del Mal",
+        "type_line": "Depredador del Abismo — Crossover",
+        "frame_theme": "snake_mountain",
+        "emblem": "skull",
+        "mana_gems": ["havoc", "dark", "blood"],
+        "lore": "Bestia voraz invocada desde el Mundo del Revés hacia las cavernas de Snake Mountain para cazar sin piedad bajo órdenes malignas.",
+        "stats": {"fuerza": 96, "magia": 88, "defensa": 92, "agilidad": 95},
+        "special_move": "Fauces del Mundo del Revés",
+        "weapon_type": "claws_beast"
+    },
+    "vecna": {
+        "canonical_name": "Vecna",
+        "faction": "Guerreros del Mal",
+        "type_line": "Señor Psíquico del Abismo — Crossover",
+        "frame_theme": "snake_mountain",
+        "emblem": "skull",
+        "mana_gems": ["havoc", "dark", "arcane"],
+        "lore": "Entidad telequinética del Mundo del Revés que doblega mentes y distorsiona portales interdimensionales hacia Eternia.",
+        "stats": {"fuerza": 90, "magia": 99, "defensa": 92, "agilidad": 86},
+        "special_move": "Maldición Mental del Reloj Maldito",
+        "weapon_type": "havoc_staff"
+    },
+    "skell-ra": {
+        "canonical_name": "Skell-Ra",
+        "faction": "Guerreros del Mal",
+        "type_line": "Fusión Inmortal del Mal — Crossover",
+        "frame_theme": "snake_mountain",
+        "emblem": "skull",
+        "mana_gems": ["havoc", "dark", "ancient"],
+        "lore": "Fusión profana entre Skeletor y Mumm-Ra que reúne la hechicería de Snake Mountain y los Antiguos Espíritus del Mal.",
+        "stats": {"fuerza": 97, "magia": 100, "defensa": 95, "agilidad": 88},
+        "special_move": "Maldición Bifronte de Plun-Darr y Snake Mountain",
+        "weapon_type": "havoc_staff"
+    },
+    "cheetara": {
+        "canonical_name": "Cheetara",
+        "faction": "Alianzas del Multiverso",
+        "type_line": "Velocista Felina — Thundercats",
+        "frame_theme": "castle_grayskull",
+        "emblem": "shield",
+        "mana_gems": ["grayskull", "speed", "light"],
+        "lore": "Rápida guerrera de Thundera dotada de sexto sentido clarividente y báculo extensible para proteger el Tercer Planeta y Eternia.",
+        "stats": {"fuerza": 88, "magia": 89, "defensa": 87, "agilidad": 100},
+        "special_move": "Ráfaga Relámpago del Sexto Sentido",
+        "weapon_type": "power_sword"
+    },
+    "panthro": {
+        "canonical_name": "Panthro",
+        "faction": "Alianzas del Multiverso",
+        "type_line": "Ingeniero y Maestro Marcial — Thundercats",
+        "frame_theme": "castle_grayskull",
+        "emblem": "shield",
+        "mana_gems": ["grayskull", "steel", "tech"],
+        "lore": "Fuerza bruta, mente de ingeniero y maestría incomparable con sus nunchakus acorazados en la defensa de la alianza multiversal.",
+        "stats": {"fuerza": 97, "magia": 75, "defensa": 96, "agilidad": 91},
+        "special_move": "Impacto Titánico de los Nunchakus",
+        "weapon_type": "ram_mace"
+    },
+    "tygra": {
+        "canonical_name": "Tygra",
+        "faction": "Alianzas del Multiverso",
+        "type_line": "Arquitecto e Ilusionista — Thundercats",
+        "frame_theme": "castle_grayskull",
+        "emblem": "shield",
+        "mana_gems": ["grayskull", "arcane", "strike"],
+        "lore": "Estratega silencioso e invisible de Thundera que emplea su látigo de bolas e ilusiones mentales junto a los héroes de Grayskull.",
+        "stats": {"fuerza": 89, "magia": 91, "defensa": 88, "agilidad": 95},
+        "special_move": "Azote Invisible del Tigre",
+        "weapon_type": "magic_sorcery"
     }
 }
 
@@ -1312,17 +1761,17 @@ CANONICAL_CARD_PROFILES: List[Dict[str, Any]] = [
         "profile": {
             "canonical_name": "Great Black Wizard",
             "subtitle": "Hechicero Ancestral de Preternia",
-            "theme_key": "castle_grayskull",
-            "faction": "Guerreros Heroicos",
-            "type_line": "Hechicero Legendario — Guerrero Oscuro",
+            "theme_key": "snake_mountain",
+            "faction": "Guerreros del Mal",
+            "type_line": "Hechicero Oscuro — Amenaza Preterniana",
             "special_move": "Conjuro Ancestral de Sombras Preternianas",
             "quote": "Las sombras milenarias de Preternia despiertan ante mi conjuro.",
             "flavor_quote_author": "Great Black Wizard",
-            "lore": "Antiguo y enigmático hechicero oscuro de la era preterniana, maestro de las artes arcanas prohibidas y guardián de hechizos milenarios.",
+            "lore": "Antiguo y temible hechicero oscuro de la era preterniana cuyo pacto con fuerzas arcanas prohibidas precedió al mal de Skeletor.",
             "stats": {"fuerza": 88, "magia": 99, "defensa": 85, "agilidad": 88},
-            "emblem": "sparkles",
-            "mana_gems": ["arcane", "magic", "grayskull"],
-            "mana_cost": "{2}{W}{U}"
+            "emblem": "skull",
+            "mana_gems": ["havoc", "arcane", "dark"],
+            "mana_cost": "{2}{B}{B}"
         }
     },
     {
@@ -1526,7 +1975,7 @@ CANONICAL_CARD_PROFILES: List[Dict[str, Any]] = [
         }
     },
     {
-        "pattern": re.compile(r"\bbattle\s+cat\b|\bcringer\b", re.IGNORECASE),
+        "pattern": re.compile(r"\bbattle\s+cat\b(?!\s+man)|\bcringer\b", re.IGNORECASE),
         "profile": {
             "canonical_name": "Battle Cat",
             "subtitle": "Tigre de Batalla Acorazado",
@@ -1726,7 +2175,25 @@ CANONICAL_CARD_PROFILES: List[Dict[str, Any]] = [
         }
     },
     {
-        "pattern": re.compile(r"\bskeletor\b|\bkeldor\b", re.IGNORECASE),
+        "pattern": re.compile(r"\bkeldor\b", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "Keldor",
+            "subtitle": "Hechicero Gar Desterrado",
+            "theme_key": "snake_mountain",
+            "faction": "Guerreros del Mal",
+            "type_line": "Hechicero Gar — Guerrero Diabólico",
+            "special_move": "Filo Alquímico del Desterrado",
+            "quote": "¡El trono de Eternia me pertenece por derecho de sangre!",
+            "flavor_quote_author": "Keldor",
+            "lore": "Guerrero oscuro de ascendencia Gar cuya ambición y dominio de la alquimia ácida forjaron la futura identidad de Skeletor.",
+            "stats": {"fuerza": 90, "magia": 95, "defensa": 88, "agilidad": 90},
+            "emblem": "skull",
+            "mana_gems": ["havoc", "acid", "dark"],
+            "mana_cost": "{2}{B}{B}"
+        }
+    },
+    {
+        "pattern": re.compile(r"\bskeletor\b", re.IGNORECASE),
         "profile": {
             "canonical_name": "Skeletor",
             "subtitle": "Señor de la Destrucción",
@@ -2126,7 +2593,7 @@ CANONICAL_CARD_PROFILES: List[Dict[str, Any]] = [
         }
     },
     {
-        "pattern": re.compile(r"\brattlor\b|\btung\s+lashr\b|\bsssqueeze\b|\bsnake\s+face\b|\bnecro[\s\-]?conda\b|\blady\s+slither\b|\bfang[\s\-]?or\b", re.IGNORECASE),
+        "pattern": re.compile(r"\brattlor\b|\btung\s+lasho?r\b|\bsssqueeze\b|\bsnake\s+face\b|\bnecro[\s\-]?conda\b|\blady\s+slither\b|\bfang[\s\-]?or\b", re.IGNORECASE),
         "profile": {
             "canonical_name": "Guerrero Serpiente",
             "subtitle": "Guerrero Ofídico del Foso",
@@ -2182,9 +2649,83 @@ CANONICAL_CARD_PROFILES: List[Dict[str, Any]] = [
         }
     },
 
-    # ── TURTLES OF GRAYSKULL (CROSSOVER) ──
+    # ── VILLANOS DE RULERS / CROSSOVERS (Antes de paraguas heroicos) ──
     {
-        "pattern": re.compile(r"turtles\s+of\s+grayskull|leonardo|donatello|michelangelo|raphael|shredder|krang|splinter|2[\s\-]?bopsteady|casey\s+jones", re.IGNORECASE),
+        "pattern": re.compile(r"\bpig[\s\-]?head\b", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "Pig-Head",
+            "subtitle": "Tirano Porcuno de la Oscuridad",
+            "theme_key": "snake_mountain",
+            "faction": "Guerreros del Mal",
+            "type_line": "Señor de la Guerra — Guerreros del Mal",
+            "special_move": "Embestida Brutal del Colmillo Oscuro",
+            "quote": "¡Nadie escapará a la maza de Pig-Head!",
+            "flavor_quote_author": "Pig-Head",
+            "lore": "Cruel rival de Sun-Man revestido de armadura acorazada que lidera las legiones oscuras contra el resplandor de Solaria.",
+            "stats": {"fuerza": 94, "magia": 82, "defensa": 93, "agilidad": 83},
+            "emblem": "skull",
+            "mana_gems": ["havoc", "dark", "steel"],
+            "mana_cost": "{2}{B}{B}"
+        }
+    },
+    {
+        "pattern": re.compile(r"\bninjor\b", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "Ninjor",
+            "subtitle": "Guerrero Ninja del Mal",
+            "theme_key": "snake_mountain",
+            "faction": "Guerreros del Mal",
+            "type_line": "Asesino Shinobi — Guerrero Diabólico",
+            "special_move": "Corte Fantasma de la Sombra Shinobi",
+            "quote": "¡De las tinieblas brota el filo letal de Snake Mountain!",
+            "flavor_quote_author": "Ninjor",
+            "lore": "Maestro shinobi convocado por Skeletor desde las dimensiones sombrías armado con katana, nunchakus y arco mortal.",
+            "stats": {"fuerza": 89, "magia": 84, "defensa": 86, "agilidad": 99},
+            "emblem": "skull",
+            "mana_gems": ["havoc", "shadow", "blade"],
+            "mana_cost": "{2}{B}{B}"
+        }
+    },
+    {
+        "pattern": re.compile(r"\bdespara\b", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "Despara",
+            "subtitle": "Capitana de Fuerza de la Horda",
+            "theme_key": "evil_horde",
+            "faction": "La Horda del Terror",
+            "type_line": "Comandante Imperial — Horda del Terror",
+            "special_move": "Juicio Escarlata de la Capitana",
+            "quote": "¡La Zona del Terror doblegará toda resistencia rebelde!",
+            "flavor_quote_author": "Despara",
+            "lore": "Implacable comandante acorazada al servicio de Hordak que esconde el origen perdido de Adora antes de la Gran Rebelión.",
+            "stats": {"fuerza": 95, "magia": 86, "defensa": 93, "agilidad": 96},
+            "emblem": "bat",
+            "mana_gems": ["horde", "blade", "dark"],
+            "mana_cost": "{3}{B}{R}"
+        }
+    },
+    {
+        "pattern": re.compile(r"\bshredder\b|\bkrang\b|\b2[\s\-]?bopsteady\b|\bsla[\s\-']?ker\b|\bmouse[\s\-]?jaw\b|\bmumm[\s\-]?ra\b|\bskell[\s\-]?ra\b|\bmegatron\b|\bstarscream\b|\bdemogorgon\b|\bvecna\b", re.IGNORECASE),
+        "profile": {
+            "canonical_name": "Señor Oscuro del Multiverso",
+            "subtitle": "Invasor del Mal Crossover",
+            "theme_key": "snake_mountain",
+            "faction": "Guerreros del Mal",
+            "type_line": "Conquistador del Multiverso — Guerreros del Mal",
+            "special_move": "Tempestad de Antimateria y Magia Oscura",
+            "quote": "¡Ninguna dimensión podrá resistir nuestra alianza implacable!",
+            "flavor_quote_author": "Conquistadores del Multiverso",
+            "lore": "Temible antagonista interdimensional aliado con las fuerzas de Snake Mountain para someter Eternia bajo un dominio oscuro.",
+            "stats": {"fuerza": 95, "magia": 94, "defensa": 94, "agilidad": 90},
+            "emblem": "skull",
+            "mana_gems": ["havoc", "dark", "mutagen"],
+            "mana_cost": "{2}{B}{B}"
+        }
+    },
+
+    # ── TURTLES OF GRAYSKULL (CROSSOVER HEROICO) ──
+    {
+        "pattern": re.compile(r"turtles\s+of\s+grayskull|leonardo|donatello|michelangelo|raphael|splinter|casey\s+jones", re.IGNORECASE),
         "profile": {
             "canonical_name": "Guerrero Ninja de Eternia",
             "subtitle": "Héroe Ninja de Grayskull",
@@ -2204,7 +2745,7 @@ CANONICAL_CARD_PROFILES: List[Dict[str, Any]] = [
 
     # ── RULERS OF THE SUN ──
     {
-        "pattern": re.compile(r"sun[\s\-]?man|digitino|space\s+sumo|pig[\s\-]?head|bolt[\s\-]?man|kikkon|rulers\s+of\s+the\s+sun", re.IGNORECASE),
+        "pattern": re.compile(r"sun[\s\-]?man|digitino|space\s+sumo|bolt[\s\-]?man|kikkon|rulers\s+of\s+the\s+sun", re.IGNORECASE),
         "profile": {
             "canonical_name": "Ruler of the Sun",
             "subtitle": "Campeón de la Luz Solar",
@@ -2244,7 +2785,7 @@ CANONICAL_CARD_PROFILES: List[Dict[str, Any]] = [
 
     # ── THUNDERCATS CROSSOVER ──
     {
-        "pattern": re.compile(r"thundercat|lion[\s\-]?o|mumm[\s\-]?ra|cheetara|panthro|battle\s+cat\s+man", re.IGNORECASE),
+        "pattern": re.compile(r"thundercat|lion[\s\-]?o|cheetara|panthro|battle\s+cat\s+man", re.IGNORECASE),
         "profile": {
             "canonical_name": "Guerrero Felino del Augurio",
             "subtitle": "Señor de los Thundercats",
@@ -2294,9 +2835,10 @@ def resolve_motu_profile(product_name: str, sub_category: Optional[str] = "MOTU 
                 "rarity_class": prof["faction"]
             }
 
-    # 2. Búsqueda en enciclopedia canónica por inclusión de clave
-    for key, data in MOTU_LORE_ENCYCLOPEDIA.items():
-        if key in clean_name:
+    # 2. Búsqueda en enciclopedia canónica por clave más específica con fronteras alfanuméricas
+    for key in sorted(MOTU_LORE_ENCYCLOPEDIA.keys(), key=len, reverse=True):
+        if _has_word_match(clean_name, key):
+            data = MOTU_LORE_ENCYCLOPEDIA[key]
             return {
                 "canonical_name": data["canonical_name"],
                 "faction": data["faction"],
@@ -2317,31 +2859,31 @@ def resolve_motu_profile(product_name: str, sub_category: Optional[str] = "MOTU 
     detected_emblem = "shield"
     detected_gems = ["grayskull", "gold"]
 
-    if any(w in clean_name for w in ["skeletor", "beast", "trap", "tri-klops", "mer-man", "lyn", "faker", "scare", "clawful", "whiplash", "spikor", "stinkor", "two-bad"]):
+    if any(_has_word_match(clean_name, w) for w in ["skeletor", "beast", "trap", "tri-klops", "mer-man", "lyn", "faker", "scare", "clawful", "whiplash", "spikor", "stinkor", "two-bad"]):
         detected_faction = "Guerreros del Mal"
         detected_theme = "snake_mountain"
         detected_type = "Criatura Legendaria — Guerrero Diabólico"
         detected_emblem = "skull"
         detected_gems = ["havoc", "dark", "blood"]
-    elif any(w in clean_name for w in ["hordak", "horde", "weaver", "catra", "grizzlor", "mantenna", "leech", "scorpia", "mosquitor"]):
+    elif any(_has_word_match(clean_name, w) for w in ["hordak", "horde", "weaver", "catra", "grizzlor", "mantenna", "leech", "scorpia", "mosquitor"]):
         detected_faction = "La Horda del Terror"
         detected_theme = "evil_horde"
         detected_type = "Criatura Legendaria — Soldado de la Horda"
         detected_emblem = "bat"
         detected_gems = ["horde", "horde", "plasma"]
-    elif any(w in clean_name for w in ["snake", "hiss", "khan", "rattlor", "tung", "lashr", "serpiente", "slither"]):
+    elif any(_has_word_match(clean_name, w) for w in ["snake", "hiss", "khan", "rattlor", "tung", "lashor", "serpiente", "slither"]):
         detected_faction = "Los Hombres Serpiente"
         detected_theme = "snake_men"
         detected_type = "Criatura Legendaria — Hombre Serpiente"
         detected_emblem = "snake"
         detected_gems = ["snake", "snake", "poison"]
-    elif any(w in clean_name for w in ["she-ra", "shera", "bow", "glimmer", "frosta", "angella", "mermista", "rebellion"]):
+    elif any(_has_word_match(clean_name, w) for w in ["she-ra", "shera", "bow", "glimmer", "frosta", "angella", "mermista", "rebellion"]):
         detected_faction = "La Gran Rebelión"
         detected_theme = "great_rebellion"
         detected_type = "Princesa del Poder — Gran Rebelión"
         detected_emblem = "sparkles"
         detected_gems = ["rebellion", "crystal"]
-    elif any(w in clean_name for w in ["zodac", "zodak", "he-ro", "eldor", "cosmic"]):
+    elif any(_has_word_match(clean_name, w) for w in ["zodac", "zodak", "he-ro", "eldor", "cosmic"]):
         detected_faction = "Guardianes Cósmicos"
         detected_theme = "cosmic_enforcers"
         detected_type = "Ejecutor Cósmico — Juez del Destino"

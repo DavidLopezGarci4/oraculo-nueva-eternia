@@ -12,6 +12,8 @@ from sqlalchemy.orm import Session
 from src.domain.models import ProductModel, ProductLoreModel, CharacterLoreModel
 from src.domain.motu_canon_database import (
     resolve_motu_profile,
+    get_figure_id_lore,
+    _has_word_match,
     CANONICAL_CARD_PROFILES,
     MOTU_LORE_ENCYCLOPEDIA,
     FACTION_TO_THEME,
@@ -61,11 +63,11 @@ CARDBACK_BIOS_ORIGINS: Dict[str, Dict[str, str]] = {
         "quote": "Las sombras milenarias de Preternia despiertan ante mi conjuro.",
         "flavor_quote_author": "Great Black Wizard",
         "special_move": "Conjuro Ancestral de Sombras Preternianas",
-        "lore": "Antiguo y enigmático hechicero oscuro de la era preterniana, maestro de las artes arcanas prohibidas y guardián de hechizos milenarios.",
+        "lore": "Antiguo y temible hechicero oscuro de la era preterniana cuyo pacto con fuerzas arcanas prohibidas precedió al mal de Skeletor.",
         "source_url": "https://he-man.fandom.com/wiki/Great_Black_Wizard",
-        "theme_key": "castle_grayskull",
-        "faction": "Guerreros Heroicos",
-        "type_line": "Hechicero Legendario — Guerrero Oscuro"
+        "theme_key": "snake_mountain",
+        "faction": "Guerreros del Mal",
+        "type_line": "Hechicero Oscuro — Amenaza Preterniana"
     },
     "he-ro": {
         "subtitle": "El Mago Más Poderoso del Universo",
@@ -500,9 +502,9 @@ class ProductLoreSeedService:
 
     @classmethod
     def match_cardback_lore(cls, product_name: str) -> Optional[Dict[str, str]]:
-        """Busca en el diccionario de cardbacks por aproximación inteligente de nombre."""
+        """Busca en el diccionario de cardbacks por fronteras alfanuméricas y mayor especificidad."""
         p_name = product_name.lower().strip()
-        
+
         matches = []
         for key, data in CARDBACK_BIOS_ORIGINS.items():
             # Evitar colisión de "anti-eternia" o "anti-he-man" con "he-man" simple
@@ -511,73 +513,130 @@ class ProductLoreSeedService:
             # Evitar colisión de "he-skeletor" con "skeletor" simple
             if ("he-skeletor" in p_name or "he skeletor" in p_name) and key == "skeletor":
                 continue
-            if key in p_name:
+            # Evitar colisión de "battle cat man" (Thundercats) con "battle cat"
+            if "battle cat man" in p_name and key == "battle cat":
+                continue
+            if _has_word_match(p_name, key):
                 matches.append((len(key), data))
-        
+
         if matches:
-            # Seleccionar la coincidencia más específica (ej: 'battle armor he-man' antes que 'he-man')
             matches.sort(key=lambda x: x[0], reverse=True)
             return matches[0][1]
-            
+
         return None
 
     @classmethod
-    def generate_default_lore_for_product(cls, product: ProductModel, db: Session) -> Dict[str, Any]:
+    def generate_default_lore_for_product(cls, product: ProductModel, db: Optional[Session] = None) -> Dict[str, Any]:
         """
         Genera el paquete de lore completo determinista combinando:
-        1. Diccionario de cardbacks oficiales de Mattel en español.
-        2. Perfil canónico maestro de cromo de motu_canon_database.
-        3. Fallback a CharacterLoreModel.
+        1. Catálogo O(1) enlazado por `products.figure_id` (338 figuras Origins).
+        2. Cardbacks oficiales de Mattel en español + perfil canónico de motu_canon_database.
+        3. Fallback real a `CharacterLoreModel` en BD cuando no existe definición específica.
         """
+        fig_entry = get_figure_id_lore(getattr(product, "figure_id", None))
+        if fig_entry:
+            return {
+                "product_id": product.id,
+                "canonical_name": fig_entry["canonical_name"],
+                "subtitle": fig_entry["subtitle"],
+                "faction": fig_entry["faction"],
+                "theme_key": fig_entry["theme_key"],
+                "type_line": fig_entry["type_line"],
+                "special_move": fig_entry["special_move"],
+                "quote": fig_entry["quote"],
+                "flavor_quote_author": fig_entry["flavor_quote_author"],
+                "lore": fig_entry["lore"],
+                "source_url": fig_entry["source_url"],
+                "text_color": "#FFFFFF",
+                "card_version": "showcase",
+                "mana_cost": fig_entry["mana_cost"],
+                "fuerza": fig_entry["fuerza"],
+                "magia": fig_entry["magia"],
+                "defensa": fig_entry["defensa"],
+                "agilidad": fig_entry["agilidad"],
+                "is_customized": False,
+            }
+
         canon_profile = resolve_motu_profile(product.name, product.sub_category)
         cardback = cls.match_cardback_lore(product.name)
 
-        # Consolidar campos con prioridad: Cardback oficial > Perfil Canónico de Cromo
+        # Si el canon cayó en plantilla genérica y no hubo cardback, buscar arquetipo real en character_lore
+        char_fallback: Optional[CharacterLoreModel] = None
+        if (
+            db is not None
+            and cardback is None
+            and str(canon_profile.get("lore", "")).startswith("Guerrero legendario de la saga")
+        ):
+            slug_candidate = getattr(product, "character_slug", None) or canonicalize_slug(product.name)
+            if slug_candidate and slug_candidate != "desconocido":
+                char_fallback = db.query(CharacterLoreModel).filter(CharacterLoreModel.slug == slug_candidate).first()
+
+        canonical_name = (
+            char_fallback.canonical_name if char_fallback else canon_profile.get("canonical_name", product.name)
+        )
         subtitle = (
             (cardback.get("subtitle") if cardback else None)
+            or (char_fallback.subtitle if char_fallback else None)
             or canon_profile.get("subtitle")
             or (f"Colección {product.sub_category}" if product.sub_category else "Campeón de Nueva Eternia")
         )
-
         quote = (
             (cardback.get("quote") if cardback else None)
+            or (char_fallback.quote if char_fallback else None)
             or canon_profile.get("quote")
-            or f"¡Por la gloria y el destino de {canon_profile.get('canonical_name', 'Eternia')}!"
+            or f"¡Por la gloria y el destino de {canonical_name}!"
         )
-
         flavor_quote_author = (
             (cardback.get("flavor_quote_author") if cardback else None)
+            or (char_fallback.flavor_quote_author if char_fallback else None)
             or canon_profile.get("flavor_quote_author")
-            or canon_profile.get("canonical_name", product.name)
+            or canonical_name
         )
-
         lore_text = (
             (cardback.get("lore") if cardback else None)
+            or (char_fallback.lore if char_fallback else None)
             or canon_profile.get("lore")
             or f"Figura coleccionable oficial de la línea {product.sub_category or 'Masters of the Universe Origins'}."
         )
-
         special_move = (
             (cardback.get("special_move") if cardback else None)
+            or (char_fallback.special_move if char_fallback else None)
             or canon_profile.get("special_move")
             or "Poder Ancestral de Grayskull"
         )
 
         stats = canon_profile.get("stats", {})
-        fuerza = stats.get("fuerza", 85)
-        magia = stats.get("magia", 75)
-        defensa = stats.get("defensa", 85)
-        agilidad = stats.get("agilidad", 85)
+        fuerza = char_fallback.fuerza if char_fallback and char_fallback.fuerza is not None else stats.get("fuerza", 85)
+        magia = char_fallback.magia if char_fallback and char_fallback.magia is not None else stats.get("magia", 75)
+        defensa = char_fallback.defensa if char_fallback and char_fallback.defensa is not None else stats.get("defensa", 85)
+        agilidad = char_fallback.agilidad if char_fallback and char_fallback.agilidad is not None else stats.get("agilidad", 85)
 
-        faction = (cardback.get("faction") if cardback else None) or canon_profile.get("faction", "Guerreros Heroicos")
-        theme_key = (cardback.get("theme_key") if cardback else None) or canon_profile.get("theme_key") or canon_profile.get("frame_theme", "castle_grayskull")
-        type_line = (cardback.get("type_line") if cardback else None) or canon_profile.get("type_line", "Criatura Legendaria — Guerrero")
-        source_url = (cardback.get("source_url") if cardback else None) or "Canon MOTU Origins"
-        mana_cost = canon_profile.get("mana_cost", "{2}{W}{W}")
+        faction = (
+            (cardback.get("faction") if cardback else None)
+            or (char_fallback.faction if char_fallback else None)
+            or canon_profile.get("faction", "Guerreros Heroicos")
+        )
+        theme_key = (
+            (cardback.get("theme_key") if cardback else None)
+            or (char_fallback.theme_key if char_fallback else None)
+            or canon_profile.get("theme_key")
+            or canon_profile.get("frame_theme", "castle_grayskull")
+        )
+        type_line = (
+            (cardback.get("type_line") if cardback else None)
+            or (char_fallback.type_line if char_fallback else None)
+            or canon_profile.get("type_line", "Criatura Legendaria — Guerrero")
+        )
+        source_url = (
+            (cardback.get("source_url") if cardback else None)
+            or (char_fallback.source_url if char_fallback and char_fallback.source_url else None)
+            or "Canon MOTU Origins"
+        )
+        mana_cost = (char_fallback.mana_cost if char_fallback and char_fallback.mana_cost else None) or canon_profile.get("mana_cost", "{2}{W}{W}")
 
         return {
             "product_id": product.id,
-            "canonical_name": canon_profile.get("canonical_name", product.name),
+            "canonical_name": canonical_name,
             "subtitle": subtitle,
             "faction": faction,
             "theme_key": theme_key,
@@ -594,7 +653,7 @@ class ProductLoreSeedService:
             "magia": magia,
             "defensa": defensa,
             "agilidad": agilidad,
-            "is_customized": False
+            "is_customized": False,
         }
 
     _CHARACTER_FIELDS = (
@@ -723,12 +782,12 @@ class ProductLoreSeedService:
         }
 
     @classmethod
-    def seed_origins_products(cls, db: Session, force: bool = False) -> Dict[str, int]:
+    def seed_origins_products(cls, db: Session, force: bool = False) -> Dict[str, Any]:
         """
-        Siembra y asegura que el 100% de los muñecos de Origins (is_vintage == False)
-        tengan su registro de ProductLoreModel activo con los textos canónicos de los cromos.
+        Siembra idempotente y diff-aware del 100% de las figuras Origins (is_vintage == False).
+        Respeta las filas personalizadas (is_customized=True) salvo force=True y solo escribe en BD
+        cuando hay altas nuevas o cambios reales de contenido.
         """
-        # REGLA ESTRICTA: Solo productos Origins (is_vintage == False)
         origins_products = db.query(ProductModel).filter(
             (ProductModel.is_vintage == False) | (ProductModel.is_vintage.is_(None))
         ).all()
@@ -737,6 +796,8 @@ class ProductLoreSeedService:
         created = 0
         updated = 0
         skipped = 0
+        unchanged = 0
+        touched_ids: List[int] = []
         existing_by_pid = {l.product_id: l for l in db.query(ProductLoreModel).all()}
 
         for p in origins_products:
@@ -746,22 +807,40 @@ class ProductLoreSeedService:
                 if existing.is_customized and not force:
                     skipped += 1
                     continue
-                # Actualizar si no fue personalizado a mano o si es force
                 data = cls.generate_default_lore_for_product(p, db)
+                dirty = False
                 for k, v in data.items():
-                    if k != "is_customized":
+                    if k == "is_customized" and not force:
+                        continue
+                    if getattr(existing, k) != v:
                         setattr(existing, k, v)
-                updated += 1
+                        dirty = True
+                if dirty:
+                    updated += 1
+                    touched_ids.append(p.id)
+                else:
+                    unchanged += 1
             else:
                 data = cls.generate_default_lore_for_product(p, db)
                 new_lore = ProductLoreModel(**data)
                 db.add(new_lore)
                 existing_by_pid[p.id] = new_lore
                 created += 1
+                touched_ids.append(p.id)
 
-        db.commit()
-        logger.info(f"Grimorio Lore Origins :: Sembrado completado ({created} creados, {updated} actualizados, {skipped} preservados).")
-        return {"total_origins": total, "created": created, "updated": updated, "skipped": skipped}
+        if created > 0 or updated > 0:
+            db.commit()
+        logger.info(
+            f"Grimorio Lore Origins :: Sembrado completado ({created} creados, {updated} actualizados, {unchanged} sin cambios, {skipped} preservados)."
+        )
+        return {
+            "total_origins": total,
+            "created": created,
+            "updated": updated,
+            "skipped": skipped,
+            "unchanged": unchanged,
+            "touched_ids": touched_ids,
+        }
 
     @classmethod
     def seed_missing_origins_products(cls, db: Session) -> Dict[str, int]:

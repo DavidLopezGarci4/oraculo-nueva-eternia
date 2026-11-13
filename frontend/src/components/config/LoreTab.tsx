@@ -12,6 +12,8 @@ import {
     Save,
     ChevronDown,
     ChevronUp,
+    ChevronLeft,
+    ChevronRight,
     Quote,
     Package,
     Users,
@@ -95,12 +97,19 @@ const LoreLengthHint: React.FC<{ length: number }> = ({ length }) => (
     </p>
 );
 
+const PAGE_SIZE = 50;
+
 export const LoreTab: React.FC = () => {
     // Modo de vista: 'products' (Figuras Origins) o 'characters' (Personajes Canónicos)
     const [activeView, setActiveView] = useState<'products' | 'characters'>('products');
 
     // Estado para Figuras Origins
     const [products, setProducts] = useState<ProductLoreListItem[]>([]);
+    const [totalProducts, setTotalProducts] = useState(0);
+    const [subCategories, setSubCategories] = useState<string[]>([]);
+    const [subCategoryFilter, setSubCategoryFilter] = useState('ALL');
+    const [customizedFilter, setCustomizedFilter] = useState<'ALL' | 'CUSTOMIZED' | 'DEFAULT'>('ALL');
+    const [quickSavingId, setQuickSavingId] = useState<number | null>(null);
     const [expandedProductId, setExpandedProductId] = useState<number | null>(null);
     const [editingProductId, setEditingProductId] = useState<number | null>(null);
     const [prodEditForm, setProdEditForm] = useState<Partial<ProductLoreListItem>>({});
@@ -108,11 +117,13 @@ export const LoreTab: React.FC = () => {
 
     // Estado para Personajes Arquetípicos
     const [characters, setCharacters] = useState<CharacterLore[]>([]);
+    const [totalCharacters, setTotalCharacters] = useState(0);
     const [editingChar, setEditingChar] = useState<CharacterLore | null>(null);
     const [pendingOnly, setPendingOnly] = useState(false);
     const [pendingCount, setPendingCount] = useState(0);
 
-    // Estados Comunes
+    // Estados Comunes y Paginación
+    const [page, setPage] = useState(0);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [factionFilter, setFactionFilter] = useState('ALL');
@@ -128,16 +139,26 @@ export const LoreTab: React.FC = () => {
                 const data = await fetchProductLoreList({
                     search: search || undefined,
                     faction: factionFilter !== 'ALL' ? factionFilter : undefined,
-                    limit: 150
+                    sub_category: subCategoryFilter !== 'ALL' ? subCategoryFilter : undefined,
+                    customized: customizedFilter !== 'ALL' ? customizedFilter : undefined,
+                    skip: page * PAGE_SIZE,
+                    limit: PAGE_SIZE
                 });
                 setProducts(data.items);
+                setTotalProducts(data.total);
+                if (data.sub_categories) {
+                    setSubCategories(data.sub_categories);
+                }
             } else {
                 const data = await fetchCharacterLoreList({
                     search: search || undefined,
                     faction: factionFilter !== 'ALL' ? factionFilter : undefined,
-                    pending_only: pendingOnly
+                    pending_only: pendingOnly,
+                    skip: page * PAGE_SIZE,
+                    limit: PAGE_SIZE
                 });
                 setCharacters(data.items);
+                setTotalCharacters(data.total);
                 setPendingCount(data.pending_count);
             }
         } catch (e) {
@@ -152,7 +173,7 @@ export const LoreTab: React.FC = () => {
             loadData();
         }, 300);
         return () => clearTimeout(timer);
-    }, [activeView, search, factionFilter, pendingOnly]);
+    }, [activeView, search, factionFilter, subCategoryFilter, customizedFilter, pendingOnly, page]);
 
     const showToast = (msg: string) => {
         setToastMessage(msg);
@@ -229,6 +250,55 @@ export const LoreTab: React.FC = () => {
             showToast('❌ Error al persistir el lore de la figura');
         } finally {
             setSavingProd(false);
+        }
+    };
+
+    const handleQuickFactionChange = async (prod: ProductLoreListItem, newFaction: string) => {
+        if (!newFaction || newFaction === prod.faction) return;
+        const prevFaction = prod.faction;
+        const prevTheme = prod.theme_key;
+        const prevCustomized = prod.is_customized;
+        const nextTheme = FACTION_TO_THEME[newFaction] ?? prod.theme_key;
+
+        setQuickSavingId(prod.product_id);
+        setProducts((prev) =>
+            prev.map((p) =>
+                p.product_id === prod.product_id
+                    ? { ...p, faction: newFaction, theme_key: nextTheme, is_customized: true }
+                    : p
+            )
+        );
+        if (editingProductId === prod.product_id) {
+            setProdEditForm((prev) => ({ ...prev, faction: newFaction }));
+        }
+
+        try {
+            const updated = await updateProductLore(prod.product_id, { faction: newFaction });
+            setProducts((prev) =>
+                prev.map((p) =>
+                    p.product_id === prod.product_id
+                        ? {
+                              ...p,
+                              faction: updated.faction,
+                              theme_key: updated.theme_key,
+                              is_customized: updated.is_customized
+                          }
+                        : p
+                )
+            );
+            showToast(`✅ Bando de "${updated.canonical_name}" cambiado a ${updated.faction}`);
+        } catch (e) {
+            console.error('Error al cambiar bando:', e);
+            setProducts((prev) =>
+                prev.map((p) =>
+                    p.product_id === prod.product_id
+                        ? { ...p, faction: prevFaction, theme_key: prevTheme, is_customized: prevCustomized }
+                        : p
+                )
+            );
+            showToast('❌ Error al actualizar el bando de la figura');
+        } finally {
+            setQuickSavingId(null);
         }
     };
 
@@ -331,7 +401,10 @@ export const LoreTab: React.FC = () => {
             {/* Selector de Modo: Figuras Origins vs Personajes Canónicos */}
             <div className="flex items-center gap-2 p-1.5 bg-slate-900/90 border border-slate-800 rounded-xl">
                 <button
-                    onClick={() => setActiveView('products')}
+                    onClick={() => {
+                        setActiveView('products');
+                        setPage(0);
+                    }}
                     className={`flex-1 py-2 px-4 rounded-lg text-xs font-bold font-cinzel uppercase tracking-wider flex items-center justify-center gap-2 transition ${
                         activeView === 'products'
                             ? 'bg-amber-500 text-slate-950 shadow-md font-black'
@@ -339,10 +412,13 @@ export const LoreTab: React.FC = () => {
                     }`}
                 >
                     <Package className="h-4 w-4" />
-                    <span>📦 Figuras Origins del Catálogo ({products.length > 0 ? products.length : 'Origins'})</span>
+                    <span>📦 Figuras Origins del Catálogo ({totalProducts > 0 ? totalProducts : 'Origins'})</span>
                 </button>
                 <button
-                    onClick={() => setActiveView('characters')}
+                    onClick={() => {
+                        setActiveView('characters');
+                        setPage(0);
+                    }}
                     className={`flex-1 py-2 px-4 rounded-lg text-xs font-bold font-cinzel uppercase tracking-wider flex items-center justify-center gap-2 transition ${
                         activeView === 'characters'
                             ? 'bg-amber-500 text-slate-950 shadow-md font-black'
@@ -350,7 +426,7 @@ export const LoreTab: React.FC = () => {
                     }`}
                 >
                     <Users className="h-4 w-4" />
-                    <span>👤 Personajes Arquetípicos ({characters.length > 0 ? characters.length : 'Canónicos'})</span>
+                    <span>👤 Personajes Arquetípicos ({totalCharacters > 0 ? totalCharacters : 'Canónicos'})</span>
                 </button>
             </div>
 
@@ -363,15 +439,26 @@ export const LoreTab: React.FC = () => {
             )}
 
             {/* Barra de Filtros y Búsqueda */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 rounded-xl bg-slate-900/80 border border-slate-800">
+            <div
+                className={`grid grid-cols-1 gap-3 p-4 rounded-xl bg-slate-900/80 border border-slate-800 ${
+                    activeView === 'products' ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-3'
+                }`}
+            >
                 {/* 1. Buscador */}
                 <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
                     <input
                         type="text"
-                        placeholder={activeView === 'products' ? 'Buscar figura o frase de blíster...' : 'Buscar personaje canónico...'}
+                        placeholder={
+                            activeView === 'products'
+                                ? 'Buscar por nombre, subtítulo, AF411 o #ID...'
+                                : 'Buscar personaje canónico...'
+                        }
                         value={search}
-                        onChange={(e) => setSearch(e.target.value)}
+                        onChange={(e) => {
+                            setSearch(e.target.value);
+                            setPage(0);
+                        }}
                         className="w-full pl-9 pr-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-white focus:border-amber-500/60 focus:outline-none transition"
                     />
                 </div>
@@ -379,7 +466,10 @@ export const LoreTab: React.FC = () => {
                 {/* 2. Selector de Facción */}
                 <select
                     value={factionFilter}
-                    onChange={(e) => setFactionFilter(e.target.value)}
+                    onChange={(e) => {
+                        setFactionFilter(e.target.value);
+                        setPage(0);
+                    }}
                     className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-white focus:border-amber-500/60 focus:outline-none transition"
                 >
                     {FACTION_OPTIONS.map((f) => (
@@ -389,10 +479,13 @@ export const LoreTab: React.FC = () => {
                     ))}
                 </select>
 
-                {/* 3. Filtro según modo */}
+                {/* 3. Filtros específicos por modo */}
                 {activeView === 'characters' ? (
                     <button
-                        onClick={() => setPendingOnly(!pendingOnly)}
+                        onClick={() => {
+                            setPendingOnly(!pendingOnly);
+                            setPage(0);
+                        }}
                         className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition ${
                             pendingOnly
                                 ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/20'
@@ -403,9 +496,38 @@ export const LoreTab: React.FC = () => {
                         <span>Pendientes de Revisión ({pendingCount})</span>
                     </button>
                 ) : (
-                    <div className="flex items-center justify-center px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs font-mono text-amber-400/80">
-                        <span>🛡️ Exclusivo MOTU Origins (Vintage excluido)</span>
-                    </div>
+                    <>
+                        <select
+                            value={subCategoryFilter}
+                            onChange={(e) => {
+                                setSubCategoryFilter(e.target.value);
+                                setPage(0);
+                            }}
+                            aria-label="Filtrar por línea o subcategoría"
+                            className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-white focus:border-amber-500/60 focus:outline-none transition"
+                        >
+                            <option value="ALL">Todas las Subcategorías / Waves</option>
+                            {subCategories.map((sub) => (
+                                <option key={sub} value={sub}>
+                                    {sub}
+                                </option>
+                            ))}
+                        </select>
+
+                        <select
+                            value={customizedFilter}
+                            onChange={(e) => {
+                                setCustomizedFilter(e.target.value as 'ALL' | 'CUSTOMIZED' | 'DEFAULT');
+                                setPage(0);
+                            }}
+                            aria-label="Filtrar por estado editorial"
+                            className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-sm text-white focus:border-amber-500/60 focus:outline-none transition"
+                        >
+                            <option value="ALL">Estado: Todas (Canon + Editadas)</option>
+                            <option value="CUSTOMIZED">Solo Editadas por Master</option>
+                            <option value="DEFAULT">Solo Canon del Sistema</option>
+                        </select>
+                    </>
                 )}
             </div>
 
@@ -457,12 +579,20 @@ export const LoreTab: React.FC = () => {
 
                                             {/* Textos Principales */}
                                             <div className="min-w-0">
-                                                <div className="flex items-center gap-2">
+                                                <div className="flex flex-wrap items-center gap-1.5">
                                                     <h4 className="text-sm font-bold text-white truncate font-cinzel">
                                                         {prod.canonical_name || prod.product_name}
                                                     </h4>
+                                                    {prod.figure_id && (
+                                                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-sky-300 text-[9px] font-mono border border-slate-700 shrink-0">
+                                                            AF411 #{prod.figure_id}
+                                                        </span>
+                                                    )}
+                                                    <span className="px-1.5 py-0.5 rounded bg-slate-950 text-slate-400 text-[9px] font-mono border border-slate-800 shrink-0">
+                                                        ID #{prod.product_id}
+                                                    </span>
                                                     {prod.is_customized && (
-                                                        <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[8px] font-black uppercase tracking-wider border border-amber-500/30">
+                                                        <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[8px] font-black uppercase tracking-wider border border-amber-500/30 shrink-0">
                                                             Editado
                                                         </span>
                                                     )}
@@ -475,13 +605,23 @@ export const LoreTab: React.FC = () => {
                                         </div>
 
                                         <div className="flex items-center gap-2 shrink-0">
-                                            <span
-                                                className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${getFactionBadgeColor(
+                                            <select
+                                                value={prod.faction}
+                                                disabled={quickSavingId === prod.product_id}
+                                                onClick={(e) => e.stopPropagation()}
+                                                onChange={(e) => handleQuickFactionChange(prod, e.target.value)}
+                                                aria-label={`Cambiar bando de ${prod.canonical_name || prod.product_name}`}
+                                                title="Cambiar bando rápidamente (1 clic)"
+                                                className={`text-[10px] font-bold px-2.5 py-1 rounded-full border cursor-pointer focus:outline-none focus:ring-1 focus:ring-amber-400 transition ${getFactionBadgeColor(
                                                     prod.faction
-                                                )}`}
+                                                )} ${quickSavingId === prod.product_id ? 'opacity-60' : ''}`}
                                             >
-                                                {prod.faction}
-                                            </span>
+                                                {MOTU_FACTIONS.map((fac) => (
+                                                    <option key={fac} value={fac} className="bg-slate-950 text-white">
+                                                        {FACTION_EMOJI[fac] ?? '⚔️'} {fac}
+                                                    </option>
+                                                ))}
+                                            </select>
                                             {isExpanded ? (
                                                 <ChevronUp className="h-4 w-4 text-amber-400" />
                                             ) : (
@@ -769,6 +909,44 @@ export const LoreTab: React.FC = () => {
                     </div>
                 )
             )}
+
+            {/* Barra de Paginación Real */}
+            {!loading && ((activeView === 'products' ? totalProducts : totalCharacters) > 0) && (() => {
+                const totalActive = activeView === 'products' ? totalProducts : totalCharacters;
+                const totalPages = Math.max(1, Math.ceil(totalActive / PAGE_SIZE));
+                const startIdx = page * PAGE_SIZE + 1;
+                const endIdx = Math.min(totalActive, (page + 1) * PAGE_SIZE);
+                return (
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 rounded-xl bg-slate-900/80 border border-slate-800 text-xs text-slate-300">
+                        <span className="font-mono">
+                            Página <strong className="text-amber-300">{page + 1}</strong> de{' '}
+                            <strong className="text-white">{totalPages}</strong> · Mostrando{' '}
+                            <strong className="text-white">{startIdx}–{endIdx}</strong> de{' '}
+                            <strong className="text-amber-300">{totalActive}</strong>
+                        </span>
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                disabled={page === 0}
+                                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                                className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-200 hover:border-amber-500/40 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                            >
+                                <ChevronLeft className="h-3.5 w-3.5" />
+                                <span>Anterior</span>
+                            </button>
+                            <button
+                                type="button"
+                                disabled={page + 1 >= totalPages}
+                                onClick={() => setPage((p) => p + 1)}
+                                className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-200 hover:border-amber-500/40 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                            >
+                                <span>Siguiente</span>
+                                <ChevronRight className="h-3.5 w-3.5" />
+                            </button>
+                        </div>
+                    </div>
+                );
+            })()}
 
             {/* Modal de Edición de Personaje Canónico */}
             {editingChar && (

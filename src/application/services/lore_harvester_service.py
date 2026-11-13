@@ -407,12 +407,16 @@ class LoreHarvesterService:
         from src.application.services.product_lore_seed import ProductLoreSeedService
 
         res = cls.seed_initial_catalog(db)
-        prods = ProductLoreSeedService.seed_missing_origins_products(db)
-        if res["seeded_characters"] or res["linked_products"] or prods["created"]:
+        prods = ProductLoreSeedService.seed_origins_products(db, force=False)
+        if res["seeded_characters"] or res["linked_products"] or prods["touched_ids"]:
             LoreDualSync.replicate_characters(db, res["touched_slugs"])
-            LoreDualSync.replicate_product_lore(db, prods["created_ids"])
+            LoreDualSync.replicate_product_lore(db, prods["touched_ids"])
             LoreDualSync.replicate_character_slugs(db, res["linked_ids"])
-        return {**res, "product_lore_created": prods["created"]}
+        return {
+            **res,
+            "product_lore_created": prods["created"],
+            "product_lore_updated": prods["updated"],
+        }
 
     @classmethod
     def list_characters(

@@ -156,11 +156,11 @@ Este documento detalla en profundidad el funcionamiento, utilidad, criticidad y 
 
 ### [14] Sembrar / Sincronizar Grimorio Lore Canónico (Origins Dual)
 * **¿Qué hace exactamente?**
-  Invoca `ProductLoreSeedService.seed_all_dual` (sembrador unificado de `seed_canonical_characters` y `seed_origins_products`). Siembra primero en **Supabase Cloud** (fuente primaria) y replica de forma unidireccional a **SQLite local** (si Supabase no está configurado, siembra solo en SQLite):
+  Invoca `ProductLoreSeedService.seed_all_dual` (sembrador unificado de `seed_canonical_characters` y `seed_origins_products` *diff-aware*). Siembra primero en **Supabase Cloud** (fuente primaria) y replica de forma unidireccional a **SQLite local** (si Supabase no está configurado, siembra solo en SQLite):
   - Los perfiles arquetípicos de personajes MOTU en español (`motu_canon_database.py`), con las 8 facciones del Grimorio.
-  - Las 338+ figuras exclusivas de la línea Origins con sus frases del reverso de blíster (*cardback bios*), subtítulos canónicos y estadísticas equilibradas.
-  - Aplica la regla estricta del proyecto: **exclusivo para Origins, omitiendo figuras Vintage**.
-* **Utilidad:** Rellena y unifica toda la información del Grimorio Lore y los cromos coleccionables en ambas bases de datos con coste cero (sin consumo de tokens de IA).
+  - Las **338 figuras** exclusivas de la línea Origins enlazadas de forma unívoca por `products.figure_id` mediante el catálogo maestro en caché `src/domain/data/origins_grimorio_by_figure_id.json` (con respaldo en cardbacks oficiales, `resolve_motu_profile` por fronteras de palabra y `CharacterLoreModel` para futuras altas), eliminando colisiones de subcadena (`Keldor`/`Eldor`, `Castle Grayskull`/`Gray`, villanos crossover).
+  - Aplica la regla estricta del proyecto: **exclusivo para Origins, omitiendo figuras Vintage** y sin añadir ningún `JOIN` ni penalización sobre `/api/products` o `/api/auctions/products`.
+* **Utilidad:** Rellena y unifica de manera *diff-aware* (solo escribe filas con cambios reales) toda la información del Grimorio Lore y los cromos coleccionables en ambas bases de datos con coste cero.
 * **Criticidad:** **ALTA**. Resuelve el problema del Grimorio Lore vacío y sincroniza el texto de las tarjetas coleccionables.
 * **Modo de Uso:** Pulsa `14` y Enter. Se te preguntará si quieres forzar (`force=True`). Sin `force`, se actualiza el canon automático del sistema pero se **respeta lo verificado y curado por un administrador** (y las fichas Origins personalizadas). Con `force=True` se **sobrescriben también los registros ya verificados y personalizados**: úsalo solo si quieres volver al canon original.
 

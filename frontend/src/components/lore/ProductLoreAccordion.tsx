@@ -322,6 +322,11 @@ export const ProductLoreAccordion: React.FC<ProductLoreAccordionProps> = ({
                                             {loreData.faction}
                                         </span>
                                     )}
+                                    {loreData?.figure_id && (
+                                        <span className="px-2 py-0.5 rounded-md bg-sky-500/10 border border-sky-500/30 font-mono text-sky-300">
+                                            AF411 #{loreData.figure_id}
+                                        </span>
+                                    )}
                                 </div>
 
                                 {isAdmin && (

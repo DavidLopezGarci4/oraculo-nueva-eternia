@@ -167,3 +167,59 @@ def test_incremental_seed_keeps_new_origins_visible_to_faction_filter(client, ad
                       params={"faction": "Gobernantes de Solaria", "search": "Sun-Man"})
     assert resp.status_code == 200
     assert origins_product in [i["product_id"] for i in resp.json()["items"]]
+
+
+def test_products_endpoint_supports_high_limit_figure_id_search_customized_and_sub_categories(
+    client, admin_headers, origins_product
+):
+    with _TestSession() as db:
+        ProductLoreSeedService.seed_missing_origins_products(db)
+
+    # Limite > 200 (hasta 500) + exposición de figure_id y sub_categories
+    resp = client.get("/api/lore/products", headers=admin_headers, params={"limit": 400})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert "Origins" in body["sub_categories"]
+    matched = [i for i in body["items"] if i["product_id"] == origins_product]
+    assert len(matched) == 1
+    assert matched[0]["figure_id"] == "LORE-SEC-ORIGINS"
+    assert matched[0]["is_customized"] is False
+
+    # Búsqueda por figure_id exacto y por #ID interno
+    by_fid = client.get("/api/lore/products", headers=admin_headers, params={"search": "LORE-SEC-ORIGINS"})
+    assert by_fid.status_code == 200
+    assert [i["product_id"] for i in by_fid.json()["items"]] == [origins_product]
+
+    by_pid = client.get("/api/lore/products", headers=admin_headers, params={"search": f"#{origins_product}"})
+    assert by_pid.status_code == 200
+    assert [i["product_id"] for i in by_pid.json()["items"]] == [origins_product]
+
+    # Cambio rápido de bando mediante PUT parcial recalcula theme_key y marca is_customized=True
+    put_resp = client.put(
+        f"/api/lore/product/{origins_product}",
+        headers=admin_headers,
+        json={"faction": "La Horda del Terror"},
+    )
+    assert put_resp.status_code == 200, put_resp.text
+    put_body = put_resp.json()
+    assert put_body["faction"] == "La Horda del Terror"
+    assert put_body["theme_key"] == "evil_horde"
+    assert put_body["is_customized"] is True
+    assert put_body["figure_id"] == "LORE-SEC-ORIGINS"
+
+    # Filtro editorial customized=CUSTOMIZED | DEFAULT
+    cust_resp = client.get(
+        "/api/lore/products",
+        headers=admin_headers,
+        params={"search": "LORE-SEC-ORIGINS", "customized": "CUSTOMIZED"},
+    )
+    assert cust_resp.status_code == 200
+    assert [i["product_id"] for i in cust_resp.json()["items"]] == [origins_product]
+
+    def_resp = client.get(
+        "/api/lore/products",
+        headers=admin_headers,
+        params={"search": "LORE-SEC-ORIGINS", "customized": "DEFAULT"},
+    )
+    assert def_resp.status_code == 200
+    assert def_resp.json()["items"] == []

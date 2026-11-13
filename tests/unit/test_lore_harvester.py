@@ -164,3 +164,99 @@ def test_harvest_for_product_requires_force_for_verified_character(client, monke
         db.query(CharacterLoreModel).filter(CharacterLoreModel.slug == "verified_hero").delete()
         db.delete(product)
         db.commit()
+
+
+def test_origins_figure_id_catalog_integrity():
+    from src.domain.motu_canon_database import load_origins_figure_id_catalog
+
+    catalog = load_origins_figure_id_catalog()
+    assert len(catalog) == 338
+    forbidden = {
+        "Guerrero Ninja de Eternia",
+        "Titán del Ring Eterniano",
+        "Ruler of the Sun",
+        "Aliado de Etheria",
+        "Soldado de la Horda",
+        "Guerrero Serpiente",
+        "Guerrero Felino del Augurio",
+    }
+    for fid, entry in catalog.items():
+        assert entry["canonical_name"] not in forbidden, f"Paraguas en {fid}"
+        assert entry["faction"] in VALID_FACTIONS, f"Facción inválida en {fid}"
+        assert entry["theme_key"] == FACTION_TO_THEME[entry["faction"]]
+        assert 65 <= len(entry["lore"]) <= 180, f"Longitud fuera de rango en {fid}"
+        assert "Guerrero legendario de la saga" not in entry["lore"]
+        for stat in ("fuerza", "magia", "defensa", "agilidad"):
+            assert 1 <= entry[stat] <= 100
+
+
+def test_word_boundary_prevents_keldor_eldor_and_grayskull_gray_collisions():
+    keldor = resolve_motu_profile("Keldor")
+    assert keldor["faction"] == "Guerreros del Mal"
+    assert "Eldor" not in keldor["canonical_name"]
+    assert ProductLoreSeedService.match_cardback_lore("Keldor") is None
+
+    grayskull = resolve_motu_profile("Castle Grayskull")
+    assert grayskull["faction"] == "Guerreros Heroicos"
+    assert grayskull["canonical_name"] == "Castle Grayskull"
+
+    assert resolve_motu_profile("Battle Cat Man")["faction"] == "Alianzas del Multiverso"
+    assert ProductLoreSeedService.match_cardback_lore("Battle Cat Man") is None
+    assert resolve_motu_profile("Battle Cat")["faction"] == "Guerreros Heroicos"
+    assert resolve_motu_profile("Pig-Head")["faction"] == "Guerreros del Mal"
+    assert resolve_motu_profile("Great Black Wizard")["faction"] == "Guerreros del Mal"
+    assert resolve_motu_profile("Turtles of Grayskull Shredder")["faction"] == "Guerreros del Mal"
+
+
+def test_generate_default_lore_uses_exact_figure_id_and_preserves_customized_on_seed(client):
+    from src.domain.models import ProductLoreModel
+    from src.domain.motu_canon_database import load_origins_figure_id_catalog
+
+    catalog = load_origins_figure_id_catalog()
+    fid = "2420"
+    assert fid in catalog
+
+    with _TestSession() as db:
+        p = ProductModel(
+            name="Figura Test Enlazada",
+            category="Action Figures",
+            sub_category="MOTU Origins",
+            figure_id=fid,
+            is_vintage=False,
+        )
+        db.add(p)
+        db.commit()
+        pid = p.id
+
+        try:
+            default_data = ProductLoreSeedService.generate_default_lore_for_product(p, db)
+            assert default_data["canonical_name"] == catalog[fid]["canonical_name"]
+            assert default_data["faction"] == catalog[fid]["faction"]
+            assert default_data["source_url"] == f"Canon MOTU Origins #{fid}"
+
+            res1 = ProductLoreSeedService.seed_origins_products(db, force=False)
+            assert res1["created"] >= 1
+            res2 = ProductLoreSeedService.seed_origins_products(db, force=False)
+            assert res2["created"] == 0 and res2["updated"] == 0
+
+            row = db.query(ProductLoreModel).filter(ProductLoreModel.product_id == pid).first()
+            row.faction = "La Horda del Terror"
+            row.theme_key = FACTION_TO_THEME["La Horda del Terror"]
+            row.is_customized = True
+            db.commit()
+
+            res3 = ProductLoreSeedService.seed_origins_products(db, force=False)
+            assert res3["skipped"] >= 1
+            db.expire_all()
+            preserved = db.query(ProductLoreModel).filter(ProductLoreModel.product_id == pid).first()
+            assert preserved.faction == "La Horda del Terror" and preserved.is_customized is True
+
+            ProductLoreSeedService.seed_origins_products(db, force=True)
+            db.expire_all()
+            restored = db.query(ProductLoreModel).filter(ProductLoreModel.product_id == pid).first()
+            assert restored.faction == catalog[fid]["faction"]
+            assert restored.is_customized is False
+        finally:
+            db.query(ProductLoreModel).filter(ProductLoreModel.product_id == pid).delete()
+            db.query(ProductModel).filter(ProductModel.id == pid).delete()
+            db.commit()

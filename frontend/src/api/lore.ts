@@ -57,6 +57,7 @@ export interface CharacterLoreListResponse {
 
 export interface ProductLore {
     product_id: number;
+    figure_id?: string | null;
     canonical_name: string;
     subtitle?: string;
     faction: string;
@@ -79,6 +80,7 @@ export interface ProductLore {
 
 export interface ProductLoreListItem {
     product_id: number;
+    figure_id?: string | null;
     product_name: string;
     sub_category?: string;
     image_url?: string;
@@ -102,6 +104,7 @@ export interface ProductLoreListItem {
 export interface ProductLoreListResponse {
     items: ProductLoreListItem[];
     total: number;
+    sub_categories?: string[];
 }
 
 // ─── ENDPOINTS LORE POR FIGURA / ÍTEM (ORIGINS) ───
@@ -123,6 +126,7 @@ export const fetchProductLoreList = async (params?: {
     search?: string;
     faction?: string;
     sub_category?: string;
+    customized?: string;
     skip?: number;
     limit?: number;
 }): Promise<ProductLoreListResponse> => {
