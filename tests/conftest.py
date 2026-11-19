@@ -139,6 +139,22 @@ def client():
     p_init.start()
     active.append(p_init)
 
+    # Hermetic isolation: prevent live Telegram polling (409 Conflict) and VintedSentinel background loop during tests
+    from unittest.mock import AsyncMock
+    p_tg = patch(
+        "src.infrastructure.services.telegram_listener.TelegramListener.start_polling",
+        new=AsyncMock(return_value=None),
+    )
+    p_tg.start()
+    active.append(p_tg)
+
+    p_vs = patch(
+        "src.application.services.vinted_sentinel_service.VintedSentinelService.start",
+        return_value=None,
+    )
+    p_vs.start()
+    active.append(p_vs)
+
     from src.interfaces.api.main import app
     with TestClient(app, raise_server_exceptions=True) as c:
         yield c

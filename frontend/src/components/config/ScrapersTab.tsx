@@ -239,7 +239,7 @@ export default function ScrapersTab({
                             </button>
                         </div>
                         <div className="max-h-[460px] overflow-y-auto space-y-2 rounded-[2.5rem] border border-white/5 bg-black/40 p-3 scrollbar-none custom-scrollbar shadow-inner">
-                            {advancedLogs.filter(log => logFilter === 'all' || log.status === 'error').map((log) => (
+                            {advancedLogs.filter(log => logFilter === 'all' || log.status === 'error' || log.status === 'blocked').map((log) => (
                                 <button
                                     key={log.id}
                                     onClick={() => { setSelectedLog(log); setTargetLogId(null); }}
@@ -253,8 +253,8 @@ export default function ScrapersTab({
                                     )}
                                     <div className="flex items-center justify-between">
                                         <span className="text-[10px] font-black uppercase tracking-widest text-white group-hover:text-brand-primary transition-colors">{log.spider_name}</span>
-                                        <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-tighter ${log.status === 'success' ? 'bg-green-500/20 text-green-400' : log.status === 'running' ? 'bg-blue-500/20 text-blue-400' : 'bg-red-500/20 text-red-400'}`}>
-                                            {log.status === 'success' ? 'Éxito' : log.status === 'running' ? 'En Ejecución' : 'Fallo'}
+                                        <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-tighter ${log.status === 'success' ? 'bg-green-500/20 text-green-400' : log.status === 'running' ? 'bg-blue-500/20 text-blue-400' : log.status === 'blocked' ? 'bg-amber-500/20 text-amber-400' : 'bg-red-500/20 text-red-400'}`}>
+                                            {log.status === 'success' ? 'Éxito' : log.status === 'running' ? 'En Ejecución' : log.status === 'blocked' ? 'Bloqueado' : 'Fallo'}
                                         </span>
                                     </div>
                                     <div className="flex items-center justify-between text-[10px] text-white/60 font-bold">
@@ -452,6 +452,7 @@ export default function ScrapersTab({
                             return filteredScrapers.map((scraper) => {
                                 const isRunning = scraper.status === 'running';
                                 const isCompleted = scraper.status === 'completed';
+                                const isBlocked = scraper.status === 'blocked';
                                 const isError = scraper.status.startsWith('error') || scraper.status === 'stopped';
 
                                 return (
@@ -460,6 +461,7 @@ export default function ScrapersTab({
                                         className={`relative overflow-hidden flex flex-col gap-1.5 rounded-xl p-3 border transition-all duration-300 ${
                                             isRunning ? 'bg-yellow-500/5 border-yellow-500/20 shadow-[0_0_15px_-5px_rgba(234,179,8,0.15)]' :
                                             isCompleted ? 'bg-green-500/5 border-green-500/10' :
+                                            isBlocked ? 'bg-amber-500/5 border-amber-500/20' :
                                             'bg-white/[0.02] border-white/5'
                                         }`}
                                     >
@@ -468,6 +470,7 @@ export default function ScrapersTab({
                                             <span className={`h-1.5 w-1.5 rounded-full ${
                                                 isRunning ? 'bg-yellow-500 animate-pulse' :
                                                 isCompleted ? 'bg-green-500' :
+                                                isBlocked ? 'bg-amber-500' :
                                                 isError ? 'bg-red-500' : 'bg-white/20'
                                             }`}></span>
                                         </div>
@@ -477,9 +480,10 @@ export default function ScrapersTab({
                                             <span className={
                                                 isRunning ? 'text-yellow-500' :
                                                 isCompleted ? 'text-green-500' :
+                                                isBlocked ? 'text-amber-400' :
                                                 isError ? 'text-red-500' : 'text-white/60'
                                             }>
-                                                {isRunning ? 'Activo' : isCompleted ? 'Listo' : 'Pausado'}
+                                                {isRunning ? 'Activo' : isCompleted ? 'Listo' : isBlocked ? 'Bloqueado' : 'Pausado'}
                                             </span>
                                         </div>
                                     </div>

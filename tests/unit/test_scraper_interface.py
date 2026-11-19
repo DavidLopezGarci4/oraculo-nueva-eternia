@@ -41,11 +41,11 @@ def test_unified_spider_registry_consistency():
     import src.application.jobs.daily_scan as daily_scan
     assert "ToymiEU" in REGISTERED_SPIDERS
     assert "Bixoto" in REGISTERED_SPIDERS
-    assert "DVDStoreSpain" in REGISTERED_SPIDERS
+    assert "DVDStoreSpain" not in REGISTERED_SPIDERS
     assert CANONICAL_SPIDER_NAMES["toymieu"] == "ToymiEU"
     assert CANONICAL_SPIDER_NAMES["bixoto"] == "Bixoto"
-    assert CANONICAL_SPIDER_NAMES["dvdstorespain"] == "DVDStoreSpain"
-    assert hasattr(daily_scan, "DVDStoreSpainScraper")
+    assert "dvdstorespain" not in CANONICAL_SPIDER_NAMES
+    assert not hasattr(daily_scan, "DVDStoreSpainScraper")
 
 
 @pytest.mark.asyncio

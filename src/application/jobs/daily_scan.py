@@ -24,7 +24,6 @@ from src.infrastructure.scrapers.pixelatoy_scraper import PixelatoyScraper
 from src.infrastructure.scrapers.electropolis_scraper import ElectropolisScraper
 from src.infrastructure.scrapers.triguetech_scraper import TriguetechScraper
 from src.infrastructure.scrapers.lamansiondelterror_scraper import LaMansionDelTerrorScraper
-from src.infrastructure.scrapers.dvdstorespain_scraper import DVDStoreSpainScraper
 
 # Phase 8.4: European Expansion Scrapers
 from src.infrastructure.scrapers.detoyboys_scraper import DeToyboysNLScraper
@@ -127,12 +126,13 @@ async def run_daily_scan(progress_callback=None):
             FrikimazScraper(),
             PixelatoyScraper(),
             ElectropolisScraper(),
-            DVDStoreSpainScraper(),
             TriguetechScraper(),
             LaMansionDelTerrorScraper(),
             # European Expansion
             ToymiEUScraper(),
             BixotoScraper(),
+            # SmythsToys integrado con Motor REA/CDP + Xvfb/WARP y fallback automático a Purgatorio
+            SmythsToysScraper(),
             Time4ActionToysDEScraper(),
             BigBadToyStoreScraper(),
             AmazonScraper(),
@@ -143,9 +143,6 @@ async def run_daily_scan(progress_callback=None):
             # DeToyboys at the end (User Request)
             DeToyboysNLScraper(),
         ]
-
-        # SmythsToys integrado con Motor REA/CDP + Xvfb/WARP y fallback automático a Purgatorio
-        all_scrapers.insert(10, SmythsToysScraper())
         
         # Filter Scrapers
         scrapers = []

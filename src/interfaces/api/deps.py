@@ -285,7 +285,7 @@ REGISTERED_SPIDERS = [
     "Fantasia Personajes", "Frikiverso", "Frikimaz", "Electropolis",
     "Pixelatoy", "Amazon.es", "DeToyboys", "Ebay.es",
     "Vinted", "Wallapop", "ToymiEU", "Time4ActionToysDE",
-    "BigBadToyStore", "DVDStoreSpain", "Triguetech",
+    "BigBadToyStore", "Triguetech",
     "LaMansionDelTerror", "SmythsToys", "Bixoto",
 ]
 
@@ -309,7 +309,6 @@ CANONICAL_SPIDER_NAMES = {
     "time4actiontoysde": "Time4ActionToysDE",
     "bigbadtoystore": "BigBadToyStore",
     "smythstoys": "SmythsToys",
-    "dvdstorespain": "DVDStoreSpain",
     "triguetech": "Triguetech",
     "lamansiondelterror": "LaMansionDelTerror",
     "bixoto": "Bixoto",

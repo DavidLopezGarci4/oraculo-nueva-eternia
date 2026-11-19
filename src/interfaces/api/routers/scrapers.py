@@ -5,6 +5,19 @@ import time
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
+_CACHED_MADRID_TZ = None
+
+
+def _get_madrid_tz():
+    """Devuelve ZoneInfo('Europe/Madrid') con respaldo UTC+1 si tzdata no está disponible en el SO."""
+    global _CACHED_MADRID_TZ
+    if _CACHED_MADRID_TZ is None:
+        try:
+            _CACHED_MADRID_TZ = ZoneInfo("Europe/Madrid")
+        except Exception:
+            _CACHED_MADRID_TZ = timezone(timedelta(hours=1))
+    return _CACHED_MADRID_TZ
+
 import psutil
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response, File, UploadFile
 from loguru import logger
@@ -76,7 +89,7 @@ def run_scraper_task(
                 status="running",
                 start_time=status.start_time,
                 trigger_type=trigger_type,
-                logs=f"[{datetime.now(ZoneInfo('Europe/Madrid')).strftime('%H:%M:%S')}] 🚀 Desplegando incursión manual: {canonical_spider_name}\n",
+                logs=f"[{datetime.now(_get_madrid_tz()).strftime('%H:%M:%S')}] 🚀 Desplegando incursión manual: {canonical_spider_name}\n",
             )
             db.add(execution_log)
             db.commit()
@@ -115,7 +128,7 @@ def run_scraper_task(
     def update_live_log(msg: str, force: bool = False):
         if not log_id:
             return
-        ts = datetime.now(ZoneInfo("Europe/Madrid")).strftime("%H:%M:%S")
+        ts = datetime.now(_get_madrid_tz()).strftime("%H:%M:%S")
         line = f"[{ts}] {msg}"
         with log_lock:
             log_buffer.append(line)
@@ -132,7 +145,6 @@ def run_scraper_task(
         from src.infrastructure.scrapers.amazon_scraper import AmazonScraper
         from src.infrastructure.scrapers.bbts_scraper import BigBadToyStoreScraper
         from src.infrastructure.scrapers.detoyboys_scraper import DeToyboysNLScraper
-        from src.infrastructure.scrapers.dvdstorespain_scraper import DVDStoreSpainScraper
         from src.infrastructure.scrapers.ebay_scraper import EbayScraper
         from src.infrastructure.scrapers.electropolis_scraper import ElectropolisScraper
         from src.infrastructure.scrapers.fantasia_scraper import FantasiaScraper
@@ -167,7 +179,6 @@ def run_scraper_task(
             "Time4ActionToysDE": Time4ActionToysDEScraper(),
             "BigBadToyStore": BigBadToyStoreScraper(),
             "SmythsToys": SmythsToysScraper(),
-            "DVDStoreSpain": DVDStoreSpainScraper(),
             "Triguetech": TriguetechScraper(),
             "LaMansionDelTerror": LaMansionDelTerrorScraper(),
         }
@@ -191,6 +202,7 @@ def run_scraper_task(
             s.log_callback = update_live_log
             spiders_to_run = [s]
 
+        all_blocked = False
         if spiders_to_run:
             for s in spiders_to_run:
                 s.log_callback = update_live_log
@@ -242,18 +254,29 @@ def run_scraper_task(
                 )
                 new_items = new_items if new_items is not None else 0
                 items_found = len(results)
+                all_blocked = (
+                    items_found == 0
+                    and all(getattr(s, "blocked", False) for s in spiders_to_run)
+                )
                 logger.info(
                     f"💾 Persistidas {items_found} ofertas tras incursión de {canonical_spider_name}."
                 )
-                update_live_log(
-                    f"✅ Incursión completada con éxito. {items_found} reliquias encontradas.",
-                    force=True,
-                )
+                if all_blocked and canonical_spider_name != "all":
+                    update_live_log(
+                        f"🛡️ Incursión bloqueada por origen ({canonical_spider_name}). Ofertas activas preservadas.",
+                        force=True,
+                    )
+                else:
+                    update_live_log(
+                        f"✅ Incursión completada con éxito. {items_found} reliquias encontradas.",
+                        force=True,
+                    )
             finally:
                 flush_live_logs()
                 loop.close()
 
         flush_live_logs()
+        is_single_blocked = all_blocked and canonical_spider_name != "all"
         with SessionCloud() as db:
             status = (
                 db.query(ScraperStatusModel)
@@ -262,7 +285,7 @@ def run_scraper_task(
             )
             if status:
                 status.spider_name = canonical_spider_name
-                status.status = "completed"
+                status.status = "blocked" if is_single_blocked else "completed"
                 status.end_time = datetime.now(timezone.utc).replace(tzinfo=None)
 
             log = (
@@ -271,7 +294,7 @@ def run_scraper_task(
                 .first()
             )
             if log:
-                log.status = "success"
+                log.status = "blocked" if is_single_blocked else "success"
                 log.end_time = datetime.now(timezone.utc).replace(tzinfo=None)
                 log.items_found = items_found
                 log.new_items = new_items if new_items is not None else 0
@@ -315,7 +338,8 @@ def get_scrapers_status():
                 ScraperStatusModel.spider_name.notin_(
                     [
                         "Nexus", "NexusVintage", "Harvester", "harvester", "all",
-                        "idealo.es", "Idealo.es", "Amazon", "amazon", "Tradeinn", "tradeinn"
+                        "idealo.es", "Idealo.es", "Amazon", "amazon", "Tradeinn", "tradeinn",
+                        "DVDStoreSpain", "dvdstorespain",
                     ]
                 )
             )
@@ -377,6 +401,11 @@ def run_scrapers(request: ScraperRunRequest, background_tasks: BackgroundTasks):
     canonical_spider_name = CANONICAL_SPIDER_NAMES.get(
         request.spider_name.lower().strip(), request.spider_name
     )
+    if canonical_spider_name != "all" and canonical_spider_name not in REGISTERED_SPIDERS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Scraper '{request.spider_name}' no registrado o deshabilitado.",
+        )
     with SessionCloud() as db:
         status = (
             db.query(ScraperStatusModel)
@@ -396,7 +425,7 @@ def run_scrapers(request: ScraperRunRequest, background_tasks: BackgroundTasks):
             status="running",
             start_time=status.start_time,
             trigger_type=request.trigger_type,
-            logs=f"[{datetime.now(ZoneInfo('Europe/Madrid')).strftime('%H:%M:%S')}] 🚀 Desplegando incursión manual: {canonical_spider_name}\n",
+            logs=f"[{datetime.now(_get_madrid_tz()).strftime('%H:%M:%S')}] 🚀 Desplegando incursión manual: {canonical_spider_name}\n",
         )
         db.add(execution_log)
         db.commit()

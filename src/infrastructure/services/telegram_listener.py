@@ -522,10 +522,18 @@ class TelegramListener:
         await telegram_service.send_message("\n".join(lines), chat_id=chat_id)
 
     async def cmd_status(self, chat_id: int):
+        from src.interfaces.api.deps import REGISTERED_SPIDERS
+
+        allowed = {s.lower() for s in REGISTERED_SPIDERS}
+
         def _fetch_status_sync() -> tuple[list[tuple[str, str]], int, int]:
             with SessionCloud() as db:
                 statuses = db.query(ScraperStatusModel).all()
-                status_rows = [(str(s.spider_name or ""), str(s.status or "")) for s in statuses]
+                status_rows = [
+                    (str(s.spider_name or ""), str(s.status or ""))
+                    for s in statuses
+                    if (s.spider_name or "").lower() in allowed
+                ]
                 total_products_val = db.query(ProductModel).count()
                 total_offers_val = db.query(OfferModel).filter(OfferModel.is_available == True).count()
                 return status_rows, total_products_val, total_offers_val
@@ -534,7 +542,7 @@ class TelegramListener:
 
         scraper_lines = []
         for spider_name, status_val in status_rows:
-            icon = "🟢" if status_val == "completed" else "🔴" if "error" in status_val else "⏳" if status_val == "running" else "⚪"
+            icon = "🟢" if status_val == "completed" else "🛡️" if status_val == "blocked" else "🔴" if "error" in status_val else "⏳" if status_val == "running" else "⚪"
             scraper_lines.append(f"{icon} <b>{html.escape(spider_name)}:</b> {html.escape(status_val.upper())}")
             
         msg = (
@@ -546,8 +554,10 @@ class TelegramListener:
         await telegram_service.send_message(msg, chat_id=chat_id)
 
     async def cmd_run(self, chat_id: int, scraper_name: str, query: Optional[str]):
-        # Validar tienda
-        valid_spiders = ["fantasia", "frikiverso", "frikimaz", "electropolis", "pixelatoy", "amazon", "detoyboys", "ebay", "vinted", "wallapop", "toymieu", "time4actiontoysde", "bigbadtoystore", "smythstoys", "dvdstorespain", "triguetech", "bixoto", "all"]
+        from src.interfaces.api.deps import CANONICAL_SPIDER_NAMES
+
+        # Validar tienda contra registro unificado
+        valid_spiders = sorted(set(CANONICAL_SPIDER_NAMES.keys()))
         safe_scraper = html.escape(scraper_name)
 
         if scraper_name.lower() not in valid_spiders:

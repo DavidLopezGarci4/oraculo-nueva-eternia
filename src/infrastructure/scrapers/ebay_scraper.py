@@ -4,7 +4,8 @@ import re
 import io
 import sys
 import random
-from typing import List, Optional
+import unicodedata
+from typing import List, Optional, Dict
 from datetime import datetime, timezone
 from playwright.async_api import Page, BrowserContext
 from src.core.vintage_utils import check_is_vintage
@@ -28,22 +29,71 @@ class EbayScraper(BaseScraper):
         self.search_url = "https://www.ebay.es/sch/i.html"
         self.items_scraped = 0
         self.is_auction_source = True # Routes to "El Pabellón"
-        self._session: Optional[AsyncSession] = None
+        self._session = None
+        self._session_headers: Optional[Dict[str, str]] = None
+
+    @staticmethod
+    def _normalize_accents(text: str) -> str:
+        """Elimina diacríticos para comparar variantes como orígenes / origenes."""
+        if not text:
+            return ""
+        return "".join(
+            ch for ch in unicodedata.normalize("NFKD", text)
+            if not unicodedata.combining(ch)
+        )
+
+    @staticmethod
+    def _extract_canonical_itm_url(item) -> Optional[str]:
+        """Extrae la URL canónica `/itm/` de una tarjeta .s-item o .s-card evitando enlaces auxiliares y dummies."""
+        anchors = item.select("a.s-item__link, a.s-card__link, a[href*='/itm/']")
+        for anchor in anchors:
+            href = (anchor.get("href") or "").strip()
+            if not href or "/itm/" not in href:
+                continue
+            clean = href.split("?")[0]
+            if clean.startswith("/itm/"):
+                clean = f"https://www.ebay.es{clean}"
+            if not ("ebay.es/itm/" in clean or "ebay.com/itm/" in clean):
+                continue
+            if re.search(r"/itm/(?:[^/]+/)?123456/?$", clean):
+                continue
+            return clean
+        return None
+
+    @staticmethod
+    def _extract_itm_id(url: str) -> str:
+        m = re.search(r"/itm/(?:[^/]+/)?(\d+)", url)
+        return m.group(1) if m else url
+
+    @classmethod
+    def _matches_query_context(cls, title: str, search_query: str) -> bool:
+        """Acepta Origins y equivalentes españoles/sublíneas MOTU Origins."""
+        title_norm = cls._normalize_accents(title.lower())
+        query_norm = cls._normalize_accents(search_query.lower())
+        if "origins" in query_norm or "origenes" in query_norm:
+            return any(
+                kw in title_norm
+                for kw in ("origins", "origenes", "cartoon collection", "turtles of grayskull")
+            )
+        return True
 
     async def _init_session(self):
-        """Inicializa la sesión de curl-cffi con una visita a la home."""
+        """Inicializa la sesión de curl-cffi con una visita a la home y cabeceras fijas por sesión."""
         from curl_cffi.requests import AsyncSession
         if self._session is None:
-            self._session = AsyncSession(impersonate="chrome120")
-            headers = self._get_random_header()
+            self._session = AsyncSession(impersonate="chrome124")
+            self._session_headers = self._get_random_header()
             try:
                 self._log("🍪 [Sirius-E] Inicializando sesión (Warm-up)...")
-                await self._session.get(self.base_url, headers=headers, timeout=30)
+                resp = await self._session.get(self.base_url, headers=self._session_headers, timeout=30)
+                if resp.status_code in (403, 429, 503):
+                    self._log(f"⚠️ [Sirius-E] Warm-up devolvió HTTP {resp.status_code}.", level="debug")
                 await asyncio.sleep(random.uniform(1, 2))
             except Exception as e:
                 self._log(f"⚠️ Error en warm-up de eBay: {e}", level="warning")
 
     async def search(self, query: str) -> List[ScrapedOffer]:
+        self.blocked = False
         if query != "auto" and check_is_vintage(query):
             self._log(f"🚫 Ebay.es: Búsqueda vintage bloqueada por política AGENTS.md ({query}).", level="warning")
             return []
@@ -52,7 +102,7 @@ class EbayScraper(BaseScraper):
             # AGENTS.md Regla 2: consultas enfocadas estrictamente a Masters of the Universe Origins
             queries_config = [
                 "masters of the universe origins",
-                "masters del universo origins"
+                "masters del universo origenes"
             ]
         else:
             queries_config = [query]
@@ -70,9 +120,11 @@ class EbayScraper(BaseScraper):
                 self._session = None
 
     async def _search_with_active_session(self, queries_config: List[str], offers: List[ScrapedOffer]) -> List[ScrapedOffer]:
-        
         playwright_queries = []
-        
+        seen_itm_ids = {self._extract_itm_id(o.url) for o in offers}
+        base_headers = self._session_headers or self._get_random_header()
+        fast_blocked_queries = 0
+
         # 1. Infiltración veloz vía curl-cffi
         for search_query in queries_config:
             params = [
@@ -92,12 +144,21 @@ class EbayScraper(BaseScraper):
             
             html = None
             try:
-                headers = self._get_random_header()
-                resp = await self._session.get(target_url, headers=headers, timeout=30)
+                req_headers = {
+                    **base_headers,
+                    "Referer": "https://www.ebay.es/",
+                    "sec-fetch-site": "same-origin",
+                }
+                resp = await self._session.get(target_url, headers=req_headers, timeout=30)
                 if resp.status_code == 200:
-                    html = resp.text
+                    if self._detect_block(resp.text):
+                        fast_blocked_queries += 1
+                    else:
+                        html = resp.text
                 else:
                     self._log(f"⚠️ Sirius-E: HTTP {resp.status_code} para '{search_query}'.", level="warning")
+                    if resp.status_code in (403, 429, 503):
+                        fast_blocked_queries += 1
             except Exception as e:
                 self._log(f"⚠️ Error en búsqueda rápida Sirius-E para '{search_query}': {e}", level="warning")
             
@@ -108,7 +169,9 @@ class EbayScraper(BaseScraper):
             if query_offers:
                 self._log(f"✅ [Sirius-E] Capturadas {len(query_offers)} reliquias directas para '{search_query}'.")
                 for o in query_offers:
-                    if o.url not in [existing.url for existing in offers]:
+                    itm_key = self._extract_itm_id(o.url)
+                    if itm_key not in seen_itm_ids:
+                        seen_itm_ids.add(itm_key)
                         offers.append(o)
                         self.items_scraped += 1
             else:
@@ -122,11 +185,13 @@ class EbayScraper(BaseScraper):
         if playwright_queries:
             self._log(f"⚠️ [Sirius-E] Iniciando escalamiento táctico a Playwright para {len(playwright_queries)} consultas...")
             from playwright.async_api import async_playwright
+            pw_blocked = False
+            pw_had_error = False
             async with async_playwright() as p:
                 browser = await p.chromium.launch(headless=True)
                 context = await browser.new_context(
                     viewport={'width': 1920, 'height': 1080},
-                    user_agent=self._get_random_header()["User-Agent"],
+                    user_agent=base_headers["User-Agent"],
                     locale="es-ES"
                 )
                 page = await context.new_page()
@@ -134,21 +199,44 @@ class EbayScraper(BaseScraper):
                     for search_query, target_url in playwright_queries:
                         self._log(f"🧭 Playwright: Navegando a resultados de '{search_query}'...")
                         try:
-                            await page.goto(target_url, wait_until="domcontentloaded", timeout=60000)
+                            resp = await page.goto(target_url, wait_until="domcontentloaded", timeout=60000)
+                            current_url = (page.url or "").lower()
+                            html_check = await page.content()
+                            resp_status = getattr(resp, "status", None) if resp else None
+                            if (
+                                "splashui/captcha" in current_url
+                                or resp_status in (403, 429, 503)
+                                or self._detect_block(html_check)
+                            ):
+                                self._log(
+                                    f"🛡️ [Sirius-E] Bloqueo anti-bot / CAPTCHA detectado en eBay ({(page.url or target_url)[:80]}). "
+                                    "Abortando escalamiento para proteger ofertas activas.",
+                                    level="warning",
+                                )
+                                self.blocked = True
+                                pw_blocked = True
+                                break
+
                             await asyncio.sleep(3)
                             await self._stealth_scroll(page)
                             new_offers = await self._extract_page_items(page, search_query)
                             self._log(f"🔭 Playwright extrajo {len(new_offers)} items para '{search_query}'.")
                             for o in new_offers:
-                                if o.url not in [existing.url for existing in offers]:
+                                itm_key = self._extract_itm_id(o.url)
+                                if itm_key not in seen_itm_ids:
+                                    seen_itm_ids.add(itm_key)
                                     offers.append(o)
                                     self.items_scraped += 1
                         except Exception as e:
+                            pw_had_error = True
                             self._log(f"❌ Error en Playwright para '{search_query}': {e}", level="error")
                         await asyncio.sleep(random.uniform(3.0, 5.0))
                 finally:
                     await browser.close()
-        
+
+            if not offers and fast_blocked_queries == len(queries_config) and (pw_blocked or pw_had_error):
+                self.blocked = True
+
         return offers
 
     def _parse_ebay_html(self, html: str, search_query: str) -> List[ScrapedOffer]:
@@ -163,29 +251,25 @@ class EbayScraper(BaseScraper):
         for item in items:
             try:
                 # Selectores inteligentes (Dual)
-                title_el = item.select_one(".s-item__title, .s-card__title")
+                title_el = item.select_one(".s-item__title, .s-card__title, [role='heading']")
                 if not title_el: continue
                 title_raw = title_el.get_text(strip=True)
                 title_raw = re.sub(r'(?i)(Nuevo anuncio|Se abre en una nueva ventana o pestaña|Se abre en una nueva ventana|o pestaña)', '', title_raw)
                 title = re.sub(r'\s+', ' ', title_raw).strip()
                 
                 # Ignorar basura de eBay
-                if not title or "anuncio" in title.lower() or "shop on ebay" in title.lower(): continue
+                if not title or "shop on ebay" in title.lower(): continue
 
                 price_el = item.select_one(".s-item__price, .s-card__price")
                 price = self._normalize_price(price_el.get_text()) if price_el else 0.0
                 
                 if price <= 0: continue
 
-                url_el = item.select_one(".s-item__link, .s-card__link")
-                url = url_el.get("href").split("?")[0] if url_el else None
-                if not url or "ebay.es/itm/" not in url: continue
+                url = self._extract_canonical_itm_url(item)
+                if not url: continue
 
-                # Filtro Inteligente Contextual (Phase 43)
-                title_lower = title.lower()
-                query_lower = search_query.lower()
-                
-                if "origins" in query_lower and "origins" not in title_lower:
+                # Filtro Inteligente Contextual (Phase 43) & Bloqueo Vintage (AGENTS.md)
+                if not self._matches_query_context(title, search_query):
                     continue
                 if check_is_vintage(title):
                     continue
@@ -298,8 +382,9 @@ class EbayScraper(BaseScraper):
                     full_text = item.get_text(separator=" ", strip=True).lower()
                     
                     # Filtro Inteligente Contextual (Phase 43) & Bloqueo Vintage (AGENTS.md)
-                    query_lower = search_query.lower()
-                    if "origins" in query_lower and "origins" not in title:
+                    if not title_raw or "shop on ebay" in title:
+                        continue
+                    if not self._matches_query_context(title_raw, search_query):
                         continue
                     if check_is_vintage(title_raw):
                         continue
@@ -330,9 +415,8 @@ class EbayScraper(BaseScraper):
                     
                     total_price = float(price + shipping_price)
 
-                    url_el = item.select_one("a.s-item__link, a.s-card__link, a")
-                    url = url_el.get("href").split("?")[0] if url_el else ""
-                    if "ebay.es/itm/" not in url: continue
+                    url = self._extract_canonical_itm_url(item)
+                    if not url: continue
                     
                     img_el = item.select_one("img")
                     image_url = img_el.get("src") if img_el else None

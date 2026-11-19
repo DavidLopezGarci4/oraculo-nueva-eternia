@@ -94,12 +94,10 @@ class BaseScraper(ABC):
                 pass
 
     def _get_random_header(self) -> dict:
-        """Returns a consistent randomized header suite."""
-        # Use a fixed consistent set to avoid mismatch detection
+        """Returns a header suite aligned with curl-cffi TLS impersonation (Chrome 124)."""
+        # Keep Chrome version consistent with default impersonate="chrome124" to avoid TLS/UA mismatch.
         versions = [
-            ("131.0.0.0", "131"),
-            ("130.0.0.0", "130"),
-            ("129.0.0.0", "129")
+            ("124.0.0.0", "124"),
         ]
         ver_full, ver_major = random.choice(versions)
         
@@ -181,7 +179,7 @@ class BaseScraper(ABC):
     async def _curl_get(
         self, 
         url: str, 
-        impersonate: str = "chrome120", 
+        impersonate: str = "chrome124", 
         use_scraperapi: bool = False,
         scraperapi_params: dict = None
     ) -> Optional[str]:
@@ -234,12 +232,16 @@ class BaseScraper(ABC):
 
     def _detect_block(self, html_content: str):
         """Analyzes HTML for common block patterns and logs snippets."""
+        if not html_content:
+            return False
+
         patterns = {
-            "CAPTCHA": r"captcha|robot|human|verify",
-            "Cloudflare": r"cloudflare|ray id|checking your browser",
+            "Cloudflare Turnstile / Challenge": r"<title>just a moment|cf-chl|turnstile|cloudflare|ray id|checking your browser",
+            "eBay Anti-Bot / CAPTCHA": r"splashui/captcha|pardon our interruption",
+            "CAPTCHA": r"captcha|robot|verify you are human",
             "CloudFront": r"cloudfront|request could not be satisfied|request blocked",
             "DataDome": r"datadome|dd=",
-            "Amazon Block": r"api-services-support|access denied|request could not be satisfied"
+            "Amazon Block": r"api-services-support|access denied|request could not be satisfied",
         }
         
         for name, pattern in patterns.items():

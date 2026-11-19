@@ -4,8 +4,8 @@ import logging
 from playwright.async_api import BrowserContext, Page
 from bs4 import BeautifulSoup
 
-from src.infrastructure.scrapers.base import BaseScraper
-from src.infrastructure.scrapers.base import ScrapedOffer
+from src.core.vintage_utils import check_is_vintage
+from src.infrastructure.scrapers.base import BaseScraper, ScrapedOffer
 
 # Configure Logger
 logger = logging.getLogger(__name__)
@@ -13,8 +13,9 @@ logger = logging.getLogger(__name__)
 class FantasiaScraper(BaseScraper):
     """
     Scraper for Fantasia Personajes (PrestaShop).
-    Uses fast curl-cffi impersonation with automatic fallback to Playwright,
-    focused MOTU Origins search query, and direct tracking of catalog items.
+    Uses fast curl-cffi impersonation with automatic fallback to Playwright
+    only when not blocked by anti-bot/Cloudflare challenges, plus direct tracking
+    of known catalog items.
     """
     KNOWN_PRODUCT_URLS: List[str] = [
         "https://fantasiapersonajes.es/masters-of-the-universe-origins-man-at-arms-14-cm-mattel"
@@ -28,6 +29,12 @@ class FantasiaScraper(BaseScraper):
 
     async def search(self, query: str = "auto") -> List[ScrapedOffer]:
         import urllib.parse
+
+        self.blocked = False
+        if query and query not in ("auto", "*") and check_is_vintage(query):
+            self._log(f"🚫 [{self.spider_name}] Búsqueda vintage bloqueada por política AGENTS.md ({query}).", level="warning")
+            return []
+
         products: List[ScrapedOffer] = []
         seen_urls = set()
 
@@ -45,7 +52,7 @@ class FantasiaScraper(BaseScraper):
             max_pages = 10
 
             while current_url and page_num <= max_pages:
-                logger.info(f"[{self.spider_name}] Fast-crawling page {page_num}: {current_url}")
+                self._log(f"📡 [{self.spider_name}] Escaneando página {page_num}...")
                 html = await self._curl_get(current_url)
                 if not html:
                     break
@@ -56,14 +63,14 @@ class FantasiaScraper(BaseScraper):
                     # Check JSON-LD fallback
                     json_prods = self._extract_from_json_ld(soup)
                     for jp in json_prods:
-                        if jp.url not in seen_urls:
+                        if jp.url not in seen_urls and not check_is_vintage(jp.product_name):
                             seen_urls.add(jp.url)
                             products.append(jp)
                             self.items_scraped += 1
                 else:
                     for item in items:
                         prod = self._parse_html_item(item)
-                        if prod and prod.url not in seen_urls:
+                        if prod and prod.url not in seen_urls and not check_is_vintage(prod.product_name):
                             seen_urls.add(prod.url)
                             products.append(prod)
                             self.items_scraped += 1
@@ -80,26 +87,40 @@ class FantasiaScraper(BaseScraper):
                 else:
                     break
 
-            # 3. Process known catalog items that might be hidden from search
-            for direct_url in self.KNOWN_PRODUCT_URLS:
-                if direct_url not in seen_urls:
-                    p_html = await self._curl_get(direct_url)
-                    if p_html:
-                        p_soup = BeautifulSoup(p_html, 'html.parser')
-                        p_prod = self._parse_product_page(p_soup, direct_url)
-                        if p_prod and p_prod.url not in seen_urls:
-                            seen_urls.add(p_prod.url)
-                            products.append(p_prod)
-                            self.items_scraped += 1
+            # Fail-fast si Cloudflare/CAPTCHA bloqueó la búsqueda: evitar golpear URLs directas o Playwright
+            if self.blocked and not products:
+                self._log(
+                    f"🛡️ [{self.spider_name}] Bloqueo Cloudflare/CAPTCHA activo en origen (HTTP 403). Abortando incursión para preservar ofertas activas.",
+                    level="warning",
+                )
+                return []
+
+            # 3. Process known catalog items that might be hidden from search (solo en modo auto y sin bloqueo)
+            if not self.blocked and query in ("auto", "*"):
+                for direct_url in self.KNOWN_PRODUCT_URLS:
+                    if direct_url not in seen_urls:
+                        p_html = await self._curl_get(direct_url)
+                        if self.blocked:
+                            break
+                        if p_html:
+                            p_soup = BeautifulSoup(p_html, 'html.parser')
+                            p_prod = self._parse_product_page(p_soup, direct_url)
+                            if p_prod and p_prod.url not in seen_urls and not check_is_vintage(p_prod.product_name):
+                                seen_urls.add(p_prod.url)
+                                products.append(p_prod)
+                                self.items_scraped += 1
 
             if products:
-                logger.info(f"[{self.spider_name}] Fast crawl finished. Total items: {len(products)}")
+                self._log(f"✅ [{self.spider_name}] Extracción rápida completada: {len(products)} ofertas.")
                 return products
 
         except Exception as e:
             logger.warning(f"[{self.spider_name}] Fast crawl encountered error: {e}. Falling back to Playwright.")
 
-        # Fallback to Playwright if curl-cffi yielded no results or was blocked
+        if self.blocked:
+            return []
+
+        # Fallback to Playwright solo si curl-cffi devolvió 0 resultados sin bloqueo explícito
         return await self._search_playwright(search_url)
 
     async def _search_playwright(self, search_url: str) -> List[ScrapedOffer]:
@@ -118,9 +139,18 @@ class FantasiaScraper(BaseScraper):
                 max_pages = 10
 
                 while current_url and page_num <= max_pages:
-                    logger.info(f"[{self.spider_name}] [Playwright] Scraping page {page_num}: {current_url}")
+                    self._log(f"🧭 [{self.spider_name}] [Playwright] Explorando página {page_num}...")
 
                     if not await self._safe_navigate(page, current_url):
+                        break
+
+                    html_content = await page.content()
+                    if self._detect_block(html_content):
+                        self._log(
+                            f"🛡️ [{self.spider_name}] Desafío anti-bot detectado en Playwright. Abortando.",
+                            level="warning",
+                        )
+                        self.blocked = True
                         break
 
                     await self._handle_popups(page)
@@ -132,7 +162,7 @@ class FantasiaScraper(BaseScraper):
                     items = soup.select('article.product-miniature, .product-miniature')
                     for item in items:
                         prod = self._parse_html_item(item)
-                        if prod and prod.url not in seen_urls:
+                        if prod and prod.url not in seen_urls and not check_is_vintage(prod.product_name):
                             seen_urls.add(prod.url)
                             products.append(prod)
                             self.items_scraped += 1
@@ -153,7 +183,7 @@ class FantasiaScraper(BaseScraper):
             finally:
                 await browser.close()
 
-        logger.info(f"[{self.spider_name}] Playwright Finished. Total items: {len(products)}")
+        self._log(f"🏁 [{self.spider_name}] Playwright finalizado: {len(products)} ofertas.")
         return products
 
     def _parse_product_page(self, soup: BeautifulSoup, url: str) -> Optional[ScrapedOffer]:
