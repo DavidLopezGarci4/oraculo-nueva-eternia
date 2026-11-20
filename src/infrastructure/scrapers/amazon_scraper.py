@@ -65,8 +65,10 @@ class AmazonScraper(BaseScraper):
         
         if not offers and self.blocked:
             self._log("⚠️ Amazon.es: Todos los niveles de extracción fueron bloqueados temporalmente.", level="warning")
-            
-        return [o for o in offers if not check_is_vintage(o.product_name)]
+
+        final_offers = [o for o in offers if not check_is_vintage(o.product_name)]
+        self._log(f"📊 [{self.shop_name}] Total extraído: {len(final_offers)} ofertas.")
+        return final_offers
 
     async def _fast_infiltration(self, url: str, search_query: str, use_scraperapi: bool = False) -> List[ScrapedOffer]:
         """Attempt extraction via curl-cffi."""
@@ -122,7 +124,8 @@ class AmazonScraper(BaseScraper):
                         ))
                         self.items_scraped += 1
             except: continue
-            
+
+        self._log(f"📄 [{self.shop_name}] Página 1: {len(offers)} ofertas extraídas.")
         return offers
 
     async def _sirius_a1_human_search(self, search_query: str) -> List[ScrapedOffer]:
@@ -217,6 +220,7 @@ class AmazonScraper(BaseScraper):
                     page_results = await page.query_selector_all("[data-asin]")
                     self._log(f"📊 Amazon.es: Detectados {len(page_results)} bloques en página {current_page}.")
 
+                    page_count = 0
                     for res in page_results:
                         try:
                             asin = await res.get_attribute("data-asin")
@@ -252,8 +256,13 @@ class AmazonScraper(BaseScraper):
                                         shop_name=self.shop_name, image_url=image_url, source_type="Retail"
                                     ))
                                     self.items_scraped += 1
+                                    page_count += 1
                         except:
                             continue
+
+                    self._log(
+                        f"📄 [{self.shop_name}] Página {current_page}: {page_count} ofertas extraídas (de {len(page_results)} bloques)."
+                    )
 
                     if current_page >= max_pages:
                         break

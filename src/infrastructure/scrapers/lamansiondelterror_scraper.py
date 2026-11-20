@@ -32,7 +32,7 @@ class LaMansionDelTerrorScraper(BaseScraper):
             offers = await self._scrape_all_pages_playwright(encoded)
 
         self.items_scraped = len(offers)
-        self._log(f"✅ Total ofertas La Mansión del Terror: {len(offers)}")
+        self._log(f"📊 [{self.shop_name}] Total extraído: {len(offers)} ofertas.")
         return offers
 
     # ------------------------------------------------------------------
@@ -53,7 +53,7 @@ class LaMansionDelTerrorScraper(BaseScraper):
                 break
 
             offers.extend(page_offers)
-            self._log(f"📄 Página {page_num}: {len(page_offers)} productos en stock")
+            self._log(f"📄 [{self.shop_name}] Página {page_num}: {len(page_offers)} ofertas en stock extraídas.")
 
             # Check total pages from active page text
             soup = BeautifulSoup(html, "html.parser")
@@ -104,7 +104,7 @@ class LaMansionDelTerrorScraper(BaseScraper):
                         break
 
                     offers.extend(page_offers)
-                    self._log(f"📄 Playwright p{page_num}: {len(page_offers)} productos en stock")
+                    self._log(f"📄 [{self.shop_name}] Página {page_num} [Playwright]: {len(page_offers)} ofertas en stock extraídas.")
 
                     soup = BeautifulSoup(html, "html.parser")
                     active_page_tag = soup.select_one(".pagination .page-link.active")

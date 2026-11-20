@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 
 interface MOTUImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   productId?: number;
@@ -8,6 +8,57 @@ interface MOTUImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
 const MAX_BLOB_CACHE_SIZE = 150;
 const globalBlobUrlMap = new Map<string, string>();
 let motuCachePromise: Promise<Cache> | null = null;
+
+function isMixedContentHttp(url: string): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    window.location.protocol === 'https:' &&
+    url.toLowerCase().startsWith('http://')
+  );
+}
+
+function getSupabaseJpgSibling(url: string): string {
+  if (!url) return '';
+  const qIndex = url.indexOf('?');
+  const pathPart = qIndex === -1 ? url : url.slice(0, qIndex);
+  const queryPart = qIndex === -1 ? '' : url.slice(qIndex);
+  if (
+    pathPart.includes('/storage/v1/object/public/motu-catalog/') &&
+    pathPart.toLowerCase().endsWith('.webp')
+  ) {
+    return `${pathPart.slice(0, -5)}.jpg${queryPart}`;
+  }
+  return '';
+}
+
+function buildCandidateUrls(
+  imageSource: string,
+  cacheKey: string | null,
+  defaultSrc: string
+): string[] {
+  const normalizedDefaultSrc =
+    defaultSrc && !isMixedContentHttp(defaultSrc) ? defaultSrc : '';
+  const supabaseJpgSibling = getSupabaseJpgSibling(normalizedDefaultSrc);
+  const cacheUrl = cacheKey ? `${cacheKey}?source=cache` : '';
+  const customUrl = cacheKey ? `${cacheKey}?source=custom` : '';
+
+  const rawOrder =
+    imageSource === 'custom_path'
+      ? [customUrl, cacheUrl, normalizedDefaultSrc, supabaseJpgSibling]
+      : imageSource === 'local_cache'
+        ? [cacheUrl, normalizedDefaultSrc, supabaseJpgSibling]
+        : [normalizedDefaultSrc, supabaseJpgSibling, cacheUrl];
+
+  const seen = new Set<string>();
+  const deduped: string[] = [];
+  for (const url of rawOrder) {
+    if (url && !seen.has(url)) {
+      seen.add(url);
+      deduped.push(url);
+    }
+  }
+  return deduped;
+}
 
 function setBlobCache(key: string, url: string) {
   const existing = globalBlobUrlMap.get(key);
@@ -52,32 +103,42 @@ const getMotuCache = () => {
 export function MOTUImage({ productId, fallbackSrc = '', src, className = '', ...props }: MOTUImageProps) {
   const imageSource = typeof window !== 'undefined' ? (localStorage.getItem('image_source') || 'supabase') : 'supabase';
   const defaultSrc = src || fallbackSrc;
-  const cacheKey = productId ? `/api/static/images/${productId}.webp` : null;
+  const cacheKey = productId ? `/api/static/images/${productId}` : null;
+  const legacyCacheKey = productId ? `/api/static/images/${productId}.webp` : null;
 
-  // 1. Synchronous initial state check from in-memory RAM cache or direct static endpoint
+  const candidates = useMemo(
+    () => buildCandidateUrls(imageSource, cacheKey, defaultSrc),
+    [imageSource, cacheKey, defaultSrc]
+  );
+
+  // 1. Synchronous initial state check from in-memory RAM cache or first finite candidate
   const [currentSrc, setCurrentSrc] = useState<string>(() => {
     if (productId && cacheKey && imageSource !== 'supabase') {
       const inMemoryUrl = globalBlobUrlMap.get(cacheKey);
       if (inMemoryUrl) {
         return inMemoryUrl;
       }
-      if (imageSource === 'local_cache') {
-        return `${cacheKey}?source=cache`;
-      } else if (imageSource === 'custom_path') {
-        return `${cacheKey}?source=custom`;
-      }
     }
-    return defaultSrc;
+    return candidates[0] || '';
   });
 
   const [isLoaded, setIsLoaded] = useState(false);
+  const [hasError, setHasError] = useState(false);
+  const triedSourcesRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     let active = true;
+    triedSourcesRef.current = new Set();
+    setHasError(false);
+    setIsLoaded(false);
 
     const resolveImage = async () => {
       if (!productId || !cacheKey) {
-        if (active) setCurrentSrc(defaultSrc);
+        const first = candidates[0] || '';
+        if (active) {
+          setCurrentSrc(first);
+          if (!first) setHasError(true);
+        }
         return;
       }
 
@@ -88,14 +149,13 @@ export function MOTUImage({ productId, fallbackSrc = '', src, className = '', ..
           return;
         }
 
-        const srcParam = imageSource === 'custom_path' ? 'custom' : 'cache';
-        const fetchUrl = `${cacheKey}?source=${srcParam}`;
-
         try {
           const cachePromise = getMotuCache();
           if (cachePromise) {
             const cache = await cachePromise;
-            const cachedResponse = await cache.match(cacheKey);
+            const cachedResponse =
+              (await cache.match(cacheKey)) ||
+              (legacyCacheKey ? await cache.match(legacyCacheKey) : undefined);
 
             if (cachedResponse) {
               const existingBlobUrl = globalBlobUrlMap.get(cacheKey);
@@ -112,11 +172,12 @@ export function MOTUImage({ productId, fallbackSrc = '', src, className = '', ..
         } catch (e) {
           console.error("Cache API resolution failed:", e);
         }
+      }
 
-        // Rely on native browser HTTP cache (Cache-Control: max-age=604800) with a single <img> request
-        if (active) setCurrentSrc(fetchUrl);
-      } else {
-        if (active) setCurrentSrc(defaultSrc);
+      const first = candidates[0] || '';
+      if (active) {
+        setCurrentSrc(first);
+        if (!first) setHasError(true);
       }
     };
 
@@ -125,33 +186,48 @@ export function MOTUImage({ productId, fallbackSrc = '', src, className = '', ..
     return () => {
       active = false;
     };
-  }, [src, fallbackSrc, productId, imageSource, defaultSrc, cacheKey]);
+  }, [src, fallbackSrc, productId, imageSource, cacheKey, legacyCacheKey, candidates]);
 
   const handleError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    if (!productId || !cacheKey) {
-      if (props.onError) props.onError(e);
+    if (currentSrc) {
+      triedSourcesRef.current.add(currentSrc);
+    }
+
+    const nextUrl = candidates.find((candidate) => !triedSourcesRef.current.has(candidate));
+    if (nextUrl) {
+      setCurrentSrc(nextUrl);
       return;
     }
 
-    const cacheFallbackUrl = `${cacheKey}?source=cache`;
-    if (currentSrc !== cacheFallbackUrl && currentSrc !== cacheKey) {
-      setCurrentSrc(cacheFallbackUrl);
-    } else if (currentSrc !== defaultSrc) {
-      setCurrentSrc(defaultSrc);
-    } else if (props.onError) {
+    setHasError(true);
+    if (props.onError) {
       props.onError(e);
     }
   };
+
+  if (hasError || !currentSrc) {
+    return (
+      <div
+        role="img"
+        aria-label={props.alt || 'Sin Imagen'}
+        className={`flex items-center justify-center bg-black/50 italic text-white/25 text-[10px] sm:text-xs font-black uppercase tracking-widest select-none ${className}`}
+      >
+        Sin Imagen
+      </div>
+    );
+  }
 
   return (
     <img
       loading="lazy"
       decoding="async"
       {...props}
+      referrerPolicy={props.referrerPolicy ?? 'no-referrer'}
       src={currentSrc}
       onError={handleError}
       onLoad={(e) => {
         setIsLoaded(true);
+        setHasError(false);
         if (props.onLoad) props.onLoad(e);
       }}
       className={`transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-85'} ${className}`}

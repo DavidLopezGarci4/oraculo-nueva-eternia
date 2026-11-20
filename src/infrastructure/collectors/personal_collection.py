@@ -361,9 +361,11 @@ def download_image(session: requests.Session, url: str, dest_path: Path) -> bool
         from PIL import Image
         try:
             with Image.open(temp_path) as img:
-                if img.mode in ('RGBA', 'LA'):
-                    background = Image.new('RGB', img.size, (255, 255, 255))
-                    background.paste(img, mask=img.split()[3])
+                has_alpha = img.mode in ('RGBA', 'LA') or (img.mode == 'P' and 'transparency' in img.info)
+                if has_alpha:
+                    rgba = img.convert('RGBA')
+                    background = Image.new('RGB', rgba.size, (255, 255, 255))
+                    background.paste(rgba, mask=rgba.split()[3])
                     img = background
                 elif img.mode != 'RGB':
                     img = img.convert('RGB')

@@ -129,8 +129,10 @@ class WallapopManualScraper(BaseScraper):
         next_page = None
         for page_idx in range(max_pages):
             res = await self._search_single(session, query, proxy, start=0, next_page=next_page)
+            page_count = len(res.offers) if res.offers else 0
             if res.offers:
                 offers.extend(res.offers)
+            self._log(f"📄 [{self.shop_name}] '{query}' - Página {page_idx + 1}: {page_count} ofertas extraídas.")
             if res.blocked or not res.next_page:
                 break
             next_page = res.next_page
@@ -199,7 +201,7 @@ class WallapopManualScraper(BaseScraper):
                 level="warning",
             )
         else:
-            self._log(f"✅ WallapopManual: {self.items_scraped} reliquias únicas enviadas al Purgatorio.")
+            self._log(f"📊 [{self.shop_name}] Total extraído: {self.items_scraped} reliquias únicas enviadas al Purgatorio.")
         return unique
 
 

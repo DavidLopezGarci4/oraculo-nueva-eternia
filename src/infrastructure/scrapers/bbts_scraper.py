@@ -247,6 +247,7 @@ class BigBadToyStoreScraper(BaseScraper):
                         consecutive_empty_pages = 0
                     
                     # Parsear items de esta página
+                    page_count = 0
                     for item in unique_items_page:
                         prod = self._parse_item(item)
                         if prod:
@@ -254,16 +255,21 @@ class BigBadToyStoreScraper(BaseScraper):
                             if not any(p.url == prod.url for p in products):
                                 products.append(prod)
                                 self.items_scraped += 1
+                                page_count += 1
+                    self._log(
+                        f"📄 [{self.shop_name}] Página {page_num}: {page_count} ofertas extraídas (de {len(unique_items_page)} items únicos)."
+                    )
                     
                     page_num += 1
                         
             except Exception as e:
                 logger.error(f"[{self.spider_name}] Error critico: {e}", exc_info=True)
+                self._log(f"❌ [{self.shop_name}] Error crítico: {e}", level="error")
                 self.errors += 1
             finally:
                 await browser.close()
                 
-        logger.info(f"[{self.spider_name}] Completado. Total: {len(products)} productos")
+        self._log(f"📊 [{self.shop_name}] Total extraído: {len(products)} ofertas.")
         return products
 
 

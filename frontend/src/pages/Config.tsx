@@ -343,12 +343,12 @@ const Config: React.FC<ConfigProps> = ({ user, onUserUpdate, onIdentityChange })
                 for (const p of itemsToProcess) {
                     if (cancelDownloadRef.current) break;
 
-                    const cacheKey = `/api/static/images/${p.id}.webp`;
+                    const cacheKey = `/api/static/images/${p.id}`;
 
                     try {
                         // 1. Si no es forzado y es la primera pasada, comprobar primero si ya existe en la caché local
                         if (!forceRefresh && pass === 1) {
-                            const existingMatch = await cache.match(cacheKey);
+                            const existingMatch = (await cache.match(cacheKey)) || (await cache.match(`${cacheKey}.webp`));
                             if (existingMatch) {
                                 setDownloadStatus(prev => ({ ...prev, current: prev.current + 1 }));
                                 continue;

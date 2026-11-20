@@ -82,15 +82,24 @@ class BaseScraper(ABC):
     
     def _log(self, message: str, level: str = "info"):
         """Internal logger that also triggers the UI callback if registered."""
+        msg_lower = message.lower()
+        has_prefix = (
+            f"[{self.spider_name.lower()}]" in msg_lower
+            or f"[{self.shop_name.lower()}]" in msg_lower
+            or msg_lower.startswith(f"{self.shop_name.lower()}:")
+            or msg_lower.startswith(f"{self.spider_name.lower()}:")
+        )
+        prefixed_msg = message if has_prefix else f"[{self.shop_name}] {message}"
+
         # 1. Standard Python Logging
         lvl = getattr(logging, level.upper(), logging.INFO)
-        logger.log(lvl, f"[{self.spider_name}] {message}")
-        
+        logger.log(lvl, prefixed_msg)
+
         # 2. UI Tactical Console Bridge
         if self.log_callback:
             try:
-                self.log_callback(message)
-            except:
+                self.log_callback(prefixed_msg)
+            except Exception:
                 pass
 
     def _get_random_header(self) -> dict:
@@ -122,30 +131,40 @@ class BaseScraper(ABC):
         """Legacy compatibility wrapper."""
         raise NotImplementedError("Oracle Scrapers now use .search(query)")
 
-    async def _safe_navigate(self, page: Page, url: str, timeout: int = 60000) -> bool:
+    async def _safe_navigate(self, page: Page, url: str, timeout: int = 60000, page_num: Optional[int] = None) -> bool:
         """Navigates with exponential backoff and randomized wait strategies."""
         wait_strategies = ["domcontentloaded", "load", "networkidle"]
-        
+
         for attempt in range(3):
             try:
                 strategy = random.choice(wait_strategies) if attempt > 0 else "domcontentloaded"
                 # Clean URL logging to extract and show page number
                 import urllib.parse
-                page_num = 1
-                try:
-                    parsed = urllib.parse.urlparse(url)
-                    query_dict = urllib.parse.parse_qs(parsed.query)
-                    for param in ['page', 'p', 'start', 'offset', 'Pagenum', 'pag']:
-                        if param in query_dict:
-                            val = query_dict[param][0]
-                            if param in ['start', 'offset']:
-                                page_num = (int(val) // 20) + 1
-                            else:
-                                page_num = int(val)
-                            break
-                except:
-                    pass
-                self._log(f"🧭 [{self.spider_name}] Accediendo a página {page_num}...")
+                resolved_page = page_num
+                if resolved_page is None:
+                    resolved_page = 1
+                    try:
+                        parsed = urllib.parse.urlparse(url)
+                        query_lower = {
+                            k.lower(): v for k, v in urllib.parse.parse_qs(parsed.query).items()
+                        }
+                        found_in_query = False
+                        for param in ['page', 'p', 'start', 'offset', 'pagenum', 'pag', 'pageindex']:
+                            if param in query_lower and query_lower[param]:
+                                val = query_lower[param][0]
+                                if param in ['start', 'offset']:
+                                    resolved_page = (int(val) // 20) + 1
+                                else:
+                                    resolved_page = int(val)
+                                found_in_query = True
+                                break
+                        if not found_in_query:
+                            path_match = re.search(r"(?:_s|/page/)(\d+)", parsed.path, re.IGNORECASE)
+                            if path_match:
+                                resolved_page = int(path_match.group(1))
+                    except Exception:
+                        pass
+                self._log(f"🧭 [{self.spider_name}] Accediendo a página {resolved_page}...")
                 await page.goto(url, wait_until=strategy, timeout=timeout)
                 return True
             except Exception as e:

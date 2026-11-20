@@ -61,23 +61,28 @@ class Time4ActionToysDEScraper(BaseScraper):
                     logger.info(f"[{self.spider_name}] Found {len(items)} items on page {page_num}")
                     
                     if not items:
+                        self._log(f"📄 [{self.shop_name}] Página {page_num}: 0 ofertas extraídas.")
                         break
                     
+                    page_count = 0
                     for item in items:
                         prod = self._parse_item(item)
                         if prod:
                             products.append(prod)
                             self.items_scraped += 1
+                            page_count += 1
+                    self._log(f"📄 [{self.shop_name}] Página {page_num}: {page_count} ofertas extraídas.")
                     
                     page_num += 1
                         
             except Exception as e:
                 logger.error(f"[{self.spider_name}] Critical Error: {e}", exc_info=True)
+                self._log(f"❌ [{self.shop_name}] Error crítico: {e}", level="error")
                 self.errors += 1
             finally:
                 await browser.close()
                 
-        logger.info(f"[{self.spider_name}] Finished. Total items: {len(products)}")
+        self._log(f"📊 [{self.shop_name}] Total extraído: {len(products)} ofertas.")
         return products
 
     def _parse_item(self, item) -> Optional[ScrapedOffer]:

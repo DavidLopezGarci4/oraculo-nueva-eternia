@@ -182,12 +182,12 @@ class NexusVintageService:
                     if not excel_path.exists():
                         raise FileNotFoundError(f"Archivo Excel Vintage no encontrado en {excel_path}")
                     
-                    migrate_excel_to_db(str(excel_path), db_mig)
-                    return excel_path
+                    stem_to_pid = migrate_excel_to_db(str(excel_path), db_mig) or {}
+                    return excel_path, stem_to_pid
                 finally:
                     db_mig.close()
 
-            excel_path = await loop.run_in_executor(None, run_migration_task)
+            excel_path, stem_to_pid = await loop.run_in_executor(None, run_migration_task)
             
             # 3. Cloud Image Synchronization (Supabase Storage in /vintage/ subfolder)
             logger.info("📡 Paso 3: Sincronizando imágenes Vintage con la Nube (Supabase)...")
@@ -199,7 +199,19 @@ class NexusVintageService:
                 if bucket_ok:
                     images_dir = os.path.join(os.path.dirname(str(excel_path)), "vintage_images")
                     # Upload all images into the specific "vintage" subfolder inside the bucket
-                    await loop.run_in_executor(None, storage.upload_all_local_images, images_dir, "vintage")
+                    uploaded_urls = await loop.run_in_executor(None, storage.upload_all_local_images, images_dir, "vintage")
+                    if uploaded_urls and not storage.storage_disabled:
+                        from src.core.image_utils import apply_confirmed_cloud_image_urls
+                        def _sync_confirmed_vintage_urls() -> int:
+                            with SessionCloud() as db_urls:
+                                return apply_confirmed_cloud_image_urls(
+                                    db_urls,
+                                    uploaded_urls,
+                                    stem_to_product_id=stem_to_pid,
+                                    is_vintage=True,
+                                )
+                        updated_urls = await asyncio.to_thread(_sync_confirmed_vintage_urls)
+                        logger.info(f"☁️ URLs Vintage actualizadas tras confirmación en Supabase: {updated_urls}")
                 else:
                     logger.warning("⚠️ Cloud storage sync bypassed (Supabase Storage is unavailable or locked). Local files are fully functional.")
             except Exception as se:

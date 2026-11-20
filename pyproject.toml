@@ -26,8 +26,10 @@ testpaths = ["tests"]
 python_files = [
     "test_api_*.py",
     "test_backend_bugs_and_perf.py",
+    "test_nexus_and_static_images.py",
     "test_redteam_security_hardening.py",
     "test_scrapers_audit_fixes.py",
+    "test_scrapers_telemetry_and_parity.py",
 ]
 markers = [
     "network: requires live network access (not run by default; use -m network)",

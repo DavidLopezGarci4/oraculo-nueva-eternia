@@ -276,7 +276,7 @@ async def run_daily_scan(progress_callback=None):
                     if getattr(scraper, 'blocked', False):
                         logger.warning(f"🛡️ [{scraper.spider_name}] Scraper was marked as BLOCKED by target server.")
                         blocked_spiders.append(scraper.spider_name)
-                        if scraper.spider_name == "smythstoys" and os.environ.get("GITHUB_ACTIONS") == "true":
+                        if scraper.spider_name.lower() == "smythstoys" and os.environ.get("GITHUB_ACTIONS") == "true":
                             try:
                                 existing_job = (
                                     db.query(WallapopJobModel)

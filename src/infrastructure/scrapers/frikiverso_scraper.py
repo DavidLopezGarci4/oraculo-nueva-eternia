@@ -52,13 +52,17 @@ class FrikiversoScraper(BaseScraper):
                     logger.info(f"[{self.spider_name}] Found {len(items)} items on page {page_num}")
                     
                     if not items:
+                        self._log(f"📄 [{self.shop_name}] Página {page_num}: 0 ofertas extraídas.")
                         break
 
+                    page_count = 0
                     for item in items:
                         prod = self._parse_html_item(item)
                         if prod:
                             products.append(prod)
                             self.items_scraped += 1
+                            page_count += 1
+                    self._log(f"📄 [{self.shop_name}] Página {page_num}: {page_count} ofertas extraídas.")
                     
                     # Pagination
                     next_tag = soup.select_one('a.next.js-search-link, .pagination a.next, a[rel="next"]')
@@ -72,11 +76,12 @@ class FrikiversoScraper(BaseScraper):
                         
             except Exception as e:
                 logger.error(f"[{self.spider_name}] Critical Error: {e}", exc_info=True)
+                self._log(f"❌ [{self.shop_name}] Error crítico: {e}", level="error")
                 self.errors += 1
             finally:
                 await browser.close()
                 
-            logger.info(f"[{self.spider_name}] Finished. Total items: {len(products)}")
+            self._log(f"📊 [{self.shop_name}] Total extraído: {len(products)} ofertas.")
             return products
 
     def _parse_html_item(self, item) -> Optional[ScrapedOffer]:

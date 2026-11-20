@@ -251,6 +251,7 @@ class ScrapingPipeline:
         self.browser_concurrency = max(1, int(browser_concurrency))
         self.http_concurrency = max(1, int(http_concurrency))
         self.failed_spiders: set[str] = set()
+        self.per_shop_counts: dict[str, int] = {}
 
     def _log(self, msg: str):
         if self.log_callback:
@@ -275,6 +276,7 @@ class ScrapingPipeline:
         """
         logger.info(f"Pipeline: Searching for '{product_name}' across {len(self.scrapers)} scrapers.")
         self.failed_spiders = set()
+        self.per_shop_counts = {}
 
         browser_sem = asyncio.Semaphore(self.browser_concurrency)
         http_sem = asyncio.Semaphore(self.http_concurrency)
@@ -284,12 +286,18 @@ class ScrapingPipeline:
             async with sem:
                 if self.cancel_event and self.cancel_event.is_set():
                     logger.warning(f"🛑 Pipeline ABORTADO: Señal de cancelación recibida antes de {scraper.shop_name}.")
+                    self.per_shop_counts[scraper.shop_name] = 0
                     self.failed_spiders.add(scraper.shop_name)
+                    self._log(f"🛑 [{scraper.shop_name}] Cancelado antes de iniciar.")
                     return []
 
                 try:
                     res = await asyncio.wait_for(scraper.search(product_name), timeout=300)  # 5 min per scraper max
-                    if getattr(scraper, "blocked", False):
+                    is_blocked = getattr(scraper, "blocked", False) is True
+                    err_val = getattr(scraper, "errors", 0)
+                    has_errors = isinstance(err_val, int) and not isinstance(err_val, bool) and err_val > 0
+                    self.per_shop_counts[scraper.shop_name] = len(res)
+                    if is_blocked or (has_errors and len(res) == 0):
                         self.failed_spiders.add(scraper.shop_name)
                     logger.info(f"Scraper {scraper.shop_name} found {len(res)} offers.")
                     source = "Peer-to-Peer" if getattr(scraper, 'is_auction_source', False) else "Retail"
@@ -298,17 +306,26 @@ class ScrapingPipeline:
                             offer.source_type = source
                     return res
                 except asyncio.TimeoutError:
+                    self.per_shop_counts[scraper.shop_name] = 0
                     self.failed_spiders.add(scraper.shop_name)
                     logger.warning(f"⏳ Scraper {scraper.shop_name} TIMEOUT (5 min). Saltando.")
+                    self._log(f"⏳ [{scraper.shop_name}] Timeout (5 min). Saltando.")
                 except asyncio.CancelledError:
+                    self.per_shop_counts[scraper.shop_name] = 0
                     self.failed_spiders.add(scraper.shop_name)
                     logger.warning(f"🛑 Scraper {scraper.shop_name} CANCELADO.")
+                    self._log(f"🛑 [{scraper.shop_name}] Cancelado.")
                 except Exception as e:
+                    self.per_shop_counts[scraper.shop_name] = 0
                     self.failed_spiders.add(scraper.shop_name)
                     logger.error(f"Scraper {scraper.shop_name} failed for '{product_name}': {e}")
+                    self._log(f"❌ [{scraper.shop_name}] Fallo en extracción: {e}")
                 return []
 
         results_per_scraper = await asyncio.gather(*[_run_single(s) for s in self.scrapers])
+        if self.per_shop_counts:
+            breakdown = " | ".join(f"{k}: {v}" for k, v in self.per_shop_counts.items())
+            self._log(f"📋 [Desglose por Tienda] {breakdown}")
         all_legacy_offers: List[ScrapedOffer] = []
         for batch in results_per_scraper:
             all_legacy_offers.extend(batch)

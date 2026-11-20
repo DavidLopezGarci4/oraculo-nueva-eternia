@@ -32,7 +32,7 @@ class FrikimazScraper(BaseScraper):
             offers = await self._scrape_all_pages_playwright(encoded)
 
         self.items_scraped = len(offers)
-        self._log(f"✅ Total ofertas Frikimaz: {len(offers)}")
+        self._log(f"📊 [{self.shop_name}] Total extraído: {len(offers)} ofertas.")
         return offers
 
     # ------------------------------------------------------------------
@@ -53,7 +53,7 @@ class FrikimazScraper(BaseScraper):
                 break
 
             offers.extend(page_offers)
-            self._log(f"📄 Página {page_num}: {len(page_offers)} productos")
+            self._log(f"📄 [{self.shop_name}] Página {page_num}: {len(page_offers)} ofertas extraídas.")
 
             # Stop if no next page link
             soup = BeautifulSoup(html, "html.parser")
@@ -94,7 +94,7 @@ class FrikimazScraper(BaseScraper):
                         break
 
                     offers.extend(page_offers)
-                    self._log(f"📄 Playwright p{page_num}: {len(page_offers)} productos")
+                    self._log(f"📄 [{self.shop_name}] Página {page_num} [Playwright]: {len(page_offers)} ofertas extraídas.")
 
                     soup = BeautifulSoup(html, "html.parser")
                     if not soup.select_one("a[rel='next'], .pagination a.next, li.next a"):

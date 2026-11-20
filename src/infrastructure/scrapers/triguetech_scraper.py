@@ -35,7 +35,7 @@ class TriguetechScraper(BaseScraper):
         offers = await self._scrape_all_pages_curl(start_url)
 
         self.items_scraped = len(offers)
-        self._log(f"✅ Total ofertas Triguetech: {len(offers)}")
+        self._log(f"📊 [{self.shop_name}] Total extraído: {len(offers)} ofertas.")
         return offers
 
     # ------------------------------------------------------------------
@@ -65,7 +65,7 @@ class TriguetechScraper(BaseScraper):
                 break
 
             offers.extend(page_offers)
-            self._log(f"📄 Página {page_num}: {len(page_offers)} productos")
+            self._log(f"📄 [{self.shop_name}] Página {page_num}: {len(page_offers)} ofertas extraídas.")
 
             # Stop if no next page link
             soup = BeautifulSoup(html, "html.parser")

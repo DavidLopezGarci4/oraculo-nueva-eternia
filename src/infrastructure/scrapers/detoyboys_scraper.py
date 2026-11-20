@@ -58,11 +58,14 @@ class DeToyboysNLScraper(BaseScraper):
                     
                     logger.info(f"[{self.spider_name}] Found {len(items)} items on page {page_num}")
                     
+                    page_count = 0
                     for item in items:
                         prod = self._parse_item(item)
                         if prod:
                             products.append(prod)
                             self.items_scraped += 1
+                            page_count += 1
+                    self._log(f"📄 [{self.shop_name}] Página {page_num}: {page_count} ofertas extraídas.")
                     
                     # Pagination: Standard PrestaShop .pagination_next
                     next_btn = soup.select_one('li.pagination_next a, a.next, [rel="next"], .pagination__next')
@@ -75,11 +78,12 @@ class DeToyboysNLScraper(BaseScraper):
                         
             except Exception as e:
                 logger.error(f"[{self.spider_name}] Critical Error: {e}", exc_info=True)
+                self._log(f"❌ [{self.shop_name}] Error crítico: {e}", level="error")
                 self.errors += 1
             finally:
                 await browser.close()
                 
-        logger.info(f"[{self.spider_name}] Finished. Total items: {len(products)}")
+        self._log(f"📊 [{self.shop_name}] Total extraído: {len(products)} ofertas.")
         return products
 
     def _parse_item(self, item) -> Optional[ScrapedOffer]:

@@ -242,10 +242,13 @@ def run_scraper_task(
 
                 update_live_log(f"💾 Persistiendo {len(results)} ofertas...", force=True)
                 failed_spiders = getattr(pipeline, "failed_spiders", set())
+                per_shop_counts = getattr(pipeline, "per_shop_counts", {})
                 completed_shops = [
                     s.shop_name
                     for s in spiders_to_run
-                    if s.shop_name not in failed_spiders and not getattr(s, "blocked", False)
+                    if s.shop_name not in failed_spiders
+                    and getattr(s, "blocked", False) is not True
+                    and per_shop_counts.get(s.shop_name, 0) > 0
                 ]
                 new_items = pipeline.update_database(
                     results,
@@ -256,7 +259,7 @@ def run_scraper_task(
                 items_found = len(results)
                 all_blocked = (
                     items_found == 0
-                    and all(getattr(s, "blocked", False) for s in spiders_to_run)
+                    and all(getattr(s, "blocked", False) is True for s in spiders_to_run)
                 )
                 logger.info(
                     f"💾 Persistidas {items_found} ofertas tras incursión de {canonical_spider_name}."

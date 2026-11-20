@@ -108,6 +108,7 @@ class VintedScraper(BaseScraper):
                             
                         self._log(f"🎁 Vinted: Hallados {len(overlay_links)} items en página {page} para '{search_query}'.")
                         
+                        page_count = 0
                         for link in overlay_links:
                             try:
                                 href = link.get("href", "")
@@ -176,8 +177,13 @@ class VintedScraper(BaseScraper):
                                     is_sold=False
                                 ))
                                 self.items_scraped += 1
+                                page_count += 1
                             except Exception as e:
                                 logger.warning(f"Error parseando item de Vinted: {e}")
+
+                        self._log(
+                            f"📄 [{self.shop_name}] '{search_query}' - Página {page}: {page_count} ofertas válidas (de {len(overlay_links)} anuncios)."
+                        )
                         
                         # Retardo de cortesía entre páginas
                         await asyncio.sleep(random.uniform(2.0, 3.5))
@@ -195,5 +201,6 @@ class VintedScraper(BaseScraper):
             if self._session:
                 await self._session.close()
                 self._session = None
-                
+
+        self._log(f"📊 [{self.shop_name}] Total extraído: {len(offers)} ofertas.")
         return offers

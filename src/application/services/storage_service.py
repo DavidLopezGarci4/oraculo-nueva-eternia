@@ -2,10 +2,16 @@ import asyncio
 import os
 import logging
 from pathlib import Path
-from supabase import create_client, Client
+from typing import Any, Dict
 from src.core.config import settings
+from src.core.image_utils import encode_webp_file, has_webp_magic
 
 logger = logging.getLogger("StorageService")
+
+# Module-level symbol preserved for deterministic test patching; real SDK imported lazily in __init__.
+create_client = None
+Client = Any
+
 
 class StorageService:
     def __init__(self):
@@ -15,7 +21,11 @@ class StorageService:
             logger.error("❌ Supabase credentials missing (URL or Service Role Key)")
             self.client = None
         else:
-            self.client: Client = create_client(url, key)
+            factory = create_client
+            if factory is None:
+                from supabase import create_client as _supabase_create_client
+                factory = _supabase_create_client
+            self.client: Any = factory(url, key)
         
         self.bucket_name = "motu-catalog"
         self.storage_disabled = False
@@ -65,21 +75,12 @@ class StorageService:
             return None
 
         temp_webp_path = None
-        # Convert to WebP on-the-fly to optimize space in Supabase
-        if path.suffix.lower() != ".webp":
+        # Convert to real WebP whenever extension isn't .webp OR magic bytes aren't RIFF...WEBP
+        needs_webp_conversion = path.suffix.lower() != ".webp" or not has_webp_magic(path)
+        if needs_webp_conversion:
             try:
-                from PIL import Image
                 temp_webp_path = str(path.with_suffix(".temp.webp"))
-                with Image.open(local_path) as img:
-                    has_alpha = img.mode in ('RGBA', 'LA') or (img.mode == 'P' and 'transparency' in img.info)
-                    if has_alpha:
-                        rgba = img.convert('RGBA')
-                        background = Image.new('RGB', rgba.size, (255, 255, 255))
-                        background.paste(rgba, mask=rgba.split()[3])
-                        img = background
-                    elif img.mode != 'RGB':
-                        img = img.convert('RGB')
-                    img.save(temp_webp_path, "WEBP", quality=85)
+                encode_webp_file(local_path, temp_webp_path, quality=85)
                 upload_file_path = temp_webp_path
                 file_name = path.stem + ".webp"
                 content_type = "image/webp"
@@ -124,24 +125,29 @@ class StorageService:
                 except Exception:
                     pass
 
-    def upload_all_local_images(self, images_dir: str, folder: str = ""):
-         """Syncs all images in the local folder to the cloud."""
-         if self.storage_disabled:
-              logger.warning("⚠️ Supabase Storage is disabled. Skipping directory sync.")
-              return
-         logger.info(f"🔄 Syncing all images from {images_dir} to Cloud folder '{folder}'...")
-         p = Path(images_dir)
-         if not p.exists(): return
-         
-         count = 0
-         # Match both jpg, png, jpeg, and webp for extra robustness
-         for ext in ("*.jpg", "*.png", "*.jpeg", "*.webp"):
-             if self.storage_disabled:
-                  break
-             for img_file in p.glob(ext):
-                 if self.storage_disabled:
-                      break
-                 url = self.upload_image(str(img_file), folder=folder)
-                 if url: count += 1
-         
-         logger.info(f"✅ Sync complete: {count} images pushed to Supabase.")
+    def upload_all_local_images(self, images_dir: str, folder: str = "") -> Dict[str, str]:
+        """Syncs all images in the local folder to the cloud and returns {stem: public_url}."""
+        uploaded: Dict[str, str] = {}
+        if self.storage_disabled:
+            logger.warning("⚠️ Supabase Storage is disabled. Skipping directory sync.")
+            return uploaded
+        logger.info(f"🔄 Syncing all images from {images_dir} to Cloud folder '{folder}'...")
+        p = Path(images_dir)
+        if not p.exists():
+            return uploaded
+
+        # Match both jpg, png, jpeg, and webp for extra robustness
+        for ext in ("*.jpg", "*.png", "*.jpeg", "*.webp"):
+            if self.storage_disabled:
+                break
+            for img_file in p.glob(ext):
+                if self.storage_disabled:
+                    break
+                if img_file.name.endswith(".temp.webp"):
+                    continue
+                url = self.upload_image(str(img_file), folder=folder)
+                if url:
+                    uploaded[img_file.stem] = url
+
+        logger.info(f"✅ Sync complete: {len(uploaded)} images pushed to Supabase.")
+        return uploaded

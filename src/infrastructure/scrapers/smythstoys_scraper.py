@@ -81,6 +81,7 @@ class SmythsToysScraper(BaseScraper):
         offers = await self._fast_infiltration(query)
         if offers and not self.blocked:
             self._log(f"🎉 SmythsToys [Nivel 1 Gratis]: ¡Éxito! Encontradas {len(offers)} ofertas.")
+            self._log(f"📊 [{self.shop_name}] Total extraído: {len(offers)} ofertas.")
             return offers
 
         # Nivel 2: Motor REA/CDP (Cookie Minter sin Runtime.enable + __NUXT_DATA__)
@@ -91,6 +92,7 @@ class SmythsToysScraper(BaseScraper):
         self.blocked = False
         offers = await self._search_rea_cdp(query)
         if offers and not self.blocked:
+            self._log(f"📊 [{self.shop_name}] Total extraído: {len(offers)} ofertas.")
             return offers
 
         # Nivel 3: ScraperAPI Premium (solo si hay clave configurada)
@@ -99,6 +101,7 @@ class SmythsToysScraper(BaseScraper):
             self.blocked = False
             offers = await self._search_option_2(query)
 
+        self._log(f"📊 [{self.shop_name}] Total extraído: {len(offers)} ofertas.")
         return offers
 
     async def _fast_infiltration(self, query: str, cookies: Optional[Dict[str, str]] = None) -> List[ScrapedOffer]:
@@ -316,6 +319,7 @@ class SmythsToysScraper(BaseScraper):
         if not scraperapi_key:
             self._log("❌ No se encontró SCRAPERAPI_KEY en variables de entorno. Abortando.", level="error")
             self.errors += 1
+            self.blocked = True
             return []
             
         products: List[ScrapedOffer] = []
@@ -346,6 +350,7 @@ class SmythsToysScraper(BaseScraper):
                 if resp.status_code != 200:
                     self._log(f"❌ Fallo en ScraperAPI con código: {resp.status_code}", level="error")
                     self.errors += 1
+                    self.blocked = True
                     return []
                     
                 soup = BeautifulSoup(resp.text, "html.parser")
@@ -361,6 +366,8 @@ class SmythsToysScraper(BaseScraper):
         except Exception as e:
             self._log(f"❌ Error al consultar ScraperAPI (Opción 2): {e}", level="error")
             self.errors += 1
+            if not products:
+                self.blocked = True
             
         return products
 
@@ -506,7 +513,7 @@ class SmythsToysScraper(BaseScraper):
             self.items_scraped += 1
 
         if parsed_offers:
-            self._log(f"✅ __NUXT_DATA__ SSR parseado: {len(parsed_offers)} productos extraídos.")
+            self._log(f"📄 [{self.shop_name}] Página 1 (vista acumulada __NUXT_DATA__): {len(parsed_offers)} ofertas extraídas.")
         return parsed_offers
 
     def _parse_html(self, soup: BeautifulSoup, seen_urls: set) -> List[ScrapedOffer]:
@@ -638,5 +645,5 @@ class SmythsToysScraper(BaseScraper):
             ))
             self.items_scraped += 1
             
-        self._log(f"✅ Extracción completada para Smyths Toys. Productos parseados: {len(parsed_offers)}")
+        self._log(f"📄 [{self.shop_name}] Página 1 (vista acumulada DOM): {len(parsed_offers)} ofertas extraídas.")
         return parsed_offers

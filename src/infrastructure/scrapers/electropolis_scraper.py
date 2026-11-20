@@ -33,6 +33,7 @@ class ElectropolisScraper(BaseScraper):
                 max_pages = 5
                 
                 while current_url and page_num <= max_pages:
+                    self._log(f"🧭 [{self.shop_name}] Accediendo a página {page_num}...")
                     logger.info(f"[{self.spider_name}] Scraping page {page_num}: {current_url}")
                     
                     # Navigate
@@ -55,11 +56,14 @@ class ElectropolisScraper(BaseScraper):
                     items = soup.select('.product-item-info')
                     logger.info(f"[{self.spider_name}] Found {len(items)} items on page {page_num}")
                     
+                    page_count = 0
                     for item in items:
                         prod = self._parse_html_item(item)
                         if prod:
                             products.append(prod)
                             self.items_scraped += 1
+                            page_count += 1
+                    self._log(f"📄 [{self.shop_name}] Página {page_num}: {page_count} ofertas extraídas.")
                     
                     # Pagination: Magento uses .pages .action.next
                     next_tag = soup.select_one('.pages .action.next')
@@ -72,11 +76,12 @@ class ElectropolisScraper(BaseScraper):
                         
             except Exception as e:
                 logger.error(f"[{self.spider_name}] Critical Error: {e}", exc_info=True)
+                self._log(f"❌ [{self.shop_name}] Error crítico: {e}", level="error")
                 self.errors += 1
             finally:
                 await browser.close()
                 
-            logger.info(f"[{self.spider_name}] Finished. Total items: {len(products)}")
+            self._log(f"📊 [{self.shop_name}] Total extraído: {len(products)} ofertas.")
             return products
 
     def _parse_html_item(self, item) -> Optional[ScrapedOffer]:

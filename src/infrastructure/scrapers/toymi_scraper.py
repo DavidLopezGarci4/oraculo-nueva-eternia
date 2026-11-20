@@ -100,7 +100,7 @@ class ToymiEUScraper(BaseScraper):
                             self.items_scraped += 1
                             items_on_page += 1
                     
-                    logger.info(f"[{self.spider_name}] Page {page_num}: {items_on_page} new products")
+                    self._log(f"📄 [{self.shop_name}] Página {page_num}: {items_on_page} ofertas extraídas.")
                     
                     # Si no hay items nuevos, probablemente terminamos
                     if items_on_page == 0 and page_num > 1:
@@ -109,11 +109,12 @@ class ToymiEUScraper(BaseScraper):
                         
             except Exception as e:
                 logger.error(f"[{self.spider_name}] Critical Error: {e}", exc_info=True)
+                self._log(f"❌ [{self.shop_name}] Error crítico: {e}", level="error")
                 self.errors += 1
             finally:
                 await browser.close()
                 
-        logger.info(f"[{self.spider_name}] Finished. Total items: {len(products)}")
+        self._log(f"📊 [{self.shop_name}] Total extraído: {len(products)} ofertas.")
         return products
 
     async def _set_country_spain(self, page: Page):

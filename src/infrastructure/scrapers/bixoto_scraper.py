@@ -64,7 +64,7 @@ class BixotoScraper(BaseScraper):
         self._log(f"🧭 [{self.spider_name}] Iniciando incursión en Bixoto...")
 
         max_pages = 5
-        for target_url in target_urls:
+        for q_idx, target_url in enumerate(target_urls, start=1):
             if self.blocked:
                 break
             logger.info(f"[{self.spider_name}] Scraping target: {target_url}")
@@ -72,7 +72,7 @@ class BixotoScraper(BaseScraper):
 
             while target_url and page_num <= max_pages:
                 current_url = f"{target_url}&page={page_num}" if page_num > 1 else target_url
-                self._log(f"📡 [{self.spider_name}] Accediendo a página {page_num}...")
+                self._log(f"📡 [{self.spider_name}] Consulta {q_idx}/{len(target_urls)} - Accediendo a página {page_num}...")
 
                 html = await self._curl_get(current_url)
                 if not html:
@@ -94,6 +94,7 @@ class BixotoScraper(BaseScraper):
                 cards = soup.select('.product-card') or soup.select('.product-card__top')
                 if not cards:
                     logger.info(f"[{self.spider_name}] No se encontraron más tarjetas en página {page_num}.")
+                    self._log(f"📄 [{self.spider_name}] Consulta {q_idx}/{len(target_urls)} - Página {page_num}: 0 tarjetas encontradas.")
                     break
 
                 # 2. Extraer mapa de EAN-13 desde los metadatos SvelteKit en scripts
@@ -178,7 +179,7 @@ class BixotoScraper(BaseScraper):
 
                 logger.info(f"[{self.spider_name}] Página {page_num}: {page_items_count} ofertas extraídas.")
                 self._log(
-                    f"📦 [{self.spider_name}] Página {page_num}: {page_items_count} reliquias MOTU válidas (de {len(cards)} tarjetas)."
+                    f"📄 [{self.spider_name}] Consulta {q_idx}/{len(target_urls)} - Página {page_num}: {page_items_count} ofertas nuevas (de {len(cards)} tarjetas)."
                 )
 
                 # Comprobar si hay paginación activa
@@ -189,5 +190,5 @@ class BixotoScraper(BaseScraper):
                 page_num += 1
                 await self._random_sleep(0.5, 1.5)
 
-        self._log(f"✅ [{self.spider_name}] Incursión finalizada. Total: {len(products)} reliquias capturadas.")
+        self._log(f"📊 [{self.spider_name}] Total extraído: {len(products)} reliquias únicas.")
         return products

@@ -167,7 +167,9 @@ class EbayScraper(BaseScraper):
                 query_offers = self._parse_ebay_html(html, search_query)
                 
             if query_offers:
-                self._log(f"✅ [Sirius-E] Capturadas {len(query_offers)} reliquias directas para '{search_query}'.")
+                self._log(
+                    f"📄 [{self.shop_name}] Consulta '{search_query}' (Página 1): {len(query_offers)} ofertas extraídas."
+                )
                 for o in query_offers:
                     itm_key = self._extract_itm_id(o.url)
                     if itm_key not in seen_itm_ids:
@@ -220,7 +222,9 @@ class EbayScraper(BaseScraper):
                             await asyncio.sleep(3)
                             await self._stealth_scroll(page)
                             new_offers = await self._extract_page_items(page, search_query)
-                            self._log(f"🔭 Playwright extrajo {len(new_offers)} items para '{search_query}'.")
+                            self._log(
+                                f"📄 [{self.shop_name}] Consulta '{search_query}' (Página 1 [Playwright]): {len(new_offers)} ofertas extraídas."
+                            )
                             for o in new_offers:
                                 itm_key = self._extract_itm_id(o.url)
                                 if itm_key not in seen_itm_ids:
@@ -237,6 +241,7 @@ class EbayScraper(BaseScraper):
             if not offers and fast_blocked_queries == len(queries_config) and (pw_blocked or pw_had_error):
                 self.blocked = True
 
+        self._log(f"📊 [{self.shop_name}] Total extraído: {len(offers)} ofertas únicas.")
         return offers
 
     def _parse_ebay_html(self, html: str, search_query: str) -> List[ScrapedOffer]:

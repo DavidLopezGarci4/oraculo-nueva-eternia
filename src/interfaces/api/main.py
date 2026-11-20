@@ -113,9 +113,14 @@ async def lifespan(app: FastAPI):
 
 from fastapi.staticfiles import StaticFiles
 import os
+import re
 import time
+import urllib.parse
+from pathlib import Path
 import anyio
 from src.infrastructure.database_cloud import SessionCloud as _DefaultSessionCloud
+
+_PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 SessionCloud = _DefaultSessionCloud
 
@@ -162,25 +167,145 @@ def _get_cached_user_image_paths(user_id: int) -> list[str]:
     return paths
 
 
+def _append_image_candidate(candidates: list[str], raw_url: str | None) -> None:
+    if not raw_url:
+        return
+    url = raw_url.strip()
+    if not url:
+        return
+    if url.startswith("http://"):
+        https_url = "https://" + url[7:]
+        if https_url not in candidates:
+            candidates.append(https_url)
+    if url not in candidates:
+        candidates.append(url)
+
+
 def _load_product_candidate_image_urls(product_id: int) -> list[str]:
-    from src.domain.models import ProductModel, OfferModel
+    from src.domain.models import ProductModel, OfferModel, PendingMatchModel
 
     candidate_urls: list[str] = []
     session_factory = _resolve_session_cloud()
     with session_factory() as db:
         product = db.query(ProductModel).filter(ProductModel.id == product_id).first()
         if product and product.image_url:
-            candidate_urls.append(product.image_url)
+            _append_image_candidate(candidate_urls, product.image_url)
+            parsed = urllib.parse.urlparse(product.image_url)
+            if "/storage/v1/object/public/motu-catalog/" in parsed.path and parsed.path.lower().endswith(".webp"):
+                base_no_ext = product.image_url[: len(product.image_url) - len(parsed.query) - (1 if parsed.query else 0)]
+                stem_url = base_no_ext[:-5]
+                query_suffix = f"?{parsed.query}" if parsed.query else ""
+                for alt_ext in (".jpg", ".png", ".jpeg"):
+                    _append_image_candidate(candidate_urls, f"{stem_url}{alt_ext}{query_suffix}")
 
         offers = (
-            db.query(OfferModel.image_url)
-            .filter(OfferModel.product_id == product_id, OfferModel.image_url.is_not(None))
+            db.query(OfferModel.image_url, OfferModel.url)
+            .filter(OfferModel.product_id == product_id)
             .all()
         )
-        for (img_url,) in offers:
-            if img_url and img_url not in candidate_urls:
-                candidate_urls.append(img_url)
+        offer_urls: list[str] = []
+        for img_url, offer_url in offers:
+            _append_image_candidate(candidate_urls, img_url)
+            if offer_url:
+                offer_urls.append(offer_url)
+
+        if offer_urls:
+            pending_imgs = (
+                db.query(PendingMatchModel.image_url)
+                .filter(
+                    PendingMatchModel.url.in_(offer_urls),
+                    PendingMatchModel.image_url.is_not(None),
+                )
+                .all()
+            )
+            for (p_img,) in pending_imgs:
+                _append_image_candidate(candidate_urls, p_img)
     return candidate_urls
+
+
+def _try_seed_cache_from_local_catalog(product_id: int, cache_root: Path) -> str | None:
+    """
+    Si el servidor dispone del catálogo local (data/MOTU/images o vintage_images),
+    convierte la imagen maestra a WebP en IMAGE_CACHE_DIR antes de salir a red.
+    """
+    from src.domain.models import ProductModel
+
+    session_factory = _resolve_session_cloud()
+    with session_factory() as db:
+        row = (
+            db.query(ProductModel.figure_id, ProductModel.image_url, ProductModel.is_vintage)
+            .filter(ProductModel.id == product_id)
+            .first()
+        )
+    if not row:
+        return None
+
+    figure_id, image_url, is_vintage = row
+    motu_root = _PROJECT_ROOT / "data" / "MOTU"
+    subdirs = ("vintage_images", "images") if is_vintage else ("images", "vintage_images")
+    valid_exts = (".webp", ".jpg", ".jpeg", ".png")
+
+    url_stem = ""
+    if image_url:
+        parsed_name = os.path.basename(urllib.parse.urlparse(image_url).path)
+        raw_stem = os.path.splitext(parsed_name)[0]
+        if raw_stem and re.fullmatch(r"[A-Za-z0-9._-]+", raw_stem):
+            url_stem = raw_stem
+
+    safe_fid = re.sub(r"[^A-Za-z0-9_-]", "", str(figure_id)) if figure_id else ""
+
+    source_file: Path | None = None
+    for sub in subdirs:
+        catalog_dir = (motu_root / sub).resolve()
+        if not catalog_dir.is_dir():
+            continue
+
+        if url_stem:
+            for ext in valid_exts:
+                candidate = (catalog_dir / f"{url_stem}{ext}").resolve()
+                if (
+                    candidate.is_relative_to(catalog_dir)
+                    and candidate.is_file()
+                    and candidate.stat().st_size > 0
+                    and _has_valid_image_magic(candidate)
+                ):
+                    source_file = candidate
+                    break
+            if source_file:
+                break
+
+        if safe_fid:
+            for pattern in (f"*-{safe_fid}.*", f"{safe_fid}.*"):
+                for candidate in sorted(catalog_dir.glob(pattern)):
+                    resolved = candidate.resolve()
+                    if (
+                        resolved.suffix.lower() in valid_exts
+                        and resolved.is_relative_to(catalog_dir)
+                        and resolved.is_file()
+                        and resolved.stat().st_size > 0
+                        and _has_valid_image_magic(resolved)
+                    ):
+                        source_file = resolved
+                        break
+                if source_file:
+                    break
+            if source_file:
+                break
+
+    if not source_file:
+        return None
+
+    try:
+        cache_root.mkdir(parents=True, exist_ok=True)
+        dest_path = (cache_root / f"{product_id}.webp").resolve()
+        if not dest_path.is_relative_to(cache_root):
+            return None
+        _encode_webp_to_disk(source_file.read_bytes(), str(dest_path))
+        if dest_path.exists() and dest_path.stat().st_size > 0:
+            return str(dest_path)
+    except Exception as e:
+        logger.warning(f"⚠️ Error cacheando imagen local del catálogo para producto {product_id}: {e}")
+    return None
 
 
 def _encode_webp_to_disk(raw_bytes: bytes, dest_path: str) -> None:
@@ -253,11 +378,9 @@ def _has_valid_image_magic(file_path) -> bool:
     )
 
 
-@app.get("/api/static/images/{product_id}.webp")
-async def get_static_image_override(product_id: int, source: str = None, user_id: int = 2):
+async def _serve_static_image(product_id: int, source: str = None, user_id: int = 2):
     from fastapi.responses import FileResponse
     from fastapi import HTTPException
-    from pathlib import Path
 
     extensions = [".webp", ".jpg", ".jpeg", ".png"]
     cache_root = Path(settings.IMAGE_CACHE_DIR).resolve()
@@ -289,11 +412,26 @@ async def get_static_image_override(product_id: int, source: str = None, user_id
             if server_cache_file.is_relative_to(cache_root) and server_cache_file.exists() and server_cache_file.is_file() and server_cache_file.stat().st_size > 0:
                 return FileResponse(str(server_cache_file), headers=STATIC_IMAGE_CACHE_HEADERS)
 
+        seeded_path = await anyio.to_thread.run_sync(_try_seed_cache_from_local_catalog, product_id, cache_root)
+        if seeded_path:
+            return FileResponse(seeded_path, headers=STATIC_IMAGE_CACHE_HEADERS)
+
         cached_path = await _fetch_and_cache_product_image(product_id)
         if cached_path:
             return FileResponse(cached_path, headers=STATIC_IMAGE_CACHE_HEADERS)
 
     raise HTTPException(status_code=404, detail="Imagen no encontrada")
+
+
+# Register .webp route explicitly BEFORE extensionless {product_id}: int so Starlette never parses "123.webp" as int.
+@app.get("/api/static/images/{product_id}.webp")
+async def get_static_image_override(product_id: int, source: str = None, user_id: int = 2):
+    return await _serve_static_image(product_id, source=source, user_id=user_id)
+
+
+@app.get("/api/static/images/{product_id}")
+async def get_static_image_extensionless(product_id: int, source: str = None, user_id: int = 2):
+    return await _serve_static_image(product_id, source=source, user_id=user_id)
 
 
 import re as _re

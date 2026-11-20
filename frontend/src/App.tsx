@@ -207,15 +207,15 @@ function App() {
         // Throttle downloads to prevent CPU/network spikes: 1 image every 1500ms
         for (const p of productsWithImages) {
           if (!active) break;
-          const cacheKey = `/api/static/images/${p.id}.webp`;
+          const cacheKey = `/api/static/images/${p.id}`;
           
           try {
-            const hasMatch = await cache.match(cacheKey);
+            const hasMatch = (await cache.match(cacheKey)) || (await cache.match(`${cacheKey}.webp`));
             if (!hasMatch) {
               // Fetch from local static server with explicit source param to avoid DB queries when source=cache
               let imgResponse = await fetch(`${cacheKey}?source=${srcParam}`);
-              if (!imgResponse.ok) {
-                // Fallback to Supabase remote image URL if local is missing
+              if (!imgResponse.ok && p.image_url && !p.image_url.toLowerCase().startsWith('http://')) {
+                // Fallback to Supabase/remote image URL if local is missing
                 imgResponse = await fetch(p.image_url);
               }
               if (imgResponse.ok) {
@@ -257,19 +257,27 @@ function App() {
 
   const handleCacheWelcomeSelect = (mode: 'download_all' | 'on_demand' | 'none') => {
     localStorage.setItem('motu_cache_intro_seen', 'true');
+    const currentSource = localStorage.getItem('image_source');
     if (mode === 'download_all') {
       localStorage.setItem('use_local_images', 'true');
       localStorage.setItem('motu_background_download_enabled', 'true');
+      if (currentSource !== 'custom_path') {
+        localStorage.setItem('image_source', 'local_cache');
+      }
       setUseLocalImages(true);
       setBgDownloadEnabled(true);
     } else if (mode === 'on_demand') {
       localStorage.setItem('use_local_images', 'true');
       localStorage.setItem('motu_background_download_enabled', 'false');
+      if (currentSource !== 'custom_path') {
+        localStorage.setItem('image_source', 'local_cache');
+      }
       setUseLocalImages(true);
       setBgDownloadEnabled(false);
     } else {
       localStorage.setItem('use_local_images', 'false');
       localStorage.setItem('motu_background_download_enabled', 'false');
+      localStorage.setItem('image_source', 'supabase');
       setUseLocalImages(false);
       setBgDownloadEnabled(false);
     }

@@ -18,6 +18,13 @@ root_dir = Path(__file__).parent.parent
 sys.path.append(str(root_dir))
 
 from src.core.config import settings
+from src.core.image_utils import (
+    encode_webp_bytes,
+    encode_webp_file,
+    find_existing_image_with_sibling,
+    has_webp_magic,
+    resolve_catalog_image_path,
+)
 from src.domain.models import (
     Base, ProductModel, ProductAliasModel, CollectionItemModel, UserModel
 )
@@ -46,12 +53,16 @@ def download_missing_image(url: str, local_path: str) -> bool:
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         }
-        r = requests.get(url, headers=headers, timeout=15, stream=True)
-        if r.status_code == 200:
+        r = requests.get(url, headers=headers, timeout=15)
+        if r.status_code == 200 and r.content:
             os.makedirs(os.path.dirname(local_path), exist_ok=True)
-            with open(local_path, "wb") as f:
-                for chunk in r.iter_content(chunk_size=8192):
-                    f.write(chunk)
+            if str(local_path).lower().endswith(".webp") and not (
+                len(r.content) >= 12 and r.content[:4] == b"RIFF" and r.content[8:12] == b"WEBP"
+            ):
+                encode_webp_bytes(r.content, local_path)
+            else:
+                with open(local_path, "wb") as f:
+                    f.write(r.content)
             logger.info(f"⬇️ Downloaded missing image from web: {url} -> {local_path}")
             return True
         else:
@@ -62,55 +73,32 @@ def download_missing_image(url: str, local_path: str) -> bool:
         return False
 
 def resolve_local_image_path(image_path_str: str, image_url: str = None) -> str | None:
-    if not image_path_str:
-        return None
-    
-    # Normalize paths
-    path_str = image_path_str.replace('\\', '/')
-    if path_str.startswith('/app/'):
-        path_str = path_str.replace('/app/', '', 1)
-        
-    project_root = Path(__file__).resolve().parent.parent
-    local_path = project_root / path_str
-    
-    if local_path.exists():
-        return str(local_path)
-        
-    # Try direct path
-    direct_path = Path(image_path_str)
-    if direct_path.exists():
-        return str(direct_path)
-        
-    # If file doesn't exist but we have a web URL, download it!
-    if image_url and image_url.startswith('http'):
-        if "supabase.co" not in image_url:
-            success = download_missing_image(image_url, str(local_path))
-            if success:
+    project_root = Path(root_dir).resolve()
+    local_path = resolve_catalog_image_path(image_path_str, project_root, default_subdir="vintage_images")
+
+    if local_path is not None:
+        existing = find_existing_image_with_sibling(local_path)
+        if existing is not None:
+            return str(existing)
+
+        if image_url and str(image_url).startswith("http") and "supabase.co" not in str(image_url):
+            if download_missing_image(str(image_url), str(local_path)):
                 return str(local_path)
-                
+
     return None
 
 def cache_image_locally(src_path: str, product_id: int):
     if os.getenv("GITHUB_ACTIONS") == "true":
         return
-        
+
     try:
-        from PIL import Image
         cache_dir = settings.IMAGE_CACHE_DIR
         os.makedirs(cache_dir, exist_ok=True)
         dest_path = os.path.join(cache_dir, f"{product_id}.webp")
-        
-        # 1. Convert to WebP and save in server cache if not exists
-        if not os.path.exists(dest_path) or os.path.getsize(dest_path) == 0:
-            with Image.open(src_path) as img:
-                if img.mode in ('RGBA', 'LA'):
-                    background = Image.new('RGB', img.size, (255, 255, 255))
-                    background.paste(img, mask=img.split()[3])
-                    img = background
-                elif img.mode != 'RGB':
-                    img = img.convert('RGB')
-                img.save(dest_path, "WEBP", quality=85)
-                logger.info(f"📸 Cached image locally: {dest_path}")
+
+        if not os.path.exists(dest_path) or os.path.getsize(dest_path) == 0 or not has_webp_magic(dest_path):
+            encode_webp_file(src_path, dest_path)
+            logger.info(f"📸 Cached image locally: {dest_path}")
     except Exception as e:
         logger.warning(f"⚠️ Error caching image {src_path} for product {product_id}: {e}")
 
@@ -138,6 +126,7 @@ def migrate_excel_to_db(excel_path: str, session):
 
             total_imported = 0
             total_collected = 0
+            stem_to_product_id: dict[str, int] = {}
 
             for sheet in sheet_names:
                 logger.info(f"📄 Processing Vintage sheet: {sheet}")
@@ -182,18 +171,12 @@ def migrate_excel_to_db(excel_path: str, session):
                     if not product:
                         product = session.query(ProductModel).filter_by(name=name, sub_category=sub_category, is_vintage=True).first()
 
-                    # Supabase Image Path mapping in the dedicated "/vintage/" subdirectory
+                    # Keep external or existing valid URL until Step 3 confirms Supabase Storage upload
                     image_url_raw = row.get('Image URL')
-                    image_url = image_url_raw
+                    image_url = str(image_url_raw).strip() if pd.notna(image_url_raw) else None
                     image_path = row.get('Image Path')
-                    
-                    resolved_path = resolve_local_image_path(image_path, image_url_raw)
-                    if resolved_path:
-                        filename = os.path.basename(resolved_path)
-                        filename_webp = os.path.splitext(filename)[0] + ".webp"
-                        supabase_url = getattr(settings, "SUPABASE_URL", "")
-                        if supabase_url:
-                            image_url = f"{supabase_url}/storage/v1/object/public/motu-catalog/vintage/{filename_webp}"
+
+                    resolved_path = resolve_local_image_path(image_path, image_url)
 
                     currency = row.get('Currency', 'USD')
                     avg_raw = clean_price(row.get('Avg'))
@@ -227,16 +210,18 @@ def migrate_excel_to_db(excel_path: str, session):
                         session.flush()
                         total_imported += 1
                         if resolved_path:
+                            stem_to_product_id[Path(resolved_path).stem] = product.id
                             cache_image_locally(resolved_path, product.id)
                     else:
-                        # Update Existing Vintage Product
+                        # Update Existing Vintage Product (preserve existing image_url if present)
                         if figure_id and not product.figure_id:
                             product.figure_id = figure_id
-                        
-                        if image_url:
+
+                        if not product.image_url and image_url:
                             product.image_url = image_url
-                            
+
                         if resolved_path:
+                            stem_to_product_id[Path(resolved_path).stem] = product.id
                             cache_image_locally(resolved_path, product.id)
                         
                         product.retail_price = clean_price(row.get('Retail'))
@@ -300,6 +285,7 @@ def migrate_excel_to_db(excel_path: str, session):
                 session.commit()
             
             logger.info(f"✅ Vintage Migration Summary: {total_imported} vintage products imported, {total_collected} collected items added.")
+            return stem_to_product_id
 
     except Exception as e:
         logger.error(f"❌ Vintage Migration Error: {e}")
