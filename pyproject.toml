@@ -26,6 +26,7 @@ testpaths = ["tests"]
 python_files = [
     "test_api_*.py",
     "test_backend_bugs_and_perf.py",
+    "test_frontend_price_visibility_governance.py",
     "test_nexus_and_static_images.py",
     "test_redteam_security_hardening.py",
     "test_scrapers_audit_fixes.py",

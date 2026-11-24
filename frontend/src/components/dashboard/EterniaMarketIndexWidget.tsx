@@ -298,10 +298,10 @@ export const EterniaMarketIndexWidget: React.FC<EterniaMarketIndexWidgetProps> =
                                 <DollarSign className="h-3 w-3" /> Tu Plusvalía Neta
                             </span>
                             <div className="flex items-baseline gap-2">
-                                <span className="text-xl font-black text-emerald-400 blur-incognito blur-manual-price">
+                                <span className="text-xl font-black text-emerald-400 blur-incognito">
                                     {port.net_unrealized_profit_eur >= 0 ? '+' : ''}{port.net_unrealized_profit_eur.toLocaleString('es-ES')} €
                                 </span>
-                                <span className="text-[11px] font-bold text-emerald-500/80 font-mono blur-incognito blur-manual-price">
+                                <span className="text-[11px] font-bold text-emerald-500/80 font-mono blur-incognito">
                                     (+{port.roi_percentage}%)
                                 </span>
                             </div>
@@ -320,15 +320,15 @@ export const EterniaMarketIndexWidget: React.FC<EterniaMarketIndexWidgetProps> =
                                 <Sparkles className="h-3 w-3" /> Gangas / Ahorro
                             </span>
                             <div className="flex items-baseline gap-2">
-                                <span className="text-xl font-black text-amber-400 blur-incognito blur-manual-price">
+                                <span className="text-xl font-black text-amber-400 blur-incognito">
                                     {port.total_bargain_savings_eur.toLocaleString('es-ES')} €
                                 </span>
                                 <span className="text-[11px] font-bold text-amber-300 font-mono">
-                                    (<span className="blur-incognito blur-manual-price">{port.bargains_detected_count}</span> gangas)
+                                    (<span className="blur-incognito">{port.bargains_detected_count}</span> gangas)
                                 </span>
                             </div>
                         </div>
-                        <div className="px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/30 text-[10px] font-bold text-amber-300 font-mono blur-incognito blur-manual-price">
+                        <div className="px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/30 text-[10px] font-bold text-amber-300 font-mono blur-incognito">
                             Alpha +{port.alpha_percentage}%
                         </div>
                     </div>

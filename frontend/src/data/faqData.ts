@@ -40,8 +40,8 @@ export const FAQ_ITEMS: FaqItem[] = [
         category: 'fortaleza',
         question: '¿Qué es el Modo Incógnito y cómo se activa?',
         points: [
-            { label: 'Propósito', text: 'Oculta y difumina instantáneamente todos los precios de compra, valoraciones financieras y totales coleccionados.' },
-            { label: 'Activación', text: 'Pulsa el icono del ojo en la barra superior (Navbar) de la app en cualquier momento.' },
+            { label: 'Control Único', text: 'El icono del ojo en la barra superior (o Ctrl+I / doble Esc) muestra todos los importes, costes, ROI y casillas de ítems cuando está abierto, o los difumina al instante al cerrarlo.' },
+            { label: 'Blindaje en Fichas', text: 'Al activarlo, las casillas manuales de inversión y lanzamiento quedan difuminadas y bloqueadas sin revelar el precio al pasar el cursor ni al enfocar.' },
             { label: 'Protección', text: 'Ideal para capturas de pantalla, streams o para mostrar tu colección sin revelar tu inversión económica.' }
         ],
         tags: ['incógnito', 'privacidad', 'difuminar', 'precios', 'ojo']

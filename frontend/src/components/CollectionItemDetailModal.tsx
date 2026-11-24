@@ -170,7 +170,10 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
                                                 }
                                             }}
                                             placeholder="0"
-                                            className={`bg-transparent text-base sm:text-2xl font-black text-white border-none focus:ring-0 w-12 sm:w-20 p-0 blur-manual-price ${isIncognito ? 'blur-incognito opacity-30 select-none pointer-events-none' : ''}`}
+                                            readOnly={isIncognito}
+                                            tabIndex={isIncognito ? -1 : undefined}
+                                            title={isIncognito ? 'Precio oculto (Modo Incógnito)' : undefined}
+                                            className="bg-transparent text-base sm:text-2xl font-black text-white border-none focus:ring-0 w-12 sm:w-20 p-0 blur-incognito blur-manual-price"
                                             aria-label="Inversión manual en euros"
                                         />
                                         <span className="text-xs sm:text-lg font-bold text-white/70">€</span>
@@ -183,20 +186,20 @@ const CollectionItemDetailModal: React.FC<CollectionItemDetailModalProps> = ({ p
                                     <div className="flex items-center justify-between">
                                         <span className="text-[7px] sm:text-[8px] font-black text-white/60 uppercase tracking-widest block">vs Mercado P2P Actual</span>
                                         {numericPrice > 0 && (
-                                            <span className={`text-[7.5px] font-black uppercase px-1.5 py-0.5 rounded blur-incognito blur-manual-price ${buyProfitLoss >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-brand-primary/20 text-brand-primary'}`}>
+                                            <span className={`text-[7.5px] font-black uppercase px-1.5 py-0.5 rounded blur-incognito ${buyProfitLoss >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-brand-primary/20 text-brand-primary'}`}>
                                                 {buyProfitLoss >= 0 ? 'Ahorro' : 'Sobreprecio'}
                                             </span>
                                         )}
                                     </div>
                                     <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-1.5">
                                         <div className="flex items-baseline gap-1">
-                                            <h4 className={`text-base sm:text-2xl font-black blur-incognito ${numericPrice > 0 ? 'blur-manual-price' : ''} ${numericPrice === 0 ? 'text-white/80' : buyProfitLoss >= 0 ? 'text-green-400' : 'text-brand-primary'}`}>
+                                            <h4 className={`text-base sm:text-2xl font-black blur-incognito ${numericPrice === 0 ? 'text-white/80' : buyProfitLoss >= 0 ? 'text-green-400' : 'text-brand-primary'}`}>
                                                 {numericPrice > 0 ? `${buyProfitLoss >= 0 ? '+' : ''}${buyProfitLoss.toFixed(2)}` : `${p2pBenchmark.toFixed(2)}`}
                                             </h4>
                                             <span className="text-xs sm:text-lg font-bold text-white/40">€</span>
                                         </div>
                                         {numericPrice > 0 && (
-                                            <div className={`flex w-fit items-center gap-1 sm:gap-1.5 px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-[8px] sm:text-[10px] font-black blur-incognito blur-manual-price ${buyProfitLoss >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-brand-primary/20 text-brand-primary'}`}>
+                                            <div className={`flex w-fit items-center gap-1 sm:gap-1.5 px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-[8px] sm:text-[10px] font-black blur-incognito ${buyProfitLoss >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-brand-primary/20 text-brand-primary'}`}>
                                                 {buyProfitLoss >= 0 ? <TrendingUp className="h-2 w-2 sm:h-3 sm:w-3" /> : <TrendingDown className="h-2 w-2 sm:h-3 sm:w-3" />}
                                                 {buyRoi.toFixed(1)}%
                                             </div>

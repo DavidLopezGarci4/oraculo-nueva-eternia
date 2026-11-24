@@ -22,12 +22,11 @@
 * **Liberar o Desvincular:** Si vendes o retiras una figura, al pasar el cursor o pulsar sobre el botón de posesión cambiará a `Liberar`, removiéndola inmediatamente de tu búnker.
 
 ### ¿Qué es el Modo Incógnito y cómo se activa?
-* **Propósito:** Oculta y difumina instantáneamente todos los precios de compra, valoraciones financieras, ROI y totales coleccionados.
-* **Activación:** Pulsa el icono del ojo `👁️` en la barra superior (Navbar) de la app.
-* **Cobertura Total:** Se aplica en toda la aplicación:
-  - **Dashboard:** Difumina el valor del Índice de Mercado (EMI), desgloses por Waves y valoraciones del Salón de la Fama.
-  - **Catálogo & Fortaleza:** Difumina precios de ofertas, mínimos históricos y costes puestos en casa (`Landed Price`).
-  - **Blindaje de Precios Manuales:** La casilla de "Tu Inversión / Coste pagado" en la ficha de la figura se bloquea, reduciendo su opacidad y desactivando tooltips (`title="•••"`), imposibilitando ver el precio real posando el cursor del ratón.
+* **Control Único de Visibilidad:** El icono del ojo `👁️` en la barra superior (o `Ctrl+I` / doble `Esc`) gobierna de forma unificada todos los importes de la aplicación. Con el ojo abierto, todos los valores (precios de mercado, costes manuales, ROI y casillas editables dentro de cada figura) se muestran nítidos; al cerrarlo, todo queda difuminado de inmediato.
+* **Cobertura Total:** Se aplica de extremo a extremo:
+  - **Dashboard:** Difumina el Índice de Mercado (EMI), Plusvalía Neta, Gangas/Ahorro, desgloses por Waves, PVP de salida, Coste y retorno (ROI).
+  - **Catálogo & Fortaleza:** Difumina precios de ofertas, mínimos históricos, ROI, costes de adquisición y precios puestos en casa (`Landed Price`).
+  - **Blindaje de Precios Manuales:** Con el Modo Incógnito activo, las casillas manuales de "Inversión (Tu Precio)" y "Precio de Lanzamiento" en las fichas y editores se difuminan, bloquean su edición/enfoque (`readOnly`, `tabIndex=-1`) y desactivan tooltips reveladores, impidiendo ver el valor real al posar el cursor o tabular.
 * **Protección:** Ideal para capturas de pantalla, grabaciones o para mostrar tu colección a terceros sin revelar tu inversión monetaria.
 
 ### ¿Cómo funcionan los Cromos TCG Digitales y las Tarjetas Foil?

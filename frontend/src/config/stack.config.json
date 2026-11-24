@@ -17,7 +17,7 @@
       "whyChosen": "Desacopla las 10 vistas del Oráculo (Orbe, Fortaleza, Nueva Eternia, Purgatorio, Ajustes) manteniendo un arranque instantáneo.",
       "useCases": [
         "Montaje bajo demanda de vistas pesadas y modales de calibración",
-        "Modo Incógnito global (Ctrl+I / Doble Esc) y ocultación de precios manuales (.blur-manual-price)"
+        "Modo Incógnito global unificado (Icono Ojo / Ctrl+I / Doble Esc) con blindaje de precios manuales sin fuga en hover"
       ]
     },
     {

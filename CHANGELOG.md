@@ -21,6 +21,9 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
 - **Aislamiento de la vista `Ajustes` para el rol `Guardián` (`SystemTab.tsx`):** Ocultación de controles administrativos globales que devolvían `403` o exponían infraestructura interna (*Filtro Global Telegram*, *Descarga ZIP WebP*, *Parámetros `.env`* y *Grafo TecnoRed*), y supresión de llamadas de red administrativas innecesarias en `fetchData()`.
 - **Alineación integral de versión `1.2.2`:** Unificación en `frontend/package.json`, `pyproject.toml`, `/api/health`, `stack.config.json` y documentación maestra.
 
+### Fixed
+- **Visibilidad unificada de importes y precios manuales bajo el icono del Ojo (`App.tsx`, `index.css`, `Dashboard.tsx`, `Collection.tsx`, `CollectionItemDetailModal.tsx`, `EditProductModal.tsx`, `EterniaMarketIndexWidget.tsx`):** Eliminado el segundo interruptor desconectado en *Ajustes → Sistema* (`allowManualPriceReveal`), de modo que con el Ojo abierto se muestren nítidos todos los costes, retornos (ROI), métricas del EMI y casillas de los ítems, y con el Ojo cerrado (`.mode-incognito`) queden difuminados y bloqueados sin fuga por hover, foco ni `title`.
+
 ---
 
 ## [1.2.1] - 2026-10-31

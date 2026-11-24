@@ -134,16 +134,6 @@ export default function SystemTab({
     const [lastExcelSync, setLastExcelSync] = useState<string | null>(() => localStorage.getItem('motu_last_excel_sync'));
     const [lastFinopsMaintenance, setLastFinopsMaintenance] = useState<string | null>(() => localStorage.getItem('motu_last_finops_maintenance'));
     const [cacheStorageSize, setCacheStorageSize] = useState<string | null>(null);
-    const [allowManualPriceReveal, setAllowManualPriceReveal] = useState<boolean>(
-        () => localStorage.getItem('allowManualPriceReveal') === 'true'
-    );
-
-    const handleToggleManualPriceReveal = () => {
-        const next = !allowManualPriceReveal;
-        localStorage.setItem('allowManualPriceReveal', next ? 'true' : 'false');
-        setAllowManualPriceReveal(next);
-        window.dispatchEvent(new Event('oraculo:manual-price-reveal'));
-    };
 
     useEffect(() => {
         const calculateStorage = async () => {
@@ -457,39 +447,6 @@ export default function SystemTab({
                         </div>
                     </div>
                     )}
-
-                    {/* Privacidad de Precios Manuales (AGENTS.md Regla 2) */}
-                    <div className="glass border border-brand-primary/30 p-6 rounded-3xl space-y-4 bg-brand-primary/5 flex flex-col justify-between">
-                        <div className="space-y-4">
-                            <div className="flex items-center gap-3 text-brand-primary font-bold uppercase tracking-widest text-xs mb-2">
-                                <Lock className="h-4 w-4" />
-                                Privacidad de Precios Manuales
-                            </div>
-                            <p className="text-[10px] text-white/65 font-bold uppercase leading-tight">
-                                Por defecto los precios manuales de compra y su ROI permanecen difuminados (sin revelarse al pasar el cursor) y siempre quedan ocultos en Modo Incógnito.
-                            </p>
-
-                            <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl">
-                                <span id="manual-price-reveal-label" className="text-xs text-white/70">Mostrar Precios Manuales de Compra</span>
-                                <button
-                                    type="button"
-                                    onClick={handleToggleManualPriceReveal}
-                                    role="switch"
-                                    aria-checked={allowManualPriceReveal}
-                                    aria-labelledby="manual-price-reveal-label"
-                                    className={`relative h-5 w-10 rounded-full transition-all cursor-pointer ${allowManualPriceReveal ? 'bg-brand-primary' : 'bg-white/10'}`}
-                                >
-                                    <div className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${allowManualPriceReveal ? 'right-0.5' : 'left-0.5'}`} />
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="text-[9px] text-white/55 font-bold uppercase tracking-wider pt-2 border-t border-white/5">
-                            {allowManualPriceReveal
-                                ? 'Visible fuera de Modo Incógnito (enfoque o sesión activa)'
-                                : 'Protección estricta activa: cifras manuales difuminadas'}
-                        </div>
-                    </div>
 
                     {/* Compartir Santuario (Public Showcase) */}
                     <div className="glass border border-brand-primary/30 p-6 rounded-3xl space-y-4 bg-brand-primary/5 flex flex-col justify-between">

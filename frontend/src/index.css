@@ -93,44 +93,27 @@ body {
     text-orientation: mixed;
 }
 
-/* ── Incognito Mode Blurring ── */
-.blur-incognito {
-    transition: filter 0.3s ease;
+/* ── Unified Price Visibility & Incognito Mode (AGENTS.md Rule 2) ── */
+.blur-incognito,
+.blur-manual-price {
+    transition: filter 0.25s ease, opacity 0.25s ease;
 }
 
-.mode-incognito .blur-incognito {
+.mode-incognito .blur-incognito,
+.mode-incognito .blur-incognito:hover,
+.mode-incognito .blur-incognito:focus {
     filter: blur(8px) !important;
     user-select: none !important;
     pointer-events: none !important;
 }
 
-/* ── Manual Price Privacy (AGENTS.md Rule 2) ── */
-.blur-manual-price {
-    filter: blur(5px);
-    opacity: 0.45;
-    user-select: none;
-    transition: filter 0.2s ease, opacity 0.2s ease;
-}
-
-.blur-manual-price:focus {
-    filter: none;
-    opacity: 1;
-}
-
-.blur-manual-price:hover:not(:focus) {
-    filter: blur(5px);
-    opacity: 0.45;
-}
-
-.reveal-manual-prices .blur-manual-price {
-    filter: none;
-    opacity: 1;
-    user-select: auto;
-}
-
-.reveal-manual-prices .blur-manual-price:hover:not(:focus) {
-    filter: none;
-    opacity: 1;
+.mode-incognito .blur-manual-price,
+.mode-incognito .blur-manual-price:hover,
+.mode-incognito .blur-manual-price:focus {
+    filter: blur(8px) !important;
+    opacity: 0.45 !important;
+    user-select: none !important;
+    pointer-events: none !important;
 }
 
 .tabular-nums {
